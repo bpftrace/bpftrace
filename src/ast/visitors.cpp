@@ -157,6 +157,16 @@ void Visitor::visit(While &while_block)
   }
 }
 
+void Visitor::visit(For &for_loop)
+{
+  Visit(*for_loop.decl);
+  Visit(*for_loop.expr);
+
+  for (Statement *stmt : *for_loop.stmts) {
+    Visit(*stmt);
+  }
+}
+
 void Visitor::visit(Jump &jump)
 {
   if (jump.return_value)
@@ -408,6 +418,16 @@ Node *Mutator::visit(While &while_block)
 
   w->stmts = mutateStmtList(while_block.stmts);
   return w;
+}
+
+Node *Mutator::visit(For &for_loop)
+{
+  auto f = for_loop.leafcopy();
+  f->decl = Value<Variable>(for_loop.decl);
+  f->expr = Value<Expression>(for_loop.expr);
+
+  f->stmts = mutateStmtList(for_loop.stmts);
+  return f;
 }
 
 Node *Mutator::visit(Probe &probe)

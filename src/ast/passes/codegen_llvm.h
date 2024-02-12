@@ -54,6 +54,7 @@ public:
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
+  void visit(For &f) override;
   void visit(Jump &jump) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
@@ -84,6 +85,10 @@ public:
                            uint64_t max_entries,
                            const MapKey &key,
                            const SizedType &value_type);
+  AllocaInst *createTuple(
+      const SizedType &tuple_type,
+      const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+      const std::string &name);
 
   void generate_ir(void);
   void generate_maps(const RequiredResources &resources);
@@ -216,6 +221,8 @@ private:
   void createIncDec(Unop &unop);
 
   Function *createMapLenCallback();
+  Function *createForEachMapCallback(const Variable &decl,
+                                     const std::vector<Statement *> &stmts);
 
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
   // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda

@@ -556,6 +556,25 @@ private:
   While(const While &other);
 };
 
+class For : public Statement {
+public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(For)
+
+  For(Variable *decl, Expression *expr, StatementList *stmts, location loc)
+      : Statement(loc), decl(decl), expr(expr), stmts(stmts)
+  {
+  }
+  ~For();
+
+  Variable *decl = nullptr;
+  Expression *expr = nullptr;
+  StatementList *stmts = nullptr;
+
+private:
+  For(const For &other);
+};
+
 class Config : public Statement {
 public:
   DEFINE_ACCEPT

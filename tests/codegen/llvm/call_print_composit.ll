@@ -18,17 +18,17 @@ define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !40 {
 entry:
   %key = alloca i32, align 4
   %print_tuple_16_t = alloca %print_tuple_16_t, align 8
-  %str = alloca [4 x i8], align 1
   %tuple = alloca %"int64_string[4]__tuple_t", align 8
-  %1 = bitcast %"int64_string[4]__tuple_t"* %tuple to i8*
+  %str = alloca [4 x i8], align 1
+  %1 = bitcast [4 x i8]* %str to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast %"int64_string[4]__tuple_t"* %tuple to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 16, i1 false)
-  %3 = getelementptr %"int64_string[4]__tuple_t", %"int64_string[4]__tuple_t"* %tuple, i32 0, i32 0
-  store i64 1, i64* %3, align 8
-  %4 = bitcast [4 x i8]* %str to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
   store [4 x i8] c"abc\00", [4 x i8]* %str, align 1
+  %2 = bitcast %"int64_string[4]__tuple_t"* %tuple to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
+  %3 = bitcast %"int64_string[4]__tuple_t"* %tuple to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %3, i8 0, i64 16, i1 false)
+  %4 = getelementptr %"int64_string[4]__tuple_t", %"int64_string[4]__tuple_t"* %tuple, i32 0, i32 0
+  store i64 1, i64* %4, align 8
   %5 = getelementptr %"int64_string[4]__tuple_t", %"int64_string[4]__tuple_t"* %tuple, i32 0, i32 1
   %6 = bitcast [4 x i8]* %5 to i8*
   %7 = bitcast [4 x i8]* %str to i8*

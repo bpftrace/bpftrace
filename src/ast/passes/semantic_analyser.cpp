@@ -10,6 +10,7 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/signal_bt.h"
+#include "collect_nodes.h"
 #include "config.h"
 #include "log.h"
 #include "printf.h"
@@ -954,7 +955,7 @@ void SemanticAnalyser::visit(Call &call)
     check_nargs(call, 0);
   } else if (call.func == "print") {
     check_assignment(call, false, false, false);
-    if (in_loop() && is_final_pass()) {
+    if (in_loop() && is_final_pass() && call.vargs->at(0)->is_map) {
       LOG(WARNING, call.loc, out_)
           << "Due to it's asynchronous nature using 'print()' in a loop can "
              "lead to unexpected behavior. The map will likely be updated "
@@ -1987,6 +1988,121 @@ void SemanticAnalyser::visit(While &while_block)
   loop_depth_--;
 }
 
+void SemanticAnalyser::visit(For &f)
+{
+  if (!bpftrace_.feature_->has_helper_for_each_map_elem()) {
+    LOG(ERROR, f.loc, err_)
+        << "Missing required kernel feature: for_each_map_elem";
+  }
+
+  /*
+   * For-loops are implemented using the bpf_for_each_map_elem helper function,
+   * which requires them to be rewritten into a callback style.
+   *
+   * In this first implementation, we do not allow any variables to be shared
+   * between the main probe and the loop's body. Maps are global so are not a
+   * problem.
+   *
+   * Pseudo code for the transformation we apply:
+   *
+   * Before:
+   *     PROBE {
+   *       @map[0] = 1;
+   *       for ($kv : @map) {
+   *         [LOOP BODY]
+   *       }
+   *     }
+   *
+   * After:
+   *     PROBE {
+   *       @map[0] = 1;
+   *       bpf_for_each_map_elem(@map, &map_for_each_cb, 0, 0);
+   *     }
+   *     long map_for_each_cb(bpf_map *map,
+   *                          const void *key,
+   *                          void *value,
+   *                          void *ctx) {
+   *       $kv = ((uint64)key, (uint64)value);
+   *       [LOOP BODY]
+   *     }
+   */
+
+  // Validate decl
+  const auto &decl_name = f.decl->ident;
+  if (variable_val_[scope_].find(decl_name) != variable_val_[scope_].end()) {
+    LOG(ERROR, f.decl->loc, err_)
+        << "Loop declaration shadows existing variable: " + decl_name;
+  }
+
+  // Validate expr
+  if (!f.expr->is_map) {
+    LOG(ERROR, f.expr->loc, err_) << "Loop expression must be a map";
+    return;
+  }
+  Map &map = static_cast<Map &>(*f.expr);
+
+  // Validate body
+  CollectNodes<Variable> vars_referenced;
+  for (auto *stmt : *f.stmts) {
+    vars_referenced.run(*stmt);
+  }
+  for (const Variable &var : vars_referenced.nodes()) {
+    if (variable_val_[scope_].find(var.ident) != variable_val_[scope_].end()) {
+      LOG(ERROR, var.loc, err_) << "Variables defined outside of a for-loop "
+                                   "can not be accessed in the loop's scope";
+    }
+  }
+
+  // This could be relaxed in the future:
+  CollectNodes<Jump> jumps;
+  for (auto *stmt : *f.stmts) {
+    jumps.run(*stmt);
+  }
+  for (const Jump &n : jumps.nodes()) {
+    LOG(ERROR, n.loc, err_)
+        << "'" << opstr(n) << "' statement is not allowed in a for-loop";
+  }
+
+  map.skip_key_validation = true;
+  map.accept(*this);
+
+  if (has_error())
+    return;
+
+  // Iterating over a map provides a tuple: (map_key, map_val)
+  auto *mapkey = get_map_key_type(map);
+  auto *mapval = get_map_type(map);
+
+  if (mapkey && mapkey->args_.size() == 0) {
+    LOG(ERROR, map.loc, err_)
+        << "Maps used as for-loop expressions must have keys to iterate over";
+  }
+
+  if (mapval && mapkey) {
+    auto keytype = CreateNone();
+    if (mapkey->args_.size() == 1) {
+      keytype = mapkey->args_[0];
+    } else {
+      keytype = CreateTuple(bpftrace_.structs.AddTuple(mapkey->args_));
+    }
+    f.decl->type = CreateTuple(
+        bpftrace_.structs.AddTuple({ keytype, *mapval }));
+  }
+  variable_val_[scope_][decl_name] = f.decl->type;
+
+  loop_depth_++;
+  accept_statements(f.stmts);
+  loop_depth_--;
+
+  // Decl variable is not valid beyond this for-loop
+  variable_val_[scope_].erase(decl_name);
+
+  // Variables declared in a for-loop are not valid beyond it
+  for (const Variable &var : vars_referenced.nodes()) {
+    variable_val_[scope_].erase(var.ident);
+  }
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   // A field access must have a field XOR index
@@ -3006,6 +3122,14 @@ SizedType *SemanticAnalyser::get_map_type(const Map &map)
   return &search->second;
 }
 
+MapKey *SemanticAnalyser::get_map_key_type(const Map &map)
+{
+  if (auto it = map_key_.find(map.ident); it != map_key_.end()) {
+    return &it->second;
+  }
+  return nullptr;
+}
+
 /*
  * assign_map_type
  *
@@ -3065,8 +3189,7 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
 }
 void SemanticAnalyser::update_key_type(const Map &map, const MapKey &new_key)
 {
-  auto key = map_key_.find(map.ident);
-  if (key != map_key_.end()) {
+  if (const auto &key = map_key_.find(map.ident); key != map_key_.end()) {
     bool valid = true;
     if (key->second.args_.size() == new_key.args_.size()) {
       for (size_t i = 0; i < key->second.args_.size(); i++) {
@@ -3080,18 +3203,20 @@ void SemanticAnalyser::update_key_type(const Map &map, const MapKey &new_key)
           break;
         }
       }
-    } else
+    } else {
       valid = false;
+    }
 
-    if (!valid) {
+    if (is_final_pass() && !valid) {
       LOG(ERROR, map.loc, err_)
           << "Argument mismatch for " << map.ident << ": "
           << "trying to access with arguments: " << new_key.argument_type_list()
           << " when map expects arguments: "
           << key->second.argument_type_list();
     }
-  } else
+  } else {
     map_key_.insert({ map.ident, new_key });
+  }
 }
 
 bool SemanticAnalyser::update_string_size(SizedType &type,
@@ -3139,6 +3264,12 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, const location &loc)
       pointer_level--;
     }
   }
+}
+
+bool SemanticAnalyser::has_error() const
+{
+  const auto &errors = err_.str();
+  return !errors.empty();
 }
 
 Pass CreateSemanticPass()

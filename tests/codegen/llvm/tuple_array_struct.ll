@@ -19,21 +19,21 @@ define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !64 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"struct Foo_int32[4]__tuple_t", align 8
-  %1 = bitcast %"struct Foo_int32[4]__tuple_t"* %tuple to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast %"struct Foo_int32[4]__tuple_t"* %tuple to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 24, i1 false)
+  %1 = bitcast i8* %0 to i64*
+  %2 = getelementptr i64, i64* %1, i64 14
+  %arg0 = load volatile i64, i64* %2, align 8
   %3 = bitcast i8* %0 to i64*
-  %4 = getelementptr i64, i64* %3, i64 14
-  %arg0 = load volatile i64, i64* %4, align 8
-  %5 = getelementptr %"struct Foo_int32[4]__tuple_t", %"struct Foo_int32[4]__tuple_t"* %tuple, i32 0, i32 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([8 x i8]*, i32, i64)*)([8 x i8]* %5, i32 8, i64 %arg0)
-  %6 = bitcast i8* %0 to i64*
-  %7 = getelementptr i64, i64* %6, i64 13
-  %arg1 = load volatile i64, i64* %7, align 8
-  %8 = add i64 %arg1, 0
+  %4 = getelementptr i64, i64* %3, i64 13
+  %arg1 = load volatile i64, i64* %4, align 8
+  %5 = add i64 %arg1, 0
+  %6 = bitcast %"struct Foo_int32[4]__tuple_t"* %tuple to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
+  %7 = bitcast %"struct Foo_int32[4]__tuple_t"* %tuple to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %7, i8 0, i64 24, i1 false)
+  %8 = getelementptr %"struct Foo_int32[4]__tuple_t", %"struct Foo_int32[4]__tuple_t"* %tuple, i32 0, i32 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([8 x i8]*, i32, i64)*)([8 x i8]* %8, i32 8, i64 %arg0)
   %9 = getelementptr %"struct Foo_int32[4]__tuple_t", %"struct Foo_int32[4]__tuple_t"* %tuple, i32 0, i32 1
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to i64 ([4 x i32]*, i32, i64)*)([4 x i32]* %9, i32 16, i64 %8)
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to i64 ([4 x i32]*, i32, i64)*)([4 x i32]* %9, i32 16, i64 %5)
   %10 = bitcast i64* %"@t_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   store i64 0, i64* %"@t_key", align 8

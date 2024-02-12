@@ -3104,6 +3104,264 @@ TEST_F(semantic_analyser_btf, fentry)
   test("fentry:func_1 { $x = args->a; }", 0);
 }
 
+TEST(semantic_analyser, for_loop_map_one_key)
+{
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }", R"(
+Program
+ BEGIN
+  =
+   map: @map :: [int64]
+    int: 0 :: [int64]
+   int: 1 :: [int64]
+  for
+   decl
+    variable: $kv :: [(unsigned int64,int64)]
+   expr
+    map: @map :: [int64]
+   stmts
+    call: print
+     variable: $kv :: [(unsigned int64,int64)]
+)");
+}
+
+TEST(semantic_analyser, for_loop_map_two_keys)
+{
+  test("BEGIN { @map[0,0] = 1; for ($kv : @map) { print($kv); } }", R"(
+Program
+ BEGIN
+  =
+   map: @map :: [int64]
+    int: 0 :: [int64]
+    int: 0 :: [int64]
+   int: 1 :: [int64]
+  for
+   decl
+    variable: $kv :: [((unsigned int64,unsigned int64),int64)]
+   expr
+    map: @map :: [int64]
+   stmts
+    call: print
+     variable: $kv :: [((unsigned int64,unsigned int64),int64)]
+)");
+}
+
+TEST(semantic_analyser, for_loop_map)
+{
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }");
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv.0); } }");
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv.1); } }");
+}
+
+TEST(semantic_analyser, for_loop_map_no_key)
+{
+  // Error location is incorrect: #3063
+  test_error("BEGIN { @map = 1; for ($kv : @map) { } }", R"(
+stdin:1:30-35: ERROR: Maps used as for-loop expressions must have keys to iterate over
+BEGIN { @map = 1; for ($kv : @map) { } }
+                             ~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_map_undefined)
+{
+  // Error location is incorrect: #3063
+  test_error("BEGIN { for ($kv : @map) { } }", R"(
+stdin:1:20-25: ERROR: Undefined map: @map
+BEGIN { for ($kv : @map) { } }
+                   ~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_map_undefined2)
+{
+  // Error location is incorrect: #3063
+  test_error("BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }", R"(
+stdin:1:33-40: ERROR: Undefined map: @undef
+BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }
+                                ~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_shadowed_decl)
+{
+  test_error(R"(
+    BEGIN {
+      $kv = 1;
+      @map[0] = 1;
+      for ($kv : @map) { }
+    })",
+             R"(
+stdin:4:11-15: ERROR: Loop declaration shadows existing variable: $kv
+      for ($kv : @map) { }
+          ~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_variables)
+{
+  // Read-only
+  test_error(R"(
+    BEGIN {
+      $var = 0;
+      @map[0] = 1;
+      for ($kv : @map) {
+        print($var);
+      }
+      print($var);
+    })",
+             R"(
+stdin:5:9-19: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
+        print($var);
+        ~~~~~~~~~~
+)");
+
+  // Modified after loop
+  test_error(R"(
+    BEGIN {
+      $var = 0;
+      @map[0] = 1;
+      for ($kv : @map) {
+        print($var);
+      }
+      $var = 1;
+      print($var);
+    })",
+             R"(
+stdin:5:9-19: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
+        print($var);
+        ~~~~~~~~~~
+)");
+
+  // Modified during loop
+  test_error(R"(
+    BEGIN {
+      $var = 0;
+      @map[0] = 1;
+      for ($kv : @map) {
+        $var++;
+      }
+      print($var);
+    })",
+             R"(
+stdin:5:9-13: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
+        $var++;
+        ~~~~
+)");
+
+  // Created in loop
+  test(R"(
+    BEGIN {
+      @map[0] = 1;
+      for ($kv : @map) {
+        $var = 2;
+        print($var);
+      }
+    })");
+}
+
+TEST(semantic_analyser, for_loop_variables_created_in_loop_used_after)
+{
+  test_error(R"(
+    BEGIN {
+      @map[0] = 1;
+      for ($kv : @map) {
+        $var = 2;
+      }
+      print($var);
+    })",
+             R"(
+stdin:6:7-17: ERROR: Undefined or undeclared variable: $var
+      print($var);
+      ~~~~~~~~~~
+)");
+
+  test_error(R"(
+    BEGIN {
+      @map[0] = 1;
+      for ($kv : @map) {
+        print($kv);
+      }
+      print($kv);
+    })",
+             R"(
+stdin:6:7-16: ERROR: Undefined or undeclared variable: $kv
+      print($kv);
+      ~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_invalid_expr)
+{
+  // Error location is incorrect: #3063
+  test_error("BEGIN { for ($x : $var) { } }", R"(
+stdin:1:19-24: ERROR: Loop expression must be a map
+BEGIN { for ($x : $var) { } }
+                  ~~~~~
+)");
+  test_error("BEGIN { for ($x : 1+2) { } }", R"(
+stdin:1:19-22: ERROR: Loop expression must be a map
+BEGIN { for ($x : 1+2) { } }
+                  ~~~
+)");
+  test_error("BEGIN { for ($x : \"abc\") { } }", R"(
+stdin:1:19-25: ERROR: Loop expression must be a map
+BEGIN { for ($x : "abc") { } }
+                  ~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_multiple_errors)
+{
+  // Error location is incorrect: #3063
+  test_error(R"(
+    BEGIN {
+      $kv = 1;
+      @map[0] = 1;
+      for ($kv : 1) { }
+    })",
+             R"(
+stdin:4:11-15: ERROR: Loop declaration shadows existing variable: $kv
+      for ($kv : 1) { }
+          ~~~~
+stdin:4:18-20: ERROR: Loop expression must be a map
+      for ($kv : 1) { }
+                 ~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_control_flow)
+{
+  // Error location is incorrect: #3063
+  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { break; } }", R"(
+stdin:1:42-47: ERROR: 'break' statement is not allowed in a for-loop
+BEGIN { @map[0] = 1; for ($kv : @map) { break; } }
+                                         ~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }", R"(
+stdin:1:42-50: ERROR: 'continue' statement is not allowed in a for-loop
+BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }
+                                         ~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { return; } }", R"(
+stdin:1:42-48: ERROR: 'return' statement is not allowed in a for-loop
+BEGIN { @map[0] = 1; for ($kv : @map) { return; } }
+                                         ~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_missing_feature)
+{
+  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }",
+             R"(
+stdin:1:22-25: ERROR: Missing required kernel feature: for_each_map_elem
+BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }
+                     ~~~
+)",
+             false);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

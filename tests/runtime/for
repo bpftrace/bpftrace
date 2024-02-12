@@ -1,0 +1,71 @@
+NAME map one key
+PROG BEGIN { @map[16] = 32; @map[64] = 128; for ($kv : @map) { print($kv); } exit(); }
+EXPECT (16, 32)
+EXPECT (64, 128)
+TIMEOUT 5
+
+NAME map two keys
+PROG BEGIN { @map[16,17] = 32; @map[64,65] = 128; for ($kv : @map) { print($kv); } exit(); }
+EXPECT ((16, 17), 32)
+EXPECT ((64, 65), 128)
+TIMEOUT 5
+
+NAME map one key elements
+PROG BEGIN { @map[16] = 32; for ($kv : @map) { printf("key: %d, val: %d\n", $kv.0, $kv.1); } exit(); }
+EXPECT key: 16, val: 32
+TIMEOUT 5
+
+NAME map two key elements
+PROG BEGIN { @map[16,17] = 32; for ($kv : @map) { printf("key: (%d,%d), val: %d\n", $kv.0.0, $kv.0.1, $kv.1); } exit(); }
+EXPECT key: (16,17), val: 32
+TIMEOUT 5
+
+NAME map strings
+PROG BEGIN { @map["abc"] = "aa"; @map["def"] = "dd"; for ($kv : @map) { print($kv); } exit(); }
+EXPECT (abc, aa)
+EXPECT (def, dd)
+TIMEOUT 5
+
+NAME map create map in body
+PROG BEGIN { @map[16] = 32; @map[64] = 128; for ($kv : @map) { @new[$kv.1] = $kv.0; } print(@new); exit(); }
+EXPECT @new[32]: 16
+EXPECT @new[128]: 64
+TIMEOUT 5
+
+NAME map multiple loops
+PROG BEGIN { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); } for ($kv : @mapB) { print($kv); } exit(); }
+EXPECT (16, 32)
+EXPECT (17, 33)
+EXPECT (64, 128)
+EXPECT (65, 129)
+TIMEOUT 5
+
+# Disabled due to https://github.com/bpftrace/bpftrace/issues/3021
+NAME map multiple probes
+PROG BEGIN { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); } exit(); } END { for ($kv : @mapB) { print($kv); } }
+EXPECT (16, 32)
+EXPECT (17, 33)
+EXPECT (64, 128)
+EXPECT (65, 129)
+TIMEOUT 5
+REQUIRES bash -c "exit 1"
+
+NAME map nested vals
+PROG BEGIN { @mapA[16] = 32; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); for ($kv2 : @mapB) { print($kv2); } } exit(); }
+EXPECT (16, 32)
+EXPECT (64, 128)
+EXPECT (65, 129)
+TIMEOUT 5
+
+NAME map nested count
+PROG BEGIN { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; @mapB[66] = 130; for ($kv : @mapA) { printf("A"); for ($kv2 : @mapB) { printf("B"); } } exit(); }
+EXPECT ABBBABBB
+TIMEOUT 5
+
+NAME map delete
+PROG BEGIN { @[0,0,0] = 1; @[0,0,1] = 1; @[0,1,0] = 1; @[1,0,0] = 1; for ($kv : @) { if ($kv.0.1 == 1) { delete(@[$kv.0.0, $kv.0.1, $kv.0.2]); } } exit(); }
+EXPECT @[0, 0, 0]: 1
+EXPECT @[0, 0, 1]: 1
+EXPECT @[1, 0, 0]: 1
+EXPECT_NONE @[0, 1, 0]: 1
+TIMEOUT 5

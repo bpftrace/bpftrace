@@ -25,7 +25,7 @@ public:
     pred_ = pred;
     node.accept(*this);
   }
-  const std::vector<std::reference_wrapper<NodeT>> nodes() const
+  const std::vector<std::reference_wrapper<NodeT>> &nodes() const
   {
     return nodes_;
   }

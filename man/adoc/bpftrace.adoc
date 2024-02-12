@@ -541,6 +541,39 @@ Characters and strings support the following escape sequences:
 
 === Loops
 
+==== For
+
+With Linux 5.13 and later, `for` loops can be used to iterate over elements in a map.
+
+----
+for ($kv : @map) {
+  block;
+}
+----
+
+The variable declared in the `for` loop will be initialised on each iteration with a tuple containing a key and a value from the map, i.e. `$kv = (key, value)`.
+
+----
+@map[10] = 20;
+for ($kv : @map) {
+  print($kv.0); // key
+  print($kv.1); // value
+}
+----
+
+When a map has multiple keys, the loop variable will be initialised with nested tuple of the form: `((key1, key2, ...), value)`
+
+----
+@map[10,11] = 20;
+for ($kv : @map) {
+  print($kv.0.0); // key 1
+  print($kv.0.1); // key 2
+  print($kv.1);   // value
+}
+----
+
+==== While
+
 Since kernel 5.3 BPF supports loops as long as the verifier can prove they're bounded and fit within the instruction limit.
 
 In bpftrace, loops are available through the `while` statement.
@@ -577,6 +610,8 @@ i:s:1 {
   printf("\n");
 }
 ----
+
+==== Unroll
 
 Loop unrolling is also supported with the `unroll` statement.
 
