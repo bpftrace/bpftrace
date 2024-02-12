@@ -17,13 +17,13 @@ Driver::Driver(BPFtrace &bpftrace, std::ostream &o)
 {
 }
 
-void Driver::source(std::string filename, std::string script)
+void Driver::source(std::string_view filename, std::string_view script)
 {
   Log::get().set_source(filename, script);
 }
 
 // Kept for the test suite
-int Driver::parse_str(std::string script)
+int Driver::parse_str(std::string_view script)
 {
   source("stdin", script);
   return parse();
