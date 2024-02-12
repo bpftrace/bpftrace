@@ -280,18 +280,45 @@ TEST(semantic_analyser, consistent_map_values)
 
 TEST(semantic_analyser, consistent_map_keys)
 {
-  test("kprobe:f { @x = 0; @x; }", 0);
-  test("kprobe:f { @x[1] = 0; @x[2]; }", 0);
+  test("BEGIN { @x = 0; @x; }");
+  test("BEGIN { @x[1] = 0; @x[2]; }");
 
-  test("kprobe:f { @x = 0; @x[1]; }", 2);
-  test("kprobe:f { @x[1] = 0; @x; }", 2);
+  test_error("BEGIN { @x = 0; @x[1]; }", R"(
+stdin:1:17-22: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64] when map expects arguments: []
+BEGIN { @x = 0; @x[1]; }
+                ~~~~~
+)");
+  test_error("BEGIN { @x[1] = 0; @x; }", R"(
+stdin:1:20-22: ERROR: Argument mismatch for @x: trying to access with arguments: [] when map expects arguments: [unsigned int64]
+BEGIN { @x[1] = 0; @x; }
+                   ~~
+)");
 
-  test("kprobe:f { @x[1,2] = 0; @x[3,4]; }", 0);
-  test("kprobe:f { @x[1,2] = 0; @x[3]; }", 2);
-  test("kprobe:f { @x[1] = 0; @x[2,3]; }", 2);
+  test("BEGIN { @x[1,2] = 0; @x[3,4]; }");
 
-  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[2,\"b\", kstack]; }", 0);
-  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 2);
+  test_error("BEGIN { @x[1,2] = 0; @x[3]; }", R"(
+stdin:1:22-27: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64] when map expects arguments: [unsigned int64, unsigned int64]
+BEGIN { @x[1,2] = 0; @x[3]; }
+                     ~~~~~
+)");
+  test_error("BEGIN { @x[1] = 0; @x[2,3]; }", R"(
+stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64, unsigned int64] when map expects arguments: [unsigned int64]
+BEGIN { @x[1] = 0; @x[2,3]; }
+                   ~~~~~~~
+)");
+
+  test("BEGIN { @x[1,\"a\",kstack] = 0; @x[2,\"b\", kstack]; }");
+
+  test_error(R"(
+    BEGIN {
+      @x[1,"a",kstack] = 0;
+      @x["b", 2, kstack];
+    })",
+             R"(
+stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: [string[2], unsigned int64, kstack] when map expects arguments: [unsigned int64, string[2], kstack]
+      @x["b", 2, kstack];
+      ~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, if_statements)
@@ -1151,12 +1178,17 @@ TEST(semantic_analyser, array_as_map_key)
        0);
 
   // Mismatched key types
-  test("struct MyStruct { int x[2]; int y[4]; }"
-       "kprobe:f { "
-       "    @x[((struct MyStruct *)arg0)->x] = 0; "
-       "    @x[((struct MyStruct *)arg0)->y] = 1; "
-       "}",
-       2);
+  test_error(R"(
+    struct MyStruct { int x[2]; int y[4]; }
+    BEGIN {
+      @x[((struct MyStruct *)0)->x] = 0;
+      @x[((struct MyStruct *)0)->y] = 1;
+    })",
+             R"(
+stdin:4:7-37: ERROR: Argument mismatch for @x: trying to access with arguments: [int32[4]] when map expects arguments: [int32[2]]
+      @x[((struct MyStruct *)0)->y] = 1;
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, array_compare)
@@ -1821,12 +1853,17 @@ TEST(semantic_analyser, struct_as_map_key)
        0);
 
   // Mismatched key types
-  test("struct A { int x; } struct B { char x; } "
-       "kprobe:f { "
-       "    @x[*((struct A *)arg0)] = 0; "
-       "    @x[*((struct B *)arg1)] = 1; "
-       "}",
-       2);
+  test_error(R"(
+    struct A { int x; } struct B { char x; }
+    BEGIN {
+        @x[*((struct A *)0)] = 0;
+        @x[*((struct B *)0)] = 1;
+    })",
+             R"(
+stdin:4:9-30: ERROR: Argument mismatch for @x: trying to access with arguments: [struct B] when map expects arguments: [struct A]
+        @x[*((struct B *)0)] = 1;
+        ~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, probe_short_name)

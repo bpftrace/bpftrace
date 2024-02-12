@@ -431,6 +431,14 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
 }
 
+namespace {
+bool skip_key_validation(const Call &call)
+{
+  return call.func == "print" || call.func == "clear" || call.func == "zero" ||
+         call.func == "len";
+}
+} // namespace
+
 void SemanticAnalyser::visit(Call &call)
 {
   // Check for unsafe-ness first. It is likely the most pertinent issue
@@ -462,10 +470,15 @@ void SemanticAnalyser::visit(Call &call)
 
   if (call.vargs) {
     for (size_t i = 0; i < call.vargs->size(); ++i) {
-      auto &expr = (*call.vargs)[i];
+      auto &expr = *(*call.vargs)[i];
       func_arg_idx_ = i;
 
-      expr->accept(*this);
+      if (expr.is_map && skip_key_validation(call)) {
+        Map &map = static_cast<Map &>(expr);
+        map.skip_key_validation = true;
+      }
+
+      expr.accept(*this);
     }
   }
 
@@ -917,7 +930,6 @@ void SemanticAnalyser::visit(Call &call)
       auto &arg = *call.vargs->at(0);
       if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
-        map.skip_key_validation = true;
         if (map.vargs != nullptr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
@@ -969,7 +981,6 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "clear() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        map.skip_key_validation = true;
         if (map.vargs != nullptr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
@@ -985,7 +996,6 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "zero() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        map.skip_key_validation = true;
         if (map.vargs != nullptr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
@@ -1000,7 +1010,6 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "len() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        map.skip_key_validation = true;
         if (map.vargs != nullptr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
@@ -1373,7 +1382,7 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
 
-  if (pass_ > 1 && !map.skip_key_validation)
+  if (!map.skip_key_validation)
     update_key_type(map, key);
 
   auto search_val = map_val_.find(map.ident);
