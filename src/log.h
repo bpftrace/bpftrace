@@ -29,7 +29,7 @@ public:
                   const std::optional<location>& loc,
                   std::ostream& out,
                   std::string&& input);
-  inline void set_source(const std::string& filename, const std::string& source)
+  inline void set_source(std::string_view filename, std::string_view source)
   {
     src_ = source;
     filename_ = filename;

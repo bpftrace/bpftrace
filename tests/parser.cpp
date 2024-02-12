@@ -12,12 +12,12 @@ namespace parser {
 using Printer = ast::Printer;
 
 void test_parse_failure(BPFtrace &bpftrace,
-                        const std::string &input,
+                        std::string_view input,
                         std::string_view expected_error = {})
 {
   std::stringstream out;
   Driver driver(bpftrace, out);
-  ASSERT_EQ(driver.parse_str(input), 1);
+  EXPECT_EQ(driver.parse_str(input), 1);
 
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
@@ -26,67 +26,185 @@ void test_parse_failure(BPFtrace &bpftrace,
   }
 }
 
-void test_parse_failure(const std::string &input,
+void test_parse_failure(std::string_view input,
                         std::string_view expected_error = {})
 {
   BPFtrace bpftrace;
   test_parse_failure(bpftrace, input, expected_error);
 }
 
-void test(BPFtrace &bpftrace,
-          const std::string &input,
-          const std::string &output)
+void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
 {
   Driver driver(bpftrace);
-  ASSERT_EQ(driver.parse_str(input), 0);
+  EXPECT_EQ(driver.parse_str(input), 0);
+
+  if (expected[0] == '\n')
+    expected.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
   Printer printer(out);
   printer.print(driver.root.get());
-  EXPECT_EQ(output, out.str());
+  EXPECT_EQ(expected, out.str());
 }
 
-void test(const std::string &input, const std::string &output)
+void test(std::string_view input, std::string_view expected)
 {
   BPFtrace bpftrace;
-  test(bpftrace, input, output);
+  test(bpftrace, input, expected);
 }
 
 TEST(Parser, builtin_variables)
 {
-  test("kprobe:f { pid }", "Program\n kprobe:f\n  builtin: pid\n");
-  test("kprobe:f { tid }", "Program\n kprobe:f\n  builtin: tid\n");
-  test("kprobe:f { cgroup }", "Program\n kprobe:f\n  builtin: cgroup\n");
-  test("kprobe:f { uid }", "Program\n kprobe:f\n  builtin: uid\n");
-  test("kprobe:f { username }", "Program\n kprobe:f\n  builtin: username\n");
-  test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
-  test("kprobe:f { nsecs }", "Program\n kprobe:f\n  builtin: nsecs\n");
-  test("kprobe:f { elapsed }", "Program\n kprobe:f\n  builtin: elapsed\n");
-  test("kprobe:f { numaid }", "Program\n kprobe:f\n  builtin: numaid\n");
-  test("kprobe:f { cpu }", "Program\n kprobe:f\n  builtin: cpu\n");
-  test("kprobe:f { curtask }", "Program\n kprobe:f\n  builtin: curtask\n");
-  test("kprobe:f { rand }", "Program\n kprobe:f\n  builtin: rand\n");
-  test("kprobe:f { ctx }", "Program\n kprobe:f\n  builtin: ctx\n");
-  test("kprobe:f { comm }", "Program\n kprobe:f\n  builtin: comm\n");
-  test("kprobe:f { kstack }", "Program\n kprobe:f\n  builtin: kstack\n");
-  test("kprobe:f { ustack }", "Program\n kprobe:f\n  builtin: ustack\n");
-  test("kprobe:f { arg0 }", "Program\n kprobe:f\n  builtin: arg0\n");
-  test("kprobe:f { sarg0 }", "Program\n kprobe:f\n  builtin: sarg0\n");
-  test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
-  test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
-  test("kprobe:f { probe }", "Program\n kprobe:f\n  builtin: probe\n");
-  test("kprobe:f { args }", "Program\n kprobe:f\n  builtin: args\n");
+  test("kprobe:f { pid }", R"(
+Program
+ kprobe:f
+  builtin: pid
+)");
+
+  test("kprobe:f { tid }", R"(
+Program
+ kprobe:f
+  builtin: tid
+)");
+
+  test("kprobe:f { cgroup }", R"(
+Program
+ kprobe:f
+  builtin: cgroup
+)");
+
+  test("kprobe:f { uid }", R"(
+Program
+ kprobe:f
+  builtin: uid
+)");
+
+  test("kprobe:f { username }", R"(
+Program
+ kprobe:f
+  builtin: username
+)");
+
+  test("kprobe:f { gid }", R"(
+Program
+ kprobe:f
+  builtin: gid
+)");
+
+  test("kprobe:f { nsecs }", R"(
+Program
+ kprobe:f
+  builtin: nsecs
+)");
+
+  test("kprobe:f { elapsed }", R"(
+Program
+ kprobe:f
+  builtin: elapsed
+)");
+
+  test("kprobe:f { numaid }", R"(
+Program
+ kprobe:f
+  builtin: numaid
+)");
+
+  test("kprobe:f { cpu }", R"(
+Program
+ kprobe:f
+  builtin: cpu
+)");
+
+  test("kprobe:f { curtask }", R"(
+Program
+ kprobe:f
+  builtin: curtask
+)");
+
+  test("kprobe:f { rand }", R"(
+Program
+ kprobe:f
+  builtin: rand
+)");
+
+  test("kprobe:f { ctx }", R"(
+Program
+ kprobe:f
+  builtin: ctx
+)");
+
+  test("kprobe:f { comm }", R"(
+Program
+ kprobe:f
+  builtin: comm
+)");
+
+  test("kprobe:f { kstack }", R"(
+Program
+ kprobe:f
+  builtin: kstack
+)");
+
+  test("kprobe:f { ustack }", R"(
+Program
+ kprobe:f
+  builtin: ustack
+)");
+
+  test("kprobe:f { arg0 }", R"(
+Program
+ kprobe:f
+  builtin: arg0
+)");
+
+  test("kprobe:f { sarg0 }", R"(
+Program
+ kprobe:f
+  builtin: sarg0
+)");
+
+  test("kprobe:f { retval }", R"(
+Program
+ kprobe:f
+  builtin: retval
+)");
+
+  test("kprobe:f { func }", R"(
+Program
+ kprobe:f
+  builtin: func
+)");
+
+  test("kprobe:f { probe }", R"(
+Program
+ kprobe:f
+  builtin: probe
+)");
+
+  test("kprobe:f { args }", R"(
+Program
+ kprobe:f
+  builtin: args
+)");
 }
 
 TEST(Parser, positional_param)
 {
-  test("kprobe:f { $1 }", "Program\n kprobe:f\n  param: $1\n");
+  test("kprobe:f { $1 }", R"(
+Program
+ kprobe:f
+  param: $1
+)");
   test_parse_failure("kprobe:f { $0 }");
 }
 
 TEST(Parser, positional_param_count)
 {
-  test("kprobe:f { $# }", "Program\n kprobe:f\n  param: $#\n");
+  test("kprobe:f { $# }", R"(
+Program
+ kprobe:f
+  param: $#
+)");
 }
 
 TEST(Parser, positional_param_attachpoint)
