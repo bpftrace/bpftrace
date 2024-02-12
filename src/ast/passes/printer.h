@@ -40,6 +40,7 @@ public:
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
+  void visit(For &for_loop) override;
   void visit(Config &config) override;
   void visit(Jump &jump) override;
   void visit(Predicate &pred) override;
@@ -48,7 +49,7 @@ public:
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
 
-  int depth_ = 0;
+  int depth_ = -1;
 
 private:
   std::ostream &out_;

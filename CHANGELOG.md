@@ -19,6 +19,8 @@ and this project adheres to
   - [#3051](https://github.com/bpftrace/bpftrace/pull/3051)
 - Add ability to call delete() with multiple arguments
   - [#3046](https://github.com/bpftrace/bpftrace/pull/3046)
+- Add for-each loops for iterating over map elements
+  - [#3003](https://github.com/bpftrace/bpftrace/pull/3003)
 #### Changed
 #### Deprecated
 #### Removed

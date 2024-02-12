@@ -149,7 +149,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList *, ast::SubprogList *>> probes_and_subprogs
 %type <ast::Config *> config
-%type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt
+%type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt for_stmt
 %type <ast::StatementList *> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
@@ -396,6 +396,7 @@ config_assign_stmt_list:
 block_stmt:
                 loop_stmt    { $$ = $1; }
         |       if_stmt      { $$ = $1; }
+        |       for_stmt     { $$ = $1; }
                 ;
 
 expr_stmt:
@@ -421,6 +422,10 @@ loop_stmt:
         |       WHILE  "(" expr ")" block            { $$ = new ast::While($3, $5, @1); }
                 ;
 
+for_stmt:
+                FOR "(" var ":" expr ")" block       { $$ = new ast::For($3, $5, $7, @1); }
+                ;
+
 if_stmt:
                 IF "(" expr ")" block                  { $$ = new ast::If($3, $5); }
         |       IF "(" expr ")" block ELSE block_or_if { $$ = new ast::If($3, $5, $7); }
@@ -440,8 +445,8 @@ assign_stmt:
                   error(@1 + @3, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead.");
                   YYERROR;
                 }
-        |       map ASSIGN expr      { $$ = new ast::AssignMapStatement($1, $3, false, @2); }
-        |       var ASSIGN expr      { $$ = new ast::AssignVarStatement($1, $3, false, @2); }
+        |       map ASSIGN expr      { $$ = new ast::AssignMapStatement($1, $3, false, @$); }
+        |       var ASSIGN expr      { $$ = new ast::AssignVarStatement($1, $3, false, @$); }
         |       map compound_op expr
                 {
                   auto b = new ast::Binop($1, $2, $3, @2);

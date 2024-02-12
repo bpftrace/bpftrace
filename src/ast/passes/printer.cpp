@@ -12,8 +12,9 @@ namespace ast {
 
 void Printer::print(Node *root)
 {
-  depth_ = 0;
+  ++depth_;
   Visit(*root);
+  --depth_;
 }
 
 std::string Printer::type(const SizedType &ty)
@@ -348,6 +349,24 @@ void Printer::visit(While &while_block)
   for (Statement *stmt : *while_block.stmts) {
     stmt->accept(*this);
   }
+}
+
+void Printer::visit(For &for_loop)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "for" << std::endl;
+
+  ++depth_;
+  out_ << indent << " decl\n";
+  print(for_loop.decl);
+  out_ << indent << " expr\n";
+  print(for_loop.expr);
+
+  out_ << indent << " stmts\n";
+  for (Statement *stmt : *for_loop.stmts) {
+    print(stmt);
+  }
+  --depth_;
 }
 
 void Printer::visit(Config &config)

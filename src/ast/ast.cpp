@@ -41,6 +41,7 @@ MAKE_ACCEPT(AttachPoint)
 MAKE_ACCEPT(If)
 MAKE_ACCEPT(Unroll)
 MAKE_ACCEPT(While)
+MAKE_ACCEPT(For)
 MAKE_ACCEPT(Config)
 MAKE_ACCEPT(Jump)
 MAKE_ACCEPT(Probe)
@@ -205,6 +206,15 @@ Ternary::~Ternary()
 While::~While()
 {
   delete cond;
+  for (auto *stmt : *stmts)
+    delete stmt;
+  delete stmts;
+}
+
+For::~For()
+{
+  delete decl;
+  delete expr;
   for (auto *stmt : *stmts)
     delete stmt;
   delete stmts;
@@ -756,6 +766,10 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
 }
 
 While::While(const While &other) : Statement(other)
+{
+}
+
+For::For(const For &other) : Statement(other)
 {
 }
 

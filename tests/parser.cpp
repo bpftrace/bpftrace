@@ -2275,6 +2275,37 @@ TEST(Parser, subprog_enum)
        " f: enum x()\n");
 }
 
+TEST(Parser, for_loop)
+{
+  test("BEGIN { for ($kv : @map) { print($kv) } }", R"(
+Program
+ BEGIN
+  for
+   decl
+    variable: $kv
+   expr
+    map: @map
+   stmts
+    call: print
+     variable: $kv
+)");
+
+  // Error location is incorrect: #3063
+  // No body
+  test_parse_failure("BEGIN { for ($kv : @map) print($kv); }", R"(
+stdin:1:27-32: ERROR: syntax error, unexpected call, expecting {
+BEGIN { for ($kv : @map) print($kv); }
+                          ~~~~~
+)");
+
+  // Map for decl
+  test_parse_failure("BEGIN { for (@kv : @map) { } }", R"(
+stdin:1:13-17: ERROR: syntax error, unexpected map, expecting variable
+BEGIN { for (@kv : @map) { } }
+            ~~~~
+)");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

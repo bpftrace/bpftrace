@@ -56,6 +56,7 @@ public:
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
   void visit(While &while_block) override;
+  void visit(For &f) override;
   void visit(Jump &jump) override;
   void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
@@ -109,6 +110,7 @@ private:
                               std::string name = "");
 
   SizedType *get_map_type(const Map &map);
+  MapKey *get_map_key_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
   void update_key_type(const Map &map, const MapKey &new_key);
   bool update_string_size(SizedType &type, const SizedType &new_type);
@@ -122,6 +124,7 @@ private:
   void binop_int(Binop &op);
   void binop_array(Binop &op);
 
+  bool has_error() const;
   bool in_loop(void)
   {
     return loop_depth_ > 0;

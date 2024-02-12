@@ -2022,6 +2022,39 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
   }
 }
 
+/*
+ * createTuple
+ *
+ * Constructs a tuple on the stack from the provided values.
+ */
+AllocaInst *CodegenLLVM::createTuple(
+    const SizedType &tuple_type,
+    const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+    const std::string &name)
+{
+  auto tuple_ty = b_.GetType(tuple_type);
+  size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
+  AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, name);
+  b_.CREATE_MEMSET(buf, b_.getInt8(0), tuple_size, 1);
+
+  for (size_t i = 0; i < vals.size(); ++i) {
+    auto [val, loc] = vals[i];
+    SizedType &type = tuple_type.GetField(i).type;
+
+    Value *dst = b_.CreateGEP(tuple_ty,
+                              buf,
+                              { b_.getInt32(0), b_.getInt32(i) });
+
+    if (onStack(type))
+      b_.CREATE_MEMCPY(dst, val, type.GetSize(), 1);
+    else if (type.IsArrayTy() || type.IsRecordTy())
+      b_.CreateProbeRead(ctx_, dst, type, val, *loc);
+    else
+      b_.CreateStore(val, dst);
+  }
+  return buf;
+}
+
 void CodegenLLVM::visit(Tuple &tuple)
 {
   // Store elements on stack
@@ -2029,24 +2062,15 @@ void CodegenLLVM::visit(Tuple &tuple)
 
   compareStructure(tuple.type, tuple_ty);
 
-  size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
-  AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, "tuple");
-  b_.CREATE_MEMSET(buf, b_.getInt8(0), tuple_size, 1);
-  for (size_t i = 0; i < tuple.elems->size(); ++i) {
-    Expression *elem = tuple.elems->at(i);
-    auto scoped_del = accept(elem);
+  std::vector<std::pair<llvm::Value *, const location *>> vals;
+  std::vector<ScopedExprDeleter> scoped_dels;
+  vals.reserve(tuple.elems->size());
 
-    Value *dst = b_.CreateGEP(tuple_ty,
-                              buf,
-                              { b_.getInt32(0), b_.getInt32(i) });
-
-    if (onStack(elem->type))
-      b_.CREATE_MEMCPY(dst, expr_, elem->type.GetSize(), 1);
-    else if (elem->type.IsArrayTy() || elem->type.IsRecordTy())
-      b_.CreateProbeRead(ctx_, dst, elem->type, expr_, elem->loc);
-    else
-      b_.CreateStore(expr_, dst);
+  for (Expression *elem : *tuple.elems) {
+    scoped_dels.emplace_back(std::move(accept(elem)));
+    vals.push_back({ expr_, &elem->loc });
   }
+  AllocaInst *buf = createTuple(tuple.type, vals, "tuple");
 
   expr_ = buf;
   expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -2301,6 +2325,15 @@ void CodegenLLVM::visit(While &while_block)
 
   b_.SetInsertPoint(while_end);
   loops_.pop_back();
+}
+
+void CodegenLLVM::visit(For &f)
+{
+  auto &map = static_cast<Map &>(*f.expr);
+
+  Value *ctx = b_.getInt64(0);
+  b_.CreateForEachMapElem(
+      ctx_, map, createForEachMapCallback(*f.decl, *f.stmts), ctx, f.loc);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
@@ -3869,6 +3902,67 @@ Function *CodegenLLVM::createMapLenCallback()
 
   b_.restoreIP(saved_ip);
 
+  return callback;
+}
+
+Function *CodegenLLVM::createForEachMapCallback(
+    const Variable &decl,
+    const std::vector<Statement *> &stmts)
+{
+  /*
+   * Create a callback function suitable for passing to bpf_for_each_map_elem,
+   * of the form:
+   *
+   *   static int cb(struct map *map, void *key, void *value, void *ctx)
+   *   {
+   *     $decl = (key, value);
+   *     [stmts...]
+   *   }
+   */
+
+  auto saved_ip = b_.saveIP();
+
+  std::array<llvm::Type *, 4> args = {
+    b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy()
+  };
+  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
+  Function *callback = Function::Create(callback_type,
+                                        Function::LinkageTypes::InternalLinkage,
+                                        "map_for_each_cb",
+                                        module_.get());
+  callback->setDSOLocal(true);
+  callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
+  callback->setSection(".text");
+  debug_.createFunctionDebugInfo(*callback);
+
+  auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
+  b_.SetInsertPoint(bb);
+
+  auto &key_type = decl.type.GetField(0).type;
+  Value *key = callback->getArg(1);
+  if (!onStack(key_type)) {
+    key = b_.CreateLoad(b_.GetType(key_type), key, "key");
+  }
+
+  auto &val_type = decl.type.GetField(1).type;
+  Value *val = callback->getArg(2);
+  if (!onStack(val_type)) {
+    val = b_.CreateLoad(b_.GetType(val_type), val, "val");
+  }
+
+  // Create decl variable for use in this iteration of the loop
+  variables_[decl.ident] = createTuple(
+      decl.type, { { key, &decl.loc }, { val, &decl.loc } }, decl.ident);
+
+  for (Statement *stmt : stmts) {
+    auto scoped_del = accept(stmt);
+  }
+  b_.CreateRet(b_.getInt64(0));
+
+  // Decl variable is not valid beyond this for loop
+  variables_.erase(decl.ident);
+
+  b_.restoreIP(saved_ip);
   return callback;
 }
 

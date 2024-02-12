@@ -40,6 +40,7 @@ public:
   virtual void visit(Jump &jump) = 0;
   virtual void visit(Unroll &unroll) = 0;
   virtual void visit(While &while_block) = 0;
+  virtual void visit(For &for_loop) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
@@ -106,6 +107,7 @@ public:
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
+  void visit(For &for_loop) override;
   void visit(Jump &jump) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
@@ -173,6 +175,7 @@ public:
   virtual R visit(Jump &node) DEFAULT_FN;
   virtual R visit(Unroll &node) DEFAULT_FN;
   virtual R visit(While &node) DEFAULT_FN;
+  virtual R visit(For &node) DEFAULT_FN;
   virtual R visit(Predicate &node) DEFAULT_FN;
   virtual R visit(AttachPoint &node) DEFAULT_FN;
   virtual R visit(Probe &node) DEFAULT_FN;
@@ -225,6 +228,7 @@ private:
     DEFINE_DISPATCH(Predicate);
     DEFINE_DISPATCH(Ternary);
     DEFINE_DISPATCH(While);
+    DEFINE_DISPATCH(For);
     DEFINE_DISPATCH(AttachPoint);
     DEFINE_DISPATCH(SubprogArg);
     DEFINE_DISPATCH(Subprog);
@@ -277,6 +281,7 @@ public:
   Node *visit(Jump &) override;
   Node *visit(Unroll &) override;
   Node *visit(While &) override;
+  Node *visit(For &) override;
   Node *visit(Predicate &) override;
   Node *visit(AttachPoint &) override;
   Node *visit(Probe &) override;
