@@ -1,5 +1,6 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/printer.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -54,21 +55,24 @@ void test_for_warning(const std::string &input,
 void test(BPFtrace &bpftrace,
           bool mock_has_features,
           Driver &driver,
-          const std::string &input,
+          std::string_view input,
           int expected_result,
           std::string_view expected_error = {},
           bool safe_mode = true,
           bool has_child = false)
 {
+  if (!input.empty() && input[0] == '\n')
+    input.remove_prefix(1); // Remove initial '\n'
+
   std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   bpftrace.safe_mode_ = safe_mode;
-  EXPECT_EQ(driver.parse_str(input), 0);
+  ASSERT_EQ(driver.parse_str(input), 0);
 
   ast::FieldAnalyser fields(driver.root.get(), bpftrace, out);
-  EXPECT_EQ(fields.analyse(), 0) << msg.str() + out.str();
+  ASSERT_EQ(fields.analyse(), 0) << msg.str() + out.str();
 
   ClangParser clang;
   clang.parse(driver.root.get(), bpftrace);
@@ -78,16 +82,21 @@ void test(BPFtrace &bpftrace,
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
   ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, out, has_child);
-  ASSERT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
+  if (expected_result == -1) {
+    // Accept any failure result
+    EXPECT_NE(0, semantics.analyse()) << msg.str() + out.str();
+  } else {
+    EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
+  }
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
-    EXPECT_EQ(out.str(), expected_error);
+    EXPECT_EQ(expected_error, out.str());
   }
 }
 
 void test(BPFtrace &bpftrace,
-          const std::string &input,
+          std::string_view input,
           int expected_result,
           bool safe_mode = true)
 {
@@ -95,14 +104,14 @@ void test(BPFtrace &bpftrace,
   test(bpftrace, true, driver, input, expected_result, {}, safe_mode, false);
 }
 
-void test(Driver &driver, const std::string &input, int expected_result)
+void test(Driver &driver, std::string_view input, int expected_result)
 {
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace, true, driver, input, expected_result, {}, true, false);
 }
 
 void test(MockBPFfeature &feature,
-          const std::string &input,
+          std::string_view input,
           int expected_result,
           bool safe_mode = true)
 {
@@ -119,7 +128,7 @@ void test(MockBPFfeature &feature,
        false);
 }
 
-void test(const std::string &input,
+void test(std::string_view input,
           int expected_result,
           bool safe_mode,
           bool has_child = false)
@@ -136,27 +145,35 @@ void test(const std::string &input,
        has_child);
 }
 
-void test(const std::string &input, int expected_result)
+void test(std::string_view input, int expected_result = 0)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
   test(*bpftrace, true, driver, input, expected_result, {}, true, false);
 }
 
-void test(const std::string &input,
-          int expected_result,
-          std::string_view expected_error)
+void test(std::string_view input, std::string_view expected_ast)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
-  test(*bpftrace,
-       true,
-       driver,
-       input,
-       expected_result,
-       expected_error,
-       true,
-       false);
+  test(*bpftrace, true, driver, input, 0, {}, true, false);
+
+  if (!expected_ast.empty() && expected_ast[0] == '\n')
+    expected_ast.remove_prefix(1); // Remove initial '\n'
+
+  std::ostringstream out;
+  ast::Printer printer(out);
+  printer.print(driver.root.get());
+  EXPECT_EQ(expected_ast, out.str());
+}
+
+void test_error(std::string_view input,
+                std::string_view expected_error,
+                bool has_features = true)
+{
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
+  test(*bpftrace, has_features, driver, input, -1, expected_error, true, false);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -2841,10 +2858,10 @@ TEST(semantic_analyser, call_nsecs)
   MockBPFfeature hasfeature(true);
   test(hasfeature, "BEGIN { $ns = nsecs(tai); }", 0);
   test("BEGIN { $ns = nsecs(sw_tai); }", 0);
-  test("BEGIN { $ns = nsecs(xxx); }", 1, R"(
+  test_error("BEGIN { $ns = nsecs(xxx); }", R"(
 stdin:1:15-24: ERROR: Invalid timestamp mode: xxx
-BEGIN { nsecs(xxx); }
-        ~~~~~~~~~~
+BEGIN { $ns = nsecs(xxx); }
+              ~~~~~~~~~
 )");
 }
 
