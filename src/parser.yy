@@ -93,19 +93,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   BNOT       "~"
   DOT        "."
   PTR        "->"
-  IF         "if"
-  ELSE       "else"
-  UNROLL     "unroll"
   STRUCT     "struct"
   UNION      "union"
-  WHILE      "while"
-  CONFIG     "config"
-  FOR        "for"
-  RETURN     "return"
-  CONTINUE   "continue"
-  BREAK      "break"
-  SIZEOF     "sizeof"
-  OFFSETOF   "offsetof"
 ;
 
 %token <std::string> BUILTIN "builtin"
@@ -125,10 +114,21 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> PARAM "positional parameter"
 %token <int64_t> INT "integer"
 %token <std::string> STACK_MODE "stack_mode"
+%token <std::string> CONFIG "config"
+%token <std::string> UNROLL "unroll"
+%token <std::string> WHILE "while"
+%token <std::string> FOR "for"
+%token <std::string> RETURN "return"
+%token <std::string> IF "if"
+%token <std::string> ELSE "else"
+%token <std::string> CONTINUE "continue"
+%token <std::string> BREAK "break"
+%token <std::string> SIZEOF "sizeof"
+%token <std::string> OFFSETOF "offsetof"
 
 
 %type <ast::Operator> unary_op compound_op
-%type <std::string> attach_point_def c_definitions ident
+%type <std::string> attach_point_def c_definitions ident keyword external_name
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList *> attach_points
@@ -446,22 +446,22 @@ primary_expr:
                 ;
 
 postfix_expr:
-                primary_expr                { $$ = $1; }
+                primary_expr                   { $$ = $1; }
 /* pointer  */
-        |       postfix_expr DOT ident    { $$ = new ast::FieldAccess($1, $3, @2); }
-        |       postfix_expr PTR ident    { $$ = new ast::FieldAccess(new ast::Unop(ast::Operator::MUL, $1, @2), $3, @$); }
+        |       postfix_expr DOT external_name { $$ = new ast::FieldAccess($1, $3, @2); }
+        |       postfix_expr PTR external_name { $$ = new ast::FieldAccess(new ast::Unop(ast::Operator::MUL, $1, @2), $3, @$); }
 /* tuple  */
-        |       tuple_access_expr         { $$ = $1; }
+        |       tuple_access_expr              { $$ = $1; }
 /* array  */
-        |       postfix_expr "[" expr "]" { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
-        |       call                      { $$ = $1; }
-        |       sizeof_expr               { $$ = $1; }
-        |       offsetof_expr             { $$ = $1; }
-        |       map_or_var INCREMENT      { $$ = new ast::Unop(ast::Operator::INCREMENT, $1, true, @2); }
-        |       map_or_var DECREMENT      { $$ = new ast::Unop(ast::Operator::DECREMENT, $1, true, @2); }
+        |       postfix_expr "[" expr "]"      { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
+        |       call                           { $$ = $1; }
+        |       sizeof_expr                    { $$ = $1; }
+        |       offsetof_expr                  { $$ = $1; }
+        |       map_or_var INCREMENT           { $$ = new ast::Unop(ast::Operator::INCREMENT, $1, true, @2); }
+        |       map_or_var DECREMENT           { $$ = new ast::Unop(ast::Operator::DECREMENT, $1, true, @2); }
 /* errors */
-        |       INCREMENT ident           { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
-        |       DECREMENT ident           { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
+        |       INCREMENT ident                { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
+        |       DECREMENT ident                { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
                 ;
 
 /* Tuple factored out so we can use it in the tuple field assignment error */
@@ -572,15 +572,29 @@ sizeof_expr:
                 ;
 
 offsetof_expr:
-                OFFSETOF "(" struct_type "," ident ")"      { $$ = new ast::Offsetof($3, $5, @$); }
+                OFFSETOF "(" struct_type "," external_name ")"      { $$ = new ast::Offsetof($3, $5, @$); }
 /* For example: offsetof(*curtask, comm) */
-        |       OFFSETOF "(" expr "," ident ")"             { $$ = new ast::Offsetof($3, $5, @$); }
+        |       OFFSETOF "(" expr "," external_name ")"             { $$ = new ast::Offsetof($3, $5, @$); }
                 ;
 
 int:
                 MINUS INT    { $$ = new ast::Integer((int64_t)(~(uint64_t)($2) + 1), @$); }
         |       INT          { $$ = new ast::Integer($1, @$); }
                 ;
+
+keyword:
+                BREAK         { $$ = $1; }
+        |       CONFIG        { $$ = $1; }
+        |       CONTINUE      { $$ = $1; }
+        |       ELSE          { $$ = $1; }
+        |       FOR           { $$ = $1; }
+        |       IF            { $$ = $1; }
+        |       OFFSETOF      { $$ = $1; }
+        |       RETURN        { $$ = $1; }
+        |       SIZEOF        { $$ = $1; }
+        |       UNROLL        { $$ = $1; }
+        |       WHILE         { $$ = $1; }
+        ;
 
 ident:
                 IDENT         { $$ = $1; }
@@ -589,6 +603,11 @@ ident:
         |       CALL_BUILTIN  { $$ = $1; }
         |       STACK_MODE    { $$ = $1; }
                 ;
+
+external_name:
+                keyword       { $$ = $1; }
+        |       ident         { $$ = $1; }
+        ;
 
 call:
                 CALL "(" ")"                 { $$ = new ast::Call($1, @$); }
