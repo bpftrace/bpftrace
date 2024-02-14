@@ -1,6 +1,7 @@
 #include "bpfbytecode.h"
 
 #include "log.h"
+#include "utils.h"
 
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
@@ -18,9 +19,13 @@ BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
 
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
-    auto name = bpftrace_map_name(bpf_map__name(m));
-    auto map = BpfMap(m);
-    maps_.emplace(name, map);
+    maps_.emplace(bpftrace_map_name(bpf_map__name(m)), m);
+  }
+
+  struct bpf_program *p;
+  bpf_object__for_each_program(p, bpf_object_.get())
+  {
+    programs_.emplace(bpf_program__name(p), p);
   }
 }
 
@@ -42,6 +47,34 @@ const std::vector<uint8_t> &BpfBytecode::getSection(
     LOG(BUG) << "Bytecode is missing section: " << name;
   }
   return sections_.at(name);
+}
+
+BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
+{
+  auto usdt_location_idx = (probe.type == ProbeType::usdt)
+                               ? std::make_optional<int>(
+                                     probe.usdt_location_idx)
+                               : std::nullopt;
+
+  auto prog = programs_.find(
+      get_function_name_for_probe(probe.name, probe.index, usdt_location_idx));
+  if (prog == programs_.end()) {
+    prog = programs_.find(get_function_name_for_probe(probe.orig_name,
+                                                      probe.index,
+                                                      usdt_location_idx));
+  }
+
+  if (prog == programs_.end()) {
+    std::stringstream msg;
+    if (probe.name != probe.orig_name)
+      msg << "Code not generated for probe: " << probe.name
+          << " from: " << probe.orig_name;
+    else
+      msg << "Code not generated for probe: " << probe.name;
+    throw std::runtime_error(msg.str());
+  }
+
+  return prog->second;
 }
 
 bool BpfBytecode::create_maps()

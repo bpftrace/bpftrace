@@ -1,7 +1,6 @@
 #pragma once
 
-#include "bpfbytecode.h"
-
+#include <bpf/libbpf.h>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -10,19 +9,20 @@
 
 namespace bpftrace {
 
+class BpfBytecode;
 class BPFtrace;
 
+// This class abstracts a single BPF program by encapsulating libbpf's
+// 'struct bpf_prog'. Currently, it also performs relocations of BPF bytecode
+// which will go away once we move to libbpf-based loading.
 class BpfProgram {
 public:
-  static std::optional<BpfProgram> CreateFromBytecode(
-      const BpfBytecode &bytecode,
-      const std::string &name);
+  explicit BpfProgram(struct bpf_program *bpf_prog);
 
-  void assemble();
+  void assemble(const BpfBytecode &bytecode);
 
-  const std::vector<uint8_t> &getCode();
-  const std::vector<uint8_t> &getBTF();
-  const std::vector<uint8_t> &getFuncInfos();
+  const std::vector<uint8_t> &getCode() const;
+  const std::vector<uint8_t> &getFuncInfos() const;
 
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;
@@ -30,17 +30,17 @@ public:
   BpfProgram &operator=(BpfProgram &&) = delete;
 
 private:
-  explicit BpfProgram(const BpfBytecode &bytecode, const std::string &name);
-
-  void relocateInsns();
-  void relocateSection(const std::string &relsecname, bpf_insn *);
-  void relocateFuncInfos();
+  void relocateInsns(const BpfBytecode &bytecode);
+  void relocateSection(const std::string &relsecname,
+                       bpf_insn *,
+                       const BpfBytecode &bytecode);
+  void relocateFuncInfos(const BpfBytecode &bytecode);
   void appendFileFuncInfos(const struct btf_ext_info_sec *src,
                            size_t func_info_rec_size,
                            size_t insn_offset);
 
-  const BpfBytecode &bytecode_;
-  std::string name_;
+  struct bpf_program *bpf_prog_;
+
   std::vector<uint8_t> code_;
   // Offset in code_ where the .text begins (if .text was appended)
   size_t text_offset_ = 0;
