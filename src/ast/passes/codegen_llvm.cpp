@@ -2497,7 +2497,7 @@ void CodegenLLVM::visit(AttachPoint &)
 
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
-                                const std::string &section_name,
+                                const std::string &name,
                                 FunctionType *func_type,
                                 std::optional<int> usdt_location_index,
                                 bool dummy)
@@ -2506,11 +2506,14 @@ void CodegenLLVM::generateProbe(Probe &probe,
   // by args builtin.
   if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
-  Function *func = Function::Create(
-      func_type, Function::ExternalLinkage, section_name, module_.get());
+
   int index = current_attach_point_->index() ?: probe.index();
-  func->setSection(
-      get_section_name_for_probe(section_name, index, usdt_location_index));
+  auto func_name = get_function_name_for_probe(name,
+                                               index,
+                                               usdt_location_index);
+  Function *func = Function::Create(
+      func_type, Function::ExternalLinkage, func_name, module_.get());
+  func->setSection(get_section_name(func_name));
   debug_.createFunctionDebugInfo(*func);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
@@ -2535,7 +2538,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
       current_attach_point_->func.size())
     generateWatchpointSetupProbe(
-        func_type, section_name, current_attach_point_->address, index);
+        func_type, func_name, current_attach_point_->address, index);
 }
 
 void CodegenLLVM::visit(Subprog &subprog)
@@ -3292,13 +3295,11 @@ void CodegenLLVM::generateWatchpointSetupProbe(
     int arg_num,
     int index)
 {
-  Function *func = Function::Create(func_type,
-                                    Function::ExternalLinkage,
-                                    get_watchpoint_setup_probe_name(
-                                        expanded_probe_name),
-                                    module_.get());
-  func->setSection(
-      get_section_name_for_watchpoint_setup(expanded_probe_name, index));
+  auto func_name = get_function_name_for_watchpoint_setup(expanded_probe_name,
+                                                          index);
+  Function *func = Function::Create(
+      func_type, Function::ExternalLinkage, func_name, module_.get());
+  func->setSection(get_section_name(func_name));
   debug_.createFunctionDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);

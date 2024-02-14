@@ -147,7 +147,7 @@ private:
   // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
                      const std::string &full_func_id,
-                     const std::string &section_name,
+                     const std::string &name,
                      FunctionType *func_type,
                      std::optional<int> usdt_location_index = std::nullopt,
                      bool dummy = false);

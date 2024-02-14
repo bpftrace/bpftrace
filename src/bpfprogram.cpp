@@ -48,8 +48,9 @@ std::optional<BpfProgram> BpfProgram::CreateFromBytecode(
     const BpfBytecode &bytecode,
     const std::string &name)
 {
-  if (bytecode.hasSection(name)) {
-    return BpfProgram(bytecode, name);
+  auto sec_name = get_section_name(name);
+  if (bytecode.hasSection(sec_name)) {
+    return BpfProgram(bytecode, sec_name);
   }
   return std::nullopt;
 }

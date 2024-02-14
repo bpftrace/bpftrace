@@ -16,7 +16,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"interval:s:1"(i8* %0) section "s_interval:s:1_1" !dbg !55 {
+define i64 @interval_s_1_1(i8* %0) section "s_interval_s_1_1" !dbg !55 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -130,7 +130,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !52 = !{}
 !53 = !{!0, !20, !25, !39}
 !54 = !{i32 2, !"Debug Info Version", i32 3}
-!55 = distinct !DISubprogram(name: "interval_s_1", linkageName: "interval_s_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !60)
+!55 = distinct !DISubprogram(name: "interval_s_1_1", linkageName: "interval_s_1_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !60)
 !56 = !DISubroutineType(types: !57)
 !57 = !{!18, !58}
 !58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)

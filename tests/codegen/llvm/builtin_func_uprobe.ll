@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"uprobe:/bin/sh:f"(i8* %0) section "s_uprobe:/bin/sh:f_1" !dbg !57 {
+define i64 @uprobe__bin_sh_f_1(i8* %0) section "s_uprobe__bin_sh_f_1" !dbg !57 {
 entry:
   %"@x_key" = alloca i64, align 8
   %usym = alloca %usym_t, align 8
@@ -112,7 +112,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !54 = !{}
 !55 = !{!0, !25, !39}
 !56 = !{i32 2, !"Debug Info Version", i32 3}
-!57 = distinct !DISubprogram(name: "uprobe__bin_sh_f", linkageName: "uprobe__bin_sh_f", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!57 = distinct !DISubprogram(name: "uprobe__bin_sh_f_1", linkageName: "uprobe__bin_sh_f_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
 !58 = !DISubroutineType(types: !59)
 !59 = !{!18, !60}
 !60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
