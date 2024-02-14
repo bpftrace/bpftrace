@@ -848,12 +848,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                      probe.usdt_location_idx)
                                : std::nullopt;
 
-  auto name = get_section_name_for_probe(probe.name,
-                                         probe.index,
-                                         usdt_location_idx);
-  auto orig_name = get_section_name_for_probe(probe.orig_name,
-                                              probe.index,
-                                              usdt_location_idx);
+  auto name = get_function_name_for_probe(probe.name,
+                                          probe.index,
+                                          usdt_location_idx);
+  auto orig_name = get_function_name_for_probe(probe.orig_name,
+                                               probe.index,
+                                               usdt_location_idx);
 
   auto program = BpfProgram::CreateFromBytecode(bytecode, name);
   if (!program) {

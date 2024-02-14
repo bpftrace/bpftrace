@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"uprobe:/tmp/bpftrace-test-dwarf-data:func_1"(i8* %0) section "s_uprobe:/tmp/bpftrace-test-dwarf-data:func_1_1" !dbg !57 {
+define i64 @uprobe__tmp_bpftrace_test_dwarf_data_func_1_1(i8* %0) section "s_uprobe__tmp_bpftrace_test_dwarf_data_func_1_1" !dbg !57 {
 entry:
   %"@_key" = alloca i64, align 8
   %args = alloca %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", align 8
@@ -115,7 +115,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !54 = !{}
 !55 = !{!0, !25, !39}
 !56 = !{i32 2, !"Debug Info Version", i32 3}
-!57 = distinct !DISubprogram(name: "uprobe__tmp_bpftrace_test_dwarf_data_func_1", linkageName: "uprobe__tmp_bpftrace_test_dwarf_data_func_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!57 = distinct !DISubprogram(name: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", linkageName: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
 !58 = !DISubroutineType(types: !59)
 !59 = !{!18, !60}
 !60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)

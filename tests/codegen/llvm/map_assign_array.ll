@@ -14,7 +14,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !56 {
+define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !56 {
 entry:
   %"$var" = alloca i32, align 4
   %1 = bitcast i32* %"$var" to i8*
@@ -144,7 +144,7 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !53 = !{}
 !54 = !{!0, !25, !39}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !52, retainedNodes: !61)
+!56 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !52, retainedNodes: !61)
 !57 = !DISubroutineType(types: !58)
 !58 = !{!18, !59}
 !59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !60, size: 64)

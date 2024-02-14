@@ -28,8 +28,8 @@ TEST(bpfbytecode, populate_sections)
 {
   auto bytecode = codegen("kprobe:foo { 1 } kprobe:bar { 1 }");
 
-  EXPECT_TRUE(bytecode.hasSection("s_kprobe:foo_1"));
-  EXPECT_TRUE(bytecode.hasSection("s_kprobe:bar_2"));
+  EXPECT_TRUE(bytecode.hasSection("s_kprobe_foo_1"));
+  EXPECT_TRUE(bytecode.hasSection("s_kprobe_bar_2"));
 }
 
 } // namespace bpfbytecode

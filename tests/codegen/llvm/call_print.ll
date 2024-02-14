@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN(i8* %0) section "s_BEGIN_1" !dbg !51 {
+define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !51 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -39,7 +39,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_2" !dbg !58 {
+define i64 @kprobe_f_2(i8* %0) section "s_kprobe_f_2" !dbg !58 {
 entry:
   %key = alloca i32, align 4
   %"print_@x" = alloca %print_t, align 8
@@ -141,13 +141,13 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !48 = !{}
 !49 = !{!0, !20, !34}
 !50 = !{i32 2, !"Debug Info Version", i32 3}
-!51 = distinct !DISubprogram(name: "BEGIN", linkageName: "BEGIN", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !56)
+!51 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !56)
 !52 = !DISubroutineType(types: !53)
 !53 = !{!18, !54}
 !54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
 !55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !56 = !{!57}
 !57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
-!58 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !59)
+!58 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !59)
 !59 = !{!60}
 !60 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !54)
