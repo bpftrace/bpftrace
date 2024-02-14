@@ -153,10 +153,11 @@ int AttachedProbe::detach_raw_tracepoint(void)
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             BpfProgram &&prog,
+                             const BpfBytecode &bytecode,
+                             const BpfProgram &prog,
                              bool safe_mode,
                              BPFtrace &bpftrace)
-    : probe_(probe), prog_(std::move(prog)), bpftrace_(bpftrace)
+    : probe_(probe), bytecode_(bytecode), prog_(prog), bpftrace_(bpftrace)
 {
   load_prog(*bpftrace.feature_);
   LOG(V1) << "Attaching " << probe_.orig_name;
@@ -204,11 +205,12 @@ AttachedProbe::AttachedProbe(Probe &probe,
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             BpfProgram &&prog,
+                             const BpfBytecode &bytecode,
+                             const BpfProgram &prog,
                              int pid,
                              BPFtrace &bpftrace,
                              bool safe_mode)
-    : probe_(probe), prog_(std::move(prog)), bpftrace_(bpftrace)
+    : probe_(probe), bytecode_(bytecode), prog_(prog), bpftrace_(bpftrace)
 {
   load_prog(*bpftrace_.feature_);
   switch (probe_.type) {
@@ -830,7 +832,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
                                .log_level = static_cast<__u32>(log_level),
                                .log_size = static_cast<__u32>(log_buf_size), );
 
-          auto &btf = prog_.getBTF();
+          auto &btf = bytecode_.getSection(".BTF");
           btf_fd = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
           if (btf_fd < 0) {
             logbuf << ": BTF load failed";
