@@ -31,32 +31,28 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   auto is_invalid_map = [=](int a) -> uint8_t {
     return (!fake && a < 0) ? 1 : 0;
   };
-  for (auto &map_val : map_vals) {
-    std::string map_name = map_val.first;
-    SizedType type = map_val.second;
+  for (auto &map_info : maps_info) {
+    std::string map_name = map_info.first;
+    SizedType type = map_info.second.value_type;
 
-    auto search_args = map_keys.find(map_name);
-    if (search_args == map_keys.end())
-      LOG(FATAL) << "map key \"" << map_name << "\" not found";
-
-    auto &key = search_args->second;
+    auto &key = map_info.second.key;
     auto max_map_keys = bpftrace.config_.get(ConfigKeyInt::max_map_keys);
 
     if (type.IsLhistTy()) {
-      auto args = lhist_args.find(map_name);
-      if (args == lhist_args.end())
+      const auto &args = map_info.second.lhist_args;
+      if (!args.has_value())
         LOG(FATAL) << "map arg \"" << map_name << "\" not found";
 
-      auto min = args->second.min;
-      auto max = args->second.max;
-      auto step = args->second.step;
+      auto min = args->min;
+      auto max = args->max;
+      auto step = args->step;
       auto map = std::make_unique<T>(
           map_name, type, key, min, max, step, max_map_keys);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     } else if (type.IsHistTy()) {
-      auto args = hist_bits_arg.find(map_name);
-      if (args == hist_bits_arg.end())
+      auto args = map_info.second.hist_bits_arg;
+      if (!args.has_value())
         LOG(FATAL) << "map arg \"" << map_name << "\" not found";
       // the 'step' argument is used to pass 'bits'
       auto map = std::make_unique<T>(map_name,
@@ -64,7 +60,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
                                      key,
                                      0,
                                      0,
-                                     args->second,
+                                     *args,
                                      bpftrace.config_.get(
                                          ConfigKeyInt::max_map_keys));
       failed_maps += is_invalid_map(map->mapfd_);

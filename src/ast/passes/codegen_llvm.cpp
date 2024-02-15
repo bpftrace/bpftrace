@@ -3329,17 +3329,13 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 void CodegenLLVM::generate_maps(const RequiredResources &resources)
 {
   // User-defined maps
-  for (auto &map_val : resources.map_vals) {
-    const std::string &name = map_val.first;
-
-    const SizedType &val_type = map_val.second;
-    auto key = resources.map_keys.find(name);
-    if (key == resources.map_keys.end())
-      LOG(FATAL) << "map key for \"" << name << "\" not found";
+  for (const auto &[name, info] : resources.maps_info) {
+    const auto &val_type = info.value_type;
+    const auto &key = info.key;
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
     auto map_type = libbpf::BPF_MAP_TYPE_UNSPEC;
-    if (val_type.IsCountTy() && key->second.args_.empty()) {
+    if (val_type.IsCountTy() && key.args_.empty()) {
       max_entries = 1;
       map_type = libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
     } else if (bpftrace_.feature_->has_map_percpu_hash() &&
@@ -3352,7 +3348,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
       map_type = libbpf::BPF_MAP_TYPE_HASH;
     }
 
-    createMapDefinition(name, map_type, max_entries, key->second, val_type);
+    createMapDefinition(name, map_type, max_entries, key, val_type);
   }
 
   // bpftrace internal maps

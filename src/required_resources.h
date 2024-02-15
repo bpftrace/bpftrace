@@ -31,12 +31,36 @@ struct LinearHistogramArgs {
   long max = -1;
   long step = -1;
 
+  bool operator==(const LinearHistogramArgs &other)
+  {
+    return min == other.min && max == other.max && step == other.step;
+  }
+  bool operator!=(const LinearHistogramArgs &other)
+  {
+    return !(*this == other);
+  }
+
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
     archive(min, max, step);
+  }
+};
+
+struct MapInfo {
+  MapKey key;
+  SizedType value_type;
+  std::optional<LinearHistogramArgs> lhist_args;
+  std::optional<int> hist_bits_arg;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(key, value_type, lhist_args, hist_bits_arg);
   }
 };
 
@@ -97,10 +121,7 @@ public:
   std::vector<std::string> probe_ids;
 
   // Map metadata
-  std::map<std::string, SizedType> map_vals;
-  std::map<std::string, LinearHistogramArgs> lhist_args;
-  std::map<std::string, int> hist_bits_arg;
-  std::map<std::string, MapKey> map_keys;
+  std::map<std::string, MapInfo> maps_info;
   std::unordered_set<StackType> stackid_maps;
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
@@ -142,10 +163,7 @@ private:
             // helper_error_info,
             printf_args,
             probe_ids,
-            map_vals,
-            lhist_args,
-            hist_bits_arg,
-            map_keys,
+            maps_info,
             stackid_maps,
             needs_join_map,
             needs_elapsed_map,
