@@ -381,10 +381,10 @@ void CodegenLLVM::visit(Call &call)
 
     AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
     Value *condition = b_.CreateICmpNE(
-        b_.CreateIntCast(lookup, b_.getInt8PtrTy(), true),
+        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
         ConstantExpr::getCast(Instruction::IntToPtr,
                               b_.getInt64(0),
-                              b_.getInt8PtrTy()),
+                              b_.GET_PTR_TY()),
         "map_lookup_cond");
     b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
@@ -438,10 +438,10 @@ void CodegenLLVM::visit(Call &call)
 
     AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
     Value *condition = b_.CreateICmpNE(
-        b_.CreateIntCast(lookup, b_.getInt8PtrTy(), true),
+        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
         ConstantExpr::getCast(Instruction::IntToPtr,
                               b_.getInt64(0),
-                              b_.getInt8PtrTy()),
+                              b_.GET_PTR_TY()),
         "map_lookup_cond");
     b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
@@ -687,7 +687,7 @@ void CodegenLLVM::visit(Call &call)
                                     ? Instruction::BitCast
                                     : Instruction::IntToPtr,
                                 expr_,
-                                b_.getInt8PtrTy()),
+                                b_.GET_PTR_TY()),
                   call.loc);
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -918,9 +918,9 @@ void CodegenLLVM::visit(Call &call)
 
       // and finally the seq_printf call
       b_.CreateSeqPrintf(ctx_,
-                         b_.CreateIntToPtr(fmt, b_.getInt8PtrTy()),
+                         b_.CreateIntToPtr(fmt, b_.GET_PTR_TY()),
                          b_.getInt32(size),
-                         b_.CreatePointerCast(data, b_.getInt8PtrTy()),
+                         b_.CreatePointerCast(data, b_.GET_PTR_TY()),
                          b_.getInt32(data_size),
                          call.loc);
 
@@ -948,7 +948,7 @@ void CodegenLLVM::visit(Call &call)
       values.push_back(expr_);
     }
 
-    b_.CreateTracePrintk(b_.CreateIntToPtr(fmt, b_.getInt8PtrTy()),
+    b_.CreateTracePrintk(b_.CreateIntToPtr(fmt, b_.GET_PTR_TY()),
                          b_.getInt32(size),
                          values,
                          call.loc);
@@ -1884,7 +1884,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
         // `is_data_loc` should only be set if field access is on `args` which
         // has to be a ctx access
         assert(type.IsCtxAccess());
-        assert(ctx_->getType() == b_.getInt8PtrTy());
+        assert(ctx_->getType() == b_.GET_PTR_TY());
         // Parser needs to have rewritten field to be a u64
         assert(field.type.IsIntTy());
         assert(field.type.GetIntBitWidth() == 64);
@@ -2422,9 +2422,9 @@ void CodegenLLVM::createRet(Value *value)
 void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(),
-                                              { b_.getInt8PtrTy() }, // struct
-                                                                     // pt_regs
-                                                                     // *ctx
+                                              { b_.GET_PTR_TY() }, // struct
+                                                                   // pt_regs
+                                                                   // *ctx
                                               false);
 
   // Probe has at least one attach point (required by the parser)
@@ -3779,7 +3779,7 @@ Function *CodegenLLVM::createMapLenCallback()
   auto saved_ip = b_.saveIP();
 
   std::array<llvm::Type *, 4> args = {
-    b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy()
+    b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY()
   };
 
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);

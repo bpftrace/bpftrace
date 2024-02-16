@@ -46,6 +46,12 @@
   CreateAtomicRMW((op), (ptr), (val), (order))
 #endif
 
+#if LLVM_VERSION_MAJOR >= 15
+#define GET_PTR_TY() getPtrTy()
+#else
+#define GET_PTR_TY() getInt8PtrTy()
+#endif
+
 namespace bpftrace {
 namespace ast {
 
