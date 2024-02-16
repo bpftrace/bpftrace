@@ -74,7 +74,11 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
                                   Optional<Reloc::Model>()
 #endif
                                       ));
+#if LLVM_VERSION_MAJOR >= 18
+  target_machine_->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
+#else
   target_machine_->setOptLevel(llvm::CodeGenOpt::Aggressive);
+#endif
 
   module_->setTargetTriple(LLVMTargetTriple);
   module_->setDataLayout(target_machine_->createDataLayout());
@@ -3536,7 +3540,9 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
 {
   legacy::PassManager PM;
 
-#if LLVM_VERSION_MAJOR >= 10
+#if LLVM_VERSION_MAJOR >= 18
+  auto type = CodeGenFileType::ObjectFile;
+#elif LLVM_VERSION_MAJOR >= 10
   auto type = llvm::CGFT_ObjectFile;
 #else
   auto type = llvm::TargetMachine::CGFT_ObjectFile;
