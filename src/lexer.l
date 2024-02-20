@@ -138,18 +138,18 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 "$"[0-9]+               { return Parser::make_PARAM(yytext, loc); }
 "$"#                    { return Parser::make_PARAMCOUNT(loc); }
 "#"[^!].*               { return Parser::make_CPREPROC(yytext, loc); }
-"if"                    { return Parser::make_IF(loc); }
-"else"                  { return Parser::make_ELSE(loc); }
+"if"                    { return Parser::make_IF(yytext, loc); }
+"else"                  { return Parser::make_ELSE(yytext, loc); }
 "?"                     { return Parser::make_QUES(loc); }
-"unroll"                { return Parser::make_UNROLL(loc); }
-"while"                 { return Parser::make_WHILE(loc); }
-"config"                { return Parser::make_CONFIG(loc); }
-"for"                   { return Parser::make_FOR(loc); }
-"return"                { return Parser::make_RETURN(loc); }
-"continue"              { return Parser::make_CONTINUE(loc); }
-"break"                 { return Parser::make_BREAK(loc); }
-"sizeof"                { return Parser::make_SIZEOF(loc); }
-"offsetof"              { return Parser::make_OFFSETOF(loc); }
+"unroll"                { return Parser::make_UNROLL(yytext, loc); }
+"while"                 { return Parser::make_WHILE(yytext, loc); }
+"config"                { return Parser::make_CONFIG(yytext, loc); }
+"for"                   { return Parser::make_FOR(yytext, loc); }
+"return"                { return Parser::make_RETURN(yytext, loc); }
+"continue"              { return Parser::make_CONTINUE(yytext, loc); }
+"break"                 { return Parser::make_BREAK(yytext, loc); }
+"sizeof"                { return Parser::make_SIZEOF(yytext, loc); }
+"offsetof"              { return Parser::make_OFFSETOF(yytext, loc); }
 
 {int_type}              { return Parser::make_INT_TYPE(yytext, loc); }
 {builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, loc); }

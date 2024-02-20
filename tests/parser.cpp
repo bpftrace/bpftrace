@@ -2141,6 +2141,28 @@ TEST(Parser, config_error)
   test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }");
 }
 
+TEST(Parser, keywords_as_identifiers)
+{
+  std::vector<std::string> keywords = { "break",    "config", "continue",
+                                        "else",     "for",    "if",
+                                        "offsetof", "return", "sizeof",
+                                        "unroll",   "while" };
+  for (const auto &keyword : keywords) {
+    test("BEGIN { $x = (struct Foo*)0; $x->" + keyword + "; }",
+         "Program\n BEGIN\n  =\n   variable: $x\n   (struct Foo *)\n    int: "
+         "0\n "
+         " .\n   dereference\n    variable: $x\n   " +
+             keyword + "\n");
+    test("BEGIN { $x = (struct Foo)0; $x." + keyword + "; }",
+         "Program\n BEGIN\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
+         " .\n   variable: $x\n   " +
+             keyword + "\n");
+    test("BEGIN { $x = offsetof(*curtask, " + keyword + "); }",
+         "Program\n BEGIN\n  =\n   variable: $x\n   offsetof: \n    "
+         "dereference\n     builtin: curtask\n");
+  }
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace
