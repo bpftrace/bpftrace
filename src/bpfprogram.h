@@ -37,6 +37,7 @@ private:
                       MapManager &bpftrace);
 
   void relocateInsns();
+  bool relocateSection(const std::string &relsecname, bpf_insn *);
   void relocateFuncInfos();
   void appendFileFuncInfos(const struct btf_ext_info_sec *src,
                            size_t func_info_rec_size,

@@ -58,7 +58,7 @@ std::optional<BpfProgram> BpfProgram::CreateFromBytecode(
 BpfProgram::BpfProgram(const BpfBytecode &bytecode,
                        const std::string &name,
                        MapManager &maps)
-    : bytecode_(bytecode), maps_(maps), name_(name), code_()
+    : bytecode_(bytecode), maps_(maps), name_(name)
 {
 }
 
@@ -100,99 +100,108 @@ void BpfProgram::assemble()
 void BpfProgram::relocateInsns()
 {
   std::string relsecname = std::string(".rel") + name_;
-  if (bytecode_.hasSection(relsecname)) {
-    // There's a relocation section for our program.
-    //
-    // Relocation support is incomplete, only ld_imm64 + R_BPF_64_64 is
-    // supported to make pointers to subprog callbacks possible.
-    //
-    // In practice, we append the entire .text section and relocate against it.
+  // Step 1: relocate our program
+  bool needs_text = relocateSection(
+      relsecname, reinterpret_cast<struct bpf_insn *>(code_.data()));
 
-    if (!bytecode_.hasSection(".text")) {
-      throw std::logic_error(
-          "Relocation section present but no .text, this is unsupported");
-    }
-    auto &relsec = bytecode_.getSection(relsecname);
-    auto &symtab = bytecode_.getSection(".symtab");
-    auto &strtab = bytecode_.getSection(".strtab");
+  if (needs_text) {
+    // Step 2: append .text if necessary.
+    text_offset_ = code_.size();
+    auto &text = bytecode_.getSection(".text");
+    code_.insert(code_.end(), text.begin(), text.end());
 
-    bool needs_text = false;
-
-    // Step 1: relocate our program
-    auto *insns = reinterpret_cast<struct bpf_insn *>(code_.data());
-    for (auto *ptr = relsec.data(); ptr < relsec.data() + relsec.size();
-         ptr += sizeof(Elf64_Rel)) {
-      auto *rel = reinterpret_cast<const Elf64_Rel *>(ptr);
-      uint32_t reltype = rel->r_info & 0xFFFFFFFF;
-      uint32_t relsym = rel->r_info >> 32;
-
-      if (reltype != R_BPF_64_64)
-        throw std::invalid_argument("Unsupported relocation type");
-
-      auto rel_offset = rel->r_offset;
-      auto insn_offset = rel_offset / sizeof(struct bpf_insn);
-      auto *insn = &insns[insn_offset];
-      if (insn->code != (BPF_LD | BPF_DW | BPF_IMM)) {
-        LOG(ERROR) << "Cannot relocate insn code " << insn->code << " ld "
-                   << (insn->code & BPF_LD) << " dw " << (insn->code & BPF_DW)
-                   << " imm " << (insn->code & BPF_IMM);
-        throw std::invalid_argument("Unsupported relocated instruction");
-      }
-
-      auto *sym = &reinterpret_cast<const Elf64_Sym *>(symtab.data())[relsym];
-      auto symtype = ELF64_ST_TYPE(sym->st_info);
-      if (symtype == STT_FUNC || symtype == STT_SECTION) {
-        // We will append .text to code_ and we assume that sym->st_shndx
-        // corresponds to .text, therefore symbol value is an offset from
-        // code_.size().
-        //
-        // Relocate via direct instruction manipulation instead of the
-        // relocation entry for readability purposes.
-        //
-        // This is a hack. We shouldn't do this. However, we don't actually have
-        // the ELF section table to determine if the relocation actually refers
-        // to .text
-        needs_text = true;
-        auto target_insn = (code_.size() + sym->st_value + insn->imm) /
-                           sizeof(struct bpf_insn);
-        insn->src_reg = BPF_PSEUDO_FUNC;
-        insn->imm = (target_insn - insn_offset - 1); // jump offset
-      } else if (symtype == STT_OBJECT) {
-        std::string map_name = reinterpret_cast<const char *>(strtab.data() +
-                                                              sym->st_name);
-
-        auto map = maps_[bpftrace_map_name(map_name)];
-        if (map) {
-          insn->src_reg = map.value()->name_ ==
-                                  to_string(MapManager::Type::MappedPrintfData)
-                              ? BPF_PSEUDO_MAP_VALUE
-                              : BPF_PSEUDO_MAP_FD;
-          insn->imm = static_cast<int32_t>((*map)->mapfd_);
-        } else {
-          throw std::runtime_error(std::string("Unknown map ") + map_name);
-        }
-      } else {
-        LOG(ERROR) << "Relocation in " << relsecname << " type " << reltype
-                   << " sym " << relsym << " type " << symtype;
-        throw std::invalid_argument(
-            "Unsupported symbol type referenced in relocation");
-      }
-    }
-
-    if (needs_text) {
-      // Step 2: append .text if necessary.
-      text_offset_ = code_.size();
-      auto &text = bytecode_.getSection(".text");
-      code_.insert(code_.end(), text.begin(), text.end());
-
-      // Step 3: relocate .text, if necessary. TODO.
-      if (bytecode_.hasSection(".rel.text"))
-        throw std::logic_error("Relocations in .text are not implemented yet");
-    }
+    // Step 3: relocate .text, if necessary.
+    relocateSection(".rel.text",
+                    reinterpret_cast<struct bpf_insn *>(code_.data() +
+                                                        text_offset_));
   }
 
   // Step 4: deal with bpf_func_infos.
   relocateFuncInfos();
+}
+
+bool BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
+{
+  if (!bytecode_.hasSection(relsecname))
+    return false;
+
+  // There's a relocation section for our program.
+  //
+  // Relocation support is incomplete, only ld_imm64 + R_BPF_64_64 is
+  // supported to make pointers to subprog callbacks possible.
+  //
+  // In practice, we append the entire .text section and relocate against it.
+
+  if (!bytecode_.hasSection(".text")) {
+    throw std::logic_error(
+        "Relocation section present but no .text, this is unsupported");
+  }
+  auto &relsec = bytecode_.getSection(relsecname);
+  auto &symtab = bytecode_.getSection(".symtab");
+  auto &strtab = bytecode_.getSection(".strtab");
+
+  bool needs_text = false;
+
+  for (auto *ptr = relsec.data(); ptr < relsec.data() + relsec.size();
+       ptr += sizeof(Elf64_Rel)) {
+    auto *rel = reinterpret_cast<const Elf64_Rel *>(ptr);
+    uint32_t reltype = rel->r_info & 0xFFFFFFFF;
+    uint32_t relsym = rel->r_info >> 32;
+
+    if (reltype != R_BPF_64_64)
+      throw std::invalid_argument("Unsupported relocation type");
+
+    auto rel_offset = rel->r_offset;
+    auto insn_offset = rel_offset / sizeof(struct bpf_insn);
+    auto *insn = &insns[insn_offset];
+    if (insn->code != (BPF_LD | BPF_DW | BPF_IMM)) {
+      LOG(ERROR) << "Cannot relocate insn code " << insn->code << " ld "
+                 << (insn->code & BPF_LD) << " dw " << (insn->code & BPF_DW)
+                 << " imm " << (insn->code & BPF_IMM);
+      throw std::invalid_argument("Unsupported relocated instruction");
+    }
+
+    auto *sym = &reinterpret_cast<const Elf64_Sym *>(symtab.data())[relsym];
+    auto symtype = ELF64_ST_TYPE(sym->st_info);
+    if (symtype == STT_FUNC || symtype == STT_SECTION) {
+      // We will append .text to code_ and we assume that sym->st_shndx
+      // corresponds to .text, therefore symbol value is an offset from
+      // code_.size().
+      //
+      // Relocate via direct instruction manipulation instead of the
+      // relocation entry for readability purposes.
+      //
+      // This is a hack. We shouldn't do this. However, we don't actually have
+      // the ELF section table to determine if the relocation actually refers
+      // to .text
+      needs_text = true;
+      auto target_insn = (code_.size() + sym->st_value + insn->imm) /
+                         sizeof(struct bpf_insn);
+      insn->src_reg = BPF_PSEUDO_FUNC;
+      insn->imm = (target_insn - insn_offset - 1); // jump offset
+    } else if (symtype == STT_OBJECT) {
+      std::string map_name = reinterpret_cast<const char *>(strtab.data() +
+                                                            sym->st_name);
+
+      auto map = maps_[bpftrace_map_name(map_name)];
+      if (map) {
+        insn->src_reg = map.value()->name_ ==
+                                to_string(MapManager::Type::MappedPrintfData)
+                            ? BPF_PSEUDO_MAP_VALUE
+                            : BPF_PSEUDO_MAP_FD;
+        insn->imm = static_cast<int32_t>((*map)->mapfd_);
+      } else {
+        throw std::runtime_error(std::string("Unknown map ") + map_name);
+      }
+    } else {
+      LOG(ERROR) << "Relocation in " << relsecname << " type " << reltype
+                 << " sym " << relsym << " type " << symtype;
+      throw std::invalid_argument(
+          "Unsupported symbol type referenced in relocation");
+    }
+  }
+
+  return needs_text;
 }
 
 // Assumed structure:
