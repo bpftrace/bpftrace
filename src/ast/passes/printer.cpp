@@ -133,8 +133,16 @@ void Printer::visit(Offsetof &ofof)
   out_ << indent << "offsetof: " << type(ofof.type) << std::endl;
 
   ++depth_;
-  if (ofof.expr)
+  std::string indentParam(depth_, ' ');
+
+  // Print the args
+  if (ofof.expr) {
     ofof.expr->accept(*this);
+  } else {
+    out_ << indentParam << ofof.record << std::endl;
+  }
+
+  out_ << indentParam << ofof.field << std::endl;
   --depth_;
 }
 

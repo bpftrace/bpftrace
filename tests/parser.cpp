@@ -1745,7 +1745,9 @@ TEST(Parser, offsetof_type)
        "\n"
        "Program\n"
        " BEGIN\n"
-       "  offsetof: \n");
+       "  offsetof: \n"
+       "   struct Foo\n"
+       "   x\n");
 }
 
 TEST(Parser, offsetof_expression)
@@ -1762,7 +1764,8 @@ TEST(Parser, offsetof_expression)
        "    int: 0\n"
        "  offsetof: \n"
        "   dereference\n"
-       "    variable: $foo\n");
+       "    variable: $foo\n"
+       "   x\n");
 }
 
 TEST(Parser, dereference_precedence)
@@ -2159,7 +2162,8 @@ TEST(Parser, keywords_as_identifiers)
              keyword + "\n");
     test("BEGIN { $x = offsetof(*curtask, " + keyword + "); }",
          "Program\n BEGIN\n  =\n   variable: $x\n   offsetof: \n    "
-         "dereference\n     builtin: curtask\n");
+         "dereference\n     builtin: curtask\n    " +
+             keyword + "\n");
   }
 }
 
