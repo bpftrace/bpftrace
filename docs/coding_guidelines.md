@@ -49,3 +49,43 @@ the kernel debug facilities. And we probably should not be mounting
 filesystems on behalf of the user. So at the point of failure, we should
 just throw an exception and let the user know their system is not ready
 for bpftrace.
+
+## Struct vs. Class
+
+Use a struct only for passive objects that carry data; everything else is a class.
+
+All fields in a struct should be public. The struct must not have invariants
+that imply relationships between different fields, since direct user access to
+those fields may break those invariants. Structs should not have any associated
+methods (including constructors and destructors).
+
+## Variable naming
+
+Variables should be in `snake_case` (all lowercase, with underscores between words).
+
+Private members should have a trailing underscore. Public members should not have
+a trailing underscore.
+
+Struct data members should _not_ have a trailing underscore.
+
+Examples:
+
+```c++
+class Foo {
+public:
+  int snake_case;      // good
+  int secondone;       // bad
+  int var_;            // bad
+  int camelCase;       // bad
+
+private:
+  int another_var_;    // good
+  int private_var;     // bad
+  int priv_;           // good
+};
+
+struct Bar {
+  int var;             // good
+  int tailing_;        // bad
+};
+```
