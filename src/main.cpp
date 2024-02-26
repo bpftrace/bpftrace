@@ -38,6 +38,7 @@
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "tracepoint_format_parser.h"
+#include "version.h"
 
 using namespace bpftrace;
 

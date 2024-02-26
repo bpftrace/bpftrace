@@ -22,6 +22,7 @@
 #include "filesystem.h"
 #include "log.h"
 #include "utils.h"
+#include "version.h"
 
 #define AOT_ELF_SECTION ".btaot"
 static constexpr auto AOT_MAGIC = 0xA07;
@@ -51,7 +52,7 @@ namespace bpftrace {
 namespace aot {
 namespace {
 
-uint32_t rs_hash(const std::string &str)
+uint32_t rs_hash(std::string_view str)
 {
   unsigned int b = 378551;
   unsigned int a = 63689;

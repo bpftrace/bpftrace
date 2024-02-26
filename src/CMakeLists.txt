@@ -61,6 +61,7 @@ set_target_properties(libbpftrace PROPERTIES PREFIX "")
 add_executable(${BPFTRACE}
   ${MAIN_SRC}
 )
+target_include_directories(${BPFTRACE} PUBLIC ${CMAKE_BINARY_DIR}/src)
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
@@ -94,22 +95,20 @@ if (KERNEL_HEADERS_DIR)
   target_compile_definitions(runtime PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 endif()
 
-execute_process(
-  COMMAND git describe --abbrev=4 --dirty --tags
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE BPFTRACE_VERSION
-  ERROR_VARIABLE GIT_DESCRIBE_ERROR
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  RESULT_VARIABLE retcode
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.h
+  DEPENDS ${PROJECT_SOURCE_DIR}/.git/index
+  COMMAND ${CMAKE_COMMAND}
+    -DVERSION_H_IN=${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
+    -DVERSION_H=${CMAKE_CURRENT_BINARY_DIR}/version.h
+    -Dbpftrace_VERSION_MAJOR=${bpftrace_VERSION_MAJOR}
+    -Dbpftrace_VERSION_MINOR=${bpftrace_VERSION_MINOR}
+    -Dbpftrace_VERSION_PATCH=${bpftrace_VERSION_PATCH}
+    -P ${CMAKE_SOURCE_DIR}/cmake/Version.cmake
 )
-
-# If the build is not done from a git repo, get the version information from
-# the version variables in main CMakeLists.txt
-if(NOT "${retcode}" STREQUAL "0")
-  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}.${bpftrace_VERSION_PATCH}")
-endif()
-
-add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
+add_custom_target(version_h DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/version.h)
+add_dependencies(${BPFTRACE} version_h)
+add_dependencies(libbpftrace version_h)
 
 target_include_directories(runtime PRIVATE ${CMAKE_BINARY_DIR})
 target_include_directories(runtime PRIVATE ${CMAKE_SOURCE_DIR}/src)

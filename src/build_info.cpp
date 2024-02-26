@@ -3,6 +3,8 @@
 
 #include "build_info.h"
 
+#include "version.h"
+
 namespace bpftrace {
 
 std::string BuildInfo::report()
