@@ -7,6 +7,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "output.h"
+#include "version.h"
 
 using namespace bpftrace;
 
