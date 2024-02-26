@@ -319,4 +319,4 @@ open path: retrans_time_ms
 
 bpftrace对内核结构跟踪的支持和bcc是一样的，允许使用内核头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidata的声明。倘若内核有提供BTF数据，则所有结构都可用。
 
-现在，你已经理解了bpftrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[参考手册](reference_guide.md)更多的功能。
+现在，你已经理解了bpftrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[使用说明书](../man/adoc/bpftrace.adoc)更多的功能。

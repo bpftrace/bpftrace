@@ -6,7 +6,7 @@
 
 bpftrace is a high-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4.x). bpftrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), and tracepoints. The bpftrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap. bpftrace was created by [Alastair Robertson](https://github.com/ajor).
 
-To learn more about bpftrace, see the [Manual](man/adoc/bpftrace.adoc) the [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
+To learn more about bpftrace, see the [Manual](man/adoc/bpftrace.adoc) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
 
 We are also holding regular [office hours](https://docs.google.com/document/d/1nt010RfL4s4gydhCPSJ-Z5mnFMFuD4NrcpVmUcyvu2E/edit?usp=sharing) open to the public.
 
@@ -100,7 +100,7 @@ For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bc
 ## Probe types
 <center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
 
-See the [Reference Guide](docs/reference_guide.md) for more detail.
+See the [Manual](man/adoc/bpftrace.adoc) for more details.
 
 ## Plugins
 
