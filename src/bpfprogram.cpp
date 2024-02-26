@@ -101,12 +101,11 @@ void BpfProgram::relocateInsns()
 {
   std::string relsecname = std::string(".rel") + name_;
   // Step 1: relocate our program
-  bool needs_text = relocateSection(
-      relsecname, reinterpret_cast<struct bpf_insn *>(code_.data()));
+  relocateSection(relsecname,
+                  reinterpret_cast<struct bpf_insn *>(code_.data()));
 
-  if (needs_text) {
+  if (text_offset_ > 0) {
     // Step 2: append .text if necessary.
-    text_offset_ = code_.size();
     auto &text = bytecode_.getSection(".text");
     code_.insert(code_.end(), text.begin(), text.end());
 
@@ -120,10 +119,10 @@ void BpfProgram::relocateInsns()
   relocateFuncInfos();
 }
 
-bool BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
+void BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
 {
   if (!bytecode_.hasSection(relsecname))
-    return false;
+    return;
 
   // There's a relocation section for our program.
   //
@@ -139,8 +138,6 @@ bool BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
   auto &relsec = bytecode_.getSection(relsecname);
   auto &symtab = bytecode_.getSection(".symtab");
   auto &strtab = bytecode_.getSection(".strtab");
-
-  bool needs_text = false;
 
   for (auto *ptr = relsec.data(); ptr < relsec.data() + relsec.size();
        ptr += sizeof(Elf64_Rel)) {
@@ -174,8 +171,18 @@ bool BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
       // This is a hack. We shouldn't do this. However, we don't actually have
       // the ELF section table to determine if the relocation actually refers
       // to .text
-      needs_text = true;
-      auto target_insn = (code_.size() + sym->st_value + insn->imm) /
+      if (text_offset_ == 0)
+        text_offset_ = code_.size();
+
+      // An offset to .text must be added when relocating instructions from the
+      // main program that point into .text.
+      // No offset is needed when relocating instructions from .text that point
+      // to another part of .text.
+      const auto text_relative_offset = (relsecname == ".rel.text")
+                                            ? 0
+                                            : text_offset_;
+
+      auto target_insn = (text_relative_offset + sym->st_value + insn->imm) /
                          sizeof(struct bpf_insn);
       insn->src_reg = BPF_PSEUDO_FUNC;
       insn->imm = (target_insn - insn_offset - 1); // jump offset
@@ -200,8 +207,6 @@ bool BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
           "Unsupported symbol type referenced in relocation");
     }
   }
-
-  return needs_text;
 }
 
 // Assumed structure:
