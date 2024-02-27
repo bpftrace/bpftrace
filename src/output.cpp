@@ -254,7 +254,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                  read_data<uint64_t>(value.data() + 16));
   else if (type.IsInetTy())
     return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),
-                                 (uint8_t *)(value.data() + 8));
+                                 static_cast<uint8_t *>(value.data() + 8));
   else if (type.IsUsernameTy())
     return bpftrace.resolve_uid(read_data<uint64_t>(value.data()));
   else if (type.IsBufferTy())
@@ -302,22 +302,22 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       // clang-format off
       case 64:
         if (sign)
-          return std::to_string(reduce_value<int64_t>(value, nvalues) / (int64_t)div);
+          return std::to_string(reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div));
         return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
       case 32:
         if (sign)
           return std::to_string(
-              reduce_value<int32_t>(value, nvalues) / (int32_t)div);
+              reduce_value<int32_t>(value, nvalues) / static_cast<int32_t>(div));
         return std::to_string(reduce_value<uint32_t>(value, nvalues) / div);
       case 16:
         if (sign)
           return std::to_string(
-              reduce_value<int16_t>(value, nvalues) / (int16_t)div);
+              reduce_value<int16_t>(value, nvalues) / static_cast<int16_t>(div));
         return std::to_string(reduce_value<uint16_t>(value, nvalues) / div);
       case 8:
         if (sign)
           return std::to_string(
-              reduce_value<int8_t>(value, nvalues) / (int8_t)div);
+              reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
         return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
         // clang-format on
       default:
@@ -448,7 +448,7 @@ std::string Output::map_stats_to_str(
 
     auto key_str = map_key_to_str(bpftrace, map, key);
 
-    int64_t count = (int64_t)value.at(0);
+    int64_t count = static_cast<int64_t>(value.at(0));
     int64_t total = value.at(1);
     int64_t average = 0;
 
@@ -519,7 +519,7 @@ std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
     }
 
     int max_width = 52;
-    int bar_width = values.at(i) / (float)max_value * max_width;
+    int bar_width = values.at(i) / static_cast<float>(max_value) * max_width;
     std::string bar(bar_width, '@');
 
     res << std::setw(16) << std::left << header.str() << std::setw(8)
@@ -550,7 +550,7 @@ std::string TextOutput::lhist_to_str(const std::vector<uint64_t> &values,
   std::ostringstream res;
   for (int i = start_value; i <= end_value; i++) {
     int max_width = 52;
-    int bar_width = values.at(i) / (float)max_value * max_width;
+    int bar_width = values.at(i) / static_cast<float>(max_value) * max_width;
     std::ostringstream header;
     if (i == 0) {
       header << "(..., " << lhist_index_label(min) << ")";
@@ -714,7 +714,7 @@ std::string JsonOutput::json_escape(const std::string &str) const
         // c always >= '\x00'
         if (c <= '\x1f') {
           escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0')
-                  << (int)c;
+                  << static_cast<int>(c);
         } else {
           escaped << c;
         }

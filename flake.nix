@@ -110,9 +110,11 @@
             pkg:
               with pkgs;
               pkgs.mkShell {
-                buildInputs = pkg.nativeBuildInputs ++ pkg.buildInputs ++ [
+                buildInputs = [
                   binutils
                   coreutils
+                  # Needed for the nix-aware "wrapped" clang-tidy
+                  clang-tools_16
                   findutils
                   gawk
                   git
@@ -125,7 +127,7 @@
                   python3
                   strace
                   util-linux
-                ];
+                ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
               };
         in
         {
