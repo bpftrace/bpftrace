@@ -97,7 +97,6 @@ endif()
 
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.h
-  DEPENDS ${PROJECT_SOURCE_DIR}/.git/index
   COMMAND ${CMAKE_COMMAND}
     -DVERSION_H_IN=${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
     -DVERSION_H=${CMAKE_CURRENT_BINARY_DIR}/version.h
