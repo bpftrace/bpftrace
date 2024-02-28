@@ -82,3 +82,18 @@ NAME address_probe_invalid_expansion
 RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "uprobeFunction1" {print $1}') { @[probe] = count(); exit() }"
 EXPECT Attaching 1 probe...
 TIMEOUT 1
+
+# The verifier is not able to track BTF info for double pointer dereferences and
+# array accesses so we must use bpf_probe_read_kernel, otherwise the program is
+# rejected. The below two tests make sure that we handle such situations.
+NAME kfunc double pointer dereference
+PROG kfunc:__module_get { print((*args.module->trace_events)->flags); exit(); }
+AFTER lsmod
+EXPECT Attaching 1 probe...
+TIMEOUT 1
+
+NAME kfunc double pointer array access
+PROG kfunc:__module_get { print(args.module->trace_events[1]->flags); exit(); }
+AFTER lsmod
+EXPECT Attaching 1 probe...
+TIMEOUT 1
