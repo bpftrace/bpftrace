@@ -95,8 +95,8 @@ if (KERNEL_HEADERS_DIR)
   target_compile_definitions(runtime PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 endif()
 
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/version.h
+# This is run on every build to ensure the version string is always up-to-date
+add_custom_target(version_h
   COMMAND ${CMAKE_COMMAND}
     -DVERSION_H_IN=${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
     -DVERSION_H=${CMAKE_CURRENT_BINARY_DIR}/version.h
@@ -105,7 +105,6 @@ add_custom_command(
     -Dbpftrace_VERSION_PATCH=${bpftrace_VERSION_PATCH}
     -P ${CMAKE_SOURCE_DIR}/cmake/Version.cmake
 )
-add_custom_target(version_h DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 add_dependencies(${BPFTRACE} version_h)
 add_dependencies(libbpftrace version_h)
 
