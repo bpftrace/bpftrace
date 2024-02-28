@@ -1551,8 +1551,14 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   else
     arr.type = CreateNone();
   arr.type.is_internal = type.is_internal;
-  arr.type.is_btftype = type.is_btftype;
   arr.type.SetAS(type.GetAS());
+
+  // BPF verifier cannot track BTF information for double pointers so we cannot
+  // propagate is_btftype for arrays of pointers and we need to reset it on the
+  // array type as well.
+  if (arr.type.IsPtrTy())
+    type.is_btftype = false;
+  arr.type.is_btftype = type.is_btftype;
 }
 
 void SemanticAnalyser::binop_int(Binop &binop)
@@ -1875,9 +1881,12 @@ void SemanticAnalyser::visit(Unop &unop)
       unop.type = SizedType(*type.GetPointeeTy());
       if (type.IsCtxAccess())
         unop.type.MarkCtxAccess();
-      unop.type.is_btftype = type.is_btftype;
       unop.type.is_internal = type.is_internal;
       unop.type.SetAS(type.GetAS());
+
+      // BPF verifier cannot track BTF information for double pointers
+      if (!unop.type.IsPtrTy())
+        unop.type.is_btftype = type.is_btftype;
     } else if (type.IsRecordTy()) {
       // We allow dereferencing "args" with no effect (for backwards compat)
       if (type.IsCtxAccess())
