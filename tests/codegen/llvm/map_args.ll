@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { i8*, i8*, i8*, i8* }
 %"struct map_t.0" = type { i8*, i8* }
 %"struct map_t.1" = type { i8*, i8*, i8*, i8* }
-%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64 }
+%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -38,12 +38,17 @@ entry:
   %arg2 = load volatile i64, i64* %10, align 8
   %11 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 2
   store i64 %arg2, i64* %11, align 8
-  %12 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  %12 = bitcast i8* %0 to i64*
+  %13 = getelementptr i64, i64* %12, i64 11
+  %arg3 = load volatile i64, i64* %13, align 8
+  %14 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 3
+  store i64 %arg3, i64* %14, align 8
+  %15 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
   store i64 0, i64* %"@_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0)
-  %13 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
+  %16 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
   ret i64 0
 }
 
@@ -80,10 +85,10 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !18 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 160, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 224, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 20, lowerBound: 0)
+!24 = !DISubrange(count: 28, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
 !27 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !28)

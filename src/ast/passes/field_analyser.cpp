@@ -113,6 +113,16 @@ void FieldAnalyser::visit(FieldAccess &acc)
   }
 }
 
+void FieldAnalyser::visit(ArrayAccess &arr)
+{
+  Visit(*arr.indexpr);
+  Visit(*arr.expr);
+  if (sized_type_.IsPtrTy()) {
+    sized_type_ = *sized_type_.GetPointeeTy();
+    resolve_fields(sized_type_);
+  }
+}
+
 void FieldAnalyser::visit(Cast &cast)
 {
   Visit(*cast.expr);

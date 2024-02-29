@@ -248,6 +248,31 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
   ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
 }
 
+TEST_F(field_analyser_btf, btf_types_arr_access)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace,
+       "kfunc:func_1 {\n"
+       "  @foo2 = args.foo3[0].foo2;\n"
+       "}",
+       0);
+
+  // args.foo3[0].foo2 should do 2 things:
+  // - add struct Foo2 (without resolving its fields)
+  // - resolve fields of struct Foo3
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo3"));
+  auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
+  auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
+
+  EXPECT_EQ(foo2->size, 24);
+  ASSERT_EQ(foo2->fields.size(), 0U); // fields are not resolved
+  EXPECT_EQ(foo3->size, 16);
+  ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
+}
+
 TEST_F(field_analyser_btf, btf_types_bitfields)
 {
   BPFtrace bpftrace;
