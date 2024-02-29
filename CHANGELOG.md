@@ -59,6 +59,8 @@ and this project adheres to
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 - Fix storing strings of differing lengths in a variable
   - [#3178](https://github.com/bpftrace/bpftrace/pull/3178)
+- Field analyser: resolve fields for array accesses
+  - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 #### Docs
 #### Tools
 
