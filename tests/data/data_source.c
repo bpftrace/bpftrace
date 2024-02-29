@@ -21,7 +21,10 @@ struct Foo3 {
 
 struct Foo3 foo3;
 
-struct Foo3 *func_1(int a, struct Foo1 *foo1, struct Foo2 *foo2)
+struct Foo3 *func_1(int a,
+                    struct Foo1 *foo1,
+                    struct Foo2 *foo2,
+                    struct Foo3 *foo3)
 {
   return 0;
 }
@@ -110,7 +113,7 @@ int main(void)
   struct bpf_iter__task_file iter_task_file;
   struct bpf_iter__task_vma iter_task_vma;
 
-  func_1(0, 0, 0);
+  func_1(0, 0, 0, 0);
 
   bpf_iter_task();
   bpf_iter_task_file();

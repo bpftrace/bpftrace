@@ -19,6 +19,8 @@ and this project adheres to
 #### Fixed
 - Fix field resolution on structs with anon union as first field
   - [#2964](https://github.com/bpftrace/bpftrace/pull/2964)
+- Field analyser: resolve fields for array accesses
+  - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 #### Docs
 #### Tools
 
