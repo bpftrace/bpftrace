@@ -569,7 +569,6 @@ TEST(semantic_analyser, call_print)
 
   test("kprobe:f { print(@x); @x[1,2] = count(); }", 0);
   test("kprobe:f { @x[1,2] = count(); print(@x); }", 0);
-  test("kprobe:f { @x[1,2] = count(); print(@x[3,4]); }", 1);
 
   test("kprobe:f { @x = count(); @ = print(@x); }", 1);
   test("kprobe:f { @x = count(); $y = print(@x); }", 1);
@@ -581,6 +580,31 @@ TEST(semantic_analyser, call_print)
                    "top and div arguments are ignored");
   test_for_warning("kprobe:f { @x = stats(10); print(@x, 2, 3); }",
                    "top and div arguments are ignored");
+}
+
+TEST(semantic_analyser, call_print_map_item)
+{
+  test(R"_(BEGIN { @x[1] = 1; print(@x[1]); })_", 0);
+  test(R"_(BEGIN { @x[1] = 1; @x[2] = 2; print(@x[2]); })_", 0);
+  test(R"_(BEGIN { @x[1] = 1; print(@x[2]); })_", 0);
+  test(R"_(BEGIN { @x[3, 5] = 1; print(@x[3, 5]); })_", 0);
+  test(R"_(BEGIN { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_", 0);
+
+  test_error("BEGIN { @x[1] = 1; print(@x[\"asdf\"]); }", R"(
+stdin:1:20-36: ERROR: Argument mismatch for @x: trying to access with arguments: [string[5]] when map expects arguments: [unsigned int64]
+BEGIN { @x[1] = 1; print(@x["asdf"]); }
+                   ~~~~~~~~~~~~~~~~
+)");
+  test_error("BEGIN { print(@x[2]); }", R"(
+stdin:1:9-20: ERROR: Undefined map: @x
+BEGIN { print(@x[2]); }
+        ~~~~~~~~~~~
+)");
+  test_error("BEGIN { @x[1] = 1; print(@x[1], 3, 5); }", R"(
+stdin:1:20-38: ERROR: Single-value (i.e. indexed) map print cannot take additional arguments.
+BEGIN { @x[1] = 1; print(@x[1], 3, 5); }
+                   ~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_print_non_map)

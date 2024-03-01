@@ -13,6 +13,8 @@ and this project adheres to
   - [#2958](https://github.com/bpftrace/bpftrace/pull/2958)
 - Add ability to list all probes in a program
   - [#2969](https://github.com/bpftrace/bpftrace/pull/2969)
+- Add ability to call print() with indexed maps to print single map values
+  - [#3027](https://github.com/bpftrace/bpftrace/pull/3027)
 #### Changed
 #### Deprecated
 #### Removed
