@@ -472,9 +472,11 @@ void SemanticAnalyser::visit(Call &call)
       auto &expr = *(*call.vargs)[i];
       func_arg_idx_ = i;
 
-      if (expr.is_map && skip_key_validation(call)) {
+      if (expr.is_map) {
         Map &map = static_cast<Map &>(expr);
-        map.skip_key_validation = true;
+        // If the map is indexed, don't skip key validation
+        if (!map.vargs && skip_key_validation(call))
+          map.skip_key_validation = true;
       }
 
       expr.accept(*this);
@@ -930,9 +932,10 @@ void SemanticAnalyser::visit(Call &call)
       if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
         if (map.vargs != nullptr) {
-          LOG(ERROR, call.loc, err_)
-              << "The map passed to " << call.func << "() should not be "
-              << "indexed by a key";
+          if (call.vargs->size() > 1)
+            LOG(ERROR, call.loc, err_) << "Single-value (i.e. indexed) map "
+                                          "print cannot take additional "
+                                          "arguments.";
         }
 
         if (is_final_pass()) {

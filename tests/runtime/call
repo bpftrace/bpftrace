@@ -352,6 +352,16 @@ REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
+NAME print_map_item
+PROG BEGIN { @x[1] = 5; print(@x[1]); exit() }
+EXPECT 5
+TIMEOUT 1
+
+NAME print_map_item_tuple
+PROG BEGIN { @x[1] = "hi"; print((1, 2, @x[1])); exit() }
+EXPECT (1, 2, hi)
+TIMEOUT 1
+
 NAME strftime
 PROG BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts); exit(); }
 EXPECT_REGEX [0-9]{2}\/[0-9]{2}\/[0-9]{2}

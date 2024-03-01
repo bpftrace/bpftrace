@@ -154,6 +154,11 @@ void ResourceAnalyser::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     if (!arg.is_map)
       resources_.non_map_print_args.push_back(arg.type);
+    else {
+      auto &map = static_cast<Map &>(arg);
+      if (map.vargs)
+        resources_.non_map_print_args.push_back(map.type);
+    }
   } else if (call.func == "kstack" || call.func == "ustack") {
     resources_.stackid_maps.insert(call.type.stack_type);
   } else if (call.func == "cgroup_path") {

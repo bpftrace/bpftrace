@@ -983,9 +983,14 @@ void CodegenLLVM::visit(Call &call)
                                               b_.GetInsertBlock()->getParent());
     b_.SetInsertPoint(deadcode);
   } else if (call.func == "print") {
-    if (call.vargs->at(0)->is_map)
-      createPrintMapCall(call);
-    else
+    if (call.vargs->at(0)->is_map) {
+      auto &arg = *call.vargs->at(0);
+      auto &map = static_cast<Map &>(arg);
+      if (!map.vargs)
+        createPrintMapCall(call);
+      else
+        createPrintNonMapCall(call, non_map_print_id_);
+    } else
       createPrintNonMapCall(call, non_map_print_id_);
   } else if (call.func == "cgroup_path") {
     auto elements = AsyncEvent::CgroupPath().asLLVMType(b_);
