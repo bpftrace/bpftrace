@@ -193,8 +193,11 @@ protected:
   virtual std::string field_to_str(const std::string &name,
                                    const std::string &value) const = 0;
   // Convert tuple to string
-  virtual std::string tuple_to_str(
-      const std::vector<std::string> &elems) const = 0;
+  virtual std::string tuple_to_str(BPFtrace &bpftrace,
+                                   const SizedType &type,
+                                   std::vector<uint8_t> &value,
+                                   bool is_per_cpu,
+                                   uint32_t div) const = 0;
   // Convert a vector of (key, value) pairs into string
   // keys are strings
   // values are 64-bit integers
@@ -267,8 +270,11 @@ protected:
   std::string map_elem_delim_to_str(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
-  std::string tuple_to_str(
-      const std::vector<std::string> &elems) const override;
+  std::string tuple_to_str(BPFtrace &bpftrace,
+                           const SizedType &type,
+                           std::vector<uint8_t> &value,
+                           bool is_per_cpu,
+                           uint32_t div) const override;
   std::string key_value_pairs_to_str(
       std::vector<std::pair<std::string, int64_t>> &keyvals) const override;
 };
@@ -346,8 +352,11 @@ protected:
   std::string map_elem_delim_to_str(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
-  std::string tuple_to_str(
-      const std::vector<std::string> &elems) const override;
+  std::string tuple_to_str(BPFtrace &bpftrace,
+                           const SizedType &type,
+                           std::vector<uint8_t> &value,
+                           bool is_per_cpu,
+                           uint32_t div) const override;
   std::string key_value_pairs_to_str(
       std::vector<std::pair<std::string, int64_t>> &keyvals) const override;
 };

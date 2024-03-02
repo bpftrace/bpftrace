@@ -285,15 +285,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     }
     return struct_to_str(elems);
   } else if (type.IsTupleTy()) {
-    std::vector<std::string> elems;
-    for (auto &field : type.GetFields()) {
-      std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                     value.begin() + field.offset +
-                                         field.type.GetSize());
-      elems.push_back(
-          value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div));
-    }
-    return tuple_to_str(elems);
+    return tuple_to_str(bpftrace, type, value, is_per_cpu, div);
   } else if (type.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (type.IsIntTy()) {
@@ -651,9 +643,24 @@ std::string TextOutput::field_to_str(const std::string &name,
   return "." + name + " = " + value;
 }
 
-std::string TextOutput::tuple_to_str(
-    const std::vector<std::string> &elems) const
+std::string TextOutput::tuple_to_str(BPFtrace &bpftrace,
+                                     const SizedType &type,
+                                     std::vector<uint8_t> &value,
+                                     bool is_per_cpu,
+                                     uint32_t div) const
 {
+  std::vector<std::string> elems;
+  for (const auto &field : type.GetFields()) {
+    std::vector<uint8_t> elem_data(value.begin() + field.offset,
+                                   value.begin() + field.offset +
+                                       field.type.GetSize());
+    auto p = value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div);
+    if (is_quoted_type(field.type)) {
+      elems.push_back("\"" + p + "\"");
+    } else {
+      elems.push_back(p);
+    }
+  }
   return "(" + str_join(elems, ", ") + ")";
 }
 
@@ -948,9 +955,20 @@ std::string JsonOutput::field_to_str(const std::string &name,
   return "\"" + name + "\": " + value;
 }
 
-std::string JsonOutput::tuple_to_str(
-    const std::vector<std::string> &elems) const
+std::string JsonOutput::tuple_to_str(BPFtrace &bpftrace,
+                                     const SizedType &type,
+                                     std::vector<uint8_t> &value,
+                                     bool is_per_cpu,
+                                     uint32_t div) const
 {
+  std::vector<std::string> elems;
+  for (const auto &field : type.GetFields()) {
+    std::vector<uint8_t> elem_data(value.begin() + field.offset,
+                                   value.begin() + field.offset +
+                                       field.type.GetSize());
+    elems.push_back(
+        value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div));
+  }
   return "[" + str_join(elems, ",") + "]";
 }
 

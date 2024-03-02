@@ -324,7 +324,7 @@ TIMEOUT 1
 
 NAME print_non_map_tuple
 PROG BEGIN { $t = (1, 2, "string"); print($t); exit() }
-EXPECT (1, 2, string)
+EXPECT (1, 2, "string")
 TIMEOUT 1
 
 NAME print_non_map_array
@@ -359,7 +359,7 @@ TIMEOUT 1
 
 NAME print_map_item_tuple
 PROG BEGIN { @x[1] = "hi"; print((1, 2, @x[1])); exit() }
-EXPECT (1, 2, hi)
+EXPECT (1, 2, "hi")
 TIMEOUT 1
 
 NAME strftime
