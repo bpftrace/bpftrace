@@ -20,10 +20,13 @@ BfdDisasm::BfdDisasm(std::string &path) : size_(0)
   fd_ = open(path.c_str(), O_RDONLY);
 
   if (fd_ >= 0) {
-    struct stat st;
+    std::error_code ec;
+    std_filesystem::path fs_path{ path };
+    std::uintmax_t file_size = std::filesystem::file_size(fs_path, ec);
 
-    if (fstat(fd_, &st) == 0)
-      size_ = st.st_size;
+    if (file_size != static_cast<std::uintmax_t>(-1)) {
+      size_ = file_size;
+    }
   }
 }
 
