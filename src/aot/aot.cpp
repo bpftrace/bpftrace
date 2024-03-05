@@ -244,15 +244,17 @@ int load(BPFtrace &bpftrace, const std::string &in)
     return 1;
   }
 
-  struct stat sb;
-  if (fstat(infd, &sb)) {
-    auto saved_err = errno;
-    LOG(ERROR) << "Failed to stat: " << in << ": " << std::strerror(saved_err);
+  std::error_code ec;
+  std_filesystem::path in_path{ in };
+  std::uintmax_t in_file_size = std::filesystem::file_size(in_path, ec);
+
+  if (in_file_size == static_cast<std::uintmax_t>(-1)) {
+    LOG(ERROR) << "Failed to stat: " << in << ": " << ec.message();
     return 1;
   }
 
   uint8_t *ptr = static_cast<uint8_t *>(
-      ::mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, infd, 0));
+      ::mmap(NULL, in_file_size, PROT_READ, MAP_PRIVATE, infd, 0));
   if (ptr == MAP_FAILED) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to mmap: " << in << ": " << std::strerror(saved_err);
@@ -282,8 +284,8 @@ int load(BPFtrace &bpftrace, const std::string &in)
     err = 1;
     goto out;
   }
-  if ((hdr->rr_off + hdr->rr_len) > static_cast<uint64_t>(sb.st_size) ||
-      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(sb.st_size)) {
+  if ((hdr->rr_off + hdr->rr_len) > static_cast<uint64_t>(in_file_size) ||
+      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(in_file_size)) {
     LOG(ERROR) << "Corrupted AOT bpftrace file: incomplete payload";
     err = 1;
     goto out;
@@ -299,7 +301,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
     goto out;
 
 out:
-  if (::munmap(ptr, sb.st_size)) {
+  if (::munmap(ptr, in_file_size)) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to munmap(): " << in << ": "
                << std::strerror(saved_err);

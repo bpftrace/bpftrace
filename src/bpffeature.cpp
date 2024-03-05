@@ -390,10 +390,11 @@ bool BPFfeature::has_uprobe_refcnt()
   if (has_uprobe_refcnt_.has_value())
     return *has_uprobe_refcnt_;
 
-  struct stat sb;
-  has_uprobe_refcnt_ =
-      ::stat("/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset",
-             &sb) == 0;
+  std::error_code ec;
+  std_filesystem::path path{
+    "/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset"
+  };
+  has_uprobe_refcnt_ = std_filesystem::exists(path, ec);
 
   return *has_uprobe_refcnt_;
 }
