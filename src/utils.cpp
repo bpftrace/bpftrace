@@ -108,6 +108,8 @@ const struct vmlinux_location vmlinux_locs[] = {
   { nullptr, false },
 };
 
+constexpr std::string_view PROC_KHEADERS_PATH = "/sys/kernel/kheaders.tar.xz";
+
 static bool pid_in_different_mountns(int pid);
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
@@ -683,6 +685,20 @@ bool is_dir(const std::string &path)
   return std_filesystem::is_directory(buf, ec);
 }
 
+bool file_exists_and_ownedby_root(const char *f)
+{
+  struct stat st;
+  if (stat(f, &st) == 0) {
+    if (st.st_uid != 0) {
+      LOG(ERROR) << "header file ownership expected to be root: "
+                 << std::string(f);
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 namespace {
 struct KernelHeaderTmpDir {
   KernelHeaderTmpDir(const std::string &prefix) : path{ prefix + "XXXXXX" }
@@ -721,14 +737,14 @@ std::string unpack_kheaders_tar_xz(const struct utsname &utsname)
 #else
   std_filesystem::path path_prefix{ "/tmp" };
 #endif
-  std_filesystem::path path_kheaders{ "/sys/kernel/kheaders.tar.xz" };
+  std_filesystem::path path_kheaders{ PROC_KHEADERS_PATH };
   if (const char *tmpdir = ::getenv("TMPDIR")) {
     path_prefix = tmpdir;
   }
   path_prefix /= "kheaders-";
   std_filesystem::path shared_path{ path_prefix.string() + utsname.release };
 
-  if (std_filesystem::exists(shared_path, ec)) {
+  if (file_exists_and_ownedby_root(shared_path.c_str())) {
     // already unpacked
     return shared_path.string();
   }
@@ -749,8 +765,10 @@ std::string unpack_kheaders_tar_xz(const struct utsname &utsname)
 
   KernelHeaderTmpDir tmpdir{ path_prefix };
 
-  FILE *tar = ::popen(
-      ("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
+  FILE *tar = ::popen(("tar xf " + std::string(PROC_KHEADERS_PATH) + " -C " +
+                       tmpdir.path)
+                          .c_str(),
+                      "w");
   if (!tar) {
     return "";
   }
