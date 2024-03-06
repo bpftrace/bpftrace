@@ -3596,6 +3596,15 @@ BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }
              false);
 }
 
+TEST_F(semantic_analyser_btf, args_builtin_mixed_probes)
+{
+  test_error("kfunc:func_1,tracepoint:sched:sched_one { args }", R"(
+stdin:1:43-47: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
+kfunc:func_1,tracepoint:sched:sched_one { args }
+                                          ~~~~
+)");
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

@@ -423,8 +423,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
     ProbeType type = single_provider_type(probe);
 
-    if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
-        type == ProbeType::uprobe) {
+    if (type == ProbeType::invalid) {
+      LOG(ERROR, builtin.loc, err_)
+          << "The args builtin can only be used within the context of a single "
+             "probe type, e.g. \"probe1 {args}\" is valid while "
+             "\"probe1,probe2 {args}\" is not.";
+    } else if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
+               type == ProbeType::uprobe) {
       auto type_name = probe->args_typename();
       builtin.type = CreateRecord(type_name,
                                   bpftrace_.structs.Lookup(type_name));
