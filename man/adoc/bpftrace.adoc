@@ -3628,11 +3628,11 @@ The address space can be changed with the <<functions-kptr, kptrs>> and <<functi
 If the kernel version has BTF support, kernel types are automatically available and there is no need to include additional headers to use them.
 It is not recommended to mix definitions from multiple sources (ie. BTF and header files).
 If your program mixes definitions, bpftrace will do its best but can easily get confused due to redefinition conflicts.
-Prefer to exclusively use BTF as it can never get out of sync on a running system.
+Prefer to exclusively use BTF as it can never get out of sync on a running system. BTF is also less susceptible to parsing failures (C is constantly evolving).
 Almost all current linux deployments will support BTF.
 
-To allow users to detect this situation in scripts, the preprocessor macro BPFTRACE_HAVE_BTF is defined if BTF is detected.
-See tools/ for examples of its usage.
+To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` is defined if BTF is detected.
+See `tools/` for examples of its usage.
 
 Requirements for using BTF for vmlinux:
 
