@@ -22,6 +22,8 @@ and this project adheres to
 - Add for-each loops for iterating over map elements
   - [#3003](https://github.com/bpftrace/bpftrace/pull/3003)
 #### Changed
+- Better error message for args in mixed probes
+  - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
 #### Deprecated
 #### Removed
 #### Fixed
