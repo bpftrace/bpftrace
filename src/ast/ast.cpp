@@ -676,26 +676,12 @@ void AttachPoint::set_index(int index)
 
 std::string Probe::name() const
 {
-  std::string n;
-  for (auto &attach_point : *attach_points) {
-    if (!n.empty())
-      n += ',';
-    n += attach_point->provider;
-    if (attach_point->target != "")
-      n += ":" + attach_point->target;
-    if (attach_point->ns != "")
-      n += ":" + attach_point->ns;
-    if (attach_point->func != "") {
-      n += ":" + attach_point->func;
-      if (attach_point->func_offset != 0)
-        n += "+" + std::to_string(attach_point->func_offset);
-    }
-    if (attach_point->address != 0)
-      n += ":" + std::to_string(attach_point->address);
-    if (attach_point->freq != 0)
-      n += ":" + std::to_string(attach_point->freq);
-  }
-  return n;
+  std::vector<std::string> ap_names;
+  std::transform(attach_points->begin(),
+                 attach_points->end(),
+                 std::back_inserter(ap_names),
+                 [](const AttachPoint *ap) { return ap->name(); });
+  return str_join(ap_names, ",");
 }
 
 std::string Probe::args_typename() const
