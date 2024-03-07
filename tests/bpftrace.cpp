@@ -615,21 +615,20 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
     ASSERT_EQ(0, bpftrace->add_probe(*probe));
     ASSERT_EQ(3U, bpftrace->get_probes().size());
     ASSERT_EQ(0U, bpftrace->get_special_probes().size());
-    const auto orig_name = provider + ":/bin/sh:cpp_mangled";
     check_uprobe(bpftrace->get_probes().at(0),
                  "/bin/sh",
                  "_Z11cpp_mangledi",
-                 orig_name,
+                 provider + ":/bin/sh:cpp:cpp_mangled",
                  provider + ":/bin/sh:cpp:_Z11cpp_mangledi");
     check_uprobe(bpftrace->get_probes().at(1),
                  "/bin/sh",
                  "_Z11cpp_mangledv",
-                 orig_name,
+                 provider + ":/bin/sh:cpp:cpp_mangled",
                  provider + ":/bin/sh:cpp:_Z11cpp_mangledv");
     check_uprobe(bpftrace->get_probes().at(2),
                  "/bin/sh",
                  "cpp_mangled",
-                 orig_name,
+                 provider + ":/bin/sh:cpp:cpp_mangled",
                  provider + ":/bin/sh:cpp:cpp_mangled");
   }
 }
@@ -649,7 +648,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh",
                "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp_mangled(int)",
+               "uprobe:/bin/sh:cpp:cpp_mangled(int)",
                "uprobe:/bin/sh:cpp:_Z11cpp_mangledi");
 }
 
@@ -671,22 +670,22 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh",
                "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:cpp_man*",
                "uprobe:/bin/sh:cpp:_Z11cpp_mangledi");
   check_uprobe(bpftrace->get_probes().at(1),
                "/bin/sh",
                "_Z11cpp_mangledv",
-               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:cpp_man*",
                "uprobe:/bin/sh:cpp:_Z11cpp_mangledv");
   check_uprobe(bpftrace->get_probes().at(2),
                "/bin/sh",
                "_Z18cpp_mangled_suffixv",
-               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:cpp_man*",
                "uprobe:/bin/sh:cpp:_Z18cpp_mangled_suffixv");
   check_uprobe(bpftrace->get_probes().at(3),
                "/bin/sh",
                "cpp_mangled",
-               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:cpp_man*",
                "uprobe:/bin/sh:cpp:cpp_mangled");
 }
 
