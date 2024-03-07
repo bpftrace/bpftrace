@@ -16,6 +16,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.20.2] 2024-03-07
+
+- Fix security hole checking unpacked kernel headers
+  - [#3033](https://github.com/bpftrace/bpftrace/pull/3033)
+
 ## [0.20.1] 2024-01-29
 
 - Fix build failure on 32-bit ARM
