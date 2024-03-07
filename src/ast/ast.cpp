@@ -587,18 +587,69 @@ std::string opstr(const Unop &unop)
   return {}; // unreached
 }
 
-std::string AttachPoint::name(const std::string &attach_target,
-                              const std::string &attach_point) const
+AttachPoint AttachPoint::create_expansion_copy(const std::string &match) const
+{
+  AttachPoint ap = *this; // copy here
+  switch (probetype(ap.provider)) {
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe:
+      ap.func = match;
+      if (match.find(":") != std::string::npos)
+        ap.target = erase_prefix(ap.func);
+      break;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+    case ProbeType::tracepoint:
+      // Tracepoint, uprobe, and k(ret)func probes specify both a target
+      // (category for tracepoints, binary for uprobes, and kernel module
+      // for k(ret)func) and a function name.
+      ap.func = match;
+      ap.target = erase_prefix(ap.func);
+      break;
+    case ProbeType::usdt:
+      // USDT probes specify a target binary path, a provider, and a function
+      // name.
+      ap.func = match;
+      ap.target = erase_prefix(ap.func);
+      ap.ns = erase_prefix(ap.func);
+      break;
+    case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
+      // Watchpoint probes come with target prefix. Strip the target to get the
+      // function
+      ap.func = match;
+      erase_prefix(ap.func);
+      break;
+    case ProbeType::rawtracepoint:
+      ap.func = match;
+      break;
+    case ProbeType::software:
+    case ProbeType::hardware:
+    case ProbeType::interval:
+    case ProbeType::profile:
+    case ProbeType::special:
+    case ProbeType::iter:
+    case ProbeType::invalid:
+      break;
+    default:
+      LOG(BUG) << "Unknown probe type";
+  }
+  return ap;
+}
+
+std::string AttachPoint::name() const
 {
   std::string n = provider;
-  if (attach_target != "")
-    n += ":" + attach_target;
+  if (target != "")
+    n += ":" + target;
   if (lang != "")
     n += ":" + lang;
   if (ns != "")
     n += ":" + ns;
-  if (attach_point != "") {
-    n += ":" + attach_point;
+  if (func != "") {
+    n += ":" + func;
     if (func_offset != 0)
       n += "+" + std::to_string(func_offset);
   }
@@ -611,11 +662,6 @@ std::string AttachPoint::name(const std::string &attach_target,
   if (mode.size())
     n += ":" + mode;
   return n;
-}
-
-std::string AttachPoint::name(const std::string &attach_point) const
-{
-  return name(target, attach_point);
 }
 
 int AttachPoint::index() const

@@ -632,9 +632,9 @@ public:
   uint64_t func_offset = 0;
   bool ignore_invalid = false;
 
-  std::string name(const std::string &attach_point) const;
-  std::string name(const std::string &attach_target,
-                   const std::string &attach_point) const;
+  std::string name() const;
+
+  AttachPoint create_expansion_copy(const std::string &match) const;
 
   int index() const;
   void set_index(int index);

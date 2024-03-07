@@ -105,8 +105,7 @@ public:
   }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
-  Probe generateWatchpointSetupProbe(const std::string &func,
-                                     const ast::AttachPoint &ap,
+  Probe generateWatchpointSetupProbe(const ast::AttachPoint &ap,
                                      const ast::Probe &probe);
   int num_probes() const;
   int prerun() const;

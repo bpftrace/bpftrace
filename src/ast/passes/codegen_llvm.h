@@ -149,7 +149,6 @@ private:
                      const std::string &full_func_id,
                      const std::string &section_name,
                      FunctionType *func_type,
-                     bool expansion,
                      std::optional<int> usdt_location_index = std::nullopt,
                      bool dummy = false);
 

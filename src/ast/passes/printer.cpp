@@ -406,7 +406,7 @@ void Printer::visit(Predicate &pred)
 void Printer::visit(AttachPoint &ap)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << ap.name(ap.func) << std::endl;
+  out_ << indent << ap.name() << std::endl;
 }
 
 void Printer::visit(Probe &probe)
