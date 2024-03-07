@@ -65,15 +65,14 @@ BPFtrace::~BPFtrace()
     bcc_free_symcache(ksyms_, -1);
 }
 
-Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
-                                             const ast::AttachPoint &ap,
+Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
                                              const ast::Probe &probe)
 {
   Probe setup_probe;
-  setup_probe.name = get_watchpoint_setup_probe_name(ap.name(func));
+  setup_probe.name = get_watchpoint_setup_probe_name(ap.name());
   setup_probe.type = ProbeType::uprobe;
   setup_probe.path = ap.target;
-  setup_probe.attach_point = func;
+  setup_probe.attach_point = ap.func;
   setup_probe.orig_name = get_watchpoint_setup_probe_name(probe.name());
   setup_probe.index = ap.index() > 0 ? ap.index() : probe.index();
 
@@ -121,7 +120,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
 
       if (underspecified_usdt_probe && matches.size() > 1) {
-        LOG(ERROR) << "namespace for " << attach_point->name(attach_point->func)
+        LOG(ERROR) << "namespace for " << attach_point->name()
                    << " not specified, matched " << matches.size() << " probes";
         LOG(INFO) << "please specify a unique namespace or use '*' to attach "
                   << "to all matched probes";
@@ -140,8 +139,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         probe.type = probetype(attach_point->provider);
         probe.log_size = config_.get(ConfigKeyInt::log_size);
         probe.orig_name = p.name();
-        probe.name = attach_point->name(attach_point->target,
-                                        attach_point->func);
+        probe.name = attach_point->name();
         probe.index = p.index();
         probe.funcs.assign(attach_funcs.begin(), attach_funcs.end());
 
@@ -160,8 +158,7 @@ int BPFtrace::add_probe(ast::Probe &p)
           probe.type = probetype(attach_point->provider);
           probe.log_size = config_.get(ConfigKeyInt::log_size);
           probe.orig_name = p.name();
-          probe.name = attach_point->name(attach_point->target,
-                                          attach_point->func);
+          probe.name = attach_point->name();
           probe.index = p.index();
           probe.funcs = attach_funcs;
 
@@ -172,22 +169,23 @@ int BPFtrace::add_probe(ast::Probe &p)
           // probe per expanded target.
           std::unordered_map<std::string, Probe> target_map;
           for (const auto &func : attach_funcs) {
-            std::string func_id = func;
-            std::string target = erase_prefix(func_id);
-            auto found = target_map.find(target);
+            ast::AttachPoint ap = attach_point->create_expansion_copy(func);
+            // Use the original (possibly wildcarded) function name
+            ap.func = attach_point->func;
+            auto found = target_map.find(ap.target);
             if (found != target_map.end()) {
               found->second.funcs.push_back(func);
             } else {
               Probe probe;
               probe.attach_point = attach_point->func;
-              probe.path = target;
+              probe.path = ap.target;
               probe.type = probetype(attach_point->provider);
               probe.log_size = config_.get(ConfigKeyInt::log_size);
               probe.orig_name = p.name();
-              probe.name = attach_point->name(target, attach_point->func);
+              probe.name = ap.name();
               probe.index = p.index();
               probe.funcs.push_back(func);
-              target_map.insert({ { target, probe } });
+              target_map.insert({ { ap.target, probe } });
             }
           }
           for (auto &pair : target_map) {
@@ -248,59 +246,29 @@ int BPFtrace::add_probe(ast::Probe &p)
     // There may be a way to refactor and unify the codepaths in a clean manner
     // but so far it has eluded your author.
     for (const auto &f : attach_funcs) {
-      std::string func = f;
-      std::string func_id = func;
-      std::string target = attach_point->target;
+      ast::AttachPoint match_ap = attach_point->create_expansion_copy(f);
 
-      // USDT probes must specify a target binary path, a provider, and
-      // a function name for full id.
-      // So we will extract out the path and the provider namespace to get just
-      // the function name
       if (probetype(attach_point->provider) == ProbeType::usdt) {
-        target = erase_prefix(func_id);
-        std::string ns = erase_prefix(func_id);
-        // Set attach_point target, ns, and func to their resolved values in
-        // case of wildcards.
-        attach_point->target = target;
-        attach_point->ns = ns;
-        attach_point->func = func_id;
         // Necessary for correct number of locations if wildcard expands to
         // multiple probes.
         std::optional<usdt_probe_entry> usdt;
-        if (attach_point->need_expansion &&
-            (usdt = USDTHelper::find(this->pid(), target, ns, func_id))) {
-          attach_point->usdt = *usdt;
+        if ((p.need_expansion || match_ap.need_expansion) &&
+            (usdt = USDTHelper::find(
+                 this->pid(), match_ap.target, match_ap.ns, match_ap.func))) {
+          match_ap.usdt = *usdt;
         }
-      } else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
-                 probetype(attach_point->provider) == ProbeType::uprobe ||
-                 probetype(attach_point->provider) == ProbeType::uretprobe ||
-                 probetype(attach_point->provider) == ProbeType::kfunc ||
-                 probetype(attach_point->provider) == ProbeType::kretfunc ||
-                 ((probetype(attach_point->provider) == ProbeType::kprobe ||
-                   probetype(attach_point->provider) == ProbeType::kretprobe) &&
-                  !attach_point->target.empty())) {
-        // tracepoint, uprobe, k(ret)func, and k(ret)probes specify both a
-        // target and a function name.
-        // We extract the target from func_id so that a resolved target and a
-        // resolved function name are used in the probe.
-        target = erase_prefix(func_id);
-      } else if (probetype(attach_point->provider) == ProbeType::watchpoint ||
-                 probetype(attach_point->provider) ==
-                     ProbeType::asyncwatchpoint) {
-        target = erase_prefix(func_id);
-        erase_prefix(func);
       } else if (probetype(attach_point->provider) == ProbeType::iter) {
         has_iter_ = true;
       }
 
       Probe probe;
-      probe.path = target;
-      probe.attach_point = func_id;
+      probe.path = match_ap.target;
+      probe.attach_point = match_ap.func;
       probe.type = probetype(attach_point->provider);
       probe.log_size = config_.get(ConfigKeyInt::log_size);
       probe.orig_name = p.name();
-      probe.ns = attach_point->ns;
-      probe.name = attach_point->name(target, func_id);
+      probe.ns = match_ap.ns;
+      probe.name = match_ap.name();
       probe.need_expansion = p.need_expansion;
       probe.freq = attach_point->freq;
       probe.address = attach_point->address;
@@ -317,7 +285,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         // We must attach to all locations of a USDT marker if duplicates exist
         // in a target binary. See comment in codegen_llvm.cpp probe generation
         // code for more details.
-        for (int i = 0; i < attach_point->usdt.num_locations; ++i) {
+        for (int i = 0; i < match_ap.usdt.num_locations; ++i) {
           Probe probe_copy = probe;
           probe_copy.usdt_location_idx = i;
           probe_copy.index = attach_point->index() > 0 ? attach_point->index()
@@ -330,7 +298,7 @@ int BPFtrace::add_probe(ast::Probe &p)
                       ProbeType::asyncwatchpoint) &&
                  attach_point->func.size()) {
         resources.probes.emplace_back(
-            generateWatchpointSetupProbe(func_id, *attach_point, p));
+            generateWatchpointSetupProbe(match_ap, p));
 
         resources.watchpoint_probes.emplace_back(std::move(probe));
       } else {

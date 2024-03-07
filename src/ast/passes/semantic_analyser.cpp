@@ -904,9 +904,9 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_)
             << "Symbol size mismatch between probes. Symbol \"" << name
             << "\" has size " << sizes.at(0) << " for probe \""
-            << probe->attach_points->at(0)->name("") << "\" but size "
+            << probe->attach_points->at(0)->name() << "\" but size "
             << sizes.at(i) << " for probe \""
-            << probe->attach_points->at(i)->name("") << "\"";
+            << probe->attach_points->at(i)->name() << "\"";
       }
     }
     size_t pointee_size = 0;

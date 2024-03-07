@@ -152,11 +152,11 @@ TEST(ast, attach_point_name)
   ap3->func = "readline";
   auto attach_points = APL({ ap1, ap2, ap3 });
   Probe kprobe(attach_points, nullptr, nullptr);
-  EXPECT_EQ(ap2->name("sys_thisone"), "kprobe:sys_thisone");
+  EXPECT_EQ(ap2->name(), "kprobe:sys_thisone");
 
   attach_points = APL({ ap1, ap2, ap3 });
   Probe uprobe(attach_points, nullptr, nullptr);
-  EXPECT_EQ(ap3->name("readline"), "uprobe:/bin/sh:readline");
+  EXPECT_EQ(ap3->name(), "uprobe:/bin/sh:readline");
 }
 
 } // namespace ast

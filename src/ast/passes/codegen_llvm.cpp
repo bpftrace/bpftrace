@@ -2500,7 +2500,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
                                 const std::string &section_name,
                                 FunctionType *func_type,
-                                bool expansion,
                                 std::optional<int> usdt_location_index,
                                 bool dummy)
 {
@@ -2508,20 +2507,9 @@ void CodegenLLVM::generateProbe(Probe &probe,
   // by args builtin.
   if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
-  int index;
-  if (expansion) {
-    if (current_attach_point_->index() != 0)
-      index = current_attach_point_->index();
-    else
-      current_attach_point_->set_index(index = getNextIndexForProbe());
-  } else {
-    if (probe.index() != 0)
-      index = probe.index();
-    else
-      probe.set_index(index = getNextIndexForProbe());
-  }
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, section_name, module_.get());
+  int index = current_attach_point_->index() ?: probe.index();
   func->setSection(
       get_section_name_for_probe(section_name, index, usdt_location_index));
   debug_.createFunctionDebugInfo(*func);
@@ -2669,7 +2657,9 @@ void CodegenLLVM::visit(Probe &probe)
   if (probe.need_expansion == false) {
     // build a single BPF program pre-wildcards
     probefull_ = probe.name();
-    generateProbe(probe, probefull_, probefull_, func_type, false);
+    if (probe.index() == 0)
+      probe.set_index(getNextIndexForProbe());
+    generateProbe(probe, probefull_, probefull_, func_type);
     generated = true;
   } else {
     /*
@@ -2709,29 +2699,20 @@ void CodegenLLVM::visit(Probe &probe)
         std::string match = m;
         generated = true;
 
-        // USDT probes must specify a target binary path, a provider,
-        // and a function name.
-        // So we will extract out the path and the provider namespace to get
-        // just the function name.
+        if (attach_point->index() == 0)
+          attach_point->set_index(getNextIndexForProbe());
+
+        AttachPoint match_ap = attach_point->create_expansion_copy(match);
+        probefull_ = match_ap.name();
+        current_attach_point_ = &match_ap;
+
         if (probetype(attach_point->provider) == ProbeType::usdt) {
-          std::string func_id = match;
-          std::string target = erase_prefix(func_id);
-          std::string ns = erase_prefix(func_id);
-
-          std::string orig_target = attach_point->target;
-          std::string orig_ns = attach_point->ns;
-
-          // Ensure that the full probe name used is the resolved one for this
-          // probe.
-          attach_point->target = target;
-          attach_point->ns = ns;
-          probefull_ = attach_point->name(func_id);
-
           // Set the probe identifier so that we can read arguments later
-          auto usdt = USDTHelper::find(bpftrace_.pid(), target, ns, func_id);
+          auto usdt = USDTHelper::find(
+              bpftrace_.pid(), match_ap.target, match_ap.ns, match_ap.func);
           if (!usdt.has_value())
             LOG(FATAL) << "Failed to find usdt probe: " << probefull_;
-          attach_point->usdt = *usdt;
+          match_ap.usdt = *usdt;
 
           // A "unique" USDT probe can be present in a binary in multiple
           // locations. One case where this happens is if a function containing
@@ -2741,62 +2722,21 @@ void CodegenLLVM::visit(Probe &probe)
           // be found in the same offset from the same register in each
           // location)
           current_usdt_location_index_ = 0;
-          for (int i = 0; i < attach_point->usdt.num_locations; ++i) {
+          for (int i = 0; i < match_ap.usdt.num_locations; ++i) {
             reset_ids();
 
             std::string full_func_id = match + "_loc" + std::to_string(i);
-            generateProbe(probe, full_func_id, probefull_, func_type, true, i);
+            generateProbe(probe, full_func_id, probefull_, func_type, i);
             current_usdt_location_index_++;
           }
-
-          // Propagate the originally specified target and namespace in case
-          // they contain a wildcard.
-          attach_point->target = orig_target;
-          attach_point->ns = orig_ns;
         } else {
-          if (attach_point->provider == "BEGIN" ||
-              attach_point->provider == "END")
-            probefull_ = attach_point->provider;
-          else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
-                   probetype(attach_point->provider) == ProbeType::uprobe ||
-                   probetype(attach_point->provider) == ProbeType::uretprobe ||
-                   probetype(attach_point->provider) == ProbeType::kfunc ||
-                   probetype(attach_point->provider) == ProbeType::kretfunc) {
-            // Tracepoint, uprobe, and k(ret)func probes specify both a target
-            // (category for tracepoints, binary for uprobes, and kernel module
-            // for k(ret)func) and a function name.
-            std::string func = match;
-            std::string category = erase_prefix(func);
-
-            probefull_ = attach_point->name(category, func);
-          } else if (probetype(attach_point->provider) ==
-                         ProbeType::watchpoint ||
-                     probetype(attach_point->provider) ==
-                         ProbeType::asyncwatchpoint) {
-            // Watchpoint probes comes with target prefix. Strip the target to
-            // get the function
-            erase_prefix(match);
-            probefull_ = attach_point->name(match);
-          } else if (probetype(attach_point->provider) == ProbeType::software ||
-                     probetype(attach_point->provider) == ProbeType::hardware ||
-                     probetype(attach_point->provider) == ProbeType::interval ||
-                     probetype(attach_point->provider) == ProbeType::profile) {
-            // Hardware, software, interval, and profile probes do not support
-            // wildcards but they still may need expansion when the 'probe'
-            // builtin is used.
-            // Just use the name stored in the probe in such a case.
-            probefull_ = attach_point->name("");
-          } else
-            probefull_ = attach_point->name(match);
-
-          generateProbe(probe, match, probefull_, func_type, true);
+          generateProbe(probe, match, probefull_, func_type);
         }
       }
     }
 
     if (!generated)
-      generateProbe(
-          probe, "dummy", "dummy", func_type, false, std::nullopt, true);
+      generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
   }
 
   if (generated)
