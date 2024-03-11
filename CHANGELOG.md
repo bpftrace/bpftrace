@@ -23,6 +23,8 @@ and this project adheres to
   - [#2964](https://github.com/bpftrace/bpftrace/pull/2964)
 - Fix security hole checking unpacked kernel headers
   - [#3033](https://github.com/bpftrace/bpftrace/pull/3033)
+- Fix alignment of atomic map counter update
+  - [#3045](https://github.com/bpftrace/bpftrace/pull/3045)
 #### Docs
 #### Tools
 
