@@ -79,20 +79,37 @@ Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
   return setup_probe;
 }
 
+Probe BPFtrace::generate_probe(const ast::AttachPoint &ap, const ast::Probe &p)
+{
+  Probe probe;
+  probe.path = ap.target;
+  probe.attach_point = ap.func;
+  probe.type = probetype(ap.provider);
+  probe.log_size = config_.get(ConfigKeyInt::log_size);
+  probe.orig_name = p.name();
+  probe.ns = ap.ns;
+  probe.name = ap.name();
+  probe.need_expansion = p.need_expansion;
+  probe.freq = ap.freq;
+  probe.address = ap.address;
+  probe.func_offset = ap.func_offset;
+  probe.loc = 0;
+  probe.index = ap.index() ?: p.index();
+  probe.len = ap.len;
+  probe.mode = ap.mode;
+  probe.async = ap.async;
+  probe.pin = ap.pin;
+  return probe;
+}
+
 int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points) {
     if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
-      Probe probe;
+      auto probe = generate_probe(*attach_point, p);
       probe.path = "/proc/self/exe";
       probe.attach_point = attach_point->provider + "_trigger";
-      probe.type = probetype(attach_point->provider);
-      probe.log_size = config_.get(ConfigKeyInt::log_size);
-      probe.orig_name = p.name();
       probe.name = p.name();
-      probe.loc = 0;
-      probe.index = attach_point->index() > 0 ? attach_point->index()
-                                              : p.index();
       resources.special_probes.push_back(probe);
       continue;
     }
@@ -134,15 +151,8 @@ int BPFtrace::add_probe(ast::Probe &p)
           (probetype(attach_point->provider) == ProbeType::kprobe ||
            probetype(attach_point->provider) == ProbeType::kretprobe) &&
           attach_point->target.empty()) {
-        Probe probe;
-        probe.attach_point = attach_point->func;
-        probe.type = probetype(attach_point->provider);
-        probe.log_size = config_.get(ConfigKeyInt::log_size);
-        probe.orig_name = p.name();
-        probe.name = attach_point->name();
-        probe.index = p.index();
-        probe.funcs.assign(attach_funcs.begin(), attach_funcs.end());
-
+        auto probe = generate_probe(*attach_point, p);
+        probe.funcs = attach_funcs;
         resources.probes.push_back(probe);
         continue;
       }
@@ -152,16 +162,8 @@ int BPFtrace::add_probe(ast::Probe &p)
           feature_->has_uprobe_multi() && has_wildcard(attach_point->func) &&
           !p.need_expansion && attach_funcs.size()) {
         if (!has_wildcard(attach_point->target)) {
-          Probe probe;
-          probe.attach_point = attach_point->func;
-          probe.path = attach_point->target;
-          probe.type = probetype(attach_point->provider);
-          probe.log_size = config_.get(ConfigKeyInt::log_size);
-          probe.orig_name = p.name();
-          probe.name = attach_point->name();
-          probe.index = p.index();
+          auto probe = generate_probe(*attach_point, p);
           probe.funcs = attach_funcs;
-
           resources.probes.push_back(probe);
           continue;
         } else {
@@ -176,14 +178,7 @@ int BPFtrace::add_probe(ast::Probe &p)
             if (found != target_map.end()) {
               found->second.funcs.push_back(func);
             } else {
-              Probe probe;
-              probe.attach_point = attach_point->func;
-              probe.path = ap.target;
-              probe.type = probetype(attach_point->provider);
-              probe.log_size = config_.get(ConfigKeyInt::log_size);
-              probe.orig_name = p.name();
-              probe.name = ap.name();
-              probe.index = p.index();
+              auto probe = generate_probe(ap, p);
               probe.funcs.push_back(func);
               target_map.insert({ { ap.target, probe } });
             }
@@ -261,25 +256,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         has_iter_ = true;
       }
 
-      Probe probe;
-      probe.path = match_ap.target;
-      probe.attach_point = match_ap.func;
-      probe.type = probetype(attach_point->provider);
-      probe.log_size = config_.get(ConfigKeyInt::log_size);
-      probe.orig_name = p.name();
-      probe.ns = match_ap.ns;
-      probe.name = match_ap.name();
-      probe.need_expansion = p.need_expansion;
-      probe.freq = attach_point->freq;
-      probe.address = attach_point->address;
-      probe.func_offset = attach_point->func_offset;
-      probe.loc = 0;
-      probe.index = attach_point->index() > 0 ? attach_point->index()
-                                              : p.index();
-      probe.len = attach_point->len;
-      probe.mode = attach_point->mode;
-      probe.async = attach_point->async;
-      probe.pin = attach_point->pin;
+      auto probe = generate_probe(match_ap, p);
 
       if (probetype(attach_point->provider) == ProbeType::usdt) {
         // We must attach to all locations of a USDT marker if duplicates exist
