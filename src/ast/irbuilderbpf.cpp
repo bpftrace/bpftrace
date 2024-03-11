@@ -1472,7 +1472,7 @@ void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
   CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Add,
                     val,
                     getInt64(1),
-                    1,
+                    8,
                     AtomicOrdering::SequentiallyConsistent);
   CreateBr(lookup_merge_block);
 
