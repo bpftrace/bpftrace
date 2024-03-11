@@ -265,6 +265,7 @@ private:
   static uint64_t read_address_from_output(std::string output);
   std::optional<std::vector<uint8_t>> find_empty_key(const BpfMap &map) const;
   struct bcc_symbol_option &get_symbol_opts();
+  Probe generate_probe(const ast::AttachPoint &ap, const ast::Probe &p);
   bool has_iter_ = false;
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;
