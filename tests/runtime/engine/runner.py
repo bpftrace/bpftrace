@@ -207,6 +207,8 @@ class Runner(object):
                 if expect.mode == "text":
                     # Raw text match on an entire line, ignoring leading/trailing whitespace
                     return re.search(f"^\s*{re.escape(expect.expect)}\s*$", output, re.M)
+                elif expect.mode == "text_none":
+                    return not re.search(f"^\s*{re.escape(expect.expect)}\s*$", output, re.M)
                 elif expect.mode == "regex":
                     return re.search(expect.expect, output, re.M)
                 elif expect.mode == "regex_none":
@@ -457,6 +459,9 @@ class Runner(object):
             for failed_expect in failed_expects:
                 if failed_expect.mode == "text":
                     print('\tExpected: ' + failed_expect.expect)
+                    print('\tFound:\n' + to_utf8(output))
+                elif failed_expect.mode == "text_none":
+                    print('\tExpected no: ' + failed_expect.expect)
                     print('\tFound:\n' + to_utf8(output))
                 elif failed_expect.mode == "regex":
                     print('\tExpected REGEX: ' + failed_expect.expect)

@@ -135,9 +135,11 @@ class TestParser(object):
                 prog = line
             elif item_name == 'EXPECT':
                 expects.append(Expect(line, 'text'))
+            elif item_name == 'EXPECT_NONE':
+                expects.append(Expect(line, 'text_none'))
             elif item_name == 'EXPECT_REGEX':
                 expects.append(Expect(line, 'regex'))
-            elif item_name == 'EXPECT_NONE':
+            elif item_name == 'EXPECT_REGEX_NONE':
                 expects.append(Expect(line, 'regex_none'))
             elif item_name == 'EXPECT_FILE':
                 has_exact_expect = True
