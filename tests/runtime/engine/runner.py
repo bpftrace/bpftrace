@@ -143,7 +143,7 @@ class Runner(object):
         bpffeature["iter:task_file"] = output.find("iter:task_file: yes") != -1
         bpffeature["iter:task_vma"] = output.find("iter:task_vma: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
-        bpffeature["dwarf"] = output.find("libdw (DWARF support): yes") != -1
+        bpffeature["dwarf"] = output.find("liblldb (DWARF support): yes") != -1
         bpffeature["kprobe_multi"] = output.find("kprobe_multi: yes") != -1
         bpffeature["uprobe_multi"] = output.find("uprobe_multi: yes") != -1
         bpffeature["aot"] = cmake_vars.LIBBCC_BPF_CONTAINS_RUNTIME

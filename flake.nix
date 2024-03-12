@@ -88,6 +88,7 @@
                     libopcodes
                     libpcap
                     libsystemtap
+                    lldb
                     llvm
                     pahole
                     xxd

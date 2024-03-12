@@ -22,6 +22,16 @@ struct Foo *uprobeFunction2(struct Foo *foo1,
   return foo1;
 }
 
+int uprobeFunction3(
+    enum { A, B, C } e,
+    union {
+      int a;
+      char b;
+    } u __attribute__((unused)))
+{
+  return e;
+}
+
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 {
   usleep(1000000);

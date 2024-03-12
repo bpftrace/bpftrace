@@ -28,6 +28,8 @@ and this project adheres to
   - [#3096](https://github.com/bpftrace/bpftrace/pull/3096)
 - Replace instances of std::runtime_error with LOG(FATAL)
   - [#3091](https://github.com/bpftrace/bpftrace/pull/3091)
+- Parse DWARF using liblldb instead of libdw
+  - [#3042](https://github.com/bpftrace/bpftrace/pull/3042)
 #### Deprecated
 #### Removed
 #### Fixed

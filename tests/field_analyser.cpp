@@ -163,6 +163,9 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
   EXPECT_EQ(arrs->GetField("ptr_arr").offset, 24);
 
+  // BTF flattens multi-dimensional arrays, so this test doesn't
+  // check the correct number of elements. The correct values are
+  // below in 'field_analyser_btf.btf_arrays_multi_dim'.
   EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
   EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsIntTy());
@@ -180,6 +183,43 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
+}
+
+TEST_F(field_analyser_btf, btf_arrays_multi_dim)
+{
+  GTEST_SKIP() << "BTF flattens multi-dimensional arrays #3082";
+
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace,
+       "BEGIN {\n"
+       "  @ = (struct Arrays *) 0;\n"
+       "}",
+       0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
+  auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
+
+  ASSERT_TRUE(arrs->HasField("multi_dim"));
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetNumElements(),
+            2);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim")
+                  .type.GetElementTy()
+                  ->GetElementTy()
+                  ->IsIntTy());
+  EXPECT_EQ(arrs->GetField("multi_dim")
+                .type.GetElementTy()
+                ->GetElementTy()
+                ->GetSize(),
+            4U);
 }
 
 TEST_F(field_analyser_btf, btf_types_struct_ptr)
@@ -280,7 +320,7 @@ TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
   EXPECT_EQ(record->GetField("c").offset, 4);
 }
 
-#ifdef HAVE_LIBDW
+#ifdef HAVE_LIBLLDB
 
 #include "dwarf_common.h"
 
@@ -340,6 +380,108 @@ TEST_F(field_analyser_dwarf, parse_struct)
   ASSERT_TRUE(str->HasField("c"));
   ASSERT_TRUE(str->GetField("c").type.IsIntTy());
   ASSERT_EQ(str->GetField("c").type.GetSize(), 8);
+}
+
+TEST_F(field_analyser_dwarf, parse_arrays)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(bpftrace,
+       uprobe + ":func_arrays {\n"
+                "  @ = (struct Arrays *) args.arr;\n"
+                "}");
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
+  auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
+
+  EXPECT_EQ(arrs->size, 64);
+  ASSERT_EQ(arrs->fields.size(), 6U);
+  ASSERT_TRUE(arrs->HasField("int_arr"));
+  ASSERT_TRUE(arrs->HasField("char_arr"));
+  ASSERT_TRUE(arrs->HasField("ptr_arr"));
+  ASSERT_TRUE(arrs->HasField("multi_dim"));
+  ASSERT_TRUE(arrs->HasField("zero"));
+  ASSERT_TRUE(arrs->HasField("flexible"));
+
+  EXPECT_TRUE(arrs->GetField("int_arr").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("int_arr").type.GetNumElements(), 4);
+  EXPECT_TRUE(arrs->GetField("int_arr").type.GetElementTy()->IsIntTy());
+  EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
+  EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
+
+  EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
+
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetNumElements(), 2);
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.GetElementTy()->IsPtrTy());
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
+  EXPECT_EQ(arrs->GetField("ptr_arr").offset, 24);
+
+  ASSERT_TRUE(arrs->HasField("multi_dim"));
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetNumElements(),
+            2);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim")
+                  .type.GetElementTy()
+                  ->GetElementTy()
+                  ->IsIntTy());
+  EXPECT_EQ(arrs->GetField("multi_dim")
+                .type.GetElementTy()
+                ->GetElementTy()
+                ->GetSize(),
+            4U);
+
+  EXPECT_TRUE(arrs->GetField("zero").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
+  EXPECT_TRUE(arrs->GetField("zero").type.GetElementTy()->IsIntTy());
+  EXPECT_EQ(arrs->GetField("zero").type.GetSize(), 0U);
+  EXPECT_EQ(arrs->GetField("zero").offset, 64);
+
+  EXPECT_TRUE(arrs->GetField("flexible").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("flexible").type.GetNumElements(), 0);
+  EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
+  EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
+  EXPECT_EQ(arrs->GetField("flexible").offset, 64);
+}
+
+TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
+{
+  GTEST_SKIP() << "Anonymous fields not supported #3084";
+
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(bpftrace, uprobe + ":func_1 { $x = args.foo2->g; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
+  auto str = bpftrace.structs.Lookup("struct Foo2").lock();
+
+  ASSERT_TRUE(str->HasFields());
+  ASSERT_EQ(str->fields.size(), 3);
+  ASSERT_EQ(str->size, 72);
+
+  ASSERT_TRUE(str->HasField("a"));
+  ASSERT_TRUE(str->GetField("a").type.IsIntTy());
+  ASSERT_EQ(str->GetField("a").type.GetSize(), 4);
+  ASSERT_EQ(str->GetField("a").offset, 0);
+
+  ASSERT_TRUE(str->HasField("f"));
+  ASSERT_TRUE(str->GetField("f").type.IsRecordTy());
+  ASSERT_EQ(str->GetField("f").type.GetSize(), 64);
+  ASSERT_EQ(str->GetField("f").offset, 8);
+
+  ASSERT_TRUE(str->HasField("g"));
+  ASSERT_TRUE(str->GetField("g").type.IsIntTy());
+  ASSERT_EQ(str->GetField("g").type.GetSize(), 1);
+  ASSERT_EQ(str->GetField("g").offset, 8);
 }
 
 TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
@@ -420,7 +562,7 @@ TEST(field_analyser_subprog, struct_cast)
   test("struct x { int a; } fn f(): void { $s = (struct x *)0; }", 0);
 }
 
-#endif // HAVE_LIBDW
+#endif // HAVE_LIBLLDB
 
 } // namespace field_analyser
 } // namespace test

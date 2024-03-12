@@ -56,6 +56,11 @@ struct Arrays {
 };
 struct Arrays arrays;
 
+struct Arrays *func_arrays(struct Arrays *arr)
+{
+  return 0;
+}
+
 struct task_struct {
   int pid;
   int pgid;

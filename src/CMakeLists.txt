@@ -126,6 +126,10 @@ endif(STATIC_LINKING)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
 target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm)
 
+if(LLDB_FOUND)
+  target_link_libraries(runtime LLDB)
+endif(LLDB_FOUND)
+
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
 endif(LIBPCAP_FOUND)
@@ -172,44 +176,17 @@ if(STATIC_LINKING)
   target_link_libraries(runtime ${LIBBPF_LIBRARIES})
   target_link_libraries(runtime ${LIBBCC_LOADER_LIBRARY_STATIC})
 
+  find_package(LibLzma)
+  add_library(LIBLZMA STATIC IMPORTED)
+  set_property(TARGET LIBLZMA PROPERTY IMPORTED_LOCATION ${LIBLZMA_LIBRARIES})
+  target_link_libraries(runtime LIBLZMA)
+
   add_library(LIBELF STATIC IMPORTED)
   set_property(TARGET LIBELF PROPERTY IMPORTED_LOCATION ${LIBELF_LIBRARIES})
   target_link_libraries(runtime LIBELF)
 else()
   target_link_libraries(runtime ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
-
-if (LIBDW_FOUND)
-  if(STATIC_LINKING)
-    find_package(LibBz2)
-    find_package(LibLzma)
-    find_package(LibEbl)
-
-    add_library(LIBBZ2 STATIC IMPORTED)
-    set_property(TARGET LIBBZ2 PROPERTY IMPORTED_LOCATION ${LIBBZ2_LIBRARIES})
-
-    add_library(LIBLZMA STATIC IMPORTED)
-    set_property(TARGET LIBLZMA PROPERTY IMPORTED_LOCATION ${LIBLZMA_LIBRARIES})
-
-    add_library(LIBDW STATIC IMPORTED)
-    set_property(TARGET LIBDW PROPERTY IMPORTED_LOCATION ${LIBDW_LIBRARIES})
-
-    set(LIBDW_LIBS LIBBZ2 LIBELF LIBLZMA)
-
-    if (${LIBEBL_FOUND})
-      # libebl is not necessary on some systems (e.g. Alpine)
-      add_library(LIBEBL STATIC IMPORTED)
-      set_property(TARGET LIBEBL PROPERTY IMPORTED_LOCATION ${LIBEBL_LIBRARIES})
-      set(LIBDW_LIBS ${LIBDW_LIBS} LIBEBL)
-    endif()
-
-    target_link_libraries(LIBDW INTERFACE ${LIBDW_LIBS})
-
-    target_link_libraries(runtime LIBDW)
-  else()
-    target_link_libraries(runtime ${LIBDW_LIBRARIES})
-  endif()
-endif()
 
 # Support for std::filesystem
 # GCC version <9 and Clang (all versions) require -lstdc++fs

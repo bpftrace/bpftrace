@@ -606,6 +606,39 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
+TEST_F(clang_parser_btf, btf_arrays_multi_dim)
+{
+  GTEST_SKIP() << "BTF flattens multi-dimensional arrays #3082";
+
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  parse("struct Foo { struct Arrays a; };", bpftrace);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
+  auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
+
+  ASSERT_TRUE(arrs->HasField("multi_dim"));
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetNumElements(),
+            2);
+
+  EXPECT_TRUE(arrs->GetField("multi_dim")
+                  .type.GetElementTy()
+                  ->GetElementTy()
+                  ->IsIntTy());
+  EXPECT_EQ(arrs->GetField("multi_dim")
+                .type.GetElementTy()
+                ->GetElementTy()
+                ->GetSize(),
+            4U);
+}
+
 TEST(clang_parser, btf_unresolved_typedef)
 {
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
