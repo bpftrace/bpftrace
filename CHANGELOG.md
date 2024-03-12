@@ -15,6 +15,8 @@ and this project adheres to
   - [#2969](https://github.com/bpftrace/bpftrace/pull/2969)
 - Add ability to call print() with indexed maps to print single map values
   - [#3027](https://github.com/bpftrace/bpftrace/pull/3027)
+- Add LLVM 18 support
+  - [#3051](https://github.com/bpftrace/bpftrace/pull/3051)
 #### Changed
 #### Deprecated
 #### Removed
