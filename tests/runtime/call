@@ -227,32 +227,32 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME ustack_stack_mode_env_bpftrace
-PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=bpftrace
-EXPECT_REGEX ^\s+[a-zA-Z0-9_]+
+EXPECT uprobeFunction1+0
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_perf
-PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
-EXPECT_REGEX ^\s+[0-9a-f]+ [a-zA-Z0-9_]+
+EXPECT_REGEX \d+ uprobeFunction1\+0 \(.*/uprobe_loop\)
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_raw
-PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=raw
-EXPECT_REGEX ^\s+[0-9a-f]+$
+EXPECT_REGEX ^[\da-fA-F]+$
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_override
-PROG k:do_nanosleep { printf("%s", ustack(raw, 1)); exit(); }
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(raw, 1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
-EXPECT_REGEX ^\s+[0-9a-f]+$
+EXPECT_REGEX ^[\da-fA-F]+$
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME ustack_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
