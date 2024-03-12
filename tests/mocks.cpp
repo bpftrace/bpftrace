@@ -45,7 +45,6 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                          "/bin/sh:_Z11cpp_mangledv\n"
                          "/bin/sh:_Z18cpp_mangled_suffixv\n";
   std::string bash_usyms = "/bin/bash:first_open\n";
-  std::string proc_usyms = "/proc/1234/exe:third_open\n";
   ON_CALL(matcher, get_func_symbols_from_file(_, "/bin/sh"))
       .WillByDefault([sh_usyms](int, const std::string &) {
         return std::unique_ptr<std::istream>(new std::istringstream(sh_usyms));
@@ -56,12 +55,6 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         return std::unique_ptr<std::istream>(
             new std::istringstream(sh_usyms + bash_usyms));
       });
-  ON_CALL(matcher, get_func_symbols_from_file(_, "*"))
-      .WillByDefault(
-          [sh_usyms, bash_usyms, proc_usyms](int, const std::string &) {
-            return std::unique_ptr<std::istream>(
-                new std::istringstream(sh_usyms + bash_usyms + proc_usyms));
-          });
 
   std::string sh_usdts = "/bin/sh:prov1:tp1\n"
                          "/bin/sh:prov1:tp2\n"
@@ -69,7 +62,6 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                          "/bin/sh:prov2:notatp\n"
                          "/bin/sh:nahprov:tp\n";
   std::string bash_usdts = "/bin/bash:prov1:tp3\n";
-  std::string proc_usdts = "/proc/1234/exe:prov2:tp4\n";
   ON_CALL(matcher, get_symbols_from_usdt(_, "/bin/sh"))
       .WillByDefault([sh_usdts](int, const std::string &) {
         return std::unique_ptr<std::istream>(new std::istringstream(sh_usdts));
@@ -79,12 +71,6 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         return std::unique_ptr<std::istream>(
             new std::istringstream(sh_usdts + bash_usdts));
       });
-  ON_CALL(matcher, get_symbols_from_usdt(_, "*"))
-      .WillByDefault(
-          [sh_usdts, bash_usdts, proc_usdts](int, const std::string &) {
-            return std::unique_ptr<std::istream>(
-                new std::istringstream(sh_usdts + bash_usdts + proc_usdts));
-          });
 }
 
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)
@@ -154,6 +140,27 @@ std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
   bpftrace->set_mock_probe_matcher(std::move(probe_matcher));
 
   return bpftrace;
+}
+
+std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations)
+{
+  auto usdt_helper = std::make_unique<NiceMock<MockUSDTHelper>>();
+
+  ON_CALL(*usdt_helper, find(_, _, _, _))
+      .WillByDefault([num_locations](int,
+                                     const std::string &,
+                                     const std::string &,
+                                     const std::string &) {
+        return usdt_probe_entry{
+          .path = "",
+          .provider = "",
+          .name = "",
+          .semaphore_offset = 0,
+          .num_locations = num_locations,
+        };
+      });
+
+  return usdt_helper;
 }
 
 } // namespace test

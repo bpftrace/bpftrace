@@ -88,7 +88,7 @@ std::set<std::string> Driver::list_modules() const
           ((probe_type == ProbeType::kprobe ||
             probe_type == ProbeType::kretprobe) &&
            !ap->target.empty())) {
-        if (ap->need_expansion) {
+        if (ap->expansion != ast::ExpansionType::NONE) {
           for (auto &match :
                bpftrace_.probe_matcher_->get_matches_for_ap(*ap)) {
             std::string func = match;

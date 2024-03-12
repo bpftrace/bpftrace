@@ -48,8 +48,17 @@ namespace bpftrace {
 namespace ast {
 
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot)
+    : CodegenLLVM(root, bpftrace, is_aot, std::make_unique<USDTHelper>())
+{
+}
+
+CodegenLLVM::CodegenLLVM(Node *root,
+                         BPFtrace &bpftrace,
+                         bool is_aot,
+                         std::unique_ptr<USDTHelper> usdt_helper)
     : root_(root),
       bpftrace_(bpftrace),
+      usdt_helper_(std::move(usdt_helper)),
       context_(std::make_unique<LLVMContext>()),
       module_(std::make_unique<Module>("bpftrace", *context_)),
       b_(*context_, *module_, bpftrace),
@@ -2568,6 +2577,44 @@ void CodegenLLVM::generateProbe(Probe &probe,
         func_type, name, current_attach_point_->address, index);
 }
 
+void CodegenLLVM::add_probe(AttachPoint &ap,
+                            Probe &probe,
+                            const std::string &name,
+                            FunctionType *func_type)
+{
+  current_attach_point_ = &ap;
+  probefull_ = ap.name();
+  if (probetype(ap.provider) == ProbeType::usdt) {
+    auto usdt = usdt_helper_->find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
+    if (!usdt.has_value()) {
+      throw FatalUserException("Failed to find usdt probe: " + probefull_);
+    } else
+      ap.usdt = *usdt;
+
+    // A "unique" USDT probe can be present in a binary in multiple
+    // locations. One case where this happens is if a function
+    // containing a USDT probe is inlined into a caller. So we must
+    // generate a new program for each instance. We _must_ regenerate
+    // because argument locations may differ between instance locations
+    // (eg arg0. may not be found in the same offset from the same
+    // register in each location)
+    auto reset_ids = create_reset_ids();
+    current_usdt_location_index_ = 0;
+    for (int i = 0; i < ap.usdt.num_locations; ++i) {
+      reset_ids();
+
+      std::string full_func_id = name + "_loc" + std::to_string(i);
+      generateProbe(probe, full_func_id, probefull_, func_type, i);
+      bpftrace_.add_probe(ap, probe, i);
+      current_usdt_location_index_++;
+    }
+  } else {
+    generateProbe(probe, name, probefull_, func_type);
+    bpftrace_.add_probe(ap, probe);
+  }
+  current_attach_point_ = nullptr;
+}
+
 void CodegenLLVM::visit(Subprog &subprog)
 {
   std::vector<llvm::Type *> arg_types;
@@ -2660,54 +2707,20 @@ void CodegenLLVM::createRet(Value *value)
 void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(),
-                                              { b_.GET_PTR_TY() }, // struct
-                                                                   // pt_regs
-                                                                   // *ctx
+                                              { b_.GET_PTR_TY() }, // ctx
                                               false);
 
-  // Probe has at least one attach point (required by the parser)
-  auto &attach_point = (*probe.attach_points)[0];
-
-  // All usdt probes need expansion to be able to read arguments
-  if (probetype(attach_point->provider) == ProbeType::usdt)
-    probe.need_expansion = true;
-
-  bool generated = false;
-  current_attach_point_ = attach_point;
-  inside_subprog_ = false;
-
-  /*
-   * Most of the time, we can take a probe like kprobe:do_f* and build a
-   * single BPF program for that, called "s_kprobe:do_f*", and attach it to
-   * each wildcard match. An exception is the "probe" builtin, where we need
-   * to build different BPF programs for each wildcard match that contains an
-   * ID for the match. Those programs will be called "s_kprobe:do_fcntl" etc.
-   */
-  if (probe.need_expansion == false) {
-    // build a single BPF program pre-wildcards
-    probefull_ = probe.name();
-    if (probe.index() == 0)
-      probe.set_index(getNextIndexForProbe());
-    generateProbe(probe, probefull_, probefull_, func_type);
-    generated = true;
-  } else {
-    /*
-     * Build a separate BPF program for each wildcard match.
-     * We begin by saving state that gets changed by the codegen pass, so we
-     * can restore it for the next pass (printf_id_, time_id_).
-     */
-    auto reset_ids = create_reset_ids();
-
-    for (auto attach_point : *probe.attach_points) {
-      current_attach_point_ = attach_point;
-
-      std::set<std::string> matches;
-      if (attach_point->provider == "BEGIN" ||
-          attach_point->provider == "END") {
-        matches.insert(attach_point->provider);
-      } else {
-        matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
-      }
+  // We begin by saving state that gets changed by the codegen pass, so we
+  // can restore it for the next pass (printf_id_, time_id_).
+  auto reset_ids = create_reset_ids();
+  for (auto *attach_point : *probe.attach_points) {
+    reset_ids();
+    current_attach_point_ = attach_point;
+    if (probe.need_expansion ||
+        attach_point->expansion == ExpansionType::FULL) {
+      // Do expansion - generate a separate LLVM function for each match
+      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
+          *attach_point);
 
       probe_count_ += matches.size();
       uint64_t max_bpf_progs = bpftrace_.config_.get(
@@ -2722,54 +2735,24 @@ void CodegenLLVM::visit(Probe &probe)
             "environment variable.");
       }
 
-      tracepoint_struct_ = "";
-      for (const auto &m : matches) {
+      for (auto &match : matches) {
         reset_ids();
-        std::string match = m;
-        generated = true;
-
         if (attach_point->index() == 0)
           attach_point->set_index(getNextIndexForProbe());
 
-        AttachPoint match_ap = attach_point->create_expansion_copy(match);
-        probefull_ = match_ap.name();
-        current_attach_point_ = &match_ap;
-
-        if (probetype(attach_point->provider) == ProbeType::usdt) {
-          // Set the probe identifier so that we can read arguments later
-          auto usdt = USDTHelper::find(
-              bpftrace_.pid(), match_ap.target, match_ap.ns, match_ap.func);
-          if (!usdt.has_value())
-            LOG(BUG) << "Failed to find usdt probe: " << probefull_;
-          match_ap.usdt = *usdt;
-
-          // A "unique" USDT probe can be present in a binary in multiple
-          // locations. One case where this happens is if a function containing
-          // a USDT probe is inlined into a caller. So we must generate a new
-          // program for each instance. We _must_ regenerate because argument
-          // locations may differ between instance locations (eg arg0. may not
-          // be found in the same offset from the same register in each
-          // location)
-          current_usdt_location_index_ = 0;
-          for (int i = 0; i < match_ap.usdt.num_locations; ++i) {
-            reset_ids();
-
-            std::string full_func_id = match + "_loc" + std::to_string(i);
-            generateProbe(probe, full_func_id, probefull_, func_type, i);
-            current_usdt_location_index_++;
-          }
-        } else {
-          generateProbe(probe, match, probefull_, func_type);
-        }
+        auto match_ap = attach_point->create_expansion_copy(match);
+        add_probe(match_ap, probe, match, func_type);
       }
+      if (matches.empty()) {
+        generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
+      }
+    } else {
+      if (probe.index() == 0)
+        probe.set_index(getNextIndexForProbe());
+      add_probe(*attach_point, probe, attach_point->name(), func_type);
     }
-
-    if (!generated)
-      generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
   }
 
-  if (generated)
-    bpftrace_.add_probe(probe);
   current_attach_point_ = nullptr;
 }
 

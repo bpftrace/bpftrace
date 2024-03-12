@@ -15,7 +15,8 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD1(add_probe, int(ast::Probe &p));
+  MOCK_METHOD3(add_probe,
+               int(const ast::AttachPoint &, const ast::Probe &, int));
 #pragma GCC diagnostic pop
 
   int resolve_uname(const std::string &name,
@@ -110,7 +111,7 @@ TEST(codegen, printf_offsets)
 TEST(codegen, probe_count)
 {
   MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_)).Times(2);
+  EXPECT_CALL(bpftrace, add_probe(_, _, _)).Times(2);
 
   Driver driver(bpftrace);
 

@@ -434,7 +434,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
-        probe->need_expansion = true;
+        attach_point->expansion = ExpansionType::FULL;
         builtin_args_tracepoint(attach_point, builtin);
       }
     }

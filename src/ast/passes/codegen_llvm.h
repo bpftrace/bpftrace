@@ -29,6 +29,10 @@ using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
 class CodegenLLVM : public Visitor {
 public:
   explicit CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot = false);
+  explicit CodegenLLVM(Node *root,
+                       BPFtrace &bpftrace,
+                       bool is_aot,
+                       std::unique_ptr<USDTHelper> usdt_helper);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -154,6 +158,12 @@ private:
                      std::optional<int> usdt_location_index = std::nullopt,
                      bool dummy = false);
 
+  // Generate a probe and register it to the BPFtrace class.
+  void add_probe(AttachPoint &ap,
+                 Probe &probe,
+                 const std::string &name,
+                 FunctionType *func_type);
+
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
   AllocaInst *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
@@ -238,6 +248,7 @@ private:
   Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;
+  std::unique_ptr<USDTHelper> usdt_helper_;
   std::unique_ptr<LLVMContext> context_;
   std::unique_ptr<TargetMachine> target_machine_;
   std::unique_ptr<Module> module_;

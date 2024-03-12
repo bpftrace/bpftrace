@@ -82,7 +82,9 @@ Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
   return setup_probe;
 }
 
-Probe BPFtrace::generate_probe(const ast::AttachPoint &ap, const ast::Probe &p)
+Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
+                               const ast::Probe &p,
+                               int usdt_location_idx)
 {
   Probe probe;
   probe.path = ap.target;
@@ -97,6 +99,7 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap, const ast::Probe &p)
   probe.address = ap.address;
   probe.func_offset = ap.func_offset;
   probe.loc = 0;
+  probe.usdt_location_idx = usdt_location_idx;
   probe.index = ap.index() ?: p.index();
   probe.len = ap.len;
   probe.mode = ap.mode;
@@ -105,237 +108,110 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap, const ast::Probe &p)
   return probe;
 }
 
-int BPFtrace::add_probe(ast::Probe &p)
+int BPFtrace::add_probe(const ast::AttachPoint &ap,
+                        const ast::Probe &p,
+                        int usdt_location_idx)
 {
-  for (auto attach_point : *p.attach_points) {
-    if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
-      auto probe = generate_probe(*attach_point, p);
-      probe.path = "/proc/self/exe";
-      probe.attach_point = attach_point->provider + "_trigger";
-      probe.name = p.name();
-      resources.special_probes.push_back(probe);
-      continue;
-    }
+  auto type = probetype(ap.provider);
+  auto probe = generate_probe(ap, p, usdt_location_idx);
 
-    std::vector<std::string> attach_funcs;
-    // An underspecified usdt probe is a probe that has no wildcards and
-    // either an empty namespace or a specified PID.
-    // We try to find a unique match for such a probe.
-    bool underspecified_usdt_probe = probetype(attach_point->provider) ==
-                                         ProbeType::usdt &&
-                                     !has_wildcard(attach_point->target) &&
-                                     !has_wildcard(attach_point->ns) &&
-                                     !has_wildcard(attach_point->func) &&
-                                     (attach_point->ns.empty() || pid() > 0);
-    if (attach_point->need_expansion &&
-        (has_wildcard(attach_point->func) ||
-         has_wildcard(attach_point->target) || has_wildcard(attach_point->ns) ||
-         underspecified_usdt_probe)) {
-      std::set<std::string> matches;
-      try {
-        matches = probe_matcher_->get_matches_for_ap(*attach_point);
-      } catch (const WildcardException &e) {
-        LOG(ERROR) << e.what();
-        return 1;
-      }
+  // Add the new probe(s) to resources
+  if (ap.provider == "BEGIN" || ap.provider == "END") {
+    // special probes
+    probe.path = "/proc/self/exe";
+    probe.attach_point = ap.provider + "_trigger";
+    resources.special_probes.push_back(std::move(probe));
+  } else if ((type == ProbeType::watchpoint ||
+              type == ProbeType::asyncwatchpoint) &&
+             ap.func.size()) {
+    // (async)watchpoint - generate also the setup probe
+    resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
+    resources.watchpoint_probes.emplace_back(std::move(probe));
+  } else if (ap.expansion == ast::ExpansionType::MULTI) {
+    // (k|u)probe_multi - do expansion and set probe.funcs
+    auto matches = probe_matcher_->get_matches_for_ap(ap);
+    if (matches.empty())
+      return 1;
 
-      if (underspecified_usdt_probe && matches.size() > 1) {
-        LOG(ERROR) << "namespace for " << attach_point->name()
-                   << " not specified, matched " << matches.size()
-                   << " probes. Please specify a unique namespace or use '*' "
-                      "to attach "
-                   << "to all matched probes";
-        return 1;
-      }
-
-      attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
-
-      if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
-          !p.need_expansion && attach_funcs.size() &&
-          (probetype(attach_point->provider) == ProbeType::kprobe ||
-           probetype(attach_point->provider) == ProbeType::kretprobe) &&
-          attach_point->target.empty()) {
-        auto probe = generate_probe(*attach_point, p);
-        probe.funcs = attach_funcs;
-        resources.probes.push_back(probe);
-        continue;
-      }
-
-      if ((probetype(attach_point->provider) == ProbeType::uprobe ||
-           probetype(attach_point->provider) == ProbeType::uretprobe) &&
-          feature_->has_uprobe_multi() && has_wildcard(attach_point->func) &&
-          !p.need_expansion && attach_funcs.size()) {
-        if (!has_wildcard(attach_point->target)) {
-          auto probe = generate_probe(*attach_point, p);
-          probe.funcs = attach_funcs;
-          resources.probes.push_back(probe);
-          continue;
+    if (has_wildcard(ap.target)) {
+      // If we have a wildcard in the target path, we need to generate one
+      // probe per expanded target.
+      assert(type == ProbeType::uprobe || type == ProbeType::uretprobe);
+      std::unordered_map<std::string, Probe> target_map;
+      for (const auto &func : matches) {
+        ast::AttachPoint match_ap = ap.create_expansion_copy(func);
+        // Use the original (possibly wildcarded) function name
+        match_ap.func = ap.func;
+        auto found = target_map.find(match_ap.target);
+        if (found != target_map.end()) {
+          found->second.funcs.push_back(func);
         } else {
-          // If we have a wildcard in the target path, we need to generate one
-          // probe per expanded target.
-          std::unordered_map<std::string, Probe> target_map;
-          for (const auto &func : attach_funcs) {
-            ast::AttachPoint ap = attach_point->create_expansion_copy(func);
-            // Use the original (possibly wildcarded) function name
-            ap.func = attach_point->func;
-            auto found = target_map.find(ap.target);
-            if (found != target_map.end()) {
-              found->second.funcs.push_back(func);
-            } else {
-              auto probe = generate_probe(ap, p);
-              probe.funcs.push_back(func);
-              target_map.insert({ { ap.target, probe } });
-            }
-          }
-          for (auto &pair : target_map) {
-            resources.probes.push_back(std::move(pair.second));
-          }
-          continue;
+          auto probe = generate_probe(match_ap, p);
+          probe.funcs.push_back(func);
+          target_map.insert({ { match_ap.target, probe } });
         }
       }
-    } else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
-                probetype(attach_point->provider) == ProbeType::uretprobe ||
-                probetype(attach_point->provider) == ProbeType::watchpoint ||
-                probetype(attach_point->provider) ==
-                    ProbeType::asyncwatchpoint) &&
-               !attach_point->func.empty()) {
-      std::set<std::string> matches;
-
-      struct symbol sym = {};
-      int err = resolve_uname(attach_point->func, &sym, attach_point->target);
-
-      if (attach_point->lang == "cpp") {
-        // As the C++ language supports function overload, a given function name
-        // (without parameters) could have multiple matches even when no
-        // wildcards are used.
-        matches = probe_matcher_->get_matches_for_ap(*attach_point);
+      for (auto &pair : target_map) {
+        resources.probes.push_back(std::move(pair.second));
       }
-
-      if (err >= 0 && sym.address != 0)
-        matches.insert(attach_point->target + ":" + attach_point->func);
-
-      attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     } else {
-      if (probetype(attach_point->provider) == ProbeType::usdt &&
-          !attach_point->ns.empty())
-        attach_funcs.push_back(attach_point->target + ":" + attach_point->ns +
-                               ":" + attach_point->func);
-      else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
-               probetype(attach_point->provider) == ProbeType::uprobe ||
-               probetype(attach_point->provider) == ProbeType::uretprobe ||
-               probetype(attach_point->provider) == ProbeType::kfunc ||
-               probetype(attach_point->provider) == ProbeType::kretfunc)
-        attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
-      else if ((probetype(attach_point->provider) == ProbeType::kprobe ||
-                probetype(attach_point->provider) == ProbeType::kretprobe) &&
-               !attach_point->target.empty()) {
-        attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
-      } else {
-        attach_funcs.push_back(attach_point->func);
-      }
+      probe.funcs.assign(matches.begin(), matches.end());
+      resources.probes.push_back(std::move(probe));
     }
+  } else if (probetype(ap.provider) == ProbeType::uprobe) {
+    bool locations_from_dwarf = false;
 
-    // You may notice that the below loop is somewhat duplicated in
-    // codegen_llvm.cpp. The reason is because codegen tries to avoid
-    // generating duplicate programs if it can be avoided. For example, a
-    // program `kprobe:do_* { print("hi") }` can be generated once and reused
-    // for multiple attachpoints. Thus, we need this loop here to attach the
-    // single program to multiple attach points.
-    //
-    // There may be a way to refactor and unify the codepaths in a clean manner
-    // but so far it has eluded your author.
-    for (const auto &f : attach_funcs) {
-      ast::AttachPoint match_ap = attach_point->create_expansion_copy(f);
-
-      if (probetype(attach_point->provider) == ProbeType::usdt) {
-        // Necessary for correct number of locations if wildcard expands to
-        // multiple probes.
-        std::optional<usdt_probe_entry> usdt;
-        if ((p.need_expansion || match_ap.need_expansion) &&
-            (usdt = USDTHelper::find(
-                 this->pid(), match_ap.target, match_ap.ns, match_ap.func))) {
-          match_ap.usdt = *usdt;
-        }
-      } else if (probetype(attach_point->provider) == ProbeType::iter) {
-        has_iter_ = true;
-      }
-
-      auto probe = generate_probe(match_ap, p);
-
-      if (probetype(attach_point->provider) == ProbeType::usdt) {
-        // We must attach to all locations of a USDT marker if duplicates exist
-        // in a target binary. See comment in codegen_llvm.cpp probe generation
-        // code for more details.
-        for (int i = 0; i < match_ap.usdt.num_locations; ++i) {
+    // If the user specified an address/offset, do not overwrite
+    // their choice with locations from the DebugInfo.
+    if (probe.address == 0 && probe.func_offset == 0) {
+      // Get function locations from the DebugInfo, as it skips the
+      // prologue and also returns locations of inlined function calls.
+      if (auto *dwarf = get_dwarf(probe.path)) {
+        const auto locations = dwarf->get_function_locations(
+            probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
+        for (const auto loc : locations) {
+          // Clear the attach point, so the address will be used instead
           Probe probe_copy = probe;
-          probe_copy.usdt_location_idx = i;
-          probe_copy.index = attach_point->index() > 0 ? attach_point->index()
-                                                       : p.index();
+          probe_copy.attach_point.clear();
+          probe_copy.address = loc;
+          resources.probes.push_back(std::move(probe_copy));
 
-          resources.probes.emplace_back(std::move(probe_copy));
+          locations_from_dwarf = true;
         }
-      } else if ((probetype(attach_point->provider) == ProbeType::watchpoint ||
-                  probetype(attach_point->provider) ==
-                      ProbeType::asyncwatchpoint) &&
-                 attach_point->func.size()) {
-        resources.probes.emplace_back(
-            generateWatchpointSetupProbe(match_ap, p));
-
-        resources.watchpoint_probes.emplace_back(std::move(probe));
-      } else if (probetype(attach_point->provider) == ProbeType::uprobe) {
-        bool locations_from_dwarf = false;
-
-        // If the user specified an address/offset, do not overwrite
-        // their choice with locations from the DebugInfo.
-        if (probe.address == 0 && probe.func_offset == 0) {
-          // Get function locations from the DebugInfo, as it skips the
-          // prologue and also returns locations of inlined function calls.
-          if (auto *dwarf = get_dwarf(probe.path)) {
-            const auto locations = dwarf->get_function_locations(
-                probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
-            for (const auto loc : locations) {
-              // Clear the attach point, so the address will be used instead
-              Probe probe_copy = probe;
-              probe_copy.attach_point.clear();
-              probe_copy.address = loc;
-              resources.probes.push_back(std::move(probe_copy));
-
-              locations_from_dwarf = true;
-            }
-          }
-        }
-
-        // Otherwise, use the location from the symbol table.
-        if (!locations_from_dwarf)
-          resources.probes.push_back(std::move(probe));
-      } else {
-        resources.probes.push_back(probe);
       }
     }
 
-    if (resources.probes_using_usym.find(&p) !=
-            resources.probes_using_usym.end() &&
-        bcc_elf_is_exe(attach_point->target.c_str())) {
-      auto user_symbol_cache_type = config_.get(
-          ConfigKeyUserSymbolCacheType::default_);
-      // preload symbol table for executable to make it available even if the
-      // binary is not present at symbol resolution time
-      // note: this only makes sense with ASLR disabled, since with ASLR offsets
-      // might be different
-      if (user_symbol_cache_type == UserSymbolCacheType::per_program &&
-          symbol_table_cache_.find(attach_point->target) ==
-              symbol_table_cache_.end())
-        symbol_table_cache_[attach_point->target] = get_symbol_table_for_elf(
-            attach_point->target);
+    // Otherwise, use the location from the symbol table.
+    if (!locations_from_dwarf)
+      resources.probes.push_back(std::move(probe));
+  } else {
+    resources.probes.emplace_back(std::move(probe));
+  }
 
-      if (user_symbol_cache_type == UserSymbolCacheType::per_pid)
-        // preload symbol tables from running processes
-        // this allows symbol resolution for processes that are running at probe
-        // attach time, but not at symbol resolution time, even with ASLR
-        // enabled, since BCC symcache records the offsets
-        for (int pid : get_pids_for_program(attach_point->target))
-          pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
-    }
+  if (type == ProbeType::iter)
+    has_iter_ = true;
+
+  // Preload symbol tables if necessary
+  if (resources.probes_using_usym.find(&p) !=
+          resources.probes_using_usym.end() &&
+      bcc_elf_is_exe(ap.target.c_str())) {
+    auto user_symbol_cache_type = config_.get(
+        ConfigKeyUserSymbolCacheType::default_);
+    // preload symbol table for executable to make it available even if the
+    // binary is not present at symbol resolution time
+    // note: this only makes sense with ASLR disabled, since with ASLR offsets
+    // might be different
+    if (user_symbol_cache_type == UserSymbolCacheType::per_program &&
+        symbol_table_cache_.find(ap.target) == symbol_table_cache_.end())
+      symbol_table_cache_[ap.target] = get_symbol_table_for_elf(ap.target);
+
+    if (user_symbol_cache_type == UserSymbolCacheType::per_pid)
+      // preload symbol tables from running processes
+      // this allows symbol resolution for processes that are running at probe
+      // attach time, but not at symbol resolution time, even with ASLR
+      // enabled, since BCC symcache records the offsets
+      for (int pid : get_pids_for_program(ap.target))
+        pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
   }
 
   return 0;
