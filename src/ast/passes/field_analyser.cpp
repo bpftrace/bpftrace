@@ -175,7 +175,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
         probe_type != ProbeType::uprobe)
       continue;
 
-    if (ap->need_expansion) {
+    if (ap->expansion != ExpansionType::NONE) {
       std::set<std::string> matches;
 
       // Find all the matches for the wildcard..

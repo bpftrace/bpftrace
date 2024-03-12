@@ -127,7 +127,7 @@ public:
   std::vector<Probe> watchpoint_probes;
 
   // List of probes using userspace symbol resolution
-  std::unordered_set<ast::Probe *> probes_using_usym;
+  std::unordered_set<const ast::Probe *> probes_using_usym;
 
 private:
   friend class cereal::access;

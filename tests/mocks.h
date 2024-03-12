@@ -163,5 +163,24 @@ public:
   }
 };
 
+class MockUSDTHelper : public USDTHelper {
+public:
+  MockUSDTHelper()
+  {
+  }
+#pragma GCC diagnostic push
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Winconsistent-missing-override"
+#endif
+  MOCK_METHOD4(find,
+               std::optional<usdt_probe_entry>(int pid,
+                                               const std::string &target,
+                                               const std::string &provider,
+                                               const std::string &name));
+#pragma GCC diagnostic pop
+};
+
+std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations);
+
 } // namespace test
 } // namespace bpftrace

@@ -89,6 +89,7 @@ private:
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
   std::function<void()> usdt_destructor_;
+  USDTHelper usdt_helper;
 
   BTF &btf_;
 };

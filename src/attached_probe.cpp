@@ -1298,7 +1298,7 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
   }
 
   // Resolve location of usdt probe
-  auto u = USDTHelper::find(pid, probe_.path, probe_.ns, probe_.attach_point);
+  auto u = usdt_helper.find(pid, probe_.path, probe_.ns, probe_.attach_point);
   if (!u.has_value())
     throw FatalUserException("Failed to find usdt probe: " + eventname());
   probe_.path = u->path;
