@@ -1178,6 +1178,10 @@ int BPFtrace::run(BpfBytecode bytecode)
   // iterate in reverse and attach the rest.
   for (auto probes = resources.probes.begin(); probes != resources.probes.end();
        ++probes) {
+    if (BPFtrace::exitsig_recv) {
+      request_finalize();
+      return -1;
+    }
     if (!attach_reverse(*probes)) {
       auto aps = attach_probe(*probes, bytecode_);
 
@@ -1192,6 +1196,10 @@ int BPFtrace::run(BpfBytecode bytecode)
   for (auto r_probes = resources.probes.rbegin();
        r_probes != resources.probes.rend();
        ++r_probes) {
+    if (BPFtrace::exitsig_recv) {
+      request_finalize();
+      return -1;
+    }
     if (attach_reverse(*r_probes)) {
       auto aps = attach_probe(*r_probes, bytecode_);
 
