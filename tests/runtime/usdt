@@ -236,7 +236,7 @@ WILL_FAIL
 # if the kernel handles the semaphore
 NAME usdt probes - file based semaphore activation no process, kernel usdt semaphore
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit(); }' --usdt-file-activation
-EXPECT Attaching 1 probe
+EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES ./testprogs/systemtap_sys_sdt_check
 REQUIRES_FEATURE uprobe_refcount
