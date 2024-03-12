@@ -27,8 +27,8 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  libdw (DWARF support): "
-#ifdef HAVE_LIBDW
+  buf << "  liblldb (DWARF support): "
+#ifdef HAVE_LIBLLDB
       << "yes" << std::endl;
 #else
       << "no" << std::endl;

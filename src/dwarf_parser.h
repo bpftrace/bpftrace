@@ -8,10 +8,9 @@
 #include <string>
 #include <vector>
 
-#ifdef HAVE_LIBDW
-#include <elfutils/libdwfl.h>
-#include <optional>
-#include <unordered_map>
+#ifdef HAVE_LIBLLDB
+#include <lldb/API/SBDebugger.h>
+#include <lldb/API/SBTarget.h>
 
 namespace bpftrace {
 
@@ -22,71 +21,57 @@ public:
   virtual ~Dwarf();
 
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
-                                              const std::string &file_path);
+                                              std::string file_path);
 
-  std::vector<std::string> get_function_params(
-      const std::string &function) const;
+  std::vector<std::string> get_function_params(const std::string &function);
   Struct resolve_args(const std::string &function);
 
-  SizedType get_stype(const std::string &type_name) const;
-  void resolve_fields(const SizedType &type) const;
+  SizedType get_stype(const std::string &type_name);
+  void resolve_fields(const SizedType &type);
 
 private:
-  Dwarf(BPFtrace *bpftrace, const std::string &file_path);
+  static std::atomic<size_t> instance_count;
 
-  std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
-  std::optional<Dwarf_Die> get_func_die(const std::string &function) const;
-  std::string get_type_name(Dwarf_Die &type_die) const;
-  Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
-  std::optional<Dwarf_Die> find_type(const std::string &name) const;
-  static ssize_t get_array_size(Dwarf_Die &subrange_die);
-  static ssize_t get_field_byte_offset(Dwarf_Die &field_die);
-  static ssize_t get_field_bit_offset(Dwarf_Die &field_die);
-  static ssize_t get_bitfield_size(Dwarf_Die &field_die);
-  std::optional<Bitfield> resolve_bitfield(Dwarf_Die &field_die) const;
+  Dwarf(BPFtrace *bpftrace, std::string file_path);
 
-  SizedType get_stype(Dwarf_Die &type_die, bool resolve_structs = true) const;
+  lldb::SBValueList function_params(const std::string &function);
 
-  static std::optional<Dwarf_Die> get_child_with_tagname(
-      Dwarf_Die *die,
-      int tag,
-      const std::string &name);
-  static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
-                                                          int tag);
-
-  Dwfl *dwfl = nullptr;
-  Dwfl_Callbacks callbacks;
+  std::string get_type_name(lldb::SBType type);
+  SizedType get_stype(lldb::SBType type, bool resolve_structs = true);
+  std::optional<Bitfield> resolve_bitfield(lldb::SBTypeMember field);
 
   BPFtrace *bpftrace_;
   std::string file_path_;
+
+  lldb::SBDebugger debugger_;
+  lldb::SBTarget target_;
 };
 
 } // namespace bpftrace
 
-#else // HAVE_LIBDW
+#else // HAVE_LIBLLDB
 
 #include "log.h"
 
 namespace bpftrace {
-
 class BPFtrace;
 
 class Dwarf {
 public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
                                               __attribute__((unused)),
-                                              const std::string &file_path_
+                                              std::string file_path_
                                               __attribute__((unused)))
   {
     static bool warned = false;
     if (!warned)
-      LOG(WARNING) << "Cannot parse DWARF: libdw not available";
+      LOG(WARNING) << "Cannot parse DWARF: liblldb not available";
     warned = true;
     return nullptr;
   }
 
   std::vector<std::string> get_function_params(const std::string &function
-                                               __attribute__((unused))) const
+                                               __attribute__((unused)))
   {
     return {};
   }
@@ -96,17 +81,19 @@ public:
     return {};
   }
 
-  SizedType get_stype(const std::string &type_name
-                      __attribute__((unused))) const
+  SizedType get_stype(const std::string &type_name __attribute__((unused)))
   {
     return CreateNone();
   }
 
-  void resolve_fields(const SizedType &type __attribute__((unused))) const
+  void resolve_fields(const SizedType &type __attribute__((unused)))
   {
   }
+
+private:
+  Dwarf() = delete;
 };
 
 } // namespace bpftrace
 
-#endif // HAVE_LIBDW
+#endif // HAVE_LIBLLDB

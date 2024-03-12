@@ -46,7 +46,7 @@ add_executable(bpftrace_test
 )
 
 add_subdirectory(data)
-if(${LIBDW_FOUND})
+if(${LLDB_FOUND})
   add_dependencies(bpftrace_test debuginfo_dwarf_data)
 endif()
 add_dependencies(bpftrace_test debuginfo_btf_data)

@@ -273,9 +273,8 @@ Use specific OS build sections listed earlier if available.
 - Flex
 - Bison
 - Asciidoctor
-- LLVM & Clang 10.0+ development packages
+- LLVM, LLDB & Clang 10.0+ development packages
 - LibElf
-- LibDw
 - Binutils development package
 - Libcereal
 - Kernel requirements described earlier
