@@ -21,6 +21,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix ability to interrupt bpftrace during probe attach
+  - [#3053](https://github.com/bpftrace/bpftrace/pull/3053)
 - Fix field resolution on structs with anon union as first field
   - [#2964](https://github.com/bpftrace/bpftrace/pull/2964)
 - Fix security hole checking unpacked kernel headers
