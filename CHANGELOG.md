@@ -24,6 +24,8 @@ and this project adheres to
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
+- Parse DWARF using liblldb instead of libdw
+  - [#3042](https://github.com/bpftrace/bpftrace/pull/3042)
 #### Deprecated
 #### Removed
 #### Fixed

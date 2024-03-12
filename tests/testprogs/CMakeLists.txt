@@ -1,3 +1,10 @@
+set(testprog_cflags "-g -O0")
+if(LLVM_VERSION_MAJOR VERSION_LESS 13)
+  # CI's GCC compile the testprogs using DWARF version 5
+  # LLDB doesn't support DWARF5 before version 13, so we force DWARF4
+  set(testprog_cflags "${testprog_cflags} -gdwarf-4")
+endif()
+
 file(GLOB testprog_sources CONFIGURE_DEPENDS *.c)
 set(testprogtargets "")
 foreach(testprog_source ${testprog_sources})
@@ -7,7 +14,7 @@ foreach(testprog_source ${testprog_sources})
     PROPERTIES
       LINK_SEARCH_START_STATIC FALSE
       LINK_SEARCH_END_STATIC FALSE
-      COMPILE_FLAGS "-g -O0"
+      COMPILE_FLAGS "${testprog_cflags}"
       LINK_FLAGS "-no-pie")
   if(HAVE_SYSTEMTAP_SYS_SDT_H)
     target_compile_definitions(${testprog_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)

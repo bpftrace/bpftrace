@@ -6,13 +6,21 @@ TIMEOUT 5
 
 NAME list uprobe args - pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction1'
-EXPECT int* n
+EXPECT int * n
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
 NAME list uprobe args - struct pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction2'
-EXPECT struct Foo* foo1
+EXPECT struct Foo * foo1
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME list uprobe args - anonymous param type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction3'
+EXPECT enum { A, B, C } e
+EXPECT union { int a; char b; } u
+REQUIRES bash -c "exit 1" # SKIP: anonymous parameter type not supported #3083
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
