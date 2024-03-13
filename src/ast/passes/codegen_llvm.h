@@ -223,6 +223,7 @@ private:
   Function *createMapLenCallback();
   Function *createForEachMapCallback(const Variable &decl,
                                      const std::vector<Statement *> &stmts);
+  Function *createMurmurHash2Func();
 
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
   // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
@@ -276,6 +277,7 @@ private:
 
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;
+  Function *murmur_hash_2_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
