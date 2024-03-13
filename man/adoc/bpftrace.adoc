@@ -2292,8 +2292,8 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 | Count how often this function is called.
 | Sync
 
-| <<map-functions-delete, `delete(mapkey k)`>>
-| Delete a single key from a map. For a single value map this deletes the only element. For an associative-array the key to delete has to be specified.
+| <<map-functions-delete, `delete(mapkey k, ...)`>>
+| Delete a single key from a map. For a single value map this deletes the only element. For an associative-array the key to delete has to be specified. Multiple arguments can be passed to delete many keys at once.
 | Sync
 
 | <<map-functions-hist, `hist(int64 n[, int k])`>>
@@ -2399,11 +2399,12 @@ i:s:10 {
 === delete
 
 .variants
-* `delete(mapkey k)`
+* `delete(mapkey k, ...)`
 
 Delete a single key from a map.
 For a single value map this deletes the only element.
 For an associative-array the key to delete has to be specified.
+Multiple arguments can be passed to delete many keys at once.
 
 ```
 k:dummy {
@@ -2411,6 +2412,8 @@ k:dummy {
   @associative[1,2] = 1;
   delete(@scalar);
   delete(@associative[1,2]);
+  // alternatively, you can delete both at once
+  delete(@scalar, @associative[1,2]);
 
   delete(@associative); // error
 }

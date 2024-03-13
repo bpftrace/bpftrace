@@ -220,6 +220,12 @@ PROG BEGIN { @ = 1; @a[1] = 1; delete(@); delete(@a[1]); printf("ok\n"); exit();
 EXPECT ok
 TIMEOUT 1
 
+NAME delete multiple-map
+PROG BEGIN { @ = 1; @a[1] = 1; delete(@, @a[1]); exit(); }
+EXPECT_NONE @: 1
+EXPECT_NONE @a[1]: 1
+TIMEOUT 1
+
 NAME delete count-map
 PROG BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a[1]); exit(); }
 EXPECT @: 0

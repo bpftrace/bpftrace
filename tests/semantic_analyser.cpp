@@ -538,6 +538,8 @@ TEST(semantic_analyser, call_stats)
 TEST(semantic_analyser, call_delete)
 {
   test("kprobe:f { @x = 1; delete(@x); }", 0);
+  test("kprobe:f { @x = 1; @y = 2; delete(@x, @y); }", 0);
+  test("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5]); }", 0);
   test("kprobe:f { delete(1); }", 1);
   test("kprobe:f { delete(); }", 1);
   test("kprobe:f { @y = delete(@x); }", 1);
@@ -545,6 +547,20 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @[delete(@x)] = 1; }", 1);
   test("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", 10);
   test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", 10);
+
+  test_error("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }", R"(
+stdin:1:42-44: ERROR: Argument mismatch for @y: trying to access with arguments: [] when map expects arguments: [unsigned int64]
+kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }
+                                         ~~
+)");
+  test_error("kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }", R"(
+stdin:1:47-49: ERROR: delete() only expects maps to be provided
+kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }
+                                              ~~
+stdin:1:51-53: ERROR: delete() only expects maps to be provided
+kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }
+                                                  ~~
+)");
 }
 
 TEST(semantic_analyser, call_exit)
