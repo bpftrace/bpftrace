@@ -672,7 +672,7 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     Probe &probe,
     const BpfBytecode &bytecode,
-    const BpfProgram &program,
+    BpfProgram &program,
     int pid,
     bool file_activation)
 {

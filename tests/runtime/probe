@@ -118,10 +118,17 @@ TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_wildcard
+PROG kprobe:vmlinux:vfs_rea* { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME kprobe_wildcard_multi
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT progs: 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
+REQUIRES_FEATURE kprobe_multi
 
 NAME kprobe_module
 PROG kprobe:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
@@ -269,12 +276,19 @@ TIMEOUT 5
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME kretprobe_wildcard
+PROG kretprobe:vmlinux:vfs_rea* { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME kretprobe_wildcard_multi
 RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
+REQUIRES_FEATURE kprobe_multi
 
-NAME kretprobe_multi_wildcard
+NAME kretprobe_wildcard_multi_link
 RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
 TIMEOUT 5

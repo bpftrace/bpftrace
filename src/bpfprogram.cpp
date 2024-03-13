@@ -1,9 +1,11 @@
 #include "bpfprogram.h"
 
 #include "bpfbytecode.h"
+#include "bpftrace.h"
 #include "log.h"
 #include "utils.h"
 
+#include <bpf/bpf.h>
 #include <cstdint>
 #include <elf.h>
 #include <linux/bpf.h>
@@ -57,6 +59,11 @@ const std::vector<uint8_t> &BpfProgram::getCode() const
 const std::vector<uint8_t> &BpfProgram::getFuncInfos() const
 {
   return func_infos_;
+}
+
+int BpfProgram::fd() const
+{
+  return fd_;
 }
 
 void BpfProgram::assemble(const BpfBytecode &bytecode)
@@ -276,6 +283,280 @@ void BpfProgram::appendFileFuncInfos(const struct btf_ext_info_sec *src,
 
     dstoff += sizeof(struct bpf_func_info);
     ptr += func_info_rec_size;
+  }
+}
+
+namespace {
+/*
+ * Searches the verifier's log for err_pattern. If a match is found, extracts
+ * the name and ID of the problematic helper and throws a HelperVerifierError.
+ *
+ * Example verfier log extract:
+ *     [...]
+ *     36: (b7) r3 = 64                      ; R3_w=64
+ *     37: (85) call bpf_d_path#147
+ *     helper call is not allowed in probe
+ *     [...]
+ *
+ *  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
+ */
+void maybe_throw_helper_verifier_error(std::string_view log,
+                                       std::string_view err_pattern,
+                                       const std::string &exception_msg_suffix)
+{
+  auto err_pos = log.find(err_pattern);
+  if (err_pos == log.npos)
+    return;
+
+  std::string_view call_pattern = " call ";
+  auto call_pos = log.rfind(call_pattern, err_pos);
+  if (call_pos == log.npos)
+    return;
+
+  auto helper_begin = call_pos + call_pattern.size();
+  auto hash_pos = log.find("#", helper_begin);
+  if (hash_pos == log.npos)
+    return;
+
+  auto eol = log.find("\n", hash_pos + 1);
+  if (eol == log.npos)
+    return;
+
+  auto helper_name = std::string{ log.substr(helper_begin,
+                                             hash_pos - helper_begin) };
+  auto func_id = std::stoi(
+      std::string{ log.substr(hash_pos + 1, eol - hash_pos - 1) });
+
+  std::string msg = std::string{ "helper " } + helper_name +
+                    exception_msg_suffix;
+  throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
+}
+} // namespace
+
+void BpfProgram::load(const Probe &probe,
+                      const BpfBytecode &bytecode,
+                      const BTF &btf,
+                      BPFfeature &feature)
+{
+  auto &insns = getCode();
+  auto func_infos = getFuncInfos();
+  const char *license = "GPL";
+  int log_level = 0;
+  std::stringstream logbuf; // while stderr is silenced and for joining lines
+
+  uint64_t log_buf_size = probe.log_size;
+  auto log_buf = std::make_unique<char[]>(log_buf_size);
+  std::string name;
+  std::string tracing_type;
+
+  /*
+   * Fallbacks for kernels that don't cope well with func_infos and BTF, and may
+   * check the program's kernel version. Try witout BTF and func_infos and when
+   * needed, also pass the kernel version (try three different methods):
+   */
+  struct load_strategy {
+    bool btf;
+    bool func_infos;
+    KernelVersionMethod kver;
+  } load_configs[] = {
+    { .btf = true, .func_infos = true, .kver = None },  // BTF and func_infos
+    { .btf = true, .func_infos = false, .kver = None }, // BTF, no func_infos
+    /* Fallbacks for Linux <5.0: No BTF and func_infos, with kernel version: */
+    { .btf = false, .func_infos = false, .kver = vDSO }, // version from vDSO
+    { .btf = false, .func_infos = false, .kver = UTS },  // version from uname
+    { .btf = false, .func_infos = false, .kver = File }, // version from header
+  };
+
+  for (auto &load_config : load_configs) {
+    if (bt_debug != DebugLevel::kNone)
+      log_level = 15;
+    if (bt_verbose)
+      log_level = 1;
+
+    if (probe.type == ProbeType::kprobe || probe.type == ProbeType::kretprobe) {
+      // Use orig_name for program name so we get proper name for
+      // wildcard probes, replace wildcards with '.'
+      name = probe.orig_name;
+      std::replace(name.begin(), name.end(), '*', '.');
+    } else
+      name = probe.name;
+
+    // bpf_prog_load rejects some characters in probe names, so we clean them
+    // start the name after the probe type, after ':'
+    if (auto last_colon = name.rfind(':'); last_colon != std::string::npos)
+      name = name.substr(last_colon + 1);
+    name = sanitise_bpf_program_name(name);
+
+    auto prog_type = progtype(probe.type);
+    if (probe.type == ProbeType::special && !feature.has_raw_tp_special())
+      prog_type = progtype(ProbeType::uprobe);
+
+    BPFTRACE_LIBBPF_OPTS(bpf_prog_load_opts, opts);
+    opts.log_buf = log_buf.get();
+    opts.log_size = log_buf_size;
+    opts.log_level = log_level;
+
+    if (probe.type == ProbeType::kfunc)
+      opts.expected_attach_type = static_cast<::bpf_attach_type>(
+          libbpf::BPF_TRACE_FENTRY);
+    else if (probe.type == ProbeType::kretfunc)
+      opts.expected_attach_type = static_cast<::bpf_attach_type>(
+          libbpf::BPF_TRACE_FEXIT);
+    else if (probe.type == ProbeType::iter)
+      opts.expected_attach_type = static_cast<::bpf_attach_type>(
+          libbpf::BPF_TRACE_ITER);
+
+    // We want to avoid kprobe_multi when a module is specified
+    // because the BPF_TRACE_KPROBE_MULTI link type does not
+    // currently support the `module:function` syntax.
+    if ((probe.type == ProbeType::kprobe ||
+         probe.type == ProbeType::kretprobe) &&
+        feature.has_kprobe_multi() && !probe.funcs.empty() &&
+        probe.path.empty())
+      opts.expected_attach_type = static_cast<::bpf_attach_type>(
+          libbpf::BPF_TRACE_KPROBE_MULTI);
+
+    if ((probe.type == ProbeType::uprobe ||
+         probe.type == ProbeType::uretprobe) &&
+        feature.has_uprobe_multi() && !probe.funcs.empty())
+      opts.expected_attach_type = static_cast<::bpf_attach_type>(
+          libbpf::BPF_TRACE_UPROBE_MULTI);
+
+    if (probe.type == ProbeType::kfunc || probe.type == ProbeType::kretfunc ||
+        probe.type == ProbeType::iter) {
+      std::string mod = probe.path;
+      std::string fun = probe.attach_point;
+      if (probe.type == ProbeType::iter)
+        fun = "bpf_iter_" + fun;
+      auto btf_id = btf.get_btf_id_fd(fun, mod);
+      if (btf_id.first < 0) {
+        std::string msg = "No BTF found for " + mod + ":" + fun;
+        if (probe.orig_name != probe.name) {
+          // one attachpoint in a multi-attachpoint (wildcard or list) probe
+          // failed, print a warning but continue
+          LOG(WARNING) << msg << ", skipping.";
+          return;
+        } else
+          // explicit match failed, fail hard
+          throw FatalUserException(msg);
+      }
+
+      opts.attach_btf_id = btf_id.first;
+      opts.attach_btf_obj_fd = btf_id.second;
+    } else {
+      opts.kern_version = kernel_version(load_config.kver);
+    }
+    logbuf << "load " << probe.name << (load_config.btf ? ", with BTF" : "")
+           << (load_config.func_infos ? ", with func_infos" : "");
+    if (opts.kern_version) {
+      logbuf << ", version: " << ((opts.kern_version >> 16) & 0xFF) << "."
+             << ((opts.kern_version >> 8) & 0xFF) << "."
+             << (opts.kern_version & 0xFF);
+    }
+
+    {
+      // Redirect stderr, so we don't get error messages from libbpf
+      StderrSilencer silencer;
+      if (bt_debug == DebugLevel::kNone)
+        silencer.silence();
+
+      int btf_fd = -1;
+      if (load_config.btf) {
+        BPFTRACE_LIBBPF_OPTS(bpf_btf_load_opts,
+                             btf_opts,
+                             .log_buf = log_buf.get(),
+                             .log_level = static_cast<__u32>(log_level),
+                             .log_size = static_cast<__u32>(log_buf_size), );
+
+        auto &btf_sec = bytecode.getSection(".BTF");
+        btf_fd = bpf_btf_load(btf_sec.data(), btf_sec.size(), &btf_opts);
+        if (btf_fd < 0) {
+          logbuf << ": BTF load failed";
+          goto log_error; // and continue to the next load_config fallback
+        }
+        opts.prog_btf_fd = (__u32)btf_fd;
+      }
+
+      // Skip .BTF.ext func_info relocation on fallback for older kernels
+      if (load_config.func_infos && !func_infos.empty()) {
+        opts.func_info_rec_size = sizeof(struct bpf_func_info);
+        opts.func_info = func_infos.data();
+        opts.func_info_cnt = func_infos.size() / sizeof(struct bpf_func_info);
+      }
+
+      // Load the BPF program on BTF load success or on fallback without it
+      if (!load_config.btf || btf_fd >= 0) {
+        fd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
+                            name.c_str(),
+                            license,
+                            reinterpret_cast<const struct bpf_insn *>(
+                                insns.data()),
+                            insns.size() / sizeof(struct bpf_insn),
+                            &opts);
+        if (btf_fd >= 0)
+          close(btf_fd);
+      }
+    }
+
+    if (opts.attach_btf_obj_fd > 0)
+      close(opts.attach_btf_obj_fd);
+    if (fd_ >= 0)
+      break;
+    logbuf << " = " << fd_ << ": " << std::strerror(-fd_);
+  log_error:
+    if (!logbuf.str().empty()) { // log the error of the failed attempt
+      LOG(V1) << logbuf.str();
+      logbuf.str("");
+    }
+  } // for (auto &load_config : load_configs): handle kernel features & versions
+
+  if (!logbuf.str().empty()) {
+    LOG(V1) << logbuf.str() << ": Success";
+  }
+
+  if (fd_ < 0) {
+    if (bt_verbose) {
+      std::cerr << std::endl
+                << "Error log: " << std::endl
+                << log_buf.get() << std::endl;
+      if (errno == ENOSPC) {
+        throw FatalUserException(
+            "Error: Failed to load program, verification log buffer not big "
+            "enough, try increasing the BPFTRACE_LOG_SIZE environment variable "
+            "beyond the current value of " +
+            std::to_string(probe.log_size) + " bytes");
+      }
+    }
+
+    maybe_throw_helper_verifier_error(log_buf.get(),
+                                      "helper call is not allowed in probe",
+                                      " not allowed in probe");
+
+    std::stringstream errmsg;
+    errmsg << "Error loading program: " << probe.name
+           << (bt_verbose ? "" : " (try -v)");
+    if (probe.orig_name != probe.name) {
+      // one attachpoint in a multi-attachpoint (wildcard or list) probe failed,
+      // print a warning but continue
+      LOG(WARNING) << errmsg.str() << ", skipping.";
+      return;
+    } else
+      // explicit match failed, fail hard
+      throw FatalUserException(errmsg.str());
+  }
+
+  if (bt_verbose) {
+    struct bpf_prog_info info = {};
+    uint32_t info_len = sizeof(info);
+    int ret;
+
+    ret = bpf_obj_get_info(fd_, &info, &info_len);
+    if (ret == 0) {
+      std::cout << std::endl << "Program ID: " << info.id << std::endl;
+    }
+    std::cout << std::endl
+              << "The verifier log: " << std::endl
+              << log_buf.get() << std::endl;
   }
 }
 

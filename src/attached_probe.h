@@ -24,12 +24,12 @@ class AttachedProbe {
 public:
   AttachedProbe(Probe &probe,
                 const BpfBytecode &bytecode,
-                const BpfProgram &prog,
+                BpfProgram &prog,
                 bool safe_mode,
                 BPFtrace &bpftrace);
   AttachedProbe(Probe &probe,
                 const BpfBytecode &bytecode,
-                const BpfProgram &prog,
+                BpfProgram &prog,
                 int pid,
                 BPFtrace &bpftrace,
                 bool safe_mode = true);
@@ -84,8 +84,6 @@ private:
   void cache_progfd(void);
 
   Probe &probe_;
-  const BpfBytecode &bytecode_;
-  const BpfProgram &prog_;
   std::vector<int> perf_event_fds_;
   bool close_progfd_ = true;
   int progfd_ = -1;
