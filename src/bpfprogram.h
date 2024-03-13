@@ -1,5 +1,9 @@
 #pragma once
 
+#include "bpffeature.h"
+#include "btf.h"
+#include "types.h"
+
 #include <bpf/libbpf.h>
 #include <cstdint>
 #include <optional>
@@ -20,9 +24,12 @@ public:
   explicit BpfProgram(struct bpf_program *bpf_prog);
 
   void assemble(const BpfBytecode &bytecode);
+  void load(const Probe &probe,
+            const BpfBytecode &bytecode,
+            const BTF &btf,
+            BPFfeature &feature);
 
-  const std::vector<uint8_t> &getCode() const;
-  const std::vector<uint8_t> &getFuncInfos() const;
+  int fd() const;
 
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;
@@ -30,6 +37,9 @@ public:
   BpfProgram &operator=(BpfProgram &&) = delete;
 
 private:
+  const std::vector<uint8_t> &getCode() const;
+  const std::vector<uint8_t> &getFuncInfos() const;
+
   void relocateInsns(const BpfBytecode &bytecode);
   void relocateSection(const std::string &relsecname,
                        bpf_insn *,
@@ -40,6 +50,7 @@ private:
                            size_t insn_offset);
 
   struct bpf_program *bpf_prog_;
+  int fd_ = -1;
 
   std::vector<uint8_t> code_;
   // Offset in code_ where the .text begins (if .text was appended)

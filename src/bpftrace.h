@@ -243,7 +243,7 @@ private:
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
       const BpfBytecode &bytecode,
-      const BpfProgram &program,
+      BpfProgram &program,
       int pid,
       bool file_activation);
   int setup_output();
