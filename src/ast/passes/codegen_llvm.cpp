@@ -555,17 +555,18 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   } else if (call.func == "delete") {
-    auto &arg = *call.vargs->at(0);
-    auto &map = static_cast<Map &>(arg);
-    auto [key, scoped_key_deleter] = getMapKey(map);
-    if (!is_bpf_map_clearable(map_types_[map.ident])) {
-      // store zero instead of calling bpf_map_delete_elem()
-      AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
-      b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
-      b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
-      b_.CreateLifetimeEnd(val);
-    } else {
-      b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+    for (const auto &arg : *call.vargs) {
+      auto &map = static_cast<Map &>(*arg);
+      auto [key, scoped_key_deleter] = getMapKey(map);
+      if (!is_bpf_map_clearable(map_types_[map.ident])) {
+        // store zero instead of calling bpf_map_delete_elem()
+        AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+        b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
+        b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
+        b_.CreateLifetimeEnd(val);
+      } else {
+        b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+      }
     }
     expr_ = nullptr;
   } else if (call.func == "str") {

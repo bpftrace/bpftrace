@@ -606,12 +606,13 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
-    if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs->at(0);
-      if (!arg.is_map)
-        LOG(ERROR, call.loc, err_) << "delete() expects a map to be provided";
+    if (check_varargs(call, 1, std::numeric_limits<size_t>::max())) {
+      for (const auto &arg : *call.vargs) {
+        if (!arg->is_map)
+          LOG(ERROR, arg->loc, err_)
+              << "delete() only expects maps to be provided";
+      }
     }
-
     call.type = CreateNone();
   } else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {

@@ -17,6 +17,8 @@ and this project adheres to
   - [#3027](https://github.com/bpftrace/bpftrace/pull/3027)
 - Add LLVM 18 support
   - [#3051](https://github.com/bpftrace/bpftrace/pull/3051)
+- Add ability to call delete() with multiple arguments
+  - [#3046](https://github.com/bpftrace/bpftrace/pull/3046)
 #### Changed
 #### Deprecated
 #### Removed
