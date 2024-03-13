@@ -90,7 +90,7 @@ public:
                              SizedType &type,
                              const location &loc);
   void CreateMapUpdateElem(Value *ctx,
-                           Map &map,
+                           const std::string &map_ident,
                            Value *key,
                            Value *val,
                            const location &loc,
@@ -185,12 +185,16 @@ public:
   CallInst *CreateGetCpuId(const location &loc);
   CallInst *CreateGetCurrentTask(const location &loc);
   CallInst *CreateGetRandom(const location &loc);
-  CallInst *CreateGetStackId(Value *ctx,
-                             bool ustack,
-                             StackType stack_type,
-                             const location &loc);
+  CallInst *CreateGetStack(Value *ctx,
+                           bool ustack,
+                           Value *buf,
+                           StackType stack_type,
+                           const location &loc);
   CallInst *CreateGetFuncIp(const location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const location &loc);
+  CallInst *CreateGetStackScratchMap(StackType stack_type,
+                                     BasicBlock *failure_callback,
+                                     const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,

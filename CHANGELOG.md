@@ -30,6 +30,8 @@ and this project adheres to
   - [#3091](https://github.com/bpftrace/bpftrace/pull/3091)
 - Parse DWARF using liblldb instead of libdw
   - [#3042](https://github.com/bpftrace/bpftrace/pull/3042)
+- Replace native 'bpf_get_stackid'
+  - [#3060](https://github.com/bpftrace/bpftrace/pull/3060)
 #### Deprecated
 #### Removed
 #### Fixed

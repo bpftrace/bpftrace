@@ -150,8 +150,83 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
                                 StackType stack_type,
                                 const location &loc)
 {
-  Value *stackid = b_.CreateGetStackId(
-      ctx_, ident == "ustack", stack_type, loc);
+  if (!murmur_hash_2_func_)
+    murmur_hash_2_func_ = createMurmurHash2Func();
+
+  const bool is_ustack = ident == "ustack";
+  const auto uint64_size = sizeof(uint64_t);
+
+  AllocaInst *stackid = b_.CreateAllocaBPF(CreateUInt64(), "stackid");
+
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *stack_scratch_failure = BasicBlock::Create(
+      module_->getContext(), "stack_scratch_failure", parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                               "merge_block",
+                                               parent);
+
+  Value *stack_trace = b_.CreateGetStackScratchMap(stack_type,
+                                                   stack_scratch_failure,
+                                                   loc);
+  b_.CREATE_MEMSET(
+      stack_trace, b_.getInt8(0), uint64_size * stack_type.limit, 1);
+
+  BasicBlock *get_stack_success = BasicBlock::Create(module_->getContext(),
+                                                     "get_stack_success",
+                                                     parent);
+  BasicBlock *get_stack_fail = BasicBlock::Create(module_->getContext(),
+                                                  "get_stack_fail",
+                                                  parent);
+
+  Value *ptr_to_stack_trace = b_.CreatePointerCast(stack_trace,
+                                                   b_.GET_PTR_TY());
+  Value *stack_size = b_.CreateGetStack(
+      ctx_, is_ustack, ptr_to_stack_trace, stack_type, loc);
+  Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt32(0));
+  b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
+
+  b_.SetInsertPoint(get_stack_fail);
+  b_.CreateDebugOutput("Failed to get stack. Error: %d",
+                       std::vector<Value *>{ stack_size },
+                       loc);
+  b_.CreateStore(b_.getInt64(0), stackid);
+  b_.CreateBr(merge_block);
+  b_.SetInsertPoint(get_stack_success);
+
+  Value *nr_stack_frames = b_.CreateUDiv(stack_size, b_.getInt32(uint64_size));
+  // A random seed (or using pid) is probably unnecessary in this situation
+  // and might hurt storage as the same pids may have the same stack and
+  // we don't need to store it twice
+  Value *seed = b_.getInt64(1);
+
+  // LLVM-12 produces code that fails the BPF verifier because it
+  // can't determine the bounds of nr_stack_frames. The only thing that seems
+  // to work is truncating the type, which is fine because 255 is long enough.
+  Value *trunc_nr_stack_frames = b_.CreateTrunc(nr_stack_frames,
+                                                b_.getInt8Ty());
+
+  // Here we use the murmur2 hash function to create the stack ids because
+  // bpf_get_stackid() is kind of broken by design and can suffer from hash
+  // collisions.
+  // More details here: https://github.com/bpftrace/bpftrace/issues/2962
+  Value *murmur_hash_2 = b_.CreateCall(
+      murmur_hash_2_func_,
+      { ptr_to_stack_trace, trunc_nr_stack_frames, seed },
+      "murmur_hash_2");
+
+  // Add the stack and id to the stack map
+  b_.CreateStore(murmur_hash_2, stackid);
+  b_.CreateMapUpdateElem(
+      ctx_, stack_type.name(), stackid, stack_trace, loc, BPF_ANY);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(stack_scratch_failure);
+  b_.CreateDebugOutput("Failed to get stack from scratch map.",
+                       std::vector<Value *>{},
+                       loc);
+  b_.CreateStore(b_.getInt64(0), stackid);
+  b_.CreateBr(merge_block);
+  b_.SetInsertPoint(merge_block);
 
   // Kernel stacks should not be differentiated by tid, since the kernel
   // address space is the same between pids (and when aggregating you *want*
@@ -159,7 +234,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   // are special because of ASLR, hence we also store the pid; probe id is
   // stored for cases when only ELF resolution works (e.g. ASLR disabled and
   // process exited).
-  if (ident == "ustack") {
+  if (is_ustack) {
     std::vector<llvm::Type *> elements = {
       b_.getInt64Ty(), // stack id
       b_.getInt32Ty(), // pid
@@ -170,7 +245,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
 
     // store stack id
     b_.CreateStore(
-        stackid,
+        b_.CreateLoad(b_.getInt64Ty(), stackid),
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     // store pid
     b_.CreateStore(
@@ -183,8 +258,10 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
 
     expr_ = buf;
   } else {
-    expr_ = stackid;
+    expr_ = b_.CreateLoad(b_.getInt64Ty(), stackid);
   }
+
+  b_.CreateLifetimeEnd(stackid);
 }
 
 int CodegenLLVM::get_probe_id()
@@ -560,7 +637,7 @@ void CodegenLLVM::visit(Call &call)
         // store zero instead of calling bpf_map_delete_elem()
         AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
         b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
-        b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
+        b_.CreateMapUpdateElem(ctx_, map.ident, key, val, call.loc);
         b_.CreateLifetimeEnd(val);
       } else {
         b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
@@ -2134,7 +2211,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     b_.CreateStore(expr, val);
     self_alloca = true;
   }
-  b_.CreateMapUpdateElem(ctx_, map, key, val, assignment.loc);
+  b_.CreateMapUpdateElem(ctx_, map.ident, key, val, assignment.loc);
   if (self_alloca)
     b_.CreateLifetimeEnd(val);
 }
@@ -3455,34 +3532,23 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
   }
 
   // bpftrace internal maps
+
+  uint16_t max_stack_limit = 0;
   for (const StackType &stack_type : resources.stackid_maps) {
-    // bpf_get_stackid() is kind of broken by design.
-    //
-    // First, stacks can suffer from hash collisions and we can lose stacks. We
-    // receive collision errors in userspace b/c we do not set
-    // BPF_F_REUSE_STACKID. Note that we should **NEVER** set this flag b/c then
-    // we can silently receive unrelated stacks in userspace.
-    //
-    // Second, there is not a great way to reduce the frequency of collision
-    // (other than increasing map size) b/c multiple probes can be sharing the
-    // same stack (remember they are hashed). As a result, we cannot delete
-    // entries in this map b/c we don't know when all the sharers are gone.
-    //
-    // Fortunately, we haven't seen many bug reports about missing stacks (or
-    // maybe people don't care that much). The proper solution would be to use
-    // bpf_get_stack() to get the actual stack trace and pass it to userspace
-    // through the ring buffer.  However, there is additional complexity with
-    // this b/c we need to set up a percpu map to use as scratch space for
-    // bpf_get_stack() to write into. Using the stack directly wouldn't work
-    // well b/c it would take too much stack space.
-    //
-    // The temporary fix is to bump the map size to 128K. Any further bumps
-    // should warrant consideration of the previous paragraph.
     createMapDefinition(stack_type.name(),
-                        libbpf::BPF_MAP_TYPE_STACK_TRACE,
+                        libbpf::BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
-                        MapKey({ CreateInt32() }),
+                        MapKey({ CreateUInt64() }),
                         CreateArray(stack_type.limit, CreateUInt64()));
+    max_stack_limit = std::max(stack_type.limit, max_stack_limit);
+  }
+
+  if (max_stack_limit > 0) {
+    createMapDefinition(StackType::scratch_name(),
+                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        1,
+                        MapKey({ CreateInt32() }),
+                        CreateArray(max_stack_limit, CreateUInt64()));
   }
 
   if (resources.needs_join_map) {
@@ -3833,7 +3899,7 @@ void CodegenLLVM::createIncDec(Unop &unop)
     else
       b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, unop.loc);
+    b_.CreateMapUpdateElem(ctx_, map.ident, key, newval, unop.loc);
 
     if (unop.is_post_op)
       expr_ = oldval;
@@ -3858,6 +3924,167 @@ void CodegenLLVM::createIncDec(Unop &unop)
   } else {
     LOG(FATAL) << "invalid expression passed to " << opstr(unop);
   }
+}
+
+Function *CodegenLLVM::createMurmurHash2Func()
+{
+  // The goal is to produce the following code:
+  //
+  // uint64_t murmur_hash_2(void *stack, uint8_t nr_stack_frames, uint64_t seed)
+  // {
+  //   const uint64_t m = 0xc6a4a7935bd1e995LLU;
+  //   const int r = 47;
+  //   uint64_t id = seed ^ (nr_stack_frames * m);
+  //   int i = 0;
+
+  //   while(i < nr_stack_frames) {
+  //     uint64_t k = stack[i];
+  //     k *= m;
+  //     k ^= k >> r;
+  //     k *= m;
+  //     id ^= k;
+  //     id *= m;
+  //     ++i;
+  //   }
+  //   return id;
+  // }
+  //
+  // https://github.com/aappleby/smhasher/blob/92cf3702fcfaadc84eb7bef59825a23e0cd84f56/src/MurmurHash2.cpp
+  auto saved_ip = b_.saveIP();
+
+  std::array<llvm::Type *, 3> args = { b_.GET_PTR_TY(),
+                                       b_.getInt8Ty(),
+                                       b_.getInt64Ty() };
+  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
+
+  Function *callback = Function::Create(callback_type,
+                                        Function::LinkageTypes::InternalLinkage,
+                                        "murmur_hash_2",
+                                        module_.get());
+  callback->addFnAttr(Attribute::AlwaysInline);
+  callback->setSection("helpers");
+
+  auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);
+  b_.SetInsertPoint(bb);
+
+  AllocaInst *nr_stack_frames = b_.CreateAllocaBPF(b_.getInt8Ty(),
+                                                   "nr_stack_frames_addr");
+  AllocaInst *seed_addr = b_.CreateAllocaBPF(b_.getInt64Ty(), "seed_addr");
+
+  AllocaInst *id = b_.CreateAllocaBPF(b_.getInt64Ty(), "id");
+  AllocaInst *i = b_.CreateAllocaBPF(b_.getInt8Ty(), "i");
+  AllocaInst *k = b_.CreateAllocaBPF(b_.getInt64Ty(), "k");
+
+  Value *m = b_.getInt64(0xc6a4a7935bd1e995LLU);
+  Value *r = b_.getInt64(47);
+
+  Value *stack_addr = b_.CreatePointerCast(callback->getArg(0),
+                                           b_.getInt64Ty()->getPointerTo());
+
+  b_.CreateStore(callback->getArg(1), nr_stack_frames);
+  b_.CreateStore(callback->getArg(2), seed_addr);
+
+  // uint64_t id = seed ^ (len * m);
+  b_.CreateStore(
+      b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), seed_addr),
+                   b_.CreateMul(b_.CreateIntCast(b_.CreateLoad(b_.getInt8Ty(),
+                                                               nr_stack_frames),
+                                                 b_.getInt64Ty(),
+                                                 false),
+                                m)),
+      id);
+
+  // int i = 0;
+  b_.CreateStore(b_.getInt8(0), i);
+
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
+                                              "while_cond",
+                                              parent);
+  BasicBlock *while_body = BasicBlock::Create(module_->getContext(),
+                                              "while_body",
+                                              parent);
+  BasicBlock *while_end = BasicBlock::Create(module_->getContext(),
+                                             "while_end",
+                                             parent);
+  b_.CreateBr(while_cond);
+  b_.SetInsertPoint(while_cond);
+  auto *cond = b_.CreateICmp(CmpInst::ICMP_ULT,
+                             b_.CreateLoad(b_.getInt8Ty(), i),
+                             b_.CreateLoad(b_.getInt8Ty(), nr_stack_frames),
+                             "length.cmp");
+  b_.CreateCondBr(cond, while_body, while_end);
+
+  b_.SetInsertPoint(while_body);
+
+  // uint64_t k = stack[i];
+  Value *stack_ptr = b_.CreateGEP(b_.getInt64Ty(),
+                                  stack_addr,
+                                  b_.CreateLoad(b_.getInt8Ty(), i));
+  b_.CreateStore(b_.CreateLoad(b_.getInt64Ty(), stack_ptr), k);
+
+  // k *= m;
+  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
+
+  // // k ^= k >> r
+  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), k),
+                              b_.CreateLShr(b_.CreateLoad(b_.getInt64Ty(), k),
+                                            r)),
+                 k);
+
+  // // k *= m
+  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
+
+  // id ^= k
+  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), id),
+                              b_.CreateLoad(b_.getInt64Ty(), k)),
+                 id);
+
+  // id *= m
+  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), id), m), id);
+
+  // ++i
+  b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt8Ty(), i), b_.getInt8(1)),
+                 i);
+
+  b_.CreateBr(while_cond);
+  b_.SetInsertPoint(while_end);
+
+  b_.CreateLifetimeEnd(nr_stack_frames);
+  b_.CreateLifetimeEnd(seed_addr);
+  b_.CreateLifetimeEnd(i);
+  b_.CreateLifetimeEnd(k);
+
+  // We reserve 0 for errors so if we happen to hash to 0 just set to 1.
+  // This should reduce hash collisions as we now have to come across two stacks
+  // that naturally hash to 1 AND 0.
+  BasicBlock *if_zero = BasicBlock::Create(module_->getContext(),
+                                           "if_zero",
+                                           parent);
+  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
+                                          "if_end",
+                                          parent);
+
+  Value *zero_cond = b_.CreateICmpEQ(b_.CreateLoad(b_.getInt64Ty(), id),
+                                     b_.getInt64(0),
+                                     "zero_cond");
+
+  b_.CreateCondBr(zero_cond, if_zero, if_end);
+  b_.SetInsertPoint(if_zero);
+  b_.CreateStore(b_.getInt64(1), id);
+
+  b_.CreateBr(if_end);
+  b_.SetInsertPoint(if_end);
+
+  Value *ret = b_.CreateLoad(b_.getInt64Ty(), id);
+
+  b_.CreateLifetimeEnd(id);
+
+  b_.CreateRet(ret);
+
+  b_.restoreIP(saved_ip);
+
+  return callback;
 }
 
 Function *CodegenLLVM::createMapLenCallback()
