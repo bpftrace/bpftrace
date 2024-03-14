@@ -4,6 +4,7 @@
 # Environment variables:
 #
 # SKIP_BCC_BUILD: Set to skip the building bcc from source
+# SKIP_LIBBPF_BUILD: Ditto for libbpf
 # LLVM_VERSION: The LLVM version to install
 
 llvm_version = ENV["LLVM_VERSION"] || 12
