@@ -671,8 +671,7 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     Probe &probe,
-    const BpfBytecode &bytecode,
-    BpfProgram &program,
+    const BpfProgram &program,
     int pid,
     bool file_activation)
 {
@@ -681,7 +680,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (feature_->has_uprobe_refcnt() ||
       !(file_activation && probe.path.size())) {
     ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, bytecode, program, pid, *this));
+        std::make_unique<AttachedProbe>(probe, program, pid, *this));
     return ret;
   }
 
@@ -734,8 +733,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
         throw FatalUserException("failed to parse pid=" + pid_str);
       }
 
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, bytecode, program, pid_parsed, *this));
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, program, pid_parsed, *this));
       break;
     }
   }
@@ -748,19 +747,16 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
-    BpfBytecode &bytecode)
+    const BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   try {
     auto &program = bytecode.getProgramForProbe(probe);
-    program.assemble(bytecode);
-
     pid_t pid = child_ ? child_->pid() : this->pid();
 
     if (probe.type == ProbeType::usdt) {
-      auto aps = attach_usdt_probe(
-          probe, bytecode, program, pid, usdt_file_activation_);
+      auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
       for (auto &ap : aps)
         ret.emplace_back(std::move(ap));
 
@@ -768,27 +764,21 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     } else if (probe.type == ProbeType::uprobe ||
                probe.type == ProbeType::uretprobe) {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, bytecode, program, pid, *this, safe_mode_));
+          probe, program, pid, *this, safe_mode_));
       return ret;
     } else if (probe.type == ProbeType::watchpoint ||
                probe.type == ProbeType::asyncwatchpoint) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, bytecode, program, pid, *this));
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, program, pid, *this));
       return ret;
     } else {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, bytecode, program, safe_mode_, *this));
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, program, safe_mode_, *this));
       return ret;
     }
   } catch (const EnospcException &e) {
     // Caller will handle
     throw e;
-  } catch (const HelperVerifierError &e) {
-    if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
-      LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
-    } else {
-      LOG(ERROR) << e.what();
-    }
   } catch (const std::exception &e) {
     LOG(ERROR) << e.what();
     ret.clear();
@@ -958,6 +948,20 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   bytecode_ = std::move(bytecode);
   bytecode_.fixupBTF(*feature_);
+
+  try {
+    bytecode_.load_progs(resources, *btf_, *feature_);
+  } catch (const HelperVerifierError &e) {
+    if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
+      LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
+    } else {
+      LOG(ERROR) << e.what();
+    }
+    return -1;
+  } catch (const std::runtime_error &e) {
+    LOG(ERROR) << e.what();
+    return -1;
+  }
 
   err = setup_output();
   if (err)
