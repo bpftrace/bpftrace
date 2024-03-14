@@ -69,13 +69,8 @@ Vagrant.configure("2") do |config|
       'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 0,
     },
-    'ubuntu-21.04'     => {
-      'image'          => 'ubuntu/hirsute64',
-      'scripts'        => [ $ubuntu_deps, ],
-      'fix_console'    => 0,
-    },
-    'ubuntu-21.10'     => {
-      'image'          => 'ubuntu/impish64',
+    'ubuntu-22.04'     => {
+      'image'          => 'ubuntu/jammy64',
       'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 0,
     },
