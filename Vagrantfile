@@ -74,6 +74,12 @@ Vagrant.configure("2") do |config|
       'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 0,
     },
+    # Unofficial Ubuntu image that support the libvirt provider.
+    'generic-ubuntu-20.04'     => {
+      'image'          => 'generic/ubuntu2004',
+      'scripts'        => [ $ubuntu_deps, ],
+      'fix_console'    => 0,
+    },
     'fedora-34'        => {
       'image'          => 'fedora/34-cloud-base',
       'scripts'        => [ $fedora_deps, ],
