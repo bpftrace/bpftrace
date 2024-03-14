@@ -153,14 +153,11 @@ int AttachedProbe::detach_raw_tracepoint(void)
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             const BpfBytecode &bytecode,
-                             BpfProgram &prog,
+                             const BpfProgram &prog,
                              bool safe_mode,
                              BPFtrace &bpftrace)
-    : probe_(probe), bpftrace_(bpftrace)
+    : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
 {
-  prog.load(probe, bytecode, *bpftrace_.btf_, *bpftrace_.feature_);
-  progfd_ = prog.fd();
   LOG(V1) << "Attaching " << probe_.orig_name;
   switch (probe_.type) {
     case ProbeType::special:
@@ -206,15 +203,12 @@ AttachedProbe::AttachedProbe(Probe &probe,
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             const BpfBytecode &bytecode,
-                             BpfProgram &prog,
+                             const BpfProgram &prog,
                              int pid,
                              BPFtrace &bpftrace,
                              bool safe_mode)
-    : probe_(probe), bpftrace_(bpftrace)
+    : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
 {
-  prog.load(probe, bytecode, *bpftrace_.btf_, *bpftrace_.feature_);
-  progfd_ = prog.fd();
   switch (probe_.type) {
     case ProbeType::usdt:
       attach_usdt(pid, *bpftrace_.feature_);

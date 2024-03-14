@@ -23,13 +23,11 @@ std::string progtypeName(libbpf::bpf_prog_type t);
 class AttachedProbe {
 public:
   AttachedProbe(Probe &probe,
-                const BpfBytecode &bytecode,
-                BpfProgram &prog,
+                const BpfProgram &prog,
                 bool safe_mode,
                 BPFtrace &bpftrace);
   AttachedProbe(Probe &probe,
-                const BpfBytecode &bytecode,
-                BpfProgram &prog,
+                const BpfProgram &prog,
                 int pid,
                 BPFtrace &bpftrace,
                 bool safe_mode = true);

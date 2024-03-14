@@ -49,7 +49,7 @@ const std::vector<uint8_t> &BpfBytecode::getSection(
   return sections_.at(name);
 }
 
-BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
+const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
 {
   auto usdt_location_idx = (probe.type == ProbeType::usdt)
                                ? std::make_optional<int>(
@@ -75,6 +75,32 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
   }
 
   return prog->second;
+}
+
+BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
+{
+  return const_cast<BpfProgram &>(
+      const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
+}
+
+void BpfBytecode::load_progs(const RequiredResources &resources,
+                             BTF &btf,
+                             BPFfeature &feature)
+{
+  load_progs(resources.probes, btf, feature);
+  load_progs(resources.special_probes, btf, feature);
+  load_progs(resources.watchpoint_probes, btf, feature);
+}
+
+void BpfBytecode::load_progs(const std::vector<Probe> &probes,
+                             BTF &btf,
+                             BPFfeature &feature)
+{
+  for (auto &probe : probes) {
+    auto &program = getProgramForProbe(probe);
+    program.assemble(*this);
+    program.load(probe, *this, btf, feature);
+  }
 }
 
 bool BpfBytecode::create_maps()

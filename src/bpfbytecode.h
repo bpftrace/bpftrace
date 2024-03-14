@@ -37,6 +37,11 @@ public:
   bool hasSection(const std::string &name) const;
   const std::vector<uint8_t> &getSection(const std::string &name) const;
 
+  void load_progs(const RequiredResources &resources,
+                  BTF &btf,
+                  BPFfeature &feature);
+
+  const BpfProgram &getProgramForProbe(const Probe &probe) const;
   BpfProgram &getProgramForProbe(const Probe &probe);
 
   bool create_maps();
@@ -53,6 +58,10 @@ public:
   void fixupBTF(BPFfeature &feature);
 
 private:
+  void load_progs(const std::vector<Probe> &probes,
+                  BTF &btf,
+                  BPFfeature &feature);
+
   SectionMap sections_;
 
   // We need a custom deleter for bpf_object which will call bpf_object__close.

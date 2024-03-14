@@ -113,7 +113,7 @@ public:
   int run(BpfBytecode bytecode);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
-      BpfBytecode &bytecode);
+      const BpfBytecode &bytecode);
   int run_iter();
   int print_maps();
   int clear_map(const BpfMap &map);
@@ -242,8 +242,7 @@ private:
 
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
-      const BpfBytecode &bytecode,
-      BpfProgram &program,
+      const BpfProgram &program,
       int pid,
       bool file_activation);
   int setup_output();
