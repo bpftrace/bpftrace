@@ -339,7 +339,11 @@ kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }
 TEST(semantic_analyser, consistent_map_values)
 {
   test("kprobe:f { @x = 0; @x = 1; }");
-  test("kprobe:f { @x = 0; @x = \"a\"; }", 1);
+  test_error("kprobe:f { @x = 0; @x = \"a\"; }", R"(
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64
+kprobe:f { @x = 0; @x = "a"; }
+                   ~~
+)");
 }
 
 TEST(semantic_analyser, consistent_map_keys)
@@ -396,9 +400,21 @@ TEST(semantic_analyser, if_statements)
 TEST(semantic_analyser, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }");
-  test("kprobe:f / \"str\" / { 123 }", 10);
-  test("kprobe:f / kstack / { 123 }", 10);
-  test("kprobe:f / @mymap / { @mymap = \"str\" }", 10);
+  test_error("kprobe:f / \"str\" / { 123 }", R"(
+stdin:1:10-19: ERROR: Invalid type for predicate: string
+kprobe:f / "str" / { 123 }
+         ~~~~~~~~~
+)");
+  test_error("kprobe:f / kstack / { 123 }", R"(
+stdin:1:10-20: ERROR: Invalid type for predicate: kstack
+kprobe:f / kstack / { 123 }
+         ~~~~~~~~~~
+)");
+  test_error("kprobe:f / @mymap / { @mymap = \"str\" }", R"(
+stdin:1:10-20: ERROR: Invalid type for predicate: string
+kprobe:f / @mymap / { @mymap = "str" }
+         ~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, ternary_expressions)
@@ -408,84 +424,151 @@ TEST(semantic_analyser, ternary_expressions)
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
   test("kprobe:f { @x = pid < 10000 ? printf(\"lo\") : cat(\"/proc/uptime\") }",
        10);
-  test("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", 10);
-  test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", 10);
-  test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", 10);
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", R"(
+stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'integer' and 'none'
+kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", R"(
+stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'integer' and 'string'
+kprobe:f { @x = pid < 10000 ? 1 : "high" }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", R"(
+stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'integer'
+kprobe:f { @x = pid < 10000 ? "lo" : 2 }
+                ~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, mismatched_call_types)
 {
-  test("kprobe:f { @x = 1; @x = count(); }", 1);
-  test("kprobe:f { @x = count(); @x = sum(pid); }", 1);
-  test("kprobe:f { @x = 1; @x = hist(0); }", 1);
+  test_error("kprobe:f { @x = 1; @x = count(); }", R"(
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count' when map already contains a value of type 'int64
+kprobe:f { @x = 1; @x = count(); }
+                   ~~
+)");
+  test_error("kprobe:f { @x = count(); @x = sum(pid); }", R"(
+stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'sum' when map already contains a value of type 'count
+kprobe:f { @x = count(); @x = sum(pid); }
+                         ~~
+)");
+  test_error("kprobe:f { @x = 1; @x = hist(0); }", R"(
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist' when map already contains a value of type 'int64
+kprobe:f { @x = 1; @x = hist(0); }
+                   ~~
+)");
 }
 
 TEST(semantic_analyser, compound_left)
 {
-  test("kprobe:f { $a <<= 0 }", 1);
+  test_error("kprobe:f { $a <<= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a <<= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a <<= 1 }");
   test("kprobe:f { @a <<= 1 }");
 }
 
 TEST(semantic_analyser, compound_right)
 {
-  test("kprobe:f { $a >>= 0 }", 1);
+  test_error("kprobe:f { $a >>= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a >>= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a >>= 1 }");
   test("kprobe:f { @a >>= 1 }");
 }
 
 TEST(semantic_analyser, compound_plus)
 {
-  test("kprobe:f { $a += 0 }", 1);
+  test_error("kprobe:f { $a += 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a += 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a += 1 }");
   test("kprobe:f { @a += 1 }");
 }
 
 TEST(semantic_analyser, compound_minus)
 {
-  test("kprobe:f { $a -= 0 }", 1);
+  test_error("kprobe:f { $a -= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a -= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a -= 1 }");
   test("kprobe:f { @a -= 1 }");
 }
 
 TEST(semantic_analyser, compound_mul)
 {
-  test("kprobe:f { $a *= 0 }", 1);
+  test_error("kprobe:f { $a *= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a *= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a *= 1 }");
   test("kprobe:f { @a *= 1 }");
 }
 
 TEST(semantic_analyser, compound_div)
 {
-  test("kprobe:f { $a /= 0 }", 1);
+  test_error("kprobe:f { $a /= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a /= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a /= 1 }");
   test("kprobe:f { @a /= 1 }");
 }
 
 TEST(semantic_analyser, compound_mod)
 {
-  test("kprobe:f { $a %= 0 }", 1);
+  test_error("kprobe:f { $a %= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a %= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a %= 1 }");
   test("kprobe:f { @a %= 1 }");
 }
 
 TEST(semantic_analyser, compound_band)
 {
-  test("kprobe:f { $a &= 0 }", 1);
+  test_error("kprobe:f { $a &= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a &= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a &= 1 }");
   test("kprobe:f { @a &= 1 }");
 }
 
 TEST(semantic_analyser, compound_bor)
 {
-  test("kprobe:f { $a |= 0 }", 1);
+  test_error("kprobe:f { $a |= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a |= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a |= 1 }");
   test("kprobe:f { @a |= 1 }");
 }
 
 TEST(semantic_analyser, compound_bxor)
 {
-  test("kprobe:f { $a ^= 0 }", 1);
+  test_error("kprobe:f { $a ^= 0 }", R"(
+stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
+kprobe:f { $a ^= 0 }
+           ~~
+)");
   test("kprobe:f { $a = 0; $a ^= 1 }");
   test("kprobe:f { @a ^= 1 }");
 }
@@ -495,30 +578,124 @@ TEST(semantic_analyser, call_hist)
   test("kprobe:f { @x = hist(1); }");
   test("kprobe:f { @x = hist(1, 0); }");
   test("kprobe:f { @x = hist(1, 5); }");
-  test("kprobe:f { @x = hist(1, 10); }", 1);
-  test("kprobe:f { $n = 3; @x = hist(1, $n); }", 1);
-  test("kprobe:f { @x = hist(); }", 1);
-  test("kprobe:f { hist(1); }", 1);
-  test("kprobe:f { $x = hist(1); }", 1);
-  test("kprobe:f { @x[hist(1)] = 1; }", 1);
-  test("kprobe:f { if(hist()) { 123 } }", 1);
-  test("kprobe:f { hist() ? 0 : 1; }", 1);
+  test_error("kprobe:f { @x = hist(1, 10); }", R"(
+stdin:1:17-28: ERROR: hist: bits 10 must be 0..5
+kprobe:f { @x = hist(1, 10); }
+                ~~~~~~~~~~~
+)");
+  test_error("kprobe:f { $n = 3; @x = hist(1, $n); }", R"(
+stdin:1:25-36: ERROR: hist() expects a integer literal (integer provided)
+kprobe:f { $n = 3; @x = hist(1, $n); }
+                        ~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @x = hist(); }", R"(
+stdin:1:17-23: ERROR: hist() requires at least one argument (0 provided)
+kprobe:f { @x = hist(); }
+                ~~~~~~
+)");
+  test_error("kprobe:f { hist(1); }", R"(
+stdin:1:12-19: ERROR: hist() should be directly assigned to a map
+kprobe:f { hist(1); }
+           ~~~~~~~
+)");
+  test_error("kprobe:f { $x = hist(1); }", R"(
+stdin:1:17-24: ERROR: hist() should be directly assigned to a map
+kprobe:f { $x = hist(1); }
+                ~~~~~~~
+)");
+  test_error("kprobe:f { @x[hist(1)] = 1; }", R"(
+stdin:1:12-22: ERROR: hist() should be directly assigned to a map
+kprobe:f { @x[hist(1)] = 1; }
+           ~~~~~~~~~~
+)");
+  test_error("kprobe:f { if(hist()) { 123 } }", R"(
+stdin:1:12-21: ERROR: hist() should be directly assigned to a map
+kprobe:f { if(hist()) { 123 } }
+           ~~~~~~~~~
+stdin:1:12-21: ERROR: hist() requires at least one argument (0 provided)
+kprobe:f { if(hist()) { 123 } }
+           ~~~~~~~~~
+)");
+  test_error("kprobe:f { hist() ? 0 : 1; }", R"(
+stdin:1:12-18: ERROR: hist() should be directly assigned to a map
+kprobe:f { hist() ? 0 : 1; }
+           ~~~~~~
+stdin:1:12-18: ERROR: hist() requires at least one argument (0 provided)
+kprobe:f { hist() ? 0 : 1; }
+           ~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_lhist)
 {
   test("kprobe:f { @ = lhist(5, 0, 10, 1); }");
-  test("kprobe:f { @ = lhist(5, 0, 10); }", 1);
-  test("kprobe:f { @ = lhist(5, 0); }", 1);
-  test("kprobe:f { @ = lhist(5); }", 1);
-  test("kprobe:f { @ = lhist(); }", 1);
-  test("kprobe:f { @ = lhist(5, 0, 10, 1, 2); }", 1);
-  test("kprobe:f { lhist(-10, -10, 10, 1); }", 1);
-  test("kprobe:f { @ = lhist(-10, -10, 10, 1); }", 10); // must be positive
-  test("kprobe:f { $x = lhist(); }", 1);
-  test("kprobe:f { @[lhist()] = 1; }", 1);
-  test("kprobe:f { if(lhist()) { 123 } }", 1);
-  test("kprobe:f { lhist() ? 0 : 1; }", 1);
+  test_error("kprobe:f { @ = lhist(5, 0, 10); }", R"(
+stdin:1:16-31: ERROR: lhist() requires 4 arguments (3 provided)
+kprobe:f { @ = lhist(5, 0, 10); }
+               ~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = lhist(5, 0); }", R"(
+stdin:1:16-27: ERROR: lhist() requires 4 arguments (2 provided)
+kprobe:f { @ = lhist(5, 0); }
+               ~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = lhist(5); }", R"(
+stdin:1:16-24: ERROR: lhist() requires 4 arguments (1 provided)
+kprobe:f { @ = lhist(5); }
+               ~~~~~~~~
+)");
+  test_error("kprobe:f { @ = lhist(); }", R"(
+stdin:1:16-23: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { @ = lhist(); }
+               ~~~~~~~
+)");
+  test_error("kprobe:f { @ = lhist(5, 0, 10, 1, 2); }", R"(
+stdin:1:16-37: ERROR: lhist() requires 4 arguments (5 provided)
+kprobe:f { @ = lhist(5, 0, 10, 1, 2); }
+               ~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { lhist(-10, -10, 10, 1); }", R"(
+stdin:1:12-34: ERROR: lhist() should be directly assigned to a map
+kprobe:f { lhist(-10, -10, 10, 1); }
+           ~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = lhist(-10, -10, 10, 1); }", R"(
+stdin:1:16-38: ERROR: lhist() min must be non-negative (provided min -10)
+kprobe:f { @ = lhist(-10, -10, 10, 1); }
+               ~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { $x = lhist(); }", R"(
+stdin:1:17-24: ERROR: lhist() should be directly assigned to a map
+kprobe:f { $x = lhist(); }
+                ~~~~~~~
+stdin:1:17-24: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { $x = lhist(); }
+                ~~~~~~~
+)");
+  test_error("kprobe:f { @[lhist()] = 1; }", R"(
+stdin:1:12-21: ERROR: lhist() should be directly assigned to a map
+kprobe:f { @[lhist()] = 1; }
+           ~~~~~~~~~
+stdin:1:12-21: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { @[lhist()] = 1; }
+           ~~~~~~~~~
+)");
+  test_error("kprobe:f { if(lhist()) { 123 } }", R"(
+stdin:1:12-22: ERROR: lhist() should be directly assigned to a map
+kprobe:f { if(lhist()) { 123 } }
+           ~~~~~~~~~~
+stdin:1:12-22: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { if(lhist()) { 123 } }
+           ~~~~~~~~~~
+)");
+  test_error("kprobe:f { lhist() ? 0 : 1; }", R"(
+stdin:1:12-19: ERROR: lhist() should be directly assigned to a map
+kprobe:f { lhist() ? 0 : 1; }
+           ~~~~~~~
+stdin:1:12-19: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { lhist() ? 0 : 1; }
+           ~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_lhist_posparam)
