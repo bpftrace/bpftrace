@@ -3206,14 +3206,26 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:*:func_1 { 1 }");
   test("kfunc:func_1 { @[func] = 1; }");
 
-  test("kretfunc:func_1 { $x = args.foo; }", 1);
+  test_error("kretfunc:func_1 { $x = args.foo; }", R"(
+stdin:1:24-29: ERROR: Can't find function parameter foo
+kretfunc:func_1 { $x = args.foo; }
+                       ~~~~~
+)");
   test("kretfunc:func_1 { $x = args; }");
   test("kfunc:func_1 { @ = args; }");
   test("kfunc:func_1 { @[args] = 1; }");
   // reg() is not available in kfunc
 #ifdef ARCH_X86_64
-  test("kfunc:func_1 { reg(\"ip\") }", 1);
-  test("kretfunc:func_1 { reg(\"ip\") }", 1);
+  test_error("kfunc:func_1 { reg(\"ip\") }", R"(
+stdin:1:16-25: ERROR: reg can not be used with "kfunc" probes
+kfunc:func_1 { reg("ip") }
+               ~~~~~~~~~
+)");
+  test_error("kretfunc:func_1 { reg(\"ip\") }", R"(
+stdin:1:19-28: ERROR: reg can not be used with "kretfunc" probes
+kretfunc:func_1 { reg("ip") }
+                  ~~~~~~~~~
+)");
 #endif
   // Backwards compatibility
   test("kfunc:func_1 { $x = args->a; }");
@@ -3237,30 +3249,57 @@ TEST_F(semantic_analyser_btf, call_skb_output)
   test("kretfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
        "}");
 
-  test("kfunc:func_1 { $ret = skboutput(); }", 1);
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\"); }", 1);
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }", 1);
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }", 1);
-  test("kfunc:func_1 { skboutput(\"one.pcap\", args.foo1, 1500, 0); }", 1);
+  test_error("kfunc:func_1 { $ret = skboutput(); }", R"(
+stdin:1:23-34: ERROR: skboutput() requires 4 arguments (0 provided)
+kfunc:func_1 { $ret = skboutput(); }
+                      ~~~~~~~~~~~
+)");
+  test_error("kfunc:func_1 { $ret = skboutput(\"one.pcap\"); }", R"(
+stdin:1:23-44: ERROR: skboutput() requires 4 arguments (1 provided)
+kfunc:func_1 { $ret = skboutput("one.pcap"); }
+                      ~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }", R"(
+stdin:1:23-55: ERROR: skboutput() requires 4 arguments (2 provided)
+kfunc:func_1 { $ret = skboutput("one.pcap", args.foo1); }
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error(
+      "kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }", R"(
+stdin:1:23-61: ERROR: skboutput() requires 4 arguments (3 provided)
+kfunc:func_1 { $ret = skboutput("one.pcap", args.foo1, 1500); }
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kfunc:func_1 { skboutput(\"one.pcap\", args.foo1, 1500, 0); }",
+             R"(
+stdin:1:16-57: ERROR: skboutput() should be assigned to a variable
+kfunc:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }");
-  test("iter:task_file { 1 }");
-  test("iter:task_vma { 1 }");
   test("iter:task { $x = ctx->task->pid }");
   test("iter:task_file { $x = ctx->file->ino }");
   test("iter:task_vma { $x = ctx->vma->vm_start }");
-  test("iter:task { $x = args.foo; }", 1);
-  test("iter:task_file { $x = args.foo; }", 1);
-  test("iter:task_vma { $x = args.foo; }", 1);
   test("iter:task { printf(\"%d\", ctx->task->pid); }");
-  test("iter:task_file { printf(\"%d\", ctx->file->ino); }");
-  test("iter:task_vma { printf(\"%lx\", ctx->vma->vm_start); }");
-  test("iter:task,iter:task_file { 1 }", 1);
-  test("iter:task,iter:task_vma { 1 }", 1);
-  test("iter:task,f:func_1 { 1 }", 1);
+  test_error("iter:task { $x = args.foo; }", R"(
+stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/kfunc/uprobeprobes (iter used here)
+iter:task { $x = args.foo; }
+                 ~~~~
+)");
+  test_error("iter:task,iter:task_file { 1 }", R"(
+stdin:1:1-10: ERROR: Only single iter attach point is allowed.
+iter:task,iter:task_file { 1 }
+~~~~~~~~~
+)");
+  test_error("iter:task,f:func_1 { 1 }", R"(
+stdin:1:1-10: ERROR: Only single iter attach point is allowed.
+iter:task,f:func_1 { 1 }
+~~~~~~~~~
+)");
 }
 
 // Sanity check for fentry/fexit aliases
@@ -3274,14 +3313,26 @@ TEST_F(semantic_analyser_btf, fentry)
   test("fentry:*:func_1 { 1 }");
   test("fentry:func_1 { @[func] = 1; }");
 
-  test("fexit:func_1 { $x = args.foo; }", 1);
+  test_error("fexit:func_1 { $x = args.foo; }", R"(
+stdin:1:21-26: ERROR: Can't find function parameter foo
+fexit:func_1 { $x = args.foo; }
+                    ~~~~~
+)");
   test("fexit:func_1 { $x = args; }");
   test("fentry:func_1 { @ = args; }");
   test("fentry:func_1 { @[args] = 1; }");
   // reg() is not available in fentry
 #ifdef ARCH_X86_64
-  test("fentry:func_1 { reg(\"ip\") }", 1);
-  test("fexit:func_1 { reg(\"ip\") }", 1);
+  test_error("fentry:func_1 { reg(\"ip\") }", R"(
+stdin:1:17-26: ERROR: reg can not be used with "kfunc" probes
+fentry:func_1 { reg("ip") }
+                ~~~~~~~~~
+)");
+  test_error("fexit:func_1 { reg(\"ip\") }", R"(
+stdin:1:16-25: ERROR: reg can not be used with "kretfunc" probes
+fexit:func_1 { reg("ip") }
+               ~~~~~~~~~
+)");
 #endif
   // Backwards compatibility
   test("fentry:func_1 { $x = args->a; }");
