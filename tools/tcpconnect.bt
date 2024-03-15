@@ -22,6 +22,10 @@
 #include <linux/socket.h>
 #include <net/sock.h>
 #else
+/*
+ * Note: you may need to install the glibc-headers package or other package
+ * containing sys/socket.h, which contains the AF_INET and AF_INET6 macros
+ */
 #include <sys/socket.h>
 #endif
 
