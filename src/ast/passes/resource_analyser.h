@@ -27,6 +27,7 @@ public:
 
 private:
   void visit(Probe &probe) override;
+  void visit(Subprog &subprog) override;
   void visit(Builtin &map) override;
   void visit(Call &call) override;
   void visit(Map &map) override;

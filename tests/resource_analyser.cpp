@@ -61,6 +61,11 @@ TEST(resource_analyser, multiple_lhist_bounds_in_single_map)
        false);
 }
 
+TEST(resource_analyser, printf_in_subprog)
+{
+  test("fn greet(): void { printf(\"Hello, world\\n\"); }", true);
+}
+
 } // namespace resource_analyser
 } // namespace test
 } // namespace bpftrace

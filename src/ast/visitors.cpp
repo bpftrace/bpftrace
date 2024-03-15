@@ -157,8 +157,10 @@ void Visitor::visit(While &while_block)
   }
 }
 
-void Visitor::visit(Jump &jump __attribute__((__unused__)))
+void Visitor::visit(Jump &jump)
 {
+  if (jump.return_value)
+    Visit(*jump.return_value);
 }
 
 void Visitor::visit(Predicate &pred)
@@ -191,8 +193,25 @@ void Visitor::visit(Config &config)
   }
 }
 
+void Visitor::visit(SubprogArg &subprog_arg __attribute__((__unused__)))
+{
+}
+
+void Visitor::visit(Subprog &subprog)
+{
+  for (SubprogArg *arg : *subprog.args) {
+    Visit(*arg);
+  }
+  for (Statement *stmt : *subprog.stmts) {
+    Visit(*stmt);
+  }
+}
+
 void Visitor::visit(Program &program)
 {
+  if (program.functions)
+    for (Subprog *subprog : *program.functions)
+      Visit(*subprog);
   for (Probe *probe : *program.probes)
     Visit(*probe);
   if (program.config)
@@ -412,9 +431,21 @@ Node *Mutator::visit(Config &config)
   return c;
 }
 
+Node *Mutator::visit(Subprog &subprog)
+{
+  auto s = subprog.leafcopy();
+
+  s->stmts = mutateStmtList(subprog.stmts);
+  return s;
+}
+
 Node *Mutator::visit(Program &program)
 {
   auto p = program.leafcopy();
+  p->functions = new SubprogList;
+  if (program.functions)
+    for (Subprog *subprog : *program.functions)
+      p->functions->push_back(Value<Subprog>(subprog));
   p->probes = new ProbeList;
   for (Probe *probe : *program.probes)
     p->probes->push_back(Value<Probe>(probe));

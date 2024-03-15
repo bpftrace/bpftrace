@@ -143,6 +143,7 @@ std::string typestr(Type t)
   switch (t) {
     // clang-format off
     case Type::none:     return "none";     break;
+    case Type::voidtype: return "void";     break;
     case Type::integer:  return "integer";  break;
     case Type::pointer:  return "pointer";  break;
     case Type::record:   return "record";   break;
@@ -322,6 +323,11 @@ SizedType CreateString(size_t size)
 SizedType CreateNone()
 {
   return SizedType(Type::none, 0);
+}
+
+SizedType CreateVoid()
+{
+  return SizedType(Type::voidtype, 0);
 }
 
 SizedType CreateStackMode()
@@ -592,6 +598,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     // No default case (explicitly skip all remaining types instead) to get
     // a compiler warning when we add a new type
     case bpftrace::Type::none:
+    case bpftrace::Type::voidtype:
     case bpftrace::Type::hist:
     case bpftrace::Type::lhist:
     case bpftrace::Type::count:

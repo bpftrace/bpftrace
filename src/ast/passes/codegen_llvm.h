@@ -58,7 +58,9 @@ public:
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
+  void visit(Subprog &subprog) override;
   void visit(Program &program) override;
+
   AllocaInst *getHistMapKey(Map &map, Value *log2);
   int getNextIndexForProbe();
   Value *createLogicalAnd(Binop &binop);
@@ -175,7 +177,7 @@ private:
 
   // Create return instruction
   //
-  // If null, return value will depend on current attach point
+  // If null, return value will depend on current attach point (void in subprog)
   void createRet(Value *value = nullptr);
 
   // Every time we see a watchpoint that specifies a function + arg pair, we
@@ -248,6 +250,7 @@ private:
   int next_probe_index_ = 1;
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
+  bool inside_subprog_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;

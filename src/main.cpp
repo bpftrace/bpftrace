@@ -22,6 +22,7 @@
 #include "ast/passes/node_counter.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/resource_analyser.h"
+#include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 
 #include "bpffeature.h"
@@ -456,6 +457,7 @@ ast::PassManager CreateDynamicPM()
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());
+  pm.AddPass(ast::CreateReturnPathPass());
 
   return pm;
 }
@@ -466,6 +468,7 @@ ast::PassManager CreateAotPM()
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
+  pm.AddPass(ast::CreateReturnPathPass());
 
   return pm;
 }

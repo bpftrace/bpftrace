@@ -38,6 +38,7 @@ public:
   void visit(AssignVarStatement &assignment) override;
   void visit(Unop &unop) override;
   void visit(Probe &probe) override;
+  void visit(Subprog &subprog) override;
 
   int analyse();
 

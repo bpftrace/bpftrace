@@ -22,6 +22,7 @@ const int COMM_SIZE = 16;
 enum class Type : uint8_t {
   // clang-format off
   none,
+  voidtype,
   integer,
   pointer,
   record, // struct/union, as struct is a protected keyword
@@ -293,6 +294,10 @@ public:
   {
     return type_ == Type::none;
   };
+  bool IsVoidTy(void) const
+  {
+    return type_ == Type::voidtype;
+  };
   bool IsIntegerTy(void) const
   {
     return type_ == Type::integer;
@@ -419,6 +424,7 @@ public:
 // Type helpers
 
 SizedType CreateNone();
+SizedType CreateVoid();
 SizedType CreateBool();
 SizedType CreateInteger(size_t bits, bool is_signed);
 SizedType CreateInt(size_t bits);

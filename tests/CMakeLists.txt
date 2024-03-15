@@ -35,6 +35,7 @@ add_executable(bpftrace_test
   config_analyser.cpp
   resource_analyser.cpp
   required_resources.cpp
+  return_path_analyser.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
   utils.cpp

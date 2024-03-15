@@ -44,6 +44,8 @@ public:
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Config &config) = 0;
+  virtual void visit(SubprogArg &subprog_arg) = 0;
+  virtual void visit(Subprog &subprog) = 0;
   virtual void visit(Program &program) = 0;
 };
 
@@ -109,6 +111,8 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Config &config) override;
+  void visit(SubprogArg &subprog_arg) override;
+  void visit(Subprog &subprog) override;
   void visit(Program &program) override;
 };
 
@@ -173,6 +177,8 @@ public:
   virtual R visit(AttachPoint &node) DEFAULT_FN;
   virtual R visit(Probe &node) DEFAULT_FN;
   virtual R visit(Config &node) DEFAULT_FN;
+  virtual R visit(SubprogArg &node) DEFAULT_FN;
+  virtual R visit(Subprog &node) DEFAULT_FN;
   virtual R visit(Program &node) DEFAULT_FN;
 
   virtual R default_visitor(Node &node)
@@ -220,6 +226,8 @@ private:
     DEFINE_DISPATCH(Ternary);
     DEFINE_DISPATCH(While);
     DEFINE_DISPATCH(AttachPoint);
+    DEFINE_DISPATCH(SubprogArg);
+    DEFINE_DISPATCH(Subprog);
     DEFINE_DISPATCH(Probe);
     DEFINE_DISPATCH(Config);
     DEFINE_DISPATCH(Program);
@@ -273,6 +281,7 @@ public:
   Node *visit(AttachPoint &) override;
   Node *visit(Probe &) override;
   Node *visit(Config &) override;
+  Node *visit(Subprog &) override;
   Node *visit(Program &) override;
 
 protected:

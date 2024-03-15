@@ -233,6 +233,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     ty = GetStructType(ty_name.str(), llvm_elems, false);
   } else if (stype.IsPtrTy()) {
     ty = getInt64Ty();
+  } else if (stype.IsVoidTy()) {
+    ty = getVoidTy();
   } else {
     switch (stype.GetSize()) {
       case 16:
