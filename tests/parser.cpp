@@ -2186,7 +2186,12 @@ TEST(Parser, subprog_void_no_args)
 
 TEST(Parser, subprog_invalid_return_type)
 {
-  test_parse_failure("fn f(): nonexistent {}");
+  // Error location is incorrect: #3063
+  test_parse_failure("fn f(): nonexistent {}", R"(
+stdin:1:9-21: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+fn f(): nonexistent {}
+        ~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, subprog_one_arg)
@@ -2233,7 +2238,12 @@ TEST(Parser, subprog_enum_arg)
 
 TEST(Parser, subprog_invalid_arg)
 {
-  test_parse_failure("fn f($x : invalid): void {}");
+  // Error location is incorrect: #3063
+  test_parse_failure("fn f($x : invalid): void {}", R"(
+stdin:1:11-19: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+fn f($x : invalid): void {}
+          ~~~~~~~~
+)");
 }
 
 TEST(Parser, subprog_return)
