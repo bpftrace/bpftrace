@@ -13,7 +13,7 @@ using Printer = ast::Printer;
 
 void test_parse_failure(BPFtrace &bpftrace,
                         std::string_view input,
-                        std::string_view expected_error = {})
+                        std::string_view expected_error)
 {
   std::stringstream out;
   Driver driver(bpftrace, out);
@@ -22,12 +22,11 @@ void test_parse_failure(BPFtrace &bpftrace,
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
-    EXPECT_EQ(out.str(), expected_error);
+    EXPECT_EQ(expected_error, out.str());
   }
 }
 
-void test_parse_failure(std::string_view input,
-                        std::string_view expected_error = {})
+void test_parse_failure(std::string_view input, std::string_view expected_error)
 {
   BPFtrace bpftrace;
   test_parse_failure(bpftrace, input, expected_error);
@@ -36,7 +35,7 @@ void test_parse_failure(std::string_view input,
 void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
 {
   Driver driver(bpftrace);
-  EXPECT_EQ(driver.parse_str(input), 0);
+  ASSERT_EQ(driver.parse_str(input), 0);
 
   if (expected[0] == '\n')
     expected.remove_prefix(1); // Remove initial '\n'
@@ -195,7 +194,12 @@ Program
  kprobe:f
   param: $1
 )");
-  test_parse_failure("kprobe:f { $0 }");
+
+  test_parse_failure("kprobe:f { $0 }", R"(
+stdin:1:12-14: ERROR: param $0 is out of integer range [1, 9223372036854775807]
+kprobe:f { $0 }
+           ~~
+)");
 }
 
 TEST(Parser, positional_param_count)
@@ -277,11 +281,36 @@ TEST(Parser, positional_param_attachpoint)
   int: 1
 )PROG");
 
-  test_parse_failure(bpftrace, R"PROG(uprobe:$1a" { 1 })PROG");
-  test_parse_failure(bpftrace, R"PROG(uprobe:$a" { 1 })PROG");
-  test_parse_failure(bpftrace, R"PROG(uprobe:$-1" { 1 })PROG");
-  test_parse_failure(bpftrace,
-                     R"PROG(uprobe:$999999999999999999999999" { 1 })PROG");
+  // Error location is incorrect: #3063
+  test_parse_failure(bpftrace, R"(uprobe:$1a { 1 })", R"(
+stdin:1:1-12: ERROR: Found trailing text 'a' in positional parameter index. Try quoting the trailing text.
+uprobe:$1a { 1 }
+~~~~~~~~~~~
+stdin:1:1-1: ERROR: No attach points for probe
+uprobe:$1a { 1 }
+
+)");
+
+  test_parse_failure(bpftrace, R"(uprobe:$a { 1 })", R"(
+stdin:1:1-11: ERROR: syntax error, unexpected variable, expecting {
+uprobe:$a { 1 }
+~~~~~~~~~~
+)");
+
+  test_parse_failure(bpftrace, R"(uprobe:$-1 { 1 })", R"(
+stdin:1:1-10: ERROR: invalid character '$'
+uprobe:$-1 { 1 }
+~~~~~~~~~
+stdin:1:1-11: ERROR: syntax error, unexpected -, expecting {
+uprobe:$-1 { 1 }
+~~~~~~~~~~
+)");
+
+  test_parse_failure(bpftrace, R"(uprobe:$999999999999999999999999 { 1 })", R"(
+stdin:1:1-34: ERROR: param $999999999999999999999999 is out of integer range [1, 9223372036854775807]
+uprobe:$999999999999999999999999 { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, comment)
@@ -1083,16 +1112,39 @@ TEST(Parser, call)
 
 TEST(Parser, call_unknown_function)
 {
-  test_parse_failure("kprobe:sys_open { myfunc() }");
-  test_parse_failure("k:f { probe(); }");
+  test_parse_failure("kprobe:sys_open { myfunc() }", R"(
+stdin:1:19-25: ERROR: Unknown function: myfunc
+kprobe:sys_open { myfunc() }
+                  ~~~~~~
+)");
+
+  test_parse_failure("k:f { probe(); }", R"(
+stdin:1:7-12: ERROR: Unknown function: probe
+k:f { probe(); }
+      ~~~~~
+)");
 }
 
 TEST(Parser, call_builtin)
 {
   // Builtins should not be usable as function
-  test_parse_failure("k:f { probe(\"blah\"); }");
-  test_parse_failure("k:f { probe(); }");
-  test_parse_failure("k:f { probe(123); }");
+  test_parse_failure("k:f { probe(\"blah\"); }", R"(
+stdin:1:7-12: ERROR: Unknown function: probe
+k:f { probe("blah"); }
+      ~~~~~
+)");
+
+  test_parse_failure("k:f { probe(); }", R"(
+stdin:1:7-12: ERROR: Unknown function: probe
+k:f { probe(); }
+      ~~~~~
+)");
+
+  test_parse_failure("k:f { probe(123); }", R"(
+stdin:1:7-12: ERROR: Unknown function: probe
+k:f { probe(123); }
+      ~~~~~
+)");
 }
 
 TEST(Parser, call_kaddr)
@@ -1156,9 +1208,23 @@ TEST(Parser, uprobe)
        " uprobe:/my/dir+/program:1234abc\n"
        "  int: 1\n");
 
-  test_parse_failure("uprobe:f { 1 }");
-  test_parse_failure("uprobe { 1 }");
-  test_parse_failure("uprobe:/my/program*:0x1234 { 1 }");
+  test_parse_failure("uprobe:f { 1 }", R"(
+stdin:1:1-9: ERROR: uprobe probe type requires 2 or 3 arguments, found 1
+uprobe:f { 1 }
+~~~~~~~~
+)");
+
+  test_parse_failure("uprobe { 1 }", R"(
+stdin:1:1-7: ERROR: uprobe probe type requires 2 or 3 arguments, found 0
+uprobe { 1 }
+~~~~~~
+)");
+
+  test_parse_failure("uprobe:/my/program*:0x1234 { 1 }", R"(
+stdin:1:1-27: ERROR: Cannot use wildcards with absolute address
+uprobe:/my/program*:0x1234 { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, usdt)
@@ -1175,7 +1241,11 @@ TEST(Parser, usdt)
        " usdt:/my/program:\"probe\"\n"
        "  int: 1\n");
 
-  test_parse_failure("usdt { 1 }");
+  test_parse_failure("usdt { 1 }", R"(
+stdin:1:1-5: ERROR: usdt probe type requires 2 or 3 arguments, found 0
+usdt { 1 }
+~~~~
+)");
 }
 
 TEST(Parser, usdt_namespaced_probe)
@@ -1215,8 +1285,17 @@ TEST(Parser, begin_probe)
        " BEGIN\n"
        "  int: 1\n");
 
-  test_parse_failure("BEGIN:f { 1 }");
-  test_parse_failure("BEGIN:path:f { 1 }");
+  test_parse_failure("BEGIN:f { 1 }", R"(
+stdin:1:1-8: ERROR: BEGIN probe type requires 0 arguments, found 1
+BEGIN:f { 1 }
+~~~~~~~
+)");
+
+  test_parse_failure("BEGIN:path:f { 1 }", R"(
+stdin:1:1-13: ERROR: BEGIN probe type requires 0 arguments, found 2
+BEGIN:path:f { 1 }
+~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, end_probe)
@@ -1226,8 +1305,17 @@ TEST(Parser, end_probe)
        " END\n"
        "  int: 1\n");
 
-  test_parse_failure("END:f { 1 }");
-  test_parse_failure("END:path:f { 1 }");
+  test_parse_failure("END:f { 1 }", R"(
+stdin:1:1-6: ERROR: END probe type requires 0 arguments, found 1
+END:f { 1 }
+~~~~~
+)");
+
+  test_parse_failure("END:path:f { 1 }", R"(
+stdin:1:1-11: ERROR: END probe type requires 0 arguments, found 2
+END:path:f { 1 }
+~~~~~~~~~~
+)");
 }
 
 TEST(Parser, tracepoint_probe)
@@ -1241,8 +1329,17 @@ TEST(Parser, tracepoint_probe)
        " tracepoint:*:*\n"
        "  int: 1\n");
 
-  test_parse_failure("tracepoint:f { 1 }");
-  test_parse_failure("tracepoint { 1 }");
+  test_parse_failure("tracepoint:f { 1 }", R"(
+stdin:1:1-13: ERROR: tracepoint probe type requires 2 arguments, found 1
+tracepoint:f { 1 }
+~~~~~~~~~~~~
+)");
+
+  test_parse_failure("tracepoint { 1 }", R"(
+stdin:1:1-11: ERROR: tracepoint probe type requires 2 arguments, found 0
+tracepoint { 1 }
+~~~~~~~~~~
+)");
 }
 
 TEST(Parser, profile_probe)
@@ -1252,10 +1349,31 @@ TEST(Parser, profile_probe)
        " profile:ms:997\n"
        "  int: 1\n");
 
-  test_parse_failure("profile:ms:nan { 1 }");
-  test_parse_failure("profile:f { 1 }");
-  test_parse_failure("profile { 1 }");
-  test_parse_failure("profile:s:1b { 1 }");
+  test_parse_failure("profile:ms:nan { 1 }", R"(
+stdin:1:1-15: ERROR: stoull
+Invalid rate of profile probe
+profile:ms:nan { 1 }
+~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("profile:f { 1 }", R"(
+stdin:1:1-10: ERROR: profile probe type requires 2 arguments, found 1
+profile:f { 1 }
+~~~~~~~~~
+)");
+
+  test_parse_failure("profile { 1 }", R"(
+stdin:1:1-8: ERROR: profile probe type requires 2 arguments, found 0
+profile { 1 }
+~~~~~~~
+)");
+
+  test_parse_failure("profile:s:1b { 1 }", R"(
+stdin:1:1-13: ERROR: Found trailing non-numeric characters
+Invalid rate of profile probe
+profile:s:1b { 1 }
+~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, interval_probe)
@@ -1275,7 +1393,12 @@ TEST(Parser, interval_probe)
        " interval:s:1000\n"
        "  int: 1\n");
 
-  test_parse_failure("interval:s:1b { 1 }");
+  test_parse_failure("interval:s:1b { 1 }", R"(
+stdin:1:1-14: ERROR: Found trailing non-numeric characters
+Invalid rate of interval probe
+interval:s:1b { 1 }
+~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, software_probe)
@@ -1295,7 +1418,12 @@ TEST(Parser, software_probe)
        " software:faults:1000\n"
        "  int: 1\n");
 
-  test_parse_failure("software:faults:1b { 1 }");
+  test_parse_failure("software:faults:1b { 1 }", R"(
+stdin:1:1-19: ERROR: Found trailing non-numeric characters
+Invalid count for software probe
+software:faults:1b { 1 }
+~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, hardware_probe)
@@ -1315,7 +1443,12 @@ TEST(Parser, hardware_probe)
        " hardware:cache-references:1000000\n"
        "  int: 1\n");
 
-  test_parse_failure("hardware:cache-references:1b { 1 }");
+  test_parse_failure("hardware:cache-references:1b { 1 }", R"(
+stdin:1:1-29: ERROR: Found trailing non-numeric characters
+Invalid count for hardware probe
+hardware:cache-references:1b { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, watchpoint_probe)
@@ -1325,11 +1458,39 @@ TEST(Parser, watchpoint_probe)
        " watchpoint:1234:8:w\n"
        "  int: 1\n");
 
-  test_parse_failure("watchpoint:1b:8:w { 1 }");
-  test_parse_failure("watchpoint:1:8a:w { 1 }");
-  test_parse_failure("watchpoint:1b:8a:w { 1 }");
-  test_parse_failure("watchpoint:+arg0:8:rw { 1 }");
-  test_parse_failure("watchpoint:func1:8:rw { 1 }");
+  test_parse_failure("watchpoint:1b:8:w { 1 }", R"(
+stdin:1:1-18: ERROR: Found trailing non-numeric characters
+Invalid function/address argument
+watchpoint:1b:8:w { 1 }
+~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("watchpoint:1:8a:w { 1 }", R"(
+stdin:1:1-18: ERROR: Found trailing non-numeric characters
+Invalid length argument
+watchpoint:1:8a:w { 1 }
+~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("watchpoint:1b:8a:w { 1 }", R"(
+stdin:1:1-19: ERROR: Found trailing non-numeric characters
+Invalid function/address argument
+watchpoint:1b:8a:w { 1 }
+~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("watchpoint:+arg0:8:rw { 1 }", R"(
+stdin:1:1-22: ERROR: Invalid function/address argument
+watchpoint:+arg0:8:rw { 1 }
+~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("watchpoint:func1:8:rw { 1 }", R"(
+stdin:1:1-22: ERROR: stoull
+Invalid function/address argument
+watchpoint:func1:8:rw { 1 }
+~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, asyncwatchpoint_probe)
@@ -1339,11 +1500,39 @@ TEST(Parser, asyncwatchpoint_probe)
        " asyncwatchpoint:1234:8:w\n"
        "  int: 1\n");
 
-  test_parse_failure("asyncwatchpoint:1b:8:w { 1 }");
-  test_parse_failure("asyncwatchpoint:1:8a:w { 1 }");
-  test_parse_failure("asyncwatchpoint:1b:8a:w { 1 }");
-  test_parse_failure("asyncwatchpoint:+arg0:8:rw { 1 }");
-  test_parse_failure("asyncwatchpoint:func1:8:rw { 1 }");
+  test_parse_failure("asyncwatchpoint:1b:8:w { 1 }", R"(
+stdin:1:1-23: ERROR: Found trailing non-numeric characters
+Invalid function/address argument
+asyncwatchpoint:1b:8:w { 1 }
+~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("asyncwatchpoint:1:8a:w { 1 }", R"(
+stdin:1:1-23: ERROR: Found trailing non-numeric characters
+Invalid length argument
+asyncwatchpoint:1:8a:w { 1 }
+~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("asyncwatchpoint:1b:8a:w { 1 }", R"(
+stdin:1:1-24: ERROR: Found trailing non-numeric characters
+Invalid function/address argument
+asyncwatchpoint:1b:8a:w { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("asyncwatchpoint:+arg0:8:rw { 1 }", R"(
+stdin:1:1-27: ERROR: Invalid function/address argument
+asyncwatchpoint:+arg0:8:rw { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("asyncwatchpoint:func1:8:rw { 1 }", R"(
+stdin:1:1-27: ERROR: stoull
+Invalid function/address argument
+asyncwatchpoint:func1:8:rw { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, multiple_attach_points_kprobe)
@@ -1382,7 +1571,12 @@ TEST(Parser, wildcard_probetype)
        " uprobe:/bin/sh:*\n"
        " usdt:/bin/sh:*\n"
        "  int: 1\n");
-  test_parse_failure("iter:task* { }");
+
+  test_parse_failure("iter:task* { }", R"(
+stdin:1:1-11: ERROR: iter probe type does not support wildcards
+iter:task* { }
+~~~~~~~~~~
+)");
 }
 
 TEST(Parser, wildcard_attach_points)
@@ -1940,13 +2134,21 @@ TEST(Parser, kprobe_offset)
        "Program\n"
        " kprobe:fn.abc+16\n");
 
-  test_parse_failure("k:asdf+123abc");
+  test_parse_failure("k:asdf+123abc", R"(
+stdin:1:1-14: ERROR: unexpected end of file, expected {
+k:asdf+123abc
+~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, kretprobe_offset)
 {
   // Not supported yet
-  test_parse_failure("kr:fn+1 { 1 }");
+  test_parse_failure("kr:fn+1 { 1 }", R"(
+stdin:1:1-8: ERROR: Offset not allowed
+kr:fn+1 { 1 }
+~~~~~~~
+)");
 }
 
 TEST(Parser, uprobe_offset)
@@ -1969,17 +2171,50 @@ TEST(Parser, uprobe_offset)
 TEST(Parser, uretprobe_offset)
 {
   // Not supported yet
-  test_parse_failure("ur:./test:fn+1 { 1 }");
-  test_parse_failure("uretprobe:/bin/sh:f+0x10 { 1 }");
+  test_parse_failure("ur:./test:fn+1 { 1 }", R"(
+stdin:1:1-15: ERROR: Offset not allowed
+ur:./test:fn+1 { 1 }
+~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("uretprobe:/bin/sh:f+0x10 { 1 }", R"(
+stdin:1:1-25: ERROR: Offset not allowed
+uretprobe:/bin/sh:f+0x10 { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, invalid_increment_decrement)
 {
-  test_parse_failure("i:s:1 { @=5++}");
-  test_parse_failure("i:s:1 { @=++5}");
-  test_parse_failure("i:s:1 { @=5--}");
-  test_parse_failure("i:s:1 { @=--5}");
-  test_parse_failure("i:s:1 { @=\"a\"++}");
+  test_parse_failure("i:s:1 { @=5++}", R"(
+stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting }
+i:s:1 { @=5++}
+        ~~~~~
+)");
+
+  test_parse_failure("i:s:1 { @=++5}", R"(
+stdin:1:9-14: ERROR: syntax error, unexpected integer
+i:s:1 { @=++5}
+        ~~~~~
+)");
+
+  test_parse_failure("i:s:1 { @=5--}", R"(
+stdin:1:9-14: ERROR: syntax error, unexpected --, expecting }
+i:s:1 { @=5--}
+        ~~~~~
+)");
+
+  test_parse_failure("i:s:1 { @=--5}", R"(
+stdin:1:9-14: ERROR: syntax error, unexpected integer
+i:s:1 { @=--5}
+        ~~~~~
+)");
+
+  test_parse_failure("i:s:1 { @=\"a\"++}", R"(
+stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting }
+i:s:1 { @="a"++}
+        ~~~~~~~
+)");
 }
 
 TEST(Parser, long_param_overflow)
@@ -2001,9 +2236,24 @@ TEST(Parser, long_param_overflow)
 
 TEST(Parser, empty_arguments)
 {
-  test_parse_failure("::k::vfs_open:: { 1 }");
-  test_parse_failure("k:vfs_open:: { 1 }");
-  test_parse_failure(":w:0x10000000:8:rw { 1 }");
+  test_parse_failure("::k::vfs_open:: { 1 }", R"(
+stdin:1:1-1: ERROR: No attach points for probe
+::k::vfs_open:: { 1 }
+
+)");
+
+  // Error location is incorrect: #3063
+  test_parse_failure("k:vfs_open:: { 1 }", R"(
+stdin:1:1-14: ERROR: kprobe probe type requires 1 or 2 arguments, found 3
+k:vfs_open:: { 1 }
+~~~~~~~~~~~~~
+)");
+
+  test_parse_failure(":w:0x10000000:8:rw { 1 }", R"(
+stdin:1:1-1: ERROR: No attach points for probe
+:w:0x10000000:8:rw { 1 }
+
+)");
 }
 
 TEST(Parser, int_notation)
@@ -2042,15 +2292,59 @@ TEST(Parser, int_notation)
   test("k:f { print(1_000ll); }",
        "Program\n kprobe:f\n  call: print\n   int: 1000\n");
 
-  test_parse_failure("k:f { print(5e-9); }");
-  test_parse_failure("k:f { print(1e17); }");
-  test_parse_failure("k:f { print(12e4); }");
-  test_parse_failure("k:f { print(1_1e100); }");
-  test_parse_failure("k:f { print(1e1_1_); }");
-  test_parse_failure("k:f { print(1_1_e100); }");
-  test_parse_failure("k:f { print(1_1_); }");
-  test_parse_failure("k:f { print(1ulll); }");
-  test_parse_failure("k:f { print(1lul); }");
+  test_parse_failure("k:f { print(5e-9); }", R"(
+stdin:1:7-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(5e-9); }
+      ~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1e17); }", R"(
+stdin:1:7-17: ERROR: Exponent will overflow integer range: 17
+k:f { print(1e17); }
+      ~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(12e4); }", R"(
+stdin:1:7-17: ERROR: Coefficient part of scientific literal must be in range (0,9), got: 12
+k:f { print(12e4); }
+      ~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1_1e100); }", R"(
+stdin:1:7-20: ERROR: Coefficient part of scientific literal must be in range (0,9), got: 11
+k:f { print(1_1e100); }
+      ~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1e1_1_); }", R"(
+stdin:1:7-19: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(1e1_1_); }
+      ~~~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1_1_e100); }", R"(
+stdin:1:7-21: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(1_1_e100); }
+      ~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1_1_); }", R"(
+stdin:1:7-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(1_1_); }
+      ~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1ulll); }", R"(
+stdin:1:7-18: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(1ulll); }
+      ~~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(1lul); }", R"(
+stdin:1:7-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
+k:f { print(1lul); }
+      ~~~~~~~~~~
+)");
 }
 
 TEST(Parser, while_loop)
@@ -2087,12 +2381,41 @@ i:s:1 { @x = (1, 2); $x.1 = 1; }
 
 TEST(Parser, tuple_assignment_error)
 {
-  test_parse_failure("i:s:1 { (1, 0) = 0 }");
-  test_parse_failure("i:s:1 { ((1, 0), 3).0.0 = 3 }");
-  test_parse_failure("i:s:1 { ((1, 0), 3).0 = (0, 1) }");
-  test_parse_failure("i:s:1 { (1, \"two\", (3, 4)).5 = \"six\"; }");
-  test_parse_failure("i:s:1 { $a = 1; $a.2 = 3 }");
-  test_parse_failure("i:s:1 { 0.1 = 1.0 }");
+  test_parse_failure("i:s:1 { (1, 0) = 0 }", R"(
+stdin:1:16-17: ERROR: syntax error, unexpected =, expecting }
+i:s:1 { (1, 0) = 0 }
+               ~
+)");
+
+  test_parse_failure("i:s:1 { ((1, 0), 3).0.0 = 3 }", R"(
+stdin:1:9-28: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
+i:s:1 { ((1, 0), 3).0.0 = 3 }
+        ~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("i:s:1 { ((1, 0), 3).0 = (0, 1) }", R"(
+stdin:1:9-31: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
+i:s:1 { ((1, 0), 3).0 = (0, 1) }
+        ~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("i:s:1 { (1, \"two\", (3, 4)).5 = \"six\"; }", R"(
+stdin:1:9-37: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
+i:s:1 { (1, "two", (3, 4)).5 = "six"; }
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("i:s:1 { $a = 1; $a.2 = 3 }", R"(
+stdin:1:17-25: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
+i:s:1 { $a = 1; $a.2 = 3 }
+                ~~~~~~~~
+)");
+
+  test_parse_failure("i:s:1 { 0.1 = 1.0 }", R"(
+stdin:1:9-18: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
+i:s:1 { 0.1 = 1.0 }
+        ~~~~~~~~~
+)");
 }
 
 TEST(Parser, abs_knl_address)
@@ -2112,9 +2435,23 @@ TEST(Parser, abs_knl_address)
 
 TEST(Parser, invalid_provider)
 {
-  test_parse_failure("asdf { }");
-  test_parse_failure("asdf:xyz { }");
-  test_parse_failure("asdf:xyz:www { }");
+  test_parse_failure("asdf { }", R"(
+stdin:1:1-5: ERROR: Invalid probe type: asdf
+asdf { }
+~~~~
+)");
+
+  test_parse_failure("asdf:xyz { }", R"(
+stdin:1:1-9: ERROR: Invalid probe type: asdf
+asdf:xyz { }
+~~~~~~~~
+)");
+
+  test_parse_failure("asdf:xyz:www { }", R"(
+stdin:1:1-13: ERROR: Invalid probe type: asdf
+asdf:xyz:www { }
+~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, non_fatal_errors)
@@ -2131,17 +2468,61 @@ uprobe:asdf:Stream {} tracepoint:only_one_arg {}
 
 TEST(Parser, config_error)
 {
-  test_parse_failure("i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }");
-  test_parse_failure("config = { exit(); } i:s:1 { exit(); }");
-  test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }");
+  test_parse_failure("i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }",
+                     R"(
+stdin:1:19-25: ERROR: syntax error, unexpected config, expecting {
+i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }
+                  ~~~~~~
+)");
+
+  test_parse_failure("config = { exit(); } i:s:1 { exit(); }", R"(
+stdin:1:12-16: ERROR: syntax error, unexpected call, expecting identifier
+config = { exit(); } i:s:1 { exit(); }
+           ~~~~
+)");
+
+  test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }", R"(
+stdin:1:12-18: ERROR: syntax error, unexpected map, expecting identifier
+config = { @start = nsecs; } i:s:1 { exit(); }
+           ~~~~~~
+)");
+
   test_parse_failure("BEGIN { @start = nsecs; } config = { "
-                     "BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }");
+                     "BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
+                     R"(
+stdin:1:27-33: ERROR: syntax error, unexpected config, expecting {
+BEGIN { @start = nsecs; } config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
+                          ~~~~~~
+)");
+
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf "
-                     "BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }");
+                     "BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }",
+                     R"(
+stdin:1:37-56: ERROR: syntax error, unexpected identifier, expecting }
+config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
+                                    ~~~~~~~~~~~~~~~~~~~
+)");
+
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
-                     "BPFTRACE_MAX_PROBES=2; exit(); }");
-  test_parse_failure("config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }");
-  test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }");
+                     "BPFTRACE_MAX_PROBES=2; exit(); }",
+                     R"(
+stdin:1:47-67: ERROR: syntax error, unexpected =, expecting }
+config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
+                                              ~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
+                     R"(
+stdin:1:8-9: ERROR: syntax error, unexpected {, expecting =
+config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
+       ~
+)");
+
+  test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }", R"(
+stdin:1:1-21: ERROR: syntax error, unexpected =, expecting {
+BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }
+~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, keywords_as_identifiers)
