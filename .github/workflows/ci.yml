@@ -22,6 +22,9 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      GTEST_COLOR: yes
+      RUNTIME_TEST_COLOR: yes
     strategy:
       matrix:
         env:

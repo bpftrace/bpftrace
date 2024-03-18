@@ -40,7 +40,9 @@ RUN_TESTS = os.environ.get("RUN_TESTS", "1")
 RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
+GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
 RUNTIME_TEST_DISABLE = os.environ.get("RUNTIME_TEST_DISABLE", "")
+RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 
@@ -229,7 +231,11 @@ def test():
         test_one(
             "bpftrace_test",
             lambda: truthy(RUN_TESTS),
-            lambda: shell(["./tests/bpftrace_test"], cwd=Path(BUILD_DIR)),
+            lambda: shell(
+                ["./tests/bpftrace_test"],
+                cwd=Path(BUILD_DIR),
+                env={"GTEST_COLOR": GTEST_COLOR},
+            ),
         )
     )
     results.append(
@@ -240,7 +246,10 @@ def test():
                 ["./tests/runtime-tests.sh"],
                 as_root=True,
                 cwd=Path(BUILD_DIR),
-                env={"RUNTIME_TEST_DISABLE": RUNTIME_TEST_DISABLE},
+                env={
+                    "RUNTIME_TEST_DISABLE": RUNTIME_TEST_DISABLE,
+                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
+                },
             ),
         )
     )

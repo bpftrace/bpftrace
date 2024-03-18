@@ -14,6 +14,7 @@ import cmake_vars
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 AOT_BIN = os.environ["BPFTRACE_AOT_RUNTIME_TEST_EXECUTABLE"]
+COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 ATTACH_TIMEOUT = 10
 DEFAULT_TIMEOUT = 5
 
@@ -23,9 +24,17 @@ WARN_COLOR = '\033[94m'
 ERROR_COLOR = '\033[91m'
 NO_COLOR = '\033[0m'
 
-# TODO(mmarchini) only add colors if terminal supports it
 def colorify(s, color):
-    return "%s%s%s" % (color, s, NO_COLOR) if sys.stdout.isatty() else s
+    if COLOR_SETTING == "yes":
+        use_color = True
+    elif COLOR_SETTING == "auto":
+        use_color = sys.stdout.isatty()
+    elif COLOR_SETTING == "no":
+        use_color = False
+    else:
+        raise ValueError("Invalid setting for RUNTIME_TEST_COLOR")
+
+    return f"{color}{s}{NO_COLOR}" if use_color else s
 
 def ok(s):
     return colorify(s, OK_COLOR)
