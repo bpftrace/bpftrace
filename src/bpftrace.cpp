@@ -891,6 +891,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     const BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
+  auto get_section = [](BpfBytecode &bytecode, const std::string &name)
+      -> std::optional<std::vector<uint8_t> *> {
+    auto sec = bytecode.find(name);
+    if (sec == bytecode.end())
+      return std::nullopt;
+    return &sec->second;
+  };
+
   // use the single-probe program if it exists (as is the case with wildcards
   // and the name builtin, which must be expanded into separate programs per
   // probe), else try to find a the program based on the original probe name
@@ -907,14 +915,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto program = BpfProgram::CreateFromBytecode(bytecode, name);
-  if (!program) {
-    auto orig_program = BpfProgram::CreateFromBytecode(bytecode, orig_name);
-    if (orig_program)
-      program.emplace(std::move(*orig_program));
+  auto section = get_section(bytecode, name);
+  if (!section) {
+    section = get_section(bytecode, orig_name);
   }
 
-  if (!program) {
+  if (!section) {
     if (probe.name != probe.orig_name)
       LOG(ERROR) << "Code not generated for probe: " << probe.name
                  << " from: " << probe.orig_name;
@@ -923,11 +929,16 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     return ret;
   }
 
-  try {
-    program->assemble();
-  } catch (const std::runtime_error &ex) {
-    LOG(ERROR) << "Failed to assemble program for probe: " << probe.name << ", "
-               << ex.what();
+  // Make a copy of the bytecode and perform relocations
+  //
+  // We choose not to modify the original bytecode to void keeping
+  // track of state when the same bytecode is attached to multiple probes.
+  std::vector<uint8_t> relocated = **section;
+  auto section_data_size = std::make_tuple((*section)->data(),
+                                           (*section)->size());
+  auto relocator = Relocator(section_data_size, *this);
+  if (relocator.relocate()) {
+    LOG(ERROR) << "Failed to relocate insns for probe: " << probe.name;
     return ret;
   }
 
@@ -935,25 +946,20 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     pid_t pid = child_ ? child_->pid() : this->pid();
 
     if (probe.type == ProbeType::usdt) {
-      auto aps = attach_usdt_probe(
-          probe, std::move(*program), pid, usdt_file_activation_);
+      auto aps = attach_usdt_probe(probe, section_data_size, pid,
+                                   usdt_file_activation_);
       for (auto &ap : aps)
         ret.emplace_back(std::move(ap));
 
       return ret;
-    } else if (probe.type == ProbeType::uprobe ||
-               probe.type == ProbeType::uretprobe) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_, safe_mode_));
-      return ret;
     } else if (probe.type == ProbeType::watchpoint ||
-               probe.type == ProbeType::asyncwatchpoint) {
+             probe.type == ProbeType::asyncwatchpoint) {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_));
+          probe, section_data_size, pid, *feature_, *btf_));
       return ret;
     } else {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), safe_mode_, *feature_, *btf_));
+          probe, section_data_size, safe_mode_, *feature_, *btf_));
       return ret;
     }
   } catch (const EnospcException &e) {
