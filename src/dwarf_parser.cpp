@@ -181,18 +181,13 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
         default:
           return CreateNone();
       }
-      break;
     }
     case lldb::eTypeClassEnumeration:
       return CreateUInt(bit_size);
     case lldb::eTypeClassPointer:
-    case lldb::eTypeClassReference: {
-      if (auto inner_type = type.GetPointeeType()) {
-        return CreatePointer(get_stype(inner_type, false));
-      }
-      // void *
-      return CreatePointer(CreateNone());
-    }
+      return CreatePointer(get_stype(type.GetPointeeType(), false));
+    case lldb::eTypeClassReference:
+      return CreatePointer(get_stype(type.GetDereferencedType(), false));
     case lldb::eTypeClassClass:
     case lldb::eTypeClassStruct:
     case lldb::eTypeClassUnion: {
