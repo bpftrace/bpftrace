@@ -45,7 +45,7 @@ public:
   }
   Output(const Output &) = delete;
   Output &operator=(const Output &) = delete;
-  virtual ~Output() = default;
+  virtual ~Output();
 
   virtual std::ostream &outputstream() const
   {

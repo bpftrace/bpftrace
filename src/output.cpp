@@ -147,6 +147,19 @@ std::string TextOutput::lhist_index_label(int number)
   return label.str();
 }
 
+Output::~Output()
+{
+  // Without this, it seems that bpftrace can lose output while exiting.
+  //
+  // My reading of https://en.cppreference.com/w/cpp/io/manip/flush seems to
+  // indicate that for non-interactive sessions (eg runtime tests in CI) the
+  // explicit std::flush at the end is necessary. But for interactive sessions,
+  // it's not. That seems to be in line with how no one can reproduce certain
+  // runtime test failures locally.
+  out_ << std::flush;
+  err_ << std::flush;
+}
+
 void Output::hist_prepare(const std::vector<uint64_t> &values,
                           int &min_index,
                           int &max_index,
