@@ -2425,7 +2425,7 @@ void CodegenLLVM::visit(Subprog &subprog)
   std::vector<llvm::Type *> arg_types;
   // First argument is for passing ctx pointer for output, rest are proper
   // arguments to the function
-  arg_types.push_back(b_.getInt8PtrTy());
+  arg_types.push_back(b_.GET_PTR_TY());
   std::transform(subprog.args->begin(),
                  subprog.args->end(),
                  std::back_inserter(arg_types),
@@ -3923,7 +3923,7 @@ Function *CodegenLLVM::createForEachMapCallback(
   auto saved_ip = b_.saveIP();
 
   std::array<llvm::Type *, 4> args = {
-    b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy()
+    b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY()
   };
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
   Function *callback = Function::Create(callback_type,
