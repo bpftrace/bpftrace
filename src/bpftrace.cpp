@@ -1777,6 +1777,8 @@ std::string BPFtrace::get_stack(int64_t stackid,
                                 StackType stack_type,
                                 int indent)
 {
+  LOG(DEBUG) << "XXX: entered";
+
   auto stack_trace = std::vector<uint64_t>(stack_type.limit);
   int err = bpf_lookup_elem(bytecode_.getMap(stack_type.name()).fd,
                             &stackid,
@@ -1786,6 +1788,7 @@ std::string BPFtrace::get_stack(int64_t stackid,
     if (stackid != -EFAULT)
       LOG(ERROR) << "failed to look up stack id " << stackid << " (pid " << pid
                  << "): " << err;
+    LOG(DEBUG) << "XXX: seen error=" << err << ", returning empty string";
     return "";
   }
 
@@ -1794,8 +1797,10 @@ std::string BPFtrace::get_stack(int64_t stackid,
 
   stack << "\n";
   for (auto &addr : stack_trace) {
-    if (addr == 0)
+    if (addr == 0) {
+      LOG(DEBUG) << "XXX: addr=0";
       break;
+    }
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
       continue;
@@ -1822,6 +1827,7 @@ std::string BPFtrace::get_stack(int64_t stackid,
     }
   }
 
+  LOG(DEBUG) << "returning stack.size()=" << stack.str().size();
   return stack.str();
 }
 
