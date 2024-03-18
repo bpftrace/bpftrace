@@ -478,6 +478,40 @@ TEST_F(field_analyser_dwarf, parse_arrays)
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
 }
 
+TEST_F(field_analyser_dwarf, parse_class)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":_Z6func_1R5ChildR6Parent { $x = args.p->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("Parent"));
+  auto cls = bpftrace.structs.Lookup("Parent").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  ASSERT_EQ(cls->fields.size(), 4);
+  ASSERT_EQ(cls->size, 16);
+
+  ASSERT_TRUE(cls->HasField("a"));
+  ASSERT_TRUE(cls->GetField("a").type.IsIntTy());
+  ASSERT_EQ(cls->GetField("a").type.GetSize(), 4);
+  ASSERT_EQ(cls->GetField("a").offset, 0);
+
+  ASSERT_TRUE(cls->HasField("b"));
+  ASSERT_TRUE(cls->GetField("b").type.IsIntTy());
+  ASSERT_EQ(cls->GetField("b").type.GetSize(), 4);
+  ASSERT_EQ(cls->GetField("b").offset, 4);
+
+  ASSERT_TRUE(cls->HasField("c"));
+  ASSERT_TRUE(cls->GetField("c").type.IsIntTy());
+  ASSERT_EQ(cls->GetField("c").type.GetSize(), 4);
+  ASSERT_EQ(cls->GetField("c").offset, 8);
+
+  ASSERT_TRUE(cls->HasField("d"));
+  ASSERT_TRUE(cls->GetField("d").type.IsIntTy());
+  ASSERT_EQ(cls->GetField("d").type.GetSize(), 4);
+  ASSERT_EQ(cls->GetField("d").offset, 12);
+}
+
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
 {
   GTEST_SKIP() << "Anonymous fields not supported #3084";

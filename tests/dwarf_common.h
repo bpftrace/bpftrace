@@ -32,4 +32,5 @@ protected:
   }
 
   static constexpr const char *bin_ = "/tmp/bpftrace-test-dwarf-data";
+  static constexpr const char *cxx_bin_ = dwarf_data_cxx_path;
 };
