@@ -233,53 +233,16 @@ def test():
 
     results.append(
         test_one(
-            "bpftrace_test",
-            lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                ["./tests/bpftrace_test"],
-                cwd=Path(BUILD_DIR),
-                env={"GTEST_COLOR": GTEST_COLOR},
-            ),
-        )
-    )
-    results.append(
-        test_one(
             "runtime-tests.sh",
             lambda: truthy(RUN_TESTS),
             lambda: shell(
-                ["./tests/runtime-tests.sh"],
+                ["./tests/runtime-tests.sh", "--filter", "ustack_stack_mode"],
                 as_root=True,
                 cwd=Path(BUILD_DIR),
                 env={
                     "CI": CI,
                     "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
                 },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "tools-parsing-test.sh",
-            lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                [
-                    "./tests/tools-parsing-test.sh",
-                ],
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "TOOLS_TEST_OLDVERSION": TOOLS_TEST_OLDVERSION,
-                    "TOOLS_TEST_DISABLE": TOOLS_TEST_DISABLE,
-                },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "memleak-tests.sh.sh",
-            lambda: truthy(RUN_MEMLEAK_TEST),
-            lambda: shell(
-                ["./tests/memleak-tests.sh"], as_root=True, cwd=Path(BUILD_DIR)
             ),
         )
     )

@@ -1002,7 +1002,12 @@ int main(int argc, char* argv[])
   act.sa_handler = SIG_DFL;
   sigaction(SIGINT, &act, NULL);
 
-  std::cout << "\n\n";
+  try {
+    std::cout << "\n\n";
+  } catch (const std::ios_base::failure& ex) {
+    LOG(DEBUG) << "exception caught in main, ex=" << ex.what()
+               << ", code=" << ex.code();
+  }
 
   err = bpftrace.print_maps();
 
