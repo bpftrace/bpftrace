@@ -91,6 +91,8 @@ public:
   virtual ~LogStream();
 
 protected:
+  std::string internal_location();
+
   Log& sink_;
   LogType type_;
   const std::optional<location> loc_;
