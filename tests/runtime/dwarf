@@ -24,6 +24,19 @@ REQUIRES bash -c "exit 1" # SKIP: anonymous parameter type not supported #3083
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
+NAME list uprobe args - class reference type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:_Z15uprobeFunction3R5ChildR6Parent'
+EXPECT Child & c
+EXPECT Parent & p
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME list uprobe args - array reference type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:_Z11uprobeArrayRA10_i'
+EXPECT int (&)[10] array
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
 NAME uprobe arg by name - char
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args.c); exit(); }
 EXPECT c = x
