@@ -184,13 +184,24 @@ LogStream::~LogStream()
   // occur. So, we cannot simply DISABLE_LOG(ERROR). Instead, here, we don't
   // output error messages to stderr.
   if (sink_.is_enabled(type_) &&
-      (type_ != LogType::ERROR || (&out_ != &std::cout && &out_ != &std::cerr)))
+      (type_ != LogType::ERROR ||
+       (&out_ != &std::cout && &out_ != &std::cerr))) {
 #else
-  if (sink_.is_enabled(type_))
+  if (sink_.is_enabled(type_)) {
 #endif
-  {
-    sink_.take_input(type_, loc_, out_, buf_.str());
+    auto msg = buf_.str();
+    if (type_ == LogType::DEBUG)
+      msg = internal_location() + msg;
+
+    sink_.take_input(type_, loc_, out_, std::move(msg));
   }
+}
+
+std::string LogStream::internal_location()
+{
+  std::ostringstream ss;
+  ss << "[" << log_file_ << ":" << log_line_ << "] ";
+  return ss.str();
 }
 
 [[noreturn]] LogStreamFatal::~LogStreamFatal()
@@ -201,8 +212,7 @@ LogStream::~LogStream()
 
 [[noreturn]] LogStreamBug::~LogStreamBug()
 {
-  std::string prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "] ";
-  sink_.take_input(type_, loc_, out_, prefix + buf_.str());
+  sink_.take_input(type_, loc_, out_, internal_location() + buf_.str());
   abort();
 }
 
