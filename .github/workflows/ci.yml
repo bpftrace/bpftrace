@@ -28,29 +28,9 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 10 Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm10
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: tcpdrop.bt
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 10 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm10
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: tcpdrop.bt
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 10 Clang Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm10
-          CC: clang
-          CXX: clang++
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: tcpdrop.bt
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 11 Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm11
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
@@ -93,6 +73,20 @@ jobs:
         - NAME: LLVM 17 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm17
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LLVM 17 Debug
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm17
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LLVM 17 Clang Debug
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm17
+          CC: clang
+          CXX: clang++
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
