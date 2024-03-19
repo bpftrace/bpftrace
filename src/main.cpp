@@ -1014,9 +1014,7 @@ int main(int argc, char* argv[])
       std::cout << "Child exited with code: " << val << std::endl;
   }
 
-  if (err)
-    return err;
-
   bpftrace.close_pcaps();
-  return 0;
+
+  return err;
 }
