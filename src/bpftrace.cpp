@@ -79,6 +79,31 @@ Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
   return setup_probe;
 }
 
+bool BPFtrace::need_expansion(ast::AttachPoint *attach_point,
+                              bool &underspecified_usdt_probe)
+{
+  // An underspecified usdt probe is a probe that has no wildcards and
+  // either an empty namespace or a specified PID.
+  // We try to find a unique match for such a probe.
+  underspecified_usdt_probe = probetype(attach_point->provider) ==
+                                  ProbeType::usdt &&
+                              !has_wildcard(attach_point->target) &&
+                              !has_wildcard(attach_point->ns) &&
+                              !has_wildcard(attach_point->func) &&
+                              (attach_point->ns.empty() || pid() > 0);
+
+  if (attach_point->need_expansion &&
+      (has_wildcard(attach_point->func) || has_wildcard(attach_point->target) ||
+       has_wildcard(attach_point->ns) || underspecified_usdt_probe))
+    return true;
+
+  // do expansion path for for single kprobe/kretprobe when
+  // kprobe_multi is supported
+  return (probetype(attach_point->provider) == ProbeType::kprobe ||
+          probetype(attach_point->provider) == ProbeType::kretprobe) &&
+         feature_->has_kprobe_multi();
+}
+
 int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points) {
@@ -97,20 +122,10 @@ int BPFtrace::add_probe(ast::Probe &p)
       continue;
     }
 
+    bool underspecified_usdt_probe;
+
     std::vector<std::string> attach_funcs;
-    // An underspecified usdt probe is a probe that has no wildcards and
-    // either an empty namespace or a specified PID.
-    // We try to find a unique match for such a probe.
-    bool underspecified_usdt_probe = probetype(attach_point->provider) ==
-                                         ProbeType::usdt &&
-                                     !has_wildcard(attach_point->target) &&
-                                     !has_wildcard(attach_point->ns) &&
-                                     !has_wildcard(attach_point->func) &&
-                                     (attach_point->ns.empty() || pid() > 0);
-    if (attach_point->need_expansion &&
-        (has_wildcard(attach_point->func) ||
-         has_wildcard(attach_point->target) || has_wildcard(attach_point->ns) ||
-         underspecified_usdt_probe)) {
+    if (need_expansion(attach_point, underspecified_usdt_probe)) {
       std::set<std::string> matches;
       try {
         matches = probe_matcher_->get_matches_for_ap(*attach_point);
@@ -129,8 +144,8 @@ int BPFtrace::add_probe(ast::Probe &p)
 
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
 
-      if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
-          !p.need_expansion && attach_funcs.size() &&
+      if (feature_->has_kprobe_multi() && !p.need_expansion &&
+          attach_funcs.size() &&
           (probetype(attach_point->provider) == ProbeType::kprobe ||
            probetype(attach_point->provider) == ProbeType::kretprobe) &&
           attach_point->target.empty()) {
@@ -931,6 +946,46 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     return ret;
   }
 
+  // resolve return program
+  std::optional<BpfProgram> retprogram = std::nullopt;
+  if (probe.ret.index >= 0) {
+    name = get_section_name_for_probe(probe.ret.name,
+                                      probe.ret.index,
+                                      usdt_location_idx);
+
+    orig_name = get_section_name_for_probe(probe.ret.orig_name,
+                                           probe.ret.index,
+                                           usdt_location_idx);
+
+    auto rp = BpfProgram::CreateFromBytecode(bytecode, name, maps);
+    if (!rp) {
+      auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
+                                                         orig_name,
+                                                         maps);
+      if (orig_program)
+        rp.emplace(std::move(*orig_program));
+    }
+
+    retprogram.emplace(std::move(*rp));
+
+    if (!retprogram) {
+      if (probe.ret.name != probe.ret.orig_name)
+        LOG(ERROR) << "Code not generated for probe: " << probe.name
+                   << " from: " << probe.orig_name;
+      else
+        LOG(ERROR) << "Code not generated for probe: " << probe.name;
+      return ret;
+    }
+
+    try {
+      retprogram->assemble();
+    } catch (const std::runtime_error &ex) {
+      LOG(ERROR) << "Failed to assemble program for probe: " << probe.ret.name
+                 << ", " << ex.what();
+      return ret;
+    }
+  }
+
   try {
     pid_t pid = child_ ? child_->pid() : this->pid();
 
@@ -952,8 +1007,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
           probe, std::move(*program), pid, *feature_, *btf_));
       return ret;
     } else {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), safe_mode_, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(*program),
+                                                       safe_mode_,
+                                                       *feature_,
+                                                       *btf_,
+                                                       std::move(retprogram)));
       return ret;
     }
   } catch (const EnospcException &e) {
@@ -1104,6 +1163,63 @@ int BPFtrace::prerun() const
   return 0;
 }
 
+void BPFtrace::merge_kprobes(void)
+{
+  std::vector<Probe> retkprobes;
+
+  for (auto &kprobe : resources.probes) {
+    // kprobes only
+    if (kprobe.type != ProbeType::kprobe)
+      continue;
+
+    // with kprobe_multi attach
+    if (!kprobe.funcs.size())
+      continue;
+
+    auto rit = std::find_if(
+        resources.probes.begin(), resources.probes.end(), [&](const auto &e) {
+          if (e.type != ProbeType::kretprobe)
+            return false;
+
+          if (e.attach_point == kprobe.attach_point)
+            return true;
+
+          return e.funcs.size() ==
+                 kprobe.funcs.size() /* && TODO match funcs */;
+        });
+
+    if (rit == resources.probes.end())
+      continue;
+
+    auto kretprobe = *rit;
+
+    kprobe.ret.index = kretprobe.index;
+    kprobe.ret.name = kretprobe.name;
+    kprobe.ret.orig_name = kretprobe.orig_name;
+
+    retkprobes.push_back(kretprobe);
+  }
+
+  for (auto it = resources.probes.begin(); it != resources.probes.end();) {
+    auto kretprobe = *it;
+
+    if (kretprobe.type != ProbeType::kretprobe) {
+      it++;
+      continue;
+    }
+
+    auto found = std::any_of(
+        retkprobes.begin(), retkprobes.end(), [&](const auto &cand) {
+          return kretprobe.attach_point == cand.attach_point;
+        });
+
+    if (found)
+      it = resources.probes.erase(it);
+    else
+      it++;
+  }
+}
+
 int BPFtrace::run(BpfBytecode bytecode)
 {
   int err = prerun();
@@ -1169,6 +1285,8 @@ int BPFtrace::run(BpfBytecode bytecode)
       return -1;
     }
   }
+
+  merge_kprobes();
 
   // The kernel appears to fire some probes in the order that they were
   // attached and others in reverse order. In order to make sure that blocks
