@@ -391,6 +391,7 @@ stmt_list:
 config_assign_stmt_list:
                 config_assign_stmt ";" config_assign_stmt_list { $$ = $3; $3->insert($3->begin(), $1); }
         |       config_assign_stmt                             { $$ = new ast::StatementList; $$->push_back($1); }
+        |       %empty                                         { $$ = new ast::StatementList; }
                 ;
 
 block_stmt:

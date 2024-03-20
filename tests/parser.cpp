@@ -2466,6 +2466,45 @@ uprobe:asdf:Stream {} tracepoint:only_one_arg {}
 )");
 }
 
+TEST(Parser, config)
+{
+  test("config = { blah = 5 } BEGIN {}", R"(
+Program
+ config
+  =
+   config var: blah
+   int: 5
+ BEGIN
+)");
+
+  test("config = { blah = 5; } BEGIN {}", R"(
+Program
+ config
+  =
+   config var: blah
+   int: 5
+ BEGIN
+)");
+
+  test("config = { blah = 5; zoop = \"a\"; } BEGIN {}", R"(
+Program
+ config
+  =
+   config var: blah
+   int: 5
+  =
+   config var: zoop
+   string: a
+ BEGIN
+)");
+
+  test("config = {} BEGIN {}", R"(
+Program
+ config
+ BEGIN
+)");
+}
+
 TEST(Parser, config_error)
 {
   test_parse_failure("i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }",
@@ -2476,13 +2515,13 @@ i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }
 )");
 
   test_parse_failure("config = { exit(); } i:s:1 { exit(); }", R"(
-stdin:1:12-16: ERROR: syntax error, unexpected call, expecting identifier
+stdin:1:12-16: ERROR: syntax error, unexpected call, expecting }
 config = { exit(); } i:s:1 { exit(); }
            ~~~~
 )");
 
   test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }", R"(
-stdin:1:12-18: ERROR: syntax error, unexpected map, expecting identifier
+stdin:1:12-18: ERROR: syntax error, unexpected map, expecting }
 config = { @start = nsecs; } i:s:1 { exit(); }
            ~~~~~~
 )");
