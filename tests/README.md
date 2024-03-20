@@ -65,9 +65,9 @@ Each runtime testcase consists of multiple directives. In no particular order:
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
   `RUN` field is required
 * `EXPECT`: The expected output. Python regular expressions are supported.
-   One or more `EXPECT` and `EXPECT_NONE` or a single `EXPECT_FILE` or 
+   One or more `EXPECT` and `EXPECT_NONE` or a single `EXPECT_FILE` or
    `EXPECT_JSON` is required.
-* `EXPECT_NONE`: The negation of `EXPECT`, which also supports Python regular 
+* `EXPECT_NONE`: The negation of `EXPECT`, which also supports Python regular
    expressions.
 * `EXPECT_FILE`: A file containing the expected output, matched as plain
    text after stripping initial and final empty lines
@@ -97,6 +97,9 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `NEW_PIDNS`: This will execute the `BEFORE`, the bpftrace (`RUN` or `PROG`),
   and the `AFTER` commands in a new pid namespace that mounts proc. At least one
   `BEFORE` is required.
+* `SKIP_IF_ENV_HAS`: Skip test case if specified environment variable is found
+  and matches value provided. Accepted format is KEY=VALUE. Only a single key/value
+  pair per test is accepted.
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
