@@ -187,11 +187,6 @@ class Runner(object):
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MAX
 
-        full_test_name = test.suite + "." + test.name
-        if full_test_name in os.getenv("RUNTIME_TEST_DISABLE", "").split(","):
-            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-            return Runner.SKIP_ENVIRONMENT_DISABLED
-
         if test.skip_if_env_has and os.environ.get(test.skip_if_env_has[0], '') == test.skip_if_env_has[1]:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_ENVIRONMENT_DISABLED
