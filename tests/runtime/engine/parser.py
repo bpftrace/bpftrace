@@ -42,7 +42,8 @@ TestStruct = namedtuple(
         'feature_requirement',
         'neg_feature_requirement',
         'will_fail',
-        'new_pidns'
+        'new_pidns',
+        'skip_if_env_has',
     ],
 )
 
@@ -121,6 +122,7 @@ class TestParser(object):
         neg_feature_requirement = set()
         will_fail = False
         new_pidns = False
+        skip_if_env_has = None
 
         for item in test:
             item_split = item.split()
@@ -204,6 +206,9 @@ class TestParser(object):
                 will_fail = True
             elif item_name == "NEW_PIDNS":
                 new_pidns = True
+            elif item_name == "SKIP_IF_ENV_HAS":
+                parts = line.split("=")
+                skip_if_env_has = (parts[0], parts[1])
             else:
                 raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
@@ -239,4 +244,6 @@ class TestParser(object):
             feature_requirement,
             neg_feature_requirement,
             will_fail,
-            new_pidns)
+            new_pidns,
+            skip_if_env_has,
+        )

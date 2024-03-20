@@ -192,6 +192,10 @@ class Runner(object):
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_ENVIRONMENT_DISABLED
 
+        if test.skip_if_env_has and os.environ.get(test.skip_if_env_has[0], '') == test.skip_if_env_has[1]:
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Runner.SKIP_ENVIRONMENT_DISABLED
+
         signal.signal(signal.SIGALRM, Runner.__handler)
 
         p = None
