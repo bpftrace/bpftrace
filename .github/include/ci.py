@@ -129,8 +129,12 @@ def shell(
         ]
     c += cmd
 
-    # Ugly workaround for mypy not being able to infer empty dict
-    empty: Dict[str, str] = {}
+    if not env:
+        env = {}
+
+    # Nix needs to know the home dir
+    if "HOME" in os.environ:
+        env["HOME"] = os.environ["HOME"]
 
     subprocess.run(
         c,
@@ -140,7 +144,7 @@ def shell(
         # inside the nix environment cannot accidentally depend on
         # host environment. There are known very-hard-to-debug issues
         # that occur in CI when the envirionment escapes.
-        env=env if env else empty,
+        env=env,
     )
 
 
