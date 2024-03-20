@@ -41,6 +41,7 @@ RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
 GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
+CI = os.environ.get("CI", "false")
 RUNTIME_TEST_DISABLE = os.environ.get("RUNTIME_TEST_DISABLE", "")
 RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
@@ -251,6 +252,7 @@ def test():
                 as_root=True,
                 cwd=Path(BUILD_DIR),
                 env={
+                    "CI": CI,
                     "RUNTIME_TEST_DISABLE": RUNTIME_TEST_DISABLE,
                     "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
                 },
