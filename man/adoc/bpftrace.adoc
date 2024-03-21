@@ -92,6 +92,8 @@ Valid values are::
 *json* +
 *text*
 
+Note: the json output is ndjson, meaning each line of the streamed output is a single blob of valid json.
+
 === *-h, --help*
 
 Print the help summary.

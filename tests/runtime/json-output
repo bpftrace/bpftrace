@@ -24,6 +24,11 @@ PROG BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }
 EXPECT_JSON runtime/outputs/map.json
 TIMEOUT 5
 
+NAME multiple maps
+PROG BEGIN { @map1["key1"] = 2; @map2["key2"] = 3; exit(); }
+EXPECT_JSON runtime/outputs/multiple_maps.ndjson
+TIMEOUT 5
+
 NAME histogram
 PROG BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }
 EXPECT_JSON runtime/outputs/hist.json
@@ -40,10 +45,9 @@ EXPECT_JSON runtime/outputs/hist_multiple.json
 TIMEOUT 5
 
 NAME histogram-finegrain
-PROG i:us:100 { @ = hist(@n++,3); if (@n > 1023) { delete(@n); exit(); }}
+PROG BEGIN { $i = 0; while ($i < 1024) { @ = hist($i, 3); $i++; } exit(); }
 EXPECT_JSON runtime/outputs/hist_2args.json
 TIMEOUT 5
-
 
 NAME linear histogram
 PROG BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }

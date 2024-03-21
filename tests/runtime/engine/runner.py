@@ -228,7 +228,31 @@ class Runner(object):
                         return output.strip() == expect_file.read().strip()
                 else:
                     with open(expect.expect) as expect_file:
-                        return json.loads(output) == json.load(expect_file)
+                        _, file_extension = os.path.splitext(expect.expect)
+                        stripped_output = output.strip()
+                        output_lines = stripped_output.splitlines()
+
+                        # ndjson files are new line delimited blocks of json
+                        # https://github.com/ndjson/ndjson-spec
+                        if file_extension == ".ndjson":
+                            stripped_file = expect_file.read().strip()
+                            file_lines = stripped_file.splitlines()
+
+                            if len(file_lines) != len(output_lines):
+                                return False
+
+                            for x in range(len(file_lines)):
+                                if json.loads(output_lines[x]) != json.loads(file_lines[x]):
+                                    return False
+
+                            return True
+
+                        if len(output_lines) != 1:
+                            print(f"Expected a single line of json ouput. Got {len(output_lines)} lines")
+                            return False
+                        return json.loads(stripped_output) == json.load(expect_file)
+
+
             except Exception as err:
                 print("ERROR in check_result: ", err)
                 return False
@@ -479,16 +503,41 @@ class Runner(object):
                     print('\tExpected no REGEX: ' + failed_expect.expect)
                     print('\tFound:\n' + to_utf8(output))
                 elif failed_expect.mode == "json":
-                    try:
-                        expected = json.dumps(json.loads(open(failed_expect.expect).read()), indent=2)
-                    except json.decoder.JSONDecodeError as err:
-                        expected = "Could not parse JSON: " + str(err)
-                    try:
-                        found = json.dumps(json.loads(output), indent=2)
-                    except json.decoder.JSONDecodeError as err:
-                        found = "Could not parse JSON: " + str(err)
-                    print('\tExpected JSON:\n' + expected)
-                    print('\tFound:\n' + found)
+                    _, file_extension = os.path.splitext(failed_expect.expect)
+                    # ndjson files are new line delimited blocks of json
+                    # https://github.com/ndjson/ndjson-spec
+                    if file_extension == ".ndjson":
+                        with open(failed_expect.expect) as expect_file:
+                            stripped_file = expect_file.read().strip()
+                            file_lines = stripped_file.splitlines()
+
+                            print('\tExpected JSON:\n')
+                            for x in file_lines:
+                                try:
+                                    print(json.dumps(json.loads(x), indent=2))
+                                except json.decoder.JSONDecodeError as err:
+                                    print("Could not parse JSON: " + str(err)  + '\n' + "Raw Line: " + x)
+
+                        stripped_output = output.strip()
+                        output_lines = stripped_output.splitlines()
+
+                        print('\tFound:\n')
+                        for x in output_lines:
+                            try:
+                                print(json.dumps(json.loads(x), indent=2))
+                            except json.decoder.JSONDecodeError as err:
+                                print("Could not parse JSON: " + str(err) + '\n' + "Raw Output: " + x)
+                    else:
+                        try:
+                            expected = json.dumps(json.loads(open(failed_expect.expect).read()), indent=2)
+                        except json.decoder.JSONDecodeError as err:
+                            expected = "Could not parse JSON: " + str(err) + '\n' + "Raw File: " + expected
+                        try:
+                            found = json.dumps(json.loads(output), indent=2)
+                        except json.decoder.JSONDecodeError as err:
+                            found = "Could not parse JSON: " + str(err) + '\n' + "Raw Output: " + output
+                        print('\tExpected JSON:\n' + expected)
+                        print('\tFound:\n' + found)
                 else:
                     print('\tExpected FILE:\n\t\t' + to_utf8(open(failed_expect.expect).read()))
                     print('\tFound:\n\t\t' + to_utf8(output))
