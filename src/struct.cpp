@@ -155,7 +155,7 @@ void Struct::AddField(const std::string &field_name,
                       bool is_data_loc)
 {
   if (!HasField(field_name))
-    fields.emplace_back(Field{ .name = field_name,
+    fields.push_back(Field{ .name = field_name,
                                .type = type,
                                .offset = offset,
                                .bitfield = bitfield,
