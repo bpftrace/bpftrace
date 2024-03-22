@@ -227,6 +227,32 @@ SizedType Dwarf::get_stype(const std::string &type_name)
   return CreateNone();
 }
 
+void Dwarf::resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type)
+{
+  if (!type.IsValid())
+    return;
+
+  for (uint32_t i = 0; i < type.GetNumberOfVirtualBaseClasses(); i++) {
+    auto parent = type.GetVirtualBaseClassAtIndex(i);
+    resolve_fields(str, parent.GetType());
+  }
+
+  for (uint32_t i = 0; i < type.GetNumberOfDirectBaseClasses(); i++) {
+    auto parent = type.GetDirectBaseClassAtIndex(i);
+    resolve_fields(str, parent.GetType());
+  }
+
+  for (uint32_t i = 0; i < type.GetNumberOfFields(); i++) {
+    auto field = type.GetFieldAtIndex(i);
+    auto field_type = get_stype(field.GetType());
+    str->AddField(field.GetName() ?: "",
+                  get_stype(field.GetType()),
+                  field.GetOffsetInBytes(),
+                  resolve_bitfield(field),
+                  false);
+  }
+}
+
 void Dwarf::resolve_fields(const SizedType &type)
 {
   if (!type.IsRecordTy())
@@ -238,18 +264,7 @@ void Dwarf::resolve_fields(const SizedType &type)
     return;
 
   auto type_dbg = target_.FindFirstType(type_name.c_str());
-  if (!type_dbg)
-    return;
-
-  for (uint32_t i = 0; i < type_dbg.GetNumberOfFields(); i++) {
-    auto field = type_dbg.GetFieldAtIndex(i);
-    auto field_type = get_stype(field.GetType());
-    str->AddField(field.GetName() ?: "",
-                  get_stype(field.GetType()),
-                  field.GetOffsetInBytes(),
-                  resolve_bitfield(field),
-                  false);
-  }
+  resolve_fields(str, type_dbg);
 }
 
 std::optional<Bitfield> Dwarf::resolve_bitfield(lldb::SBTypeMember field)

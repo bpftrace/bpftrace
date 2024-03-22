@@ -40,6 +40,7 @@ private:
 
   std::string get_type_name(lldb::SBType type);
   SizedType get_stype(lldb::SBType type, bool resolve_structs = true);
+  void resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type);
   std::optional<Bitfield> resolve_bitfield(lldb::SBTypeMember field);
 
   BPFtrace *bpftrace_;
