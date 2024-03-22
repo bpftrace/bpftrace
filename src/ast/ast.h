@@ -571,6 +571,8 @@ public:
   Expression *expr = nullptr;
   StatementList *stmts = nullptr;
 
+  SizedType ctx_type;
+
 private:
   For(const For &other);
 };
