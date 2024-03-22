@@ -127,10 +127,13 @@ std::string TextOutput::hist_index_label(uint32_t index, uint32_t k)
   return label.str();
 }
 
-std::string TextOutput::lhist_index_label(int number)
+std::string TextOutput::lhist_index_label(int number, int step)
 {
-  int kilo = 1024;
-  int mega = 1048576;
+  constexpr int kilo = 1024;
+  constexpr int mega = 1024 * 1024;
+
+  if (step % kilo != 0)
+    return std::to_string(number);
 
   std::ostringstream label;
 
@@ -562,12 +565,12 @@ std::string TextOutput::lhist_to_str(const std::vector<uint64_t> &values,
     int bar_width = values.at(i) / (float)max_value * max_width;
     std::ostringstream header;
     if (i == 0) {
-      header << "(..., " << lhist_index_label(min) << ")";
+      header << "(..., " << lhist_index_label(min, step) << ")";
     } else if (i == (buckets + 1)) {
-      header << "[" << lhist_index_label(max) << ", ...)";
+      header << "[" << lhist_index_label(max, step) << ", ...)";
     } else {
-      header << "[" << lhist_index_label((i - 1) * step + min);
-      header << ", " << lhist_index_label(i * step + min) << ")";
+      header << "[" << lhist_index_label((i - 1) * step + min, step);
+      header << ", " << lhist_index_label(i * step + min, step) << ")";
     }
 
     std::string bar(bar_width, '@');

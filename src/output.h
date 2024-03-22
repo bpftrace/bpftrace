@@ -249,7 +249,7 @@ public:
 
 protected:
   static std::string hist_index_label(uint32_t index, uint32_t bits);
-  static std::string lhist_index_label(int number);
+  static std::string lhist_index_label(int number, int step);
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,
                                   uint32_t k) const override;

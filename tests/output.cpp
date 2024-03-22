@@ -37,11 +37,15 @@ TEST(TextOutput, lhist_no_suffix)
 
   output.map_hist(bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
 
+  // The buckets for this test case have been specifically chosen: 640000 can
+  // also be written as 625K, while the other bucket boundaries can not be
+  // expressed with a suffix. We should only use the suffix representation for a
+  // bucket if all buckets can be expressed with one.
   EXPECT_EQ(R"(@mymap: 
 [610000, 620000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [620000, 630000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[630000, 625K)         1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[625K, 650000)         1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[630000, 640000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[640000, 650000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [650000, 660000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [660000, 670000)       1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
