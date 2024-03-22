@@ -14,7 +14,7 @@ if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
   set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
 else()
   set(CODEGEN_SRC "")
-  message(STATUS "Disabled codegen test for LLVM != 12")
+  message(STATUS "Disabled codegen test for LLVM != 12 (found ${LLVM_VERSION_MAJOR})")
 endif()
 
 add_executable(bpftrace_test
