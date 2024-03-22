@@ -4,12 +4,12 @@ namespace bpftrace {
 
 libbpf::bpf_map_type BpfMap::type() const
 {
-  return static_cast<libbpf::bpf_map_type>(bpf_map__type(bpf_map_));
+  return type_;
 }
 
-std::string BpfMap::bpf_name() const
+cstring_view BpfMap::bpf_name() const
 {
-  return bpf_map__name(bpf_map_);
+  return name_;
 }
 
 std::string BpfMap::name() const
@@ -19,17 +19,17 @@ std::string BpfMap::name() const
 
 uint32_t BpfMap::key_size() const
 {
-  return bpf_map__key_size(bpf_map_);
+  return key_size_;
 }
 
 uint32_t BpfMap::value_size() const
 {
-  return bpf_map__value_size(bpf_map_);
+  return value_size_;
 }
 
 uint32_t BpfMap::max_entries() const
 {
-  return bpf_map__max_entries(bpf_map_);
+  return max_entries_;
 }
 
 bool BpfMap::is_stack_map() const
