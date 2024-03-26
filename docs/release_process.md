@@ -2,6 +2,13 @@
 
 This document describes the bpftrace release process.
 
+## Semantic versioning
+
+We choose to follow semantic versioning. Note that this doesn't matter much for
+major version < 1 but will matter a lot for >= 1.0.0 releases.
+
+See https://semver.org/ .
+
 ## Branching model
 
 There should be one release branch per "major release" (we are currently
@@ -15,13 +22,6 @@ Example branch names:
     * release/1.1.x
 
 Backport PRs should be opened against the relevant release branch.
-
-## Semantic versioning
-
-We choose to follow semantic versioning. Note that this doesn't matter much for
-major version < 1 but will matter a lot for >= 1.0.0 releases.
-
-See https://semver.org/ .
 
 ## Tagging a release
 
