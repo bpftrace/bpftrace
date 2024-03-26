@@ -16,6 +16,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.20.3] 2024-03-25
+
+- Fix build on kernels older than 5.16
+  - [#2977](https://github.com/bpftrace/bpftrace/pull/2977)
+
 ## [0.20.2] 2024-03-07
 
 - Fix security hole checking unpacked kernel headers
