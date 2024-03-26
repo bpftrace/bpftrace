@@ -94,5 +94,7 @@ add_custom_command(
 
 add_custom_target(debuginfo_btf_data DEPENDS ${BTF_DATA_H})
 
+# BTF doesn't support C++, so we only generate a data_source_cxx executable
+# to run the field_analyser tests on.
 add_executable(data_source_cxx data_source_cxx.cpp)
 target_compile_options(data_source_cxx PRIVATE -g)

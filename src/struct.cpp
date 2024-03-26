@@ -156,10 +156,10 @@ void Struct::AddField(const std::string &field_name,
 {
   if (!HasField(field_name))
     fields.push_back(Field{ .name = field_name,
-                               .type = type,
-                               .offset = offset,
-                               .bitfield = bitfield,
-                               .is_data_loc = is_data_loc });
+                            .type = type,
+                            .offset = offset,
+                            .bitfield = bitfield,
+                            .is_data_loc = is_data_loc });
 }
 
 bool Struct::HasFields() const
