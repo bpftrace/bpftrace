@@ -1359,14 +1359,18 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
   return call;
 }
 
-CallInst *IRBuilderBPF::CreateGetFuncIp(const location &loc)
+CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const location &loc)
 {
   // u64 bpf_get_func_ip(void *ctx)
-  // Return: Address of the traced function.
-  FunctionType *getfuncip_func_type = FunctionType::get(getInt64Ty(), false);
+  // Return:
+  // 		Address of the traced function.
+  //		0 for kprobes placed within the function (not at the entry).
+  FunctionType *getfuncip_func_type = FunctionType::get(getInt64Ty(),
+                                                        { GET_PTR_TY() },
+                                                        false);
   return CreateHelperCall(libbpf::BPF_FUNC_get_func_ip,
                           getfuncip_func_type,
-                          {},
+                          { ctx },
                           "get_func_ip",
                           &loc);
 }

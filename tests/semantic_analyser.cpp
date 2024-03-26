@@ -1176,7 +1176,13 @@ TEST(semantic_analyser, call_func)
 
   test("kfunc:f { func }");
   test("kretprobe:f { func }");
-  test("uretprobe:/bin/sh:f { func }");
+
+  // Disabled due to #2285
+  test_error("uretprobe:/bin/sh:f { func }", R"(
+stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes. Consider using 'probe' instead.
+uretprobe:/bin/sh:f { func }
+                      ~~~~
+)");
 
   // We only care about the BPF_FUNC_get_func_ip feature and error message here,
   // but don't have enough control over the mock features to only disable that.
@@ -1190,9 +1196,22 @@ kfunc:f { func }
           ~~~~
 )",
              false);
-  MockBPFfeature nofeature(false);
-  test(nofeature, "kretprobe:f { func }");
-  test(nofeature, "uretprobe:/bin/sh:f { func }");
+
+  test_error("kretprobe:f { func }",
+             R"(
+stdin:1:15-19: ERROR: The 'func' builtin is not available for kretprobes on older kernels without the get_func_ip BPF helper. Consider using 'probe' instead.
+kretprobe:f { func }
+              ~~~~
+)",
+             false);
+
+  test_error("uretprobe:/bin/sh:f { func }",
+             R"(
+stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes. Consider using 'probe' instead.
+uretprobe:/bin/sh:f { func }
+                      ~~~~
+)",
+             false);
 }
 
 TEST(semantic_analyser, call_probe)

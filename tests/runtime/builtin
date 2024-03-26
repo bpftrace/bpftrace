@@ -99,13 +99,12 @@ EXPECT func: "vfs_read"
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
-# Disabled due to #68
 NAME func_kretprobe
 PROG kr:vfs_read { printf("func: \"%s\"\n", func); exit(); }
 EXPECT func: "vfs_read"
 TIMEOUT 5
+REQUIRES_FEATURE get_func_ip
 AFTER ./testprogs/syscall read
-REQUIRES bash -c "exit 1"
 
 NAME func_uprobe
 PROG uprobe:./testprogs/uprobe_symres:test { printf("func: \"%s\"\n", func); exit(); }

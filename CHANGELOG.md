@@ -24,6 +24,8 @@ and this project adheres to
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
+- Disable func builtin for uretprobes
+  - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
 #### Deprecated
 #### Removed
 #### Fixed
@@ -37,6 +39,8 @@ and this project adheres to
   - [#3045](https://github.com/bpftrace/bpftrace/pull/3045)
 - Allow trailing semicolons and empty blocks in config syntax
   - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
+- Fix func builtin for kretprobes
+  - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
 #### Docs
 #### Tools
 
