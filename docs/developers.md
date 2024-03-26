@@ -137,6 +137,16 @@ can be used to easily format commits, e.g. `git clang-format upstream/master`
 We want to avoid `fix formatting` commits. Instead every commit should be
 formatted correctly.
 
+## Merging pull requests
+
+Please squash + rebase all pull requests (with no merge commit). In other words,
+there should be one commit in master per pull request. This makes generating
+changelogs both trivial and precise with the least amount of noise.
+
+The exception to this is PRs with complicated changes. If this is the case and
+the commits are well structured, a rebase + merge (no merge commit) is acceptable.
+The rule of thumb is the commit titles should make sense in a changelog.
+
 ## Changelog
 
 The changelog is for end users. It should provide them with a quick summary of
