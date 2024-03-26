@@ -3,6 +3,8 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
+#include <llvm/Config/llvm-config.h>
+
 namespace bpftrace {
 namespace test {
 namespace field_analyser {
@@ -478,7 +480,8 @@ TEST_F(field_analyser_dwarf, parse_arrays)
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
 }
 
-static void CheckParentFields(const std::shared_ptr<Struct> &cls, bool is_d_shadowed = false)
+static void CheckParentFields(const std::shared_ptr<Struct> &cls,
+                              bool is_d_shadowed = false)
 {
   EXPECT_TRUE(cls->HasField("a"));
   EXPECT_TRUE(cls->GetField("a").type.IsIntTy());
@@ -587,6 +590,40 @@ TEST_F(field_analyser_dwarf, parse_inheritance_chain)
   ASSERT_EQ(cls->size, 16 + 12 + 4);
 
   CheckGrandChildFields(cls);
+}
+
+TEST_F(field_analyser_dwarf, parse_inheritance_multi)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_3 { $x = args.m->abc; }", 0);
+
+  std::shared_ptr<Struct> cls;
+  if (LLVM_VERSION_MAJOR <= 12) {
+    // LLDB 12 and below classify Multi as a class instead of a struct.
+    // This is a bug in LLDB, we work around it by removing the `struct` prefix.
+    ASSERT_TRUE(bpftrace.structs.Has("Multi"));
+    cls = bpftrace.structs.Lookup("Multi").lock();
+  } else {
+    ASSERT_TRUE(bpftrace.structs.Has("struct Multi"));
+    cls = bpftrace.structs.Lookup("struct Multi").lock();
+  }
+
+  ASSERT_TRUE(cls->HasFields());
+  ASSERT_EQ(cls->fields.size(), 6);
+  ASSERT_EQ(cls->size, 24);
+
+  CheckParentFields(cls);
+
+  EXPECT_TRUE(cls->HasField("x"));
+  EXPECT_TRUE(cls->GetField("x").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("x").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("x").offset, 16);
+
+  EXPECT_TRUE(cls->HasField("abc"));
+  EXPECT_TRUE(cls->GetField("abc").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("abc").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("abc").offset, 20);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)

@@ -1,4 +1,4 @@
-file(GLOB testlib_sources CONFIGURE_DEPENDS *.c)
+file(GLOB testlib_sources CONFIGURE_DEPENDS *.c *.cpp)
 set(testlibtargets "")
 foreach(testlib_source ${testlib_sources})
   get_filename_component(testlib_name ${testlib_source} NAME_WE)
