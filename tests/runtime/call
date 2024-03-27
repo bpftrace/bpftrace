@@ -240,6 +240,12 @@ EXPECT_REGEX \d+ uprobeFunction1\+0 \(.*/uprobe_loop\)
 TIMEOUT 5
 AFTER ./testprogs/uprobe_loop
 
+NAME ustack_stack_mode_TEST
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("\n\n\n\n\n\n\n\n\n\n\n\n\nsomeline\n\n\n\n\n\n\n\n\nasdfasdf\n"); exit(); }
+EXPECT asdfasdf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_loop
+
 NAME ustack_stack_mode_env_raw
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=raw
