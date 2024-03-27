@@ -15,7 +15,7 @@ if [[ "$#" -ne 4 ]]; then
   echo "$(basename $0) <bpftrace_A> <bpftrace_B> <objdump> <tooldir>"
   echo ""
   echo "EXAMPLE:"
-  echo "$(basename $0) bpftrace_master bpftrace llvm-objdump-7 /vagrant/tools"
+  echo "$(basename $0) bpftrace_master bpftrace llvm-objdump-7 ./tools"
   echo ""
   exit 1
 fi

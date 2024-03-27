@@ -35,30 +35,6 @@ want to consider using the Nix build. Or manually building and installing
 
 The distro build is documented in [INSTALL.md](../INSTALL.md#generic-build-process).
 
-### Vagrant build
-
-We also provide tentative support for building and testing using Vagrant. The boxes
-we define in our [`Vagrantfile`](../Vagrantfile) should contain all the necessary
-dependencies to build and run bpftrace. Please be aware we do not have _too_ many
-folks using the vagrant workflow, so it may be a little out of date.
-
-This is useful if the host you're developing on does not run linux.
-
-Make sure you have the `vbguest` plugin installed - it is required to correctly
-install the shared file system driver on the ubuntu boxes:
-
-```
-$ vagrant plugin install vagrant-vbguest
-```
-
-Start VM:
-
-```
-$ vagrant status
-$ vagrant up $YOUR_CHOICE
-$ vagrant ssh $YOUR_CHOICE
-```
-
 ## [Tests](../tests/README.md)
 
 Every contribution should (1) not break the existing tests and (2) introduce new

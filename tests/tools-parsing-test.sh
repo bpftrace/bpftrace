@@ -17,7 +17,7 @@ IFS=',' read -ra SKIP_TOOLS <<< "${TOOLS_TEST_DISABLE:-"NONE"}"
 
 function set_tooldir() {
   local dir
-  for dir in "${DIR}/../../tools" "/vagrant/tools"; do
+  for dir in "${DIR}/../../tools"; do
       if [[ -d "$dir" ]]; then
           TOOLDIR="$dir"
           return
