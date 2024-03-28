@@ -16,11 +16,11 @@ RUN apt-get update && apt-get install -y \
     libbpf-dev \
     libbpfcc-dev \
     libcereal-dev \
-    libdw-dev \
     libelf-dev \
     libiberty-dev \
     libpcap-dev \
     llvm-dev \
+    liblldb-dev \
     libclang-dev \
     systemtap-sdt-dev \
     zlib1g-dev

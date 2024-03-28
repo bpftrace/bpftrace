@@ -113,7 +113,6 @@ set(CMAKE_REQUIRED_DEFINITIONS)
 
 find_package(LibBfd)
 find_package(LibOpcodes)
-find_package(LibDw)
 
 if(ENABLE_SKB_OUTPUT)
 find_package(LibPcap)
@@ -154,6 +153,8 @@ add_definitions(${LLVM_DEFINITIONS})
 find_package(Clang REQUIRED)
 include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
+find_package(LLDB)
+
 # BPFtrace compile definitions
 
 set(BPFTRACE_FLAGS)
@@ -175,8 +176,8 @@ if(HAVE_BFD_DISASM)
   endif(LIBBFD_INIT_DISASM_INFO_FOUR_ARGS_SIGNATURE)
 endif(HAVE_BFD_DISASM)
 
-if (LIBDW_FOUND)
-  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBDW)
+if (LLDB_FOUND)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBLLDB)
 endif ()
 
 if(LIBPCAP_FOUND)
