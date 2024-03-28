@@ -38,8 +38,8 @@ TEST(codegen, call_kstack_mapids)
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
 
-  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 7);
-  ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 2U);
+  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 8);
+  ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 3U);
 
   StackType stack_type;
   stack_type.limit = 5;
@@ -74,8 +74,8 @@ TEST(codegen, call_kstack_modes_mapids)
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
 
-  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 9);
-  ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 3U);
+  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 10);
+  ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 4U);
 
   StackType stack_type;
   stack_type.mode = StackMode::perf;
