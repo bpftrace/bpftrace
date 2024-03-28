@@ -190,14 +190,14 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         // continue with other functions.
         if (probe_type == ProbeType::kfunc ||
             probe_type == ProbeType::kretfunc) {
-          try {
-            ap_args = bpftrace_.btf_->resolve_args(func,
-                                                   probe_type ==
-                                                       ProbeType::kretfunc);
-          } catch (const std::runtime_error &e) {
-            LOG(WARNING) << "kfunc:" << ap->func << ": " << e.what();
+          std::string err;
+          auto maybe_ap_args = bpftrace_.btf_->resolve_args(
+              func, probe_type == ProbeType::kretfunc, err);
+          if (!maybe_ap_args.has_value()) {
+            LOG(WARNING) << "kfunc:" << ap->func << ": " << err;
             continue;
           }
+          ap_args = std::move(*maybe_ap_args);
         } else // uprobe
         {
           Dwarf *dwarf = bpftrace_.get_dwarf(target);
@@ -218,14 +218,14 @@ bool FieldAnalyser::resolve_args(Probe &probe)
     } else {
       // Resolving args for an explicit function failed, print an error and fail
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
-        try {
-          probe_args = bpftrace_.btf_->resolve_args(ap->func,
-                                                    probe_type ==
-                                                        ProbeType::kretfunc);
-        } catch (const std::runtime_error &e) {
-          LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << e.what();
+        std::string err;
+        auto maybe_probe_args = bpftrace_.btf_->resolve_args(
+            ap->func, probe_type == ProbeType::kretfunc, err);
+        if (!maybe_probe_args.has_value()) {
+          LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << err;
           return false;
         }
+        probe_args = std::move(*maybe_probe_args);
       } else // uprobe
       {
         Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);

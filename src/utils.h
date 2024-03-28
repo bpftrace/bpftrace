@@ -40,22 +40,6 @@ private:
   std::string msg_;
 };
 
-class InvalidPIDException : public std::exception {
-public:
-  InvalidPIDException(const std::string &pid, const std::string &msg)
-  {
-    msg_ = "pid '" + pid + "' " + msg;
-  }
-
-  const char *what() const noexcept override
-  {
-    return msg_.c_str();
-  }
-
-private:
-  std::string msg_;
-};
-
 class EnospcException : public std::runtime_error {
 public:
   // C++11 feature: bring base class constructor into scope to automatically
@@ -203,7 +187,7 @@ std::string str_join(const std::vector<std::string> &list,
                      const std::string &delim);
 bool is_numeric(const std::string &str);
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
-pid_t parse_pid(const std::string &str);
+std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
 std::string hex_format_buffer(const char *buf,
                               size_t size,
                               bool keep_ascii = true,

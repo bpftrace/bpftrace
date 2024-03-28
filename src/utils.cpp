@@ -67,7 +67,7 @@ std::vector<std::string> expand_wildcard_path(const std::string &path)
 
   if (glob(path.c_str(), GLOB_NOCHECK, nullptr, &glob_result)) {
     globfree(&glob_result);
-    throw std::runtime_error("glob() failed");
+    LOG(FATAL) << "glob() failed";
   }
 
   std::vector<std::string> matching_paths;
@@ -704,8 +704,7 @@ struct KernelHeaderTmpDir {
   KernelHeaderTmpDir(const std::string &prefix) : path{ prefix + "XXXXXX" }
   {
     if (::mkdtemp(&path[0]) == nullptr) {
-      throw std::runtime_error(
-          "creating temporary path for kheaders.tar.xz failed");
+      LOG(FATAL) << "creating temporary path for kheaders.tar.xz failed";
     }
   }
 
@@ -1102,25 +1101,40 @@ bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
     return false;
 }
 
-pid_t parse_pid(const std::string &str)
+static std::string get_invalid_pid_message(const std::string &pid,
+                                           const std::string &msg)
 {
+  return "pid '" + pid + "' " + msg;
+}
+
+std::optional<pid_t> parse_pid(const std::string &str, std::string &err)
+{
+  std::size_t idx = 0;
+  pid_t pid;
+  constexpr ssize_t pid_max = 4 * 1024 * 1024;
   try {
-    constexpr ssize_t pid_max = 4 * 1024 * 1024;
-    std::size_t idx = 0;
-    auto pid = std::stol(str, &idx, 10);
-    // Detect cases like `13ABC`
-    if (idx < str.size())
-      throw InvalidPIDException(str, "is not a valid decimal number");
-    if (pid < 1 || pid > pid_max)
-      throw InvalidPIDException(str,
-                                "out of valid pid range [1," +
-                                    std::to_string(pid_max) + "]");
-    return pid;
+    pid = std::stol(str, &idx, 10);
   } catch (const std::out_of_range &e) {
-    throw InvalidPIDException(str, "outside of integer range");
+    err = get_invalid_pid_message(str, "outside of integer range");
+    return std::nullopt;
   } catch (const std::invalid_argument &e) {
-    throw InvalidPIDException(str, "is not a valid decimal number");
+    err = get_invalid_pid_message(str, "is not a valid decimal number");
+    return std::nullopt;
   }
+  // Detect cases like `13ABC`
+  if (idx < str.size()) {
+    err = get_invalid_pid_message(str, "is not a valid decimal number");
+    return std::nullopt;
+  }
+
+  if (pid < 1 || pid > pid_max) {
+    err = get_invalid_pid_message(str,
+                                  "out of valid pid range [1," +
+                                      std::to_string(pid_max) + "]");
+    return std::nullopt;
+  }
+
+  return pid;
 }
 
 std::string hex_format_buffer(const char *buf,

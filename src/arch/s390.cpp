@@ -93,8 +93,7 @@ std::string name()
 
 std::vector<std::string> invalid_watchpoint_modes()
 {
-  throw std::runtime_error(
-      "Watchpoints are not supported on this architecture");
+  LOG(FATAL) << "Watchpoints are not supported on this architecture";
 }
 
 int get_kernel_ptr_width()

@@ -94,11 +94,9 @@ private:
   std::set<std::string> get_matches_in_set(const std::string &search_input,
                                            const std::set<std::string> &set);
 
-  virtual std::unique_ptr<std::istream> get_symbols_from_file(
-      const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
       bool with_modules = false) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_file_safe(
+  virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
       int pid,
