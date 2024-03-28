@@ -2009,48 +2009,6 @@ std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
   return result.str().substr(0, result.str().size() - 1);
 }
 
-static int add_symbol(const char *symname,
-                      uint64_t /*start*/,
-                      uint64_t /*size*/,
-                      void *payload)
-{
-  auto syms = static_cast<std::set<std::string> *>(payload);
-  syms->insert(std::string(symname));
-  return 0;
-}
-
-std::string BPFtrace::extract_func_symbols_from_path(
-    const std::string &path) const
-{
-  std::vector<std::string> real_paths;
-  if (path.find('*') != std::string::npos)
-    real_paths = resolve_binary_path(path);
-  else
-    real_paths.push_back(path);
-  struct bcc_symbol_option symbol_option;
-  memset(&symbol_option, 0, sizeof(symbol_option));
-  symbol_option.use_debug_file = 1;
-  symbol_option.check_debug_file_crc = 1;
-  symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
-
-  std::string result;
-  for (auto &real_path : real_paths) {
-    std::set<std::string> syms;
-    // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
-    // it's also found in debug info (#1138), so a std::set is used here (and in
-    // the add_symbol callback) to ensure that each symbol will be unique in the
-    // returned string.
-    int err = bcc_elf_foreach_sym(
-        real_path.c_str(), add_symbol, &symbol_option, &syms);
-    if (err) {
-      LOG(WARNING) << "Could not list function symbols: " + real_path;
-    }
-    for (auto &sym : syms)
-      result += real_path + ":" + sym + "\n";
-  }
-  return result;
-}
-
 uint64_t BPFtrace::read_address_from_output(std::string output)
 {
   std::string first_word = output.substr(0, output.find(" "));
