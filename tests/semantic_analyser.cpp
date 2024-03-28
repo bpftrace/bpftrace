@@ -1173,6 +1173,45 @@ TEST(semantic_analyser, call_func)
   test("kprobe:f { printf(\"%s\", func);  }");
   test("uprobe:/bin/sh:f { @[func] = count(); }");
   test("uprobe:/bin/sh:f { printf(\"%s\", func);  }");
+
+  test("kfunc:f { func }");
+  test("kretprobe:f { func }");
+
+  // Disabled due to #2285
+  test_error("uretprobe:/bin/sh:f { func }", R"(
+stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes. Consider using 'probe' instead.
+uretprobe:/bin/sh:f { func }
+                      ~~~~
+)");
+
+  // We only care about the BPF_FUNC_get_func_ip feature and error message here,
+  // but don't have enough control over the mock features to only disable that.
+  test_error("kfunc:f { func }",
+             R"(
+stdin:1:1-8: ERROR: kfunc/kretfunc not available for your kernel version.
+kfunc:f { func }
+~~~~~~~
+stdin:1:11-15: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
+kfunc:f { func }
+          ~~~~
+)",
+             false);
+
+  test_error("kretprobe:f { func }",
+             R"(
+stdin:1:15-19: ERROR: The 'func' builtin is not available for kretprobes on older kernels without the get_func_ip BPF helper. Consider using 'probe' instead.
+kretprobe:f { func }
+              ~~~~
+)",
+             false);
+
+  test_error("uretprobe:/bin/sh:f { func }",
+             R"(
+stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes. Consider using 'probe' instead.
+uretprobe:/bin/sh:f { func }
+                      ~~~~
+)",
+             false);
 }
 
 TEST(semantic_analyser, call_probe)
@@ -3204,7 +3243,6 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kretfunc:func_1 { $x = retval; }");
   test("kfunc:vmlinux:func_1 { 1 }");
   test("kfunc:*:func_1 { 1 }");
-  test("kfunc:func_1 { @[func] = 1; }");
 
   test_error("kretfunc:func_1 { $x = args.foo; }", R"(
 stdin:1:24-29: ERROR: Can't find function parameter foo

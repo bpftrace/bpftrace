@@ -189,7 +189,7 @@ public:
                              bool ustack,
                              StackType stack_type,
                              const location &loc);
-  CallInst *CreateGetFuncIp(const location &loc);
+  CallInst *CreateGetFuncIp(Value *ctx, const location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
