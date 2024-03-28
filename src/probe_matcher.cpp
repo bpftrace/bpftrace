@@ -120,11 +120,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::tracepoint: {
-      symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
+      symbol_stream = get_symbols_from_file(tracefs::available_events());
       break;
     }
     case ProbeType::rawtracepoint: {
-      symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
+      symbol_stream = get_symbols_from_file(tracefs::available_events());
       symbol_stream = adjust_rawtracepoint(*symbol_stream);
       break;
     }
@@ -212,8 +212,9 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
 {
   auto file = std::make_unique<std::ifstream>(path);
   if (file->fail()) {
-    throw std::runtime_error("Could not read symbols from " + path + ": " +
-                             strerror(errno));
+    LOG(WARNING) << "Could not read symbols from " << path << ": "
+                 << strerror(errno);
+    return nullptr;
   }
 
   return file;
@@ -232,17 +233,6 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     }
   }
   return std::make_unique<std::istringstream>(funcs);
-}
-
-std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file_safe(
-    const std::string& path) const
-{
-  try {
-    return get_symbols_from_file(path);
-  } catch (const std::runtime_error& e) {
-    LOG(WARNING) << e.what();
-  }
-  return NULL;
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(

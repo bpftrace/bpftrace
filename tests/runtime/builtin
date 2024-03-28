@@ -184,7 +184,7 @@ TIMEOUT 5
 NAME log size too small
 ENV BPFTRACE_LOG_SIZE=0
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ERROR: Error loading program: BEGIN (try -v)
+EXPECT FATAL: Error loading program: BEGIN (try -v)
 TIMEOUT 5
 WILL_FAIL
 

@@ -74,7 +74,9 @@ public:
   std::map<std::string, std::vector<std::string>> get_params(
       const std::set<std::string>& funcs) const;
 
-  Struct resolve_args(const std::string& func, bool ret);
+  std::optional<Struct> resolve_args(const std::string& func,
+                                     bool ret,
+                                     std::string& err);
   void resolve_fields(SizedType& type);
 
   std::pair<int, int> get_btf_id_fd(const std::string& func,

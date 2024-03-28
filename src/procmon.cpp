@@ -25,11 +25,6 @@ static inline int pidfd_open(int pid, unsigned int flags)
   return syscall(__NR_pidfd_open, pid, flags);
 }
 
-ProcMon::ProcMon(const std::string& pid)
-{
-  setup(parse_pid(pid));
-}
-
 ProcMon::ProcMon(pid_t pid)
 {
   setup(pid);

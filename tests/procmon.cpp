@@ -7,6 +7,7 @@
 #include "procmon.h"
 
 #include "childhelper.h"
+#include "utils.h"
 
 namespace bpftrace {
 namespace test {
@@ -34,13 +35,6 @@ TEST(procmon, child_terminates)
   EXPECT_FALSE(child->is_alive());
   EXPECT_FALSE(procmon->is_alive());
   EXPECT_FALSE(procmon->is_alive());
-}
-
-TEST(procmon, pid_string)
-{
-  auto child = getChild("/bin/ls");
-  auto procmon = std::make_unique<ProcMon>(std::to_string(child->pid()));
-  EXPECT_TRUE(procmon->is_alive());
 }
 
 } // namespace procmon

@@ -121,7 +121,7 @@ void AttachedProbe::attach_kfunc(void)
     return;
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0)
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
 }
 
 int AttachedProbe::detach_kfunc(void)
@@ -138,7 +138,7 @@ void AttachedProbe::attach_iter(void)
                                 libbpf::BPF_TRACE_ITER),
                             NULL);
   if (linkfd_ < 0) {
-    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 }
 
@@ -156,13 +156,13 @@ void AttachedProbe::attach_raw_tracepoint(void)
   tracing_fd_ = bpf_raw_tracepoint_open(probe_.attach_point.c_str(), progfd_);
   if (tracing_fd_ < 0) {
     if (tracing_fd_ == -ENOENT)
-      throw std::runtime_error("Probe does not exist: " + probe_.name);
+      LOG(FATAL) << "Probe does not exist: " << probe_.name;
     else if (tracing_fd_ == -EINVAL)
-      throw std::runtime_error("Error attaching probe: " + probe_.name +
-                               ", maybe trying to access arguments beyond "
-                               "what's available in this tracepoint");
+      LOG(FATAL) << "Error attaching probe: " << probe_.name
+                 << ", maybe trying to access arguments beyond "
+                    "what's available in this tracepoint";
     else
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 }
 
@@ -401,8 +401,7 @@ static uint64_t resolve_offset(const std::string &path,
 
   if (bcc_resolve_symname(
           path.c_str(), symbol.c_str(), loc, 0, nullptr, &bcc_sym))
-    throw std::runtime_error("Could not resolve symbol: " + path + ":" +
-                             symbol);
+    LOG(FATAL) << "Could not resolve symbol: " << path << ":" << symbol;
 
   // Have to free sym.module, see:
   // https://github.com/iovisor/bcc/blob/ba73657cb8c4dab83dfb89eed4a8b3866255569a/src/cc/bcc_syms.h#L98-L99
@@ -436,8 +435,8 @@ static void check_alignment(std::string &path,
       return;
     case AlignState::NotAlign:
       if (safe_mode)
-        throw std::runtime_error("Could not add " + probe_name +
-                                 " into middle of instruction: " + tmp);
+        LOG(FATAL) << "Could not add " << probe_name
+                   << " into middle of instruction: " << tmp;
       else
         LOG(WARNING) << "Unsafe " + probe_name +
                             " in the middle of the instruction: "
@@ -446,18 +445,18 @@ static void check_alignment(std::string &path,
 
     case AlignState::Fail:
       if (safe_mode)
-        throw std::runtime_error("Failed to check if " + probe_name +
-                                 " is in proper place: " + tmp);
+        LOG(FATAL) << "Failed to check if " << probe_name
+                   << " is in proper place: " << tmp;
       else
         LOG(WARNING) << "Unchecked " + probe_name + ": " << tmp;
       break;
 
     case AlignState::NotSupp:
       if (safe_mode)
-        throw std::runtime_error("Can't check if " + probe_name +
-                                 " is in proper place (compiled without "
-                                 "(k|u)probe offset support): " +
-                                 tmp);
+        LOG(FATAL) << "Can't check if " << probe_name
+                   << " is in proper place (compiled without "
+                      "(k|u)probe offset support): "
+                   << tmp;
       else
         LOG(WARNING) << "Unchecked " + probe_name + " : " << tmp;
       break;
@@ -483,8 +482,8 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
       if (safe_mode) {
         std::stringstream ss;
         ss << "0x" << std::hex << probe_.address;
-        throw std::runtime_error("Could not resolve address: " + probe_.path +
-                                 ":" + ss.str());
+        LOG(FATAL) << "Could not resolve address: " << probe_.path << ":"
+                   << ss.str();
       } else {
         LOG(WARNING) << "Could not determine instruction boundary for "
                      << probe_.name
@@ -502,15 +501,14 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
     bcc_elf_foreach_sym(probe_.path.c_str(), sym_name_cb, &option, &sym);
 
     if (!sym.start)
-      throw std::runtime_error("Could not resolve symbol: " + probe_.path +
-                               ":" + symbol);
+      LOG(FATAL) << "Could not resolve symbol: " << probe_.path << ":"
+                 << symbol;
   }
 
   if (probe_.type == ProbeType::uretprobe && func_offset != 0) {
-    std::stringstream msg;
-    msg << "uretprobes cannot be attached at function offset. "
-        << "(address resolved to: " << symbol << "+" << func_offset << ")";
-    throw std::runtime_error(msg.str());
+    LOG(FATAL) << "uretprobes cannot be attached at function offset. "
+               << "(address resolved to: " << symbol << "+" << func_offset
+               << ")";
   }
 
   if (sym.size == 0 && func_offset == 0) {
@@ -520,7 +518,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
           << " (symbol has size 0).";
       if (probe_.orig_name == probe_.name) {
         msg << " Use --unsafe to force attachment.";
-        throw std::runtime_error(msg.str());
+        LOG(FATAL) << msg.str();
       } else {
         LOG(WARNING)
             << msg.str()
@@ -531,8 +529,8 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
   } else if (func_offset >= sym.size) {
     std::stringstream ss;
     ss << sym.size;
-    throw std::runtime_error("Offset outside the function bounds ('" + symbol +
-                             "' size is " + ss.str() + ")");
+    LOG(FATAL) << "Offset outside the function bounds ('" << symbol
+               << "' size is " << ss.str() << ")";
   }
 
   uint64_t sym_offset = resolve_offset(probe_.path,
@@ -618,8 +616,8 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
   }
 
   if (func_offset >= sym.size)
-    throw std::runtime_error("Offset outside the function bounds ('" + symbol +
-                             "' size is " + std::to_string(sym.size) + ")");
+    LOG(FATAL) << "Offset outside the function bounds ('" << symbol
+               << "' size is " << std::to_string(sym.size) << ")";
 
   uint64_t sym_offset = resolve_offset(path, probe_.attach_point, probe_.loc);
 
@@ -766,7 +764,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
             return;
           } else
             // explicit match failed, fail hard
-            throw std::runtime_error(msg);
+            LOG(FATAL) << msg;
         }
 
         opts.attach_btf_id = btf_id.first;
@@ -821,18 +819,15 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   }
 
   if (progfd_ < 0) {
-    std::stringstream errmsg;
     if (bt_verbose) {
       std::cerr << std::endl
                 << "Error log: " << std::endl
                 << log_buf.get() << std::endl;
       if (errno == ENOSPC) {
-        errmsg << "Error: Failed to load program, verification log buffer "
-               << "not big enough, try increasing the BPFTRACE_LOG_SIZE "
-               << "environment variable beyond the current value of "
-               << probe_.log_size << " bytes";
-
-        throw std::runtime_error(errmsg.str());
+        LOG(FATAL) << "Error: Failed to load program, verification log buffer "
+                   << "not big enough, try increasing the BPFTRACE_LOG_SIZE "
+                   << "environment variable beyond the current value of "
+                   << probe_.log_size << " bytes";
       }
     }
 
@@ -848,6 +843,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       }
     }
 
+    std::stringstream errmsg;
     errmsg << "Error loading program: " << probe_.name
            << (bt_verbose ? "" : " (try -v)");
     if (probe_.orig_name != probe_.name) {
@@ -857,7 +853,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       return;
     } else
       // explicit match failed, fail hard
-      throw std::runtime_error(errmsg.str());
+      LOG(FATAL) << errmsg.str();
   }
 
   if (bt_verbose) {
@@ -910,7 +906,7 @@ void AttachedProbe::attach_multi_kprobe(void)
                                 libbpf::BPF_TRACE_KPROBE_MULTI),
                             &opts);
   if (linkfd_ < 0) {
-    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 }
 
@@ -936,9 +932,8 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
         LOG(WARNING) << message;
       } else {
         // Explicitly specified modules should fail
-        LOG(ERROR) << message;
-        throw std::runtime_error("Error attaching probe: '" + probe_.name +
-                                 "'");
+        LOG(FATAL) << "Error attaching probe: " << probe_.name << ": "
+                   << message;
       }
     }
     funcname = modname + ":" + funcname;
@@ -962,7 +957,7 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
         LOG(ERROR) << "Possible attachment attempt in the middle of an "
                       "instruction, try a different offset.";
       // an explicit match failed, so fail as the user must have wanted it
-      throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
     }
   }
 
@@ -1023,7 +1018,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
     auto pos = func.find(':');
 
     if (pos == std::string::npos) {
-      throw std::runtime_error("Error resolving probe: '" + probe_name + "'");
+      LOG(FATAL) << "Error resolving probe: " << probe_name;
     }
 
     syms.push_back(func.substr(pos + 1));
@@ -1044,8 +1039,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   // Resolve symbols into addresses
   err = bcc_elf_foreach_sym(path.c_str(), bcc_sym_cb, &option, &data);
   if (err) {
-    throw std::runtime_error("Failed to list symbols for probe: '" +
-                             probe_name + "'");
+    LOG(FATAL) << "Failed to list symbols for probe: " << probe_name;
   }
 
   for (auto a : set) {
@@ -1060,8 +1054,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   // Translate addresses into offsets
   err = bcc_elf_foreach_load_section(path.c_str(), bcc_load_cb, &addrs);
   if (err) {
-    throw std::runtime_error("Failed to resolve symbols offsets for probe: '" +
-                             probe_name + "'");
+    LOG(FATAL) << "Failed to resolve symbols offsets for probe: " << probe_name;
   }
 
   for (auto a : addrs) {
@@ -1109,7 +1102,7 @@ void AttachedProbe::attach_multi_uprobe(int pid)
                                 libbpf::BPF_TRACE_UPROBE_MULTI),
                             &opts);
   if (linkfd_ < 0) {
-    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 }
 #else
@@ -1137,7 +1130,7 @@ void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
                                         0);
 
   if (perf_event_fd < 0)
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
 
   perf_event_fds_.push_back(perf_event_fd);
 }
@@ -1239,20 +1232,18 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
     // FIXME when iovisor/bcc#2064 is merged, optionally pass probe_.path
     ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (!ctx)
-      throw std::runtime_error(
-          "Error initializing context for probe: " + probe_.name +
-          ", for PID: " + std::to_string(pid));
+      LOG(FATAL) << "Error initializing context for probe: " + probe_.name +
+                        ", for PID: " + std::to_string(pid);
   } else {
     ctx = bcc_usdt_new_frompath(probe_.path.c_str());
     if (!ctx)
-      throw std::runtime_error("Error initializing context for probe: " +
-                               probe_.name);
+      LOG(FATAL) << "Error initializing context for probe: " << probe_.name;
   }
 
   // Resolve location of usdt probe
   auto u = USDTHelper::find(pid, probe_.path, probe_.ns, probe_.attach_point);
   if (!u.has_value())
-    throw std::runtime_error("Failed to find usdt probe: " + eventname());
+    LOG(FATAL) << "Failed to find usdt probe: " << eventname();
   probe_.path = u->path;
 
   err = bcc_usdt_get_location(ctx,
@@ -1261,8 +1252,7 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
                               probe_.usdt_location_idx,
                               &loc);
   if (err)
-    throw std::runtime_error("Error finding location for probe: " +
-                             probe_.name);
+    LOG(FATAL) << "Error finding location for probe: " << probe_.name;
   probe_.loc = loc.address;
 
   offset_ = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
@@ -1285,7 +1275,7 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
     errstr += '\n';
     errstr +=
         "Try using -p or --usdt-file-activation if there's USDT semaphores";
-    throw std::runtime_error(errstr);
+    LOG(FATAL) << errstr;
   }
 
   int perf_event_fd = bpf_attach_uprobe(progfd_,
@@ -1298,10 +1288,10 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
 
   if (perf_event_fd < 0) {
     if (pid)
-      throw std::runtime_error("Error attaching probe: " + probe_.name +
-                               ", to PID: " + std::to_string(pid));
+      LOG(FATAL) << "Error attaching probe: " << probe_.name
+                 << ", to PID: " << std::to_string(pid);
     else
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 
   perf_event_fds_.push_back(perf_event_fd);
@@ -1315,7 +1305,7 @@ void AttachedProbe::attach_tracepoint()
 
   if (perf_event_fd < 0 && probe_.name == probe_.orig_name) {
     // do not fail if there are other attach points where attaching may succeed
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
   }
 
   perf_event_fds_.push_back(perf_event_fd);
@@ -1355,7 +1345,7 @@ void AttachedProbe::attach_profile()
                                               group_fd);
 
     if (perf_event_fd < 0)
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
 
     perf_event_fds_.push_back(perf_event_fd);
   }
@@ -1390,7 +1380,7 @@ void AttachedProbe::attach_interval()
                                             group_fd);
 
   if (perf_event_fd < 0)
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+    LOG(FATAL) << "Error attaching probe: " << probe_.name;
 
   perf_event_fds_.push_back(perf_event_fd);
 }
@@ -1422,7 +1412,7 @@ void AttachedProbe::attach_software()
         progfd_, PERF_TYPE_SOFTWARE, type, period, 0, pid, cpu, group_fd);
 
     if (perf_event_fd < 0)
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
 
     perf_event_fds_.push_back(perf_event_fd);
   }
@@ -1455,7 +1445,7 @@ void AttachedProbe::attach_hardware()
         progfd_, PERF_TYPE_HARDWARE, type, period, 0, pid, cpu, group_fd);
 
     if (perf_event_fd < 0)
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+      LOG(FATAL) << "Error attaching probe: " << probe_.name;
 
     perf_event_fds_.push_back(perf_event_fd);
   }
