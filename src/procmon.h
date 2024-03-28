@@ -29,7 +29,6 @@ protected:
 class ProcMon : public ProcMonBase {
 public:
   ProcMon(pid_t pid);
-  ProcMon(const std::string& pid);
   ~ProcMon() override;
 
   // Disallow copying as the internal state will get out of sync which will

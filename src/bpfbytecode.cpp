@@ -14,7 +14,7 @@ BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
       bpf_object__open_mem(elf, elf_size, nullptr));
   if (!bpf_object_)
-    throw std::runtime_error("The produced ELF is not a valid BPF object");
+    LOG(FATAL) << "The produced ELF is not a valid BPF object";
 
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
@@ -39,7 +39,7 @@ const std::vector<uint8_t> &BpfBytecode::getSection(
     const std::string &name) const
 {
   if (!hasSection(name)) {
-    throw std::runtime_error("Bytecode is missing section " + name);
+    LOG(FATAL) << "Bytecode is missing section: " << name;
   }
   return sections_.at(name);
 }
@@ -88,7 +88,7 @@ const BpfMap &BpfBytecode::getMap(const std::string &name) const
 {
   auto map = maps_.find(name);
   if (map == maps_.end()) {
-    throw std::runtime_error("Unknown map: " + name);
+    LOG(FATAL) << "Unknown map: " << name;
   }
   return map->second;
 }
@@ -102,7 +102,7 @@ const BpfMap &BpfBytecode::getMap(int map_id) const
 {
   auto map = maps_by_id_.find(map_id);
   if (map == maps_by_id_.end()) {
-    throw std::runtime_error("Unknown map id: " + std::to_string(map_id));
+    LOG(FATAL) << "Unknown map id: " << std::to_string(map_id);
   }
   return *map->second;
 }

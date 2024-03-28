@@ -785,8 +785,13 @@ int main(int argc, char* argv[])
   bpftrace.delta_taitime_ = get_delta_taitime();
 
   if (!args.pid_str.empty()) {
+    std::string errmsg;
+    auto maybe_pid = parse_pid(args.pid_str, errmsg);
+    if (!maybe_pid.has_value()) {
+      LOG(FATAL) << "Failed to parse pid: " + errmsg;
+    }
     try {
-      bpftrace.procmon_ = std::make_unique<ProcMon>(args.pid_str);
+      bpftrace.procmon_ = std::make_unique<ProcMon>(*maybe_pid);
     } catch (const std::exception& e) {
       LOG(ERROR) << e.what();
       return 1;

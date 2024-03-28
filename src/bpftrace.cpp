@@ -416,8 +416,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     err = bpftrace->print_map(map, print->top, print->div);
 
     if (err)
-      throw std::runtime_error("Could not print map with ident \"" +
-                               map.name() + "\", err=" + std::to_string(err));
+      LOG(FATAL) << "Could not print map with ident \"" << map.name()
+                 << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::print_non_map)) {
     auto print = static_cast<AsyncEvent::PrintNonMap *>(data);
@@ -437,8 +437,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     err = bpftrace->clear_map(map);
     if (err)
-      throw std::runtime_error("Could not clear map with ident \"" +
-                               map.name() + "\", err=" + std::to_string(err));
+      LOG(FATAL) << "Could not clear map with ident \"" << map.name()
+                 << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::zero)) {
     auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
@@ -446,8 +446,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     err = bpftrace->zero_map(map);
     if (err)
-      throw std::runtime_error("Could not zero map with ident \"" + map.name() +
-                               "\", err=" + std::to_string(err));
+      LOG(FATAL) << "Could not zero map with ident \"" << map.name()
+                 << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::time)) {
     char timestr[64]; // not respecting config_.get(ConfigKeyInt::max_strlen)
@@ -835,7 +835,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   // much faster too.
   glob_t globbuf;
   if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
-    throw std::runtime_error("failed to glob");
+    LOG(FATAL) << "failed to glob";
 
   char *p;
   if (!(p = realpath(probe.path.c_str(), nullptr))) {
@@ -871,7 +871,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       try {
         pid_parsed = std::stoi(pid_str);
       } catch (const std::exception &ex) {
-        throw std::runtime_error("failed to parse pid=" + pid_str);
+        LOG(FATAL) << "failed to parse pid=" << pid_str;
       }
 
       ret.emplace_back(std::make_unique<AttachedProbe>(
@@ -925,7 +925,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
   try {
     program->assemble();
-  } catch (const std::runtime_error &ex) {
+  } catch (const std::exception &ex) {
     LOG(ERROR) << "Failed to assemble program for probe: " << probe.name << ", "
                << ex.what();
     return ret;
@@ -1455,14 +1455,11 @@ int BPFtrace::clear_map(const BpfMap &map)
   if (!map.is_clearable())
     return zero_map(map);
 
-  std::vector<uint8_t> old_key;
-  try {
-    old_key = find_empty_key(map);
-  } catch (std::runtime_error &e) {
-    LOG(ERROR) << "failed to get key for map '" << map.name()
-               << "': " << e.what();
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
     return -2;
   }
+  auto old_key(std::move(*maybe_old_key));
   auto key(old_key);
 
   // snapshot keys, then operate on them
@@ -1487,14 +1484,11 @@ int BPFtrace::clear_map(const BpfMap &map)
 int BPFtrace::zero_map(const BpfMap &map)
 {
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  std::vector<uint8_t> old_key;
-  try {
-    old_key = find_empty_key(map);
-  } catch (std::runtime_error &e) {
-    LOG(ERROR) << "failed to get key for map '" << map.name()
-               << "': " << e.what();
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
     return -2;
   }
+  auto old_key(std::move(*maybe_old_key));
   auto key(old_key);
 
   // snapshot keys, then operate on them
@@ -1528,14 +1522,11 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
     return print_map_stats(map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  std::vector<uint8_t> old_key;
-  try {
-    old_key = find_empty_key(map);
-  } catch (std::runtime_error &e) {
-    LOG(ERROR) << "failed to get key for map '" << map.name()
-               << "': " << e.what();
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
     return -2;
   }
+  auto old_key(std::move(*maybe_old_key));
   auto key(old_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -1597,14 +1588,11 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
   // would actually be stored with the key: [1, 2, 3]
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  std::vector<uint8_t> old_key;
-  try {
-    old_key = find_empty_key(map);
-  } catch (std::runtime_error &e) {
-    LOG(ERROR) << "failed to get key for map '" << map.name()
-               << "': " << e.what();
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
     return -2;
   }
+  auto old_key(std::move(*maybe_old_key));
   auto key(old_key);
 
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
@@ -1666,14 +1654,11 @@ int BPFtrace::print_map_stats(const BpfMap &map, uint32_t top, uint32_t div)
   // stats() and avg() maps add an extra 8 bytes onto the end of their key for
   // storing the bucket number.
 
-  std::vector<uint8_t> old_key;
-  try {
-    old_key = find_empty_key(map);
-  } catch (std::runtime_error &e) {
-    LOG(ERROR) << "failed to get key for map '" << map.name()
-               << "': " << e.what();
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
     return -2;
   }
+  auto old_key(std::move(*maybe_old_key));
   auto key(old_key);
 
   std::map<std::vector<uint8_t>, std::vector<int64_t>> values_by_key;
@@ -1745,7 +1730,8 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   }
 }
 
-std::vector<uint8_t> BPFtrace::find_empty_key(const BpfMap &map) const
+std::optional<std::vector<uint8_t>> BPFtrace::find_empty_key(
+    const BpfMap &map) const
 {
   // 4.12 and above kernel supports passing NULL to BPF_MAP_GET_NEXT_KEY
   // to get first key of the map. For older kernels, the call will fail.
@@ -1767,7 +1753,8 @@ std::vector<uint8_t> BPFtrace::find_empty_key(const BpfMap &map) const
   if (bpf_lookup_elem(map.fd, key.data(), value.data()))
     return key;
 
-  throw std::runtime_error("Could not find empty key");
+  LOG(ERROR) << "Failed to get key for map '" << map.name();
+  return std::nullopt;
 }
 
 std::string BPFtrace::get_stack(int64_t stackid,

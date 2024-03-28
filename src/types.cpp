@@ -488,7 +488,7 @@ Field &SizedType::GetField(ssize_t n) const
 {
   assert(IsTupleTy() || IsRecordTy());
   if (n >= GetFieldCount())
-    throw std::runtime_error("Getfield(): out of bound");
+    LOG(FATAL) << "Getfield(): out of bounds";
   return inner_struct_.lock()->fields[n];
 }
 

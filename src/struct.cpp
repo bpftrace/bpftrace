@@ -163,8 +163,8 @@ void StructManager::Add(const std::string &name,
                         bool allow_override)
 {
   if (struct_map_.find(name) != struct_map_.end())
-    throw std::runtime_error("Type redefinition: type with name \'" + name +
-                             "\' already exists");
+    LOG(FATAL) << "Type redefinition: type with name \'" << name
+               << "\' already exists";
   struct_map_[name] = std::make_unique<Struct>(size, allow_override);
 }
 
