@@ -13,6 +13,7 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
   config_map_ = {
     { ConfigKeyBool::cpp_demangle, { .value = true } },
     { ConfigKeyBool::lazy_symbolication, { .value = false } },
+    { ConfigKeyBool::probe_inline, { .value = false } },
     { ConfigKeyInt::log_size, { .value = (uint64_t)1000000 } },
     { ConfigKeyInt::max_bpf_progs, { .value = (uint64_t)512 } },
     { ConfigKeyInt::max_cat_bytes, { .value = (uint64_t)10240 } },

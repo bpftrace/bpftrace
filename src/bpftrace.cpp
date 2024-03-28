@@ -278,6 +278,32 @@ int BPFtrace::add_probe(ast::Probe &p)
             generateWatchpointSetupProbe(match_ap, p));
 
         resources.watchpoint_probes.emplace_back(std::move(probe));
+      } else if (probetype(attach_point->provider) == ProbeType::uprobe) {
+        bool locations_from_dwarf = false;
+
+        // If the user specified an address/offset, do not overwrite
+        // their choice with locations from the DebugInfo.
+        if (probe.address == 0 && probe.func_offset == 0) {
+          // Get function locations from the DebugInfo, as it skips the
+          // prologue and also returns locations of inlined function calls.
+          if (auto *dwarf = get_dwarf(probe.path)) {
+            const auto locations = dwarf->get_function_locations(
+                probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
+            for (const auto loc : locations) {
+              // Clear the attach point, so the address will be used instead
+              Probe probe_copy = probe;
+              probe_copy.attach_point.clear();
+              probe_copy.address = loc;
+              resources.probes.push_back(std::move(probe_copy));
+
+              locations_from_dwarf = true;
+            }
+          }
+        }
+
+        // Otherwise, use the location from the symbol table.
+        if (!locations_from_dwarf)
+          resources.probes.push_back(std::move(probe));
       } else {
         resources.probes.push_back(probe);
       }

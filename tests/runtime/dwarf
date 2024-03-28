@@ -45,6 +45,62 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+NAME uprobe skip inlined function
+PROG config = { probe_inline = 0 }
+     uprobe:./testprogs/inline_function:square { @count++ }
+     uretprobe:./testprogs/inline_function:main { exit() }
+EXPECT @count: 1
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/inline_function
+
+NAME uprobe inlined function
+PROG config = { probe_inline = 1 }
+     uprobe:./testprogs/inline_function:square { @count++ }
+     uretprobe:./testprogs/inline_function:main { exit() }
+EXPECT @count: 3
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/inline_function
+
+NAME uprobe inlined function - probe
+PROG config = { probe_inline = 1; cache_user_symbols = "PER_PROGRAM"; }
+     uprobe:./testprogs/inline_function:square {
+       printf("%s\n", probe);
+       if (++@count == 3) { exit(); }
+     }
+EXPECT uprobe:./testprogs/inline_function:square
+       uprobe:./testprogs/inline_function:square
+       uprobe:./testprogs/inline_function:square
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/inline_function
+
+NAME uprobe inlined function - func
+PROG config = { probe_inline = 1; cache_user_symbols = "PER_PROGRAM"; }
+     uprobe:./testprogs/inline_function:square {
+       printf("%s\n", func);
+       if (++@count == 3) { exit(); }
+     }
+EXPECT main
+       main
+       square
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/inline_function
+
+NAME uprobe inlined function - ustack
+PROG config = { probe_inline = 1; cache_user_symbols = "PER_PROGRAM"; }
+     uprobe:./testprogs/inline_function:square {
+       printf("%s\n", ustack);
+       if (++@count == 3) { exit(); }
+     }
+EXPECT_REGEX ^\n[ ]+main\+\d+\n[ ]+0x[\da-f]+\n\n$
+EXPECT_REGEX ^\n[ ]+square\+\d+\n[ ]+main\+\d+\n[ ]+0x[\da-f]+\n\n$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/inline_function
+
 # Checking backwards compatibility
 NAME uprobe args as pointer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args->c); exit(); }

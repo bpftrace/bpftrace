@@ -23,6 +23,8 @@ public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
                                               std::string file_path);
 
+  std::vector<uint64_t> get_function_locations(const std::string &function,
+                                               bool include_inlined);
   std::vector<std::string> get_function_params(const std::string &function);
   Struct resolve_args(const std::string &function);
 
@@ -68,6 +70,14 @@ public:
       LOG(WARNING) << "Cannot parse DWARF: liblldb not available";
     warned = true;
     return nullptr;
+  }
+
+  std::vector<uint64_t> get_function_locations(const std::string &function
+                                               __attribute__((unused)),
+                                               bool include_inlined
+                                               __attribute__((unused)))
+  {
+    return {};
   }
 
   std::vector<std::string> get_function_params(const std::string &function

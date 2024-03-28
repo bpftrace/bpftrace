@@ -229,7 +229,7 @@ AFTER ./testprogs/uprobe_loop
 NAME ustack_stack_mode_env_bpftrace
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=bpftrace
-EXPECT uprobeFunction1+0
+EXPECT_REGEX ^uprobeFunction1\+[0-9]+$
 TIMEOUT 5
 AFTER ./testprogs/uprobe_loop
 # This was debugged as far down as std::cout having badbit [0] set after a
@@ -249,7 +249,7 @@ SKIP_IF_ENV_HAS CI=true
 NAME ustack_stack_mode_env_perf
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
-EXPECT_REGEX \d+ uprobeFunction1\+0 \(.*/uprobe_loop\)
+EXPECT_REGEX ^[0-9a-f]+ uprobeFunction1\+[0-9]+ \(.*/uprobe_loop\)$
 TIMEOUT 5
 AFTER ./testprogs/uprobe_loop
 # See https://github.com/bpftrace/bpftrace/issues/3080
@@ -276,17 +276,8 @@ SKIP_IF_ENV_HAS CI=true
 NAME ustack_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
 PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
-EXPECT_REGEX ^\s+test\+0\s+main\+[1-9][0-9]*
+EXPECT_REGEX ^\s+test\+[0-9]+\s+test2\+[0-9]+\s+main\+[0-9]+
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
-ARCH x86_64
-TIMEOUT 5
-
-NAME ustack_elf_symtable
-ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
-PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
-EXPECT_REGEX ^\s+test\+0\s+test2\+[1-9][0-9]*\s+main\+[1-9][0-9]*
-AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
-ARCH ppc64le
 TIMEOUT 5
 
 NAME cat

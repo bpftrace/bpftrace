@@ -105,6 +105,18 @@ struct DeprecatedName {
   std::string old_name;
   std::string new_name;
   bool show_warning = true;
+  bool replace_by_new_name = true;
+
+  bool matches(const std::string &name) const
+  {
+    // We allow a prefix match to match against builtins with number (argX)
+    if (old_name.back() == '*') {
+      std::string_view old_name_view{ old_name.c_str(), old_name.size() - 1 };
+      return name.rfind(old_name_view) == 0;
+    }
+
+    return name == old_name;
+  }
 };
 
 typedef std::unordered_map<std::string, std::unordered_set<std::string>>
@@ -121,7 +133,9 @@ struct KConfig {
   std::unordered_map<std::string, std::string> config;
 };
 
-static std::vector<DeprecatedName> DEPRECATED_LIST = {};
+static std::vector<DeprecatedName> DEPRECATED_LIST = {
+  { "sarg*", "*(reg(\"sp\") + <stack_offset>)", true, false }
+};
 
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
