@@ -79,6 +79,7 @@ public:
 
   void createPrintMapCall(Call &call);
   void createPrintNonMapCall(Call &call, int &id);
+  void createSubprogCall(Call &call);
 
   void createMapDefinition(const std::string &name,
                            libbpf::bpf_map_type map_type,
@@ -260,6 +261,7 @@ private:
   bool inside_subprog_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
+  std::unordered_set<std::string> subprogs_;
   int printf_id_ = 0;
   int mapped_printf_id_ = 0;
   int time_id_ = 0;
