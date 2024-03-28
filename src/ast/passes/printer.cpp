@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "ast/ast.h"
+#include "struct.h"
 
 namespace bpftrace {
 namespace ast {
@@ -351,19 +352,27 @@ void Printer::visit(While &while_block)
   }
 }
 
-void Printer::visit(For &for_loop)
+void Printer::visit(For &f)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "for" << std::endl;
 
   ++depth_;
+  if (f.ctx_type.IsRecordTy() && !f.ctx_type.GetFields().empty()) {
+    out_ << indent << " ctx\n";
+    for (const auto &field : f.ctx_type.GetFields()) {
+      out_ << indent << "  " << field.name << type(field.type) << "\n";
+    }
+  }
+
   out_ << indent << " decl\n";
-  print(for_loop.decl);
+  print(f.decl);
+
   out_ << indent << " expr\n";
-  print(for_loop.expr);
+  print(f.expr);
 
   out_ << indent << " stmts\n";
-  for (Statement *stmt : *for_loop.stmts) {
+  for (Statement *stmt : *f.stmts) {
     print(stmt);
   }
   --depth_;

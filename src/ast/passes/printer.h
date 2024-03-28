@@ -40,7 +40,7 @@ public:
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
-  void visit(For &for_loop) override;
+  void visit(For &f) override;
   void visit(Config &config) override;
   void visit(Jump &jump) override;
   void visit(Predicate &pred) override;

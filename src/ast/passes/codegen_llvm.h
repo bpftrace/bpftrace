@@ -221,8 +221,7 @@ private:
   void createIncDec(Unop &unop);
 
   Function *createMapLenCallback();
-  Function *createForEachMapCallback(const Variable &decl,
-                                     const std::vector<Statement *> &stmts);
+  Function *createForEachMapCallback(const For &f, llvm::Type *ctx_t);
 
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
   // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
@@ -259,7 +258,11 @@ private:
   int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
 
-  std::map<std::string, AllocaInst *> variables_;
+  struct VariableLLVM {
+    llvm::Value *value;
+    llvm::Type *type;
+  };
+  std::map<std::string, VariableLLVM> variables_;
   int printf_id_ = 0;
   int mapped_printf_id_ = 0;
   int time_id_ = 0;
