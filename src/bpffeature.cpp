@@ -179,7 +179,8 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
     return false;
 
   return (strstr(buf, "invalid func ") == nullptr) &&
-         (strstr(buf, "unknown func ") == nullptr);
+         (strstr(buf, "unknown func ") == nullptr) &&
+         (strstr(buf, "program of this type cannot use helper ") == nullptr);
 }
 
 bool BPFfeature::detect_prog_type(
