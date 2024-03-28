@@ -21,6 +21,7 @@
 #include <stdexcept>
 
 #include "act_helpers.h"
+#include "log.h"
 #include "resolve_cgroupid.h"
 
 namespace {
@@ -91,8 +92,8 @@ std::uint64_t resolve_cgroupid(const std::string &path)
       AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
   if (err < 0) {
     auto emsg = std::strerror(errno);
-    throw std::runtime_error("Failed to get `cgroupid` for path: \"" + path +
-                             "\": " + emsg);
+    LOG(FATAL) << "Failed to get `cgroupid` for path: \"" << path
+               << "\": " << emsg;
   }
 
   return cfh.cgid;

@@ -395,35 +395,45 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-Struct BTF::resolve_args(const std::string &func, bool ret)
+std::optional<Struct> BTF::resolve_args(const std::string &func,
+                                        bool ret,
+                                        std::string &err)
 {
-  if (!has_data())
-    throw std::runtime_error("BTF data not available");
+  if (!has_data()) {
+    err = "BTF data not available";
+    return std::nullopt;
+  }
 
   auto func_id = find_id(func, BTF_KIND_FUNC);
-  if (!func_id.btf)
-    throw std::runtime_error("no BTF data for " + func);
+  if (!func_id.btf) {
+    err = "no BTF data for " + func;
+    return std::nullopt;
+  }
 
   const struct btf_type *t = btf__type_by_id(func_id.btf, func_id.id);
   t = btf__type_by_id(func_id.btf, t->type);
-  if (!t || !btf_is_func_proto(t))
-    throw std::runtime_error(func + " is not a function");
+  if (!t || !btf_is_func_proto(t)) {
+    err = func + " is not a function";
+    return std::nullopt;
+  }
 
   if (bpftrace_ && !bpftrace_->is_traceable_func(func)) {
-    if (bpftrace_->get_traceable_funcs().empty())
-      throw std::runtime_error("could not read traceable functions from " +
-                               tracefs::available_filter_functions() +
-                               " (is tracefs mounted?)");
-    else
-      throw std::runtime_error("function not traceable (probably it is "
-                               "inlined or marked as \"notrace\")");
+    if (bpftrace_->get_traceable_funcs().empty()) {
+      err = "could not read traceable functions from " +
+            tracefs::available_filter_functions() + " (is tracefs mounted?)";
+    } else {
+      err = "function not traceable (probably it is "
+            "inlined or marked as \"notrace\")";
+    }
+    return std::nullopt;
   }
 
   const struct btf_param *p = btf_params(t);
   __u16 vlen = btf_vlen(t);
   if (vlen > arch::max_arg() + 1) {
-    throw std::runtime_error("functions with more than 6 parameters are "
-                             "not supported.");
+    err = "functions with more than 6 parameters are "
+          "not supported.";
+    return std::nullopt;
   }
 
   Struct args(0, false);
@@ -432,8 +442,10 @@ Struct BTF::resolve_args(const std::string &func, bool ret)
   __u32 type_size = 0;
   for (; j < vlen; j++, p++) {
     const char *str = btf_str(func_id.btf, p->name_off);
-    if (!str)
-      throw std::runtime_error("failed to resolve arguments");
+    if (!str) {
+      err = "failed to resolve arguments";
+      return std::nullopt;
+    }
 
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
     stype.funcarg_idx = arg_idx;

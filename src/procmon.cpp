@@ -27,7 +27,12 @@ static inline int pidfd_open(int pid, unsigned int flags)
 
 ProcMon::ProcMon(const std::string& pid)
 {
-  setup(parse_pid(pid));
+  std::string err;
+  auto maybe_pid = parse_pid(pid, err);
+  if (!maybe_pid.has_value()) {
+    throw std::runtime_error("Failed to parse pid: " + err);
+  }
+  setup(*maybe_pid);
 }
 
 ProcMon::ProcMon(pid_t pid)

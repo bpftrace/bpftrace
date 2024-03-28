@@ -59,8 +59,7 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
   std::string error_str;
   auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
   if (!target)
-    throw std::runtime_error(
-        "Could not find bpf llvm target, does your llvm support it?");
+    LOG(FATAL) << "Could not find bpf llvm target, does your llvm support it?";
 
   target_machine_.reset(
       target->createTargetMachine(LLVMTargetTriple,
@@ -700,7 +699,7 @@ void CodegenLLVM::visit(Call &call)
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
-      throw std::runtime_error("Failed to resolve kernel symbol: " + name);
+      LOG(FATAL) << "Failed to resolve kernel symbol: " << name;
     expr_ = b_.getInt64(addr);
   } else if (call.func == "uaddr") {
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
@@ -709,8 +708,8 @@ void CodegenLLVM::visit(Call &call)
                                       &sym,
                                       current_attach_point_->target);
     if (err < 0 || sym.address == 0)
-      throw std::runtime_error("Could not resolve symbol: " +
-                               current_attach_point_->target + ":" + name);
+      LOG(FATAL) << "Could not resolve symbol: "
+                 << current_attach_point_->target << ":" << name;
     expr_ = b_.getInt64(sym.address);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
@@ -2563,13 +2562,13 @@ void CodegenLLVM::visit(Probe &probe)
       uint64_t max_bpf_progs = bpftrace_.config_.get(
           ConfigKeyInt::max_bpf_progs);
       if (probe_count_ > max_bpf_progs) {
-        throw std::runtime_error(
-            "Your program is trying to generate more than " +
-            std::to_string(probe_count_) +
-            " BPF programs, which exceeds the current limit of " +
-            std::to_string(max_bpf_progs) +
-            ".\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
-            "environment variable.");
+        LOG(FATAL) << "Your program is trying to generate more than "
+                   << std::to_string(probe_count_)
+                   << " BPF programs, which exceeds the current limit of "
+                   << std::to_string(max_bpf_progs)
+                   << ".\nYou can increase the limit through the "
+                      "BPFTRACE_MAX_BPF_PROGS "
+                      "environment variable.";
       }
 
       tracepoint_struct_ = "";
@@ -2599,8 +2598,7 @@ void CodegenLLVM::visit(Probe &probe)
           // Set the probe identifier so that we can read arguments later
           auto usdt = USDTHelper::find(bpftrace_.pid(), target, ns, func_id);
           if (!usdt.has_value())
-            throw std::runtime_error("Failed to find usdt probe: " +
-                                     probefull_);
+            LOG(FATAL) << "Failed to find usdt probe: " << probefull_;
           attach_point->usdt = *usdt;
 
           // A "unique" USDT probe can be present in a binary in multiple
@@ -3639,7 +3637,7 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
 #endif
 
   if (target_machine_->addPassesToEmitFile(PM, stream, nullptr, type))
-    throw std::runtime_error("Cannot emit a file of this type");
+    LOG(FATAL) << "Cannot emit a file of this type";
   PM.run(*module_.get());
 }
 

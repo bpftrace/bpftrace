@@ -29,9 +29,9 @@ Appropriate language features for this include:
 * `int`
 * `bool`
 
-If an error is **not** recoverable, prefer throwing an exception. Broadly
+If an error is **not** recoverable, prefer using `LOG(FATAL)`. Broadly
 speaking, if you want to immediately terminate and show a message to the
-user, use an exception. Exceptions **should not** be used for recoverable
+user, use `LOG(FATAL)`. Exceptions **should not** be used for recoverable
 errors.
 
 ### Examples
