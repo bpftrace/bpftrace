@@ -36,7 +36,11 @@ and this project adheres to
   - [#3060](https://github.com/bpftrace/bpftrace/pull/3060)
 - Disable func builtin for kretprobes and uretprobes when `get_func_ip` feature is not available
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
+- Attach probe to inlined functions
+  - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 #### Deprecated
+- Deprecate `sarg` builtin
+  - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 #### Removed
 #### Fixed
 - Fix ability to interrupt bpftrace during probe attach
@@ -51,6 +55,8 @@ and this project adheres to
   - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
 - Fix func builtin for kretprobes and uretprobes for kernels with working `get_func_ip` feature
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
+- Fix ustack for functions with prologue
+  - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 #### Docs
 #### Tools
 

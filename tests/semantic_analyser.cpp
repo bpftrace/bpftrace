@@ -206,13 +206,21 @@ void test(std::string_view input, std::string_view expected_ast)
   EXPECT_EQ(expected_ast, out.str());
 }
 
+void test_error(BPFtrace &bpftrace,
+                std::string_view input,
+                std::string_view expected_error,
+                bool has_features = true)
+{
+  Driver driver(bpftrace);
+  test(bpftrace, has_features, driver, input, -1, expected_error, true, false);
+}
+
 void test_error(std::string_view input,
                 std::string_view expected_error,
                 bool has_features = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace, has_features, driver, input, -1, expected_error, true, false);
+  test_error(*bpftrace, input, expected_error, has_features);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -252,6 +260,33 @@ kprobe:f { fake }
   MockBPFfeature feature(false);
   test(feature, "k:f { cgroup }", 1);
   test(feature, "k:f { jiffies }", 1);
+}
+
+TEST(semantic_analyser, builtin_variables_inline)
+{
+  auto bpftrace = get_mock_bpftrace();
+  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  configs.set(ConfigKeyBool::probe_inline, true);
+
+  // Check argument builtins are rejected when `probe_inline` is enabled.
+  test_error(*bpftrace, "uprobe:/bin/sh:f { arg0 }", R"(
+stdin:1:20-24: ERROR: The arg0 builtin can only be used when the probe_inline config is disabled.
+uprobe:/bin/sh:f { arg0 }
+                   ~~~~
+)");
+  test_error(*bpftrace, "uprobe:/bin/sh:f { sarg0 }", R"(
+stdin:1:20-25: ERROR: The sarg0 builtin can only be used when the probe_inline config is disabled.
+uprobe:/bin/sh:f { sarg0 }
+                   ~~~~~
+)");
+  test_error(*bpftrace, "uprobe:/bin/sh:f { args }", R"(
+stdin:1:20-24: ERROR: The args builtin can only be used when the probe_inline config is disabled.
+uprobe:/bin/sh:f { args }
+                   ~~~~
+stdin:1:20-24: ERROR: Cannot read function parameters
+uprobe:/bin/sh:f { args }
+                   ~~~~
+)");
 }
 
 TEST(semantic_analyser, builtin_cpid)

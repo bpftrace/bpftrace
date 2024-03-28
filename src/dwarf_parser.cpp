@@ -50,6 +50,31 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   }
 }
 
+std::vector<uint64_t> Dwarf::get_function_locations(const std::string &function,
+                                                    bool include_inlined)
+{
+  // Locating every inlined instances of a function is expensive,
+  // so we only do it if the user explicitly requests it.
+  if (!include_inlined) {
+    auto syms = target_.FindSymbols(function.c_str(),
+                                    lldb::SymbolType::eSymbolTypeCode);
+    // The given function name MUST identify a unique symbol!
+    if (syms.GetSize() != 1)
+      return {};
+    auto sym = syms.GetContextAtIndex(0).GetSymbol();
+    return { sym.GetStartAddress().GetFileAddress() +
+             sym.GetPrologueByteSize() };
+  } else {
+    auto bps = target_.BreakpointCreateByName(function.c_str());
+    std::vector<uint64_t> result(bps.GetNumLocations());
+    for (uint32_t i = 0; i < bps.GetNumLocations(); i++) {
+      auto loc = bps.GetLocationAtIndex(i);
+      result[i] = loc.GetAddress().GetFileAddress();
+    }
+    return result;
+  }
+}
+
 std::string Dwarf::get_type_name(lldb::SBType type)
 {
   std::string type_name = type.GetDisplayTypeName() ?: "<anonymous type>";
