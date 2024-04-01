@@ -4,7 +4,7 @@ set(GZFILES "")
 foreach(FIL ${FILES})
   get_filename_component(NAME ${FIL} NAME)
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.gz
-    COMMAND ${GZIP} -c ${FIL} > ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.gz
+    COMMAND ${GZIP} -nc ${FIL} > ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.gz
     DEPENDS ${FIL})
   list(APPEND GZFILES "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.gz")
 endforeach()

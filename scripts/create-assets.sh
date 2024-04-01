@@ -47,8 +47,8 @@ tar --xz -cf "$OUT/tools.tar.xz" -C "$TMP/bin" "."
 info "Creating man archive"
 mkdir -p "$TMP/share/man/man8"
 cp man/man8/*.8 "$TMP/share//man/man8/"
-gzip "$TMP/share/man/man8/"*
-asciidoctor man/adoc/bpftrace.adoc  -b manpage -o - | gzip - > "$TMP/share/man/man8/bpftrace.8.gz"
+gzip -n "$TMP/share/man/man8/"*
+asciidoctor man/adoc/bpftrace.adoc  -b manpage -o - | gzip -n - > "$TMP/share/man/man8/bpftrace.8.gz"
 tar --xz -cf "$OUT/man.tar.xz" -C "$TMP/share" man
 
 info "Building bpftrace appimage"
