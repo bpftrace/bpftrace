@@ -176,8 +176,12 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              bool safe_mode,
                              BPFfeature &feature,
-                             BTF &btf)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+                             BTF &btf,
+                             std::optional<BpfProgram> retprog)
+    : probe_(probe),
+      prog_(std::move(prog)),
+      retprog_(std::move(retprog)),
+      btf_(btf)
 {
   load_prog(feature);
   if (bt_verbose)
@@ -233,7 +237,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BPFfeature &feature,
                              BTF &btf,
                              bool safe_mode)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+    : probe_(probe), prog_(std::move(prog)), retprog_(std::nullopt), btf_(btf)
 {
   load_prog(feature);
   switch (probe_.type) {
@@ -668,15 +672,12 @@ const std::regex helper_verifier_error_re(
     "[0-9]+: \\([0-9]+\\) call ([a-z|A-Z|0-9|_]+)#([0-9]+)");
 }
 
-void AttachedProbe::load_prog(BPFfeature &feature)
+int AttachedProbe::load_prog_fd(BPFfeature &feature, BpfProgram &prog)
 {
-  if (use_cached_progfd())
-    return;
-
-  auto &insns = prog_.getCode();
-  auto func_infos = prog_.getFuncInfos();
+  auto &insns = prog.getCode();
+  auto func_infos = prog.getFuncInfos();
   const char *license = "GPL";
-  int log_level = 0;
+  int log_level = 0, progfd = -1;
 
   uint64_t log_buf_size = probe_.log_size;
   auto log_buf = std::make_unique<char[]>(log_buf_size);
@@ -763,7 +764,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
             // one attachpoint in a multi-attachpoint (wildcard or list) probe
             // failed, print a warning but continue
             LOG(WARNING) << msg << ", skipping.";
-            return;
+            return -1;
           } else
             // explicit match failed, fail hard
             throw std::runtime_error(msg);
@@ -802,25 +803,25 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         // This will fall back to the error handling for failed program load,
         // which is more robust.
         if (btf_fd >= 0) {
-          progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
-                                  name.c_str(),
-                                  license,
-                                  reinterpret_cast<const struct bpf_insn *>(
-                                      insns.data()),
-                                  insns.size() / sizeof(struct bpf_insn),
-                                  &opts);
+          progfd = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
+                                 name.c_str(),
+                                 license,
+                                 reinterpret_cast<const struct bpf_insn *>(
+                                     insns.data()),
+                                 insns.size() / sizeof(struct bpf_insn),
+                                 &opts);
           close(btf_fd);
         }
       }
 
       if (opts.attach_btf_obj_fd > 0)
         close(opts.attach_btf_obj_fd);
-      if (progfd_ >= 0)
+      if (progfd >= 0)
         break;
     }
   }
 
-  if (progfd_ < 0) {
+  if (progfd < 0) {
     std::stringstream errmsg;
     if (bt_verbose) {
       std::cerr << std::endl
@@ -854,7 +855,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       // one attachpoint in a multi-attachpoint (wildcard or list) probe failed,
       // print a warning but continue
       LOG(WARNING) << errmsg.str() << ", skipping.";
-      return;
+      return -1;
     } else
       // explicit match failed, fail hard
       throw std::runtime_error(errmsg.str());
@@ -865,13 +866,26 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     uint32_t info_len = sizeof(info);
     int ret;
 
-    ret = bpf_obj_get_info(progfd_, &info, &info_len);
+    ret = bpf_obj_get_info(progfd, &info, &info_len);
     if (ret == 0) {
       std::cout << std::endl << "Program ID: " << info.id << std::endl;
     }
     std::cout << std::endl
               << "The verifier log: " << std::endl
               << log_buf.get() << std::endl;
+  }
+  return progfd;
+}
+
+void AttachedProbe::load_prog(BPFfeature &feature)
+{
+  if (use_cached_progfd())
+    return;
+
+  progfd_ = load_prog_fd(feature, prog_);
+
+  if (retprog_ != std::nullopt) {
+    retprogfd_ = load_prog_fd(feature, *retprog_);
   }
 
   cache_progfd();
@@ -892,6 +906,13 @@ void AttachedProbe::attach_multi_kprobe(void)
   opts.kprobe_multi.flags = probe_.type == ProbeType::kretprobe
                                 ? BPF_F_KPROBE_MULTI_RETURN
                                 : 0;
+
+#ifdef HAVE_BPF_KPROBE_MULTI_RETURN_PROG
+  if (retprogfd_ >= 0) {
+    opts.kprobe_multi.return_prog_fd = retprogfd_;
+    opts.kprobe_multi.flags |= BPF_F_KPROBE_MULTI_RETURN_PROG;
+  }
+#endif
 
   if (bt_verbose) {
     std::cout << "Attaching to " << probe_.funcs.size() << " functions"

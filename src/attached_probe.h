@@ -24,7 +24,8 @@ public:
                 BpfProgram &&prog,
                 bool safe_mode,
                 BPFfeature &feature,
-                BTF &btf);
+                BTF &btf,
+                std::optional<BpfProgram> retprog = std::nullopt);
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
                 int pid,
@@ -45,6 +46,7 @@ private:
   void resolve_offset_kprobe(bool safe_mode);
   bool resolve_offset_uprobe(bool safe_mode);
   void load_prog(BPFfeature &feature);
+  int load_prog_fd(BPFfeature &feature, BpfProgram &prog);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
   void attach_kprobe(bool safe_mode);
@@ -83,9 +85,11 @@ private:
 
   Probe &probe_;
   BpfProgram prog_;
+  std::optional<BpfProgram> retprog_;
   std::vector<int> perf_event_fds_;
   bool close_progfd_ = true;
   int progfd_ = -1;
+  int retprogfd_ = -1;
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
   std::function<void()> usdt_destructor_;
