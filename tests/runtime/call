@@ -221,10 +221,10 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME ustack
-PROG k:do_nanosleep { printf("%s\n%s\n", ustack(), ustack(1)); exit(); }
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n%s\n", ustack(), ustack(1)); exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_bpftrace
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
