@@ -14,7 +14,7 @@ BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
       bpf_object__open_mem(elf, elf_size, nullptr));
   if (!bpf_object_)
-    LOG(FATAL) << "The produced ELF is not a valid BPF object";
+    LOG(BUG) << "The produced ELF is not a valid BPF object";
 
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
@@ -39,12 +39,12 @@ const std::vector<uint8_t> &BpfBytecode::getSection(
     const std::string &name) const
 {
   if (!hasSection(name)) {
-    LOG(FATAL) << "Bytecode is missing section: " << name;
+    LOG(BUG) << "Bytecode is missing section: " << name;
   }
   return sections_.at(name);
 }
 
-int BpfBytecode::create_maps()
+bool BpfBytecode::create_maps()
 {
   int failed_maps = 0;
   for (auto &map : maps_) {
@@ -64,14 +64,13 @@ int BpfBytecode::create_maps()
   }
 
   if (failed_maps > 0) {
-    std::cerr << "Creation of the required BPF maps has failed." << std::endl;
-    std::cerr << "Make sure you have all the required permissions and are not";
-    std::cerr << " confined (e.g. like" << std::endl;
-    std::cerr << "snapcraft does). `dmesg` will likely have useful output for";
-    std::cerr << " further troubleshooting" << std::endl;
+    LOG(ERROR) << "Creation of the required BPF maps has failed. \nMake sure "
+                  "you have all the required permissions and are not confined "
+                  "(e.g. like snapcraft does).\n`dmesg` will likely have "
+                  "useful output for further troubleshooting";
+    return false;
   }
-
-  return failed_maps;
+  return true;
 }
 
 bool BpfBytecode::hasMap(MapType internal_type) const
@@ -88,7 +87,7 @@ const BpfMap &BpfBytecode::getMap(const std::string &name) const
 {
   auto map = maps_.find(name);
   if (map == maps_.end()) {
-    LOG(FATAL) << "Unknown map: " << name;
+    LOG(BUG) << "Unknown map: " << name;
   }
   return map->second;
 }
@@ -102,7 +101,7 @@ const BpfMap &BpfBytecode::getMap(int map_id) const
 {
   auto map = maps_by_id_.find(map_id);
   if (map == maps_by_id_.end()) {
-    LOG(FATAL) << "Unknown map id: " << std::to_string(map_id);
+    LOG(BUG) << "Unknown map id: " << std::to_string(map_id);
   }
   return *map->second;
 }

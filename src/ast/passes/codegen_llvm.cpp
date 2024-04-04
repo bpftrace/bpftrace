@@ -143,7 +143,7 @@ void CodegenLLVM::visit(Identifier &identifier)
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
     expr_ = b_.getInt64(bpftrace_.enums_[identifier.ident]);
   } else {
-    LOG(FATAL) << "unknown identifier \"" << identifier.ident << "\"";
+    LOG(BUG) << "unknown identifier \"" << identifier.ident << "\"";
   }
 }
 
@@ -424,7 +424,7 @@ void CodegenLLVM::visit(Builtin &builtin)
              builtin.ident.at(4) <= '9') {
     int sp_offset = arch::sp_offset();
     if (sp_offset == -1) {
-      LOG(FATAL) << "negative offset for stack pointer";
+      LOG(BUG) << "negative offset for stack pointer";
     }
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
@@ -466,7 +466,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "jiffies") {
     expr_ = b_.CreateJiffies64(builtin.loc);
   } else {
-    LOG(FATAL) << "unknown builtin \"" << builtin.ident << "\"";
+    LOG(BUG) << "unknown builtin \"" << builtin.ident << "\"";
   }
 }
 
@@ -1176,7 +1176,7 @@ void CodegenLLVM::visit(Call &call)
 
     int id = bpftrace_.resources.maps_info.at(map.ident).id;
     if (id == -1) {
-      LOG(FATAL) << "map id for map \"" << map.ident << "\" not found";
+      LOG(BUG) << "map id for map \"" << map.ident << "\" not found";
     }
     auto *ident_ptr = b_.CreateGEP(event_struct,
                                    buf,
@@ -1386,7 +1386,7 @@ void CodegenLLVM::visit(Call &call)
       expr_ = b_.CreateGetNs(call.type.ts_mode, call.loc);
     }
   } else {
-    LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
+    LOG(BUG) << "missing codegen for function \"" << call.func << "\"";
   }
 }
 
@@ -1442,8 +1442,7 @@ std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
 void CodegenLLVM::binop_string(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
-    LOG(FATAL) << "missing codegen to string operator \"" << opstr(binop)
-               << "\"";
+    LOG(BUG) << "missing codegen to string operator \"" << opstr(binop) << "\"";
   }
 
   std::string string_literal;
@@ -1506,8 +1505,7 @@ void CodegenLLVM::binop_integer_array(Binop &binop)
 void CodegenLLVM::binop_buf(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
-    LOG(FATAL) << "missing codegen to buffer operator \"" << opstr(binop)
-               << "\"";
+    LOG(BUG) << "missing codegen to buffer operator \"" << opstr(binop) << "\"";
   }
 
   std::string string_literal("");
@@ -1823,8 +1821,8 @@ void CodegenLLVM::visit(Unop &unop)
   {
     unop_ptr(unop);
   } else {
-    LOG(FATAL) << "invalid type (" << type << ") passed to unary operator \""
-               << opstr(unop) << "\"";
+    LOG(BUG) << "invalid type (" << type << ") passed to unary operator \""
+             << opstr(unop) << "\"";
   }
 }
 
@@ -2599,7 +2597,7 @@ void CodegenLLVM::createRet(Value *value)
   // Fall back to default return value
   switch (probetype(current_attach_point_->provider)) {
     case ProbeType::invalid:
-      LOG(FATAL) << "Returning from invalid probetype";
+      LOG(BUG) << "Returning from invalid probetype";
       break;
     case ProbeType::tracepoint:
       // Classic (ie. *not* raw) tracepoints have a kernel quirk stopping perf
@@ -2712,7 +2710,7 @@ void CodegenLLVM::visit(Probe &probe)
           auto usdt = USDTHelper::find(
               bpftrace_.pid(), match_ap.target, match_ap.ns, match_ap.func);
           if (!usdt.has_value())
-            LOG(FATAL) << "Failed to find usdt probe: " << probefull_;
+            LOG(BUG) << "Failed to find usdt probe: " << probefull_;
           match_ap.usdt = *usdt;
 
           // A "unique" USDT probe can be present in a binary in multiple
@@ -3360,7 +3358,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
 
   int id = bpftrace_.resources.maps_info.at(map.ident).id;
   if (id == -1) {
-    LOG(FATAL) << "map id for map \"" << map.ident << "\" not found";
+    LOG(BUG) << "map id for map \"" << map.ident << "\" not found";
   }
   auto *ident_ptr = b_.CreateGEP(print_struct,
                                  buf,
@@ -3699,7 +3697,7 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
 #endif
 
   if (target_machine_->addPassesToEmitFile(PM, stream, nullptr, type))
-    LOG(FATAL) << "Cannot emit a file of this type";
+    LOG(BUG) << "Cannot emit a file of this type";
   PM.run(*module_.get());
 }
 
@@ -3920,7 +3918,7 @@ void CodegenLLVM::createIncDec(Unop &unop)
     else
       expr_ = newval;
   } else {
-    LOG(FATAL) << "invalid expression passed to " << opstr(unop);
+    LOG(BUG) << "invalid expression passed to " << opstr(unop);
   }
 }
 

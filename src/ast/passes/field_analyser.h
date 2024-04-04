@@ -43,7 +43,7 @@ public:
   int analyse();
 
 private:
-  bool resolve_args(Probe &probe);
+  void resolve_args(Probe &probe);
   void resolve_fields(SizedType &type);
   void resolve_type(SizedType &type);
 

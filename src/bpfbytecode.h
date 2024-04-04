@@ -33,7 +33,7 @@ public:
   bool hasSection(const std::string &name) const;
   const std::vector<uint8_t> &getSection(const std::string &name) const;
 
-  int create_maps();
+  bool create_maps();
   bool hasMap(MapType internal_type) const;
   bool hasMap(const StackType &stack_type) const;
   const BpfMap &getMap(const std::string &name) const;

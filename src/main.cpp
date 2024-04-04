@@ -113,7 +113,6 @@ void usage()
   std::cerr << std::endl;
   std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
   std::cerr << "    -v                      verbose messages" << std::endl;
-  std::cerr << "    -vv                     more verbose messages (max 2)" << std::endl;
   std::cerr << "    -d                      (dry run) debug info" << std::endl;
   std::cerr << "    -dd                     (dry run) verbose debug info" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
@@ -158,18 +157,16 @@ static void enforce_infinite_rlimit()
   rl.rlim_cur = rl.rlim_max;
   err = setrlimit(RLIMIT_MEMLOCK, &rl);
   if (err)
-    LOG(ERROR) << std::strerror(err) << ": couldn't set RLIMIT_MEMLOCK for "
-               << "bpftrace. If your program is not loading, you can try "
-               << "\"ulimit -l 8192\" to fix the problem";
+    LOG(WARNING) << std::strerror(err) << ": couldn't set RLIMIT_MEMLOCK for "
+                 << "bpftrace. If your program is not loading, you can try "
+                 << "\"ulimit -l 8192\" to fix the problem";
 }
 
-bool is_root()
+void check_is_root()
 {
   if (geteuid() != 0) {
-    LOG(ERROR) << "bpftrace currently only supports running as the root user.";
-    return false;
-  } else
-    return true;
+    LOG(FATAL) << "bpftrace currently only supports running as the root user.";
+  }
 }
 
 static void info(BPFnofeature no_feature)
@@ -258,20 +255,18 @@ static std::optional<struct timespec> get_delta_taitime()
   return get_delta_with_boottime(CLOCK_TAI);
 }
 
-[[nodiscard]] static bool parse_env(BPFtrace& bpftrace)
+static void parse_env(BPFtrace& bpftrace)
 {
   ConfigSetter config_setter(bpftrace.config_, ConfigSource::env_var);
-  if (!get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_strlen, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_strlen, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
-        LOG(WARNING) << "BPFTRACE_STRLEN is deprecated. Use "
-                        "BPFTRACE_MAX_STRLEN instead.";
-        config_setter.set(ConfigKeyInt::max_strlen, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
+    LOG(WARNING) << "BPFTRACE_STRLEN is deprecated. Use "
+                    "BPFTRACE_MAX_STRLEN instead.";
+    config_setter.set(ConfigKeyInt::max_strlen, x);
+  });
 
   // in practice, the largest buffer I've seen fit into the BPF stack was 240
   // bytes. I've set the bar lower, in case your program has a deeper stack than
@@ -283,105 +278,88 @@ static std::optional<struct timespec> get_delta_taitime()
     // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
     // is exceeded. Please move large on stack variables into BPF per-cpu array
     // map.> ~1024= <A call to built-in function 'memset' is not supported.>
-    LOG(ERROR) << "'BPFTRACE_MAX_STRLEN' " << max_strlen
+    LOG(FATAL) << "'BPFTRACE_MAX_STRLEN' " << max_strlen
                << " exceeds the current maximum of 200 bytes.\n"
                << "This limitation is because strings are currently stored on "
                   "the 512 byte BPF stack.\n"
                << "Long strings will be pursued in: "
                   "https://github.com/bpftrace/bpftrace/issues/305";
-    return false;
   }
 
   if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
     config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
 
-  if (!get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
-        config_setter.set(ConfigKeyBool::cpp_demangle, x);
-      }))
-    return false;
+  get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
+    config_setter.set(ConfigKeyBool::cpp_demangle, x);
+  });
 
-  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
-                        [&](bool x) { bpftrace.debug_output_ = x; }))
-    return false;
+  get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
+                   [&](bool x) { bpftrace.debug_output_ = x; });
 
-  if (!get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
-        config_setter.set(ConfigKeyBool::lazy_symbolication, x);
-      }))
-    return false;
+  get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
+    config_setter.set(ConfigKeyBool::lazy_symbolication, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_map_keys, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_map_keys, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_probes, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_probes, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_bpf_progs, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_bpf_progs, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::log_size, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::log_size, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::perf_rb_pages, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::perf_rb_pages, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_cat_bytes, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::max_cat_bytes, x);
+  });
 
   if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS")) {
     const std::string s(env_p);
     if (!config_setter.set_user_symbol_cache_type(s))
-      return false;
+      exit(1);
   }
 
   bpftrace.max_ast_nodes_ = std::numeric_limits<uint64_t>::max();
-  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
-                          [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; }))
-    return false;
+  get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                     [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
 
   if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE")) {
     if (!config_setter.set_stack_mode(stack_mode))
-      return false;
+      exit(1);
   }
 
-  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
-        LOG(WARNING) << "BPFTRACE_NO_CPP_DEMANGLE is deprecated. Use "
-                        "BPFTRACE_CPP_DEMANGLE=0 instead.";
-        config_setter.set(ConfigKeyBool::cpp_demangle, !x);
-      }))
-    return false;
+  get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
+    LOG(WARNING) << "BPFTRACE_NO_CPP_DEMANGLE is deprecated. Use "
+                    "BPFTRACE_CPP_DEMANGLE=0 instead.";
+    config_setter.set(ConfigKeyBool::cpp_demangle, !x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
-        LOG(WARNING) << "BPFTRACE_CAT_BYTES_MAX is deprecated. Use "
-                        "BPFTRACE_MAX_CAT_BYTES instead.";
-        config_setter.set(ConfigKeyInt::max_cat_bytes, x);
-      }))
-    return false;
+  get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
+    LOG(WARNING) << "BPFTRACE_CAT_BYTES_MAX is deprecated. Use "
+                    "BPFTRACE_MAX_CAT_BYTES instead.";
+    config_setter.set(ConfigKeyInt::max_cat_bytes, x);
+  });
 
-  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
-        LOG(WARNING) << "BPFTRACE_MAP_KEYS_MAX is deprecated. Use "
-                        "BPFTRACE_MAX_MAP_KEYS instead.";
-        config_setter.set(ConfigKeyInt::max_map_keys, x);
-      }))
-    return false;
-
-  return true;
+  get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
+    LOG(WARNING) << "BPFTRACE_MAP_KEYS_MAX is deprecated. Use "
+                    "BPFTRACE_MAX_MAP_KEYS instead.";
+    config_setter.set(ConfigKeyInt::max_map_keys, x);
+  });
 }
 
 [[nodiscard]] std::unique_ptr<ast::Program> parse(
@@ -527,11 +505,9 @@ Args parse_args(int argc, char* argv[])
          -1) {
     switch (c) {
       case Options::INFO: // --info
-        if (is_root()) {
-          info(args.no_feature);
-          exit(0);
-        }
-        exit(1);
+        check_is_root();
+        info(args.no_feature);
+        exit(0);
         break;
       case Options::EMIT_ELF: // --emit-elf
         args.output_elf = optarg;
@@ -546,8 +522,7 @@ Args parse_args(int argc, char* argv[])
         if (std::strcmp(optarg, "codegen") == 0)
           args.test_mode = TestMode::CODEGEN;
         else {
-          LOG(ERROR) << "USAGE: --test can only be 'codegen'.";
-          exit(1);
+          LOG(FATAL) << "USAGE: --test can only be 'codegen'.";
         }
         break;
       case Options::AOT: // --aot
@@ -556,9 +531,8 @@ Args parse_args(int argc, char* argv[])
         break;
       case Options::NO_FEATURE: // --no-feature
         if (args.no_feature.parse(optarg)) {
-          LOG(ERROR) << "USAGE: --no-feature can only have values "
+          LOG(FATAL) << "USAGE: --no-feature can only have values "
                         "'kprobe_multi,uprobe_multi'.";
-          exit(1);
         }
         break;
       case 'o':
@@ -575,10 +549,8 @@ Args parse_args(int argc, char* argv[])
         bt_quiet = true;
         break;
       case 'v':
-        if (bt_verbose)
-          bt_verbose2 = true;
-        else
-          bt_verbose = true;
+        ENABLE_LOG(V1);
+        bt_verbose = true;
         break;
       case 'B':
         if (std::strcmp(optarg, "line") == 0) {
@@ -588,8 +560,7 @@ Args parse_args(int argc, char* argv[])
         } else if (std::strcmp(optarg, "none") == 0) {
           args.obc = OutputBufferConfig::NONE;
         } else {
-          LOG(ERROR) << "USAGE: -B must be either 'line', 'full', or 'none'.";
-          exit(1);
+          LOG(FATAL) << "USAGE: -B must be either 'line', 'full', or 'none'.";
         }
         break;
       case 'f':
@@ -650,8 +621,7 @@ Args parse_args(int argc, char* argv[])
 
   if (bt_verbose && (bt_debug != DebugLevel::kNone)) {
     // TODO: allow both
-    LOG(ERROR) << "USAGE: Use either -v or -d.";
-    exit(1);
+    LOG(FATAL) << "USAGE: Use either -v or -d.";
   }
 
   if (!args.cmd_str.empty() && !args.pid_str.empty()) {
@@ -662,8 +632,7 @@ Args parse_args(int argc, char* argv[])
 
   // Difficult to serialize flex generated types
   if (args.helper_check_level && args.build_mode == BuildMode::AHEAD_OF_TIME) {
-    LOG(ERROR) << "Cannot use -k[k] with --aot";
-    exit(1);
+    LOG(FATAL) << "Cannot use -k[k] with --aot";
   }
 
   if (args.listing) {
@@ -689,8 +658,7 @@ Args parse_args(int argc, char* argv[])
   } else {
     // Expect to find a script either through -e or filename
     if (args.script.empty() && argv[optind] == nullptr) {
-      LOG(ERROR) << "USAGE: filename or -e 'program' required.";
-      exit(1);
+      LOG(FATAL) << "USAGE: filename or -e 'program' required.";
     }
 
     // If no script was specified with -e, then we expect to find a script file
@@ -744,9 +712,8 @@ int main(int argc, char* argv[])
   if (!args.output_file.empty()) {
     outputstream.open(args.output_file);
     if (outputstream.fail()) {
-      LOG(ERROR) << "Failed to open output file: \"" << args.output_file
+      LOG(FATAL) << "Failed to open output file: \"" << args.output_file
                  << "\": " << strerror(errno);
-      return 1;
     }
     os = &outputstream;
   }
@@ -757,9 +724,8 @@ int main(int argc, char* argv[])
   } else if (args.output_format == "json") {
     output = std::make_unique<JsonOutput>(*os);
   } else {
-    LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
+    LOG(FATAL) << "Invalid output format \"" << args.output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
-    return 1;
   }
 
   switch (args.obc) {
@@ -783,8 +749,7 @@ int main(int argc, char* argv[])
   if (!args.cmd_str.empty())
     bpftrace.cmd_ = args.cmd_str;
 
-  if (!parse_env(bpftrace))
-    return 1;
+  parse_env(bpftrace);
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;
@@ -801,8 +766,7 @@ int main(int argc, char* argv[])
     try {
       bpftrace.procmon_ = std::make_unique<ProcMon>(*maybe_pid);
     } catch (const std::exception& e) {
-      LOG(ERROR) << e.what();
-      return 1;
+      LOG(FATAL) << e.what();
     }
   }
 
@@ -811,15 +775,13 @@ int main(int argc, char* argv[])
     try {
       bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
     } catch (const std::runtime_error& e) {
-      LOG(ERROR) << "Failed to fork child: " << e.what();
-      return -1;
+      LOG(FATAL) << "Failed to fork child: " << e.what();
     }
   }
 
   // Listing probes when there is no program
   if (args.listing && args.script.empty() && args.filename.empty()) {
-    if (!is_root())
-      return 1;
+    check_is_root();
 
     if (is_type_name(args.search)) {
       // Print structure definitions
@@ -875,9 +837,8 @@ int main(int argc, char* argv[])
     } else {
       std::ifstream file(args.filename);
       if (file.fail()) {
-        LOG(ERROR) << "failed to open file '" << args.filename
+        LOG(FATAL) << "failed to open file '" << args.filename
                    << "': " << std::strerror(errno);
-        return -1;
       }
 
       filename = args.filename;
@@ -895,8 +856,7 @@ int main(int argc, char* argv[])
     bpftrace.add_param(param);
   }
 
-  if (!is_root())
-    return 1;
+  check_is_root();
 
   auto lockdown_state = lockdown::detect();
   if (lockdown_state == lockdown::LockdownState::Confidentiality) {
@@ -939,8 +899,7 @@ int main(int argc, char* argv[])
     try {
       bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
     } catch (const std::runtime_error& e) {
-      LOG(ERROR) << "Failed to fork child: " << e.what();
-      return -1;
+      LOG(FATAL) << "Failed to fork child: " << e.what();
     }
   }
 
@@ -964,12 +923,10 @@ int main(int argc, char* argv[])
     }
 
     bool verify_llvm_ir = false;
-    if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
-                          [&](bool x) { verify_llvm_ir = x; }))
-      return 1;
+    get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
+                     [&](bool x) { verify_llvm_ir = x; });
     if (verify_llvm_ir && !llvm.verify()) {
-      LOG(ERROR) << "Verification of generated LLVM IR failed";
-      return 1;
+      LOG(FATAL) << "Verification of generated LLVM IR failed";
     }
 
     llvm.optimize();
@@ -1025,12 +982,12 @@ int main(int argc, char* argv[])
 
   err = bpftrace.print_maps();
 
-  if (bt_verbose && bpftrace.child_) {
+  if (bpftrace.child_) {
     auto val = 0;
     if ((val = bpftrace.child_->term_signal()) > -1)
-      std::cout << "Child terminated by signal: " << val << std::endl;
+      LOG(V1) << "Child terminated by signal: " << val;
     if ((val = bpftrace.child_->exit_code()) > -1)
-      std::cout << "Child exited with code: " << val << std::endl;
+      LOG(V1) << "Child exited with code: " << val;
   }
 
   bpftrace.close_pcaps();

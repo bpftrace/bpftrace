@@ -26,9 +26,10 @@ TEST(LogStream, basic)
   ss.str({});
 
   // test macro with 1 argument
+  ENABLE_LOG(V1);
   auto cerr_buf = std::cerr.rdbuf(ss.rdbuf());
-  LOG(INFO) << content_1 << content_2;
-  EXPECT_EQ(ss.str(), "INFO: " + content_1 + content_2 + "\n");
+  LOG(V1) << content_1 << content_2;
+  EXPECT_EQ(ss.str(), content_1 + content_2 + "\n");
   std::cerr.rdbuf(cerr_buf);
 }
 

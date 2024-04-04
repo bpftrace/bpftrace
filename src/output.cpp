@@ -331,8 +331,8 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
         return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
         // clang-format on
       default:
-        LOG(FATAL) << "value_to_str: Invalid int bitwidth: "
-                   << type.GetIntBitWidth() << "provided";
+        LOG(BUG) << "value_to_str: Invalid int bitwidth: "
+                 << type.GetIntBitWidth() << "provided";
         return {};
     }
   } else if (type.IsSumTy() || type.IsIntTy()) {
