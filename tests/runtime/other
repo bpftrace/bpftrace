@@ -211,10 +211,10 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME positional ustack
-RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", ustack(), ustack($1)); exit(); }' 1
-EXPECT SUCCESS
+RUN {{BPFTRACE}} -e 'u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n%s\n", ustack(), ustack($1)); exit(); }' 1
+EXPECT_REGEX .*uprobeFunction1\+0\n\s+main\+\d+\n.*\n\n\n\s+uprobeFunction1\+0
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep  1e8
+AFTER ./testprogs/uprobe_loop
 
 NAME lhist can be cleared
 PROG BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }
