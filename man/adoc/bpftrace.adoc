@@ -1016,19 +1016,19 @@ For string arguments use the `str()` call to retrieve the value.
 | uint64
 | 4.18
 | get_current_cgroup_id
-| ID of the cgroup the current task is in. Only works with cgroupv2.
+| ID of the cgroup the current process belongs to. Only works with cgroupv2.
 
 | comm
 | string[16]
 | 4.2
-| get_current_com
-| `comm` of the current task. Equal to the value in `/proc/<pid>/comm`
+| get_current_comm
+| Name of the current thread
 
 | cpid
 | uint32
 | n/a
 | n/a
-| PID of the child process
+| Child process ID, if bpftrace is invoked with `-c`
 
 | cpu
 | uint32
@@ -1058,7 +1058,7 @@ For string arguments use the `str()` call to retrieve the value.
 | uint64
 | 4.2
 | get_current_uid_gid
-| GID of current task
+| Group ID of the current thread, as seen from the init namespace
 
 | jiffies
 | uint64
@@ -1076,7 +1076,7 @@ For string arguments use the `str()` call to retrieve the value.
 | uint64
 | 4.2
 | get_current_pid_tgid
-| Process ID (or thread group ID) of the current task.
+| Process ID of the current thread (aka thread group ID), as seen from the init namespace
 
 | probe
 | string
@@ -1094,7 +1094,7 @@ For string arguments use the `str()` call to retrieve the value.
 | n/a
 | n/a
 | n/a
-| The return keyword is used to exit the current probe. This differs from exit() in that it doesn't exit bpftrace
+| The return keyword is used to exit the current probe. This differs from exit() in that it doesn't exit bpftrace.
 
 | retval
 | int64
@@ -1106,19 +1106,19 @@ For string arguments use the `str()` call to retrieve the value.
 | int64
 | n/a
 | n/a
-| nth stack value of the function being traced. (kprobes, uprobes).
+| nth stack value of the function being traced (kprobes, uprobes)
 
 | tid
 | uint64
 | 4.2
 | get_current_pid_tgid
-| Thread ID of the current task.
+| Thread ID of the current thread, as seen from the init namespace
 
 | uid
 | uint64
 | 4.2
 | get_current_uid_gid
-| UID of current task
+| User ID of the current thread, as seen from the init namespace
 
 |===
 
@@ -1297,7 +1297,7 @@ Tracing block I/O sizes > 0 bytes
 | Sync
 
 | <<functions-signal, `signal(char[] signal \| u32 signal)`>>
-| Send a signal to the current task
+| Send a signal to the current process
 | Sync
 
 | <<functions-sizeof, `sizeof(...)`>>
