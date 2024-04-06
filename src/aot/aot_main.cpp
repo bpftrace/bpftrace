@@ -1,12 +1,12 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
-#include <memory>
 
 #include "aot.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "output.h"
+#include "run_bpftrace.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -101,6 +101,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  libbpf_set_print(libbpf_print);
+
   auto output = prepare_output(output_file, output_format);
   if (!output)
     return 1;
@@ -112,12 +114,5 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  err = bpftrace.run(std::move(bpftrace.bytecode_));
-  if (err)
-    return err;
-
-  std::cout << "\n\n";
-  return bpftrace.print_maps();
-
-  return 0;
+  return run_bpftrace(bpftrace, bpftrace.bytecode_);
 }

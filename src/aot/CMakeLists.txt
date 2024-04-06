@@ -13,7 +13,7 @@ if(NOT LIBBCC_BPF_CONTAINS_RUNTIME)
 endif()
 
 add_executable(bpftrace-aotrt aot_main.cpp)
-target_link_libraries(bpftrace-aotrt aot runtime arch ast_defs cxxdemangler_stdlib)
+target_link_libraries(bpftrace-aotrt aot runtime arch ast ast_defs cxxdemangler_stdlib)
 install(TARGETS bpftrace-aotrt DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(LIBPCAP_FOUND)

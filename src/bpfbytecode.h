@@ -62,13 +62,6 @@ private:
 
   std::map<std::string, BpfMap> maps_;
   std::map<int, BpfMap *> maps_by_id_;
-
-  friend class cereal::access;
-  template <typename Archive>
-  void serialize(Archive &archive)
-  {
-    archive(sections_);
-  }
 };
 
 } // namespace bpftrace

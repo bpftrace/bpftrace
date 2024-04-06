@@ -36,6 +36,7 @@ add_library(runtime
   procmon.cpp
   printf.cpp
   resolve_cgroupid.cpp
+  run_bpftrace.cpp
   struct.cpp
   tracefs.cpp
   debugfs.cpp
