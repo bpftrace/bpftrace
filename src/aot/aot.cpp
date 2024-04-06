@@ -26,7 +26,6 @@
 
 #define AOT_ELF_SECTION ".btaot"
 static constexpr auto AOT_MAGIC = 0xA07;
-static constexpr auto AOT_SHIM_NAME = "bpftrace-aotrt";
 static constexpr auto AOT_SECDATA_TEMPFILE = ".temp_btaot";
 
 // AOT payload will have this header at the beginning. We don't worry about
@@ -190,7 +189,7 @@ int generate(const RequiredResources &resources,
   if (!section)
     return 1;
 
-  auto shim = find_in_path(AOT_SHIM_NAME);
+  auto shim = find_in_path(AOT_SHIM_NAME.data());
   if (!shim) {
     LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
                << " shim binary. Is it in $PATH?";

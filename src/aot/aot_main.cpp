@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -11,10 +12,10 @@
 
 using namespace bpftrace;
 
-void usage()
+void usage(std::string_view filename)
 {
   // clang-format off
-  std::cerr << "USAGE: bpftrace-aotrt filename" << std::endl;
+  std::cerr << "USAGE: " << filename << " [options]" << std::endl;
   std::cerr << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
@@ -70,6 +71,13 @@ int main(int argc, char* argv[])
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
+  std::filesystem::path p(argv[0]);
+  if (p.filename() == aot::AOT_SHIM_NAME) {
+    LOG(ERROR) << "Runtime shim should not be run directly, please generate a "
+                  "binary using --aot option in bpftrace";
+    return 1;
+  }
+
   while ((c = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1) {
     switch (c) {
       case 'o':
@@ -79,7 +87,7 @@ int main(int argc, char* argv[])
         output_format = optarg;
         break;
       case 'h':
-        usage();
+        usage(argv[0]);
         return 0;
       case 'V':
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
@@ -91,13 +99,13 @@ int main(int argc, char* argv[])
         bt_verbose = true;
         break;
       default:
-        usage();
+        usage(argv[0]);
         return 1;
     }
   }
 
-  if (!argv[optind]) {
-    usage();
+  if (argv[optind]) {
+    usage(argv[0]);
     return 1;
   }
 
@@ -108,7 +116,7 @@ int main(int argc, char* argv[])
     return 1;
 
   BPFtrace bpftrace(std::move(output));
-  int err = aot::load(bpftrace, argv[optind]);
+  int err = aot::load(bpftrace, argv[0]);
   if (err) {
     LOG(ERROR) << "Failed to load AOT script";
     return err;
