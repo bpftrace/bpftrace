@@ -1,6 +1,5 @@
 #include <array>
 #include <bpf/libbpf.h>
-#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -38,6 +37,7 @@
 #include "output.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "run_bpftrace.h"
 #include "tracepoint_format_parser.h"
 #include "utils.h"
 #include "version.h"
@@ -692,29 +692,6 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
-static const char* libbpf_print_level_string(enum libbpf_print_level level)
-{
-  switch (level) {
-    case LIBBPF_WARN:
-      return "WARN";
-    case LIBBPF_INFO:
-      return "INFO";
-    default:
-      return "DEBUG";
-  }
-}
-
-static int libbpf_print(enum libbpf_print_level level,
-                        const char* msg,
-                        va_list ap)
-{
-  if (bt_debug == DebugLevel::kNone)
-    return 0;
-
-  fprintf(stderr, "[%s] ", libbpf_print_level_string(level));
-  return vfprintf(stderr, msg, ap);
-}
-
 int main(int argc, char* argv[])
 {
   int err;
@@ -966,6 +943,14 @@ int main(int argc, char* argv[])
       llvm.emit_elf(args.output_elf);
       return 0;
     }
+    if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
+      llvm::SmallVector<char, 0> aot_output;
+      llvm::raw_svector_ostream aot_os(aot_output);
+      llvm.emit(aot_os);
+
+      return aot::generate(
+          bpftrace.resources, args.aot, aot_output.data(), aot_output.size());
+    }
     bytecode = llvm.emit();
   } catch (const std::system_error& ex) {
     LOG(ERROR) << "failed to write elf: " << ex.what();
@@ -978,41 +963,5 @@ int main(int argc, char* argv[])
   if (bt_debug != DebugLevel::kNone || args.test_mode == TestMode::CODEGEN)
     return 0;
 
-  if (args.build_mode == BuildMode::AHEAD_OF_TIME)
-    return aot::generate(bpftrace.resources, bytecode, args.aot);
-
-  // Signal handler that lets us know an exit signal was received.
-  struct sigaction act = {};
-  act.sa_handler = [](int) { BPFtrace::exitsig_recv = true; };
-  sigaction(SIGINT, &act, NULL);
-  sigaction(SIGTERM, &act, NULL);
-
-  // Signal handler that prints all maps when SIGUSR1 was received.
-  act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
-  sigaction(SIGUSR1, &act, NULL);
-
-  err = bpftrace.run(std::move(bytecode));
-  if (err)
-    return err;
-
-  // We are now post-processing. If we receive another SIGINT,
-  // handle it normally (exit)
-  act.sa_handler = SIG_DFL;
-  sigaction(SIGINT, &act, NULL);
-
-  std::cout << "\n\n";
-
-  err = bpftrace.print_maps();
-
-  if (bpftrace.child_) {
-    auto val = 0;
-    if ((val = bpftrace.child_->term_signal()) > -1)
-      LOG(V1) << "Child terminated by signal: " << val;
-    if ((val = bpftrace.child_->exit_code()) > -1)
-      LOG(V1) << "Child exited with code: " << val;
-  }
-
-  bpftrace.close_pcaps();
-
-  return err;
+  return run_bpftrace(bpftrace, bytecode);
 }

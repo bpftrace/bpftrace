@@ -10,8 +10,9 @@ namespace bpftrace {
 namespace aot {
 
 int generate(const RequiredResources &resources,
-             const BpfBytecode &bytecode,
-             const std::string &out);
+             const std::string &out,
+             void *const elf,
+             size_t elf_size);
 
 int load(BPFtrace &bpftrace, const std::string &in);
 

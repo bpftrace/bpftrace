@@ -6,10 +6,9 @@
 #include <exception>
 #include <fcntl.h>
 #include <fstream>
-#include <istream>
+#include <gelf.h>
+#include <libelf.h>
 #include <optional>
-#include <ostream>
-#include <streambuf>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -19,6 +18,7 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
+#include "ast/elf_parser.h"
 #include "filesystem.h"
 #include "log.h"
 #include "utils.h"
@@ -41,8 +41,8 @@ struct Header {
   uint64_t version;    // Hash of version string
   uint64_t rr_off;     // RequiredResources offset from start of file
   uint64_t rr_len;     // RequiredResources length
-  uint64_t bc_off;     // Bytecode offset from start of file
-  uint64_t bc_len;     // Bytecode length
+  uint64_t elf_off;    // ELF offset from start of file
+  uint64_t elf_len;    // ELF length
 };
 
 static_assert(sizeof(Header) == 48);
@@ -66,12 +66,6 @@ uint32_t rs_hash(std::string_view str)
   return hash;
 }
 
-void serialize_bytecode(const BpfBytecode &bytecode, std::ostream &out)
-{
-  cereal::BinaryOutputArchive archive(out);
-  archive(bytecode);
-}
-
 int load_required_resources(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
 {
   try {
@@ -84,24 +78,10 @@ int load_required_resources(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
   return 0;
 }
 
-int load_bytecode(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
-{
-  try {
-    Membuf mbuf(ptr, ptr + len);
-    std::istream istream(&mbuf);
-    cereal::BinaryInputArchive archive(istream);
-    archive(bpftrace.bytecode_);
-  } catch (const std::exception &ex) {
-    LOG(ERROR) << "Failed to deserialize metadata: " << ex.what();
-    return 1;
-  }
-
-  return 0;
-}
-
 std::optional<std::vector<uint8_t>> generate_btaot_section(
     const RequiredResources &resources,
-    const BpfBytecode &bytecode)
+    void *const elf,
+    size_t elf_size)
 {
   // Serialize RuntimeResources
   std::string serialized_metadata;
@@ -114,17 +94,6 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
     return std::nullopt;
   }
 
-  // Serialize bytecode
-  std::string serialized_bytecode;
-  try {
-    std::ostringstream serialized(std::ios::binary);
-    serialize_bytecode(bytecode, serialized);
-    serialized_bytecode = serialized.str();
-  } catch (const std::exception &ex) {
-    LOG(ERROR) << "Failed to serialize bytecode: " << ex.what();
-    return std::nullopt;
-  }
-
   // Construct the header
   auto hdr_len = sizeof(Header);
   Header hdr = {
@@ -134,13 +103,13 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
     .version = rs_hash(BPFTRACE_VERSION),
     .rr_off = hdr_len,
     .rr_len = serialized_metadata.size(),
-    .bc_off = hdr_len + serialized_metadata.size(),
-    .bc_len = serialized_bytecode.size(),
+    .elf_off = hdr_len + serialized_metadata.size(),
+    .elf_len = elf_size,
   };
 
   // Resize the output buffer appropriately
   std::vector<uint8_t> out;
-  out.resize(sizeof(Header) + hdr.rr_len + hdr.bc_len);
+  out.resize(sizeof(Header) + hdr.rr_len + hdr.elf_len);
   uint8_t *p = out.data();
 
   // Write out header
@@ -151,9 +120,9 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
   memcpy(p, serialized_metadata.data(), hdr.rr_len);
   p += hdr.rr_len;
 
-  // Write out bytecode
-  memcpy(p, serialized_bytecode.data(), hdr.bc_len);
-  p += hdr.bc_len;
+  // Write out ELF
+  memcpy(p, elf, hdr.elf_len);
+  p += hdr.elf_len;
 
   return out;
 }
@@ -213,10 +182,11 @@ out:
 } // namespace
 
 int generate(const RequiredResources &resources,
-             const BpfBytecode &bytecode,
-             const std::string &out)
+             const std::string &out,
+             void *const elf,
+             size_t elf_size)
 {
-  auto section = generate_btaot_section(resources, bytecode);
+  auto section = generate_btaot_section(resources, elf, elf_size);
   if (!section)
     return 1;
 
@@ -253,16 +223,76 @@ int load(BPFtrace &bpftrace, const std::string &in)
     return 1;
   }
 
-  uint8_t *ptr = static_cast<uint8_t *>(
-      ::mmap(NULL, in_file_size, PROT_READ, MAP_PRIVATE, infd, 0));
-  if (ptr == MAP_FAILED) {
-    auto saved_err = errno;
-    LOG(ERROR) << "Failed to mmap: " << in << ": " << std::strerror(saved_err);
-    return 1;
+  // Find .btaot section
+  Elf *elf = NULL;
+  Elf_Scn *scn = NULL;
+  GElf_Shdr shdr;
+  char *secname = NULL;
+  Elf_Data *data = NULL;
+  uint8_t *btaot_section = NULL;
+  const Header *hdr;
+
+  if (elf_version(EV_CURRENT) == EV_NONE) {
+    LOG(ERROR) << "Cannot set libelf version: " << elf_errmsg(-1);
+    err = 1;
+    goto out;
   }
 
-  // Validate header
-  auto hdr = reinterpret_cast<const Header *>(ptr);
+  elf = elf_begin(infd, ELF_C_READ, NULL);
+  if (!elf) {
+    LOG(ERROR) << "Cannot read ELF file: " << elf_errmsg(-1);
+    err = 1;
+    goto out;
+  }
+
+  size_t strndx;
+  if (elf_getshdrstrndx(elf, &strndx) < 0) {
+    LOG(ERROR) << "Failed to get ELF section index of the string table: "
+               << elf_errmsg(-1);
+    err = 1;
+    goto out;
+  }
+
+  int i;
+  i = 0;
+  while ((scn = elf_nextscn(elf, scn))) {
+    i++;
+    if (!gelf_getshdr(scn, &shdr)) {
+      LOG(ERROR) << "Failed to get ELF section(" << i
+                 << ") hdr: " << elf_errmsg(-1);
+      err = 1;
+      goto out;
+    }
+
+    secname = elf_strptr(elf, strndx, shdr.sh_name);
+    if (!secname) {
+      LOG(ERROR) << "Failed to get ELF section(" << i
+                 << ") hdr name: " << elf_errmsg(-1);
+      err = 1;
+      goto out;
+    }
+
+    if (std::string_view(secname) == AOT_ELF_SECTION) {
+      data = elf_getdata(scn, 0);
+      if (!data) {
+        LOG(ERROR) << "Failed to get BTAOT ELF section(" << i
+                   << ") data: " << elf_errmsg(-1);
+        err = 1;
+        goto out;
+      }
+
+      btaot_section = static_cast<uint8_t *>(data->d_buf);
+      break;
+    }
+  }
+
+  // Validate .btaot header
+  hdr = reinterpret_cast<const Header *>(btaot_section);
+  if (!hdr) {
+    LOG(ERROR) << "Couldn't find " << AOT_ELF_SECTION << " section in " << in;
+    err = 1;
+    goto out;
+  }
   if (hdr->magic != AOT_MAGIC) {
     LOG(ERROR) << "Invalid magic in " << in << ": " << hdr->magic;
     err = 1;
@@ -285,28 +315,30 @@ int load(BPFtrace &bpftrace, const std::string &in)
     goto out;
   }
   if ((hdr->rr_off + hdr->rr_len) > static_cast<uint64_t>(in_file_size) ||
-      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(in_file_size)) {
+      (hdr->elf_off + hdr->elf_len) > static_cast<uint64_t>(in_file_size)) {
     LOG(ERROR) << "Corrupted AOT bpftrace file: incomplete payload";
     err = 1;
     goto out;
   }
 
   // Load payloads
-  err = load_required_resources(bpftrace, ptr + hdr->rr_off, hdr->rr_len);
+  err = load_required_resources(bpftrace,
+                                btaot_section + hdr->rr_off,
+                                hdr->rr_len);
   if (err)
     goto out;
 
-  err = load_bytecode(bpftrace, ptr + hdr->bc_off, hdr->bc_len);
+  bpftrace.bytecode_ = elf::parseBpfBytecodeFromElfObject(btaot_section +
+                                                              hdr->elf_off,
+                                                          hdr->elf_len);
   if (err)
     goto out;
 
 out:
-  if (::munmap(ptr, in_file_size)) {
-    auto saved_err = errno;
-    LOG(ERROR) << "Failed to munmap(): " << in << ": "
-               << std::strerror(saved_err);
-  }
+  if (elf)
+    elf_end(elf);
 
+  close(infd);
   return err;
 }
 
