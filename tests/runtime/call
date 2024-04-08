@@ -449,9 +449,13 @@ RUN {{BPFTRACE}} -e 'BEGIN { if (strcontains("abc", "a")) { printf("OK\n"); exit
 EXPECT OK
 TIMEOUT 1
 
+# The extra prints are here to confirm that we report on the correct helper, not
+# just the first or the last one.
 NAME path_in_unsupported_kfunc
-PROG kfunc:vfs_read { print(path(args.file->f_path)); }
-EXPECT stdin:1:18-47: ERROR: helper bpf_d_path not supported in probe
+PROG kfunc:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+EXPECT stdin:1:30-59: ERROR: helper bpf_d_path not allowed in probe
+EXPECT kfunc:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+EXPECT                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
