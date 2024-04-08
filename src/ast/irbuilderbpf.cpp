@@ -334,6 +334,18 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
       to_string(MapType::Join), "join", GET_PTR_TY(), loc, failure_callback);
 }
 
+CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
+                                                 BasicBlock *failure_callback,
+                                                 const location &loc)
+{
+  SizedType value_type = CreateArray(stack_type.limit, CreateUInt64());
+  return createGetScratchMap(StackType::scratch_name(),
+                             StackType::scratch_name(),
+                             GetType(value_type)->getPointerTo(),
+                             loc,
+                             failure_callback);
+}
+
 // createGetScratchMap will jump to failure_callback if it cannot find the map
 // value
 CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
@@ -364,10 +376,9 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
   CreateCondBr(condition, lookup_merge_block, lookup_failure_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (bpftrace_.debug_output_)
-    CreateDebugOutput("unable to find the scratch map value for " + name,
-                      std::vector<Value *>{},
-                      loc);
+  CreateDebugOutput("unable to find the scratch map value for " + name,
+                    std::vector<Value *>{},
+                    loc);
   CreateBr(failure_callback);
 
   SetInsertPoint(lookup_merge_block);
@@ -441,14 +452,13 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 }
 
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
-                                       Map &map,
+                                       const std::string &map_ident,
                                        Value *key,
                                        Value *val,
                                        const location &loc,
                                        int64_t flags)
 {
-  Value *map_ptr = GetMapVar(map.ident);
-
+  Value *map_ptr = GetMapVar(map_ident);
   assert(ctx && ctx->getType() == GET_PTR_TY());
   assert(key->getType()->isPointerTy());
   assert(val->getType()->isPointerTy());
@@ -1332,30 +1342,33 @@ CallInst *IRBuilderBPF::CreateGetRandom(const location &loc)
                           &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
-                                         bool ustack,
-                                         StackType stack_type,
-                                         const location &loc)
+CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
+                                       bool ustack,
+                                       Value *buf,
+                                       StackType stack_type,
+                                       const location &loc)
 {
   assert(ctx && ctx->getType() == GET_PTR_TY());
-
-  Value *map_ptr = GetMapVar(stack_type.name());
 
   int flags = 0;
   if (ustack)
     flags |= (1 << 8);
   Value *flags_val = getInt64(flags);
+  Value *stack_size = getInt32(stack_type.limit * sizeof(uint64_t));
 
-  // long bpf_get_stackid(struct pt_regs *ctx, struct bpf_map *map, u64 flags)
-  // Return: >= 0 stackid on success or negative error
-  FunctionType *getstackid_func_type = FunctionType::get(
-      getInt64Ty(), { GET_PTR_TY(), map_ptr->getType(), getInt64Ty() }, false);
-  CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_stackid,
-                                    getstackid_func_type,
-                                    { ctx, map_ptr, flags_val },
-                                    "get_stackid",
+  // long bpf_get_stack(void *ctx, void *buf, u32 size, u64 flags)
+  // Return: The non-negative copied *buf* length equal to or less than
+  // *size* on success, or a negative error in case of failure.
+  FunctionType *getstack_func_type = FunctionType::get(
+      getInt32Ty(),
+      { GET_PTR_TY(), GET_PTR_TY(), getInt32Ty(), getInt64Ty() },
+      false);
+  CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_stack,
+                                    getstack_func_type,
+                                    { ctx, buf, stack_size, flags_val },
+                                    "get_stack",
                                     &loc);
-  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_stackid, loc);
+  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_stack, loc);
   return call;
 }
 
@@ -1492,7 +1505,7 @@ void IRBuilderBPF::CreateMapElemInit(Value *ctx,
 {
   AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
   CreateStore(val, initValue);
-  CreateMapUpdateElem(ctx, map, key, initValue, loc, BPF_NOEXIST);
+  CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
   CreateLifetimeEnd(initValue);
   return;
 }
@@ -1572,6 +1585,8 @@ void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,
                                      const std::vector<Value *> &values,
                                      const location &loc)
 {
+  if (!bpftrace_.debug_output_)
+    return;
   fmt_str = "[BPFTRACE_DEBUG_OUTPUT] " + fmt_str;
   Constant *const_str = ConstantDataArray::getString(module_.getContext(),
                                                      fmt_str,
