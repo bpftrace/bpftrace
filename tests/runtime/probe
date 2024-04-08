@@ -36,7 +36,9 @@ AFTER ./testprogs/syscall read
 # https://github.com/bpftrace/bpftrace/issues/2447
 NAME kfunc_multiple_attach_point_multiple_functions
 PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } kfunc:vfs_read, kfunc:vfs_open /@a != 0/ { @a -= 1 } kfunc:vfs_read /@b == 1/ { @b = 0 } kfunc:vfs_open /@c == 1/ { @c = 0 }
-EXPECT_REGEX @a: 0\n@b: 0\n@c: 0
+EXPECT @a: 0
+       @b: 0
+       @c: 0
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 # Note: this calls both vfs_read and vfs_open
@@ -476,7 +478,8 @@ TIMEOUT 2
 
 NAME BEGIN,END
 PROG BEGIN,END { printf("Hello\n"); exit(); }
-EXPECT_REGEX Hello\nHello
+EXPECT Hello
+       Hello
 TIMEOUT 2
 
 # The "probe" builtin forces bpftrace to generate one BPF function for each

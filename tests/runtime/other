@@ -61,16 +61,16 @@ TIMEOUT 5
 NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT stdin:1:17-29: ERROR: unroll maximum value is 100
-EXPECT i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT                 ~~~~~~~~~~~~
+       i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
+                       ~~~~~~~~~~~~
 TIMEOUT 5
 WILL_FAIL
 
 NAME unroll_min_value
 PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT stdin:1:17-27: ERROR: unroll minimum value is 1
-EXPECT i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT                 ~~~~~~~~~~
+       i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
+                       ~~~~~~~~~~
 TIMEOUT 5
 WILL_FAIL
 
@@ -267,15 +267,15 @@ TIMEOUT 1
 NAME runtime_error_check_delete
 RUN {{BPFTRACE}} -k -e 'i:ms:100 { @[1] = 1; delete(@[2]); exit(); }'
 EXPECT stdin:1:22-34: WARNING: Can't delete map element because it does not exist.
-EXPECT Additional Info - helper: map_delete_elem, retcode: -2
-EXPECT i:ms:100 { @[1] = 1; delete(@[2]); exit(); }
-EXPECT                      ~~~~~~~~~~~~
+       Additional Info - helper: map_delete_elem, retcode: -2
+       i:ms:100 { @[1] = 1; delete(@[2]); exit(); }
+                            ~~~~~~~~~~~~
 TIMEOUT 1
 
 NAME runtime_error_check_lookup
 RUN {{BPFTRACE}} -kk -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
 EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exist.
-EXPECT Additional Info - helper: map_lookup_elem, retcode: 0
-EXPECT i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }
-EXPECT                                     ~~~~
+       Additional Info - helper: map_lookup_elem, retcode: 0
+       i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }
+                                           ~~~~
 TIMEOUT 1
