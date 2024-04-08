@@ -11,7 +11,6 @@
 #include <linux/hw_breakpoint.h>
 #include <linux/limits.h>
 #include <linux/perf_event.h>
-#include <regex>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
@@ -662,8 +661,50 @@ void AttachedProbe::cache_progfd(void)
 }
 
 namespace {
-const std::regex helper_verifier_error_re(
-    "[0-9]+: \\([0-9]+\\) call ([a-z|A-Z|0-9|_]+)#([0-9]+)");
+/*
+ * Searches the verifier's log for err_pattern. If a match is found, extracts
+ * the name and ID of the problematic helper and throws a HelperVerifierError.
+ *
+ * Example verfier log extract:
+ *     [...]
+ *     36: (b7) r3 = 64                      ; R3_w=64
+ *     37: (85) call bpf_d_path#147
+ *     helper call is not allowed in probe
+ *     [...]
+ *
+ *  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
+ */
+void maybe_throw_helper_verifier_error(std::string_view log,
+                                       std::string_view err_pattern,
+                                       const std::string &exception_msg_suffix)
+{
+  auto err_pos = log.find(err_pattern);
+  if (err_pos == log.npos)
+    return;
+
+  std::string_view call_pattern = " call ";
+  auto call_pos = log.rfind(call_pattern, err_pos);
+  if (call_pos == log.npos)
+    return;
+
+  auto helper_begin = call_pos + call_pattern.size();
+  auto hash_pos = log.find("#", helper_begin);
+  if (hash_pos == log.npos)
+    return;
+
+  auto eol = log.find("\n", hash_pos + 1);
+  if (eol == log.npos)
+    return;
+
+  auto helper_name = std::string{ log.substr(helper_begin,
+                                             hash_pos - helper_begin) };
+  auto func_id = std::stoi(
+      std::string{ log.substr(hash_pos + 1, eol - hash_pos - 1) });
+
+  std::string msg = std::string{ "helper " } + helper_name +
+                    exception_msg_suffix;
+  throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
+}
 }
 
 void AttachedProbe::load_prog(BPFfeature &feature)
@@ -831,17 +872,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       }
     }
 
-    // try to identify an illegal helper call
-    if (std::string(log_buf.get())
-            .find("helper call is not allowed in probe") != std::string::npos) {
-      // get helper function name and id
-      std::cmatch m;
-      if (std::regex_search(log_buf.get(), m, helper_verifier_error_re)) {
-        throw HelperVerifierError(static_cast<libbpf::bpf_func_id>(
-                                      std::stoi(m[2].str())),
-                                  m[1].str());
-      }
-    }
+    maybe_throw_helper_verifier_error(log_buf.get(),
+                                      "helper call is not allowed in probe",
+                                      " not allowed in probe");
 
     std::stringstream errmsg;
     errmsg << "Error loading program: " << probe_.name

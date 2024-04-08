@@ -95,15 +95,12 @@ private:
 
 class HelperVerifierError : public std::runtime_error {
 public:
-  const libbpf::bpf_func_id func_id_;
-  const std::string helper_name_;
-  explicit HelperVerifierError(libbpf::bpf_func_id func_id,
-                               std::string helper_name)
-      : std::runtime_error("helper invalid in probe"),
-        func_id_(func_id),
-        helper_name_(helper_name)
+  HelperVerifierError(const std::string &msg, libbpf::bpf_func_id func_id_)
+      : std::runtime_error(msg), func_id(func_id_)
   {
   }
+
+  const libbpf::bpf_func_id func_id;
 };
 
 } // namespace bpftrace

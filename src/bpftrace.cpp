@@ -960,11 +960,10 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     // Caller will handle
     throw e;
   } catch (const HelperVerifierError &e) {
-    if (helper_use_loc_.find(e.func_id_) != helper_use_loc_.end()) {
-      LOG(ERROR, helper_use_loc_[e.func_id_], std::cerr)
-          << "helper " << e.helper_name_ << " not supported in probe";
+    if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
+      LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
     } else {
-      LOG(ERROR) << "helper " << e.helper_name_ << " not supported in probe";
+      LOG(ERROR) << e.what();
     }
   } catch (const std::runtime_error &e) {
     LOG(ERROR) << e.what();
