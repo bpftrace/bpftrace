@@ -64,6 +64,43 @@ add_executable(${BPFTRACE}
 )
 target_include_directories(${BPFTRACE} PUBLIC ${CMAKE_BINARY_DIR}/src)
 
+# TODO: Add support for using "system" blazesym and linking dynamically. Then,
+#       also honor `STATIC_LINKING` properly.
+if (USE_BLAZESYM)
+  #if (NOT STATIC_LINKING)
+  #  # It's not a strict requirement (we could just link *only* blazesym
+  #  # statically), but for now we enforce program-wide static linking.
+  #  message(FATAL_ERROR "blazesym usage requires static linking; consider setting STATIC_LINKING")
+  #endif()
+
+  include(FetchContent)
+  set(FETCHCONTENT_QUIET TRUE)
+
+  FetchContent_Declare(
+      Corrosion
+      GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+      GIT_TAG v0.5.0
+  )
+  FetchContent_MakeAvailable(Corrosion)
+
+  FetchContent_Declare(
+    blazesym
+    GIT_REPOSITORY https://github.com/libbpf/blazesym.git
+    GIT_TAG capi-v0.1.0-rc.1
+  )
+  FetchContent_MakeAvailable(blazesym)
+
+  corrosion_import_crate(
+    MANIFEST_PATH ${blazesym_SOURCE_DIR}/Cargo.toml
+    CRATE_TYPES staticlib
+    CRATES blazesym-c
+  )
+
+  target_compile_definitions(runtime PRIVATE USE_BLAZESYM=${USE_BLAZESYM})
+  target_include_directories(runtime PRIVATE ${blazesym_SOURCE_DIR}/capi/include)
+  target_link_libraries(runtime blazesym_c)
+endif()
+
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
 
