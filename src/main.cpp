@@ -669,9 +669,13 @@ Args parse_args(int argc, char* argv[])
     if (optind == argc) {
       args.search = "*:*";
     } else if (optind == argc - 1) {
-      args.search = argv[optind];
-      if (args.search == "*") {
+      std::string_view val(argv[optind]);
+      if (val == "*") {
         args.search = "*:*";
+      } else if (val.find_first_of(":*") != std::string::npos) {
+        args.search = val;
+      } else {
+        args.filename = val;
       }
       optind++;
     } else {
