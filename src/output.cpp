@@ -241,12 +241,18 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
 {
   uint32_t nvalues = is_per_cpu ? bpftrace.ncpus_ : 1;
   if (type.IsKstackTy())
-    return bpftrace.get_stack(
-        read_data<uint64_t>(value.data()), -1, -1, false, type.stack_type, 8);
+    return bpftrace.get_stack(read_data<uint64_t>(value.data()),
+                              read_data<uint32_t>(value.data() + 8),
+                              -1,
+                              -1,
+                              false,
+                              type.stack_type,
+                              8);
   else if (type.IsUstackTy())
     return bpftrace.get_stack(read_data<int64_t>(value.data()),
-                              read_data<int32_t>(value.data() + 8),
+                              read_data<uint32_t>(value.data() + 8),
                               read_data<int32_t>(value.data() + 12),
+                              read_data<int32_t>(value.data() + 16),
                               true,
                               type.stack_type,
                               8);

@@ -78,12 +78,18 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       }
       break;
     case Type::kstack:
-      return bpftrace.get_stack(
-          read_data<int64_t>(data), -1, -1, false, arg.stack_type, 4);
+      return bpftrace.get_stack(read_data<int64_t>(data),
+                                read_data<uint32_t>(arg_data + 8),
+                                -1,
+                                -1,
+                                false,
+                                arg.stack_type,
+                                4);
     case Type::ustack:
       return bpftrace.get_stack(read_data<int64_t>(data),
-                                read_data<int32_t>(arg_data + 8),
+                                read_data<uint32_t>(arg_data + 8),
                                 read_data<int32_t>(arg_data + 12),
+                                read_data<int32_t>(arg_data + 16),
                                 true,
                                 arg.stack_type,
                                 4);

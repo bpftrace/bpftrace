@@ -12,212 +12,243 @@ target triple = "bpf-pc-linux"
 %"struct map_t.5" = type { i8*, i8*, i8*, i8* }
 %"struct map_t.6" = type { i8*, i8* }
 %"struct map_t.7" = type { i8*, i8*, i8*, i8* }
-%stack_t = type { i64, i32, i32 }
+%stack_t = type { i64, i32, i32, i32 }
+%stack_key = type { i64, i32 }
 
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @AT_z = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !27
 @stack_perf_127 = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !29
-@stack_bpftrace_6 = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !48
-@stack_bpftrace_127 = dso_local global %"struct map_t.4" zeroinitializer, section ".maps", !dbg !57
-@stack_scratch = dso_local global %"struct map_t.5" zeroinitializer, section ".maps", !dbg !59
-@ringbuf = dso_local global %"struct map_t.6" zeroinitializer, section ".maps", !dbg !70
-@ringbuf_loss_counter = dso_local global %"struct map_t.7" zeroinitializer, section ".maps", !dbg !84
+@stack_bpftrace_6 = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !53
+@stack_bpftrace_127 = dso_local global %"struct map_t.4" zeroinitializer, section ".maps", !dbg !62
+@stack_scratch = dso_local global %"struct map_t.5" zeroinitializer, section ".maps", !dbg !64
+@ringbuf = dso_local global %"struct map_t.6" zeroinitializer, section ".maps", !dbg !75
+@ringbuf_loss_counter = dso_local global %"struct map_t.7" zeroinitializer, section ".maps", !dbg !89
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !98 {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !103 {
 entry:
   %"@z_key" = alloca i64, align 8
   %stack_args31 = alloca %stack_t, align 8
   %lookup_stack_scratch_key21 = alloca i32, align 4
-  %stackid18 = alloca i64, align 8
+  %stack_key18 = alloca %stack_key, align 8
   %"@y_key" = alloca i64, align 8
   %stack_args15 = alloca %stack_t, align 8
   %lookup_stack_scratch_key5 = alloca i32, align 4
-  %stackid2 = alloca i64, align 8
+  %stack_key2 = alloca %stack_key, align 8
   %"@x_key" = alloca i64, align 8
   %stack_args = alloca %stack_t, align 8
   %lookup_stack_scratch_key = alloca i32, align 4
-  %stackid = alloca i64, align 8
-  %1 = bitcast i64* %stackid to i8*
+  %stack_key = alloca %stack_key, align 8
+  %1 = bitcast %stack_key* %stack_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast i32* %lookup_stack_scratch_key to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
+  %2 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 0
+  store i64 0, i64* %2, align 8
+  %3 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 1
+  store i32 0, i32* %3, align 4
+  %4 = bitcast i32* %lookup_stack_scratch_key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
   store i32 0, i32* %lookup_stack_scratch_key, align 4
   %lookup_stack_scratch_map = call [127 x i64]* inttoptr (i64 1 to [127 x i64]* (%"struct map_t.5"*, i32*)*)(%"struct map_t.5"* @stack_scratch, i32* %lookup_stack_scratch_key)
-  %3 = bitcast i32* %lookup_stack_scratch_key to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
-  %lookup_stack_scratch_cond = icmp ne i8* %4, null
+  %5 = bitcast i32* %lookup_stack_scratch_key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
+  %6 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
+  %lookup_stack_scratch_cond = icmp ne i8* %6, null
   br i1 %lookup_stack_scratch_cond, label %lookup_stack_scratch_merge, label %lookup_stack_scratch_failure
 
 stack_scratch_failure:                            ; preds = %lookup_stack_scratch_failure
-  store i64 0, i64* %stackid, align 8
   br label %merge_block
 
 merge_block:                                      ; preds = %stack_scratch_failure, %get_stack_success, %get_stack_fail
-  %5 = bitcast %stack_t* %stack_args to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  %6 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 0
-  %7 = load i64, i64* %stackid, align 8
-  store i64 %7, i64* %6, align 8
-  %8 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 1
+  %7 = bitcast %stack_t* %stack_args to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 0
+  %9 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 0
+  %10 = load i64, i64* %8, align 8
+  store i64 %10, i64* %9, align 8
+  %11 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 1
+  %12 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 1
+  %13 = load i32, i32* %11, align 4
+  store i32 %13, i32* %12, align 4
+  %14 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 2
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
-  %9 = trunc i64 %get_pid_tgid to i32
-  store i32 %9, i32* %8, align 4
-  %10 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 2
-  store i32 0, i32* %10, align 4
-  %11 = bitcast i64* %stackid to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  %15 = trunc i64 %get_pid_tgid to i32
+  store i32 %15, i32* %14, align 4
+  %16 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 3
+  store i32 0, i32* %16, align 4
+  %17 = bitcast %stack_key* %stack_key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
+  %18 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
   store i64 0, i64* %"@x_key", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %stack_t*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", %stack_t* %stack_args, i64 0)
-  %13 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  %14 = bitcast i64* %stackid2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
-  %15 = bitcast i32* %lookup_stack_scratch_key5 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
+  %19 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
+  %20 = bitcast %stack_key* %stack_key2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %20)
+  %21 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 0
+  store i64 0, i64* %21, align 8
+  %22 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 1
+  store i32 0, i32* %22, align 4
+  %23 = bitcast i32* %lookup_stack_scratch_key5 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
   store i32 0, i32* %lookup_stack_scratch_key5, align 4
   %lookup_stack_scratch_map6 = call [6 x i64]* inttoptr (i64 1 to [6 x i64]* (%"struct map_t.5"*, i32*)*)(%"struct map_t.5"* @stack_scratch, i32* %lookup_stack_scratch_key5)
-  %16 = bitcast i32* %lookup_stack_scratch_key5 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
-  %lookup_stack_scratch_cond9 = icmp ne i8* %17, null
+  %24 = bitcast i32* %lookup_stack_scratch_key5 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
+  %25 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
+  %lookup_stack_scratch_cond9 = icmp ne i8* %25, null
   br i1 %lookup_stack_scratch_cond9, label %lookup_stack_scratch_merge8, label %lookup_stack_scratch_failure7
 
 lookup_stack_scratch_failure:                     ; preds = %entry
   br label %stack_scratch_failure
 
 lookup_stack_scratch_merge:                       ; preds = %entry
-  %18 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %18, i8 0, i64 1016, i1 false)
-  %19 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
-  %get_stack = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %19, i32 1016, i64 256)
-  %20 = icmp sge i32 %get_stack, 0
-  br i1 %20, label %get_stack_success, label %get_stack_fail
+  %26 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %26, i8 0, i64 1016, i1 false)
+  %27 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
+  %get_stack = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %27, i32 1016, i64 256)
+  %28 = icmp sge i32 %get_stack, 0
+  br i1 %28, label %get_stack_success, label %get_stack_fail
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
-  %21 = udiv i32 %get_stack, 8
-  %22 = trunc i32 %21 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(i8* %19, i8 %22, i64 1)
-  store i64 %murmur_hash_2, i64* %stackid, align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t.4"*, i64*, [127 x i64]*, i64)*)(%"struct map_t.4"* @stack_bpftrace_127, i64* %stackid, [127 x i64]* %lookup_stack_scratch_map, i64 0)
+  %29 = udiv i32 %get_stack, 8
+  %30 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 1
+  store i32 %29, i32* %30, align 4
+  %31 = trunc i32 %29 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(i8* %27, i8 %31, i64 1)
+  %32 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, i64* %32, align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t.4"*, %stack_key*, [127 x i64]*, i64)*)(%"struct map_t.4"* @stack_bpftrace_127, %stack_key* %stack_key, [127 x i64]* %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
 get_stack_fail:                                   ; preds = %lookup_stack_scratch_merge
-  store i64 0, i64* %stackid, align 8
   br label %merge_block
 
 stack_scratch_failure3:                           ; preds = %lookup_stack_scratch_failure7
-  store i64 0, i64* %stackid2, align 8
   br label %merge_block4
 
 merge_block4:                                     ; preds = %stack_scratch_failure3, %get_stack_success10, %get_stack_fail11
-  %23 = bitcast %stack_t* %stack_args15 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
-  %24 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 0
-  %25 = load i64, i64* %stackid2, align 8
-  store i64 %25, i64* %24, align 8
-  %26 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 1
+  %33 = bitcast %stack_t* %stack_args15 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %33)
+  %34 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 0
+  %35 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 0
+  %36 = load i64, i64* %34, align 8
+  store i64 %36, i64* %35, align 8
+  %37 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 1
+  %38 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 1
+  %39 = load i32, i32* %37, align 4
+  store i32 %39, i32* %38, align 4
+  %40 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 2
   %get_pid_tgid16 = call i64 inttoptr (i64 14 to i64 ()*)()
-  %27 = trunc i64 %get_pid_tgid16 to i32
-  store i32 %27, i32* %26, align 4
-  %28 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 2
-  store i32 0, i32* %28, align 4
-  %29 = bitcast i64* %stackid2 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %29)
-  %30 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %30)
+  %41 = trunc i64 %get_pid_tgid16 to i32
+  store i32 %41, i32* %40, align 4
+  %42 = getelementptr %stack_t, %stack_t* %stack_args15, i64 0, i32 3
+  store i32 0, i32* %42, align 4
+  %43 = bitcast %stack_key* %stack_key2 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %43)
+  %44 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %44)
   store i64 0, i64* %"@y_key", align 8
   %update_elem17 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, %stack_t*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", %stack_t* %stack_args15, i64 0)
-  %31 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %31)
-  %32 = bitcast i64* %stackid18 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %32)
-  %33 = bitcast i32* %lookup_stack_scratch_key21 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %33)
+  %45 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %45)
+  %46 = bitcast %stack_key* %stack_key18 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %46)
+  %47 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 0
+  store i64 0, i64* %47, align 8
+  %48 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 1
+  store i32 0, i32* %48, align 4
+  %49 = bitcast i32* %lookup_stack_scratch_key21 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %49)
   store i32 0, i32* %lookup_stack_scratch_key21, align 4
   %lookup_stack_scratch_map22 = call [127 x i64]* inttoptr (i64 1 to [127 x i64]* (%"struct map_t.5"*, i32*)*)(%"struct map_t.5"* @stack_scratch, i32* %lookup_stack_scratch_key21)
-  %34 = bitcast i32* %lookup_stack_scratch_key21 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %34)
-  %35 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
-  %lookup_stack_scratch_cond25 = icmp ne i8* %35, null
+  %50 = bitcast i32* %lookup_stack_scratch_key21 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %50)
+  %51 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
+  %lookup_stack_scratch_cond25 = icmp ne i8* %51, null
   br i1 %lookup_stack_scratch_cond25, label %lookup_stack_scratch_merge24, label %lookup_stack_scratch_failure23
 
 lookup_stack_scratch_failure7:                    ; preds = %merge_block
   br label %stack_scratch_failure3
 
 lookup_stack_scratch_merge8:                      ; preds = %merge_block
-  %36 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %36, i8 0, i64 48, i1 false)
-  %37 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
-  %get_stack12 = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %37, i32 48, i64 256)
-  %38 = icmp sge i32 %get_stack12, 0
-  br i1 %38, label %get_stack_success10, label %get_stack_fail11
+  %52 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %52, i8 0, i64 48, i1 false)
+  %53 = bitcast [6 x i64]* %lookup_stack_scratch_map6 to i8*
+  %get_stack12 = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %53, i32 48, i64 256)
+  %54 = icmp sge i32 %get_stack12, 0
+  br i1 %54, label %get_stack_success10, label %get_stack_fail11
 
 get_stack_success10:                              ; preds = %lookup_stack_scratch_merge8
-  %39 = udiv i32 %get_stack12, 8
-  %40 = trunc i32 %39 to i8
-  %murmur_hash_213 = call i64 @murmur_hash_2(i8* %37, i8 %40, i64 1)
-  store i64 %murmur_hash_213, i64* %stackid2, align 8
-  %update_elem14 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.3"*, i64*, [6 x i64]*, i64)*)(%"struct map_t.3"* @stack_bpftrace_6, i64* %stackid2, [6 x i64]* %lookup_stack_scratch_map6, i64 0)
+  %55 = udiv i32 %get_stack12, 8
+  %56 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 1
+  store i32 %55, i32* %56, align 4
+  %57 = trunc i32 %55 to i8
+  %murmur_hash_213 = call i64 @murmur_hash_2(i8* %53, i8 %57, i64 1)
+  %58 = getelementptr %stack_key, %stack_key* %stack_key2, i64 0, i32 0
+  store i64 %murmur_hash_213, i64* %58, align 8
+  %update_elem14 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.3"*, %stack_key*, [6 x i64]*, i64)*)(%"struct map_t.3"* @stack_bpftrace_6, %stack_key* %stack_key2, [6 x i64]* %lookup_stack_scratch_map6, i64 0)
   br label %merge_block4
 
 get_stack_fail11:                                 ; preds = %lookup_stack_scratch_merge8
-  store i64 0, i64* %stackid2, align 8
   br label %merge_block4
 
 stack_scratch_failure19:                          ; preds = %lookup_stack_scratch_failure23
-  store i64 0, i64* %stackid18, align 8
   br label %merge_block20
 
 merge_block20:                                    ; preds = %stack_scratch_failure19, %get_stack_success26, %get_stack_fail27
-  %41 = bitcast %stack_t* %stack_args31 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %41)
-  %42 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 0
-  %43 = load i64, i64* %stackid18, align 8
-  store i64 %43, i64* %42, align 8
-  %44 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 1
+  %59 = bitcast %stack_t* %stack_args31 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %59)
+  %60 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 0
+  %61 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 0
+  %62 = load i64, i64* %60, align 8
+  store i64 %62, i64* %61, align 8
+  %63 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 1
+  %64 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 1
+  %65 = load i32, i32* %63, align 4
+  store i32 %65, i32* %64, align 4
+  %66 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 2
   %get_pid_tgid32 = call i64 inttoptr (i64 14 to i64 ()*)()
-  %45 = trunc i64 %get_pid_tgid32 to i32
-  store i32 %45, i32* %44, align 4
-  %46 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 2
-  store i32 0, i32* %46, align 4
-  %47 = bitcast i64* %stackid18 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %47)
-  %48 = bitcast i64* %"@z_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %48)
+  %67 = trunc i64 %get_pid_tgid32 to i32
+  store i32 %67, i32* %66, align 4
+  %68 = getelementptr %stack_t, %stack_t* %stack_args31, i64 0, i32 3
+  store i32 0, i32* %68, align 4
+  %69 = bitcast %stack_key* %stack_key18 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %69)
+  %70 = bitcast i64* %"@z_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %70)
   store i64 0, i64* %"@z_key", align 8
   %update_elem33 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.1"*, i64*, %stack_t*, i64)*)(%"struct map_t.1"* @AT_z, i64* %"@z_key", %stack_t* %stack_args31, i64 0)
-  %49 = bitcast i64* %"@z_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %49)
+  %71 = bitcast i64* %"@z_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %71)
   ret i64 0
 
 lookup_stack_scratch_failure23:                   ; preds = %merge_block4
   br label %stack_scratch_failure19
 
 lookup_stack_scratch_merge24:                     ; preds = %merge_block4
-  %50 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %50, i8 0, i64 1016, i1 false)
-  %51 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
-  %get_stack28 = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %51, i32 1016, i64 256)
-  %52 = icmp sge i32 %get_stack28, 0
-  br i1 %52, label %get_stack_success26, label %get_stack_fail27
+  %72 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %72, i8 0, i64 1016, i1 false)
+  %73 = bitcast [127 x i64]* %lookup_stack_scratch_map22 to i8*
+  %get_stack28 = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %73, i32 1016, i64 256)
+  %74 = icmp sge i32 %get_stack28, 0
+  br i1 %74, label %get_stack_success26, label %get_stack_fail27
 
 get_stack_success26:                              ; preds = %lookup_stack_scratch_merge24
-  %53 = udiv i32 %get_stack28, 8
-  %54 = trunc i32 %53 to i8
-  %murmur_hash_229 = call i64 @murmur_hash_2(i8* %51, i8 %54, i64 1)
-  store i64 %murmur_hash_229, i64* %stackid18, align 8
-  %update_elem30 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.2"*, i64*, [127 x i64]*, i64)*)(%"struct map_t.2"* @stack_perf_127, i64* %stackid18, [127 x i64]* %lookup_stack_scratch_map22, i64 0)
+  %75 = udiv i32 %get_stack28, 8
+  %76 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 1
+  store i32 %75, i32* %76, align 4
+  %77 = trunc i32 %75 to i8
+  %murmur_hash_229 = call i64 @murmur_hash_2(i8* %73, i8 %77, i64 1)
+  %78 = getelementptr %stack_key, %stack_key* %stack_key18, i64 0, i32 0
+  store i64 %murmur_hash_229, i64* %78, align 8
+  %update_elem30 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.2"*, %stack_key*, [127 x i64]*, i64)*)(%"struct map_t.2"* @stack_perf_127, %stack_key* %stack_key18, [127 x i64]* %lookup_stack_scratch_map22, i64 0)
   br label %merge_block20
 
 get_stack_fail27:                                 ; preds = %lookup_stack_scratch_merge24
-  store i64 0, i64* %stackid18, align 8
   br label %merge_block20
 }
 
@@ -319,8 +350,8 @@ attributes #1 = { alwaysinline }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn }
 attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
-!llvm.dbg.cu = !{!94}
-!llvm.module.flags = !{!97}
+!llvm.dbg.cu = !{!99}
+!llvm.module.flags = !{!102}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -343,10 +374,10 @@ attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !18 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 128, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 160, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 16, lowerBound: 0)
+!24 = !DISubrange(count: 20, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "AT_y", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !27 = !DIGlobalVariableExpression(var: !28, expr: !DIExpression())
@@ -354,7 +385,7 @@ attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression())
 !30 = distinct !DIGlobalVariable(name: "stack_perf_127", linkageName: "global", scope: !2, file: !2, type: !31, isLocal: false, isDefinition: true)
 !31 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !32)
-!32 = !{!33, !38, !16, !43}
+!32 = !{!33, !38, !43, !48}
 !33 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !34, size: 64)
 !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 64)
 !35 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 288, elements: !36)
@@ -365,65 +396,70 @@ attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !40 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 4194304, elements: !41)
 !41 = !{!42}
 !42 = !DISubrange(count: 131072, lowerBound: 0)
-!43 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !44, size: 64, offset: 192)
+!43 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !44, size: 64, offset: 128)
 !44 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)
-!45 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 8128, elements: !46)
+!45 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 96, elements: !46)
 !46 = !{!47}
-!47 = !DISubrange(count: 127, lowerBound: 0)
-!48 = !DIGlobalVariableExpression(var: !49, expr: !DIExpression())
-!49 = distinct !DIGlobalVariable(name: "stack_bpftrace_6", linkageName: "global", scope: !2, file: !2, type: !50, isLocal: false, isDefinition: true)
-!50 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !51)
-!51 = !{!33, !38, !16, !52}
-!52 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !53, size: 64, offset: 192)
-!53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
-!54 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 384, elements: !55)
-!55 = !{!56}
-!56 = !DISubrange(count: 6, lowerBound: 0)
-!57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
-!58 = distinct !DIGlobalVariable(name: "stack_bpftrace_127", linkageName: "global", scope: !2, file: !2, type: !31, isLocal: false, isDefinition: true)
-!59 = !DIGlobalVariableExpression(var: !60, expr: !DIExpression())
-!60 = distinct !DIGlobalVariable(name: "stack_scratch", linkageName: "global", scope: !2, file: !2, type: !61, isLocal: false, isDefinition: true)
-!61 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !62)
-!62 = !{!63, !66, !67, !43}
-!63 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !64, size: 64)
-!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !65, size: 64)
-!65 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !55)
-!66 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !6, size: 64, offset: 64)
-!67 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !68, size: 64, offset: 128)
-!68 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !69, size: 64)
-!69 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!70 = !DIGlobalVariableExpression(var: !71, expr: !DIExpression())
-!71 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !72, isLocal: false, isDefinition: true)
-!72 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !73)
-!73 = !{!74, !79}
-!74 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !75, size: 64)
-!75 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !76, size: 64)
-!76 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 864, elements: !77)
-!77 = !{!78}
-!78 = !DISubrange(count: 27, lowerBound: 0)
-!79 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !80, size: 64, offset: 64)
+!47 = !DISubrange(count: 12, lowerBound: 0)
+!48 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !49, size: 64, offset: 192)
+!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
+!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 8128, elements: !51)
+!51 = !{!52}
+!52 = !DISubrange(count: 127, lowerBound: 0)
+!53 = !DIGlobalVariableExpression(var: !54, expr: !DIExpression())
+!54 = distinct !DIGlobalVariable(name: "stack_bpftrace_6", linkageName: "global", scope: !2, file: !2, type: !55, isLocal: false, isDefinition: true)
+!55 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !56)
+!56 = !{!33, !38, !43, !57}
+!57 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !58, size: 64, offset: 192)
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)
+!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 384, elements: !60)
+!60 = !{!61}
+!61 = !DISubrange(count: 6, lowerBound: 0)
+!62 = !DIGlobalVariableExpression(var: !63, expr: !DIExpression())
+!63 = distinct !DIGlobalVariable(name: "stack_bpftrace_127", linkageName: "global", scope: !2, file: !2, type: !31, isLocal: false, isDefinition: true)
+!64 = !DIGlobalVariableExpression(var: !65, expr: !DIExpression())
+!65 = distinct !DIGlobalVariable(name: "stack_scratch", linkageName: "global", scope: !2, file: !2, type: !66, isLocal: false, isDefinition: true)
+!66 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !67)
+!67 = !{!68, !71, !72, !48}
+!68 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !69, size: 64)
+!69 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !70, size: 64)
+!70 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !60)
+!71 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !6, size: 64, offset: 64)
+!72 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !73, size: 64, offset: 128)
+!73 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !74, size: 64)
+!74 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
+!75 = !DIGlobalVariableExpression(var: !76, expr: !DIExpression())
+!76 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !77, isLocal: false, isDefinition: true)
+!77 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !78)
+!78 = !{!79, !84}
+!79 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !80, size: 64)
 !80 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !81, size: 64)
-!81 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 8388608, elements: !82)
+!81 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 864, elements: !82)
 !82 = !{!83}
-!83 = !DISubrange(count: 262144, lowerBound: 0)
-!84 = !DIGlobalVariableExpression(var: !85, expr: !DIExpression())
-!85 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !86, isLocal: false, isDefinition: true)
-!86 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !87)
-!87 = !{!88, !66, !67, !93}
-!88 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !89, size: 64)
-!89 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !90, size: 64)
-!90 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !91)
-!91 = !{!92}
-!92 = !DISubrange(count: 2, lowerBound: 0)
-!93 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !17, size: 64, offset: 192)
-!94 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !95, globals: !96)
-!95 = !{}
-!96 = !{!0, !25, !27, !29, !48, !57, !59, !70, !84}
-!97 = !{i32 2, !"Debug Info Version", i32 3}
-!98 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !99, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !94, retainedNodes: !102)
-!99 = !DISubroutineType(types: !100)
-!100 = !{!18, !101}
-!101 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
-!102 = !{!103, !104}
-!103 = !DILocalVariable(name: "var0", scope: !98, file: !2, type: !18)
-!104 = !DILocalVariable(name: "var1", arg: 1, scope: !98, file: !2, type: !101)
+!83 = !DISubrange(count: 27, lowerBound: 0)
+!84 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !85, size: 64, offset: 64)
+!85 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !86, size: 64)
+!86 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 8388608, elements: !87)
+!87 = !{!88}
+!88 = !DISubrange(count: 262144, lowerBound: 0)
+!89 = !DIGlobalVariableExpression(var: !90, expr: !DIExpression())
+!90 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !91, isLocal: false, isDefinition: true)
+!91 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !92)
+!92 = !{!93, !71, !72, !98}
+!93 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !94, size: 64)
+!94 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !95, size: 64)
+!95 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !96)
+!96 = !{!97}
+!97 = !DISubrange(count: 2, lowerBound: 0)
+!98 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !17, size: 64, offset: 192)
+!99 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !100, globals: !101)
+!100 = !{}
+!101 = !{!0, !25, !27, !29, !53, !62, !64, !75, !89}
+!102 = !{i32 2, !"Debug Info Version", i32 3}
+!103 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !104, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !99, retainedNodes: !107)
+!104 = !DISubroutineType(types: !105)
+!105 = !{!18, !106}
+!106 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+!107 = !{!108, !109}
+!108 = !DILocalVariable(name: "var0", scope: !103, file: !2, type: !18)
+!109 = !DILocalVariable(name: "var1", arg: 1, scope: !103, file: !2, type: !106)
