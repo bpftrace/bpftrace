@@ -3386,6 +3386,13 @@ TEST(semantic_analyser, for_loop_map)
   test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv.1); } }");
 }
 
+TEST(semantic_analyser, for_loop_map_declared_after)
+{
+  // Regression test: What happens with @map[$kv.0] when @map hasn't been
+  // defined yet?
+  test("BEGIN { for ($kv : @map) { @map[$kv.0] } @map[0] = 1; }");
+}
+
 TEST(semantic_analyser, for_loop_map_no_key)
 {
   // Error location is incorrect: #3063
