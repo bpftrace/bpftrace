@@ -2083,16 +2083,17 @@ void SemanticAnalyser::visit(For &f)
         << "Maps used as for-loop expressions must have keys to iterate over";
   }
 
-  if (mapval && mapkey) {
-    auto keytype = CreateNone();
-    if (mapkey->args_.size() == 1) {
-      keytype = mapkey->args_[0];
-    } else {
-      keytype = CreateTuple(bpftrace_.structs.AddTuple(mapkey->args_));
-    }
-    f.decl->type = CreateTuple(
-        bpftrace_.structs.AddTuple({ keytype, *mapval }));
+  if (!mapval || !mapkey)
+    return;
+
+  auto keytype = CreateNone();
+  if (mapkey->args_.size() == 1) {
+    keytype = mapkey->args_[0];
+  } else {
+    keytype = CreateTuple(bpftrace_.structs.AddTuple(mapkey->args_));
   }
+  f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ keytype, *mapval }));
+
   variable_val_[scope_][decl_name] = f.decl->type;
 
   loop_depth_++;
