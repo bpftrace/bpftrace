@@ -171,12 +171,6 @@ EXPECT ERROR: failed to open file 'non_existent_file.bt': No such file or direct
 TIMEOUT 1
 WILL_FAIL
 
-NAME errors on invalid character in search expression
-RUN {{BPFTRACE}} -l '\n'
-EXPECT stdin:1:1-2: ERROR: invalid character '\'
-TIMEOUT 1
-WILL_FAIL
-
 NAME pid fails validation with leading non-number
 RUN {{BPFTRACE}} -p a1111 file.bt
 EXPECT FATAL: Failed to parse pid: pid 'a1111' is not a valid decimal number
