@@ -37,6 +37,7 @@
 #include "ast/elf_parser.h"
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
+#include "collect_nodes.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -4175,6 +4176,16 @@ Function *CodegenLLVM::createForEachMapCallback(
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }
 
+  // Collect a list of variables which are used in the loop without having been
+  // used before. This is a hack to simulate block scoping in the absence of the
+  // real thing (#3017).
+  CollectNodes<Variable> new_vars;
+  for (auto *stmt : stmts) {
+    new_vars.run(*stmt, [this](const auto &var) {
+      return variables_.find(var.ident) == variables_.end();
+    });
+  }
+
   // Create decl variable for use in this iteration of the loop
   variables_[decl.ident] = createTuple(
       decl.type, { { key, &decl.loc }, { val, &decl.loc } }, decl.ident);
@@ -4186,6 +4197,11 @@ Function *CodegenLLVM::createForEachMapCallback(
 
   // Decl variable is not valid beyond this for loop
   variables_.erase(decl.ident);
+
+  // Variables declared in a for-loop are not valid beyond it
+  for (const Variable &var : new_vars.nodes()) {
+    variables_.erase(var.ident);
+  }
 
   b_.restoreIP(saved_ip);
   return callback;
