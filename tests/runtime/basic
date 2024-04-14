@@ -158,9 +158,16 @@ EXPECT hardware:cache-misses:
 EXPECT tracepoint:xdp:mem_connect
 TIMEOUT 5
 
-NAME errors on invalid character in search expression
-RUN {{BPFTRACE}} -l '\n'
-EXPECT stdin:1:1-2: ERROR: invalid character '\'
+NAME it lists probes in a given file
+RUN {{BPFTRACE}} -l runtime/scripts/interval_order.bt
+EXPECT interval:ms:
+EXPECT interval:ms:
+EXPECT interval:ms:
+TIMEOUT 5
+
+NAME errors on non existent file
+RUN {{BPFTRACE}} -l non_existent_file.bt
+EXPECT ERROR: failed to open file 'non_existent_file.bt': No such file or directory
 TIMEOUT 1
 WILL_FAIL
 
