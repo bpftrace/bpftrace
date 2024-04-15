@@ -327,10 +327,38 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateGetCurrentComm(ctx_, buf, builtin.type.GetSize(), builtin.loc);
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  } else if (builtin.ident == "func") {
+    // kfunc/kretfunc probes do not have access to registers, so require use of
+    // the get_func_ip helper to get the instruction pointer.
+    //
+    // For [ku]retprobes, the IP register will not be pointing to the function
+    // we want to trace. It may point to a kernel trampoline, or it may point to
+    // the caller of the traced function, as it fires after the "ret"
+    // instruction has executed.
+    //
+    // The get_func_ip helper resolves these issues for us.
+    //
+    // But do not use the it for non-ret [ku]probes (which can be used with
+    // offsets), as the helper will fail for probes placed within a function
+    // (not at the entry).
+    auto probe_type = probetype(current_attach_point_->provider);
+    if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
+        probe_type == ProbeType::kretprobe ||
+        probe_type == ProbeType::uretprobe) {
+      expr_ = b_.CreateGetFuncIp(ctx_, builtin.loc);
+    } else {
+      expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
+    }
+
+    if (builtin.type.IsUsymTy()) {
+      expr_ = b_.CreateUSym(expr_, get_probe_id(), builtin.loc);
+      Value *expr = expr_;
+      expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
+    }
   } else if ((!builtin.ident.compare(0, 3, "arg") &&
               builtin.ident.size() == 4 && builtin.ident.at(3) >= '0' &&
               builtin.ident.at(3) <= '9') ||
-             builtin.ident == "retval" || builtin.ident == "func") {
+             builtin.ident == "retval") {
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.type.is_funcarg) {
@@ -348,12 +376,6 @@ void CodegenLLVM::visit(Builtin &builtin)
                                         bpftrace_.pid(),
                                         AddrSpace::user,
                                         builtin.loc);
-      return;
-    }
-
-    if (builtin.ident == "func" &&
-        (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)) {
-      expr_ = b_.CreateGetFuncIp(builtin.loc);
       return;
     }
 

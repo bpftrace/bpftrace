@@ -1203,9 +1203,21 @@ kretfunc:f { func }
 )",
              false);
 
-  MockBPFfeature nofeature(false);
-  test(nofeature, "kretprobe:f { func }");
-  test(nofeature, "uretprobe:/bin/sh:f { func }");
+  test_error("kretprobe:f { func }",
+             R"(
+stdin:1:15-19: ERROR: The 'func' builtin is not available for kretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
+kretprobe:f { func }
+              ~~~~
+)",
+             false);
+
+  test_error("uretprobe:/bin/sh:f { func }",
+             R"(
+stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
+uretprobe:/bin/sh:f { func }
+                      ~~~~
+)",
+             false);
 }
 
 TEST(semantic_analyser, call_probe)

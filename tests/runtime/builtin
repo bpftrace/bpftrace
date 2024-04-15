@@ -99,13 +99,12 @@ EXPECT func: 'vfs_read'
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
-# Disabled due to #68
 NAME func_kretprobe
 PROG kr:vfs_read { printf("func: '%s'\n", func); exit(); }
 EXPECT func: 'vfs_read'
 TIMEOUT 5
+REQUIRES_FEATURE get_func_ip
 AFTER ./testprogs/syscall read
-REQUIRES bash -c "exit 1"
 
 NAME func_uprobe
 PROG uprobe:./testprogs/uprobe_symres:test { printf("func: '%s'\n", func); exit(); }
@@ -113,13 +112,14 @@ EXPECT func: 'test'
 AFTER ./testprogs/uprobe_symres
 TIMEOUT 5
 
-# Disabled due to #2285
 NAME func_uretprobe
 PROG uretprobe:./testprogs/uprobe_symres:test { printf("func: '%s'\n", func); exit(); }
-EXPECT func: 'test'
+# Kernels from v5.15 to v6.5 include the get_func_ip helper, but it does not
+# work for uretprobes: it will always return 0.
+EXPECT_REGEX ^func: 'test'$|^func: '0'$
 AFTER ./testprogs/uprobe_symres
 TIMEOUT 5
-REQUIRES bash -c "exit 1"
+REQUIRES_FEATURE get_func_ip
 
 # Disabled, since BCC code it depends on is prone to race condition,
 # (https://github.com/iovisor/bcc/pull/4319#issuecomment-1321731687)
