@@ -108,7 +108,8 @@ class Runner(object):
             return nsenter_prefix + ret
         else:  # PROG
             use_json = "-q -f json" if test.expects[0].mode == "json" else ""
-            cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, test.prog)
+            escaped_prog = test.prog.replace("'", "'\\''")
+            cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, escaped_prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
                 return cmd + " --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(AOT_BIN)
