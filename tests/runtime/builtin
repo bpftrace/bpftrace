@@ -93,17 +93,33 @@ EXPECT_REGEX SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
-NAME func
-PROG k:vfs_read { printf("SUCCESS %s\n", func); exit(); }
-EXPECT_REGEX SUCCESS .*
+NAME func_kprobe
+PROG k:vfs_read { printf("func: '%s'\n", func); exit(); }
+EXPECT func: 'vfs_read'
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
-NAME func_uprobe
-PROG uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }
-EXPECT_REGEX SUCCESS .*
-AFTER ./testprogs/uprobe_negative_retval
+# Disabled due to #68
+NAME func_kretprobe
+PROG kr:vfs_read { printf("func: '%s'\n", func); exit(); }
+EXPECT func: 'vfs_read'
 TIMEOUT 5
+AFTER ./testprogs/syscall read
+REQUIRES bash -c "exit 1"
+
+NAME func_uprobe
+PROG uprobe:./testprogs/uprobe_symres:test { printf("func: '%s'\n", func); exit(); }
+EXPECT func: 'test'
+AFTER ./testprogs/uprobe_symres
+TIMEOUT 5
+
+# Disabled due to #2285
+NAME func_uretprobe
+PROG uretprobe:./testprogs/uprobe_symres:test { printf("func: '%s'\n", func); exit(); }
+EXPECT func: 'test'
+AFTER ./testprogs/uprobe_symres
+TIMEOUT 5
+REQUIRES bash -c "exit 1"
 
 # Disabled, since BCC code it depends on is prone to race condition,
 # (https://github.com/iovisor/bcc/pull/4319#issuecomment-1321731687)

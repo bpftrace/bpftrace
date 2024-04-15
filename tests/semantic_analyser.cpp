@@ -1173,6 +1173,39 @@ TEST(semantic_analyser, call_func)
   test("kprobe:f { printf(\"%s\", func);  }");
   test("uprobe:/bin/sh:f { @[func] = count(); }");
   test("uprobe:/bin/sh:f { printf(\"%s\", func);  }");
+
+  test("kfunc:f { func }");
+  test("kretfunc:f { func }");
+  test("kretprobe:f { func }");
+  test("uretprobe:/bin/sh:f { func }");
+
+  // We only care about the BPF_FUNC_get_func_ip feature and error message here,
+  // but don't have enough control over the mock features to only disable that.
+  test_error("kfunc:f { func }",
+             R"(
+stdin:1:1-8: ERROR: kfunc/kretfunc not available for your kernel version.
+kfunc:f { func }
+~~~~~~~
+stdin:1:11-15: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
+kfunc:f { func }
+          ~~~~
+)",
+             false);
+
+  test_error("kretfunc:f { func }",
+             R"(
+stdin:1:1-11: ERROR: kfunc/kretfunc not available for your kernel version.
+kretfunc:f { func }
+~~~~~~~~~~
+stdin:1:14-18: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
+kretfunc:f { func }
+             ~~~~
+)",
+             false);
+
+  MockBPFfeature nofeature(false);
+  test(nofeature, "kretprobe:f { func }");
+  test(nofeature, "uretprobe:/bin/sh:f { func }");
 }
 
 TEST(semantic_analyser, call_probe)
@@ -3204,7 +3237,6 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kretfunc:func_1 { $x = retval; }");
   test("kfunc:vmlinux:func_1 { 1 }");
   test("kfunc:*:func_1 { 1 }");
-  test("kfunc:func_1 { @[func] = 1; }");
 
   test_error("kretfunc:func_1 { $x = args.foo; }", R"(
 stdin:1:24-29: ERROR: Can't find function parameter foo
