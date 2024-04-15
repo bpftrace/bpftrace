@@ -476,8 +476,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           match_print = target + ":" + ap->lang + ":" + func;
         }
 
-        std::cout << probetypeName(probe_type) << ":" << match_print
-                  << std::endl;
+        std::cout << probe_type << ":" << match_print << std::endl;
         if (bt_verbose) {
           for (auto& param : param_lists[match])
             std::cout << "    " << param << std::endl;

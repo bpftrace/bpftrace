@@ -56,7 +56,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::usdt:      return BPF_PROBE_ENTRY;  break;
     default:
-      LOG(FATAL) << "invalid probe attachtype \"" << probetypeName(t) << "\"";
+      LOG(FATAL) << "invalid probe attachtype \"" << t << "\"";
   }
   // clang-format on
 }
@@ -221,8 +221,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_raw_tracepoint();
       break;
     default:
-      LOG(FATAL) << "invalid attached probe type \""
-                 << probetypeName(probe_.type) << "\"";
+      LOG(FATAL) << "invalid attached probe type \"" << probe_.type << "\"";
   }
 }
 
@@ -248,8 +247,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_uprobe(pid, safe_mode);
       break;
     default:
-      LOG(FATAL) << "invalid attached probe type \""
-                 << probetypeName(probe_.type) << "\"";
+      LOG(FATAL) << "invalid attached probe type \"" << probe_.type << "\"";
   }
 }
 
@@ -300,8 +298,8 @@ AttachedProbe::~AttachedProbe()
       err = detach_raw_tracepoint();
       break;
     case ProbeType::invalid:
-      LOG(FATAL) << "invalid attached probe type \""
-                 << probetypeName(probe_.type) << "\" at destructor";
+      LOG(FATAL) << "invalid attached probe type \"" << probe_.type
+                 << "\" at destructor";
   }
 
   if (err)
@@ -354,8 +352,7 @@ std::string AttachedProbe::eventname() const
     case ProbeType::tracepoint:
       return probe_.attach_point;
     default:
-      LOG(FATAL) << "invalid eventname probe \"" << probetypeName(probe_.type)
-                 << "\"";
+      LOG(FATAL) << "invalid eventname probe \"" << probe_.type << "\"";
   }
 }
 
@@ -419,7 +416,6 @@ static void check_alignment(std::string &path,
 {
   Disasm dasm(path);
   AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
-  std::string probe_name = probetypeName(type);
 
   std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
 
@@ -434,30 +430,29 @@ static void check_alignment(std::string &path,
       return;
     case AlignState::NotAlign:
       if (safe_mode)
-        LOG(FATAL) << "Could not add " << probe_name
+        LOG(FATAL) << "Could not add " << type
                    << " into middle of instruction: " << tmp;
       else
-        LOG(WARNING) << "Unsafe " + probe_name +
-                            " in the middle of the instruction: "
-                     << tmp;
+        LOG(WARNING) << "Unsafe " << type
+                     << " in the middle of the instruction: " << tmp;
       break;
 
     case AlignState::Fail:
       if (safe_mode)
-        LOG(FATAL) << "Failed to check if " << probe_name
+        LOG(FATAL) << "Failed to check if " << type
                    << " is in proper place: " << tmp;
       else
-        LOG(WARNING) << "Unchecked " + probe_name + ": " << tmp;
+        LOG(WARNING) << "Unchecked " << type << ": " << tmp;
       break;
 
     case AlignState::NotSupp:
       if (safe_mode)
-        LOG(FATAL) << "Can't check if " << probe_name
+        LOG(FATAL) << "Can't check if " << type
                    << " is in proper place (compiled without "
                       "(k|u)probe offset support): "
                    << tmp;
       else
-        LOG(WARNING) << "Unchecked " + probe_name + " : " << tmp;
+        LOG(WARNING) << "Unchecked " << type << " : " << tmp;
       break;
   }
 }

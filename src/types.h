@@ -538,7 +538,6 @@ ProbeType probetype(const std::string &type);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);
-std::string probetypeName(ProbeType t);
 
 struct Probe {
   ProbeType type;
