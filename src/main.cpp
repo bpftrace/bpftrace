@@ -96,7 +96,8 @@ void usage()
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
   std::cerr << "    --include FILE add an #include file before preprocessing" << std::endl;
-  std::cerr << "    -l [search]    list kernel probes or probes in a program" << std::endl;
+  std::cerr << "    -l [search|filename]" << std::endl;
+  std::cerr << "                   list kernel probes or probes in a program" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    --usdt-file-activation" << std::endl;

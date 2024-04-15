@@ -132,7 +132,7 @@ u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
 
 Same as '-k' but also includes the errors from 'probe_read_*'  BPF helpers.
 
-=== *-l* [_SEARCH_]
+=== *-l* [_SEARCH_|_FILENAME_]
 
 List all probes that match the _SEARCH_ pattern.
 If the pattern is omitted all probes will be listed.
@@ -3526,6 +3526,7 @@ combined with `-e` or filename args to see all the probes that a program would a
 # bpftrace -l 'kprobe:tcp*,trace
 # bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
 # bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
+# bpftrace -l my_script.bt
 # bpftrace -lv 'enum cpu_usage_stat'
 ----
 
