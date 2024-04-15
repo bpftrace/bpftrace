@@ -448,7 +448,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       LOG(ERROR, builtin.loc, err_)
           << "The args builtin can only be used with tracepoint/kfunc/uprobe"
-          << "probes (" << probetypeName(type) << " used here)";
+          << "probes (" << type << " used here)";
     }
   } else {
     builtin.type = CreateNone();

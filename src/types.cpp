@@ -21,6 +21,7 @@ std::ostream &operator<<(std::ostream &os, AddrSpace as)
   return os;
 }
 
+std::string probetypeName(ProbeType t);
 std::ostream &operator<<(std::ostream &os, ProbeType type)
 {
   os << probetypeName(type);
