@@ -4,6 +4,10 @@ This teaches you bpftrace for Linux in 12 easy lessons, where each lesson is a o
 
 Contributed by Brendan Gregg, Netflix (2018), based on his FreeBSD [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial).
 
+Note: bpftrace 0.19 changed the way probe arguments are accessed (using
+`args.xxx` instead of `args->xxx`). If you are using an older version of
+bpftrace, you will need to use `args->xxx` in the below examples.
+
 # Lesson 1. Listing Probes
 
 ```
