@@ -1141,7 +1141,10 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
     b_.CreateStore(b_.getInt64(0), len);
 
-    b_.CreateForEachMapElem(ctx_, map, createMapLenCallback(), len, call.loc);
+    if (!map_len_func_)
+      map_len_func_ = createMapLenCallback();
+
+    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, call.loc);
 
     expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
     b_.CreateLifetimeEnd(len);

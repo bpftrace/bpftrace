@@ -278,6 +278,7 @@ private:
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;
   Function *murmur_hash_2_func_ = nullptr;
+  Function *map_len_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
