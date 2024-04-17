@@ -77,35 +77,21 @@ static auto parse_probe(const std::string &str)
   return probe;
 }
 
-static const std::string uprobe_name(const std::string &path,
-                                     const std::string &attach_point,
-                                     uint64_t address,
-                                     uint64_t func_offset,
-                                     bool retprobe = false)
-{
-  auto provider = retprobe ? "uretprobe:" : "uprobe:";
-  if (attach_point.empty()) {
-    return provider + path + ":" + std::to_string(address);
-  } else {
-    auto str = func_offset ? "+" + std::to_string(func_offset) : "";
-    return provider + path + ":" + attach_point + str;
-  }
-}
-
 void check_uprobe(Probe &p,
                   const std::string &path,
                   const std::string &attach_point,
                   const std::string &orig_name,
+                  const std::string &name,
                   uint64_t address = 0,
                   uint64_t func_offset = 0)
 {
   bool retprobe = orig_name.find("uretprobe:") == 0 ||
                   orig_name.find("ur:") == 0;
   EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
+  EXPECT_EQ(path, p.path);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(uprobe_name(path, attach_point, address, func_offset, retprobe),
-            p.name);
+  EXPECT_EQ(name, p.name);
   EXPECT_EQ(address, p.address);
   EXPECT_EQ(func_offset, p.func_offset);
 }
@@ -366,8 +352,11 @@ TEST(bpftrace, add_probes_uprobe)
   ASSERT_EQ(0, bpftrace.add_probe(*probe));
   ASSERT_EQ(1U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
-  check_uprobe(
-      bpftrace.get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo");
+  check_uprobe(bpftrace.get_probes().at(0),
+               "/bin/sh",
+               "foo",
+               "uprobe:/bin/sh:foo",
+               "uprobe:/bin/sh:foo");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
@@ -386,10 +375,16 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:/bin/sh:*open";
-  check_uprobe(
-      bpftrace->get_probes().at(0), "/bin/sh", "first_open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(1), "/bin/sh", "second_open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "first_open",
+               probe_orig_name,
+               "uprobe:/bin/sh:first_open");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "second_open",
+               probe_orig_name,
+               "uprobe:/bin/sh:second_open");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
@@ -408,8 +403,11 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  check_uprobe(
-      bpftrace->get_probes().at(0), "/bin/sh", "*open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "*open",
+               probe_orig_name,
+               probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_file)
@@ -425,10 +423,16 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:/bin/*sh:first_open";
-  check_uprobe(
-      bpftrace->get_probes().at(0), "/bin/bash", "first_open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(1), "/bin/sh", "first_open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/bash",
+               "first_open",
+               probe_orig_name,
+               "uprobe:/bin/bash:first_open");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "first_open",
+               probe_orig_name,
+               "uprobe:/bin/sh:first_open");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_for_target)
@@ -446,16 +450,26 @@ TEST(bpftrace, add_probes_uprobe_wildcard_for_target)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:*:*open";
-  check_uprobe(
-      bpftrace->get_probes().at(0), "/bin/bash", "first_open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(1), "/bin/sh", "first_open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(2), "/bin/sh", "second_open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/bash",
+               "first_open",
+               probe_orig_name,
+               "uprobe:/bin/bash:first_open");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "first_open",
+               probe_orig_name,
+               "uprobe:/bin/sh:first_open");
+  check_uprobe(bpftrace->get_probes().at(2),
+               "/bin/sh",
+               "second_open",
+               probe_orig_name,
+               "uprobe:/bin/sh:second_open");
   check_uprobe(bpftrace->get_probes().at(3),
                "/proc/1234/exe",
                "third_open",
-               probe_orig_name);
+               probe_orig_name,
+               "uprobe:/proc/1234/exe:third_open");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_for_target_uprobe_multi)
@@ -473,12 +487,21 @@ TEST(bpftrace, add_probes_uprobe_wildcard_for_target_uprobe_multi)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:*:*open";
-  check_uprobe(
-      bpftrace->get_probes().at(0), "/proc/1234/exe", "*open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(1), "/bin/sh", "*open", probe_orig_name);
-  check_uprobe(
-      bpftrace->get_probes().at(2), "/bin/bash", "*open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/proc/1234/exe",
+               "*open",
+               probe_orig_name,
+               "uprobe:/proc/1234/exe:*open");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "*open",
+               probe_orig_name,
+               "uprobe:/bin/sh:*open");
+  check_uprobe(bpftrace->get_probes().at(2),
+               "/bin/bash",
+               "*open",
+               probe_orig_name,
+               "uprobe:/bin/bash:*open");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
@@ -507,8 +530,11 @@ TEST(bpftrace, add_probes_uprobe_string_literal)
   ASSERT_EQ(0, bpftrace.add_probe(*probe));
   ASSERT_EQ(1U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
-  check_uprobe(
-      bpftrace.get_probes().at(0), "/bin/sh", "foo*", "uprobe:/bin/sh:foo*");
+  check_uprobe(bpftrace.get_probes().at(0),
+               "/bin/sh",
+               "foo*",
+               "uprobe:/bin/sh:foo*",
+               "uprobe:/bin/sh:foo*");
 }
 
 TEST(bpftrace, add_probes_uprobe_address)
@@ -519,8 +545,12 @@ TEST(bpftrace, add_probes_uprobe_address)
   ASSERT_EQ(0, bpftrace.add_probe(*probe));
   ASSERT_EQ(1U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
-  check_uprobe(
-      bpftrace.get_probes().at(0), "/bin/sh", "", "uprobe:/bin/sh:1024", 1024);
+  check_uprobe(bpftrace.get_probes().at(0),
+               "/bin/sh",
+               "",
+               "uprobe:/bin/sh:1024",
+               "uprobe:/bin/sh:1024",
+               1024);
 }
 
 TEST(bpftrace, add_probes_uprobe_string_offset)
@@ -535,16 +565,16 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
                "/bin/sh",
                "foo",
                "uprobe:/bin/sh:foo+10",
+               "uprobe:/bin/sh:foo+10",
                0,
                10);
 }
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol)
 {
-  for (auto &provider : { "uprobe", "uretprobe" }) {
-    std::stringstream prog;
-    prog << provider << ":/bin/sh:cpp:cpp_mangled{}";
-    ast::Probe *probe = parse_probe(prog.str());
+  for (const std::string provider : { "uprobe", "uretprobe" }) {
+    std::string prog = provider + ":/bin/sh:cpp:cpp_mangled{}";
+    ast::Probe *probe = parse_probe(prog);
 
     auto bpftrace = get_strict_mock_bpftrace();
     EXPECT_CALL(*bpftrace->mock_probe_matcher,
@@ -554,17 +584,22 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
     ASSERT_EQ(0, bpftrace->add_probe(*probe));
     ASSERT_EQ(3U, bpftrace->get_probes().size());
     ASSERT_EQ(0U, bpftrace->get_special_probes().size());
-    auto orig_name = std::string(provider) + ":/bin/sh:cpp_mangled";
+    const auto orig_name = provider + ":/bin/sh:cpp_mangled";
     check_uprobe(bpftrace->get_probes().at(0),
-                 "/bin/sh:cpp",
+                 "/bin/sh",
                  "_Z11cpp_mangledi",
-                 orig_name);
+                 orig_name,
+                 provider + ":/bin/sh:cpp:_Z11cpp_mangledi");
     check_uprobe(bpftrace->get_probes().at(1),
-                 "/bin/sh:cpp",
+                 "/bin/sh",
                  "_Z11cpp_mangledv",
-                 orig_name);
-    check_uprobe(
-        bpftrace->get_probes().at(2), "/bin/sh:cpp", "cpp_mangled", orig_name);
+                 orig_name,
+                 provider + ":/bin/sh:cpp:_Z11cpp_mangledv");
+    check_uprobe(bpftrace->get_probes().at(2),
+                 "/bin/sh",
+                 "cpp_mangled",
+                 orig_name,
+                 provider + ":/bin/sh:cpp:cpp_mangled");
   }
 }
 
@@ -581,9 +616,10 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
   check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh:cpp",
+               "/bin/sh",
                "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp_mangled(int)");
+               "uprobe:/bin/sh:cpp_mangled(int)",
+               "uprobe:/bin/sh:cpp:_Z11cpp_mangledi");
 }
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
@@ -602,21 +638,25 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh:cpp",
+               "/bin/sh",
                "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp_man*");
+               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:_Z11cpp_mangledi");
   check_uprobe(bpftrace->get_probes().at(1),
-               "/bin/sh:cpp",
+               "/bin/sh",
                "_Z11cpp_mangledv",
-               "uprobe:/bin/sh:cpp_man*");
+               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:_Z11cpp_mangledv");
   check_uprobe(bpftrace->get_probes().at(2),
-               "/bin/sh:cpp",
+               "/bin/sh",
                "_Z18cpp_mangled_suffixv",
-               "uprobe:/bin/sh:cpp_man*");
+               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:_Z18cpp_mangled_suffixv");
   check_uprobe(bpftrace->get_probes().at(3),
-               "/bin/sh:cpp",
+               "/bin/sh",
                "cpp_mangled",
-               "uprobe:/bin/sh:cpp_man*");
+               "uprobe:/bin/sh:cpp_man*",
+               "uprobe:/bin/sh:cpp:cpp_mangled");
 }
 
 TEST(bpftrace, add_probes_uprobe_no_demangling)
@@ -635,6 +675,7 @@ TEST(bpftrace, add_probes_uprobe_no_demangling)
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh",
                "cpp_mangled",
+               "uprobe:/bin/sh:cpp_mangled",
                "uprobe:/bin/sh:cpp_mangled");
 }
 
