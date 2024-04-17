@@ -29,19 +29,6 @@ static const std::string kprobe_name(const std::string &attach_point,
   return "kprobe:" + attach_point + str;
 }
 
-void check_kprobe(Probe &p,
-                  const std::string &attach_point,
-                  const std::string &orig_name,
-                  uint64_t func_offset = 0,
-                  const std::string &target = "")
-{
-  EXPECT_EQ(ProbeType::kprobe, p.type);
-  EXPECT_EQ(attach_point, p.attach_point);
-  EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(kprobe_name(attach_point, target, func_offset), p.name);
-  EXPECT_EQ(func_offset, p.func_offset);
-}
-
 static auto make_probe(std::vector<ast::AttachPoint *> elems)
 {
   auto apl = new ast::AttachPointList(elems);
@@ -77,6 +64,31 @@ static auto parse_probe(const std::string &str)
   return probe;
 }
 
+void check_kprobe(Probe &p,
+                  const std::string &attach_point,
+                  const std::string &orig_name,
+                  uint64_t func_offset = 0,
+                  const std::string &target = "")
+{
+  EXPECT_EQ(ProbeType::kprobe, p.type);
+  EXPECT_EQ(attach_point, p.attach_point);
+  EXPECT_EQ(orig_name, p.orig_name);
+  EXPECT_EQ(kprobe_name(attach_point, target, func_offset), p.name);
+  EXPECT_EQ(func_offset, p.func_offset);
+  EXPECT_TRUE(p.funcs.empty());
+}
+
+void check_kprobe_multi(Probe &p,
+                        const std::vector<std::string> &funcs,
+                        const std::string &orig_name,
+                        const std::string &name)
+{
+  EXPECT_EQ(ProbeType::kprobe, p.type);
+  EXPECT_EQ(funcs, p.funcs);
+  EXPECT_EQ(orig_name, p.orig_name);
+  EXPECT_EQ(name, p.name);
+}
+
 void check_uprobe(Probe &p,
                   const std::string &path,
                   const std::string &attach_point,
@@ -94,6 +106,22 @@ void check_uprobe(Probe &p,
   EXPECT_EQ(name, p.name);
   EXPECT_EQ(address, p.address);
   EXPECT_EQ(func_offset, p.func_offset);
+  EXPECT_TRUE(p.funcs.empty());
+}
+
+void check_uprobe_multi(Probe &p,
+                        const std::string &path,
+                        const std::vector<std::string> &funcs,
+                        const std::string &orig_name,
+                        const std::string &name)
+{
+  bool retprobe = orig_name.find("uretprobe:") == 0 ||
+                  orig_name.find("ur:") == 0;
+  EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
+  EXPECT_EQ(path, p.path);
+  EXPECT_EQ(funcs, p.funcs);
+  EXPECT_EQ(orig_name, p.orig_name);
+  EXPECT_EQ(name, p.name);
 }
 
 void check_usdt(Probe &p,
@@ -276,7 +304,10 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
 
   std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
-  check_kprobe(bpftrace->get_probes().at(1), "my_*", probe_orig_name);
+  check_kprobe_multi(bpftrace->get_probes().at(1),
+                     { "my_one", "my_two" },
+                     probe_orig_name,
+                     "kprobe:my_*");
   check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
 }
 
@@ -403,11 +434,11 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
-               "*open",
-               probe_orig_name,
-               probe_orig_name);
+  check_uprobe_multi(bpftrace->get_probes().at(0),
+                     "/bin/sh",
+                     { "/bin/sh:first_open", "/bin/sh:second_open" },
+                     probe_orig_name,
+                     probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_file)
@@ -487,21 +518,21 @@ TEST(bpftrace, add_probes_uprobe_wildcard_for_target_uprobe_multi)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:*:*open";
-  check_uprobe(bpftrace->get_probes().at(0),
-               "/proc/1234/exe",
-               "*open",
-               probe_orig_name,
-               "uprobe:/proc/1234/exe:*open");
-  check_uprobe(bpftrace->get_probes().at(1),
-               "/bin/sh",
-               "*open",
-               probe_orig_name,
-               "uprobe:/bin/sh:*open");
-  check_uprobe(bpftrace->get_probes().at(2),
-               "/bin/bash",
-               "*open",
-               probe_orig_name,
-               "uprobe:/bin/bash:*open");
+  check_uprobe_multi(bpftrace->get_probes().at(0),
+                     "/proc/1234/exe",
+                     { "/proc/1234/exe:third_open" },
+                     probe_orig_name,
+                     "uprobe:/proc/1234/exe:*open");
+  check_uprobe_multi(bpftrace->get_probes().at(1),
+                     "/bin/sh",
+                     { "/bin/sh:first_open", "/bin/sh:second_open" },
+                     probe_orig_name,
+                     "uprobe:/bin/sh:*open");
+  check_uprobe_multi(bpftrace->get_probes().at(2),
+                     "/bin/bash",
+                     { "/bin/bash:first_open" },
+                     probe_orig_name,
+                     "uprobe:/bin/bash:*open");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
