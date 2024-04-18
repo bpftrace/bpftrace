@@ -730,6 +730,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
       case Type::kstack:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
+                      *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
                       -1,
                       -1,
                       false,
@@ -739,8 +740,9 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
       case Type::ustack:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
-                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 8),
+                      *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
                       *reinterpret_cast<int32_t *>(arg_data + arg.offset + 12),
+                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 16),
                       true,
                       arg.type.stack_type,
                       8)));
@@ -1757,21 +1759,23 @@ std::optional<std::vector<uint8_t>> BPFtrace::find_empty_key(
 }
 
 std::string BPFtrace::get_stack(int64_t stackid,
+                                uint32_t nr_stack_frames,
                                 int pid,
                                 int probe_id,
                                 bool ustack,
                                 StackType stack_type,
                                 int indent)
 {
+  struct stack_key stack_key = { stackid, nr_stack_frames };
   auto stack_trace = std::vector<uint64_t>(stack_type.limit);
   int err = bpf_lookup_elem(bytecode_.getMap(stack_type.name()).fd,
-                            &stackid,
+                            &stack_key,
                             stack_trace.data());
   if (err) {
     // ignore EFAULT errors: eg, kstack used but no kernel stack
-    if (stackid != -EFAULT)
-      LOG(ERROR) << "failed to look up stack id " << stackid << " (pid " << pid
-                 << "): " << err;
+    LOG(ERROR) << "failed to look up stack id: " << stackid
+               << " stack length: " << nr_stack_frames << " (pid " << pid
+               << "): " << err;
     return "";
   }
 
@@ -1779,9 +1783,8 @@ std::string BPFtrace::get_stack(int64_t stackid,
   std::string padding(indent, ' ');
 
   stack << "\n";
-  for (auto &addr : stack_trace) {
-    if (addr == 0)
-      break;
+  for (uint32_t i = 0; i < nr_stack_frames; ++i) {
+    uint64_t addr = stack_trace.at(i);
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
       continue;

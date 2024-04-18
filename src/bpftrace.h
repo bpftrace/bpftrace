@@ -42,6 +42,11 @@ struct symbol {
   uint64_t address;
 };
 
+struct stack_key {
+  int64_t stackid;
+  uint32_t nr_stack_frames;
+};
+
 enum class DebugLevel;
 
 // globals
@@ -115,6 +120,7 @@ public:
   int zero_map(const BpfMap &map);
   int print_map(const BpfMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
+                        uint32_t nr_stack_frames,
                         int pid,
                         int probe_id,
                         bool ustack,

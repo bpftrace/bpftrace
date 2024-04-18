@@ -157,7 +157,22 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   const bool is_ustack = ident == "ustack";
   const auto uint64_size = sizeof(uint64_t);
 
-  AllocaInst *stackid = b_.CreateAllocaBPF(CreateUInt64(), "stackid");
+  std::vector<llvm::Type *> stack_key_elements = {
+    b_.getInt64Ty(), // stack id
+    b_.getInt32Ty(), // nr_stack_frames
+  };
+  StructType *stack_key_struct = b_.GetStructType("stack_key",
+                                                  stack_key_elements,
+                                                  false);
+  AllocaInst *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
+  b_.CreateStore(b_.getInt64(0),
+                 b_.CreateGEP(stack_key_struct,
+                              stack_key,
+                              { b_.getInt64(0), b_.getInt32(0) }));
+  b_.CreateStore(b_.getInt32(0),
+                 b_.CreateGEP(stack_key_struct,
+                              stack_key,
+                              { b_.getInt64(0), b_.getInt32(1) }));
 
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *stack_scratch_failure = BasicBlock::Create(
@@ -190,11 +205,14 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.CreateDebugOutput("Failed to get stack. Error: %d",
                        std::vector<Value *>{ stack_size },
                        loc);
-  b_.CreateStore(b_.getInt64(0), stackid);
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
-  Value *nr_stack_frames = b_.CreateUDiv(stack_size, b_.getInt32(uint64_size));
+  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt32(uint64_size));
+  b_.CreateStore(num_frames,
+                 b_.CreateGEP(stack_key_struct,
+                              stack_key,
+                              { b_.getInt64(0), b_.getInt32(1) }));
   // A random seed (or using pid) is probably unnecessary in this situation
   // and might hurt storage as the same pids may have the same stack and
   // we don't need to store it twice
@@ -203,8 +221,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   // LLVM-12 produces code that fails the BPF verifier because it
   // can't determine the bounds of nr_stack_frames. The only thing that seems
   // to work is truncating the type, which is fine because 255 is long enough.
-  Value *trunc_nr_stack_frames = b_.CreateTrunc(nr_stack_frames,
-                                                b_.getInt8Ty());
+  Value *trunc_nr_stack_frames = b_.CreateTrunc(num_frames, b_.getInt8Ty());
 
   // Here we use the murmur2 hash function to create the stack ids because
   // bpf_get_stackid() is kind of broken by design and can suffer from hash
@@ -215,17 +232,19 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
       { ptr_to_stack_trace, trunc_nr_stack_frames, seed },
       "murmur_hash_2");
 
+  b_.CreateStore(murmur_hash_2,
+                 b_.CreateGEP(stack_key_struct,
+                              stack_key,
+                              { b_.getInt64(0), b_.getInt32(0) }));
   // Add the stack and id to the stack map
-  b_.CreateStore(murmur_hash_2, stackid);
   b_.CreateMapUpdateElem(
-      ctx_, stack_type.name(), stackid, stack_trace, loc, BPF_ANY);
+      ctx_, stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(stack_scratch_failure);
   b_.CreateDebugOutput("Failed to get stack from scratch map.",
                        std::vector<Value *>{},
                        loc);
-  b_.CreateStore(b_.getInt64(0), stackid);
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(merge_block);
 
@@ -238,6 +257,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   if (is_ustack) {
     std::vector<llvm::Type *> elements = {
       b_.getInt64Ty(), // stack id
+      b_.getInt32Ty(), // nr_stack_frames
       b_.getInt32Ty(), // pid
       b_.getInt32Ty(), // probe id
     };
@@ -245,24 +265,33 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
     AllocaInst *buf = b_.CreateAllocaBPF(stack_struct, "stack_args");
 
     // store stack id
+    Value *stackid = b_.CreateGEP(stack_key_struct,
+                                  stack_key,
+                                  { b_.getInt64(0), b_.getInt32(0) });
     b_.CreateStore(
         b_.CreateLoad(b_.getInt64Ty(), stackid),
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
+    // store nr_stack_frames
+    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                          stack_key,
+                                          { b_.getInt64(0), b_.getInt32(1) });
+    b_.CreateStore(
+        b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store pid
     b_.CreateStore(
         b_.CreateTrunc(b_.CreateGetPidTgid(loc), b_.getInt32Ty()),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     // store probe id
     b_.CreateStore(
-        b_.GetIntSameSize(get_probe_id(), elements.at(2)),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
+        b_.GetIntSameSize(get_probe_id(), elements.at(3)),
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(3) }));
 
     expr_ = buf;
+    b_.CreateLifetimeEnd(stack_key);
   } else {
-    expr_ = b_.CreateLoad(b_.getInt64Ty(), stackid);
+    expr_ = stack_key;
   }
-
-  b_.CreateLifetimeEnd(stackid);
 }
 
 int CodegenLLVM::get_probe_id()
@@ -3564,7 +3593,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
     createMapDefinition(stack_type.name(),
                         libbpf::BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
-                        MapKey({ CreateUInt64() }),
+                        MapKey({ CreateUInt64(), CreateUInt32() }),
                         CreateArray(stack_type.limit, CreateUInt64()));
     max_stack_limit = std::max(stack_type.limit, max_stack_limit);
   }

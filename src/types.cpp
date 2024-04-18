@@ -107,9 +107,10 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsByteArray() const
 {
   return type_ == Type::string || type_ == Type::usym ||
-         type_ == Type::ustack || type_ == Type::inet ||
-         type_ == Type::buffer || type_ == Type::timestamp ||
-         type_ == Type::mac_address || type_ == Type::cgroup_path;
+         type_ == Type::kstack || type_ == Type::ustack ||
+         type_ == Type::inet || type_ == Type::buffer ||
+         type_ == Type::timestamp || type_ == Type::mac_address ||
+         type_ == Type::cgroup_path;
 }
 
 bool SizedType::IsAggregate() const
@@ -363,7 +364,8 @@ SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
 
 SizedType CreateStack(bool kernel, StackType stack)
 {
-  auto st = SizedType(kernel ? Type::kstack : Type::ustack, kernel ? 8 : 16);
+  // These sizes are based on the stack key (see CodegenLLVM::kstack_ustack)
+  auto st = SizedType(kernel ? Type::kstack : Type::ustack, kernel ? 12 : 20);
   st.stack_type = stack;
   return st;
 }
