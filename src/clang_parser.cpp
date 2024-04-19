@@ -663,7 +663,8 @@ bool ClangParser::parse(ast::Program *program,
   if (program->c_definitions.empty() && bpftrace.btf_set_.empty())
     return true;
 
-  input = "#include <__btf_generated_header.h>\n" + program->c_definitions;
+  input = "#include </bpftrace/include/__btf_generated_header.h>\n" +
+          program->c_definitions;
 
   input_files = getTranslationUnitFiles(CXUnsavedFile{
       .Filename = "definitions.h",

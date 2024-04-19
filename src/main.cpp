@@ -423,7 +423,7 @@ static std::optional<struct timespec> get_delta_taitime()
           utsname.machine, ksrc, kobj, bpftrace.kconfig);
   }
   extra_flags.push_back("-include");
-  extra_flags.push_back(CLANG_WORKAROUNDS_H);
+  extra_flags.push_back("/bpftrace/include/" CLANG_WORKAROUNDS_H);
 
   for (auto dir : include_dirs) {
     extra_flags.push_back("-I");
