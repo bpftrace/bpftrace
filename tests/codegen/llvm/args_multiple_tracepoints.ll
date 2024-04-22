@@ -62,7 +62,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define i64 @"tracepoint:sched:sched_two"(i8* %0) section "s_tracepoint:sched:sched_two_2" !dbg !63 {
+define i64 @"tracepoint:sched:sched_two"(i8* %0) section "s_tracepoint:sched:sched_two_2" !dbg !62 {
 entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -170,10 +170,8 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !57 = !{!18, !58}
 !58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)
 !59 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!60 = !{!61, !62}
-!61 = !DILocalVariable(name: "var0", scope: !55, file: !2, type: !18)
-!62 = !DILocalVariable(name: "var1", arg: 1, scope: !55, file: !2, type: !58)
-!63 = distinct !DISubprogram(name: "tracepoint_sched_sched_two", linkageName: "tracepoint_sched_sched_two", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !64)
-!64 = !{!65, !66}
-!65 = !DILocalVariable(name: "var0", scope: !63, file: !2, type: !18)
-!66 = !DILocalVariable(name: "var1", arg: 1, scope: !63, file: !2, type: !58)
+!60 = !{!61}
+!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)
+!62 = distinct !DISubprogram(name: "tracepoint_sched_sched_two", linkageName: "tracepoint_sched_sched_two", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !63)
+!63 = !{!64}
+!64 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !58)

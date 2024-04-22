@@ -35,7 +35,7 @@ while_cond:                                       ; preds = %while_end3, %entry
   %4 = icmp sle i64 %3, 100
   %5 = zext i1 %4 to i64
   %true_cond = icmp ne i64 %5, 0
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !59
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !58
 
 while_body:                                       ; preds = %while_cond
   store i64 0, i64* %"$j", align 8
@@ -52,7 +52,7 @@ while_cond1:                                      ; preds = %lookup_merge, %whil
   %9 = icmp sle i64 %8, 100
   %10 = zext i1 %9 to i64
   %true_cond4 = icmp ne i64 %10, 0
-  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !59
+  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !58
 
 while_body2:                                      ; preds = %while_cond1
   %11 = bitcast i64* %"@_key" to i8*
@@ -164,8 +164,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !53 = !{!18, !54}
 !54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
 !55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!56 = !{!57, !58}
-!57 = !DILocalVariable(name: "var0", scope: !51, file: !2, type: !18)
-!58 = !DILocalVariable(name: "var1", arg: 1, scope: !51, file: !2, type: !54)
-!59 = distinct !{!59, !60}
-!60 = !{!"llvm.loop.unroll.disable"}
+!56 = !{!57}
+!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
+!58 = distinct !{!58, !59}
+!59 = !{!"llvm.loop.unroll.disable"}

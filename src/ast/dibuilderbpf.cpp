@@ -39,16 +39,7 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
-  std::string prefix("var");
-  for (size_t i = 0; i < types.size(); ++i) {
-    createParameterVariable(subprog,
-                            prefix + std::to_string(i),
-                            i,
-                            file,
-                            0,
-                            (DIType *)types[i],
-                            true);
-  }
+  createParameterVariable(subprog, "ctx", 1, file, 0, (DIType *)types[1], true);
 
   func.setSubprogram(subprog);
 }

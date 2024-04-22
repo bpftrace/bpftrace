@@ -41,7 +41,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !59 {
+define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !58 {
   %"$var" = alloca i64, align 8
   %5 = bitcast i64* %"$var" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
@@ -64,7 +64,7 @@ define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".t
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
-define internal i64 @map_for_each_cb.1(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !63 {
+define internal i64 @map_for_each_cb.1(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !61 {
   %"$var" = alloca i64, align 8
   %5 = bitcast i64* %"$var" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
@@ -147,14 +147,11 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !53 = !{!18, !54}
 !54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
 !55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!56 = !{!57, !58}
-!57 = !DILocalVariable(name: "var0", scope: !51, file: !2, type: !18)
-!58 = !DILocalVariable(name: "var1", arg: 1, scope: !51, file: !2, type: !54)
-!59 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !47, retainedNodes: !60)
-!60 = !{!61, !62}
-!61 = !DILocalVariable(name: "var0", scope: !59, file: !2, type: !18)
-!62 = !DILocalVariable(name: "var1", arg: 1, scope: !59, file: !2, type: !54)
-!63 = distinct !DISubprogram(name: "map_for_each_cb_1", linkageName: "map_for_each_cb_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !47, retainedNodes: !64)
-!64 = !{!65, !66}
-!65 = !DILocalVariable(name: "var0", scope: !63, file: !2, type: !18)
-!66 = !DILocalVariable(name: "var1", arg: 1, scope: !63, file: !2, type: !54)
+!56 = !{!57}
+!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
+!58 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !47, retainedNodes: !59)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !54)
+!61 = distinct !DISubprogram(name: "map_for_each_cb_1", linkageName: "map_for_each_cb_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !47, retainedNodes: !62)
+!62 = !{!63}
+!63 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !54)

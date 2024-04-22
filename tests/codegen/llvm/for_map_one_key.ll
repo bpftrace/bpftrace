@@ -42,7 +42,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !69 {
+define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !68 {
   %"@x_key" = alloca i64, align 8
   %"$kv" = alloca %"unsigned int64_int64__tuple_t", align 8
   %key = load i64, i8* %1, align 8
@@ -140,10 +140,8 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !63 = !{!18, !64}
 !64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !65, size: 64)
 !65 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!66 = !{!67, !68}
-!67 = !DILocalVariable(name: "var0", scope: !61, file: !2, type: !18)
-!68 = !DILocalVariable(name: "var1", arg: 1, scope: !61, file: !2, type: !64)
-!69 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !70)
-!70 = !{!71, !72}
-!71 = !DILocalVariable(name: "var0", scope: !69, file: !2, type: !18)
-!72 = !DILocalVariable(name: "var1", arg: 1, scope: !69, file: !2, type: !64)
+!66 = !{!67}
+!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)
+!68 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !69)
+!69 = !{!70}
+!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !68, file: !2, type: !64)
