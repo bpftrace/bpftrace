@@ -6,6 +6,7 @@
 #include "tracefs.h"
 #include "types.h"
 #include "utils.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <fcntl.h>

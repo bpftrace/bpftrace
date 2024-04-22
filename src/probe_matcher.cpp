@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <dirent.h>
 #include <fstream>
 #include <iomanip>
