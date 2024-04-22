@@ -73,7 +73,7 @@ while_cond:                                       ; preds = %arraycmp.loop, %ent
   %19 = load i32, i32* %n, align 4
   %20 = load i32, i32* %i, align 4
   %size_check = icmp slt i32 %20, %19
-  br i1 %size_check, label %while_body, label %arraycmp.done, !llvm.loop !48
+  br i1 %size_check, label %while_body, label %arraycmp.done, !llvm.loop !47
 
 while_body:                                       ; preds = %while_cond
   %21 = load i32, i32* %i, align 4
@@ -196,8 +196,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !42 = !{!35, !43}
 !43 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !44, size: 64)
 !44 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!45 = !{!46, !47}
-!46 = !DILocalVariable(name: "var0", scope: !40, file: !2, type: !35)
-!47 = !DILocalVariable(name: "var1", arg: 1, scope: !40, file: !2, type: !43)
-!48 = distinct !{!48, !49}
-!49 = !{!"llvm.loop.unroll.disable"}
+!45 = !{!46}
+!46 = !DILocalVariable(name: "ctx", arg: 1, scope: !40, file: !2, type: !43)
+!47 = distinct !{!47, !48}
+!48 = !{!"llvm.loop.unroll.disable"}

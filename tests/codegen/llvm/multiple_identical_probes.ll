@@ -17,7 +17,7 @@ entry:
   ret i64 0
 }
 
-define i64 @"kprobe:f.1"(i8* %0) section "s_kprobe:f_2" !dbg !48 {
+define i64 @"kprobe:f.1"(i8* %0) section "s_kprobe:f_2" !dbg !47 {
 entry:
   ret i64 0
 }
@@ -72,10 +72,8 @@ attributes #0 = { nounwind }
 !42 = !{!35, !43}
 !43 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !44, size: 64)
 !44 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!45 = !{!46, !47}
-!46 = !DILocalVariable(name: "var0", scope: !40, file: !2, type: !35)
-!47 = !DILocalVariable(name: "var1", arg: 1, scope: !40, file: !2, type: !43)
-!48 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !41, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !49)
-!49 = !{!50, !51}
-!50 = !DILocalVariable(name: "var0", scope: !48, file: !2, type: !35)
-!51 = !DILocalVariable(name: "var1", arg: 1, scope: !48, file: !2, type: !43)
+!45 = !{!46}
+!46 = !DILocalVariable(name: "ctx", arg: 1, scope: !40, file: !2, type: !43)
+!47 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !41, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !48)
+!48 = !{!49}
+!49 = !DILocalVariable(name: "ctx", arg: 1, scope: !47, file: !2, type: !43)

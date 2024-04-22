@@ -30,7 +30,7 @@ while_cond:                                       ; preds = %while_body, %entry
   %3 = icmp sle i64 %2, 10
   %4 = zext i1 %3 to i64
   %true_cond = icmp ne i64 %4, 0
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !59
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !58
 
 while_body:                                       ; preds = %while_cond
   %5 = load i64, i64* %"$a", align 8
@@ -121,8 +121,7 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !53 = !{!18, !54}
 !54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
 !55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!56 = !{!57, !58}
-!57 = !DILocalVariable(name: "var0", scope: !51, file: !2, type: !18)
-!58 = !DILocalVariable(name: "var1", arg: 1, scope: !51, file: !2, type: !54)
-!59 = distinct !{!59, !60}
-!60 = !{!"llvm.loop.unroll.disable"}
+!56 = !{!57}
+!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
+!58 = distinct !{!58, !59}
+!59 = !{!"llvm.loop.unroll.disable"}
