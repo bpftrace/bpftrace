@@ -1,6 +1,6 @@
 #include "ast/ast.h"
 
-#include <iostream>
+#include <algorithm>
 
 #include "ast/visitors.h"
 #include "log.h"
