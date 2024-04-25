@@ -158,6 +158,11 @@ EXPECT hardware:cache-misses:
 EXPECT tracepoint:xdp:mem_connect
 TIMEOUT 5
 
+NAME it lists struct definitions
+RUN {{BPFTRACE}} -lv 'struct task_struct'
+EXPECT struct task_struct {
+TIMEOUT 2
+
 NAME it lists probes in a given file
 RUN {{BPFTRACE}} -l runtime/scripts/interval_order.bt
 EXPECT interval:ms:
@@ -165,9 +170,9 @@ EXPECT interval:ms:
 EXPECT interval:ms:
 TIMEOUT 5
 
-NAME errors on non existent file
+NAME warning on non existent file
 RUN {{BPFTRACE}} -l non_existent_file.bt
-EXPECT ERROR: failed to open file 'non_existent_file.bt': No such file or directory
+EXPECT WARNING: It appears that 'non_existent_file.bt' is a filename but the file does not exist. Treating 'non_existent_file.bt' as a search pattern.
 TIMEOUT 1
 WILL_FAIL
 

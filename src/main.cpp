@@ -39,6 +39,7 @@
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "tracepoint_format_parser.h"
+#include "utils.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -671,12 +672,14 @@ Args parse_args(int argc, char* argv[])
       args.search = "*:*";
     } else if (optind == argc - 1) {
       std::string_view val(argv[optind]);
-      if (val == "*") {
-        args.search = "*:*";
-      } else if (val.find_first_of(":*") != std::string::npos) {
-        args.search = val;
-      } else {
+      if (std_filesystem::exists(val)) {
         args.filename = val;
+      } else {
+        if (val == "*") {
+          args.search = "*:*";
+        } else {
+          args.search = val;
+        }
       }
       optind++;
     } else {
@@ -818,13 +821,19 @@ int main(int argc, char* argv[])
     if (!is_root())
       return 1;
 
-    if (args.search.find(':') == std::string::npos &&
-        (args.search.find("struct") == 0 || args.search.find("union") == 0 ||
-         args.search.find("enum") == 0)) {
+    if (is_type_name(args.search)) {
       // Print structure definitions
       bpftrace.parse_btf({});
       bpftrace.probe_matcher_->list_structs(args.search);
       return 0;
+    }
+
+    if (args.search.find(".") != std::string::npos &&
+        args.search.find_first_of(":*") == std::string::npos) {
+      LOG(WARNING)
+          << "It appears that \'" << args.search
+          << "\' is a filename but the file does not exist. Treating \'"
+          << args.search << "\' as a search pattern.";
     }
 
     Driver driver(bpftrace);
