@@ -178,6 +178,7 @@ const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);
 bool is_supported_lang(const std::string &lang);
+bool is_type_name(std::string_view str);
 std::string exec_system(const char *cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);

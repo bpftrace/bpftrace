@@ -886,6 +886,12 @@ bool is_supported_lang(const std::string &lang)
                      [&](const auto &cand) { return lang == cand; });
 }
 
+bool is_type_name(std::string_view str)
+{
+  return str.find("struct ") == 0 || str.find("union ") == 0 ||
+         str.find("enum ") == 0;
+}
+
 std::string exec_system(const char *cmd)
 {
   std::array<char, 128> buffer;
