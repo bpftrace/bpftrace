@@ -1032,7 +1032,8 @@ void CodegenLLVM::visit(Call &call)
                                      data,
                                      { b_.getInt64(0),
                                        b_.getInt64((i - 1) * ptr_size) });
-        b_.CreateStore(expr_, offset);
+        b_.CreateStore(
+            expr_, b_.CreateBitCast(offset, expr_->getType()->getPointerTo()));
 
         // keep the expression alive, so it's still there
         // for following seq_printf call
@@ -3833,6 +3834,8 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
     // Read data onto stack
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
     if (elem_type.IsStringTy() && data_type.is_btftype) {
+      if (src->getType()->isIntegerTy())
+        src = b_.CreateIntToPtr(src, dst->getType());
       b_.CREATE_MEMCPY(dst, src, elem_type.GetSize(), 1);
     } else {
       b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
