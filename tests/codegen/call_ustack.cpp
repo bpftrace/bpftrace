@@ -74,7 +74,6 @@ TEST(codegen, call_ustack_modes_mapids)
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
 
-  bpftrace->bytecode_.create_maps();
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 10);
   ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 4U);
 

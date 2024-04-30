@@ -86,6 +86,8 @@ include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibBpf REQUIRED)
 include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
+# TODO: update to 1.5 once [1] is released.
+# [1] https://github.com/libbpf/libbpf/commit/dd589c3b31c13164bdc61ed174fbae6fe76c8308
 if(LIBBPF_VERSION_MAJOR VERSION_LESS 1)
   message(SEND_ERROR "bpftrace requires libbpf 1.0 or greater")
 endif()

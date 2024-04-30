@@ -36,7 +36,6 @@
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
-#include "ast/elf_parser.h"
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
 #include "collect_nodes.h"
@@ -3751,7 +3750,7 @@ BpfBytecode CodegenLLVM::emit(void)
   assert(!output.empty());
 
   state_ = State::DONE;
-  return elf::parseBpfBytecodeFromElfObject(output.data(), output.size());
+  return BpfBytecode(output.data(), output.size(), bpftrace_.config_);
 }
 
 BpfBytecode CodegenLLVM::compile(void)
