@@ -15,6 +15,7 @@ target triple = "bpf-pc-linux"
 %stack_t = type { i64, i32, i32, i32 }
 %stack_key = type { i64, i32 }
 
+@LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @AT_z = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !27

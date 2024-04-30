@@ -9,6 +9,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.2" = type { i8*, i8*, i8*, i8* }
 %"unsigned int64_int64__tuple_t" = type { i64, i64 }
 
+@LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_map = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_x = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !30

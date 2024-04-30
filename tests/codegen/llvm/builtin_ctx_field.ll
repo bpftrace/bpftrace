@@ -11,6 +11,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.4" = type { i8*, i8* }
 %"struct map_t.5" = type { i8*, i8*, i8*, i8* }
 
+@LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_a = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_b = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @AT_c = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !22
