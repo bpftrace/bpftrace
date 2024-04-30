@@ -745,10 +745,7 @@ std::unordered_set<std::string> BTF::get_all_iters() const
   return iters;
 }
 
-// Retrieves BTF id of the given function and the FD of the BTF object
-// containing it
-std::pair<int, int> BTF::get_btf_id_fd(const std::string &func,
-                                       const std::string &mod) const
+int BTF::get_btf_id(std::string_view func, std::string_view mod) const
 {
   for (auto &btf_obj : btf_objects) {
     if (!mod.empty() && mod != btf_obj.name)
@@ -756,10 +753,10 @@ std::pair<int, int> BTF::get_btf_id_fd(const std::string &func,
 
     auto id = find_id_in_btf(btf_obj.btf, func, BTF_KIND_FUNC);
     if (id >= 0)
-      return { id, btf_obj.id ? bpf_btf_get_fd_by_id(btf_obj.id) : 0 };
+      return id;
   }
 
-  return { -1, -1 };
+  return -1;
 }
 
 BTF::BTFId BTF::find_id(const std::string &name,
@@ -776,7 +773,7 @@ BTF::BTFId BTF::find_id(const std::string &name,
 }
 
 __s32 BTF::find_id_in_btf(struct btf *btf,
-                          const std::string &name,
+                          std::string_view name,
                           std::optional<__u32> kind) const
 {
   for (__s32 id = start_id(btf), max = (__s32)type_cnt(btf); id <= max; ++id) {

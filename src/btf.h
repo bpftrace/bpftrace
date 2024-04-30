@@ -79,8 +79,7 @@ public:
                                      std::string& err);
   void resolve_fields(SizedType& type);
 
-  std::pair<int, int> get_btf_id_fd(const std::string& func,
-                                    const std::string& mod) const;
+  int get_btf_id(std::string_view func, std::string_view mod) const;
 
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
@@ -91,7 +90,7 @@ private:
   BTF::BTFId find_id(const std::string& name,
                      std::optional<__u32> kind = std::nullopt) const;
   __s32 find_id_in_btf(struct btf* btf,
-                       const std::string& name,
+                       std::string_view name,
                        std::optional<__u32> = std::nullopt) const;
 
   std::string dump_defs_from_btf(const struct btf* btf,

@@ -2,6 +2,11 @@
 
 namespace bpftrace {
 
+int BpfMap::fd() const
+{
+  return bpf_map__fd(bpf_map_);
+}
+
 libbpf::bpf_map_type BpfMap::type() const
 {
   return type_;

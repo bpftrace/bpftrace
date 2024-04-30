@@ -30,14 +30,18 @@
                 src = super.fetchFromGitHub {
                   owner = "libbpf";
                   repo = "libbpf";
-                  rev = "v${libbpfVersion}";
+                  # We need libbpf support for "module:function" syntax for
+                  # fentry/fexit probes. This is not released, yet, hence we pin
+                  # to a specific commit for now. Once the next release is out,
+                  # we should move to the corresponding version (likely 1.5.0).
+                  rev = "dd589c3b31c13164bdc61ed174fbae6fe76c8308";
                   # If you don't know the hash the first time, set:
                   # hash = "";
                   # then nix will fail the build with such an error message:
                   # hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
                   # specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
                   # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
-                  sha256 = "sha256-PlGr/qZbKnaY37wikdmX/iYtP11WHShn1I7vACUgLG0=";
+                  sha256 = "sha256-zreQ18XLzk65w1TxCbL7RUdmzABYSSlfsGBKq2CvvXE=";
                 };
               });
             });

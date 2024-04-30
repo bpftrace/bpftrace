@@ -37,7 +37,7 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: false
 DerivePointerAlignment: true
 DisableFormat: false
-ForEachMacros: ['bpf_map__for_each']
+ForEachMacros: ['bpf_map__for_each', 'bpf_object__for_each_program']
 FixNamespaceComments: true
 IncludeBlocks:   Preserve
 IncludeCategories:

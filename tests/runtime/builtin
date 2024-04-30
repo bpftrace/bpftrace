@@ -170,9 +170,10 @@ EXPECT_REGEX ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME log size too small
-ENV BPFTRACE_LOG_SIZE=0
-RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ERROR: Error loading program: BEGIN (try -v)
+ENV BPFTRACE_LOG_SIZE=2
+RUN {{BPFTRACE}} -v -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+EXPECT ERROR: Error loading BPF program for BEGIN_1.
+EXPECT_REGEX ^WARNING: Kernel log seems to be trimmed.*
 TIMEOUT 5
 WILL_FAIL
 
