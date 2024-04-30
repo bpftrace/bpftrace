@@ -6,6 +6,7 @@
 #include <csignal>
 #include <ctime>
 #include <fstream>
+#include <llvm/IR/GlobalValue.h>
 
 #if LLVM_VERSION_MAJOR <= 16
 #include <llvm-c/Transforms/IPO.h>
@@ -93,6 +94,14 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
   module_->addModuleFlag(llvm::Module::Warning,
                          "Debug Info Version",
                          llvm::DEBUG_METADATA_VERSION);
+
+  // Set license of BPF programs
+  const std::string license = "GPL";
+  auto license_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+      "LICENSE", ArrayType::get(b_.getInt8Ty(), license.size() + 1)));
+  license_var->setInitializer(
+      ConstantDataArray::getString(module_->getContext(), license.c_str()));
+  license_var->setSection("license");
 }
 
 void CodegenLLVM::visit(Integer &integer)

@@ -12,6 +12,7 @@ target triple = "bpf-pc-linux"
 %printf_t.2 = type { i64 }
 %printf_t = type { i64 }
 
+@LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_i = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
