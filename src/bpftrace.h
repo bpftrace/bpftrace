@@ -53,7 +53,6 @@ enum class DebugLevel;
 extern DebugLevel bt_debug;
 extern bool bt_quiet;
 extern bool bt_verbose;
-extern bool bt_verbose2;
 
 enum class DebugLevel { kNone, kDebug, kFullDebug };
 

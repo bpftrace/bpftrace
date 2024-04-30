@@ -45,7 +45,6 @@ namespace bpftrace {
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_quiet = false;
 bool bt_verbose = false;
-bool bt_verbose2 = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
@@ -138,9 +137,10 @@ int BPFtrace::add_probe(ast::Probe &p)
 
       if (underspecified_usdt_probe && matches.size() > 1) {
         LOG(ERROR) << "namespace for " << attach_point->name()
-                   << " not specified, matched " << matches.size() << " probes";
-        LOG(INFO) << "please specify a unique namespace or use '*' to attach "
-                  << "to all matched probes";
+                   << " not specified, matched " << matches.size()
+                   << " probes. Please specify a unique namespace or use '*' "
+                      "to attach "
+                   << "to all matched probes";
         return 1;
       }
 
@@ -362,8 +362,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     err = bpftrace->print_map(map, print->top, print->div);
 
     if (err)
-      LOG(FATAL) << "Could not print map with ident \"" << map.name()
-                 << "\", err=" << std::to_string(err);
+      LOG(BUG) << "Could not print map with ident \"" << map.name()
+               << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::print_non_map)) {
     auto print = static_cast<AsyncEvent::PrintNonMap *>(data);
@@ -383,8 +383,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     err = bpftrace->clear_map(map);
     if (err)
-      LOG(FATAL) << "Could not clear map with ident \"" << map.name()
-                 << "\", err=" << std::to_string(err);
+      LOG(BUG) << "Could not clear map with ident \"" << map.name()
+               << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::zero)) {
     auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
@@ -392,8 +392,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     err = bpftrace->zero_map(map);
     if (err)
-      LOG(FATAL) << "Could not zero map with ident \"" << map.name()
-                 << "\", err=" << std::to_string(err);
+      LOG(BUG) << "Could not zero map with ident \"" << map.name()
+               << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::time)) {
     char timestr[64]; // not respecting config_.get(ConfigKeyInt::max_strlen)
@@ -401,13 +401,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     struct tm tmp;
     t = time(NULL);
     if (!localtime_r(&t, &tmp)) {
-      LOG(ERROR) << "localtime_r: " << strerror(errno);
+      LOG(WARNING) << "localtime_r: " << strerror(errno);
       return;
     }
     auto time = static_cast<AsyncEvent::Time *>(data);
     auto fmt = bpftrace->resources.time_args[time->time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
-      LOG(ERROR) << "strftime returned 0";
+      LOG(WARNING) << "strftime returned 0";
       return;
     }
     bpftrace->out_->message(MessageType::time, timestr, false);
@@ -440,7 +440,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     uint64_t addr = watchpoint->addr;
 
     if (probe_idx >= bpftrace->resources.watchpoint_probes.size()) {
-      std::cerr << "Invalid watchpoint probe idx=" << probe_idx << std::endl;
+      LOG(ERROR) << "Invalid watchpoint probe idx=" << probe_idx;
       abort = true;
       goto out;
     }
@@ -727,7 +727,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         break;
         // fall through
       default:
-        LOG(FATAL) << "invalid argument type";
+        LOG(BUG) << "invalid argument type";
     }
   }
 
@@ -783,7 +783,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   // much faster too.
   glob_t globbuf;
   if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
-    LOG(FATAL) << "failed to glob";
+    LOG(BUG) << "failed to glob";
 
   char *p;
   if (!(p = realpath(probe.path.c_str(), nullptr))) {
@@ -943,7 +943,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::rawtracepoint:
       return false;
     case ProbeType::invalid:
-      LOG(FATAL) << "Unknown probe type";
+      LOG(BUG) << "Unknown probe type";
   }
 
   return {}; // unreached
@@ -1058,7 +1058,7 @@ int BPFtrace::run(BpfBytecode bytecode)
     return err;
 
   bytecode.set_map_ids(resources);
-  if (bytecode.create_maps())
+  if (!bytecode.create_maps())
     return 1;
 
   if (bytecode.hasMap(MapType::MappedPrintfData)) {
@@ -2116,8 +2116,8 @@ void BPFtrace::sort_by_key(
               return va < vb;
             });
       } else {
-        LOG(FATAL) << "invalid integer argument size. 4 or 8  expected, but "
-                   << arg.GetSize() << " provided";
+        LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
+                 << arg.GetSize() << " provided";
       }
 
     } else if (arg.IsStringTy()) {

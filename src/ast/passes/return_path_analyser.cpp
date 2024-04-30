@@ -27,7 +27,7 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
     if (Visit(*stmt))
       return true;
   }
-  LOG(ERROR, subprog.loc, err_) << "Not all code paths return a value";
+  LOG(ERROR, subprog.loc, err_) << "Not all code paths returned a value";
   return false;
 }
 

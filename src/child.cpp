@@ -287,9 +287,9 @@ void ChildProc::check_child(bool block)
     if (errno == EINVAL)
       LOG(BUG) << "waitpid() EINVAL";
     else {
-      LOG(ERROR) << "waitpid(" << child_pid_
-                 << ") returned unexpected error: " << errno
-                 << ". Marking the child as dead";
+      LOG(WARNING) << "waitpid(" << child_pid_
+                   << ") returned unexpected error: " << errno
+                   << ". Marking the child as dead";
       state_ = State::DIED;
       return;
     }

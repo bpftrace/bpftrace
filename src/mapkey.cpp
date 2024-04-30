@@ -147,7 +147,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return bpftrace.resolve_mac_address(p);
     }
     default:
-      LOG(ERROR) << "invalid mapkey argument type";
+      LOG(BUG) << "invalid mapkey argument type";
   }
   abort();
 }

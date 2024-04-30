@@ -6,12 +6,12 @@ std::string logtype_str(LogType t)
 {
   switch (t) {
     // clang-format off
-    case LogType::DEBUG   : return "DEBUG";
-    case LogType::INFO    : return "INFO";
-    case LogType::WARNING : return "WARNING";
-    case LogType::ERROR   : return "ERROR";
-    case LogType::FATAL   : return "FATAL";
-    case LogType::BUG     : return "BUG";
+    case LogType::DEBUG   : return "";
+    case LogType::V1      : return "";
+    case LogType::WARNING : return "WARNING: ";
+    case LogType::ERROR   : return "ERROR: ";
+    case LogType::FATAL   : return "ERROR: ";
+    case LogType::BUG     : return "BUG: ";
       // clang-format on
   }
 
@@ -22,7 +22,7 @@ Log::Log()
 {
   enabled_map_[LogType::ERROR] = true;
   enabled_map_[LogType::WARNING] = true;
-  enabled_map_[LogType::INFO] = true;
+  enabled_map_[LogType::V1] = false;
   enabled_map_[LogType::DEBUG] = true;
   enabled_map_[LogType::FATAL] = true;
   enabled_map_[LogType::BUG] = true;
@@ -39,9 +39,7 @@ void Log::take_input(LogType type,
                      std::ostream& out,
                      std::string&& input)
 {
-  auto print_out = [&]() {
-    out << logtype_str(type) << ": " << input << std::endl;
-  };
+  auto print_out = [&]() { out << logtype_str(type) << input << std::endl; };
 
   if (loc) {
     if (src_.empty()) {
@@ -99,7 +97,7 @@ void Log::log_with_location(LogType type,
      <filename>:<start_line>-<end_line>: ERROR: <message>
   */
   if (l.begin.line < l.end.line) {
-    out << l.begin.line << "-" << l.end.line << ": " << typestr << ": " << msg
+    out << l.begin.line << "-" << l.end.line << ": " << typestr << msg
         << std::endl;
     return;
   }
@@ -118,7 +116,7 @@ void Log::log_with_location(LogType type,
             ~~~~~~~~~~
   */
   out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": " << typestr << ": " << msg << std::endl;
+  out << ": " << typestr << msg << std::endl;
 
   // for bpftrace::position, valid line# starts from 1
   std::string srcline = get_source_line(l.begin.line - 1);

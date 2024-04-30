@@ -137,13 +137,13 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT FATAL: Error attaching probe: kprobe:nonsense:vfs_read: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+EXPECT ERROR: Error attaching probe: kprobe:nonsense:vfs_read: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
 TIMEOUT 5
 WILL_FAIL
 
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT FATAL: Error attaching probe: kprobe:vmlinux:nonsense
+EXPECT ERROR: Error attaching probe: kprobe:vmlinux:nonsense
 TIMEOUT 5
 WILL_FAIL
 
@@ -289,7 +289,7 @@ WILL_FAIL
 
 NAME uprobe_address_fail_resolve
 PROG uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}
-EXPECT FATAL: Could not resolve address: /bin/bash:0xa
+EXPECT ERROR: Could not resolve address: /bin/bash:0xa
 TIMEOUT 5
 WILL_FAIL
 
@@ -308,7 +308,7 @@ AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME uprobe_zero_size
 PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
-EXPECT FATAL: Could not determine boundary for _init (symbol has size 0). Use --unsafe to force attachment.
+EXPECT ERROR: Could not determine boundary for _init (symbol has size 0). Use --unsafe to force attachment.
 TIMEOUT 5
 WILL_FAIL
 
@@ -399,7 +399,7 @@ TIMEOUT 5
 
 NAME rawtracepoint_missing
 PROG rawtracepoint:nonsense { printf("hit"); exit(); }
-EXPECT FATAL: Probe does not exist: rawtracepoint:nonsense
+EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
 TIMEOUT 5
 WILL_FAIL
 
@@ -486,7 +486,7 @@ TIMEOUT 2
 # match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS.
 NAME bpf_programs_limit
 PROG k:* { @[probe] = count(); }
-EXPECT_REGEX FATAL: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 512.\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
+EXPECT_REGEX ERROR: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 512.\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
 WILL_FAIL
 TIMEOUT 2
 

@@ -491,8 +491,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
     t = btf__type_by_id(btf_obj.btf, t->type);
     if (!t || !btf_is_func_proto(t)) {
       /* bad.. */
-      if (!bt_verbose)
-        LOG(ERROR) << func_name << " function does not have FUNC_PROTO record";
+      LOG(ERROR) << func_name << " function does not have FUNC_PROTO record";
       break;
     }
 

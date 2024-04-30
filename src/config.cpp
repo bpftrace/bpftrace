@@ -49,8 +49,7 @@ bool Config::is_aslr_enabled()
   {
     std::ifstream file(randomize_va_space_file);
     if (file.fail()) {
-      if (bt_verbose_)
-        LOG(ERROR) << std::strerror(errno) << ": " << randomize_va_space_file;
+      LOG(V1) << std::strerror(errno) << ": " << randomize_va_space_file;
       // conservatively return true
       return true;
     }

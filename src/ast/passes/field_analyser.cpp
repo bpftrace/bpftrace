@@ -155,7 +155,7 @@ void FieldAnalyser::visit(Unop &unop)
   }
 }
 
-bool FieldAnalyser::resolve_args(Probe &probe)
+void FieldAnalyser::resolve_args(Probe &probe)
 {
   // load probe arguments into a special record type "struct <probename>_args"
   Struct probe_args;
@@ -173,7 +173,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
       } catch (const WildcardException &e) {
         LOG(ERROR) << e.what();
-        return false;
+        return;
       }
 
       // ... and check if they share same arguments.
@@ -223,7 +223,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
             ap->func, probe_type == ProbeType::kretfunc, err);
         if (!maybe_probe_args.has_value()) {
           LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << err;
-          return false;
+          return;
         }
         probe_args = std::move(*maybe_probe_args);
       } else // uprobe
@@ -232,7 +232,8 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         if (dwarf)
           probe_args = dwarf->resolve_args(ap->func);
         else {
-          LOG(ERROR, ap->loc, err_) << "No debuginfo found for " << ap->target;
+          LOG(WARNING, ap->loc, err_)
+              << "No debuginfo found for " << ap->target;
         }
         if ((int)probe_args.fields.size() > (arch::max_arg() + 1)) {
           LOG(ERROR, ap->loc, err_) << "\'args\' builtin is not supported for "
@@ -252,7 +253,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
       bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
     }
   }
-  return true;
+  return;
 }
 
 void FieldAnalyser::resolve_fields(SizedType &type)

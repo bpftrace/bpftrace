@@ -14,7 +14,7 @@ namespace bpftrace {
 enum class LogType
 {
   DEBUG,
-  INFO,
+  V1,
   WARNING,
   ERROR,
   FATAL,
@@ -50,7 +50,8 @@ public:
   }
   inline void disable(LogType type)
   {
-    assert(type != LogType::FATAL);
+    assert(type != LogType::FATAL && type != LogType::BUG &&
+           type != LogType::ERROR);
     enabled_map_[type] = false;
   }
   inline bool is_enabled(LogType type)
@@ -143,7 +144,7 @@ public:
 // clang-format off
 #define LOGSTREAM_COMMON(...) bpftrace::LogStream(__FILE__, __LINE__, __VA_ARGS__)
 #define LOGSTREAM_DEBUG(...) LOGSTREAM_COMMON(__VA_ARGS__)
-#define LOGSTREAM_INFO(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_V1(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_WARNING(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_ERROR(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_FATAL(...) bpftrace::LogStreamFatal(__FILE__, __LINE__, __VA_ARGS__)
@@ -153,5 +154,6 @@ public:
 #define LOG(type, ...) LOGSTREAM_##type(bpftrace::LogType::type, ##__VA_ARGS__)
 
 #define DISABLE_LOG(type) bpftrace::Log::get().disable(LogType::type)
+#define ENABLE_LOG(type) bpftrace::Log::get().enable(LogType::type)
 
 }; // namespace bpftrace

@@ -480,7 +480,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
         std::cout << probe_type << ":" << match_print << std::endl;
         if (bt_verbose) {
           for (auto& param : param_lists[match])
-            std::cout << "    " << param << std::endl;
+            LOG(V1) << "    " << param;
         }
       }
     }

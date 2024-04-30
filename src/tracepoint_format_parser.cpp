@@ -51,9 +51,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
               if (category == "syscall")
                 LOG(ERROR, ap->loc, std::cerr)
                     << "Did you mean syscalls:" << event_name << "?";
-              if (bt_verbose) {
-                LOG(ERROR) << strerror(errno) << ": " << format_file_path;
-              }
+              LOG(V1) << strerror(errno) << ": " << format_file_path;
               return false;
             } else {
               // unexpected error

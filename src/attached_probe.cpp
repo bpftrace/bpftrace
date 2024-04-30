@@ -56,7 +56,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::usdt:      return BPF_PROBE_ENTRY;  break;
     default:
-      LOG(FATAL) << "invalid probe attachtype \"" << t << "\"";
+      LOG(BUG) << "invalid probe attachtype \"" << t << "\"";
   }
   // clang-format on
 }
@@ -84,7 +84,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
     case ProbeType::rawtracepoint: return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     // clang-format on
     case ProbeType::invalid:
-      LOG(FATAL) << "program type invalid";
+      LOG(BUG) << "program type invalid";
   }
 
   return {}; // unreached
@@ -100,16 +100,15 @@ std::string progtypeName(libbpf::bpf_prog_type t)
     case libbpf::BPF_PROG_TYPE_TRACING:    return "BPF_PROG_TYPE_TRACING";    break;
     // clang-format on
     default:
-      LOG(FATAL) << "invalid program type: " << t;
+      LOG(BUG) << "invalid program type: " << t;
   }
 }
 
 void check_banned_kretprobes(std::string const &kprobe_name)
 {
   if (banned_kretprobes.find(kprobe_name) != banned_kretprobes.end()) {
-    LOG(ERROR) << "error: kretprobe:" << kprobe_name
+    LOG(FATAL) << "kretprobe:" << kprobe_name
                << " can't be used as it might lock up your system.";
-    exit(1);
   }
 }
 
@@ -179,8 +178,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
     : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
   load_prog(feature);
-  if (bt_verbose)
-    std::cerr << "Attaching " << probe_.orig_name << std::endl;
+  LOG(V1) << "Attaching " << probe_.orig_name;
   switch (probe_.type) {
     case ProbeType::special:
       // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
@@ -221,7 +219,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_raw_tracepoint();
       break;
     default:
-      LOG(FATAL) << "invalid attached probe type \"" << probe_.type << "\"";
+      LOG(BUG) << "invalid attached probe type \"" << probe_.type << "\"";
   }
 }
 
@@ -247,7 +245,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_uprobe(pid, safe_mode);
       break;
     default:
-      LOG(FATAL) << "invalid attached probe type \"" << probe_.type << "\"";
+      LOG(BUG) << "invalid attached probe type \"" << probe_.type << "\"";
   }
 }
 
@@ -257,7 +255,8 @@ AttachedProbe::~AttachedProbe()
   for (int perf_event_fd : perf_event_fds_) {
     err = bpf_close_perf_event_fd(perf_event_fd);
     if (err)
-      LOG(ERROR) << "failed to close perf event FDs for probe: " << probe_.name;
+      LOG(WARNING) << "failed to close perf event FDs for probe: "
+                   << probe_.name;
   }
 
   err = 0;
@@ -298,12 +297,12 @@ AttachedProbe::~AttachedProbe()
       err = detach_raw_tracepoint();
       break;
     case ProbeType::invalid:
-      LOG(FATAL) << "invalid attached probe type \"" << probe_.type
-                 << "\" at destructor";
+      LOG(BUG) << "invalid attached probe type \"" << probe_.type
+               << "\" at destructor";
   }
 
   if (err)
-    LOG(ERROR) << "failed to detach probe: " << probe_.name;
+    LOG(WARNING) << "failed to detach probe: " << probe_.name;
 
   if (close_progfd_ && progfd_ >= 0)
     close(progfd_);
@@ -352,7 +351,7 @@ std::string AttachedProbe::eventname() const
     case ProbeType::tracepoint:
       return probe_.attach_point;
     default:
-      LOG(FATAL) << "invalid eventname probe \"" << probe_.type << "\"";
+      LOG(BUG) << "invalid eventname probe \"" << probe_.type << "\"";
   }
 }
 
@@ -430,8 +429,8 @@ static void check_alignment(std::string &path,
       return;
     case AlignState::NotAlign:
       if (safe_mode)
-        LOG(FATAL) << "Could not add " << type
-                   << " into middle of instruction: " << tmp;
+        LOG(BUG) << "Could not add " << type
+                 << " into middle of instruction: " << tmp;
       else
         LOG(WARNING) << "Unsafe " << type
                      << " in the middle of the instruction: " << tmp;
@@ -439,18 +438,18 @@ static void check_alignment(std::string &path,
 
     case AlignState::Fail:
       if (safe_mode)
-        LOG(FATAL) << "Failed to check if " << type
-                   << " is in proper place: " << tmp;
+        LOG(BUG) << "Failed to check if " << type
+                 << " is in proper place: " << tmp;
       else
         LOG(WARNING) << "Unchecked " << type << ": " << tmp;
       break;
 
     case AlignState::NotSupp:
       if (safe_mode)
-        LOG(FATAL) << "Can't check if " << type
-                   << " is in proper place (compiled without "
-                      "(k|u)probe offset support): "
-                   << tmp;
+        LOG(BUG) << "Can't check if " << type
+                 << " is in proper place (compiled without "
+                    "(k|u)probe offset support): "
+                 << tmp;
       else
         LOG(WARNING) << "Unchecked " << type << " : " << tmp;
       break;
@@ -562,8 +561,7 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
       continue;
     bcc_elf_foreach_sym(path, sym_name_cb, &option, &sym);
     if (sym.start) {
-      if (bt_verbose)
-        std::cout << "vmlinux: using " << path << std::endl;
+      LOG(V1) << "vmlinux: using " << path;
       return path;
     }
   }
@@ -599,12 +597,10 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
 
   std::string path = find_vmlinux(locs, sym);
   if (path.empty()) {
-    if (bt_verbose) {
-      LOG(WARNING) << "Could not resolve symbol " << symbol
-                   << ". Skipping usermode offset checking.";
-      LOG(WARNING) << "The kernel will verify the safety of the location but "
-                      "will also allow the offset to be in a different symbol.";
-    }
+    LOG(V1) << "Could not resolve symbol " << symbol
+            << ". Skipping usermode offset checking.";
+    LOG(V1) << "The kernel will verify the safety of the location but "
+               "will also allow the offset to be in a different symbol.";
 
     return;
   }
@@ -918,13 +914,9 @@ void AttachedProbe::attach_multi_kprobe(void)
                                 : 0;
 
   if (bt_verbose) {
-    std::cout << "Attaching to " << probe_.funcs.size() << " functions"
-              << std::endl;
-
-    if (bt_verbose2) {
-      for (i = 0; i < opts.kprobe_multi.cnt; i++) {
-        std::cout << " " << syms[i] << std::endl;
-      }
+    LOG(V1) << "Attaching to " << probe_.funcs.size() << " functions";
+    for (i = 0; i < opts.kprobe_multi.cnt; i++) {
+      LOG(V1) << " " << syms[i];
     }
   }
 
@@ -1114,13 +1106,9 @@ void AttachedProbe::attach_multi_uprobe(int pid)
   }
 
   if (bt_verbose) {
-    std::cout << "Attaching to " << probe_.funcs.size() << " functions"
-              << std::endl;
-
-    if (bt_verbose2) {
-      for (i = 0; i < syms.size(); i++) {
-        std::cout << probe_.path << ":" << syms[i] << std::endl;
-      }
+    LOG(V1) << "Attaching to " << probe_.funcs.size() << " functions";
+    for (i = 0; i < syms.size(); i++) {
+      LOG(V1) << probe_.path << ":" << syms[i];
     }
   }
 

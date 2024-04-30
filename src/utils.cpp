@@ -216,23 +216,22 @@ KConfig::KConfig()
   }
 }
 
-bool get_uint64_env_var(const ::std::string &str,
+void get_uint64_env_var(const ::std::string &str,
                         const std::function<void(uint64_t)> &cb)
 {
   uint64_t dest;
   if (const char *env_p = std::getenv(str.c_str())) {
     std::istringstream stringstream(env_p);
     if (!(stringstream >> dest)) {
-      LOG(ERROR) << "Env var '" << str
+      LOG(FATAL) << "Env var '" << str
                  << "' did not contain a valid uint64_t, or was zero-valued.";
-      return false;
+      return;
     }
     cb(dest);
   }
-  return true;
 }
 
-bool get_bool_env_var(const ::std::string &str,
+void get_bool_env_var(const ::std::string &str,
                       const std::function<void(bool)> &cb)
 {
   if (const char *env_p = std::getenv(str.c_str())) {
@@ -243,14 +242,13 @@ bool get_bool_env_var(const ::std::string &str,
     else if (s == "0")
       dest = false;
     else {
-      LOG(ERROR) << "Env var '" << str
+      LOG(FATAL) << "Env var '" << str
                  << "' did not contain a "
                     "valid value (0 or 1).";
-      return false;
     }
     cb(dest);
   }
-  return true;
+  return;
 }
 
 std::optional<std_filesystem::path> find_in_path(const std::string &name)
