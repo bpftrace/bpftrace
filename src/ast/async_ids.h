@@ -9,7 +9,7 @@ namespace ast {
   DO(cgroup_path)                                                              \
   DO(helper_error)                                                             \
   DO(join)                                                                     \
-  DO(mapped_printf)                                                            \
+  DO(bpf_print)                                                                \
   DO(non_map_print)                                                            \
   DO(printf)                                                                   \
   DO(skb_output)                                                               \

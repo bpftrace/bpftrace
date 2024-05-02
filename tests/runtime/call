@@ -502,21 +502,18 @@ PROG iter:task { printf("comm: %s\n", ctx->task->comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 TIMEOUT 5
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME iter:task_file
 PROG iter:task_file { printf("comm: %s\n", ctx->task->comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 TIMEOUT 5
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME iter:task_vma
 PROG iter:task_vma { printf("comm: %s\n", ctx->task->comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 TIMEOUT 5
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME cgroup_path
 PROG BEGIN { print(cgroup_path(cgroup & ((1 << 32) - 1))); exit(); }
@@ -580,19 +577,16 @@ NAME debugf
 RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf"); exit();}'; cat /sys/kernel/debug/tracing/trace
 EXPECT_REGEX bpf_trace_printk: debugf
 TIMEOUT 3
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME debugf_with_arguments
 RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf %s %d %x", "a", 1, 16); exit();}'; cat /sys/kernel/debug/tracing/trace
 EXPECT_REGEX bpf_trace_printk: debugf a 1 10
 TIMEOUT 3
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME debugf_with_seq_printf
 RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { printf("printf %d", 0); debugf("debugf %d", 1); exit();}'; cat /sys/kernel/debug/tracing/trace
 EXPECT_REGEX bpf_trace_printk: debugf 1
 TIMEOUT 3
-REQUIRES /bin/bash -c 'exit 1'
 
 NAME nsecs
 PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs()); exit(); }
