@@ -68,8 +68,6 @@ std::string to_string(MapType t)
       return "join";
     case MapType::Elapsed:
       return "elapsed";
-    case MapType::MappedPrintfData:
-      return "mapped_printf_data";
     case MapType::Ringbuf:
       return "ringbuf";
     case MapType::StrBuffer:

@@ -924,28 +924,8 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (err)
     return err;
 
-  bytecode.set_map_ids(resources);
-
-  if (bytecode.hasMap(MapType::MappedPrintfData)) {
-    const auto &map = bytecode.getMap(MapType::MappedPrintfData);
-    uint32_t idx = 0;
-    std::vector<uint8_t> formats(map.value_size(), 0);
-    for (auto &arg : resources.mapped_printf_args) {
-      auto str = std::get<0>(arg).c_str();
-      auto len = std::get<0>(arg).size();
-      memcpy(&formats.data()[idx], str, len);
-      idx += len + 1;
-    }
-
-    // store the data in map
-    uint32_t id = 0;
-    if (bpf_update_elem(map.fd(), &id, formats.data(), 0) < 0) {
-      perror("Failed to write printf data to data map");
-      return -1;
-    }
-  }
-
   bytecode_ = std::move(bytecode);
+  bytecode_.set_map_ids(resources);
 
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, config_);

@@ -1040,15 +1040,10 @@ void CodegenLLVM::visit(Call &call)
         data_size += ptr_size;
       }
 
-      // pick to current format string
-      auto ids = bpftrace_.resources.mapped_printf_ids.at(
-          async_ids_.mapped_printf());
-      auto idx = std::get<0>(ids);
-      auto size = std::get<1>(ids);
-
-      // and load it from the map
-      Value *map_data = b_.GetMapVar(to_string(MapType::MappedPrintfData));
-      Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
+      // pick the current format string
+      auto print_id = async_ids_.bpf_print();
+      auto fmt = createFmtString(print_id);
+      auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
 
       // and finally the seq_printf call
       b_.CreateSeqPrintf(ctx_,
@@ -1065,14 +1060,9 @@ void CodegenLLVM::visit(Call &call)
                              AsyncAction::printf);
     }
   } else if (call.func == "debugf") {
-    // format string was pre-saved in the map, referenced by mapped_printf_id_
-    auto ids = bpftrace_.resources.mapped_printf_ids.at(
-        async_ids_.mapped_printf());
-    auto idx = std::get<0>(ids);
-    auto size = std::get<1>(ids);
-
-    Value *map_data = b_.GetMapVar(to_string(MapType::MappedPrintfData));
-    Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
+    auto print_id = async_ids_.bpf_print();
+    auto fmt = createFmtString(print_id);
+    auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
 
     std::vector<Value *> values;
     for (size_t i = 1; i < call.vargs->size(); i++) {
@@ -3593,21 +3583,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         CreateUInt64());
   }
 
-  if (resources.needs_data_map) {
-    size_t value_size = 0;
-    for (auto &arg : resources.mapped_printf_args)
-      value_size += std::get<0>(arg).size() + 1;
-    int ptr_size = sizeof(unsigned long);
-    value_size = (value_size / ptr_size + 1) * ptr_size;
-    SizedType value_type = CreateArray(value_size, CreateInt8());
-
-    createMapDefinition(to_string(MapType::MappedPrintfData),
-                        libbpf::BPF_MAP_TYPE_ARRAY,
-                        1,
-                        MapKey({ CreateInt32() }),
-                        value_type);
-  }
-
   if (!bpftrace_.feature_->has_map_ringbuf() ||
       resources.needs_perf_event_map) {
     createMapDefinition(to_string(MapType::PerfEvent),
@@ -4262,6 +4237,25 @@ bool CodegenLLVM::canAggPerCpuMapElems(const SizedType &val_type,
   return val_type.IsCastableMapTy() &&
          (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
           map_type == libbpf::BPF_MAP_TYPE_PERCPU_HASH);
+}
+
+// BPF helpers that use fmt strings (bpf_trace_printk, bpf_seq_printf) expect
+// the string passed in a data map. libbpf is able to create the map internally
+// if an internal global constant string is used. This function creates the
+// constant. Uses bpf_print_id_ to pick the correct format string from
+// RequiredResources.
+Value *CodegenLLVM::createFmtString(int print_id)
+{
+  auto fmt_str = bpftrace_.resources.bpf_print_fmts.at(print_id);
+  auto res = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+      "__fmt_" + std::to_string(print_id),
+      ArrayType::get(b_.getInt8Ty(), fmt_str.length() + 1)));
+  res->setConstant(true);
+  res->setInitializer(
+      ConstantDataArray::getString(module_->getContext(), fmt_str.c_str()));
+  res->setAlignment(MaybeAlign(1));
+  res->setLinkage(llvm::GlobalValue::InternalLinkage);
+  return res;
 }
 
 } // namespace ast

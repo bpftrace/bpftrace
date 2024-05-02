@@ -239,6 +239,8 @@ private:
                                      const std::vector<Statement *> &stmts);
   Function *createMurmurHash2Func();
 
+  Value *createFmtString(int print_id);
+
   bool canAggPerCpuMapElems(const SizedType &val_type, const MapKey &key);
 
   Node *root_ = nullptr;

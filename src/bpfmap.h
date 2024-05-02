@@ -70,7 +70,6 @@ enum class MapType {
   PerfEvent,
   Join,
   Elapsed,
-  MappedPrintfData,
   Ringbuf,
   StrBuffer,
   EventLossCounter,
