@@ -23,10 +23,12 @@
 #include <net/sock.h>
 #else
 /*
- * Note: you may need to install the glibc-headers package or other package
- * containing sys/socket.h, which contains the AF_INET and AF_INET6 macros
+ * BTF provides the types, we just need to define AF_INET and AF_INET6.
+ * These are Linux ABI defines, and are not architecture-specific.
+ * With BTF, this allows tcpconnect.bt to work without glibc headers:
  */
-#include <sys/socket.h>
+#define AF_INET   2 /* IPv4 */
+#define AF_INET6 10 /* IPv6 */
 #endif
 
 BEGIN
