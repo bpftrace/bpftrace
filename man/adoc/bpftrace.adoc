@@ -53,7 +53,11 @@ x86_64, arm64, s390x, arm32, loongarch64, mips64, ppc64, riscv64
 
 The license of a bpftrace script affects how it can be run, as the Linux kernel limits the functionality available to non-GPL licensed programs.
 
-A license can be specified by setting the <<license>> config variable.
+A license can be specified by setting the <<license>> config variable or by including a single-line comment containing a SPDX License ID:
+
+----
+// SPDX-License-Identifier: GPL-2.0-or-later
+----
 
 If a license is not explicitly declared, bpftrace will assume that the script is GPL v2 compatible.
 

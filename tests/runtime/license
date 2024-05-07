@@ -16,3 +16,24 @@ EXPECT stdin:1:51-57: ERROR: helper bpf_probe_read_str can only be used in GPL-c
 TIMEOUT 5
 WILL_FAIL
 
+NAME spdx_allowed
+PROG // SPDX-License-Identifier: GPL-2.0-or-later
+     BEGIN { printf("\"%s\"\n", str(0)); exit(); }
+EXPECT ""
+TIMEOUT 5
+
+NAME spdx_not_allowed
+PROG // SPDX-License-Identifier: Apache-2.0
+     BEGIN { printf("%s\n", str(0)); }
+EXPECT stdin:2:24-30: ERROR: helper bpf_probe_read_str can only be used in GPL-compatible programs
+       BEGIN { printf("%s\n", str(0)); }
+                              ~~~~~~
+TIMEOUT 5
+WILL_FAIL
+
+NAME config_override_spdx
+PROG // SPDX-License-Identifier: Some-unknown-GPL-compatible-license
+     config = { license = "GPL" }
+     BEGIN { printf("\"%s\"\n", str(0)); exit(); }
+EXPECT ""
+TIMEOUT 5

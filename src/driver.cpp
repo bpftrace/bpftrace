@@ -12,6 +12,31 @@ extern bpftrace::location loc;
 
 namespace bpftrace {
 
+namespace {
+std::string_view parse_license()
+{
+  std::string_view program = Log::get().get_source();
+  constexpr std::string_view spdx_id_marker = "SPDX-License-Identifier: ";
+  auto spdx_id_pos = program.find(spdx_id_marker);
+  if (spdx_id_pos == program.npos)
+    return {};
+
+  auto license_pos = spdx_id_pos + spdx_id_marker.size();
+  auto eol_pos = program.find("\n", spdx_id_pos + 1);
+  if (eol_pos == program.npos)
+    return {};
+
+  auto license = program.substr(license_pos, eol_pos - license_pos);
+
+  // Try to translate some known GPL-v2-compatible licenses into a format
+  // understood by the Linux kernel
+  if (license.find("GPL-2.0") == 0)
+    return "GPL";
+
+  return license;
+}
+} // namespace
+
 Driver::Driver(BPFtrace &bpftrace, std::ostream &o)
     : bpftrace_(bpftrace), out_(o)
 {
@@ -31,6 +56,12 @@ int Driver::parse_str(std::string_view script)
 
 int Driver::parse()
 {
+  if (auto license = parse_license(); !license.empty()) {
+    LOG(V1) << "Found license from SPDX ID: " << license;
+    ConfigSetter config_setter(bpftrace_.config_, ConfigSource::default_);
+    config_setter.set(ConfigKeyString::license, std::string{ license });
+  }
+
   // Reset previous state if we parse more than once
   root.reset();
 
