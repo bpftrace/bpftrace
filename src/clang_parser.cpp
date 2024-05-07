@@ -660,9 +660,6 @@ bool ClangParser::parse(ast::Program *program,
   StderrSilencer silencer;
   silencer.silence();
 #endif
-  if (program->c_definitions.empty() && bpftrace.btf_set_.empty())
-    return true;
-
   input = "#include </bpftrace/include/__btf_generated_header.h>\n" +
           program->c_definitions;
 

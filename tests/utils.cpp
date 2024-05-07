@@ -358,27 +358,6 @@ TEST(utils, get_pids_for_program)
   ASSERT_EQ(pids.size(), 0);
 }
 
-TEST(utils, file_exists_and_ownedby_root)
-{
-  std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
-  std::string file1 = "/ownedby-user";
-  std::string file2 = "/no-exists";
-  if (::mkdtemp(tmpdir.data()) == nullptr) {
-    throw std::runtime_error("creating temporary path for tests failed");
-  }
-
-  int fd;
-  fd = open((tmpdir + file1).c_str(), O_CREAT, S_IRUSR);
-  close(fd);
-  ASSERT_GE(fd, 0);
-
-  EXPECT_FALSE(file_exists_and_ownedby_root((tmpdir + file1).c_str()));
-  EXPECT_FALSE(file_exists_and_ownedby_root((tmpdir + file2).c_str()));
-  EXPECT_TRUE(file_exists_and_ownedby_root("/proc/1/maps"));
-
-  EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
-}
-
 } // namespace utils
 } // namespace test
 } // namespace bpftrace
