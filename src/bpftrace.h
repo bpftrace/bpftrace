@@ -166,6 +166,7 @@ public:
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
+  std::string get_license() const;
 
   std::string cmd_;
   bool finalize_ = false;

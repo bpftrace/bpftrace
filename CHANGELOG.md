@@ -21,6 +21,8 @@ and this project adheres to
   - [#3046](https://github.com/bpftrace/bpftrace/pull/3046)
 - Add for-each loops for iterating over map elements
   - [#3003](https://github.com/bpftrace/bpftrace/pull/3003)
+- Add ability to specify a script's license
+  - [#3157](https://github.com/bpftrace/bpftrace/pull/3157)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)

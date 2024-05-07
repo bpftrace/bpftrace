@@ -174,10 +174,11 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              bool safe_mode,
                              BPFfeature &feature,
-                             BTF &btf)
+                             BTF &btf,
+                             cstring_view license)
     : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
-  load_prog(feature);
+  load_prog(feature, license);
   LOG(V1) << "Attaching " << probe_.orig_name;
   switch (probe_.type) {
     case ProbeType::special:
@@ -228,10 +229,11 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              int pid,
                              BPFfeature &feature,
                              BTF &btf,
+                             cstring_view license,
                              bool safe_mode)
     : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
-  load_prog(feature);
+  load_prog(feature, license);
   switch (probe_.type) {
     case ProbeType::usdt:
       attach_usdt(pid, feature);
@@ -698,14 +700,13 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 }
 }
 
-void AttachedProbe::load_prog(BPFfeature &feature)
+void AttachedProbe::load_prog(BPFfeature &feature, cstring_view license)
 {
   if (use_cached_progfd())
     return;
 
   auto &insns = prog_.getCode();
   auto func_infos = prog_.getFuncInfos();
-  const char *license = "GPL";
   int log_level = 0;
 
   uint64_t log_buf_size = probe_.log_size;
@@ -834,7 +835,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         if (btf_fd >= 0) {
           progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                                   name.c_str(),
-                                  license,
+                                  license.c_str(),
                                   reinterpret_cast<const struct bpf_insn *>(
                                       insns.data()),
                                   insns.size() / sizeof(struct bpf_insn),
@@ -866,6 +867,10 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     maybe_throw_helper_verifier_error(log_buf.get(),
                                       "helper call is not allowed in probe",
                                       " not allowed in probe");
+    maybe_throw_helper_verifier_error(
+        log_buf.get(),
+        "cannot call GPL-restricted function from non-GPL compatible program",
+        " can only be used in GPL-compatible programs");
 
     std::stringstream errmsg;
     errmsg << "Error loading program: " << probe_.name

@@ -49,6 +49,14 @@ List all the probes attached in the program::
 
 x86_64, arm64, s390x, arm32, loongarch64, mips64, ppc64, riscv64
 
+== Script Licenses
+
+The license of a bpftrace script affects how it can be run, as the Linux kernel limits the functionality available to non-GPL licensed programs.
+
+A license can be specified by setting the <<license>> config variable.
+
+If a license is not explicitly declared, bpftrace will assume that the script is GPL v2 compatible.
+
 == Options
 
 === *-B* _MODE_
@@ -3339,6 +3347,16 @@ This feature can be turned off by setting the value of this environment variable
 Default: 0
 
 For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
+
+=== license
+
+Default: <unset>
+
+The license covering the script's source code.
+
+This license string is passed to the kernel where it is used to determine what functionality can be used.
+
+Licenses recognised by the Linux kernel are listed in link:https://docs.kernel.org/process/license-rules.html#id1[its documentation].
 
 === log_size
 

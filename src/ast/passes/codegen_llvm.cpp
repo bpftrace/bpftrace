@@ -96,12 +96,16 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
                          llvm::DEBUG_METADATA_VERSION);
 
   // Set license of BPF programs
-  const std::string license = "GPL";
+  const auto &license = bpftrace_.get_license();
   auto license_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
       "LICENSE", ArrayType::get(b_.getInt8Ty(), license.size() + 1)));
   license_var->setInitializer(
       ConstantDataArray::getString(module_->getContext(), license.c_str()));
   license_var->setSection("license");
+
+  // XXX: Set licenses for manually loaded programs. Remove once libbpf is used
+  // instead:
+  bpftrace_.resources.license = license;
 }
 
 void CodegenLLVM::visit(Integer &integer)

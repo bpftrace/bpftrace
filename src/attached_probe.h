@@ -8,6 +8,7 @@
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
+#include "container/cstring_view.h"
 #include "types.h"
 
 #include <bcc/libbpf.h>
@@ -24,12 +25,14 @@ public:
                 BpfProgram &&prog,
                 bool safe_mode,
                 BPFfeature &feature,
-                BTF &btf);
+                BTF &btf,
+                cstring_view license);
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
                 int pid,
                 BPFfeature &feature,
                 BTF &btf,
+                cstring_view license,
                 bool safe_mode = true);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
@@ -44,7 +47,7 @@ private:
   std::string eventname() const;
   void resolve_offset_kprobe(bool safe_mode);
   bool resolve_offset_uprobe(bool safe_mode);
-  void load_prog(BPFfeature &feature);
+  void load_prog(BPFfeature &feature, cstring_view license);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
   void attach_kprobe(bool safe_mode);

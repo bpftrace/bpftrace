@@ -1,0 +1,18 @@
+NAME implicit_allowed
+PROG BEGIN { printf("\"%s\"\n", str(0)); exit(); }
+EXPECT ""
+TIMEOUT 5
+
+NAME config_allowed
+PROG config = { license = "GPL" } BEGIN { printf("\"%s\"\n", str(0)); exit(); }
+EXPECT ""
+TIMEOUT 5
+
+NAME config_not_allowed
+PROG config = { license = "?" } BEGIN { printf("%s\n", str(0)); }
+EXPECT stdin:1:51-57: ERROR: helper bpf_probe_read_str can only be used in GPL-compatible programs
+       config = { license = "?" } BEGIN { printf("%s\n", str(0)); }
+                                                         ~~~~~~
+TIMEOUT 5
+WILL_FAIL
+
