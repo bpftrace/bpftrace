@@ -21,6 +21,7 @@ set(VENDOR_GTEST OFF CACHE BOOL "Clone gtest from github")
 set(BUILD_FUZZ OFF CACHE BOOL "Build bpftrace for fuzzing")
 set(USE_LIBFUZZER OFF CACHE BOOL "Use libfuzzer for fuzzing")
 set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
+set(ENABLE_SYSTEMD OFF CACHE BOOL "Enable systemd integration")
 
 set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
 
@@ -118,6 +119,11 @@ if(ENABLE_SKB_OUTPUT)
   find_package(LibPcap)
 endif()
 
+if(ENABLE_SYSTEMD)
+  find_package(PkgConfig)
+  pkg_check_modules(libsystemd REQUIRED IMPORTED_TARGET libsystemd)
+endif()
+
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
@@ -187,6 +193,10 @@ endif(LIBPCAP_FOUND)
 if (HAVE_LIBBPF_UPROBE_MULTI)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBBPF_UPROBE_MULTI)
 endif(HAVE_LIBBPF_UPROBE_MULTI)
+
+if(ENABLE_SYSTEMD)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBSYSTEMD)
+endif()
 
 add_subdirectory(src)
 if (BUILD_TESTING)

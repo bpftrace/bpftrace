@@ -29,6 +29,9 @@
 #include <bcc/perf_reader.h>
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
+#ifdef HAVE_LIBSYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
 
 #include "ast/async_event_types.h"
 #include "bpfmap.h"
@@ -1175,6 +1178,13 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
     std::cerr << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
 
+#ifdef HAVE_LIBSYSTEMD
+  err = sd_notify(false, "READY=1\nSTATUS=Processing events...");
+  if (err < 0)
+    LOG(WARNING) << "Failed to send readiness notification, ignoring: "
+                 << strerror(-err);
+#endif
+
   if (has_iter_) {
     int err = run_iter();
     if (err)
@@ -1182,6 +1192,13 @@ int BPFtrace::run(BpfBytecode bytecode)
   } else {
     poll_output();
   }
+
+#ifdef HAVE_LIBSYSTEMD
+  err = sd_notify(false, "STOPPING=1\nSTATUS=Shutting down...");
+  if (err < 0)
+    LOG(WARNING) << "Failed to send shutdown notification, ignoring: "
+                 << strerror(-err);
+#endif
 
   attached_probes_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise

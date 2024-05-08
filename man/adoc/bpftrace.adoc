@@ -3809,3 +3809,29 @@ Maps are printed by reference not by value and as the value gets updated right a
 ----
 
 Therefore, when you need precise event statistics, it is recommended to use synchronous functions (e.g. count() and hist()) to ensure more reliable and accurate results.
+
+=== Systemd support
+
+To run bpftrace in the background using systemd::
+----
+# systemd-run --unit=bpftrace --service-type=notify bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
+----
+
+In the above example, systemd-run will not finish until bpftrace has attached
+its probes, so you can be sure that all following commands will be traced. To
+stop tracing, run `systemctl stop bpftrace`.
+
+To debug early boot issues, bpftrace can be invoked via a systemd service
+ordered before the service that needs to be traced. A basic unit file to run
+bpftrace before another service looks as follows::
+----
+[Unit]
+Before=service-i-want-to-trace.service
+
+[Service]
+Type=notify
+ExecStart=bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
+----
+
+Similarly to the systemd-run example, the service to be traced will not start
+until bpftrace started by the systemd unit has attached its probes.

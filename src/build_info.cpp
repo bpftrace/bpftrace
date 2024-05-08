@@ -33,6 +33,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  libsystemd (systemd notify support): "
+#ifdef HAVE_LIBSYSTEMD
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
 
   return buf.str();
 }
