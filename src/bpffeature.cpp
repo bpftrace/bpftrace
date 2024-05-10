@@ -47,9 +47,12 @@ static bool try_load_(const char* name,
                       size_t logbuf_size,
                       int* outfd = nullptr)
 {
-  for (int attempt = 0; attempt < 3; attempt++) {
-    auto version = kernel_version(attempt);
-    if (version == 0 && attempt > 0) {
+  const KernelVersionMethod methods[] = { vDSO, UTS, File };
+
+  for (KernelVersionMethod method : methods) {
+    auto version = kernel_version(method);
+
+    if (method != vDSO && !version) {
       // Recent kernels don't check the version so we should try to call
       // bpf_prog_load during first iteration even if we failed to determine
       // the version. We should not do that in subsequent iterations to avoid

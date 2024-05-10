@@ -1196,28 +1196,27 @@ static uint32_t kernel_version_from_khdr(void)
  * may not match if bpftrace is compiled on a different Linux version than it's
  * used on, e.g. if built with Docker.
  */
-uint32_t kernel_version(int attempt)
+uint32_t kernel_version(KernelVersionMethod method)
 {
   static std::optional<uint32_t> a0, a1, a2;
-  switch (attempt) {
-    case 0: {
+  switch (method) {
+    case vDSO: {
       if (!a0)
         a0 = kernel_version_from_vdso();
       return *a0;
     }
-    case 1: {
+    case UTS: {
       if (!a1)
         a1 = kernel_version_from_uts();
       return *a1;
     }
-    case 2: {
+    case File: {
       if (!a2)
         a2 = kernel_version_from_khdr();
       return *a2;
     }
-    default:
-      LOG(BUG) << "kernel_version(): Invalid attempt: "
-               << std::to_string(attempt);
+    case None:
+      return 0;
   }
 }
 
