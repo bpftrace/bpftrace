@@ -1,5 +1,8 @@
 #include "elf_parser.h"
 #include <elf.h>
+#ifndef EM_BPF     // EM_BPF may not be defined in older containers, e.g. RHEL7
+#define EM_BPF 247 // Could be in linux/elf.h, but it can cause conflicts
+#endif
 
 namespace bpftrace {
 namespace elf {

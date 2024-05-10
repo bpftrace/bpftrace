@@ -707,13 +707,32 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   auto func_infos = prog_.getFuncInfos();
   const char *license = "GPL";
   int log_level = 0;
+  std::stringstream logbuf; // while stderr is silenced and for joining lines
 
   uint64_t log_buf_size = probe_.log_size;
   auto log_buf = std::make_unique<char[]>(log_buf_size);
   std::string name;
   std::string tracing_type;
 
-  {
+  /*
+   * Fallbacks for kernels that don't cope well with func_infos and BTF, and may
+   * check the program's kernel version. Try witout BTF and func_infos and when
+   * needed, also pass the kernel version (try three different methods):
+   */
+  struct load_strategy {
+    bool btf;
+    bool func_infos;
+    KernelVersionMethod kver;
+  } load_configs[] = {
+    { .btf = true, .func_infos = true, .kver = None },  // BTF and func_infos
+    { .btf = true, .func_infos = false, .kver = None }, // BTF, no func_infos
+    /* Fallbacks for Linux <5.0: No BTF and func_infos, with kernel version: */
+    { .btf = false, .func_infos = false, .kver = vDSO }, // version from vDSO
+    { .btf = false, .func_infos = false, .kver = UTS },  // version from uname
+    { .btf = false, .func_infos = false, .kver = File }, // version from header
+  };
+
+  for (auto &load_config : load_configs) {
     if (bt_debug != DebugLevel::kNone)
       log_level = 15;
     if (bt_verbose)
@@ -738,16 +757,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     if (probe_.type == ProbeType::special && !feature.has_raw_tp_special())
       prog_type = progtype(ProbeType::uprobe);
 
-    for (int attempt = 0; attempt < 3; attempt++) {
-      auto version = kernel_version(attempt);
-      if (version == 0 && attempt > 0) {
-        // Recent kernels don't check the version so we should try to call
-        // bpf_prog_load during first iteration even if we failed to determine
-        // the version. We should not do that in subsequent iterations to avoid
-        // zeroing of log_buf on systems with older kernels.
-        continue;
-      }
-
+    {
       LIBBPF_OPTS(bpf_prog_load_opts, opts);
       opts.log_buf = log_buf.get();
       opts.log_size = log_buf_size;
@@ -802,7 +812,14 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.attach_btf_id = btf_id.first;
         opts.attach_btf_obj_fd = btf_id.second;
       } else {
-        opts.kern_version = version;
+        opts.kern_version = kernel_version(load_config.kver);
+      }
+      logbuf << "load " << probe_.name << (load_config.btf ? ", with BTF" : "")
+             << (load_config.func_infos ? ", with func_infos" : "");
+      if (opts.kern_version) {
+        logbuf << ", version: " << ((opts.kern_version >> 16) & 0xFF) << "."
+               << ((opts.kern_version >> 8) & 0xFF) << "."
+               << (opts.kern_version & 0xFF);
       }
 
       {
@@ -811,35 +828,41 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         if (bt_debug == DebugLevel::kNone)
           silencer.silence();
 
-        LIBBPF_OPTS(bpf_btf_load_opts,
-                    btf_opts,
-                    .log_buf = log_buf.get(),
-                    .log_level = static_cast<__u32>(log_level),
-                    .log_size = static_cast<__u32>(log_buf_size), );
+        int btf_fd = -1;
+        if (load_config.btf) {
+          LIBBPF_OPTS(bpf_btf_load_opts,
+                      btf_opts,
+                      .log_buf = log_buf.get(),
+                      .log_level = static_cast<__u32>(log_level),
+                      .log_size = static_cast<__u32>(log_buf_size), );
 
-        auto &btf = prog_.getBTF();
-        auto btf_fd = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
+          auto &btf = prog_.getBTF();
+          btf_fd = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
+          if (btf_fd < 0) {
+            logbuf << ": BTF load failed";
+            goto log_error; // and continue to the next load_config fallback
+          }
+          opts.prog_btf_fd = (__u32)btf_fd;
+        }
 
-        opts.prog_btf_fd = btf_fd;
-
-        if (!func_infos.empty()) {
+        // Skip .BTF.ext func_info relocation on fallback for older kernels
+        if (load_config.func_infos && !func_infos.empty()) {
           opts.func_info_rec_size = sizeof(struct bpf_func_info);
           opts.func_info = func_infos.data();
           opts.func_info_cnt = func_infos.size() / sizeof(struct bpf_func_info);
         }
 
-        // Don't attempt to load the program if the BTF load failed.
-        // This will fall back to the error handling for failed program load,
-        // which is more robust.
-        if (btf_fd >= 0) {
+        // Load the BPF program on BTF load success or on fallback without it
+        if (!load_config.btf || btf_fd >= 0) {
           progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                                   name.c_str(),
                                   license,
                                   reinterpret_cast<const struct bpf_insn *>(
                                       insns.data()),
                                   insns.size() / sizeof(struct bpf_insn),
-                                  &opts);
-          close(btf_fd);
+                                  &opts); // Configured opts are passed here
+          if (btf_fd >= 0)
+            close(btf_fd);
         }
       }
 
@@ -847,7 +870,17 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         close(opts.attach_btf_obj_fd);
       if (progfd_ >= 0)
         break;
-    }
+      logbuf << " = " << progfd_ << ": " << std::strerror(-progfd_);
+    log_error:
+      if (!logbuf.str().empty()) { // log the error of the failed attempt
+        LOG(V1) << logbuf.str();
+        logbuf.str("");
+      }
+    } // obsolete indendation level, has no effect, kept for a small commitdiff
+  } // for (auto &load_config : load_configs): handle kernel features & versions
+
+  if (!logbuf.str().empty()) {
+    LOG(V1) << logbuf.str() << ": Success";
   }
 
   if (progfd_ < 0) {
