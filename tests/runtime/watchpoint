@@ -37,7 +37,7 @@ REQUIRES_FEATURE signal
 
 NAME many_function_probes
 RUN {{BPFTRACE}} -e 'watchpoint:increment+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_many_probes
-EXPECT You are out of watchpoint registers
+EXPECT Failed to attach watchpoint probe. You are out of watchpoint registers.
 ARCH aarch64|x86_64
 TIMEOUT 5
 REQUIRES_FEATURE signal
@@ -58,7 +58,7 @@ REQUIRES_FEATURE signal
 
 NAME wildcarded_function
 RUN {{BPFTRACE}} -e 'watchpoint:increment_*+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_wildcard
-EXPECT You are out of watchpoint registers
+EXPECT Failed to attach watchpoint probe. You are out of watchpoint registers.
 ARCH aarch64|x86_64
 TIMEOUT 5
 REQUIRES_FEATURE signal
