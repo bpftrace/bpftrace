@@ -72,6 +72,17 @@ TEST(Config, get_config_key)
             "max_ast_nodes can only be set as an environment variable");
 }
 
+TEST(Config, try_get)
+{
+  auto config = Config();
+  auto config_setter = ConfigSetter(config, ConfigSource::env_var);
+
+  EXPECT_EQ(config.try_get(ConfigKeyString::license), std::nullopt);
+
+  config_setter.set(ConfigKeyString::license, "abc");
+  EXPECT_EQ(config.try_get(ConfigKeyString::license), "abc");
+}
+
 TEST(ConfigSetter, set_stack_mode)
 {
   auto config = Config();

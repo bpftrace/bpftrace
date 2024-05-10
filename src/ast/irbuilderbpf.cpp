@@ -607,14 +607,12 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
       getInt64Ty(), { dst->getType(), getInt32Ty(), src->getType() }, false);
-  PointerType *probereadstr_func_ptr_type = PointerType::get(
-      probereadstr_func_type, 0);
-  Constant *probereadstr_callee = ConstantExpr::getCast(
-      Instruction::IntToPtr, getInt64(read_fn), probereadstr_func_ptr_type);
-  CallInst *call = createCall(probereadstr_func_type,
-                              probereadstr_callee,
-                              { dst, size_i32, src },
-                              probeReadHelperName(read_fn));
+
+  CallInst *call = CreateHelperCall(read_fn,
+                                    probereadstr_func_type,
+                                    { dst, size_i32, src },
+                                    probeReadHelperName(read_fn),
+                                    &loc);
   CreateHelperErrorCond(ctx, call, read_fn, loc);
   return call;
 }

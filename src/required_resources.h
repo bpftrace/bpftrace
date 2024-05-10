@@ -85,6 +85,8 @@ public:
   void load_state(std::istream &in);
   void load_state(const uint8_t *ptr, size_t len);
 
+  std::string license;
+
   // Async argument metadata
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
   // mapped_printf_args stores seq_printf, debugf arguments

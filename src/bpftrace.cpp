@@ -769,7 +769,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (feature_->has_uprobe_refcnt() ||
       !(file_activation && probe.path.size())) {
     ret.emplace_back(std::make_unique<AttachedProbe>(
-        probe, std::move(program), pid, *feature_, *btf_));
+        probe, std::move(program), pid, *feature_, *btf_, resources.license));
     return ret;
   }
 
@@ -822,8 +822,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
         LOG(FATAL) << "failed to parse pid=" << pid_str;
       }
 
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(program), pid_parsed, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(program),
+                                                       pid_parsed,
+                                                       *feature_,
+                                                       *btf_,
+                                                       resources.license));
       break;
     }
   }
@@ -891,17 +895,30 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
       return ret;
     } else if (probe.type == ProbeType::uprobe ||
                probe.type == ProbeType::uretprobe) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_, safe_mode_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(*program),
+                                                       pid,
+                                                       *feature_,
+                                                       *btf_,
+                                                       resources.license,
+                                                       safe_mode_));
       return ret;
     } else if (probe.type == ProbeType::watchpoint ||
                probe.type == ProbeType::asyncwatchpoint) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(*program),
+                                                       pid,
+                                                       *feature_,
+                                                       *btf_,
+                                                       resources.license));
       return ret;
     } else {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), safe_mode_, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(*program),
+                                                       safe_mode_,
+                                                       *feature_,
+                                                       *btf_,
+                                                       resources.license));
       return ret;
     }
   } catch (const EnospcException &e) {
@@ -2291,6 +2308,16 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
   };
 
   return symopts;
+}
+
+std::string BPFtrace::get_license() const
+{
+  const auto &opt_license = config_.try_get(ConfigKeyString::license);
+  if (opt_license)
+    return *opt_license;
+
+  LOG(V1) << "No license detected... defaulting to GPL";
+  return "GPL";
 }
 
 } // namespace bpftrace

@@ -39,6 +39,7 @@ enum class ConfigKeyInt {
 };
 
 enum class ConfigKeyString {
+  license,
   str_trunc_trailer,
 };
 
@@ -63,6 +64,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
   { "cpp_demangle", ConfigKeyBool::cpp_demangle },
   { "lazy_symbolication", ConfigKeyBool::lazy_symbolication },
+  { "license", ConfigKeyString::license },
   { "log_size", ConfigKeyInt::log_size },
   { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
   { "max_cat_bytes", ConfigKeyInt::max_cat_bytes },
@@ -83,7 +85,12 @@ const std::set<std::string> ENV_ONLY = {
 
 struct ConfigValue {
   ConfigSource source = ConfigSource::default_;
-  std::variant<bool, uint64_t, std::string, StackMode, UserSymbolCacheType>
+  std::variant<bool,
+               uint64_t,
+               std::string,
+               StackMode,
+               UserSymbolCacheType,
+               std::nullopt_t>
       value;
 };
 
@@ -104,6 +111,11 @@ public:
   std::string get(ConfigKeyString key) const
   {
     return get<std::string>(key);
+  }
+
+  std::optional<std::string> try_get(ConfigKeyString key) const
+  {
+    return try_get<std::string>(key);
   }
 
   StackMode get(ConfigKeyStackMode key) const
@@ -152,6 +164,19 @@ private:
       // This shouldn't happen
       throw std::runtime_error("Type mismatch for config key");
     }
+  }
+
+  template <typename T>
+  std::optional<T> try_get(ConfigKey key) const
+  {
+    auto it = config_map_.find(key);
+    if (it == config_map_.end()) {
+      throw std::runtime_error("Config key does not exist in map");
+    }
+    auto *p = std::get_if<T>(&it->second.value);
+    if (p)
+      return *p;
+    return {};
   }
 
 private:

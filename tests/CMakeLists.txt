@@ -31,6 +31,7 @@ add_executable(bpftrace_test
   mocks.cpp
   output.cpp
   parser.cpp
+  parser_licenses.cpp
   portability_analyser.cpp
   procmon.cpp
   probe.cpp
