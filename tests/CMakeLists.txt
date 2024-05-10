@@ -123,14 +123,15 @@ add_custom_target(
 )
 add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
 
-file(GLOB_RECURSE runtime_test_files
+file(GLOB_RECURSE runtime_test_src_files
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
   CONFIGURE_DEPENDS
   runtime/*
 )
-list(REMOVE_ITEM runtime_test_files runtime/engine/cmake_vars.py)
+list(REMOVE_ITEM runtime_test_src_files runtime/engine/cmake_vars.py)
 
-foreach(runtime_test_file ${runtime_test_files})
+set(runtime_test_files)
+foreach(runtime_test_file ${runtime_test_src_files})
   add_custom_command(
     OUTPUT
       ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
@@ -139,6 +140,10 @@ foreach(runtime_test_file ${runtime_test_files})
       ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
     DEPENDS
       ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+  )
+  list(APPEND
+    runtime_test_files
+    ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
   )
 endforeach()
 add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
