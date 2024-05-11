@@ -115,7 +115,7 @@ find_package(LibBfd)
 find_package(LibOpcodes)
 
 if(ENABLE_SKB_OUTPUT)
-find_package(LibPcap)
+  find_package(LibPcap)
 endif()
 
 if(POLICY CMP0075)
