@@ -222,6 +222,10 @@ if (STATIC_LINKING)
   endif()
 endif()
 
+if (ENABLE_SYSTEMD)
+  target_link_libraries(runtime PkgConfig::libsystemd)
+endif()
+
 unset(MAIN_SRC)
 unset(BPFTRACE)
 
