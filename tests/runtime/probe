@@ -486,7 +486,7 @@ TIMEOUT 2
 # match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS.
 NAME bpf_programs_limit
 PROG k:* { @[probe] = count(); }
-EXPECT_REGEX ERROR: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 512.\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
+EXPECT_REGEX ERROR: Failed to compile: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 512.\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
 WILL_FAIL
 TIMEOUT 2
 

@@ -1,6 +1,7 @@
 #include "format_string.h"
 #include "log.h"
 #include "struct.h"
+#include "utils.h"
 
 #include <unordered_map>
 
@@ -148,7 +149,9 @@ void FormatString::format(std::ostream &out,
   auto buffer = std::vector<char>(FMT_BUF_SZ);
   auto check_snprintf_ret = [](int r) {
     if (r < 0) {
-      LOG(FATAL) << "format() error occurred: " << std::strerror(errno);
+      char *e = std::strerror(errno);
+      throw FatalUserException("format() error occurred: " +
+                               std::string(e ? e : ""));
     }
   };
 

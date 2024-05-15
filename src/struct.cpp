@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "log.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -131,7 +132,7 @@ const Field &Struct::GetField(const std::string &name) const
     if (field.name == name)
       return field;
   }
-  throw std::runtime_error("struct has no field named " + name);
+  throw FatalUserException("struct has no field named " + name);
 }
 
 void Struct::AddField(const std::string &field_name,
@@ -163,8 +164,8 @@ void StructManager::Add(const std::string &name,
                         bool allow_override)
 {
   if (struct_map_.find(name) != struct_map_.end())
-    LOG(FATAL) << "Type redefinition: type with name \'" << name
-               << "\' already exists";
+    throw FatalUserException("Type redefinition: type with name \'" + name +
+                             "\' already exists");
   struct_map_[name] = std::make_unique<Struct>(size, allow_override);
 }
 

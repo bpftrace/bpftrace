@@ -61,7 +61,8 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
   std::string error_str;
   auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
   if (!target)
-    LOG(FATAL) << "Could not find bpf llvm target, does your llvm support it?";
+    throw FatalUserException(
+        "Could not find bpf llvm target, does your llvm support it?");
 
   target_machine_.reset(
       target->createTargetMachine(LLVMTargetTriple,
@@ -837,7 +838,7 @@ void CodegenLLVM::visit(Call &call)
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
-      LOG(FATAL) << "Failed to resolve kernel symbol: " << name;
+      throw FatalUserException("Failed to resolve kernel symbol: " + name);
     expr_ = b_.getInt64(addr);
   } else if (call.func == "uaddr") {
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
@@ -846,8 +847,8 @@ void CodegenLLVM::visit(Call &call)
                                       &sym,
                                       current_attach_point_->target);
     if (err < 0 || sym.address == 0)
-      LOG(FATAL) << "Could not resolve symbol: "
-                 << current_attach_point_->target << ":" << name;
+      throw FatalUserException("Could not resolve symbol: " +
+                               current_attach_point_->target + ":" + name);
     expr_ = b_.getInt64(sym.address);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
@@ -999,7 +1000,8 @@ void CodegenLLVM::visit(Call &call)
     Value *octet;
     auto ret = inet_pton(af_type, addr.c_str(), &dst);
     if (ret != 1) {
-      LOG(FATAL) << "inet_pton() call returns " << ret;
+      throw FatalUserException("inet_pton() call returns " +
+                               std::to_string(ret));
     }
     for (int i = 0; i < addr_size; i++) {
       octet = b_.getInt8(dst[i]);
@@ -1014,7 +1016,7 @@ void CodegenLLVM::visit(Call &call)
     auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
     int offset = arch::offset(reg_name);
     if (offset == -1) {
-      LOG(FATAL) << "negative offset on reg() call";
+      throw FatalUserException("negative offset on reg() call");
     }
 
     expr_ = b_.CreateRegisterRead(ctx_, offset, call.func + "_" + reg_name);
@@ -2697,13 +2699,13 @@ void CodegenLLVM::visit(Probe &probe)
       uint64_t max_bpf_progs = bpftrace_.config_.get(
           ConfigKeyInt::max_bpf_progs);
       if (probe_count_ > max_bpf_progs) {
-        LOG(FATAL) << "Your program is trying to generate more than "
-                   << std::to_string(probe_count_)
-                   << " BPF programs, which exceeds the current limit of "
-                   << std::to_string(max_bpf_progs)
-                   << ".\nYou can increase the limit through the "
-                      "BPFTRACE_MAX_BPF_PROGS "
-                      "environment variable.";
+        throw FatalUserException(
+            "Your program is trying to generate more than " +
+            std::to_string(probe_count_) +
+            " BPF programs, which exceeds the current limit of " +
+            std::to_string(max_bpf_progs) +
+            ".\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
+            "environment variable.");
       }
 
       tracepoint_struct_ = "";

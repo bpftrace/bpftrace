@@ -253,8 +253,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
         ty = getInt8Ty();
         break;
       default:
-        LOG(FATAL) << stype.GetSize()
-                   << " is not a valid type size for GetType";
+        LOG(BUG) << stype.GetSize() << " is not a valid type size for GetType";
     }
   }
   return ty;
@@ -666,8 +665,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     int offset = 0;
     offset = arch::offset(argument->base_register_name);
     if (offset < 0) {
-      LOG(FATAL) << "offset for register " << argument->base_register_name
-                 << " not known";
+      LOG(BUG) << "offset for register " << argument->base_register_name
+               << " not known";
     }
 
     // bpftrace's args are internally represented as 64 bit integers. However,
@@ -682,8 +681,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
       int ioffset = arch::offset(argument->index_register_name);
       if (ioffset < 0) {
-        LOG(FATAL) << "offset for register " << argument->index_register_name
-                   << " not known";
+        LOG(BUG) << "offset for register " << argument->index_register_name
+                 << " not known";
       }
       index_offset = CreateGEP(getInt8Ty(),
                                ctx,

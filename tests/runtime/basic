@@ -282,7 +282,7 @@ WILL_FAIL
 
 NAME kaddr fails
 PROG BEGIN { print(kaddr("asdfzzzzzzz")) }
-EXPECT ERROR: Failed to resolve kernel symbol: asdfzzzzzzz
+EXPECT ERROR: Failed to compile: Failed to resolve kernel symbol: asdfzzzzzzz
 TIMEOUT 1
 WILL_FAIL
 

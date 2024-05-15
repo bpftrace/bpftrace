@@ -563,7 +563,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
              printf_id < asyncactionint(AsyncAction::syscall) +
                              RESERVED_IDS_PER_ASYNCACTION) {
     if (bpftrace->safe_mode_) {
-      LOG(FATAL) << "syscall() not allowed in safe mode";
+      throw FatalUserException(
+          "syscall() not allowed in safe mode. Use '--unsafe'.");
     }
 
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
@@ -634,9 +635,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
               val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
               break;
             default:
-              LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
-                            "byte supported. "
-                         << arg.type.GetSize() << "provided";
+              throw FatalUserException("get_arg_values: invalid integer size. "
+                                       "8, 4, 2 and byte supported. " +
+                                       std::to_string(arg.type.GetSize()) +
+                                       "provided");
           }
           arg_values.push_back(std::make_unique<PrintableSInt>(val));
         } else {
@@ -658,9 +660,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
               val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
               break;
             default:
-              LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
-                            "byte supported. "
-                         << arg.type.GetSize() << "provided";
+              throw FatalUserException("get_arg_values: invalid integer size. "
+                                       "8, 4, 2 and byte supported. " +
+                                       std::to_string(arg.type.GetSize()) +
+                                       "provided");
           }
           arg_values.push_back(std::make_unique<PrintableInt>(val));
         }
@@ -848,7 +851,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       try {
         pid_parsed = std::stoi(pid_str);
       } catch (const std::exception &ex) {
-        LOG(FATAL) << "failed to parse pid=" << pid_str;
+        throw FatalUserException("failed to parse pid=" + pid_str);
       }
 
       ret.emplace_back(std::make_unique<AttachedProbe>(
@@ -942,7 +945,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     } else {
       LOG(ERROR) << e.what();
     }
-  } catch (const std::runtime_error &e) {
+  } catch (const std::exception &e) {
     LOG(ERROR) << e.what();
     ret.clear();
   }
@@ -1140,7 +1143,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (child_ && has_usdt_) {
     try {
       child_->run(true);
-    } catch (std::runtime_error &e) {
+    } catch (const std::exception &e) {
       LOG(ERROR) << "Failed to setup child: " << e.what();
       return -1;
     }
@@ -1194,7 +1197,7 @@ int BPFtrace::run(BpfBytecode bytecode)
         child_->resume();
       else
         child_->run();
-    } catch (std::runtime_error &e) {
+    } catch (const std::exception &e) {
       LOG(ERROR) << "Failed to run child: " << e.what();
       return -1;
     }
