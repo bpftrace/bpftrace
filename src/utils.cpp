@@ -109,8 +109,6 @@ const struct vmlinux_location vmlinux_locs[] = {
   { nullptr, false },
 };
 
-constexpr std::string_view PROC_KHEADERS_PATH = "/sys/kernel/kheaders.tar.xz";
-
 static bool pid_in_different_mountns(int pid);
 static std::vector<std::string>
 resolve_binary_path(const std::string &cmd, const char *env_paths, int pid);
@@ -702,107 +700,6 @@ bool is_dir(const std::string& path)
   return std_filesystem::is_directory(buf, ec);
 }
 
-bool file_exists_and_ownedby_root(const char *f)
-{
-  struct stat st;
-  if (stat(f, &st) == 0)
-  {
-    if (st.st_uid != 0)
-    {
-      LOG(ERROR) << "header file ownership expected to be root: "
-                 << std::string(f);
-      return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-namespace {
-  struct KernelHeaderTmpDir {
-    KernelHeaderTmpDir(const std::string& prefix) : path{prefix + "XXXXXX"}
-    {
-      if (::mkdtemp(&path[0]) == nullptr) {
-        throw std::runtime_error("creating temporary path for kheaders.tar.xz failed");
-      }
-    }
-
-    ~KernelHeaderTmpDir()
-    {
-      if (path.size() > 0) {
-        // move_to either did not succeed or did not run, so clean up after ourselves
-        exec_system(("rm -rf " + path).c_str());
-      }
-    }
-
-    void move_to(const std::string& new_path)
-    {
-      int err = ::rename(path.c_str(), new_path.c_str());
-      if (err == 0) {
-        path = "";
-      }
-    }
-
-    std::string path;
-  };
-
-  std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
-  {
-    std::error_code ec;
-#if defined(__ANDROID__)
-    std_filesystem::path path_prefix{ "/data/local/tmp" };
-#else
-    std_filesystem::path path_prefix{ "/tmp" };
-#endif
-    std_filesystem::path path_kheaders{ PROC_KHEADERS_PATH };
-    if (const char* tmpdir = ::getenv("TMPDIR")) {
-      path_prefix = tmpdir;
-    }
-    path_prefix /= "kheaders-";
-    std_filesystem::path shared_path{ path_prefix.string() + utsname.release };
-
-    if (file_exists_and_ownedby_root(shared_path.c_str()))
-    {
-      // already unpacked
-      return shared_path.string();
-    }
-
-    if (!std_filesystem::exists(path_kheaders, ec))
-    {
-      StderrSilencer silencer;
-      silencer.silence();
-
-      FILE* modprobe = ::popen("modprobe kheaders", "w");
-      if (modprobe == nullptr || pclose(modprobe) != 0) {
-        return "";
-      }
-
-      if (!std_filesystem::exists(path_kheaders, ec))
-      {
-        return "";
-      }
-    }
-
-    KernelHeaderTmpDir tmpdir{path_prefix};
-
-    FILE *tar = ::popen(("tar xf " + std::string(PROC_KHEADERS_PATH) + " -C " +
-                         tmpdir.path)
-                            .c_str(),
-                        "w");
-    if (!tar) {
-      return "";
-    }
-
-    int rc = ::pclose(tar);
-    if (rc == 0) {
-      tmpdir.move_to(shared_path);
-      return shared_path;
-    }
-
-    return "";
-  }
-} // namespace
-
 // get_kernel_dirs returns {ksrc, kobj} - directories for pristine and
 // generated kernel sources.
 //
@@ -820,8 +717,7 @@ namespace {
 // {"", ""} is returned if no trace of kernel headers was found at all.
 // Both ksrc and kobj are guaranteed to be != "", if at least some trace of kernel sources was found.
 std::tuple<std::string, std::string> get_kernel_dirs(
-    const struct utsname &utsname,
-    bool unpack_kheaders)
+    const struct utsname &utsname)
 {
 #ifdef KERNEL_HEADERS_DIR
   return {KERNEL_HEADERS_DIR, KERNEL_HEADERS_DIR};
@@ -851,12 +747,14 @@ std::tuple<std::string, std::string> get_kernel_dirs(
   }
   if (ksrc.empty() && kobj.empty())
   {
-    if (unpack_kheaders)
-    {
-      const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
-      if (kheaders_tar_xz_path.size() > 0)
-        return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
-    }
+    LOG(WARNING) << "Could not find kernel headers in " << ksrc << " or "
+                 << kobj
+                 << ". To specify a particular path to kernel headers, set the "
+                    "env variables BPFTRACE_KERNEL_SOURCE and, optionally, "
+                    "BPFTRACE_KERNEL_BUILD if the kernel was built in a "
+                    "different directory than its source. To create kernel "
+                    "headers run 'modprobe kheaders', which will create a tar "
+                    "file at /sys/kernel/kheaders.tar.xz";
     return std::make_tuple("", "");
   }
   if (ksrc.empty())
