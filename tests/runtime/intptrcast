@@ -1,83 +1,11 @@
 NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}
-EXPECT @: 3258
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*((uint16*)arg0 + 1)); exit();}
+EXPECT @: 1110
 TIMEOUT 5
-ARCH x86_64
-AFTER ./testprogs/intptrcast
-
-NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
-EXPECT @: 3258
-TIMEOUT 5
-ARCH aarch64
-AFTER ./testprogs/intptrcast
-
-NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
-EXPECT @: 3567
-TIMEOUT 5
-ARCH armv7l
-AFTER ./testprogs/intptrcast
-
-NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+96)); exit();}
-EXPECT @: 3258
-TIMEOUT 5
-ARCH ppc64le
-AFTER ./testprogs/intptrcast
-
-NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+112)); exit();}
-EXPECT @: 3258
-TIMEOUT 5
-ARCH ppc64
-AFTER ./testprogs/intptrcast
-
-NAME Sum casted value
-PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r15")+160)); exit();}
-EXPECT @: 4660
-TIMEOUT 5
-ARCH s390x
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}
-EXPECT 3258
+PROG uprobe:./testprogs/intptrcast:fn { $a=*((uint16*)arg0 + 1); printf("%d\n", $a); exit();}
+EXPECT 1110
 TIMEOUT 5
-ARCH x86_64
-AFTER ./testprogs/intptrcast
-
-NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+0); printf("%d\n", $a); exit();}
-EXPECT 3258
-TIMEOUT 5
-ARCH aarch64
-AFTER ./testprogs/intptrcast
-
-NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+4); printf("0x%x\n", $a); exit();}
-EXPECT 0x4321
-TIMEOUT 5
-ARCH armv7l
-AFTER ./testprogs/intptrcast
-
-NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+96); printf("%d\n", $a); exit();}
-EXPECT 3258
-TIMEOUT 5
-ARCH ppc64le
-AFTER ./testprogs/intptrcast
-
-NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+112); printf("%d\n", $a); exit();}
-EXPECT 3258
-TIMEOUT 5
-ARCH ppc64
-AFTER ./testprogs/intptrcast
-
-NAME Casting ints
-PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r15")+160); printf("%d\n", $a); exit();}
-EXPECT 4660
-TIMEOUT 5
-ARCH s390x
 AFTER ./testprogs/intptrcast
