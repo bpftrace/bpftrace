@@ -387,32 +387,6 @@ static void parse_env(BPFtrace& bpftrace)
   if (TracepointFormatParser::parse(driver.root.get(), bpftrace) == false)
     return nullptr;
 
-  ClangParser clang;
-  std::vector<std::string> extra_flags;
-  {
-    struct utsname utsname;
-    uname(&utsname);
-    std::string ksrc, kobj;
-    auto kdirs = get_kernel_dirs(utsname);
-    ksrc = std::get<0>(kdirs);
-    kobj = std::get<1>(kdirs);
-
-    if (ksrc != "")
-      extra_flags = get_kernel_cflags(
-          utsname.machine, ksrc, kobj, bpftrace.kconfig);
-  }
-  extra_flags.push_back("-include");
-  extra_flags.push_back("/bpftrace/include/" CLANG_WORKAROUNDS_H);
-
-  for (auto dir : include_dirs) {
-    extra_flags.push_back("-I");
-    extra_flags.push_back(dir);
-  }
-  for (auto file : include_files) {
-    extra_flags.push_back("-include");
-    extra_flags.push_back(file);
-  }
-
   // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
   // avoid issues in some versions. Since we're including files in the command
   // line, we want to force parsing, so we make sure C definitions are not
@@ -420,8 +394,40 @@ static void parse_env(BPFtrace& bpftrace)
   if (!include_files.empty() && driver.root->c_definitions.empty())
     driver.root->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  if (!clang.parse(driver.root.get(), bpftrace, extra_flags))
-    return nullptr;
+  bool should_clang_parse = !(driver.root.get()->c_definitions.empty() &&
+                              bpftrace.btf_set_.empty());
+
+  if (should_clang_parse) {
+    ClangParser clang;
+    std::vector<std::string> extra_flags;
+    {
+      struct utsname utsname;
+      uname(&utsname);
+      std::string ksrc, kobj;
+      auto kdirs = get_kernel_dirs(utsname);
+      ksrc = std::get<0>(kdirs);
+      kobj = std::get<1>(kdirs);
+
+      if (ksrc != "") {
+        extra_flags = get_kernel_cflags(
+            utsname.machine, ksrc, kobj, bpftrace.kconfig);
+      }
+    }
+    extra_flags.push_back("-include");
+    extra_flags.push_back(CLANG_WORKAROUNDS_H);
+
+    for (auto dir : include_dirs) {
+      extra_flags.push_back("-I");
+      extra_flags.push_back(dir);
+    }
+    for (auto file : include_files) {
+      extra_flags.push_back("-include");
+      extra_flags.push_back(file);
+    }
+
+    if (!clang.parse(driver.root.get(), bpftrace, extra_flags))
+      return nullptr;
+  }
 
   err = driver.parse();
   if (err)
