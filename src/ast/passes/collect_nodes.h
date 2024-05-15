@@ -36,6 +36,8 @@ private:
     if (pred_(node)) {
       nodes_.push_back(node);
     }
+
+    Visitor::visit(node);
   }
 
   std::vector<std::reference_wrapper<NodeT>> nodes_;
