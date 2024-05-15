@@ -748,22 +748,18 @@ std::tuple<std::string, std::string> get_kernel_dirs(
 
 const std::string &is_deprecated(const std::string &str)
 {
-  for (auto &item : DEPRECATED_LIST) {
-    if (!item.matches(str)) {
-      continue;
-    }
+  std::vector<DeprecatedName>::iterator item;
 
-    if (item.show_warning) {
-      LOG(WARNING) << item.old_name
-                   << " is deprecated and will be removed in the future. Use "
-                   << item.new_name << " instead.";
-      item.show_warning = false;
-    }
+  for (item = DEPRECATED_LIST.begin(); item != DEPRECATED_LIST.end(); item++) {
+    if (str == item->old_name) {
+      if (item->show_warning) {
+        LOG(WARNING) << item->old_name
+                     << " is deprecated and will be removed in the future. Use "
+                     << item->new_name << " instead.";
+        item->show_warning = false;
+      }
 
-    if (item.replace_by_new_name) {
-      return item.new_name;
-    } else {
-      return str;
+      return item->new_name;
     }
   }
 

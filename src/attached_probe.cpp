@@ -378,10 +378,7 @@ static int sym_address_cb(const char *symname,
 {
   struct symbol *sym = static_cast<struct symbol *>(p);
 
-  // When size is 0, then [start, start + size) = [start, start) = ø.
-  // So we need a special case when size=0, but address matches the symbol's
-  if (sym->address == start ||
-      (sym->address > start && sym->address < (start + size))) {
+  if (sym->address >= start && sym->address < (start + size)) {
     sym->start = start;
     sym->size = size;
     sym->name = symname;

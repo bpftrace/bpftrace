@@ -1102,6 +1102,12 @@ For string arguments use the `str()` call to retrieve the value.
 | n/a
 | Value returned by the function being traced (kretprobe, uretprobe, kretfunc)
 
+| `sarg0`, `sarg1`, `...sargn`
+| int64
+| n/a
+| n/a
+| nth stack value of the function being traced (kprobes, uprobes)
+
 | tid
 | uint64
 | 4.2
@@ -1613,9 +1619,7 @@ This buffer can be printed in the canonical string format using the `%s` format 
 
 ----
 kprobe:arp_create {
-  $stack_arg0 = *(uint8*)(reg("sp") + 8);
-  $stack_arg1 = *(uint8*)(reg("sp") + 16);
-  printf("SRC %s, DST %s\n", macaddr($stack_arg0), macaddr($stack_arg1));
+  printf("SRC %s, DST %s\n", macaddr(sarg0), macaddr(sarg1));
 }
 
 /*
@@ -2917,7 +2921,7 @@ kprobe:tcp_reset {
 }
 ----
 
-Function arguments are available through the `argN` for register args. Arguments passed on stack are available using the stack pointer, e.g. `$stack_arg0 = *(int64*)reg("sp") + 16`.
+Function arguments are available through the `argN` and `sargN` builtins, for register args and stack args respectively.
 Whether arguments passed on stack or in a register depends on the architecture and the number or arguments used, e.g. on x86_64 the first 6 non-floating point arguments are passed in registers and all following arguments are passed on the stack.
 Note that floating point arguments are typically passed in special registers which don't count as `argN` arguments which can cause confusion.
 Consider a function with the following signature:
