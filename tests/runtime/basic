@@ -285,3 +285,13 @@ PROG BEGIN { print(kaddr("asdfzzzzzzz")) }
 EXPECT ERROR: Failed to resolve kernel symbol: asdfzzzzzzz
 TIMEOUT 1
 WILL_FAIL
+
+NAME variable strings are memset
+PROG BEGIN { $x = "xxxxx"; $x = "a"; @[$x] = 1; $y = "yyyyy"; $y = "a"; @[$y] = 1; printf("len: %d\n", len(@)); exit(); }
+EXPECT len: 1
+TIMEOUT 1
+
+NAME map strings are memset
+PROG BEGIN { @x = "xxxxx"; @x = "a"; @[@x] = 1; @y = "yyyyy"; @y = "a"; @[@y] = 1; printf("len: %d\n", len(@)); exit(); }
+EXPECT len: 1
+TIMEOUT 1

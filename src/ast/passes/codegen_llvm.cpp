@@ -2308,8 +2308,10 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     // Extend lifetime of RHS up to the end of probe
     scoped_del.disarm();
   } else if (needMemcpy(var.type)) {
-    b_.CREATE_MEMCPY(
-        variables_[var.ident], expr_, assignment.expr->type.GetSize(), 1);
+    auto *val = variables_[var.ident];
+    if (assignment.expr->type.GetSize() != var.type.GetSize())
+      b_.CREATE_MEMSET(val, b_.getInt8(0), var.type.GetSize(), 1);
+    b_.CREATE_MEMCPY(val, expr_, assignment.expr->type.GetSize(), 1);
   } else {
     b_.CreateStore(expr_, variables_[var.ident]);
   }

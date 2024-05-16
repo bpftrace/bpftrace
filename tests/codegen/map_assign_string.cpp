@@ -11,6 +11,13 @@ TEST(codegen, map_assign_string)
        NAME);
 }
 
+TEST(codegen, map_assign_string_shorter)
+{
+  test("kprobe:f { @x = \"xxxxx\"; @x = \"a\"; }",
+
+       NAME);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

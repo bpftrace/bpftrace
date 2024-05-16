@@ -57,6 +57,8 @@ and this project adheres to
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
 - Fix ustack for functions with prologue
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
+- Fix storing strings of differing lengths in a variable
+  - [#3178](https://github.com/bpftrace/bpftrace/pull/3178)
 #### Docs
 #### Tools
 
