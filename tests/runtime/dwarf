@@ -95,8 +95,8 @@ PROG config = { probe_inline = 1; cache_user_symbols = "PER_PROGRAM"; }
        printf("%s\n", ustack);
        if (++@count == 3) { exit(); }
      }
-EXPECT_REGEX ^\n[ ]+main\+\d+\n[ ]+0x[\da-f]+\n\n$
-EXPECT_REGEX ^\n[ ]+square\+\d+\n[ ]+main\+\d+\n[ ]+0x[\da-f]+\n\n$
+EXPECT_REGEX ^\n[ ]+main\+\d+$
+EXPECT_REGEX ^\n[ ]+square\+\d+\n[ ]+main\+\d+$
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 AFTER ./testprogs/inline_function
