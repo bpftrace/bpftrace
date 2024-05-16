@@ -229,7 +229,7 @@ AFTER ./testprogs/uprobe_loop
 NAME ustack_stack_mode_env_bpftrace
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=bpftrace
-EXPECT_REGEX ^uprobeFunction1\+[0-9]+$
+EXPECT_REGEX ^\s+uprobeFunction1\+[0-9]+$
 TIMEOUT 5
 AFTER ./testprogs/uprobe_loop
 # This was debugged as far down as std::cout having badbit [0] set after a
@@ -249,7 +249,7 @@ SKIP_IF_ENV_HAS CI=true
 NAME ustack_stack_mode_env_perf
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
-EXPECT_REGEX ^[0-9a-f]+ uprobeFunction1\+[0-9]+ \(.*/uprobe_loop\)$
+EXPECT_REGEX ^\s+[0-9a-f]+ uprobeFunction1\+[0-9]+ \(.*/uprobe_loop\)$
 TIMEOUT 5
 AFTER ./testprogs/uprobe_loop
 # See https://github.com/bpftrace/bpftrace/issues/3080
