@@ -208,6 +208,10 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
       switch (inner_type.GetBasicType()) {
         case lldb::eBasicTypeChar:
         case lldb::eBasicTypeSignedChar:
+        case lldb::eBasicTypeUnsignedChar:
+#if LLVM_VERSION_MAJOR >= 15
+        case lldb::eBasicTypeChar8:
+#endif
           return CreateString(length);
         default:
           return CreateArray(length, inner_stype);

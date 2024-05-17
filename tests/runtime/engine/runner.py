@@ -371,6 +371,7 @@ class Runner(object):
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                errors='backslashreplace',
                 env=env,
                 start_new_session=True,
                 universal_newlines=True,

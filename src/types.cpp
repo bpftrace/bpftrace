@@ -252,14 +252,8 @@ uint64_t asyncactionint(AsyncAction a)
 // Type wrappers
 SizedType CreateInteger(size_t bits, bool is_signed)
 {
-  // Zero sized integers are not usually valid. However, during semantic
-  // analysis when we're inferring types, the first pass may not have
-  // enough information to figure out the exact size of the integer. Later
-  // passes infer the exact size.
-  assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
-         bits == 64);
   auto t = SizedType(Type::integer, 0, is_signed);
-  t.size_bits_ = bits;
+  t.SetIntBitWidth(bits);
   return t;
 }
 

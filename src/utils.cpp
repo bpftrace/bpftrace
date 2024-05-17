@@ -1376,7 +1376,7 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
   };
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
-  option.use_symbol_type = BCC_SYM_ALL_TYPES;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
   bcc_elf_foreach_sym(
       elf_file.c_str(), sym_resolve_callback, &option, &symbol_table);
 
