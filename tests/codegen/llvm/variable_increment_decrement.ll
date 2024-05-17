@@ -104,7 +104,7 @@ counter_merge4:                                   ; preds = %lookup_merge10, %co
   %23 = getelementptr %printf_t.2, %printf_t.2* %printf_args12, i32 0, i32 0
   store i64 2, i64* %23, align 8
   %24 = load i64, i64* %"$x", align 8
-  %25 = sub i64 %24, 1
+  %25 = add i64 %24, -1
   store i64 %25, i64* %"$x", align 8
   %26 = getelementptr %printf_t.2, %printf_t.2* %printf_args12, i32 0, i32 1
   store i64 %24, i64* %26, align 8
@@ -143,7 +143,7 @@ counter_merge15:                                  ; preds = %lookup_merge21, %co
   %34 = getelementptr %printf_t.3, %printf_t.3* %printf_args23, i32 0, i32 0
   store i64 3, i64* %34, align 8
   %35 = load i64, i64* %"$x", align 8
-  %36 = sub i64 %35, 1
+  %36 = add i64 %35, -1
   store i64 %36, i64* %"$x", align 8
   %37 = getelementptr %printf_t.3, %printf_t.3* %printf_args23, i32 0, i32 1
   store i64 %36, i64* %37, align 8

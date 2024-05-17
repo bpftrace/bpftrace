@@ -1519,7 +1519,9 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     Map &map,
                                     Value *key,
                                     Value *val,
-                                    const location &loc)
+                                    const location &loc,
+                                    AllocaInst *pre_post_val,
+                                    bool is_post_op)
 {
   CallInst *call = CreateMapLookup(map, key);
   SizedType &type = map.type;
@@ -1546,7 +1548,16 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, value->getType(), "cast");
+
+  if (pre_post_val && is_post_op) {
+    CreateStore(CreateLoad(getInt64Ty(), cast), pre_post_val);
+  }
+
   CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), val), cast);
+
+  if (pre_post_val && !is_post_op) {
+    CreateStore(CreateLoad(getInt64Ty(), cast), pre_post_val);
+  }
 
   CreateBr(lookup_merge_block);
 
@@ -1554,10 +1565,17 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   CreateMapElemInit(ctx, map, key, val, loc);
 
+  if (pre_post_val) {
+    if (is_post_op) {
+      CreateStore(getInt64(0), pre_post_val);
+    } else {
+      CreateStore(val, pre_post_val);
+    }
+  }
+
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
   CreateLifetimeEnd(value);
-  return;
 }
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,

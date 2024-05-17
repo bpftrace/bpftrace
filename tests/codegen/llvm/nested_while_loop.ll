@@ -17,8 +17,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @interval_s_1_1(i8* %0) section "s_interval_s_1_1" !dbg !51 {
 entry:
-  %"@_newval" = alloca i64, align 8
+  %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
+  %"@pre_post_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %"$j" = alloca i64, align 8
   %1 = bitcast i64* %"$j" to i8*
@@ -59,9 +60,11 @@ while_body2:                                      ; preds = %while_cond1
   %11 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
   store i64 0, i64* %"@_key", align 8
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i64*)*)(%"struct map_t"* @AT_, i64* %"@_key")
-  %12 = bitcast i64* %lookup_elem_val to i8*
+  %12 = bitcast i64* %"@pre_post_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i64*)*)(%"struct map_t"* @AT_, i64* %"@_key")
+  %13 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
@@ -70,30 +73,34 @@ while_end3:                                       ; preds = %while_cond1
 
 lookup_success:                                   ; preds = %while_body2
   %cast = bitcast i8* %lookup_elem to i64*
-  %13 = load i64, i64* %cast, align 8
-  store i64 %13, i64* %lookup_elem_val, align 8
+  %14 = load i64, i64* %cast, align 8
+  store i64 %14, i64* %"@pre_post_val", align 8
+  %15 = load i64, i64* %cast, align 8
+  %16 = add i64 %15, 1
+  store i64 %16, i64* %cast, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %while_body2
-  store i64 0, i64* %lookup_elem_val, align 8
+  %17 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
+  store i64 1, i64* %initial_value, align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %initial_value, i64 1)
+  %18 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  store i64 0, i64* %"@pre_post_val", align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %14 = load i64, i64* %lookup_elem_val, align 8
-  %15 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast i64* %"@_newval" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
-  %17 = add i64 %14, 1
-  store i64 %17, i64* %"@_newval", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_newval", i64 0)
-  %18 = bitcast i64* %"@_newval" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
-  %19 = bitcast i64* %"@_key" to i8*
+  %19 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
-  %20 = load i64, i64* %"$j", align 8
-  %21 = add i64 %20, 1
-  store i64 %21, i64* %"$j", align 8
+  %20 = load i64, i64* %"@pre_post_val", align 8
+  %21 = bitcast i64* %"@pre_post_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
+  %22 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
+  %23 = load i64, i64* %"$j", align 8
+  %24 = add i64 %23, 1
+  store i64 %24, i64* %"$j", align 8
   br label %while_cond1
 }
 

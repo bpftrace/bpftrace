@@ -3893,34 +3893,31 @@ void CodegenLLVM::createIncDec(Unop &unop)
   bool is_increment = unop.op == Operator::INCREMENT;
   SizedType &type = unop.expr->type;
   uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
+  if (!is_increment) {
+    step = -step;
+  }
 
   if (unop.expr->is_map) {
     Map &map = static_cast<Map &>(*unop.expr);
     auto [key, scoped_key_deleter] = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, unop.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
-    if (is_increment)
-      b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
-                     newval);
-    else
-      b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
-                     newval);
-    b_.CreateMapUpdateElem(ctx_, map.ident, key, newval, unop.loc);
-
-    if (unop.is_post_op)
-      expr_ = oldval;
-    else
-      expr_ = b_.CreateLoad(b_.GetType(map.type), newval);
-    b_.CreateLifetimeEnd(newval);
+    AllocaInst *pre_post_val = b_.CreateAllocaBPF(map.type,
+                                                  map.ident + "pre_post_val");
+    b_.CreateMapElemAdd(ctx_,
+                        map,
+                        key,
+                        b_.GetIntSameSize(step,
+                                          b_.getInt64(is_increment ? 1 : -1)),
+                        unop.loc,
+                        pre_post_val,
+                        unop.is_post_op);
+    expr_ = b_.CreateLoad(b_.GetType(map.type), pre_post_val);
+    b_.CreateLifetimeEnd(pre_post_val);
   } else if (unop.expr->is_variable) {
     Variable &var = static_cast<Variable &>(*unop.expr);
     Value *oldval = b_.CreateLoad(variables_[var.ident]->getAllocatedType(),
                                   variables_[var.ident]);
     Value *newval;
-    if (is_increment)
-      newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
-    else
-      newval = b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval));
+    newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
     b_.CreateStore(newval, variables_[var.ident]);
 
     if (unop.is_post_op)

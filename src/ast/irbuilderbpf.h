@@ -222,7 +222,9 @@ public:
                         Map &map,
                         Value *key,
                         Value *val,
-                        const location &loc);
+                        const location &loc,
+                        AllocaInst *pre_post_val = nullptr,
+                        bool is_post_op = false);
   void CreateDebugOutput(std::string fmt_str,
                          const std::vector<Value *> &values,
                          const location &loc);
