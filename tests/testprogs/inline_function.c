@@ -18,12 +18,11 @@ int main(int argc, char *argv[] __attribute__((unused)))
 
   printf("%d^2 = %d\n", 8, square(8));
 
-  // Make a call to `square` using __asm__,
+  // Make a call to `square` through the `square_ptr` pointer,
   // to prevent the compiler from inlining the call
   int x = 10;
-  int x_squared = 0;
-  __asm__("call square" : "=a"(x_squared) : "D"(x));
-  printf("%d^2 = %d\n", x, x_squared);
+  int (*square_ptr)(int) = square;
+  printf("%d^2 = %d\n", x, square_ptr(x));
 
   return 0;
 }
