@@ -1553,7 +1553,11 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
     CreateStore(CreateLoad(getInt64Ty(), cast), pre_post_val);
   }
 
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), val), cast);
+  CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Add,
+                    cast,
+                    val,
+                    8,
+                    AtomicOrdering::SequentiallyConsistent);
 
   if (pre_post_val && !is_post_op) {
     CreateStore(CreateLoad(getInt64Ty(), cast), pre_post_val);

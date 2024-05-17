@@ -39,25 +39,23 @@ entry:
 
 lookup_success:                                   ; preds = %entry
   %cast1 = bitcast i8* %lookup_elem to i64*
-  %9 = load i64, i64* %cast1, align 8
-  %10 = add i64 %9, 1
-  store i64 %10, i64* %cast1, align 8
+  %9 = atomicrmw add i64* %cast1, i64 1 seq_cst
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  %11 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  %10 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   store i64 1, i64* %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %initial_value, i64 1)
-  %12 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %11 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %13 = bitcast i64* %lookup_elem_val to i8*
+  %12 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %13 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  %14 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
   ret i64 0
 }
 

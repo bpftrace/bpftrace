@@ -75,32 +75,30 @@ lookup_success:                                   ; preds = %while_body2
   %cast = bitcast i8* %lookup_elem to i64*
   %14 = load i64, i64* %cast, align 8
   store i64 %14, i64* %"@pre_post_val", align 8
-  %15 = load i64, i64* %cast, align 8
-  %16 = add i64 %15, 1
-  store i64 %16, i64* %cast, align 8
+  %15 = atomicrmw add i64* %cast, i64 1 seq_cst
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %while_body2
-  %17 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
+  %16 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
   store i64 1, i64* %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %initial_value, i64 1)
-  %18 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %17 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
   store i64 0, i64* %"@pre_post_val", align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %19 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
-  %20 = load i64, i64* %"@pre_post_val", align 8
-  %21 = bitcast i64* %"@pre_post_val" to i8*
+  %18 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = load i64, i64* %"@pre_post_val", align 8
+  %20 = bitcast i64* %"@pre_post_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
+  %21 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
-  %22 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  %23 = load i64, i64* %"$j", align 8
-  %24 = add i64 %23, 1
-  store i64 %24, i64* %"$j", align 8
+  %22 = load i64, i64* %"$j", align 8
+  %23 = add i64 %22, 1
+  store i64 %23, i64* %"$j", align 8
   br label %while_cond1
 }
 
