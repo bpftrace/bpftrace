@@ -804,6 +804,8 @@ $b = --$a; // a = 9; b = 9
 Note that maps will be implicitly declared and initialized to 0 if not already declared or defined.
 Scratch variables must be initialized before using these operators.
 
+Note `++`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
+
 === Pointers
 
 Pointers in bpftrace are similar to those found in `C`.
