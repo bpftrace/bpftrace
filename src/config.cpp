@@ -23,7 +23,7 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
     { ConfigKeyInt::max_type_res_iterations, { .value = (uint64_t)0 } },
     { ConfigKeyInt::perf_rb_pages, { .value = (uint64_t)64 } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },
-    { ConfigKeyString::str_trunc_trailer, { .value = ".." } },
+    { ConfigKeyString::str_trunc_trailer, { .value = std::string("..") } },
     // by default, cache user symbols per program if ASLR is disabled on system
     // or `-c` option is given
     { ConfigKeyUserSymbolCacheType::default_,
