@@ -69,6 +69,8 @@ and this project adheres to
   - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
 - Semantic analyser: fix checking record map types
   - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
+- Fix count/sum map reads in kernel space (implict casting)
+  - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
 #### Docs
 #### Tools
 

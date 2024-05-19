@@ -412,6 +412,10 @@ public:
   {
     return type_ == Type::timestamp_mode;
   }
+  bool IsCastableMapTy() const
+  {
+    return type_ == Type::count || type_ == Type::sum;
+  }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);

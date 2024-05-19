@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
@@ -326,6 +327,35 @@ CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
   return createCall(lookup_func_type, lookup_func, { map_ptr, key }, name);
 }
 
+CallInst *IRBuilderBPF::createPerCpuMapLookup(const std::string &map_name,
+                                              Value *key,
+                                              Value *cpu,
+                                              const std::string &name)
+{
+  return createPerCpuMapLookup(map_name, key, cpu, GET_PTR_TY(), name);
+}
+
+CallInst *IRBuilderBPF::createPerCpuMapLookup(const std::string &map_name,
+                                              Value *key,
+                                              Value *cpu,
+                                              PointerType *val_ptr_ty,
+                                              const std::string &name)
+{
+  Value *map_ptr = GetMapVar(map_name);
+  // void *map_lookup_percpu_elem(struct bpf_map * map, void * key, u32 cpu)
+  // Return: Map value or NULL
+
+  assert(key->getType()->isPointerTy());
+  FunctionType *lookup_func_type = FunctionType::get(
+      val_ptr_ty, { map_ptr->getType(), key->getType(), getInt32Ty() }, false);
+  PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
+  Constant *lookup_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_map_lookup_percpu_elem),
+      lookup_func_ptr_type);
+  return createCall(lookup_func_type, lookup_func, { map_ptr, key, cpu }, name);
+}
+
 CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
                                          const location &loc)
 {
@@ -447,6 +477,134 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   // value is a pointer to i64
   Value *ret = CreateLoad(getInt64Ty(), value);
   CreateLifetimeEnd(value);
+  return ret;
+}
+
+Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
+                                             Map &map,
+                                             Value *key,
+                                             const location &loc,
+                                             bool is_aot)
+{
+  /*
+   * int sum = 0;
+   * int i = 0;
+   * while (i < nr_cpus) {
+   *   int * cpu_value = map_lookup_percpu_elem(map, key, i);
+   *   if (cpu_value == NULL) {
+   *     if (i == 0)
+   *        log_error("Key not found")
+   *     else
+   *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
+   *     break;
+   *   }
+   *   sum += *cpu_value;
+   *   i++;
+   * }
+   * return sum;
+   */
+
+  assert(ctx && ctx->getType() == GET_PTR_TY());
+
+  const std::string &map_name = map.ident;
+
+  AllocaInst *sum = CreateAllocaBPF(getInt64Ty(), "sum");
+  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
+
+  // Set a large upper bound if we don't know the number of cpus
+  // when generating the instructions
+  int nr_cpus = is_aot ? 1024 : bpftrace_.get_num_possible_cpus();
+
+  CreateStore(getInt32(0), i);
+  CreateStore(getInt64(0), sum);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
+                                              "while_cond",
+                                              parent);
+  BasicBlock *while_body = BasicBlock::Create(module_.getContext(),
+                                              "while_body",
+                                              parent);
+  BasicBlock *while_end = BasicBlock::Create(module_.getContext(),
+                                             "while_end",
+                                             parent);
+  CreateBr(while_cond);
+  SetInsertPoint(while_cond);
+  // TODO: after full libbpf support update the number of cpus from userspace
+  // dynamically using a global mutable variable and the skeleton
+  auto *cond = CreateICmp(CmpInst::ICMP_ULT,
+                          CreateLoad(getInt32Ty(), i),
+                          getInt32(nr_cpus),
+                          "num_cpu.cmp");
+  CreateCondBr(cond, while_body, while_end);
+
+  SetInsertPoint(while_body);
+
+  CallInst *call = createPerCpuMapLookup(map_name,
+                                         key,
+                                         CreateLoad(getInt32Ty(), i));
+
+  Function *lookup_parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        lookup_parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        lookup_parent);
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, GET_PTR_TY(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+  // createMapLookup  returns an u8*
+  auto *cast = CreatePointerCast(call, getInt64Ty()->getPointerTo(), "cast");
+  // sum += cpu_value;
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast),
+                        CreateLoad(getInt64Ty(), sum)),
+              sum);
+
+  // ++i;
+  CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
+
+  CreateBr(while_cond);
+  SetInsertPoint(lookup_failure_block);
+
+  Function *error_parent = GetInsertBlock()->getParent();
+  BasicBlock *error_success_block = BasicBlock::Create(module_.getContext(),
+                                                       "error_success",
+                                                       error_parent);
+  BasicBlock *error_failure_block = BasicBlock::Create(module_.getContext(),
+                                                       "error_failure",
+                                                       error_parent);
+
+  // If the CPU is 0 and the map lookup fails it means the key doesn't exist
+  Value *error_condition = CreateICmpEQ(CreateLoad(getInt32Ty(), i),
+                                        getInt32(0),
+                                        "error_lookup_cond");
+  CreateCondBr(error_condition, error_success_block, error_failure_block);
+
+  SetInsertPoint(error_success_block);
+
+  CreateHelperError(
+      ctx, getInt32(0), libbpf::BPF_FUNC_map_lookup_percpu_elem, loc);
+  CreateBr(while_end);
+
+  SetInsertPoint(error_failure_block);
+
+  // This should only get triggered in the AOT case
+  CreateDebugOutput("No cpu found for cpu id: %lu",
+                    std::vector<Value *>{ CreateLoad(getInt32Ty(), i) },
+                    loc);
+
+  CreateBr(while_end);
+
+  SetInsertPoint(while_end);
+
+  CreateLifetimeEnd(i);
+  Value *ret = CreateLoad(getInt64Ty(), sum);
+  CreateLifetimeEnd(sum);
   return ret;
 }
 

@@ -279,3 +279,18 @@ EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exis
        i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }
                                            ~~~~
 TIMEOUT 1
+
+NAME per_cpu_map_if_lt
+PROG i:ms:1 { @ = count(); if (@ > 5) { printf("done\n"); exit(); }}
+EXPECT done
+TIMEOUT 5
+
+NAME per_cpu_map_arithmetic
+PROG BEGIN { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } exit();}
+EXPECT done
+TIMEOUT 5
+
+NAME per_cpu_map_cast
+PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); exit();}
+EXPECT 1-10
+TIMEOUT 5
