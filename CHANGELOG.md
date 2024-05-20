@@ -16,6 +16,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.20.4] 2024-05-20
+
+- Don't unpack kernel headers or look in tmp
+  - [#3156](https://github.com/bpftrace/bpftrace/pull/3156)
+
 ## [0.20.3] 2024-03-25
 
 - Fix build on kernels older than 5.16
