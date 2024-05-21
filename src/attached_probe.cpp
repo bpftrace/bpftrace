@@ -37,7 +37,7 @@ namespace bpftrace {
  * Kernel functions that are unsafe to trace are excluded in the Kernel with
  * `notrace`. However, the ones below are not excluded.
  */
-const std::set<std::string> banned_kretprobes = {
+const std::set<std::string> banned_kernel_funcs = {
   "_raw_spin_lock",
   "_raw_spin_lock_irqsave",
   "_raw_spin_unlock_irqrestore",
@@ -104,10 +104,10 @@ std::string progtypeName(libbpf::bpf_prog_type t)
   }
 }
 
-void check_banned_kretprobes(std::string const &kprobe_name)
+void check_banned_kernel_funcs(std::string const &kernel_func)
 {
-  if (banned_kretprobes.find(kprobe_name) != banned_kretprobes.end()) {
-    LOG(FATAL) << "kretprobe:" << kprobe_name
+  if (banned_kernel_funcs.find(kernel_func) != banned_kernel_funcs.end()) {
+    LOG(FATAL) << "kernel function: " << kernel_func
                << " can't be used as it might lock up your system.";
   }
 }
@@ -178,7 +178,13 @@ AttachedProbe::AttachedProbe(Probe &probe,
     : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
   load_prog(feature);
+  if (probe_.type == ProbeType::kretprobe || probe_.type == ProbeType::kprobe ||
+      probe_.type == ProbeType::kfunc || probe_.type == ProbeType::kretfunc) {
+    check_banned_kernel_funcs(probe_.attach_point);
+  }
+
   LOG(V1) << "Attaching " << probe_.orig_name;
+
   switch (probe_.type) {
     case ProbeType::special:
       // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
@@ -190,7 +196,6 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_kprobe(safe_mode);
       break;
     case ProbeType::kretprobe:
-      check_banned_kretprobes(probe_.attach_point);
       attach_kprobe(safe_mode);
       break;
     case ProbeType::tracepoint:
