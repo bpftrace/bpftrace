@@ -531,6 +531,7 @@ void SemanticAnalyser::visit(Call &call)
       }
 
       expr.accept(*this);
+      dereference_if_needed((*call.vargs)[i]);
     }
   }
 
@@ -1331,6 +1332,7 @@ void SemanticAnalyser::visit(Sizeof &szof)
   szof.type = CreateUInt64();
   if (szof.expr) {
     szof.expr->accept(*this);
+    dereference_if_needed(szof.expr);
     szof.argtype = szof.expr->type;
   }
   resolve_struct_type(szof.argtype, szof.loc);
@@ -1341,6 +1343,7 @@ void SemanticAnalyser::visit(Offsetof &ofof)
   ofof.type = CreateUInt64();
   if (ofof.expr) {
     ofof.expr->accept(*this);
+    dereference_if_needed(ofof.expr);
     ofof.record = ofof.expr->type;
   }
   resolve_struct_type(ofof.record, ofof.loc);
@@ -1447,6 +1450,7 @@ void SemanticAnalyser::visit(Map &map)
     for (unsigned int i = 0; i < map.vargs->size(); i++) {
       Expression *expr = map.vargs->at(i);
       expr->accept(*this);
+      dereference_if_needed(map.vargs->at(i));
 
       // Insert a cast to 64 bits if needed by injecting
       // a cast into the ast.
@@ -1515,7 +1519,9 @@ void SemanticAnalyser::visit(Variable &var)
 void SemanticAnalyser::visit(ArrayAccess &arr)
 {
   arr.expr->accept(*this);
+  dereference_if_needed(arr.expr);
   arr.indexpr->accept(*this);
+  dereference_if_needed(arr.indexpr);
 
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
@@ -1756,7 +1762,10 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
 void SemanticAnalyser::visit(Binop &binop)
 {
   binop.left->accept(*this);
+  dereference_if_needed(binop.left);
+
   binop.right->accept(*this);
+  dereference_if_needed(binop.right);
 
   auto &lht = binop.left->type;
   auto &rht = binop.right->type;
@@ -1860,6 +1869,7 @@ void SemanticAnalyser::visit(Unop &unop)
   }
 
   unop.expr->accept(*this);
+  dereference_if_needed(unop.expr);
 
   auto valid_ptr_op = false;
   switch (unop.op) {
@@ -1873,8 +1883,8 @@ void SemanticAnalyser::visit(Unop &unop)
 
   SizedType &type = unop.expr->type;
   if (is_final_pass()) {
-    // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
-    // and context (we allow args->field for backwards compatibility)
+    // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers,
+    // references and context (we allow args->field for backwards compatibility)
     if (!type.IsIntegerTy() &&
         !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
       LOG(ERROR, unop.loc, err_)
@@ -1928,8 +1938,11 @@ void SemanticAnalyser::visit(Unop &unop)
 void SemanticAnalyser::visit(Ternary &ternary)
 {
   ternary.cond->accept(*this);
+  dereference_if_needed(ternary.cond);
   ternary.left->accept(*this);
+  dereference_if_needed(ternary.left);
   ternary.right->accept(*this);
+  dereference_if_needed(ternary.right);
   const Type &cond = ternary.cond->type.GetTy();
   const Type &lhs = ternary.left->type.GetTy();
   const Type &rhs = ternary.right->type.GetTy();
@@ -1957,6 +1970,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 void SemanticAnalyser::visit(If &if_block)
 {
   if_block.cond->accept(*this);
+  dereference_if_needed(if_block.cond);
 
   if (is_final_pass()) {
     const Type &cond = if_block.cond->type.GetTy();
@@ -1973,6 +1987,7 @@ void SemanticAnalyser::visit(If &if_block)
 void SemanticAnalyser::visit(Unroll &unroll)
 {
   unroll.expr->accept(*this);
+  dereference_if_needed(unroll.expr);
 
   auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
   if (!unroll_value.has_value()) {
@@ -1995,8 +2010,10 @@ void SemanticAnalyser::visit(Jump &jump)
 {
   switch (jump.ident) {
     case JumpType::RETURN:
-      if (jump.return_value)
+      if (jump.return_value) {
         jump.return_value->accept(*this);
+        dereference_if_needed(jump.return_value);
+      }
       if (auto subprog = dynamic_cast<Subprog *>(scope_)) {
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
@@ -2028,6 +2045,7 @@ void SemanticAnalyser::visit(While &while_block)
   }
 
   while_block.cond->accept(*this);
+  dereference_if_needed(while_block.cond);
 
   loop_depth_++;
   accept_statements(while_block.stmts);
@@ -2183,6 +2201,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   assert((acc.field.size() > 0) != (acc.index >= 0));
 
   acc.expr->accept(*this);
+  dereference_if_needed(acc.expr);
 
   SizedType &type = acc.expr->type;
 
@@ -2213,7 +2232,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       return;
     auto arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
     if (arg) {
-      acc.type = arg->type;
+      // Only set acc.type if it's not already set. [1]
+      // Overwriting the type once set could override the conversion
+      // from Reference to Pointer done by dereference_if_needed.
+      if (acc.type.IsNoneTy())
+        acc.type = arg->type;
       acc.type.SetAS(acc.expr->type.GetAS());
 
       if (is_final_pass()) {
@@ -2314,7 +2337,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         }
       }
 
-      acc.type = field.type;
+      // Only set acc.type if it's not already set. See explanation [1].
+      if (acc.type.IsNoneTy())
+        acc.type = field.type;
+
       if (acc.expr->type.IsCtxAccess() &&
           (acc.type.IsArrayTy() || acc.type.IsRecordTy())) {
         // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
@@ -2336,6 +2362,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
+  dereference_if_needed(cast.expr);
 
   // cast type is synthesised in parser, if it is a struct, it needs resolving
   resolve_struct_type(cast.type, cast.loc);
@@ -2416,6 +2443,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
   for (size_t i = 0; i < tuple.elems->size(); ++i) {
     Expression *elem = tuple.elems->at(i);
     elem->accept(*this);
+    dereference_if_needed(tuple.elems->at(i));
 
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
@@ -2431,12 +2459,14 @@ void SemanticAnalyser::visit(Tuple &tuple)
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);
+  dereference_if_needed(expr.expr);
 }
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
+  dereference_if_needed(assignment.expr);
 
   assign_map_type(*assignment.map, assignment.expr->type);
 
@@ -2513,6 +2543,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
   assignment.expr->accept(*this);
+  dereference_if_needed(assignment.expr);
 
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_[scope_].find(var_ident);
@@ -2594,11 +2625,13 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
 {
   assignment.expr->accept(*this);
+  dereference_if_needed(assignment.expr);
 }
 
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
+  dereference_if_needed(pred.expr);
   if (is_final_pass()) {
     SizedType &ty = pred.expr->type;
     if (!ty.IsIntTy() && !ty.IsPtrTy()) {
@@ -3377,6 +3410,23 @@ Pass CreateSemanticPass()
 
   return Pass("Semantic", fn);
 };
+
+void SemanticAnalyser::dereference_if_needed(Expression *&expr)
+{
+  if (expr->type.IsRefTy()) {
+    expr->type.IntoPointer();
+    const SizedType &ptr_type = expr->type;
+    Expression *ptr_expr = expr;
+
+    Unop *deref_expr = new Unop(Operator::MUL, ptr_expr, ptr_expr->loc);
+    deref_expr->type = *ptr_type.GetPointeeTy();
+    deref_expr->type.is_internal = ptr_type.is_internal;
+    deref_expr->type.SetAS(ptr_type.GetAS());
+    if (ptr_type.IsCtxAccess())
+      deref_expr->type.MarkCtxAccess();
+    expr = deref_expr;
+  }
+}
 
 } // namespace ast
 } // namespace bpftrace

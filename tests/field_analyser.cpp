@@ -610,8 +610,8 @@ TEST_F(field_analyser_dwarf, parse_inheritance_multi)
   }
 
   ASSERT_TRUE(cls->HasFields());
-  ASSERT_EQ(cls->fields.size(), 6);
-  ASSERT_EQ(cls->size, 24);
+  ASSERT_EQ(cls->fields.size(), 7);
+  ASSERT_EQ(cls->size, 32);
 
   CheckParentFields(cls);
 
@@ -624,6 +624,11 @@ TEST_F(field_analyser_dwarf, parse_inheritance_multi)
   EXPECT_TRUE(cls->GetField("abc").type.IsIntTy());
   EXPECT_EQ(cls->GetField("abc").type.GetSize(), 4);
   EXPECT_EQ(cls->GetField("abc").offset, 20);
+
+  EXPECT_TRUE(cls->HasField("rabc"));
+  EXPECT_TRUE(cls->GetField("rabc").type.IsRefTy());
+  EXPECT_EQ(cls->GetField("rabc").type.GetSize(), 8);
+  EXPECT_EQ(cls->GetField("rabc").offset, 24);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
