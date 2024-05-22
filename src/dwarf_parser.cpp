@@ -188,7 +188,7 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
     case lldb::eTypeClassPointer:
       return CreatePointer(get_stype(type.GetPointeeType(), false));
     case lldb::eTypeClassReference:
-      return CreatePointer(get_stype(type.GetDereferencedType(), false));
+      return CreateReference(get_stype(type.GetDereferencedType(), true));
     case lldb::eTypeClassClass:
     case lldb::eTypeClassStruct:
     case lldb::eTypeClassUnion: {
@@ -250,7 +250,19 @@ void Dwarf::resolve_fields(const SizedType &type)
   if (!type_dbg.IsValid())
     return;
 
-  std::queue<Subobject> subobjects{ std::deque{ Subobject{ type_dbg, 0 } } };
+  resolve_fields(std::move(str), std::move(type_dbg));
+}
+
+void Dwarf::resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type)
+{
+  if (!str || str->HasFields())
+    return;
+
+  if (!type.IsValid())
+    return;
+
+  std::queue<Subobject> subobjects{ std::deque{
+      Subobject{ std::move(type), 0 } } };
   while (!subobjects.empty()) {
     auto &subobject = subobjects.front();
 

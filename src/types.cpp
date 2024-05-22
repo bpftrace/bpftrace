@@ -38,6 +38,8 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
     if (type.IsCtxAccess())
       os << "(ctx) ";
     os << *type.GetPointeeTy() << " *";
+  } else if (type.IsRefTy()) {
+    os << *type.GetDereferencedTy() << " &";
   } else if (type.IsIntTy()) {
     os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.GetSize();
   } else if (type.IsArrayTy()) {
@@ -153,6 +155,7 @@ std::string typestr(Type t)
     case Type::voidtype: return "void";     break;
     case Type::integer:  return "integer";  break;
     case Type::pointer:  return "pointer";  break;
+    case Type::reference:return "reference";break;
     case Type::record:   return "record";   break;
     case Type::hist:     return "hist";     break;
     case Type::lhist:    return "lhist";    break;
@@ -349,6 +352,15 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
   // Pointer itself is always an uint64
   auto ty = SizedType(Type::pointer, 8);
   ty.element_type_ = std::make_shared<SizedType>(pointee_type);
+  ty.SetAS(as);
+  return ty;
+}
+
+SizedType CreateReference(const SizedType &referred_type, AddrSpace as)
+{
+  // Reference itself is always an uint64
+  auto ty = SizedType(Type::reference, 8);
+  ty.element_type_ = std::make_shared<SizedType>(referred_type);
   ty.SetAS(as);
   return ty;
 }
@@ -588,6 +600,9 @@ size_t hash<bpftrace::SizedType>::operator()(
       break;
     case bpftrace::Type::pointer:
       bpftrace::hash_combine(hash, *type.GetPointeeTy());
+      break;
+    case bpftrace::Type::reference:
+      bpftrace::hash_combine(hash, *type.GetDereferencedTy());
       break;
     case bpftrace::Type::record:
       bpftrace::hash_combine(hash, type.GetName());

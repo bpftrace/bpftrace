@@ -1,4 +1,5 @@
 #include "ast/passes/semantic_analyser.h"
+#include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
 #include "bpffeature.h"
@@ -14,6 +15,7 @@ namespace test {
 namespace semantic_analyser {
 
 #include "btf_common.h"
+#include "dwarf_common.h"
 
 using ::testing::_;
 using ::testing::HasSubstr;
@@ -70,6 +72,9 @@ void test(BPFtrace &bpftrace,
 
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::AttachPointParser ap_parser(driver.ctx, bpftrace, out, false);
+  ASSERT_EQ(ap_parser.parse(), 0);
 
   ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() + out.str();
@@ -1684,6 +1689,24 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { $x++; }", 1);
   test("kprobe:f { @x = \"a\"; @x++; }", 10);
   test("kprobe:f { $x = \"a\"; $x++; }", 10);
+}
+
+class semantic_analyser_dwarf : public test_dwarf {};
+
+TEST_F(semantic_analyser_dwarf, reference_into_deref)
+{
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(uprobe + ":cpp:func_1 { args.c }",
+       R"(
+Program
+ )" + uprobe +
+           R"(:cpp:func_1
+  dereference
+   . :: [Child *, AS(user)]
+    builtin: args :: [struct )" +
+           uprobe + R"(:cpp:func_1_args, ctx: 1, AS(user)]
+    c
+)");
 }
 
 TEST(semantic_analyser, printf)

@@ -26,6 +26,7 @@ enum class Type : uint8_t {
   voidtype,
   integer,
   pointer,
+  reference,
   record, // struct/union, as struct is a protected keyword
   hist,
   lhist,
@@ -314,6 +315,12 @@ public:
     return element_type_.get();
   }
 
+  const SizedType *GetDereferencedTy() const
+  {
+    assert(IsRefTy());
+    return element_type_.get();
+  }
+
   bool IsBoolTy() const
   {
     return type_ == Type::integer && size_bits_ == 1;
@@ -321,6 +328,10 @@ public:
   bool IsPtrTy() const
   {
     return type_ == Type::pointer;
+  };
+  bool IsRefTy() const
+  {
+    return type_ == Type::reference;
   };
   bool IsIntTy() const
   {
@@ -458,12 +469,19 @@ public:
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
 
+  void IntoPointer()
+  {
+    assert(IsRefTy());
+    type_ = Type::pointer;
+  }
+
   // Factories
 
   friend SizedType CreateArray(size_t num_elements,
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
+  friend SizedType CreateReference(const SizedType &pointee_type, AddrSpace as);
   friend SizedType CreateRecord(const std::string &name,
                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
@@ -490,6 +508,8 @@ SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
+SizedType CreateReference(const SizedType &referred_type,
+                          AddrSpace as = AddrSpace::none);
 
 SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::weak_ptr<Struct> tuple);

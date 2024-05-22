@@ -1,4 +1,5 @@
 #include "mocks.h"
+#include "dwarf_common.h"
 #include "tracefs.h"
 
 namespace bpftrace {
@@ -65,6 +66,15 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
       .WillByDefault([sh_usyms, bash_usyms](int, const std::string &) {
         return std::unique_ptr<std::istream>(
             new std::istringstream(sh_usyms + bash_usyms));
+      });
+
+  std::string cxx_usyms = std::string(dwarf_data_cxx_path) +
+                          ":_Z6func_1R5ChildR6Parent\n" + dwarf_data_cxx_path +
+                          ":_Z6func_2R10GrandChild\n" + dwarf_data_cxx_path +
+                          ":_Z6func_3R5MultiR6Bottom\n";
+  ON_CALL(matcher, get_func_symbols_from_file(_, dwarf_data_cxx_path))
+      .WillByDefault([cxx_usyms](int, const std::string &) {
+        return std::unique_ptr<std::istream>(new std::istringstream(cxx_usyms));
       });
 
   std::string sh_usdts = "/bin/sh:prov1:tp1\n"
