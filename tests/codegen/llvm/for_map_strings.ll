@@ -29,10 +29,8 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store [4 x i8] c"abc\00", [4 x i8]* %str1, align 1
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, [4 x i8]*, i64)*)(%"struct map_t"* @AT_map, [4 x i8]* %str1, [4 x i8]* %str, i64 0)
-  %3 = bitcast [4 x i8]* %str1 to i8*
+  %3 = bitcast [4 x i8]* %str to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [4 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
   %for_each_map_elem = call i64 inttoptr (i64 164 to i64 (%"struct map_t"*, i64 (i8*, i8*, i8*, i8*)*, i8*, i64)*)(%"struct map_t"* @AT_map, i64 (i8*, i8*, i8*, i8*)* @map_for_each_cb, i8* null, i64 0)
   ret i64 0
 }
