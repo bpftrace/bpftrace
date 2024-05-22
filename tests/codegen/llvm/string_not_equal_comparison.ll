@@ -130,8 +130,6 @@ lookup_failure:                                   ; preds = %pred_true
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %25 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %25)
-  %26 = bitcast [16 x i8]* %comm17 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %26)
   ret i64 0
 }
 

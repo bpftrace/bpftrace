@@ -2777,6 +2777,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     Map &map)
 {
   Value *key;
+  bool alloca_created_here = true;
   if (map.vargs) {
     // A single value as a map key (e.g., @[comm] = 0;)
     if (map.vargs->size() == 1) {
@@ -2793,6 +2794,10 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
           key = expr_;
           // Call-ee freed
           scoped_del.disarm();
+
+          // We don't have enough visibility into where key comes from to safely
+          // end its lifetime. It could be a variable, for example.
+          alloca_created_here = false;
         }
       } else {
         key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
@@ -2815,8 +2820,8 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     b_.CreateStore(b_.getInt64(0), key);
   }
 
-  auto key_deleter = [this, key]() {
-    if (dyn_cast<AllocaInst>(key))
+  auto key_deleter = [this, key, alloca_created_here]() {
+    if (alloca_created_here)
       b_.CreateLifetimeEnd(key);
   };
   return std::make_tuple(key, ScopedExprDeleter(std::move(key_deleter)));
@@ -2832,6 +2837,9 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   for (auto *extra_key : extra_keys) {
     size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
+
+  // If key ever changes to not be allocated here, be sure to update getMapKey()
+  // as well to take the new lifetime semantics into account.
   AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
 

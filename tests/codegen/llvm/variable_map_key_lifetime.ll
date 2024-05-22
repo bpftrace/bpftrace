@@ -39,16 +39,12 @@ entry:
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"$myvar", i64* %"@x_val", i64 0)
   %8 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
-  %9 = bitcast [4 x i8]* %"$myvar" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  %10 = bitcast i64* %"@x_val1" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
+  %9 = bitcast i64* %"@x_val1" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i64 1, i64* %"@x_val1", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"$myvar", i64* %"@x_val1", i64 0)
-  %11 = bitcast i64* %"@x_val1" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast [4 x i8]* %"$myvar" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %10 = bitcast i64* %"@x_val1" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   ret i64 0
 }
 

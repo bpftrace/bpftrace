@@ -61,6 +61,8 @@ and this project adheres to
   - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 - Fix error in dereferencing kernel double pointers
   - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
+- Fix variable corruption when used as map key
+  - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
 #### Docs
 #### Tools
 
