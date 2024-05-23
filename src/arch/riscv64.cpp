@@ -1,4 +1,5 @@
 #include "arch.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <array>
@@ -103,7 +104,8 @@ std::string name()
 
 std::vector<std::string> invalid_watchpoint_modes()
 {
-  LOG(FATAL) << "Watchpoints are not supported on this architecture";
+  throw FatalUserException(
+      "Watchpoints are not supported on this architecture");
 }
 
 int get_kernel_ptr_width()

@@ -10,7 +10,6 @@ std::string logtype_str(LogType t)
     case LogType::V1      : return "";
     case LogType::WARNING : return "WARNING: ";
     case LogType::ERROR   : return "ERROR: ";
-    case LogType::FATAL   : return "ERROR: ";
     case LogType::BUG     : return "BUG: ";
       // clang-format on
   }
@@ -24,7 +23,6 @@ Log::Log()
   enabled_map_[LogType::WARNING] = true;
   enabled_map_[LogType::V1] = false;
   enabled_map_[LogType::DEBUG] = true;
-  enabled_map_[LogType::FATAL] = true;
   enabled_map_[LogType::BUG] = true;
 }
 
@@ -200,12 +198,6 @@ std::string LogStream::internal_location()
   std::ostringstream ss;
   ss << "[" << log_file_ << ":" << log_line_ << "] ";
   return ss.str();
-}
-
-[[noreturn]] LogStreamFatal::~LogStreamFatal()
-{
-  sink_.take_input(type_, loc_, out_, buf_.str());
-  abort();
 }
 
 [[noreturn]] LogStreamBug::~LogStreamBug()

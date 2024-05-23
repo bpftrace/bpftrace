@@ -23,6 +23,7 @@
 #include "act_helpers.h"
 #include "log.h"
 #include "resolve_cgroupid.h"
+#include "utils.h"
 
 namespace {
 
@@ -91,9 +92,9 @@ std::uint64_t resolve_cgroupid(const std::string &path)
   int err = name_to_handle_at(
       AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
   if (err < 0) {
-    auto emsg = std::strerror(errno);
-    LOG(FATAL) << "Failed to get `cgroupid` for path: \"" << path
-               << "\": " << emsg;
+    char *e = std::strerror(errno);
+    throw bpftrace::FatalUserException("Failed to get `cgroupid` for path: \"" +
+                                       path + "\": " + std::string(e ? e : ""));
   }
 
   return cfh.cgid;

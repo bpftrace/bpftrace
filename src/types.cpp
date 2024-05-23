@@ -6,6 +6,7 @@
 #include "log.h"
 #include "struct.h"
 #include "types.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -491,7 +492,7 @@ Field &SizedType::GetField(ssize_t n) const
 {
   assert(IsTupleTy() || IsRecordTy());
   if (n >= GetFieldCount())
-    LOG(FATAL) << "Getfield(): out of bounds";
+    throw FatalUserException("Getfield(): out of bounds");
   return inner_struct_.lock()->fields[n];
 }
 

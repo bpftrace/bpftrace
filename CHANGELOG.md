@@ -28,8 +28,6 @@ and this project adheres to
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
 - Reproducible Builds: Do not store timestamps in gzip header
   - [#3096](https://github.com/bpftrace/bpftrace/pull/3096)
-- Replace instances of std::runtime_error with LOG(FATAL)
-  - [#3091](https://github.com/bpftrace/bpftrace/pull/3091)
 - Parse DWARF using liblldb instead of libdw
   - [#3042](https://github.com/bpftrace/bpftrace/pull/3042)
 - Replace native 'bpf_get_stackid'

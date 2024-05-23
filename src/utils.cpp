@@ -67,7 +67,7 @@ std::vector<std::string> expand_wildcard_path(const std::string &path)
 
   if (glob(path.c_str(), GLOB_NOCHECK, nullptr, &glob_result)) {
     globfree(&glob_result);
-    LOG(FATAL) << "glob() failed";
+    throw bpftrace::FatalUserException("glob() failed");
   }
 
   std::vector<std::string> matching_paths;
@@ -139,7 +139,8 @@ void StdioSilencer::silence()
     close(new_stdio);
   } catch (const std::system_error &e) {
     if (errno == EMFILE)
-      LOG(FATAL) << e.what() << ": please raise NOFILE";
+      throw bpftrace::FatalUserException(std::string(e.what()) +
+                                         ": please raise NOFILE");
     else
       LOG(BUG) << e.what();
   }
@@ -221,8 +222,9 @@ void get_uint64_env_var(const ::std::string &str,
   if (const char *env_p = std::getenv(str.c_str())) {
     std::istringstream stringstream(env_p);
     if (!(stringstream >> dest)) {
-      LOG(FATAL) << "Env var '" << str
-                 << "' did not contain a valid uint64_t, or was zero-valued.";
+      throw bpftrace::FatalUserException(
+          "Env var '" + str +
+          "' did not contain a valid uint64_t, or was zero-valued.");
       return;
     }
     cb(dest);
@@ -240,9 +242,8 @@ void get_bool_env_var(const ::std::string &str,
     else if (s == "0")
       dest = false;
     else {
-      LOG(FATAL) << "Env var '" << str
-                 << "' did not contain a "
-                    "valid value (0 or 1).";
+      throw bpftrace::FatalUserException(
+          "Env var '" + str + "' did not contain a valid value (0 or 1).");
     }
     cb(dest);
   }
@@ -803,7 +804,7 @@ std::string exec_system(const char *cmd)
   std::string result;
   std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
   if (!pipe)
-    throw std::runtime_error("popen() failed!");
+    throw bpftrace::FatalUserException("popen() failed!");
   while (!feof(pipe.get())) {
     if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
       result += buffer.data();
