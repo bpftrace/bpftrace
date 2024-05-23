@@ -2,16 +2,21 @@ add_compile_options("-Werror=undef")
 
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
-file(GLOB_RECURSE CODEGEN_SOURCES codegen/*.cpp codegen/*.h)
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
+file(GLOB_RECURSE CODEGEN_SOURCES CONFIGURE_DEPENDS codegen/*.cpp codegen/*.h)
+set(CODEGEN_INCLUDES_CPP codegen_includes.cpp)
+add_custom_command(
+  OUTPUT
+    ${CODEGEN_INCLUDES_CPP}
   COMMAND
     ${CMAKE_COMMAND}
-    -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/tests/codegen"
+    -DCODEGEN_INCLUDES_CPP="${CODEGEN_INCLUDES_CPP}"
+    -DCODEGEN_SOURCES="${CODEGEN_SOURCES}"
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
-  DEPENDS ${CODEGEN_SOURCES})
+  DEPENDS
+    ${CODEGEN_SOURCES})
 
 if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
-  set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
+  set(CODEGEN_SRC ${CODEGEN_INCLUDES_CPP})
 else()
   set(CODEGEN_SRC "")
   message(STATUS "Disabled codegen test for LLVM != 12 (found ${LLVM_VERSION_MAJOR})")
