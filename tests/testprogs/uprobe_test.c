@@ -9,6 +9,7 @@ struct Foo {
   int a;
   char b[10];
   int c[3];
+  __int128_t d;
 };
 
 int uprobeFunction1(int *n, char c __attribute__((unused)))
@@ -50,6 +51,14 @@ struct Foo *uprobeFunction2(struct Foo *foo1,
  */
 // clang-format on
 
+__uint128_t uprobeFunctionUint128(__uint128_t x,
+                                  __uint128_t y __attribute__((unused)),
+                                  __uint128_t z __attribute__((unused)),
+                                  __uint128_t w)
+{
+  return x + w;
+}
+
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 {
   usleep(1000000);
@@ -58,9 +67,19 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
   char c = 'x';
   uprobeFunction1(&n, c);
 
-  struct Foo foo1 = { .a = 123, .b = "hello", .c = { 1, 2, 3 } };
-  struct Foo foo2 = { .a = 456, .b = "world", .c = { 4, 5, 6 } };
+  struct Foo foo1 = {
+    .a = 123, .b = "hello", .c = { 1, 2, 3 }, .d = 0x123456789ABCDEF0
+  };
+  struct Foo foo2 = {
+    .a = 456, .b = "world", .c = { 4, 5, 6 }, .d = 0xFEDCBA9876543210
+  };
   uprobeFunction2(&foo1, &foo2);
+
+  __uint128_t x = 0x123456789ABCDEF0;
+  __uint128_t y = 0xEFEFEFEFEFEFEFEF;
+  __uint128_t z = 0xCDCDCDCDCDCDCDCD;
+  __uint128_t w = 0xABABABABABABABAB;
+  uprobeFunctionUint128(x, y, z, w);
 
   return 0;
 }

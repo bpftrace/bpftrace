@@ -144,7 +144,7 @@ std::string addrspacestr(AddrSpace as)
 std::string typestr(Type t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case Type::none:     return "none";     break;
     case Type::voidtype: return "void";     break;
     case Type::integer:  return "integer";  break;

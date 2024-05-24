@@ -251,12 +251,15 @@ public:
   void SetIntBitWidth(size_t bits)
   {
     assert(IsIntTy());
+    // Truncate integers too large to fit in BPF registers (64-bits).
+    if (bits > 64)
+      bits = 64;
     // Zero sized integers are not usually valid. However, during semantic
     // analysis when we're inferring types, the first pass may not have
     // enough information to figure out the exact size of the integer. Later
     // passes infer the exact size.
     assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
-          bits == 64 || bits == 128);
+           bits == 64);
     size_bits_ = bits;
   }
 

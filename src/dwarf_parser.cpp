@@ -217,6 +217,8 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
           return CreateArray(length, inner_stype);
       }
     }
+    case lldb::eTypeClassTypedef:
+      return get_stype(type.GetTypedefedType(), resolve_structs);
     default:
       return CreateNone();
   }
