@@ -250,7 +250,7 @@ void get_bool_env_var(const ::std::string &str,
   return;
 }
 
-std::optional<std_filesystem::path> find_in_path(const std::string &name)
+std::optional<std_filesystem::path> find_in_path(std::string_view name)
 {
   std::error_code ec;
 

@@ -9,6 +9,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <sys/utsname.h>
 #include <tuple>
 #include <unordered_map>
@@ -161,7 +162,7 @@ void get_uint64_env_var(const ::std::string &str,
 void get_bool_env_var(const ::std::string &str,
                       const std::function<void(bool)> &cb);
 // Tries to find a file in $PATH
-std::optional<std_filesystem::path> find_in_path(const std::string &name);
+std::optional<std_filesystem::path> find_in_path(std::string_view name);
 std::string get_pid_exe(pid_t pid);
 std::string get_pid_exe(const std::string &pid);
 std::string get_proc_maps(const std::string &pid);

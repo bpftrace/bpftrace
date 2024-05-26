@@ -143,7 +143,7 @@ bool build_binary(const std_filesystem::path &shim,
   secdata.close();
 
   // Respect user provided BPFTRACE_OBJCOPY if present
-  std::string objcopy = "objcopy";
+  std::string_view objcopy = "objcopy";
   if (auto c = std::getenv("BPFTRACE_OBJCOPY"))
     objcopy = c;
 
@@ -189,7 +189,7 @@ int generate(const RequiredResources &resources,
   if (!section)
     return 1;
 
-  auto shim = find_in_path(AOT_SHIM_NAME.data());
+  auto shim = find_in_path(AOT_SHIM_NAME);
   if (!shim) {
     LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
                << " shim binary. Is it in $PATH?";
