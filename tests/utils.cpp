@@ -347,6 +347,22 @@ TEST(utils, find_in_path)
   EXPECT_TRUE(std_filesystem::remove_all(path));
 }
 
+// These tests are a bit hacky and rely on repository structure.
+//
+// They rely on the fact that the test binary is in the same directory
+// as some of the other test binaries.
+//
+// Hopefully they are easy to maintain. If not, please delete.
+TEST(utils, find_near_self)
+{
+  auto runtime_tests = find_near_self("runtime-tests.sh");
+  ASSERT_TRUE(runtime_tests.has_value());
+  EXPECT_TRUE(runtime_tests->filename() == "runtime-tests.sh");
+  EXPECT_TRUE(std_filesystem::exists(*runtime_tests));
+
+  EXPECT_FALSE(find_near_self("SHOULD_NOT_EXIST").has_value());
+}
+
 TEST(utils, get_pids_for_program)
 {
   auto pids = get_pids_for_program("/proc/self/exe");
