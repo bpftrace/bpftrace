@@ -268,6 +268,26 @@ std::optional<std_filesystem::path> find_in_path(std::string_view name)
   return std::nullopt;
 }
 
+std::optional<std_filesystem::path> find_near_self(std::string_view filename)
+{
+  std::error_code ec;
+  auto exe = std_filesystem::read_symlink("/proc/self/exe", ec);
+  if (ec) {
+    LOG(WARNING) << "Failed to resolve /proc/self/exe: " << ec;
+    return std::nullopt;
+  }
+
+  exe.replace_filename(filename);
+  bool exists = std_filesystem::exists(exe, ec);
+  if (!exists) {
+    if (ec)
+      LOG(WARNING) << "Failed to resolve stat " << exe << ": " << ec;
+    return std::nullopt;
+  }
+
+  return exe;
+}
+
 std::string get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
