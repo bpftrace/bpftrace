@@ -189,12 +189,22 @@ int generate(const RequiredResources &resources,
   if (!section)
     return 1;
 
-  auto shim = find_in_path(AOT_SHIM_NAME);
+  // For development, we want to use the locally built AOT shim instead of a
+  // "real" one that could be present elsewhere in $PATH. So we give precedence
+  // to shim found "next" to the running binary.
+  auto rel = std_filesystem::path("aot") / AOT_SHIM_NAME;
+  auto local = find_near_self(rel.native());
+  auto path = find_in_path(AOT_SHIM_NAME);
+  auto shim = local ? local : path;
   if (!shim) {
     LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
                << " shim binary. Is it in $PATH?";
     return 1;
   }
+
+  if (shim == local)
+    LOG(WARNING) << "Using development shim (" << *shim
+                 << "). Ensure you are a developer!";
 
   if (auto err = build_binary(*shim, out, *section))
     return err;
