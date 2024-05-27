@@ -2221,4 +2221,40 @@ int BPFtrace::get_num_possible_cpus() const
   return libbpf_num_possible_cpus();
 }
 
+/*
+ * This prevents an ABBA deadlock when attaching to spin lock internal
+ * functions e.g. "kfunc:queued_spin_lock_slowpath".
+ *
+ * Specifically, if there are two hash maps (non percpu) being accessed by
+ * two different CPUs by two bpf progs then we can get in a situation where,
+ * because there are progs attached to spin lock internals, a lock is taken for
+ * one map while a different lock is trying to be acquired for the other map.
+ * This is specific to kfunc/fentry kretfunc/fexit as kprobes have kernel
+ * protections against this type of deadlock.
+ *
+ * Note: it would be better if this was in resource analyzer but we need
+ * probe_matcher to get the list of functions for the attach point
+ */
+void BPFtrace::kfunc_recursion_check(ast::Program *prog)
+{
+  for (auto *probe : *prog->probes) {
+    for (auto *ap : *probe->attach_points) {
+      auto probe_type = probetype(ap->provider);
+      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
+        auto matches = probe_matcher_->get_matches_for_ap(*ap);
+        for (const auto &match : matches) {
+          if (is_recursive_func(match)) {
+            LOG(WARNING)
+                << "Attaching to dangerous function: " << match
+                << ". bpftrace has added mitigations to prevent a kernel "
+                   "deadlock but they may result in some lost events.";
+            need_recursion_check_ = true;
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+
 } // namespace bpftrace

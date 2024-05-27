@@ -195,6 +195,7 @@ private:
   //
   // If null, return value will depend on current attach point (void in subprog)
   void createRet(Value *value = nullptr);
+  int getReturnValueForProbe(ProbeType probe_type);
 
   // Every time we see a watchpoint that specifies a function + arg pair, we
   // generate a special "setup" probe that:
@@ -275,6 +276,7 @@ private:
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
+  bool need_recursion_check_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
 

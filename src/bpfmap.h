@@ -73,6 +73,7 @@ enum class MapType {
   Ringbuf,
   RingbufLossCounter,
   StrBuffer,
+  RecursionPrevention,
 };
 
 std::string to_string(MapType t);

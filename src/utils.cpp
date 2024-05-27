@@ -1093,6 +1093,17 @@ std::string hex_format_buffer(const char *buf,
   return std::string(s);
 }
 
+/*
+ * Attaching to these kernel functions with kfunc/fentry or kretfunc/fexit
+ * could lead to a recursive loop and kernel crash so we need additional
+ * generated BPF code to protect against this if one of these are being
+ * attached to.
+ */
+bool is_recursive_func(const std::string &func_name)
+{
+  return RECURSIVE_KERNEL_FUNCS.find(func_name) != RECURSIVE_KERNEL_FUNCS.end();
+}
+
 static bool is_bad_func(std::string &func)
 {
   /*

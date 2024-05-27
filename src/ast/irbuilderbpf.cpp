@@ -761,6 +761,127 @@ void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_for_each_map_elem, loc);
 }
 
+void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
+                                           int early_exit_ret)
+{
+  const std::string map_ident = to_string(MapType::RecursionPrevention);
+
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
+  CreateStore(getInt32(0), key);
+
+  CallInst *call = createMapLookup(map_ident, key);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "lookup_merge",
+                                               parent);
+
+  // Make the verifier happy with a null check even though the value should
+  // never be null for key 0.
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, GET_PTR_TY(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+
+  CreateLifetimeEnd(key);
+
+  // createMapLookup  returns an u8*
+  auto *cast = CreatePointerCast(call, getInt64Ty(), "cast");
+
+  Value *prev_value = CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Xchg,
+                                        cast,
+                                        getInt64(1),
+                                        8,
+                                        AtomicOrdering::SequentiallyConsistent);
+
+  Function *set_parent = GetInsertBlock()->getParent();
+  BasicBlock *value_is_set_block = BasicBlock::Create(module_.getContext(),
+                                                      "value_is_set",
+                                                      set_parent);
+  Value *set_condition = CreateICmpEQ(prev_value,
+                                      getInt64(0),
+                                      "value_set_condition");
+  CreateCondBr(set_condition, merge_block, value_is_set_block);
+
+  SetInsertPoint(value_is_set_block);
+  /*
+   * The counter is set, we need to exit early from the probe.
+   * Most of the time this will happen for the functions that can lead
+   * to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
+   * for nested probes e.g. "page_fault_user" -> "print".
+   */
+  CreateRet(getInt64(early_exit_ret));
+
+  SetInsertPoint(lookup_failure_block);
+
+  CreateDebugOutput(
+      "Value for per-cpu map key 0 is null. This shouldn't happen.",
+      std::vector<Value *>{},
+      loc);
+  CreateRet(getInt64(0));
+
+  SetInsertPoint(merge_block);
+}
+
+void IRBuilderBPF::CreateUnSetRecursion(const location &loc)
+{
+  const std::string map_ident = to_string(MapType::RecursionPrevention);
+
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
+  CreateStore(getInt32(0), key);
+
+  CallInst *call = createMapLookup(map_ident, key);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "lookup_merge",
+                                               parent);
+
+  // Make the verifier happy with a null check even though the value should
+  // never be null for key 0.
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, GET_PTR_TY(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+
+  CreateLifetimeEnd(key);
+
+  // createMapLookup  returns an u8*
+  auto *cast = CreatePointerCast(call, getInt64Ty(), "cast");
+  CreateStore(getInt64(0), cast);
+
+  CreateBr(merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+
+  CreateDebugOutput(
+      "Value for per-cpu map key 0 is null. This shouldn't happen.",
+      std::vector<Value *>{},
+      loc);
+
+  CreateBr(merge_block);
+
+  SetInsertPoint(merge_block);
+}
+
 void IRBuilderBPF::CreateProbeRead(Value *ctx,
                                    Value *dst,
                                    llvm::Value *size,
