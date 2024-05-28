@@ -94,7 +94,9 @@ Below are details about when to use each kind of log level:
 
 - `DEBUG`: log info regardless of log level; like using stdout (comes with file
 and line number)
-- `V1`: log info only if verbose logging is enabled (-v)
+- `V1`: log info only if verbose logging is enabled (-v); use this (among
+  others) for printing warnings which may occur on every bpftrace execution
+  (like BTF is not available)
 - `WARNING`: log info that might affect bpftrace behavior or output but allows
 the run to continue; like using stderr
 - `ERROR`: log info to indicate that the user did something invalid, which will

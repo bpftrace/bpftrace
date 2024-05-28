@@ -54,8 +54,7 @@ BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
     load_kernel_btfs(modules);
 
   if (btf_objects.empty()) {
-    if (bt_debug != DebugLevel::kNone)
-      LOG(ERROR) << "BTF: failed to find BTF data";
+    LOG(V1) << "BTF: failed to find BTF data";
     return;
   }
 
@@ -74,8 +73,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 {
   vmlinux_btf = btf__load_vmlinux_btf();
   if (libbpf_get_error(vmlinux_btf)) {
-    if (bt_debug != DebugLevel::kNone)
-      LOG(ERROR) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
+    LOG(V1) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
     return;
   }
   btf_objects.push_back(
@@ -90,16 +88,15 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
   while (true) {
     int err = bpf_btf_get_next_id(id, &id);
     if (err) {
-      if (errno != ENOENT && bt_debug != DebugLevel::kNone)
-        LOG(WARNING) << "BTF: failed to iterate modules BTF objects";
+      if (errno != ENOENT)
+        LOG(V1) << "BTF: failed to iterate modules BTF objects";
       break;
     }
 
     // Get BTF object FD
     int fd = bpf_btf_get_fd_by_id(id);
     if (fd < 0) {
-      if (bt_debug != DebugLevel::kNone)
-        LOG(WARNING) << "BTF: failed to get FD for object with id " << id;
+      LOG(V1) << "BTF: failed to get FD for object with id " << id;
       continue;
     }
 
@@ -113,8 +110,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
     close(fd); // close the FD not to leave too many files open
     if (err) {
-      if (bt_debug != DebugLevel::kNone)
-        LOG(WARNING) << "BTF: failed to get info for object with id " << id;
+      LOG(V1) << "BTF: failed to get info for object with id " << id;
       continue;
     }
 
