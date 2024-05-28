@@ -33,7 +33,7 @@ inline Pass CreateCounterPass()
     c.Visit(n);
     auto node_count = c.get_count();
     auto max = ctx.b.max_ast_nodes_;
-    LOG(V1) << "node count: " << node_count;
+    LOG(V1) << "AST node count: " << node_count;
     if (node_count >= max) {
       LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
                  << max << ")";

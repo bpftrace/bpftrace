@@ -27,7 +27,7 @@ void PassManager::AddPass(Pass p)
 PassResult PassManager::Run(std::unique_ptr<Node> node, PassContext &ctx)
 {
   Node *root = node.release();
-  if (bt_debug != DebugLevel::kNone)
+  if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
     print(root, "parser", std::cout);
   for (auto &pass : passes_) {
     auto result = pass.Run(*root, ctx);
@@ -39,7 +39,7 @@ PassResult PassManager::Run(std::unique_ptr<Node> node, PassContext &ctx)
       root = result.Root();
     }
 
-    if (bt_debug != DebugLevel::kNone)
+    if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
       print(root, pass.name, std::cout);
   }
   return PassResult::Success(root);

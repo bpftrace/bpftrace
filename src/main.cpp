@@ -78,6 +78,7 @@ enum Options {
   EMIT_ELF,
   EMIT_LLVM,
   NO_FEATURE,
+  DEBUG,
 };
 } // namespace
 
@@ -113,8 +114,8 @@ void usage()
   std::cerr << std::endl;
   std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
   std::cerr << "    -v                      verbose messages" << std::endl;
-  std::cerr << "    -d                      (dry run) debug info" << std::endl;
-  std::cerr << "    -dd                     (dry run) verbose debug info" << std::endl;
+  std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
+  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   std::cerr << std::endl;
@@ -471,13 +472,14 @@ struct Args {
   std::vector<std::string> include_dirs;
   std::vector<std::string> include_files;
   std::vector<std::string> params;
+  std::vector<std::string> debug_stages;
 };
 
 Args parse_args(int argc, char* argv[])
 {
   Args args;
 
-  const char* const short_options = "dbB:f:e:hlp:vqc:Vo:I:k";
+  const char* const short_options = "d:bB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
     option{ "help", no_argument, nullptr, Options::HELP },
     option{ "version", no_argument, nullptr, Options::VERSION },
@@ -493,6 +495,7 @@ Args parse_args(int argc, char* argv[])
     option{ "test", required_argument, nullptr, Options::TEST },
     option{ "aot", required_argument, nullptr, Options::AOT },
     option{ "no-feature", required_argument, nullptr, Options::NO_FEATURE },
+    option{ "debug", required_argument, nullptr, Options::DEBUG },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
@@ -537,9 +540,25 @@ Args parse_args(int argc, char* argv[])
         args.output_file = optarg;
         break;
       case 'd':
-        bt_debug++;
-        if (bt_debug == DebugLevel::kNone) {
-          usage();
+      case Options::DEBUG:
+        if (std::strcmp(optarg, "ast") == 0)
+          bt_debug.insert(DebugStage::Ast);
+        else if (std::strcmp(optarg, "codegen") == 0)
+          bt_debug.insert(DebugStage::Codegen);
+        else if (std::strcmp(optarg, "codegen-opt") == 0)
+          bt_debug.insert(DebugStage::CodegenOpt);
+        else if (std::strcmp(optarg, "libbpf") == 0)
+          bt_debug.insert(DebugStage::Libbpf);
+        else if (std::strcmp(optarg, "verifier") == 0)
+          bt_debug.insert(DebugStage::Verifier);
+        else if (std::strcmp(optarg, "all") == 0) {
+          bt_debug.insert({ DebugStage::Ast,
+                            DebugStage::Codegen,
+                            DebugStage::CodegenOpt,
+                            DebugStage::Libbpf,
+                            DebugStage::Verifier });
+        } else {
+          LOG(ERROR) << "USAGE: invalid option for -d: " << optarg;
           exit(1);
         }
         break;
@@ -615,12 +634,6 @@ Args parse_args(int argc, char* argv[])
 
   if (argc == 1) {
     usage();
-    exit(1);
-  }
-
-  if (bt_verbose && (bt_debug != DebugLevel::kNone)) {
-    // TODO: allow both
-    LOG(ERROR) << "USAGE: Use either -v or -d.";
     exit(1);
   }
 
@@ -903,9 +916,9 @@ int main(int argc, char* argv[])
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();
-    if (bt_debug == DebugLevel::kFullDebug) {
-      std::cout << "Before optimization\n";
-      std::cout << "-------------------\n\n";
+    if (bt_debug.find(DebugStage::Codegen) != bt_debug.end()) {
+      std::cout << "LLVM IR before optimization\n";
+      std::cout << "---------------------------\n\n";
       llvm.DumpIR();
     }
     if (!args.output_llvm.empty()) {
@@ -921,11 +934,9 @@ int main(int argc, char* argv[])
     }
 
     llvm.optimize();
-    if (bt_debug != DebugLevel::kNone) {
-      if (bt_debug == DebugLevel::kFullDebug) {
-        std::cout << "\nAfter optimization\n";
-        std::cout << "------------------\n\n";
-      }
+    if (bt_debug.find(DebugStage::CodegenOpt) != bt_debug.end()) {
+      std::cout << "\nLLVM IR after optimization\n";
+      std::cout << "----------------------------\n\n";
       llvm.DumpIR();
     }
     if (!args.output_llvm.empty()) {
@@ -952,7 +963,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (bt_debug != DebugLevel::kNone || args.test_mode == TestMode::CODEGEN)
+  if (args.test_mode == TestMode::CODEGEN)
     return 0;
 
   return run_bpftrace(bpftrace, bytecode);

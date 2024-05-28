@@ -47,33 +47,14 @@ struct stack_key {
   uint32_t nr_stack_frames;
 };
 
-enum class DebugLevel;
+enum class DebugStage;
 
 // globals
-extern DebugLevel bt_debug;
+extern std::set<DebugStage> bt_debug;
 extern bool bt_quiet;
 extern bool bt_verbose;
 
-enum class DebugLevel { kNone, kDebug, kFullDebug };
-
-inline DebugLevel operator++(DebugLevel &level, int)
-{
-  switch (level) {
-    case DebugLevel::kNone:
-      level = DebugLevel::kDebug;
-      break;
-    case DebugLevel::kDebug:
-      level = DebugLevel::kFullDebug;
-      break;
-    case DebugLevel::kFullDebug:
-      // NOTE (mmarchini): should be handled by the caller
-      level = DebugLevel::kNone;
-      break;
-    default:
-      break;
-  }
-  return level;
-}
+enum class DebugStage { Ast, Codegen, CodegenOpt, Libbpf, Verifier };
 
 class WildcardException : public std::exception {
 public:
