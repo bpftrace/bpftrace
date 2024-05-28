@@ -368,9 +368,11 @@ void BpfProgram::load(const Probe &probe,
   };
 
   for (auto &load_config : load_configs) {
-    if (bt_debug != DebugLevel::kNone)
+    // In debug mode, show full verifier log.
+    // In verbose mode, only show verifier log for failures.
+    if (bt_debug.find(DebugStage::Verifier) != bt_debug.end())
       log_level = 15;
-    if (bt_verbose)
+    else if (bt_verbose)
       log_level = 1;
 
     if (probe.type == ProbeType::kprobe || probe.type == ProbeType::kretprobe) {
@@ -446,7 +448,8 @@ void BpfProgram::load(const Probe &probe,
     } else {
       opts.kern_version = kernel_version(load_config.kver);
     }
-    logbuf << "load " << probe.name << (load_config.btf ? ", with BTF" : "")
+    logbuf << std::endl
+           << "load " << probe.name << (load_config.btf ? ", with BTF" : "")
            << (load_config.func_infos ? ", with func_infos" : "");
     if (opts.kern_version) {
       logbuf << ", version: " << ((opts.kern_version >> 16) & 0xFF) << "."
@@ -457,7 +460,7 @@ void BpfProgram::load(const Probe &probe,
     {
       // Redirect stderr, so we don't get error messages from libbpf
       StderrSilencer silencer;
-      if (bt_debug == DebugLevel::kNone)
+      if (bt_debug.find(DebugStage::Libbpf) == bt_debug.end())
         silencer.silence();
 
       int btf_fd = -1;
@@ -552,11 +555,14 @@ void BpfProgram::load(const Probe &probe,
 
     ret = bpf_obj_get_info(fd_, &info, &info_len);
     if (ret == 0) {
-      std::cout << std::endl << "Program ID: " << info.id << std::endl;
+      std::cerr << std::endl << "Program ID: " << info.id << std::endl;
     }
-    std::cout << std::endl
-              << "The verifier log: " << std::endl
-              << log_buf.get() << std::endl;
+  }
+
+  if (bt_debug.find(DebugStage::Verifier) != bt_debug.end()) {
+    std::cout << "BPF verifier log for " << probe.name << ":\n";
+    std::cout << "--------------------------------------\n";
+    std::cout << log_buf.get() << std::endl;
   }
 }
 

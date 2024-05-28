@@ -14,8 +14,14 @@ and this project adheres to
   - [#3264](https://github.com/bpftrace/bpftrace/pull/3264)
 - Only print kernel headers not found message if parsing fails
   - [#3265](https://github.com/bpftrace/bpftrace/pull/3265)
+- Add mandatory "stage" argument to the -d CLI option
+  - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
+- Allow simultaneous use of -v and -d
+  - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 #### Deprecated
 #### Removed
+- Remove the -dd CLI option
+  - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 #### Fixed
 - Fix incorrect buf() size calculation which could lead to verifier errors
   - [#3281](https://github.com/bpftrace/bpftrace/pull/3281)

@@ -19,11 +19,11 @@ static const char *libbpf_print_level_string(enum libbpf_print_level level)
 
 int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap)
 {
-  if (bt_debug == DebugLevel::kNone)
+  if (bt_debug.find(DebugStage::Libbpf) == bt_debug.end())
     return 0;
 
-  fprintf(stderr, "[%s] ", libbpf_print_level_string(level));
-  return vfprintf(stderr, msg, ap);
+  printf("[%s] ", libbpf_print_level_string(level));
+  return vprintf(msg, ap);
 }
 
 int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
