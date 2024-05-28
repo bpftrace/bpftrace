@@ -354,8 +354,6 @@ bool ClangParser::ClangParserHandler::check_diagnostics(
       // Do not fail on "too many errors"
       if (!bail_on_error && msg == "too many errors emitted, stopping now")
         return true;
-      if (bt_debug >= DebugLevel::kDebug)
-        LOG(ERROR) << "Input (" << input.size() << "): " << input;
       return false;
     }
   }
