@@ -388,8 +388,7 @@ bool ClangParser::ClangParserHandler::parse_file(
 
   error_msgs.clear();
   if (error) {
-    if (bt_debug == DebugLevel::kFullDebug)
-      LOG(ERROR) << "Clang error while parsing C definitions: " << error;
+    LOG(V1) << "Clang error while parsing C definitions: " << error;
     return false;
   }
 

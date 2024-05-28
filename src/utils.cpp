@@ -1106,10 +1106,8 @@ FuncsModulesMap parse_traceable_funcs()
 
   std::ifstream available_funs(kprobe_path);
   if (available_funs.fail()) {
-    if (bt_debug != DebugLevel::kNone) {
-      std::cerr << "Error while reading traceable functions from "
-                << kprobe_path << ": " << strerror(errno);
-    }
+    LOG(V1) << "Error while reading traceable functions from " << kprobe_path
+            << ": " << strerror(errno);
     return {};
   }
 

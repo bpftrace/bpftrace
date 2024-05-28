@@ -36,6 +36,8 @@ and this project adheres to
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
 - Attach probe to inlined functions
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
+- Move error printing from debug to verbose mode
+  - [#3202](https://github.com/bpftrace/bpftrace/pull/3202)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
