@@ -58,14 +58,19 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm17
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 17 Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
+        - NAME: LLVM 18 Release
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm18
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 17 Clang Debug
+        - NAME: LLVM 18 Debug
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
+          NIX_TARGET: .#bpftrace-llvm18
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LLVM 18 Clang Debug
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm18
           CC: clang
           CXX: clang++
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
