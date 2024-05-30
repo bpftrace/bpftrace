@@ -1237,6 +1237,9 @@ uint32_t kernel_version(KernelVersionMethod method)
     case None:
       return 0;
   }
+
+  // Unreachable
+  return 0;
 }
 
 std::optional<std::string> abs_path(const std::string &rel_path)
