@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: DeterminateSystems/nix-installer-action@v4
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+    - uses: DeterminateSystems/nix-installer-action@v11
+    - uses: DeterminateSystems/magic-nix-cache-action@v6
 
     - name: Build artifacts
       run: nix develop --command bash -c "OUT=./assets ./scripts/create-assets.sh"

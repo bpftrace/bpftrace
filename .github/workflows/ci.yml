@@ -14,8 +14,8 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: DeterminateSystems/nix-installer-action@v4
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+    - uses: DeterminateSystems/nix-installer-action@v11
+    - uses: DeterminateSystems/magic-nix-cache-action@v6
     - name: clang-format
       run: nix develop --command git clang-format --diff origin/master
 
@@ -87,8 +87,8 @@ jobs:
           RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
-    - uses: DeterminateSystems/nix-installer-action@v4
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+    - uses: DeterminateSystems/nix-installer-action@v11
+    - uses: DeterminateSystems/magic-nix-cache-action@v6
     - name: Load kernel modules
       # nf_tables and xfs are necessary for testing kernel modules BTF support
       run: |
