@@ -338,9 +338,7 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
                                      &translation_unit);
 }
 
-bool ClangParser::ClangParserHandler::check_diagnostics(
-    const std::string &input,
-    bool bail_on_error)
+bool ClangParser::ClangParserHandler::check_diagnostics(bool bail_on_error)
 {
   for (unsigned int i = 0; i < clang_getNumDiagnostics(get_translation_unit());
        i++) {
@@ -367,7 +365,6 @@ CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor()
 
 bool ClangParser::ClangParserHandler::parse_file(
     const std::string &filename,
-    const std::string &input,
     const std::vector<const char *> &args,
     std::vector<CXUnsavedFile> &unsaved_files,
     bool bail_on_errors)
@@ -390,7 +387,7 @@ bool ClangParser::ClangParserHandler::parse_file(
     return false;
   }
 
-  return check_diagnostics(input, bail_on_errors);
+  return check_diagnostics(bail_on_errors);
 }
 
 const std::vector<std::string> &ClangParser::ClangParserHandler::
@@ -543,7 +540,7 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types()
   // Parse without failing on compilation errors (ie incomplete structs) because
   // our goal is to enumerate all such errors.
   ClangParserHandler handler;
-  if (!handler.parse_file("definitions.h", input, args, input_files, false))
+  if (!handler.parse_file("definitions.h", args, input_files, false))
     return {};
 
   struct TypeData {
@@ -704,15 +701,14 @@ bool ClangParser::parse(ast::Program *program,
     // conditionally include headers if BTF isn't available.
     args.push_back("-DBPFTRACE_HAVE_BTF");
 
-    if (handler.parse_file("definitions.h", input, args, input_files, false) &&
+    if (handler.parse_file("definitions.h", args, input_files, false) &&
         handler.has_redefinition_error())
       btf_conflict = true;
 
     if (!btf_conflict) {
       resolve_incomplete_types_from_btf(bpftrace, program->probes);
 
-      if (handler.parse_file(
-              "definitions.h", input, args, input_files, false) &&
+      if (handler.parse_file("definitions.h", args, input_files, false) &&
           handler.has_redefinition_error())
         btf_conflict = true;
     }
@@ -720,8 +716,7 @@ bool ClangParser::parse(ast::Program *program,
     if (!btf_conflict) {
       resolve_unknown_typedefs_from_btf(bpftrace);
 
-      if (handler.parse_file(
-              "definitions.h", input, args, input_files, false) &&
+      if (handler.parse_file("definitions.h", args, input_files, false) &&
           handler.has_redefinition_error())
         btf_conflict = true;
     }
@@ -736,7 +731,7 @@ bool ClangParser::parse(ast::Program *program,
     input_files.back() = get_empty_btf_generated_header();
   }
 
-  if (!handler.parse_file("definitions.h", input, args, input_files)) {
+  if (!handler.parse_file("definitions.h", args, input_files)) {
     if (handler.has_redefinition_error()) {
       LOG(WARNING) << "Cannot take type definitions from BTF since there is "
                       "a redefinition conflict with user-defined types.";
@@ -784,7 +779,7 @@ std::unordered_set<std::string> ClangParser::get_unknown_typedefs()
   // Parse without failing on compilation errors (ie unknown types) because
   // our goal is to enumerate and analyse all such errors
   ClangParserHandler handler;
-  if (!handler.parse_file("definitions.h", input, args, input_files, false))
+  if (!handler.parse_file("definitions.h", args, input_files, false))
     return {};
 
   std::unordered_set<std::string> unknown_typedefs;
