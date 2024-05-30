@@ -72,7 +72,6 @@ private:
     ~ClangParserHandler();
 
     bool parse_file(const std::string &filename,
-                    const std::string &input,
                     const std::vector<const char *> &args,
                     std::vector<CXUnsavedFile> &unsaved_files,
                     bool bail_on_errors = true);
@@ -91,7 +90,7 @@ private:
      * Return true if an error occurred. If bail_on_error is false, only fail
      * on fatal errors.
      */
-    bool check_diagnostics(const std::string &input, bool bail_on_error);
+    bool check_diagnostics(bool bail_on_error);
 
     CXCursor get_translation_unit_cursor();
 
