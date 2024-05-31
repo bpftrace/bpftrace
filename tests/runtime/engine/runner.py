@@ -13,7 +13,6 @@ from functools import lru_cache
 import cmake_vars
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
-AOT_BIN = os.environ["BPFTRACE_AOT_RUNTIME_TEST_EXECUTABLE"]
 COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 ATTACH_TIMEOUT = 10
 DEFAULT_TIMEOUT = 5
@@ -103,7 +102,6 @@ class Runner(object):
 
         if test.run:
             ret = re.sub("{{BPFTRACE}}", BPFTRACE_BIN, test.run)
-            ret = re.sub("{{BPFTRACE_AOTRT}}", AOT_BIN, ret)
 
             return nsenter_prefix + ret
         else:  # PROG
@@ -112,7 +110,7 @@ class Runner(object):
             cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, escaped_prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
-                return cmd + " --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(AOT_BIN)
+                return cmd + " --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot"
             else:
                 return cmd
 
