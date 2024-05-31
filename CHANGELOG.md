@@ -38,6 +38,8 @@ and this project adheres to
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 - Move error printing from debug to verbose mode
   - [#3202](https://github.com/bpftrace/bpftrace/pull/3202)
+- Better error message when libbpf is too old
+  - [#3212](https://github.com/bpftrace/bpftrace/pull/3212)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
