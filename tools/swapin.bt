@@ -11,9 +11,16 @@
  * When copying or porting, include this comment.
  *
  * 26-Jan-2019  Brendan Gregg   Created this.
+ * 31-May-2024  Rong Tao        Add folio support.
  */
 
-kprobe:swap_readpage
+/**
+ * kernel commit c9bdf768dd93("mm: convert swap_readpage() to swap_read_folio()")
+ * convert swap_readpage() to swap_read_folio(), try attaching two kprobes, one
+ * will trigger a warning and the other will be attached successfully.
+ */
+kprobe:swap_readpage,
+kprobe:swap_read_folio
 {
         @[comm, pid] = count();
 }
