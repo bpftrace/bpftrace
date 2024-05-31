@@ -83,6 +83,9 @@ include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibBpf REQUIRED)
 include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
+if(LIBBPF_VERSION_MAJOR VERSION_LESS 1)
+  message(SEND_ERROR "bpftrace requires libbpf 1.0 or greater")
+endif()
 
 find_package(LibElf REQUIRED)
 include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
