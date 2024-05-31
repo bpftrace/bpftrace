@@ -128,14 +128,14 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
 
 // Clones the shim to final destination while also injecting
 // the custom .btaot section.
-bool build_binary(const std_filesystem::path &shim,
-                  const std::string &out,
-                  const std::vector<uint8_t> &section)
+int build_binary(const std_filesystem::path &shim,
+                 const std::string &out,
+                 const std::vector<uint8_t> &section)
 {
   std::error_code ec;
-  bool ret = false;
   char cmd[1024];
   int written;
+  int ret = 0;
 
   // Write out section data in a temporary file
   std::ofstream secdata(AOT_SECDATA_TEMPFILE, std::ios_base::binary);
@@ -150,6 +150,7 @@ bool build_binary(const std_filesystem::path &shim,
   // Resolve objcopy binary to full path
   auto objcopy_full = find_in_path(objcopy);
   if (!objcopy_full) {
+    ret = 1;
     LOG(ERROR) << "Failed to find " << objcopy << " in $PATH";
     goto out;
   }
@@ -162,19 +163,21 @@ bool build_binary(const std_filesystem::path &shim,
                      shim.c_str(),
                      out.c_str());
   if (written < 0 || written == sizeof(cmd)) {
+    ret = 1;
     LOG(ERROR) << "Failed to construct objcopy command";
     goto out;
   }
 
-  if (std::system(cmd)) {
+  if ((ret = std::system(cmd))) {
     LOG(ERROR) << "Failed to execute: " << cmd;
     goto out;
   }
 
-  ret = true;
 out:
-  if (!std_filesystem::remove(AOT_SECDATA_TEMPFILE, ec) || ec)
+  if (!std_filesystem::remove(AOT_SECDATA_TEMPFILE, ec) || ec) {
+    ret = 1;
     LOG(ERROR) << "Failed to remove " << AOT_SECDATA_TEMPFILE << ": " << ec;
+  }
   return ret;
 }
 
