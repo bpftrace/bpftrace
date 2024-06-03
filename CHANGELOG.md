@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add --dry-run CLI option
+  - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 #### Changed
 - Stream output when printing maps
   - [#3264](https://github.com/bpftrace/bpftrace/pull/3264)
