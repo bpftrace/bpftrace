@@ -49,6 +49,7 @@ namespace bpftrace {
 std::set<DebugStage> bt_debug = {};
 bool bt_quiet = false;
 bool bt_verbose = false;
+bool dry_run = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
@@ -1061,6 +1062,9 @@ int BPFtrace::run(BpfBytecode bytecode)
     LOG(WARNING) << "Failed to send readiness notification, ignoring: "
                  << strerror(-err);
 #endif
+
+  if (dry_run)
+    exitsig_recv = true;
 
   if (has_iter_) {
     int err = run_iter();

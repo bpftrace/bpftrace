@@ -30,11 +30,11 @@ function set_tooldir() {
 
 function do_test() {
   local file="$1"
-  if $BPFTRACE_EXECUTABLE --unsafe -d all "$file" 2>/dev/null >/dev/null; then
+  if $BPFTRACE_EXECUTABLE --unsafe -v --dry-run "$file" 2>/dev/null >/dev/null; then
     echo "$file    passed"
   else
     echo "$file    failed";
-    $BPFTRACE_EXECUTABLE --unsafe -d all "$file";
+    $BPFTRACE_EXECUTABLE --unsafe -v --dry-run "$file";
     EXIT_STATUS=1;
   fi
 }

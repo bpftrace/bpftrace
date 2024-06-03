@@ -75,6 +75,12 @@ The child process runs with the same privileges as bpftrace itself (usually root
 Enable debug mode.
 For more details see the <<Debug Output>> section.
 
+=== *--dry-run*
+
+Terminate execution right after attaching all the probes. Useful for testing
+that the script can be parsed, loaded, and attached, without actually running
+it.
+
 === *-e* _PROGRAM_
 
 Execute _PROGRAM_ instead of reading the program from a file or stdin.

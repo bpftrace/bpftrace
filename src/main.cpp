@@ -79,6 +79,7 @@ enum Options {
   EMIT_LLVM,
   NO_FEATURE,
   DEBUG,
+  DRY_RUN,
 };
 } // namespace
 
@@ -114,6 +115,7 @@ void usage()
   std::cerr << std::endl;
   std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
   std::cerr << "    -v                      verbose messages" << std::endl;
+  std::cerr << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
   std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
@@ -496,6 +498,7 @@ Args parse_args(int argc, char* argv[])
     option{ "aot", required_argument, nullptr, Options::AOT },
     option{ "no-feature", required_argument, nullptr, Options::NO_FEATURE },
     option{ "debug", required_argument, nullptr, Options::DEBUG },
+    option{ "dry-run", no_argument, nullptr, Options::DRY_RUN },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
@@ -535,6 +538,9 @@ Args parse_args(int argc, char* argv[])
                         "'kprobe_multi,uprobe_multi'.";
           exit(1);
         }
+        break;
+      case Options::DRY_RUN:
+        dry_run = true;
         break;
       case 'o':
         args.output_file = optarg;

@@ -53,6 +53,7 @@ enum class DebugStage;
 extern std::set<DebugStage> bt_debug;
 extern bool bt_quiet;
 extern bool bt_verbose;
+extern bool dry_run;
 
 enum class DebugStage { Ast, Codegen, CodegenOpt, Libbpf, Verifier };
 
