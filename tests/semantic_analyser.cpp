@@ -375,7 +375,7 @@ TEST(semantic_analyser, consistent_map_values)
 {
   test("kprobe:f { @x = 0; @x = 1; }");
   test_error("kprobe:f { @x = 0; @x = \"a\"; }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~
 )");
@@ -482,17 +482,17 @@ kprobe:f { @x = pid < 10000 ? "lo" : 2 }
 TEST(semantic_analyser, mismatched_call_types)
 {
   test_error("kprobe:f { @x = 1; @x = count(); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count' when map already contains a value of type 'int64
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = count(); }
                    ~~
 )");
   test_error("kprobe:f { @x = count(); @x = sum(pid); }", R"(
-stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'sum' when map already contains a value of type 'count
+stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'sum' when map already contains a value of type 'count'
 kprobe:f { @x = count(); @x = sum(pid); }
                          ~~
 )");
   test_error("kprobe:f { @x = 1; @x = hist(0); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist' when map already contains a value of type 'int64
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = hist(0); }
                    ~~
 )");
