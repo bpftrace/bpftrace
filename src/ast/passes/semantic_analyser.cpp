@@ -2400,7 +2400,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
           << "Type mismatch for " << map_ident << ": "
           << "trying to assign value of type '" << ty
           << "' when map already contains a value of type '" << stored_ty
-          << "''";
+          << "'";
     } else {
       map_val_[map_ident] = assignment.expr->type;
       map_val_[map_ident].is_internal = true;
@@ -2499,7 +2499,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignTy.GetName()
-          << "' when variable already contains a value of type '" << storedTy;
+          << "' when variable already contains a value of type '" << storedTy
+          << "'";
     }
   } else if (assignTy.IsStringTy()) {
     auto var_size = storedTy.GetSize();
@@ -3195,7 +3196,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
       LOG(ERROR, map.loc, err_)
           << "Type mismatch for " << map_ident << ": "
           << "trying to assign value of type '" << type
-          << "' when map already contains a value of type '" << *maptype;
+          << "' when map already contains a value of type '" << *maptype << "'";
     }
 
     if (maptype->IsStringTy() || maptype->IsTupleTy())
