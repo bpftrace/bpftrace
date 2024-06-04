@@ -370,7 +370,7 @@ TEST(utils, get_pids_for_program)
   ASSERT_EQ(pids.size(), 1);
   ASSERT_EQ(pids[0], getpid());
 
-  pids = get_pids_for_program("/proc/12345/root/usr/bin/bash");
+  pids = get_pids_for_program("/doesnotexist");
   ASSERT_EQ(pids.size(), 0);
 }
 
