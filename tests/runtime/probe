@@ -141,6 +141,24 @@ EXPECT ERROR: Error attaching probe: kprobe:nonsense:vfs_read: specified module 
 TIMEOUT 5
 WILL_FAIL
 
+NAME kprobe_wildcard_all_leading_underscore
+PROG kprobe:_* { } interval:s:1{ printf("SUCCESS"); exit(); }
+EXPECT_REGEX SUCCESS
+ENV BPFTRACE_MAX_PROBES=20000
+TIMEOUT 5
+REQUIRES_FEATURE kprobe_multi
+
+NAME kprobe_disallow_rcu_functions
+PROG kprobe:rcu_* { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT No probes to attach
+TIMEOUT 5
+WILL_FAIL
+
+NAME kprobe_hide_ftrace_invalid_address
+RUN {{BPFTRACE}} -l | grep -c __ftrace_invalid_address__ || true
+EXPECT 0
+TIMEOUT 5
+
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT ERROR: Error attaching probe: kprobe:vmlinux:nonsense
