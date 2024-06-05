@@ -361,6 +361,67 @@ TEST(bpftrace, add_probes_specify_kernel_module)
                "kernel_mod");
 }
 
+TEST(bpftrace, add_probes_kernel_module_wildcard)
+{
+  auto bpftrace = get_strict_mock_bpftrace();
+  // We enable kprobe_multi here but it doesn't support the module:function
+  // syntax so full expansion should be done anyways.
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(true))
+      .Times(1);
+
+  parse_probe("kprobe:*kernel_mod:* {}", *bpftrace);
+
+  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:*kernel_mod:*";
+  check_kprobe(bpftrace->get_probes().at(0),
+               "func_in_mod",
+               probe_orig_name,
+               0,
+               "kernel_mod");
+  check_kprobe(bpftrace->get_probes().at(1),
+               "other_func_in_mod",
+               probe_orig_name,
+               0,
+               "kernel_mod");
+  check_kprobe(bpftrace->get_probes().at(2),
+               "func_in_mod",
+               probe_orig_name,
+               0,
+               "other_kernel_mod");
+}
+
+TEST(bpftrace, add_probes_kernel_module_function_wildcard)
+{
+  auto bpftrace = get_strict_mock_bpftrace();
+  // We enable kprobe_multi here but it doesn't support the module:function
+  // syntax so full expansion should be done anyways.
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(true))
+      .Times(1);
+
+  parse_probe("kprobe:kernel_mod:*func_in_mod {}", *bpftrace);
+
+  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:kernel_mod:*func_in_mod";
+  check_kprobe(bpftrace->get_probes().at(0),
+               "func_in_mod",
+               probe_orig_name,
+               0,
+               "kernel_mod");
+  check_kprobe(bpftrace->get_probes().at(1),
+               "other_func_in_mod",
+               probe_orig_name,
+               0,
+               "kernel_mod");
+}
+
 TEST(bpftrace, add_probes_offset)
 {
   auto offset = 10;
