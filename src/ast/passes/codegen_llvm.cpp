@@ -1425,7 +1425,8 @@ void CodegenLLVM::visit(Map &map)
   const auto &val_type = map_info->second.value_type;
   Value *value;
   if (canAggPerCpuMapElems(val_type, map_info->second.key)) {
-    value = b_.CreatePerCpuMapSumElems(ctx_, map, key, map.loc, is_aot_);
+    value = b_.CreatePerCpuMapAggElems(
+        ctx_, map, key, val_type, map.loc, is_aot_);
   } else {
     value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
   }
@@ -4217,13 +4218,14 @@ Function *CodegenLLVM::createForEachMapCallback(
   auto &val_type = decl.type.GetField(1).type;
   Value *val = callback->getArg(2);
 
-  auto map_val_type = map_info->second.value_type;
+  const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key)) {
     AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
                                              "lookup_key");
     b_.CreateStore(key, key_ptr);
 
-    val = b_.CreatePerCpuMapSumElems(ctx_, map, key_ptr, map.loc, is_aot_);
+    val = b_.CreatePerCpuMapAggElems(
+        ctx_, map, key_ptr, map_val_type, map.loc, is_aot_);
   } else if (!onStack(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

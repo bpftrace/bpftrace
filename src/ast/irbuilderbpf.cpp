@@ -480,14 +480,15 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   return ret;
 }
 
-Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
+Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              Map &map,
                                              Value *key,
+                                             const SizedType &type,
                                              const location &loc,
                                              bool is_aot)
 {
   /*
-   * int sum = 0;
+   * int ret = 0;
    * int i = 0;
    * while (i < nr_cpus) {
    *   int * cpu_value = map_lookup_percpu_elem(map, key, i);
@@ -498,17 +499,17 @@ Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
    *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
    *     break;
    *   }
-   *   sum += *cpu_value;
+   *   // Get the sum, min, or max value
    *   i++;
    * }
-   * return sum;
+   * return ret;
    */
 
   assert(ctx && ctx->getType() == GET_PTR_TY());
 
   const std::string &map_name = map.ident;
 
-  AllocaInst *sum = CreateAllocaBPF(getInt64Ty(), "sum");
+  AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
 
   // Set a large upper bound if we don't know the number of cpus
@@ -516,7 +517,7 @@ Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
   int nr_cpus = is_aot ? 1024 : bpftrace_.get_num_possible_cpus();
 
   CreateStore(getInt32(0), i);
-  CreateStore(getInt64(0), sum);
+  CreateStore(getInt64(0), ret);
 
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
@@ -560,10 +561,16 @@ Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
   SetInsertPoint(lookup_success_block);
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, getInt64Ty()->getPointerTo(), "cast");
-  // sum += cpu_value;
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast),
-                        CreateLoad(getInt64Ty(), sum)),
-              sum);
+
+  if (type.IsSumTy() || type.IsCountTy()) {
+    createPerCpuSum(ret, cast);
+  } else if (type.IsMaxTy()) {
+    createPerCpuMinMax(ret, cast, true);
+  } else if (type.IsMinTy()) {
+    createPerCpuMinMax(ret, cast, false);
+  } else {
+    LOG(BUG) << "Unsupported map aggregation type: " << type;
+  }
 
   // ++i;
   CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
@@ -603,9 +610,50 @@ Value *IRBuilderBPF::CreatePerCpuMapSumElems(Value *ctx,
   SetInsertPoint(while_end);
 
   CreateLifetimeEnd(i);
-  Value *ret = CreateLoad(getInt64Ty(), sum);
-  CreateLifetimeEnd(sum);
-  return ret;
+  Value *ret_reg = CreateLoad(getInt64Ty(), ret);
+  CreateLifetimeEnd(ret);
+  return ret_reg;
+}
+
+void IRBuilderBPF::createPerCpuSum(AllocaInst *ret, Value *cpu_value)
+{
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cpu_value),
+                        CreateLoad(getInt64Ty(), ret)),
+              ret);
+}
+
+void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
+                                      Value *cpu_value,
+                                      bool is_max)
+{
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *success_block = BasicBlock::Create(module_.getContext(),
+                                                 "min_max_success",
+                                                 parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "min_max_merge",
+                                               parent);
+  Value *condition;
+
+  if (is_max) {
+    condition = CreateICmpSGT(CreateLoad(getInt64Ty(), cpu_value),
+                              CreateLoad(getInt64Ty(), ret),
+                              "max_cond");
+  } else {
+    condition = CreateICmpSLT(CreateLoad(getInt64Ty(), cpu_value),
+                              CreateLoad(getInt64Ty(), ret),
+                              "min_cond");
+  }
+  CreateCondBr(condition, success_block, merge_block);
+
+  SetInsertPoint(success_block);
+
+  // ret = cpu_value;
+  CreateStore(CreateLoad(getInt64Ty(), cpu_value), ret);
+
+  CreateBr(merge_block);
+
+  SetInsertPoint(merge_block);
 }
 
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,

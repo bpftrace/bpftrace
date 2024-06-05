@@ -68,18 +68,18 @@ define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".t
   %tuple = alloca %"unsigned int64_count__tuple_t", align 8
   %"$kv" = alloca %"unsigned int64_count__tuple_t", align 8
   %i = alloca i32, align 4
-  %sum = alloca i64, align 8
+  %ret = alloca i64, align 8
   %lookup_key = alloca i64, align 8
   %key = load i64, i8* %1, align 8
   %5 = bitcast i64* %lookup_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   store i64 %key, i64* %lookup_key, align 8
-  %6 = bitcast i64* %sum to i8*
+  %6 = bitcast i64* %ret to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
   %7 = bitcast i32* %i to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
   store i32 0, i32* %i, align 4
-  store i64 0, i64* %sum, align 8
+  store i64 0, i64* %ret, align 8
   br label %while_cond
 
 while_cond:                                       ; preds = %lookup_success, %4
@@ -96,8 +96,8 @@ while_body:                                       ; preds = %while_cond
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   %10 = bitcast i32* %i to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = load i64, i64* %sum, align 8
-  %12 = bitcast i64* %sum to i8*
+  %11 = load i64, i64* %ret, align 8
+  %12 = bitcast i64* %ret to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   %13 = bitcast %"unsigned int64_count__tuple_t"* %"$kv" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
@@ -137,10 +137,10 @@ while_end:                                        ; preds = %error_failure, %err
 
 lookup_success:                                   ; preds = %while_body
   %cast = bitcast i8* %lookup_percpu_elem to i64*
-  %32 = load i64, i64* %sum, align 8
+  %32 = load i64, i64* %ret, align 8
   %33 = load i64, i64* %cast, align 8
   %34 = add i64 %33, %32
-  store i64 %34, i64* %sum, align 8
+  store i64 %34, i64* %ret, align 8
   %35 = load i32, i32* %i, align 4
   %36 = add i32 %35, 1
   store i32 %36, i32* %i, align 4

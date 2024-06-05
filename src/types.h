@@ -414,7 +414,8 @@ public:
   }
   bool IsCastableMapTy() const
   {
-    return type_ == Type::count || type_ == Type::sum;
+    return type_ == Type::count || type_ == Type::sum || type_ == Type::max ||
+           type_ == Type::min;
   }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
