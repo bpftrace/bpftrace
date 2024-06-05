@@ -67,6 +67,8 @@ and this project adheres to
   - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 - Fix variable corruption when used as map key
   - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
+- Semantic analyser: fix checking record map types
+  - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
 #### Docs
 #### Tools
 

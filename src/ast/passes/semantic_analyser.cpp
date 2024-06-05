@@ -2392,7 +2392,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   const std::string &map_ident = assignment.map->ident;
   auto type = assignment.expr->type;
 
-  if (type.IsRecordTy()) {
+  if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
     std::string ty = assignment.expr->type.GetName();
     std::string stored_ty = map_val_[map_ident].GetName();
     if (!stored_ty.empty() && stored_ty != ty) {

@@ -379,6 +379,11 @@ stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'stri
 kprobe:f { @x = 0; @x = "a"; }
                    ~~
 )");
+  test_error("kprobe:f { @x = 0; @x = *curtask; }", R"(
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'int64'
+kprobe:f { @x = 0; @x = *curtask; }
+                   ~~
+)");
 }
 
 TEST(semantic_analyser, consistent_map_keys)
