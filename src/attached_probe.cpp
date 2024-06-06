@@ -64,7 +64,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
 libbpf::bpf_prog_type progtype(ProbeType t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case ProbeType::special:    return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     case ProbeType::kprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
@@ -93,7 +93,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
 std::string progtypeName(libbpf::bpf_prog_type t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case libbpf::BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
     case libbpf::BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
     case libbpf::BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
@@ -699,7 +699,7 @@ void maybe_throw_helper_verifier_error(std::string_view log,
                     exception_msg_suffix;
   throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
 }
-}
+} // namespace
 
 void AttachedProbe::load_prog(BPFfeature &feature)
 {
@@ -941,7 +941,7 @@ void AttachedProbe::attach_multi_kprobe(void)
   unsigned int i = 0;
 
   for (i = 0; i < probe_.funcs.size(); i++) {
-    syms.push_back(probe_.funcs[i].c_str());
+    syms.push_back(probe_.funcs[i].symbol_name.c_str());
   }
 
   opts.kprobe_multi.syms = syms.data();
@@ -1063,7 +1063,7 @@ static int bcc_load_cb(uint64_t v_addr,
 
 static void resolve_offset_uprobe_multi(const std::string &path,
                                         const std::string &probe_name,
-                                        const std::vector<std::string> &funcs,
+                                        const std::vector<TrapLocation> &funcs,
                                         std::vector<std::string> &syms,
                                         std::vector<unsigned long> &offsets)
 {
@@ -1071,14 +1071,8 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   int err;
 
   // Parse symbols names into syms vector
-  for (const std::string &func : funcs) {
-    auto pos = func.find(':');
-
-    if (pos == std::string::npos) {
-      throw FatalUserException("Error resolving probe: " + probe_name);
-    }
-
-    syms.push_back(func.substr(pos + 1));
+  for (const auto &func : funcs) {
+    syms.push_back(func.symbol_name);
   }
 
   std::sort(std::begin(syms), std::end(syms));

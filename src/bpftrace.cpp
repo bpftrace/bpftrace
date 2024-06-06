@@ -108,6 +108,35 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   return probe;
 }
 
+std::vector<TrapLocation> BPFtrace::function_locations(const Probe &probe)
+{
+  // If the user specified an address/offset, do not overwrite
+  // their choice with locations from the DebugInfo.
+  if (probe.address == 0 && probe.func_offset == 0) {
+    // Get function locations from the DebugInfo, as it skips the
+    // prologue and also returns locations of inlined function calls.
+    if (auto *dwarf = get_dwarf(probe.path)) {
+      const auto locations = dwarf->get_function_locations(
+          probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
+      if (!locations.empty())
+        return locations;
+    }
+  } else if (probe.address) {
+    // Use the user provided address.
+    return { TrapLocation{
+        .name = probe.attach_point,
+        .file_address = probe.address,
+    } };
+  }
+
+  // Otherwise, use the location from the symbol table.
+  return { TrapLocation{
+      .name = probe.attach_point,
+      .symbol_name = probe.attach_point,
+      .offset = probe.func_offset,
+  } };
+}
+
 int BPFtrace::add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         int usdt_location_idx)
@@ -138,16 +167,23 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
       // probe per expanded target.
       assert(type == ProbeType::uprobe || type == ProbeType::uretprobe);
       std::unordered_map<std::string, Probe> target_map;
-      for (const auto &func : matches) {
-        ast::AttachPoint match_ap = ap.create_expansion_copy(func);
+      for (auto &func : matches) {
+        auto match_ap = ap.create_expansion_copy(func);
+        auto func_name = std::move(match_ap.func);
         // Use the original (possibly wildcarded) function name
         match_ap.func = ap.func;
         auto found = target_map.find(match_ap.target);
         if (found != target_map.end()) {
-          found->second.funcs.push_back(func);
+          found->second.funcs.push_back(TrapLocation{
+              .name = std::move(func),
+              .symbol_name = std::move(func_name),
+          });
         } else {
           auto probe = generate_probe(match_ap, p);
-          probe.funcs.push_back(func);
+          probe.funcs.push_back(TrapLocation{
+              .name = std::move(func),
+              .symbol_name = std::move(func_name),
+          });
           target_map.insert({ { match_ap.target, probe } });
         }
       }
@@ -155,7 +191,13 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
         resources.probes.push_back(std::move(pair.second));
       }
     } else {
-      probe.funcs.assign(matches.begin(), matches.end());
+      for (auto &m : matches) {
+        auto match_ap = ap.create_expansion_copy(m);
+        probe.funcs.push_back(TrapLocation{
+            .name = std::move(m),
+            .symbol_name = std::move(match_ap.func),
+        });
+      }
       resources.probes.push_back(std::move(probe));
     }
   } else if (probetype(ap.provider) == ProbeType::uprobe) {
@@ -169,11 +211,11 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
       if (auto *dwarf = get_dwarf(probe.path)) {
         const auto locations = dwarf->get_function_locations(
             probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
-        for (const auto loc : locations) {
+        for (auto &loc : locations) {
           // Clear the attach point, so the address will be used instead
           Probe probe_copy = probe;
           probe_copy.attach_point.clear();
-          probe_copy.address = loc;
+          probe_copy.address = loc.file_address + loc.offset;
           resources.probes.push_back(std::move(probe_copy));
 
           locations_from_dwarf = true;

@@ -549,6 +549,36 @@ std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);
 
+struct TrapLocation {
+  /* Name of the "attach point" given by the user. */
+  std::string name;
+  /* Name of the function from the symbol table.
+   * Inline functions get their caller's symbol name.
+   */
+  std::string symbol_name;
+  /* Address of the function from the symbol table. */
+  uintptr_t file_address = 0;
+  /* Address of the function in virtual memory. */
+  uintptr_t load_address = 0;
+  /* Offset within the symbol where the trap is inserted. */
+  size_t offset = 0;
+
+  bool operator==(const TrapLocation &other) const
+  {
+    return symbol_name == other.symbol_name &&
+           file_address == other.file_address &&
+           load_address == other.load_address && offset == other.offset;
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(name, symbol_name, file_address, load_address, offset);
+  }
+};
+
 struct Probe {
   ProbeType type;
   std::string path;         // file path if used
@@ -569,7 +599,8 @@ struct Probe {
   bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
-  std::vector<std::string> funcs;
+
+  std::vector<TrapLocation> funcs;
 
 private:
   friend class cereal::access;

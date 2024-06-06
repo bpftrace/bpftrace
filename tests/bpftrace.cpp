@@ -71,7 +71,7 @@ void check_kprobe(Probe &p,
 }
 
 void check_kprobe_multi(Probe &p,
-                        const std::vector<std::string> &funcs,
+                        const std::vector<TrapLocation> &funcs,
                         const std::string &orig_name,
                         const std::string &name)
 {
@@ -103,7 +103,7 @@ void check_uprobe(Probe &p,
 
 void check_uprobe_multi(Probe &p,
                         const std::string &path,
-                        const std::vector<std::string> &funcs,
+                        const std::vector<TrapLocation> &funcs,
                         const std::string &orig_name,
                         const std::string &name)
 {
@@ -287,7 +287,8 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe_multi(bpftrace->get_probes().at(1),
-                     { "my_one", "my_two" },
+                     { { .name = "my_one", .symbol_name = "my_one" },
+                       { .name = "my_two", .symbol_name = "my_two" } },
                      probe_orig_name,
                      "kprobe:my_*");
   check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
@@ -489,11 +490,13 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  check_uprobe_multi(bpftrace->get_probes().at(0),
-                     "/bin/sh",
-                     { "/bin/sh:first_open", "/bin/sh:second_open" },
-                     probe_orig_name,
-                     probe_orig_name);
+  check_uprobe_multi(
+      bpftrace->get_probes().at(0),
+      "/bin/sh",
+      { { .name = "/bin/sh:first_open", .symbol_name = "first_open" },
+        { .name = "/bin/sh:second_open", .symbol_name = "second_open" } },
+      probe_orig_name,
+      probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_file)
@@ -541,14 +544,17 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file_uprobe_multi)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "uprobe:/bin/*sh:*open";
-  check_uprobe_multi(bpftrace->get_probes().at(0),
-                     "/bin/sh",
-                     { "/bin/sh:first_open", "/bin/sh:second_open" },
-                     probe_orig_name,
-                     "uprobe:/bin/sh:*open");
+  check_uprobe_multi(
+      bpftrace->get_probes().at(0),
+      "/bin/sh",
+      { { .name = "/bin/sh:first_open", .symbol_name = "first_open" },
+        { .name = "/bin/sh:second_open", .symbol_name = "second_open" } },
+      probe_orig_name,
+      "uprobe:/bin/sh:*open");
   check_uprobe_multi(bpftrace->get_probes().at(1),
                      "/bin/bash",
-                     { "/bin/bash:first_open" },
+                     { { .name = "/bin/bash:first_open",
+                         .symbol_name = "first_open" } },
                      probe_orig_name,
                      "uprobe:/bin/bash:*open");
 }
