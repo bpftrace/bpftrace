@@ -65,10 +65,6 @@ public:
                                               std::string file_path_
                                               __attribute__((unused)))
   {
-    static bool warned = false;
-    if (!warned)
-      LOG(WARNING) << "Cannot parse DWARF: liblldb not available";
-    warned = true;
     return nullptr;
   }
 
