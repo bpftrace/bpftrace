@@ -28,7 +28,7 @@ using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
+  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot = false);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -91,6 +91,8 @@ public:
       const std::string &name);
 
   void generate_ir(void);
+  libbpf::bpf_map_type get_map_type(const SizedType &val_type,
+                                    const MapKey &key);
   void generate_maps(const RequiredResources &resources);
   void optimize(void);
   bool verify(void);
@@ -220,7 +222,8 @@ private:
   void createIncDec(Unop &unop);
 
   Function *createMapLenCallback();
-  Function *createForEachMapCallback(const Variable &decl,
+  Function *createForEachMapCallback(Map &map,
+                                     const Variable &decl,
                                      const std::vector<Statement *> &stmts);
   Function *createMurmurHash2Func();
 
@@ -229,6 +232,8 @@ private:
   // will restore `CodegenLLVM`s async id state back to when this function was
   // first called.
   std::function<void()> create_reset_ids();
+
+  bool canAggPerCpuMapElems(const SizedType &val_type, const MapKey &key);
 
   Node *root_ = nullptr;
 
@@ -239,6 +244,7 @@ private:
   IRBuilderBPF b_;
 
   DIBuilderBPF debug_;
+  bool is_aot_;
 
   const DataLayout &datalayout() const
   {

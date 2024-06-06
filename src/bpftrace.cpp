@@ -1,3 +1,4 @@
+#include "btf.h"
 #include <algorithm>
 #include <arpa/inet.h>
 #include <cassert>
@@ -2337,6 +2338,11 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
   };
 
   return symopts;
+}
+
+int BPFtrace::get_num_possible_cpus() const
+{
+  return libbpf_num_possible_cpus();
 }
 
 } // namespace bpftrace

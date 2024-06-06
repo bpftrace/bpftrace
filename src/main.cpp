@@ -907,7 +907,9 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  ast::CodegenLLVM llvm(&*ast_root, bpftrace);
+  ast::CodegenLLVM llvm(&*ast_root,
+                        bpftrace,
+                        args.build_mode == BuildMode::AHEAD_OF_TIME);
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();

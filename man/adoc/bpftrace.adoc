@@ -2415,9 +2415,12 @@ i:s:10 {
 Count how often this function is called.
 
 Using `@=count()` is conceptually similar to `@++`.
-The difference is that the `count()` function uses a map type optimized for this (PER_CPU), increasing performance and correctness.
-Multiple writers to a shared global var might lose counts as bpftrace doesn't update them atomically.
-Due to this the map cannot be accessed as a regular integer.
+The difference is that the `count()` function uses a map type optimized for 
+writing (PER_CPU), increasing performance and correctness. However, sync reads 
+can be expensive as bpftrace needs to iterate over all the cpus to collect and 
+sum these values.
+Note: In contrast to hash maps (e.g. `@++`), multiple writers to a shared 
+global var might lose counts as bpftrace doesn't update them atomically.
 
 ----
 i:ms:100 {
@@ -2425,7 +2428,12 @@ i:ms:100 {
 }
 
 i:s:10 {
+  // async read
   print(@);
+  // sync read
+  if (@ > 10) {
+    print(("hello"));
+  }
   clear(@);
 }
 ----
@@ -2574,6 +2582,30 @@ kprobe:vfs_read {
 * `sum(int64 n)`
 
 Calculate the sum of all `n` passed.
+
+Using `@=sum(5)` is conceptually similar to `@+=5`.
+The difference is that the `sum()` function uses a map type optimized for 
+writing (PER_CPU), increasing performance and correctness. However, sync reads 
+can be expensive as bpftrace needs to iterate over all the cpus to collect and 
+sum these values.
+Note: In contrast to hash maps (e.g. `@+=5`), multiple writers to a shared 
+global var might lose updates as bpftrace doesn't update them atomically.
+
+----
+i:ms:100 {
+  @ = sum(5);
+}
+
+i:s:10 {
+  // async read
+  print(@);
+  // sync read
+  if (@ > 10) {
+    print(("hello"));
+  }
+  clear(@);
+}
+----
 
 [#map-functions-zero]
 === zero

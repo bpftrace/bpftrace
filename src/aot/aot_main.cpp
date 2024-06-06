@@ -116,6 +116,16 @@ int main(int argc, char* argv[])
     return 1;
 
   BPFtrace bpftrace(std::move(output));
+
+  // TODO: remove this once we move to libbpf or move to open-coded iterators
+  auto num_cpus = bpftrace.get_num_possible_cpus();
+  if (num_cpus > 1024) {
+    LOG(WARNING) << "Detected " << num_cpus
+                 << " cpus. For ahead-of-time compilation there is a max of "
+                    "1024 cpus so there may be incorrect data for 'count' "
+                    "and 'sum' aggregations.";
+  }
+
   int err = aot::load(bpftrace, argv[0]);
   if (err) {
     LOG(ERROR) << "Failed to load AOT script";

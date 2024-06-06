@@ -89,6 +89,12 @@ public:
                              Value *key,
                              SizedType &type,
                              const location &loc);
+
+  Value *CreatePerCpuMapSumElems(Value *ctx,
+                                 Map &map,
+                                 Value *key,
+                                 const location &loc,
+                                 bool is_aot);
   void CreateMapUpdateElem(Value *ctx,
                            const std::string &map_ident,
                            Value *key,
@@ -303,6 +309,17 @@ private:
                             Value *key,
                             PointerType *val_ptr_ty,
                             const std::string &name = "lookup_elem");
+  CallInst *createPerCpuMapLookup(
+      const std::string &map_name,
+      Value *key,
+      Value *cpu,
+      const std::string &name = "lookup_percpu_elem");
+  CallInst *createPerCpuMapLookup(
+      const std::string &map_name,
+      Value *key,
+      Value *cpu,
+      PointerType *val_ptr_ty,
+      const std::string &name = "lookup_percpu_elem");
   CallInst *createGetScratchMap(const std::string &map_name,
                                 const std::string &name,
                                 PointerType *val_ptr_ty,

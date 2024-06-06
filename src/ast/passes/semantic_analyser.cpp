@@ -1796,7 +1796,8 @@ void SemanticAnalyser::visit(Binop &binop)
     return;
   }
 
-  if (lht.IsIntTy() && rht.IsIntTy()) {
+  if ((lht.IsCastableMapTy() || lht.IsIntTy()) &&
+      (rht.IsCastableMapTy() || rht.IsIntTy())) {
     binop_int(binop);
   } else if (lht.IsArrayTy() && rht.IsArrayTy()) {
     binop_array(binop);
@@ -2333,7 +2334,7 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if ((cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
-       !rhs.IsCtxAccess() && !(rhs.IsArrayTy())) ||
+       !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
       // casting from/to int arrays must respect the size
       (cast.type.IsArrayTy() &&
        (!rhs.IsIntTy() || cast.type.GetSize() != rhs.GetSize())) ||

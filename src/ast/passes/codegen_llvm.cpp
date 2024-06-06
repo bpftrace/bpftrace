@@ -47,13 +47,14 @@
 namespace bpftrace {
 namespace ast {
 
-CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
+CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot)
     : root_(root),
       bpftrace_(bpftrace),
       context_(std::make_unique<LLVMContext>()),
       module_(std::make_unique<Module>("bpftrace", *context_)),
       b_(*context_, *module_, bpftrace),
-      debug_(*module_)
+      debug_(*module_),
+      is_aot_(is_aot)
 {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -1415,7 +1416,20 @@ void CodegenLLVM::visit(Offsetof &ofof)
 void CodegenLLVM::visit(Map &map)
 {
   auto [key, scoped_key_deleter] = getMapKey(map);
-  Value *value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
+
+  auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+  if (map_info == bpftrace_.resources.maps_info.end()) {
+    LOG(BUG) << "map name: \"" << map.ident << "\" not found";
+  }
+
+  const auto &val_type = map_info->second.value_type;
+  Value *value;
+  if (canAggPerCpuMapElems(val_type, map_info->second.key)) {
+    value = b_.CreatePerCpuMapSumElems(ctx_, map, key, map.loc, is_aot_);
+  } else {
+    value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
+  }
+
   expr_ = value;
 
   if (dyn_cast<AllocaInst>(value))
@@ -2476,7 +2490,7 @@ void CodegenLLVM::visit(For &f)
 
   Value *ctx = b_.getInt64(0);
   b_.CreateForEachMapElem(
-      ctx_, map, createForEachMapCallback(*f.decl, *f.stmts), ctx, f.loc);
+      ctx_, map, createForEachMapCallback(map, *f.decl, *f.stmts), ctx, f.loc);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
@@ -3497,6 +3511,22 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
   var->addDebugInfo(debuginfo);
 }
 
+libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
+                                               const MapKey &key)
+{
+  if (val_type.IsCountTy() && key.args_.empty()) {
+    return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+  } else if (bpftrace_.feature_->has_map_percpu_hash() &&
+             (val_type.IsHistTy() || val_type.IsLhistTy() ||
+              val_type.IsCountTy() || val_type.IsSumTy() ||
+              val_type.IsMinTy() || val_type.IsMaxTy() || val_type.IsAvgTy() ||
+              val_type.IsStatsTy())) {
+    return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
+  } else {
+    return libbpf::BPF_MAP_TYPE_HASH;
+  }
+}
+
 // Emit maps in libbpf format so that Clang can create BTF info for them which
 // can be read and used by libbpf.
 //
@@ -3530,18 +3560,9 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
     const auto &key = info.key;
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
-    auto map_type = libbpf::BPF_MAP_TYPE_UNSPEC;
+    auto map_type = get_map_type(val_type, key);
     if (val_type.IsCountTy() && key.args_.empty()) {
       max_entries = 1;
-      map_type = libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
-    } else if (bpftrace_.feature_->has_map_percpu_hash() &&
-               (val_type.IsHistTy() || val_type.IsLhistTy() ||
-                val_type.IsCountTy() || val_type.IsSumTy() ||
-                val_type.IsMinTy() || val_type.IsMaxTy() ||
-                val_type.IsAvgTy() || val_type.IsStatsTy())) {
-      map_type = libbpf::BPF_MAP_TYPE_PERCPU_HASH;
-    } else {
-      map_type = libbpf::BPF_MAP_TYPE_HASH;
     }
 
     createMapDefinition(name, map_type, max_entries, key, val_type);
@@ -4149,6 +4170,7 @@ Function *CodegenLLVM::createMapLenCallback()
 }
 
 Function *CodegenLLVM::createForEachMapCallback(
+    Map &map,
     const Variable &decl,
     const std::vector<Statement *> &stmts)
 {
@@ -4187,9 +4209,22 @@ Function *CodegenLLVM::createForEachMapCallback(
     key = b_.CreateLoad(b_.GetType(key_type), key, "key");
   }
 
+  auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+  if (map_info == bpftrace_.resources.maps_info.end()) {
+    LOG(BUG) << "map name: \"" << map.ident << "\" not found";
+  }
+
   auto &val_type = decl.type.GetField(1).type;
   Value *val = callback->getArg(2);
-  if (!onStack(val_type)) {
+
+  auto map_val_type = map_info->second.value_type;
+  if (canAggPerCpuMapElems(map_val_type, map_info->second.key)) {
+    AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
+                                             "lookup_key");
+    b_.CreateStore(key, key_ptr);
+
+    val = b_.CreatePerCpuMapSumElems(ctx_, map, key_ptr, map.loc, is_aot_);
+  } else if (!onStack(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }
 
@@ -4248,6 +4283,15 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->mapped_printf_id_ = starting_mapped_printf_id;
     this->skb_output_id_ = starting_skb_output_id;
   };
+}
+
+bool CodegenLLVM::canAggPerCpuMapElems(const SizedType &val_type,
+                                       const MapKey &key)
+{
+  auto map_type = get_map_type(val_type, key);
+  return val_type.IsCastableMapTy() &&
+         (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
+          map_type == libbpf::BPF_MAP_TYPE_PERCPU_HASH);
 }
 
 } // namespace ast
