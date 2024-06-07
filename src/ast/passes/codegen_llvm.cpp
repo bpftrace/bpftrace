@@ -3619,14 +3619,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         entries,
                         MapKey(),
                         CreateNone());
-
-    int loss_cnt_key_size = sizeof(bpftrace_.rb_loss_cnt_key_) * 8;
-    int loss_cnt_val_size = sizeof(bpftrace_.rb_loss_cnt_val_) * 8;
-    createMapDefinition(to_string(MapType::RingbufLossCounter),
-                        libbpf::BPF_MAP_TYPE_ARRAY,
-                        1,
-                        MapKey({ CreateInt(loss_cnt_key_size) }),
-                        CreateInt(loss_cnt_val_size));
   }
 
   if (resources.str_buffers > 0) {
@@ -3637,6 +3629,13 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         MapKey({ CreateInt32() }),
                         CreateArray(max_strlen, CreateInt8()));
   }
+  int loss_cnt_key_size = sizeof(bpftrace_.event_loss_cnt_key_) * 8;
+  int loss_cnt_val_size = sizeof(bpftrace_.event_loss_cnt_val_) * 8;
+  createMapDefinition(to_string(MapType::EventLossCounter),
+                      libbpf::BPF_MAP_TYPE_ARRAY,
+                      1,
+                      MapKey({ CreateInt(loss_cnt_key_size) }),
+                      CreateInt(loss_cnt_val_size));
 }
 
 void CodegenLLVM::emit_elf(const std::string &filename)

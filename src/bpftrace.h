@@ -203,8 +203,8 @@ public:
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
-  static constexpr uint32_t rb_loss_cnt_key_ = 0;
-  static constexpr uint64_t rb_loss_cnt_val_ = 0;
+  static constexpr uint32_t event_loss_cnt_key_ = 0;
+  static constexpr uint64_t event_loss_cnt_val_ = 0;
   bool need_recursion_check_ = false;
 
   static void sort_by_key(
@@ -247,7 +247,8 @@ private:
       bool file_activation);
   int setup_output();
   int setup_perf_events();
-  int setup_ringbuf();
+  void setup_ringbuf();
+  int setup_event_loss();
   // when the ringbuf feature is available, enable ringbuf for built-ins like
   // printf, cat.
   bool is_ringbuf_enabled(void) const
@@ -263,7 +264,7 @@ private:
   void teardown_output();
   void poll_output(bool drain = false);
   int poll_perf_events();
-  void handle_ringbuf_loss();
+  void handle_event_loss();
   int print_map_hist(const BpfMap &map, uint32_t top, uint32_t div);
   int print_map_stats(const BpfMap &map, uint32_t top, uint32_t div);
   static uint64_t read_address_from_output(std::string output);
@@ -275,7 +276,7 @@ private:
   bool has_iter_ = false;
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;
-  uint64_t ringbuf_loss_count_ = 0;
+  uint64_t event_loss_count_ = 0;
 
   // Mapping traceable functions to modules (or "vmlinux") they appear in.
   // Needs to be mutable to allow lazy loading of the mapping from const lookup

@@ -24,7 +24,7 @@ target triple = "bpf-pc-linux"
 @stack_bpftrace_127 = dso_local global %"struct map_t.4" zeroinitializer, section ".maps", !dbg !62
 @stack_scratch = dso_local global %"struct map_t.5" zeroinitializer, section ".maps", !dbg !64
 @ringbuf = dso_local global %"struct map_t.6" zeroinitializer, section ".maps", !dbg !75
-@ringbuf_loss_counter = dso_local global %"struct map_t.7" zeroinitializer, section ".maps", !dbg !89
+@event_loss_counter = dso_local global %"struct map_t.7" zeroinitializer, section ".maps", !dbg !89
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -442,7 +442,7 @@ attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !87 = !{!88}
 !88 = !DISubrange(count: 262144, lowerBound: 0)
 !89 = !DIGlobalVariableExpression(var: !90, expr: !DIExpression())
-!90 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !91, isLocal: false, isDefinition: true)
+!90 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !91, isLocal: false, isDefinition: true)
 !91 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !92)
 !92 = !{!93, !71, !72, !98}
 !93 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !94, size: 64)

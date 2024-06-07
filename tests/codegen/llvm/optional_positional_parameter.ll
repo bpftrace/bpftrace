@@ -13,8 +13,8 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !30
-@ringbuf_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !44
-@str_buffer = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !57
+@str_buffer = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !44
+@event_loss_counter = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !57
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -40,7 +40,7 @@ entry:
   %5 = bitcast i32* %lookup_str_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   store i32 0, i32* %lookup_str_key, align 4
-  %lookup_str_map = call i8* inttoptr (i64 1 to i8* (%"struct map_t.3"*, i32*)*)(%"struct map_t.3"* @str_buffer, i32* %lookup_str_key)
+  %lookup_str_map = call i8* inttoptr (i64 1 to i8* (%"struct map_t.2"*, i32*)*)(%"struct map_t.2"* @str_buffer, i32* %lookup_str_key)
   %6 = bitcast i32* %lookup_str_key to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
   %lookup_str_cond = icmp ne i8* %lookup_str_map, null
@@ -130,27 +130,27 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !42 = !{!43}
 !43 = !DISubrange(count: 262144, lowerBound: 0)
 !44 = !DIGlobalVariableExpression(var: !45, expr: !DIExpression())
-!45 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
+!45 = distinct !DIGlobalVariable(name: "str_buffer", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
 !46 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !47)
-!47 = !{!48, !53, !54, !19}
+!47 = !{!48, !53, !54, !24}
 !48 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !49, size: 64)
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
-!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !51)
+!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !51)
 !51 = !{!52}
-!52 = !DISubrange(count: 2, lowerBound: 0)
+!52 = !DISubrange(count: 6, lowerBound: 0)
 !53 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !6, size: 64, offset: 64)
 !54 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !55, size: 64, offset: 128)
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !56, size: 64)
 !56 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
-!58 = distinct !DIGlobalVariable(name: "str_buffer", linkageName: "global", scope: !2, file: !2, type: !59, isLocal: false, isDefinition: true)
+!58 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !59, isLocal: false, isDefinition: true)
 !59 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !60)
-!60 = !{!61, !53, !54, !24}
+!60 = !{!61, !53, !54, !19}
 !61 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !62, size: 64)
 !62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !63, size: 64)
-!63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !64)
+!63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !64)
 !64 = !{!65}
-!65 = !DISubrange(count: 6, lowerBound: 0)
+!65 = !DISubrange(count: 2, lowerBound: 0)
 !66 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !67, globals: !68)
 !67 = !{}
 !68 = !{!0, !20, !30, !44, !57}
