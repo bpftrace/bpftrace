@@ -9,7 +9,7 @@ and this project adheres to
 ## Unreleased
 
 #### Added
-- Add 'lazy_symbolication' config
+- Add 'lazy_symbolication' config option
   - [#2958](https://github.com/bpftrace/bpftrace/pull/2958)
 - Add ability to list all probes in a program
   - [#2969](https://github.com/bpftrace/bpftrace/pull/2969)
@@ -23,23 +23,27 @@ and this project adheres to
   - [#3003](https://github.com/bpftrace/bpftrace/pull/3003)
 - Add optional systemd support
   - [#3158](https://github.com/bpftrace/bpftrace/pull/3158)
+- Add ability to attach uprobes to inlined functions
+  - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
+- Enable count/sum map reads in kernel space (implicit casting)
+  - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
 - Reproducible Builds: Do not store timestamps in gzip header
   - [#3096](https://github.com/bpftrace/bpftrace/pull/3096)
-- Parse DWARF using liblldb instead of libdw
+- Improve DWARF support, using liblldb instead of libdw
   - [#3042](https://github.com/bpftrace/bpftrace/pull/3042)
-- Replace native 'bpf_get_stackid'
+- Use new hash function to reduce collisions when aggregating on stack traces
   - [#3060](https://github.com/bpftrace/bpftrace/pull/3060)
 - Disable func builtin for kretprobes and uretprobes when `get_func_ip` feature is not available
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
-- Attach probe to inlined functions
-  - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 - Move error printing from debug to verbose mode
   - [#3202](https://github.com/bpftrace/bpftrace/pull/3202)
 - Better error message when libbpf is too old
   - [#3212](https://github.com/bpftrace/bpftrace/pull/3212)
+- Allow trailing semicolons and empty blocks in config syntax
+  - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
@@ -49,28 +53,25 @@ and this project adheres to
   - [#3053](https://github.com/bpftrace/bpftrace/pull/3053)
 - Fix field resolution on structs with anon union as first field
   - [#2964](https://github.com/bpftrace/bpftrace/pull/2964)
-- Fix security hole checking unpacked kernel headers
-  - [#3033](https://github.com/bpftrace/bpftrace/pull/3033)
 - Fix alignment of atomic map counter update
   - [#3045](https://github.com/bpftrace/bpftrace/pull/3045)
-- Allow trailing semicolons and empty blocks in config syntax
-  - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
 - Fix func builtin for kretprobes and uretprobes for kernels with working `get_func_ip` feature
   - [#2645](https://github.com/bpftrace/bpftrace/pull/2645)
-- Fix ustack for functions with prologue
+- Fix ustack missing the second-from-top stack frame in uprobes
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
 - Fix storing strings of differing lengths in a variable
   - [#3178](https://github.com/bpftrace/bpftrace/pull/3178)
-- Field analyser: resolve fields for array accesses
+- Fix field resolution for structs in arrays
   - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 - Fix error in dereferencing kernel double pointers
   - [#3024](https://github.com/bpftrace/bpftrace/pull/3024)
 - Fix variable corruption when used as map key
   - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
-- Semantic analyser: fix checking record map types
+- Fix crash when assigning a record type to a map
   - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
-- Fix count/sum map reads in kernel space (implict casting)
-  - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
+#### Security
+- Don't unpack kernel headers or look in tmp
+  - [#3156](https://github.com/bpftrace/bpftrace/pull/3156)
 #### Docs
 #### Tools
 
