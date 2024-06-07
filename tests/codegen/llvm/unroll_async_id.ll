@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_i = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
-@ringbuf_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
+@event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -59,7 +59,7 @@ event_loss_counter:                               ; preds = %entry
   %8 = bitcast i32* %key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i32 0, i32* %key, align 4
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
@@ -93,7 +93,7 @@ event_loss_counter3:                              ; preds = %counter_merge
   %16 = bitcast i32* %key6 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
   store i32 0, i32* %key6, align 4
-  %lookup_elem7 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key6)
+  %lookup_elem7 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key6)
   %map_lookup_cond11 = icmp ne i8* %lookup_elem7, null
   br i1 %map_lookup_cond11, label %lookup_success8, label %lookup_failure9
 
@@ -127,7 +127,7 @@ event_loss_counter14:                             ; preds = %counter_merge4
   %24 = bitcast i32* %key17 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
   store i32 0, i32* %key17, align 4
-  %lookup_elem18 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key17)
+  %lookup_elem18 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key17)
   %map_lookup_cond22 = icmp ne i8* %lookup_elem18, null
   br i1 %map_lookup_cond22, label %lookup_success19, label %lookup_failure20
 
@@ -161,7 +161,7 @@ event_loss_counter25:                             ; preds = %counter_merge15
   %32 = bitcast i32* %key28 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %32)
   store i32 0, i32* %key28, align 4
-  %lookup_elem29 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key28)
+  %lookup_elem29 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key28)
   %map_lookup_cond33 = icmp ne i8* %lookup_elem29, null
   br i1 %map_lookup_cond33, label %lookup_success30, label %lookup_failure31
 
@@ -195,7 +195,7 @@ event_loss_counter36:                             ; preds = %counter_merge26
   %40 = bitcast i32* %key39 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %40)
   store i32 0, i32* %key39, align 4
-  %lookup_elem40 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key39)
+  %lookup_elem40 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key39)
   %map_lookup_cond44 = icmp ne i8* %lookup_elem40, null
   br i1 %map_lookup_cond44, label %lookup_success41, label %lookup_failure42
 
@@ -269,7 +269,7 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !32 = !{!33}
 !33 = !DISubrange(count: 262144, lowerBound: 0)
 !34 = !DIGlobalVariableExpression(var: !35, expr: !DIExpression())
-!35 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !36, isLocal: false, isDefinition: true)
+!35 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !36, isLocal: false, isDefinition: true)
 !36 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !37)
 !37 = !{!38, !43, !44, !19}
 !38 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !39, size: 64)

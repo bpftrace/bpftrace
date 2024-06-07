@@ -1127,10 +1127,11 @@ int BPFtrace::run(BpfBytecode bytecode)
 int BPFtrace::setup_output()
 {
   if (is_ringbuf_enabled()) {
-    int err = setup_ringbuf();
-    if (err)
-      return err;
+    setup_ringbuf();
   }
+  int err = setup_event_loss();
+  if (err)
+    return err;
   if (is_perf_event_enabled()) {
     return setup_perf_events();
   }
@@ -1179,15 +1180,19 @@ int BPFtrace::setup_perf_events()
   return 0;
 }
 
-int BPFtrace::setup_ringbuf()
+void BPFtrace::setup_ringbuf()
 {
   ringbuf_ = static_cast<struct ring_buffer *>(ring_buffer__new(
       bytecode_.getMap(MapType::Ringbuf).fd, ringbuf_printer, this, nullptr));
-  if (bpf_update_elem(bytecode_.getMap(MapType::RingbufLossCounter).fd,
-                      const_cast<uint32_t *>(&rb_loss_cnt_key_),
-                      const_cast<uint64_t *>(&rb_loss_cnt_val_),
+}
+
+int BPFtrace::setup_event_loss()
+{
+  if (bpf_update_elem(bytecode_.getMap(MapType::EventLossCounter).fd,
+                      const_cast<uint32_t *>(&event_loss_cnt_key_),
+                      const_cast<uint64_t *>(&event_loss_cnt_val_),
                       0)) {
-    LOG(ERROR) << "fail to init ringbuf loss counter";
+    LOG(ERROR) << "fail to init event loss counter";
     return -1;
   }
   return 0;
@@ -1242,9 +1247,10 @@ void BPFtrace::poll_output(bool drain)
       }
     }
 
+    // print loss events
+    handle_event_loss();
+
     if (do_poll_ringbuf) {
-      // print loss events
-      handle_ringbuf_loss();
       ready = ring_buffer__poll(ringbuf_, timeout_ms);
       if (should_retry(ready)) {
         continue;
@@ -1286,21 +1292,21 @@ int BPFtrace::poll_perf_events()
   return ready;
 }
 
-void BPFtrace::handle_ringbuf_loss()
+void BPFtrace::handle_event_loss()
 {
   uint64_t current_value = 0;
-  if (bpf_lookup_elem(bytecode_.getMap(MapType::RingbufLossCounter).fd,
-                      const_cast<uint32_t *>(&rb_loss_cnt_key_),
+  if (bpf_lookup_elem(bytecode_.getMap(MapType::EventLossCounter).fd,
+                      const_cast<uint32_t *>(&event_loss_cnt_key_),
                       &current_value)) {
-    LOG(ERROR) << "fail to get ringbuf loss counter";
+    LOG(ERROR) << "fail to get event loss counter";
   }
   if (current_value) {
-    if (current_value > ringbuf_loss_count_) {
-      out_->lost_events(current_value - ringbuf_loss_count_);
-      ringbuf_loss_count_ = current_value;
-    } else if (current_value < ringbuf_loss_count_) {
-      LOG(ERROR) << "Invalid ringbuf loss count value: " << current_value
-                 << ", last seen: " << ringbuf_loss_count_;
+    if (current_value > event_loss_count_) {
+      out_->lost_events(current_value - event_loss_count_);
+      event_loss_count_ = current_value;
+    } else if (current_value < event_loss_count_) {
+      LOG(ERROR) << "Invalid event loss count value: " << current_value
+                 << ", last seen: " << event_loss_count_;
     }
   }
 }

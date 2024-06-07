@@ -71,8 +71,8 @@ enum class MapType {
   Elapsed,
   MappedPrintfData,
   Ringbuf,
-  RingbufLossCounter,
   StrBuffer,
+  EventLossCounter,
   RecursionPrevention,
 };
 

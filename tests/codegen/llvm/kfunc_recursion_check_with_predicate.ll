@@ -11,17 +11,18 @@ target triple = "bpf-pc-linux"
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @recursion_prevention = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
-@ringbuf_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
+@event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kfunc_queued_spin_lock_slowpath_1(i8* %0) section "s_kfunc_queued_spin_lock_slowpath_1" !dbg !49 {
 entry:
-  %lookup_key13 = alloca i32, align 4
-  %key = alloca i32, align 4
+  %lookup_key19 = alloca i32, align 4
+  %key13 = alloca i32, align 4
   %print_integer_8_t = alloca %print_integer_8_t, align 8
-  %lookup_key1 = alloca i32, align 4
+  %lookup_key6 = alloca i32, align 4
+  %key = alloca i32, align 4
   %lookup_key = alloca i32, align 4
   %1 = bitcast i32* %lookup_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -50,87 +51,105 @@ lookup_merge:                                     ; preds = %lookup_success
   br i1 %predcond, label %pred_false, label %pred_true
 
 value_is_set:                                     ; preds = %lookup_success
+  %7 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store i32 0, i32* %key, align 4
+  %lookup_elem1 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key)
+  %map_lookup_cond5 = icmp ne i8* %lookup_elem1, null
+  br i1 %map_lookup_cond5, label %lookup_success2, label %lookup_failure3
+
+lookup_success2:                                  ; preds = %value_is_set
+  %8 = bitcast i8* %lookup_elem1 to i64*
+  %9 = atomicrmw add i64* %8, i64 1 seq_cst
+  br label %lookup_merge4
+
+lookup_failure3:                                  ; preds = %value_is_set
+  br label %lookup_merge4
+
+lookup_merge4:                                    ; preds = %lookup_failure3, %lookup_success2
+  %10 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   ret i64 0
 
 pred_false:                                       ; preds = %lookup_merge
-  %7 = bitcast i32* %lookup_key1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  store i32 0, i32* %lookup_key1, align 4
-  %lookup_elem2 = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i32*)*)(%"struct map_t"* @recursion_prevention, i32* %lookup_key1)
-  %map_lookup_cond6 = icmp ne i8* %lookup_elem2, null
-  br i1 %map_lookup_cond6, label %lookup_success3, label %lookup_failure4
+  %11 = bitcast i32* %lookup_key6 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store i32 0, i32* %lookup_key6, align 4
+  %lookup_elem7 = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i32*)*)(%"struct map_t"* @recursion_prevention, i32* %lookup_key6)
+  %map_lookup_cond11 = icmp ne i8* %lookup_elem7, null
+  br i1 %map_lookup_cond11, label %lookup_success8, label %lookup_failure9
 
 pred_true:                                        ; preds = %lookup_merge
-  %8 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %9 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 0
-  store i64 30007, i64* %9, align 8
-  %10 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 1
-  store i64 0, i64* %10, align 8
-  %11 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i32 0, i32 2
-  %12 = bitcast [8 x i8]* %11 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %12, i8 0, i64 8, i1 false)
-  %13 = bitcast [8 x i8]* %11 to i64*
-  store i64 2, i64* %13, align 8
+  %12 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  %13 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 0
+  store i64 30007, i64* %13, align 8
+  %14 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 1
+  store i64 0, i64* %14, align 8
+  %15 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i32 0, i32 2
+  %16 = bitcast [8 x i8]* %15 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %16, i8 0, i64 8, i1 false)
+  %17 = bitcast [8 x i8]* %15 to i64*
+  store i64 2, i64* %17, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, %print_integer_8_t*, i64, i64)*)(%"struct map_t.0"* @ringbuf, %print_integer_8_t* %print_integer_8_t, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-lookup_success3:                                  ; preds = %pred_false
-  %14 = bitcast i32* %lookup_key1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
-  %cast7 = ptrtoint i8* %lookup_elem2 to i64
-  store i64 0, i64 %cast7, align 8
-  br label %lookup_merge5
+lookup_success8:                                  ; preds = %pred_false
+  %18 = bitcast i32* %lookup_key6 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %cast12 = ptrtoint i8* %lookup_elem7 to i64
+  store i64 0, i64 %cast12, align 8
+  br label %lookup_merge10
 
-lookup_failure4:                                  ; preds = %pred_false
-  br label %lookup_merge5
+lookup_failure9:                                  ; preds = %pred_false
+  br label %lookup_merge10
 
-lookup_merge5:                                    ; preds = %lookup_failure4, %lookup_success3
+lookup_merge10:                                   ; preds = %lookup_failure9, %lookup_success8
   ret i64 0
 
 event_loss_counter:                               ; preds = %pred_true
-  %15 = bitcast i32* %key to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
-  store i32 0, i32* %key, align 4
-  %lookup_elem8 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key)
-  %map_lookup_cond12 = icmp ne i8* %lookup_elem8, null
-  br i1 %map_lookup_cond12, label %lookup_success9, label %lookup_failure10
-
-counter_merge:                                    ; preds = %lookup_merge11, %pred_true
-  %16 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast i32* %lookup_key13 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
-  store i32 0, i32* %lookup_key13, align 4
-  %lookup_elem14 = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i32*)*)(%"struct map_t"* @recursion_prevention, i32* %lookup_key13)
+  %19 = bitcast i32* %key13 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
+  store i32 0, i32* %key13, align 4
+  %lookup_elem14 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key13)
   %map_lookup_cond18 = icmp ne i8* %lookup_elem14, null
   br i1 %map_lookup_cond18, label %lookup_success15, label %lookup_failure16
 
-lookup_success9:                                  ; preds = %event_loss_counter
-  %18 = bitcast i8* %lookup_elem8 to i64*
-  %19 = atomicrmw add i64* %18, i64 1 seq_cst
-  br label %lookup_merge11
-
-lookup_failure10:                                 ; preds = %event_loss_counter
-  br label %lookup_merge11
-
-lookup_merge11:                                   ; preds = %lookup_failure10, %lookup_success9
-  %20 = bitcast i32* %key to i8*
+counter_merge:                                    ; preds = %lookup_merge17, %pred_true
+  %20 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  br label %counter_merge
+  %21 = bitcast i32* %lookup_key19 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %21)
+  store i32 0, i32* %lookup_key19, align 4
+  %lookup_elem20 = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i32*)*)(%"struct map_t"* @recursion_prevention, i32* %lookup_key19)
+  %map_lookup_cond24 = icmp ne i8* %lookup_elem20, null
+  br i1 %map_lookup_cond24, label %lookup_success21, label %lookup_failure22
 
-lookup_success15:                                 ; preds = %counter_merge
-  %21 = bitcast i32* %lookup_key13 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
-  %cast19 = ptrtoint i8* %lookup_elem14 to i64
-  store i64 0, i64 %cast19, align 8
+lookup_success15:                                 ; preds = %event_loss_counter
+  %22 = bitcast i8* %lookup_elem14 to i64*
+  %23 = atomicrmw add i64* %22, i64 1 seq_cst
   br label %lookup_merge17
 
-lookup_failure16:                                 ; preds = %counter_merge
+lookup_failure16:                                 ; preds = %event_loss_counter
   br label %lookup_merge17
 
 lookup_merge17:                                   ; preds = %lookup_failure16, %lookup_success15
+  %24 = bitcast i32* %key13 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
+  br label %counter_merge
+
+lookup_success21:                                 ; preds = %counter_merge
+  %25 = bitcast i32* %lookup_key19 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %25)
+  %cast25 = ptrtoint i8* %lookup_elem20 to i64
+  store i64 0, i64 %cast25, align 8
+  br label %lookup_merge23
+
+lookup_failure22:                                 ; preds = %counter_merge
+  br label %lookup_merge23
+
+lookup_merge23:                                   ; preds = %lookup_failure22, %lookup_success21
   ret i64 0
 }
 
@@ -187,7 +206,7 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !34 = !{!35}
 !35 = !DISubrange(count: 262144, lowerBound: 0)
 !36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
-!37 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !38, isLocal: false, isDefinition: true)
+!37 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !38, isLocal: false, isDefinition: true)
 !38 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !39)
 !39 = !{!40, !11, !16, !19}
 !40 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !41, size: 64)
