@@ -2080,6 +2080,12 @@ void SemanticAnalyser::visit(For &f)
   }
   Map &map = static_cast<Map &>(*f.expr);
 
+  if (!map.type.IsMapIterableTy()) {
+    LOG(ERROR, f.expr->loc, err_)
+        << "Loop expression does not support type: " << map.type;
+    return;
+  }
+
   // Validate body
   CollectNodes<Variable> vars_referenced;
   for (auto *stmt : *f.stmts) {
