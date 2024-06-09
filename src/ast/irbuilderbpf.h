@@ -196,6 +196,9 @@ public:
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,
                                      const location &loc);
+  CallInst *CreateGetStrScratchMap(int idx,
+                                   BasicBlock *failure_callback,
+                                   const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,

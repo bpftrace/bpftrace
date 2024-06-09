@@ -375,6 +375,18 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
                              failure_callback);
 }
 
+CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
+                                               BasicBlock *failure_callback,
+                                               const location &loc)
+{
+  return createGetScratchMap(to_string(MapType::StrBuffer),
+                             "str",
+                             GET_PTR_TY(),
+                             loc,
+                             failure_callback,
+                             idx);
+}
+
 // createGetScratchMap will jump to failure_callback if it cannot find the map
 // value
 CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
