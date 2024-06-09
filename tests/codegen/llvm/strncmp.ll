@@ -22,65 +22,55 @@ entry:
   %strcmp.result = alloca i1, align 1
   %comm = alloca [16 x i8], align 1
   %str = alloca [64 x i8], align 1
-  %strlen = alloca i64, align 8
-  %1 = bitcast i64* %strlen to i8*
+  %1 = bitcast [64 x i8]* %str to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast i64* %strlen to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 8, i1 false)
-  store i64 64, i64* %strlen, align 8
-  %3 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 64, i1 false)
-  %5 = ptrtoint i8* %0 to i64
-  %6 = add i64 %5, 8
-  %7 = inttoptr i64 %6 to i64*
-  %8 = load volatile i64, i64* %7, align 8
-  %9 = load i64, i64* %strlen, align 8
-  %10 = trunc i64 %9 to i32
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %10, i64 %8)
-  %11 = bitcast i64* %strlen to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
-  %13 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %13, i8 0, i64 16, i1 false)
+  %2 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 64, i1 false)
+  %3 = ptrtoint i8* %0 to i64
+  %4 = add i64 %3, 8
+  %5 = inttoptr i64 %4 to i64*
+  %6 = load volatile i64, i64* %5, align 8
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 64, i64 %6)
+  %7 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm, i64 16)
-  %14 = bitcast i1* %strcmp.result to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
+  %9 = bitcast i1* %strcmp.result to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i1 false, i1* %strcmp.result, align 1
-  %15 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 0
-  %16 = load i8, i8* %15, align 1
-  %17 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 0
-  %18 = load i8, i8* %17, align 1
-  %strcmp.cmp = icmp ne i8 %16, %18
+  %10 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 0
+  %11 = load i8, i8* %10, align 1
+  %12 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 0
+  %13 = load i8, i8* %12, align 1
+  %strcmp.cmp = icmp ne i8 %11, %13
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 pred_false:                                       ; preds = %strcmp.false
   ret i64 1
 
 pred_true:                                        ; preds = %strcmp.false
-  %19 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
-  %20 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %20)
+  %14 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
+  %15 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
   store i64 0, i64* %"@_key", align 8
-  %21 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %21)
+  %16 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
   store i64 1, i64* %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_val", i64 0)
-  %22 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  %23 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
+  %17 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
+  %18 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
   ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %entry
-  %24 = load i1, i1* %strcmp.result, align 1
-  %25 = bitcast i1* %strcmp.result to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %25)
-  %26 = zext i1 %24 to i64
-  %predcond = icmp eq i64 %26, 0
+  %19 = load i1, i1* %strcmp.result, align 1
+  %20 = bitcast i1* %strcmp.result to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
+  %21 = zext i1 %19 to i64
+  %predcond = icmp eq i64 %21, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
 strcmp.done:                                      ; preds = %strcmp.loop57, %strcmp.loop_null_cmp58, %strcmp.loop_null_cmp54, %strcmp.loop_null_cmp50, %strcmp.loop_null_cmp46, %strcmp.loop_null_cmp42, %strcmp.loop_null_cmp38, %strcmp.loop_null_cmp34, %strcmp.loop_null_cmp30, %strcmp.loop_null_cmp26, %strcmp.loop_null_cmp22, %strcmp.loop_null_cmp18, %strcmp.loop_null_cmp14, %strcmp.loop_null_cmp10, %strcmp.loop_null_cmp6, %strcmp.loop_null_cmp2, %strcmp.loop_null_cmp
@@ -88,190 +78,190 @@ strcmp.done:                                      ; preds = %strcmp.loop57, %str
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %27 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 1
-  %28 = load i8, i8* %27, align 1
-  %29 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 1
-  %30 = load i8, i8* %29, align 1
-  %strcmp.cmp3 = icmp ne i8 %28, %30
+  %22 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 1
+  %23 = load i8, i8* %22, align 1
+  %24 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 1
+  %25 = load i8, i8* %24, align 1
+  %strcmp.cmp3 = icmp ne i8 %23, %25
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
 strcmp.loop_null_cmp:                             ; preds = %entry
-  %strcmp.cmp_null = icmp eq i8 %16, 0
+  %strcmp.cmp_null = icmp eq i8 %11, 0
   br i1 %strcmp.cmp_null, label %strcmp.done, label %strcmp.loop
 
 strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
-  %31 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 2
-  %32 = load i8, i8* %31, align 1
-  %33 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 2
-  %34 = load i8, i8* %33, align 1
-  %strcmp.cmp7 = icmp ne i8 %32, %34
+  %26 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 2
+  %27 = load i8, i8* %26, align 1
+  %28 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 2
+  %29 = load i8, i8* %28, align 1
+  %strcmp.cmp7 = icmp ne i8 %27, %29
   br i1 %strcmp.cmp7, label %strcmp.false, label %strcmp.loop_null_cmp6
 
 strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
-  %strcmp.cmp_null4 = icmp eq i8 %28, 0
+  %strcmp.cmp_null4 = icmp eq i8 %23, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 
 strcmp.loop5:                                     ; preds = %strcmp.loop_null_cmp6
-  %35 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 3
-  %36 = load i8, i8* %35, align 1
-  %37 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 3
-  %38 = load i8, i8* %37, align 1
-  %strcmp.cmp11 = icmp ne i8 %36, %38
+  %30 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 3
+  %31 = load i8, i8* %30, align 1
+  %32 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 3
+  %33 = load i8, i8* %32, align 1
+  %strcmp.cmp11 = icmp ne i8 %31, %33
   br i1 %strcmp.cmp11, label %strcmp.false, label %strcmp.loop_null_cmp10
 
 strcmp.loop_null_cmp6:                            ; preds = %strcmp.loop1
-  %strcmp.cmp_null8 = icmp eq i8 %32, 0
+  %strcmp.cmp_null8 = icmp eq i8 %27, 0
   br i1 %strcmp.cmp_null8, label %strcmp.done, label %strcmp.loop5
 
 strcmp.loop9:                                     ; preds = %strcmp.loop_null_cmp10
-  %39 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 4
-  %40 = load i8, i8* %39, align 1
-  %41 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 4
-  %42 = load i8, i8* %41, align 1
-  %strcmp.cmp15 = icmp ne i8 %40, %42
+  %34 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 4
+  %35 = load i8, i8* %34, align 1
+  %36 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 4
+  %37 = load i8, i8* %36, align 1
+  %strcmp.cmp15 = icmp ne i8 %35, %37
   br i1 %strcmp.cmp15, label %strcmp.false, label %strcmp.loop_null_cmp14
 
 strcmp.loop_null_cmp10:                           ; preds = %strcmp.loop5
-  %strcmp.cmp_null12 = icmp eq i8 %36, 0
+  %strcmp.cmp_null12 = icmp eq i8 %31, 0
   br i1 %strcmp.cmp_null12, label %strcmp.done, label %strcmp.loop9
 
 strcmp.loop13:                                    ; preds = %strcmp.loop_null_cmp14
-  %43 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 5
-  %44 = load i8, i8* %43, align 1
-  %45 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 5
-  %46 = load i8, i8* %45, align 1
-  %strcmp.cmp19 = icmp ne i8 %44, %46
+  %38 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 5
+  %39 = load i8, i8* %38, align 1
+  %40 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 5
+  %41 = load i8, i8* %40, align 1
+  %strcmp.cmp19 = icmp ne i8 %39, %41
   br i1 %strcmp.cmp19, label %strcmp.false, label %strcmp.loop_null_cmp18
 
 strcmp.loop_null_cmp14:                           ; preds = %strcmp.loop9
-  %strcmp.cmp_null16 = icmp eq i8 %40, 0
+  %strcmp.cmp_null16 = icmp eq i8 %35, 0
   br i1 %strcmp.cmp_null16, label %strcmp.done, label %strcmp.loop13
 
 strcmp.loop17:                                    ; preds = %strcmp.loop_null_cmp18
-  %47 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 6
-  %48 = load i8, i8* %47, align 1
-  %49 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 6
-  %50 = load i8, i8* %49, align 1
-  %strcmp.cmp23 = icmp ne i8 %48, %50
+  %42 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 6
+  %43 = load i8, i8* %42, align 1
+  %44 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 6
+  %45 = load i8, i8* %44, align 1
+  %strcmp.cmp23 = icmp ne i8 %43, %45
   br i1 %strcmp.cmp23, label %strcmp.false, label %strcmp.loop_null_cmp22
 
 strcmp.loop_null_cmp18:                           ; preds = %strcmp.loop13
-  %strcmp.cmp_null20 = icmp eq i8 %44, 0
+  %strcmp.cmp_null20 = icmp eq i8 %39, 0
   br i1 %strcmp.cmp_null20, label %strcmp.done, label %strcmp.loop17
 
 strcmp.loop21:                                    ; preds = %strcmp.loop_null_cmp22
-  %51 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 7
-  %52 = load i8, i8* %51, align 1
-  %53 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 7
-  %54 = load i8, i8* %53, align 1
-  %strcmp.cmp27 = icmp ne i8 %52, %54
+  %46 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 7
+  %47 = load i8, i8* %46, align 1
+  %48 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 7
+  %49 = load i8, i8* %48, align 1
+  %strcmp.cmp27 = icmp ne i8 %47, %49
   br i1 %strcmp.cmp27, label %strcmp.false, label %strcmp.loop_null_cmp26
 
 strcmp.loop_null_cmp22:                           ; preds = %strcmp.loop17
-  %strcmp.cmp_null24 = icmp eq i8 %48, 0
+  %strcmp.cmp_null24 = icmp eq i8 %43, 0
   br i1 %strcmp.cmp_null24, label %strcmp.done, label %strcmp.loop21
 
 strcmp.loop25:                                    ; preds = %strcmp.loop_null_cmp26
-  %55 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 8
-  %56 = load i8, i8* %55, align 1
-  %57 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 8
-  %58 = load i8, i8* %57, align 1
-  %strcmp.cmp31 = icmp ne i8 %56, %58
+  %50 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 8
+  %51 = load i8, i8* %50, align 1
+  %52 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 8
+  %53 = load i8, i8* %52, align 1
+  %strcmp.cmp31 = icmp ne i8 %51, %53
   br i1 %strcmp.cmp31, label %strcmp.false, label %strcmp.loop_null_cmp30
 
 strcmp.loop_null_cmp26:                           ; preds = %strcmp.loop21
-  %strcmp.cmp_null28 = icmp eq i8 %52, 0
+  %strcmp.cmp_null28 = icmp eq i8 %47, 0
   br i1 %strcmp.cmp_null28, label %strcmp.done, label %strcmp.loop25
 
 strcmp.loop29:                                    ; preds = %strcmp.loop_null_cmp30
-  %59 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 9
-  %60 = load i8, i8* %59, align 1
-  %61 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 9
-  %62 = load i8, i8* %61, align 1
-  %strcmp.cmp35 = icmp ne i8 %60, %62
+  %54 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 9
+  %55 = load i8, i8* %54, align 1
+  %56 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 9
+  %57 = load i8, i8* %56, align 1
+  %strcmp.cmp35 = icmp ne i8 %55, %57
   br i1 %strcmp.cmp35, label %strcmp.false, label %strcmp.loop_null_cmp34
 
 strcmp.loop_null_cmp30:                           ; preds = %strcmp.loop25
-  %strcmp.cmp_null32 = icmp eq i8 %56, 0
+  %strcmp.cmp_null32 = icmp eq i8 %51, 0
   br i1 %strcmp.cmp_null32, label %strcmp.done, label %strcmp.loop29
 
 strcmp.loop33:                                    ; preds = %strcmp.loop_null_cmp34
-  %63 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 10
-  %64 = load i8, i8* %63, align 1
-  %65 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 10
-  %66 = load i8, i8* %65, align 1
-  %strcmp.cmp39 = icmp ne i8 %64, %66
+  %58 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 10
+  %59 = load i8, i8* %58, align 1
+  %60 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 10
+  %61 = load i8, i8* %60, align 1
+  %strcmp.cmp39 = icmp ne i8 %59, %61
   br i1 %strcmp.cmp39, label %strcmp.false, label %strcmp.loop_null_cmp38
 
 strcmp.loop_null_cmp34:                           ; preds = %strcmp.loop29
-  %strcmp.cmp_null36 = icmp eq i8 %60, 0
+  %strcmp.cmp_null36 = icmp eq i8 %55, 0
   br i1 %strcmp.cmp_null36, label %strcmp.done, label %strcmp.loop33
 
 strcmp.loop37:                                    ; preds = %strcmp.loop_null_cmp38
-  %67 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 11
-  %68 = load i8, i8* %67, align 1
-  %69 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 11
-  %70 = load i8, i8* %69, align 1
-  %strcmp.cmp43 = icmp ne i8 %68, %70
+  %62 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 11
+  %63 = load i8, i8* %62, align 1
+  %64 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 11
+  %65 = load i8, i8* %64, align 1
+  %strcmp.cmp43 = icmp ne i8 %63, %65
   br i1 %strcmp.cmp43, label %strcmp.false, label %strcmp.loop_null_cmp42
 
 strcmp.loop_null_cmp38:                           ; preds = %strcmp.loop33
-  %strcmp.cmp_null40 = icmp eq i8 %64, 0
+  %strcmp.cmp_null40 = icmp eq i8 %59, 0
   br i1 %strcmp.cmp_null40, label %strcmp.done, label %strcmp.loop37
 
 strcmp.loop41:                                    ; preds = %strcmp.loop_null_cmp42
-  %71 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 12
-  %72 = load i8, i8* %71, align 1
-  %73 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 12
-  %74 = load i8, i8* %73, align 1
-  %strcmp.cmp47 = icmp ne i8 %72, %74
+  %66 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 12
+  %67 = load i8, i8* %66, align 1
+  %68 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 12
+  %69 = load i8, i8* %68, align 1
+  %strcmp.cmp47 = icmp ne i8 %67, %69
   br i1 %strcmp.cmp47, label %strcmp.false, label %strcmp.loop_null_cmp46
 
 strcmp.loop_null_cmp42:                           ; preds = %strcmp.loop37
-  %strcmp.cmp_null44 = icmp eq i8 %68, 0
+  %strcmp.cmp_null44 = icmp eq i8 %63, 0
   br i1 %strcmp.cmp_null44, label %strcmp.done, label %strcmp.loop41
 
 strcmp.loop45:                                    ; preds = %strcmp.loop_null_cmp46
-  %75 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 13
-  %76 = load i8, i8* %75, align 1
-  %77 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 13
-  %78 = load i8, i8* %77, align 1
-  %strcmp.cmp51 = icmp ne i8 %76, %78
+  %70 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 13
+  %71 = load i8, i8* %70, align 1
+  %72 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 13
+  %73 = load i8, i8* %72, align 1
+  %strcmp.cmp51 = icmp ne i8 %71, %73
   br i1 %strcmp.cmp51, label %strcmp.false, label %strcmp.loop_null_cmp50
 
 strcmp.loop_null_cmp46:                           ; preds = %strcmp.loop41
-  %strcmp.cmp_null48 = icmp eq i8 %72, 0
+  %strcmp.cmp_null48 = icmp eq i8 %67, 0
   br i1 %strcmp.cmp_null48, label %strcmp.done, label %strcmp.loop45
 
 strcmp.loop49:                                    ; preds = %strcmp.loop_null_cmp50
-  %79 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 14
-  %80 = load i8, i8* %79, align 1
-  %81 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 14
-  %82 = load i8, i8* %81, align 1
-  %strcmp.cmp55 = icmp ne i8 %80, %82
+  %74 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 14
+  %75 = load i8, i8* %74, align 1
+  %76 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 14
+  %77 = load i8, i8* %76, align 1
+  %strcmp.cmp55 = icmp ne i8 %75, %77
   br i1 %strcmp.cmp55, label %strcmp.false, label %strcmp.loop_null_cmp54
 
 strcmp.loop_null_cmp50:                           ; preds = %strcmp.loop45
-  %strcmp.cmp_null52 = icmp eq i8 %76, 0
+  %strcmp.cmp_null52 = icmp eq i8 %71, 0
   br i1 %strcmp.cmp_null52, label %strcmp.done, label %strcmp.loop49
 
 strcmp.loop53:                                    ; preds = %strcmp.loop_null_cmp54
-  %83 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 15
-  %84 = load i8, i8* %83, align 1
-  %85 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 15
-  %86 = load i8, i8* %85, align 1
-  %strcmp.cmp59 = icmp ne i8 %84, %86
+  %78 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 15
+  %79 = load i8, i8* %78, align 1
+  %80 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 15
+  %81 = load i8, i8* %80, align 1
+  %strcmp.cmp59 = icmp ne i8 %79, %81
   br i1 %strcmp.cmp59, label %strcmp.false, label %strcmp.loop_null_cmp58
 
 strcmp.loop_null_cmp54:                           ; preds = %strcmp.loop49
-  %strcmp.cmp_null56 = icmp eq i8 %80, 0
+  %strcmp.cmp_null56 = icmp eq i8 %75, 0
   br i1 %strcmp.cmp_null56, label %strcmp.done, label %strcmp.loop53
 
 strcmp.loop57:                                    ; preds = %strcmp.loop_null_cmp58
   br label %strcmp.done
 
 strcmp.loop_null_cmp58:                           ; preds = %strcmp.loop53
-  %strcmp.cmp_null60 = icmp eq i8 %84, 0
+  %strcmp.cmp_null60 = icmp eq i8 %79, 0
   br i1 %strcmp.cmp_null60, label %strcmp.done, label %strcmp.loop57
 }
 
