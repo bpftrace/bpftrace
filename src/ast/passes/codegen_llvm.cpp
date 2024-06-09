@@ -4247,25 +4247,25 @@ Function *CodegenLLVM::createForEachMapCallback(
 std::function<void()> CodegenLLVM::create_reset_ids()
 {
   return [this,
+          starting_helper_error_id = this->b_.helper_error_id_,
           starting_printf_id = this->printf_id_,
+          starting_mapped_printf_id = this->mapped_printf_id_,
+          starting_time_id = this->time_id_,
           starting_cat_id = this->cat_id_,
           starting_system_id = this->system_id_,
-          starting_time_id = this->time_id_,
-          starting_strftime_id = this->strftime_id_,
           starting_join_id = this->join_id_,
-          starting_helper_error_id = this->b_.helper_error_id_,
+          starting_strftime_id = this->strftime_id_,
           starting_non_map_print_id = this->non_map_print_id_,
-          starting_mapped_printf_id = this->mapped_printf_id_,
           starting_skb_output_id = this->skb_output_id_] {
+    this->b_.helper_error_id_ = starting_helper_error_id;
     this->printf_id_ = starting_printf_id;
-    this->cat_id_ = starting_cat_id;
-    this->system_id_ = starting_system_id;
+    this->mapped_printf_id_ = starting_mapped_printf_id;
     this->time_id_ = starting_time_id;
+    this->cat_id_ = starting_cat_id;
     this->strftime_id_ = starting_strftime_id;
     this->join_id_ = starting_join_id;
-    this->b_.helper_error_id_ = starting_helper_error_id;
+    this->system_id_ = starting_system_id;
     this->non_map_print_id_ = starting_non_map_print_id;
-    this->mapped_printf_id_ = starting_mapped_printf_id;
     this->skb_output_id_ = starting_skb_output_id;
   };
 }
