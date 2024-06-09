@@ -19,32 +19,22 @@ define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
   %"@x_key" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
-  %strlen = alloca i64, align 8
-  %1 = bitcast i64* %strlen to i8*
+  %1 = bitcast [64 x i8]* %str to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast i64* %strlen to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 8, i1 false)
-  store i64 7, i64* %strlen, align 8
-  %3 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 64, i1 false)
-  %5 = bitcast i8* %0 to i64*
-  %6 = getelementptr i64, i64* %5, i64 14
-  %arg0 = load volatile i64, i64* %6, align 8
-  %7 = load i64, i64* %strlen, align 8
-  %8 = trunc i64 %7 to i32
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %8, i64 %arg0)
-  %9 = bitcast i64* %strlen to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  %10 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
+  %2 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 64, i1 false)
+  %3 = bitcast i8* %0 to i64*
+  %4 = getelementptr i64, i64* %3, i64 14
+  %arg0 = load volatile i64, i64* %4, align 8
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 7, i64 %arg0)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   store i64 0, i64* %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [64 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", [64 x i8]* %str, i64 0)
-  %11 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %6 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %7 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
   ret i64 0
 }
 

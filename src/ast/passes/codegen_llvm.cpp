@@ -717,8 +717,9 @@ void CodegenLLVM::visit(Call &call)
     }
     expr_ = nullptr;
   } else if (call.func == "str") {
-    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+    // Largest read we'll allow = our global string buffer size
+    Value *strlen = b_.getInt64(
+        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
     if (call.vargs->size() > 1) {
       auto scoped_del = accept(call.vargs->at(1));
       expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
@@ -728,20 +729,13 @@ void CodegenLLVM::visit(Call &call)
                                                              // probe_read_str's
                                                              // null byte
 
-      // largest read we'll allow = our global string buffer size
-      Value *max = b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::max_strlen));
       // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
       // check whether proposed_strlen is less-than-or-equal-to maximum
-      Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+      Value *Cmp = b_.CreateICmp(P, proposed_strlen, strlen, "str.min.cmp");
       // select proposed_strlen if it's sufficiently low, otherwise choose
       // maximum
-      Value *Select = b_.CreateSelect(
-          Cmp, proposed_strlen, max, "str.min.select");
-      b_.CreateStore(Select, strlen);
-    } else {
-      b_.CreateStore(
-          b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::max_strlen)), strlen);
+      strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
     AllocaInst *buf = b_.CreateAllocaBPF(
         bpftrace_.config_.get(ConfigKeyInt::max_strlen), "str");
@@ -749,13 +743,8 @@ void CodegenLLVM::visit(Call &call)
         buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::max_strlen), 1);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
-    b_.CreateProbeReadStr(ctx_,
-                          buf,
-                          b_.CreateLoad(b_.getInt64Ty(), strlen),
-                          expr_,
-                          arg0->type.GetAS(),
-                          call.loc);
-    b_.CreateLifetimeEnd(strlen);
+    b_.CreateProbeReadStr(
+        ctx_, buf, strlen, expr_, arg0->type.GetAS(), call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };

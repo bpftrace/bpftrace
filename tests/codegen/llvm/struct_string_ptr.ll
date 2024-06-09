@@ -20,7 +20,6 @@ entry:
   %"@mystr_key" = alloca i64, align 8
   %"struct Foo.str" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
-  %strlen = alloca i64, align 8
   %"$foo" = alloca i64, align 8
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -29,36 +28,27 @@ entry:
   %3 = getelementptr i64, i64* %2, i64 14
   %arg0 = load volatile i64, i64* %3, align 8
   store i64 %arg0, i64* %"$foo", align 8
-  %4 = bitcast i64* %strlen to i8*
+  %4 = bitcast [64 x i8]* %str to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
-  %5 = bitcast i64* %strlen to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %5, i8 0, i64 8, i1 false)
-  store i64 64, i64* %strlen, align 8
-  %6 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  %7 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %7, i8 0, i64 64, i1 false)
-  %8 = load i64, i64* %"$foo", align 8
-  %9 = add i64 %8, 0
+  %5 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %5, i8 0, i64 64, i1 false)
+  %6 = load i64, i64* %"$foo", align 8
+  %7 = add i64 %6, 0
+  %8 = bitcast i64* %"struct Foo.str" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* %"struct Foo.str", i32 8, i64 %7)
+  %9 = load i64, i64* %"struct Foo.str", align 8
   %10 = bitcast i64* %"struct Foo.str" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* %"struct Foo.str", i32 8, i64 %9)
-  %11 = load i64, i64* %"struct Foo.str", align 8
-  %12 = bitcast i64* %"struct Foo.str" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = load i64, i64* %strlen, align 8
-  %14 = trunc i64 %13 to i32
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %14, i64 %11)
-  %15 = bitcast i64* %strlen to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast i64* %"@mystr_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 64, i64 %9)
+  %11 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
   store i64 0, i64* %"@mystr_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [64 x i8]*, i64)*)(%"struct map_t"* @AT_mystr, i64* %"@mystr_key", [64 x i8]* %str, i64 0)
-  %17 = bitcast i64* %"@mystr_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
-  %18 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %12 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %13 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0
 }
 
