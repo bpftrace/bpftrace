@@ -155,6 +155,8 @@ void ResourceAnalyser::visit(Call &call)
       resources_.time_args.push_back(get_literal_string(*call.vargs->at(0)));
     else
       resources_.time_args.push_back("%H:%M:%S\n");
+  } else if (call.func == "str") {
+    resources_.str_buffers++;
   } else if (call.func == "strftime") {
     resources_.strftime_args.push_back(get_literal_string(*call.vargs->at(0)));
   } else if (call.func == "print") {

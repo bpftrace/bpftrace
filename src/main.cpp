@@ -269,22 +269,14 @@ static void parse_env(BPFtrace& bpftrace)
     config_setter.set(ConfigKeyInt::max_strlen, x);
   });
 
-  // in practice, the largest buffer I've seen fit into the BPF stack was 240
-  // bytes. I've set the bar lower, in case your program has a deeper stack than
-  // the one from my tests, in the hope that you'll get this instructive error
-  // instead of getting the BPF verifier's error.
+  // The current 1024B limit comes from LLVM builtin memset(). Once
+  // we have a custom memset(), we can go above 1024B.
   uint64_t max_strlen = bpftrace.config_.get(ConfigKeyInt::max_strlen);
-  if (max_strlen > 200) {
-    // the verifier errors you would encounter when attempting larger
-    // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
-    // is exceeded. Please move large on stack variables into BPF per-cpu array
-    // map.> ~1024= <A call to built-in function 'memset' is not supported.>
+  if (max_strlen > 1024) {
     LOG(ERROR) << "'BPFTRACE_MAX_STRLEN' " << max_strlen
-               << " exceeds the current maximum of 200 bytes.\n"
-               << "This limitation is because strings are currently stored on "
-                  "the 512 byte BPF stack.\n"
-               << "Long strings will be pursued in: "
-                  "https://github.com/bpftrace/bpftrace/issues/305";
+               << " exceeds the current maximum of 1024 bytes.\n"
+               << "Larger support is tracked in: "
+                  "https://github.com/bpftrace/bpftrace/issues/3229";
     exit(1);
   }
 

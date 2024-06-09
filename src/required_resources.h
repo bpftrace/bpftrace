@@ -117,6 +117,7 @@ public:
   bool needs_elapsed_map = false;
   bool needs_data_map = false;
   bool needs_perf_event_map = false;
+  uint32_t str_buffers = 0;
 
   // Probe metadata
   //

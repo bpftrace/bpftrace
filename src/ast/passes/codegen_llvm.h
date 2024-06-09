@@ -290,6 +290,7 @@ private:
   uint64_t watchpoint_id_ = 0;
   int cgroup_path_id_ = 0;
   int skb_output_id_ = 0;
+  int str_id_ = 0;
 
   std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
 

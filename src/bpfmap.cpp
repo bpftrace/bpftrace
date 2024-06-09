@@ -69,6 +69,8 @@ std::string to_string(MapType t)
       return "ringbuf";
     case MapType::RingbufLossCounter:
       return "ringbuf_loss_counter";
+    case MapType::StrBuffer:
+      return "str_buffer";
   }
   return {}; // unreached
 }

@@ -7,21 +7,23 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { i8*, i8*, i8*, i8* }
 %"struct map_t.1" = type { i8*, i8* }
 %"struct map_t.2" = type { i8*, i8*, i8*, i8* }
+%"struct map_t.3" = type { i8*, i8*, i8*, i8* }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !30
 @ringbuf_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !44
+@str_buffer = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !57
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !61 {
+define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !70 {
 entry:
   %"@y_key" = alloca i64, align 8
-  %str1 = alloca [1 x i8], align 1
-  %str = alloca [64 x i8], align 1
+  %str = alloca [1 x i8], align 1
+  %lookup_str_key = alloca i32, align 4
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %1 = bitcast i64* %"@x_key" to i8*
@@ -35,28 +37,42 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
-  %5 = bitcast [64 x i8]* %str to i8*
+  %5 = bitcast i32* %lookup_str_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  %6 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %6, i8 0, i64 64, i1 false)
-  %7 = bitcast [1 x i8]* %str1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %8 = bitcast [1 x i8]* %str1 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 1, i1 false)
-  store [1 x i8] zeroinitializer, [1 x i8]* %str1, align 1
-  %9 = ptrtoint [1 x i8]* %str1 to i64
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 64, i64 %9)
-  %10 = bitcast [1 x i8]* %str1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
-  store i64 0, i64* %"@y_key", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, [64 x i8]*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", [64 x i8]* %str, i64 0)
-  %12 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
+  store i32 0, i32* %lookup_str_key, align 4
+  %lookup_str_map = call i8* inttoptr (i64 1 to i8* (%"struct map_t.3"*, i32*)*)(%"struct map_t.3"* @str_buffer, i32* %lookup_str_key)
+  %6 = bitcast i32* %lookup_str_key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %lookup_str_cond = icmp ne i8* %lookup_str_map, null
+  br i1 %lookup_str_cond, label %lookup_str_merge, label %lookup_str_failure
+
+scratch_lookup_failure:                           ; preds = %lookup_str_failure
   ret i64 0
+
+scratch_lookup_merge:                             ; preds = %lookup_str_merge
+  %7 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
+  %8 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  store i64 0, i64* %"@y_key", align 8
+  %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, i8*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", i8* %lookup_str_map, i64 0)
+  %9 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
+  ret i64 0
+
+lookup_str_failure:                               ; preds = %entry
+  br label %scratch_lookup_failure
+
+lookup_str_merge:                                 ; preds = %entry
+  call void @llvm.memset.p0i8.i64(i8* align 1 %lookup_str_map, i8 0, i64 64, i1 false)
+  %10 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
+  %11 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %11, i8 0, i64 1, i1 false)
+  store [1 x i8] zeroinitializer, [1 x i8]* %str, align 1
+  %12 = ptrtoint [1 x i8]* %str to i64
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %12)
+  br label %scratch_lookup_merge
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
@@ -72,8 +88,8 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
-!llvm.dbg.cu = !{!57}
-!llvm.module.flags = !{!60}
+!llvm.dbg.cu = !{!66}
+!llvm.module.flags = !{!69}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -132,13 +148,22 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !54 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !55, size: 64, offset: 128)
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !56, size: 64)
 !56 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!57 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !58, globals: !59)
-!58 = !{}
-!59 = !{!0, !20, !30, !44}
-!60 = !{i32 2, !"Debug Info Version", i32 3}
-!61 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !65)
-!62 = !DISubroutineType(types: !63)
-!63 = !{!18, !64}
-!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !27, size: 64)
-!65 = !{!66}
-!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)
+!57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
+!58 = distinct !DIGlobalVariable(name: "str_buffer", linkageName: "global", scope: !2, file: !2, type: !59, isLocal: false, isDefinition: true)
+!59 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !60)
+!60 = !{!61, !53, !54, !24}
+!61 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !62, size: 64)
+!62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !63, size: 64)
+!63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !64)
+!64 = !{!65}
+!65 = !DISubrange(count: 6, lowerBound: 0)
+!66 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !67, globals: !68)
+!67 = !{}
+!68 = !{!0, !20, !30, !44, !57}
+!69 = !{i32 2, !"Debug Info Version", i32 3}
+!70 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !71, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !66, retainedNodes: !74)
+!71 = !DISubroutineType(types: !72)
+!72 = !{!18, !73}
+!73 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !27, size: 64)
+!74 = !{!75}
+!75 = !DILocalVariable(name: "ctx", arg: 1, scope: !70, file: !2, type: !73)
