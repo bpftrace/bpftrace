@@ -4256,6 +4256,8 @@ std::function<void()> CodegenLLVM::create_reset_ids()
           starting_join_id = this->join_id_,
           starting_strftime_id = this->strftime_id_,
           starting_non_map_print_id = this->non_map_print_id_,
+          starting_watchpoint_id = this->watchpoint_id_,
+          starting_cgroup_path_id = this->cgroup_path_id_,
           starting_skb_output_id = this->skb_output_id_] {
     this->b_.helper_error_id_ = starting_helper_error_id;
     this->printf_id_ = starting_printf_id;
@@ -4266,6 +4268,8 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->join_id_ = starting_join_id;
     this->system_id_ = starting_system_id;
     this->non_map_print_id_ = starting_non_map_print_id;
+    this->watchpoint_id_ = starting_watchpoint_id;
+    this->cgroup_path_id_ = starting_cgroup_path_id;
     this->skb_output_id_ = starting_skb_output_id;
   };
 }

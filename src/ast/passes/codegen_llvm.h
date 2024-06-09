@@ -277,6 +277,8 @@ private:
   bool inside_subprog_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
+
+  // NB: ensure all IDs are saved/restored in create_reset_ids()
   int printf_id_ = 0;
   int mapped_printf_id_ = 0;
   int time_id_ = 0;
