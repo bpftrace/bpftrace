@@ -1,4 +1,4 @@
-#if HAVE_LIBLLDB
+#ifdef HAVE_LIBLLDB
 
 #include "../dwarf_common.h"
 #include "common.h"
