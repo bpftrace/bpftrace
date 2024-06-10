@@ -89,10 +89,10 @@ public:
                              Value *key,
                              SizedType &type,
                              const location &loc);
-
-  Value *CreatePerCpuMapSumElems(Value *ctx,
+  Value *CreatePerCpuMapAggElems(Value *ctx,
                                  Map &map,
                                  Value *key,
+                                 const SizedType &type,
                                  const location &loc,
                                  bool is_aot);
   void CreateMapUpdateElem(Value *ctx,
@@ -337,6 +337,9 @@ private:
                              Value *data,
                              size_t size,
                              const location *loc = nullptr);
+
+  void createPerCpuSum(AllocaInst *ret, Value *cpu_value);
+  void createPerCpuMinMax(AllocaInst *ret, Value *cpu_value, bool is_max);
 
   std::map<std::string, StructType *> structs_;
 };

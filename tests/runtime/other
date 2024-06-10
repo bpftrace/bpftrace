@@ -280,8 +280,18 @@ EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exis
                                            ~~~~
 TIMEOUT 1
 
-NAME per_cpu_map_if_lt
+NAME per_cpu_map_count_if
 PROG i:ms:1 { @ = count(); if (@ > 5) { printf("done\n"); exit(); }}
+EXPECT done
+TIMEOUT 5
+
+NAME per_cpu_map_min_if
+PROG BEGIN { @ = 10; } i:ms:1 { @--; @mn = min(@); if (@mn < 5) { printf("done\n"); exit(); }}
+EXPECT done
+TIMEOUT 5
+
+NAME per_cpu_map_max_if
+PROG BEGIN { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n"); exit(); }}
 EXPECT done
 TIMEOUT 5
 

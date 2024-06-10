@@ -2545,6 +2545,7 @@ Prints:
 * `max(int64 n)`
 
 Update the map with `n` if `n` is bigger than the current value held.
+Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
 
 [#map-functions-min]
 === min
@@ -2553,6 +2554,7 @@ Update the map with `n` if `n` is bigger than the current value held.
 * `min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
+Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
 
 [#map-functions-stats]
 === stats

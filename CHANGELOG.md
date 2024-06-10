@@ -25,8 +25,9 @@ and this project adheres to
   - [#3158](https://github.com/bpftrace/bpftrace/pull/3158)
 - Add ability to attach uprobes to inlined functions
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
-- Enable count/sum map reads in kernel space (implicit casting)
+- Enable count, sum, min, and max map reads in kernel space (implicit casting)
   - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
+  - [#3226](https://github.com/bpftrace/bpftrace/pull/3226)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)

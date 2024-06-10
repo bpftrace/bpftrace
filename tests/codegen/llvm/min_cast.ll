@@ -38,9 +38,8 @@ entry:
 lookup_success:                                   ; preds = %entry
   %cast = bitcast i8* %lookup_elem to i64*
   %3 = load i64, i64* %cast, align 8
-  %4 = add i64 %3, 2
-  store i64 %4, i64* %cast, align 8
-  br label %lookup_merge
+  %4 = icmp sge i64 %3, 2
+  br i1 %4, label %min.ge, label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   %5 = bitcast i64* %initial_value to i8*
@@ -51,7 +50,7 @@ lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+lookup_merge:                                     ; preds = %lookup_failure, %min.ge, %lookup_success
   %7 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
   %8 = bitcast i64* %"@x_key" to i8*
@@ -66,6 +65,10 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   store i32 0, i32* %i, align 4
   store i64 0, i64* %ret, align 8
   br label %while_cond
+
+min.ge:                                           ; preds = %lookup_success
+  store i64 2, i64* %cast, align 8
+  br label %lookup_merge
 
 if_body:                                          ; preds = %while_end
   %12 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
@@ -86,7 +89,7 @@ if_body:                                          ; preds = %while_end
 if_end:                                           ; preds = %counter_merge, %while_end
   ret i64 0
 
-while_cond:                                       ; preds = %lookup_success2, %lookup_merge
+while_cond:                                       ; preds = %min_max_merge, %lookup_merge
   %18 = load i32, i32* %i, align 4
   %num_cpu.cmp = icmp ult i32 %18, 20
   br i1 %num_cpu.cmp, label %while_body, label %while_end
@@ -114,17 +117,24 @@ lookup_success2:                                  ; preds = %while_body
   %cast5 = bitcast i8* %lookup_percpu_elem to i64*
   %26 = load i64, i64* %ret, align 8
   %27 = load i64, i64* %cast5, align 8
-  %28 = add i64 %27, %26
-  store i64 %28, i64* %ret, align 8
-  %29 = load i32, i32* %i, align 4
-  %30 = add i32 %29, 1
-  store i32 %30, i32* %i, align 4
-  br label %while_cond
+  %min_cond = icmp slt i64 %27, %26
+  br i1 %min_cond, label %min_max_success, label %min_max_merge
 
 lookup_failure3:                                  ; preds = %while_body
-  %31 = load i32, i32* %i, align 4
-  %error_lookup_cond = icmp eq i32 %31, 0
+  %28 = load i32, i32* %i, align 4
+  %error_lookup_cond = icmp eq i32 %28, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
+
+min_max_success:                                  ; preds = %lookup_success2
+  %29 = load i64, i64* %cast5, align 8
+  store i64 %29, i64* %ret, align 8
+  br label %min_max_merge
+
+min_max_merge:                                    ; preds = %min_max_success, %lookup_success2
+  %30 = load i32, i32* %i, align 4
+  %31 = add i32 %30, 1
+  store i32 %31, i32* %i, align 4
+  br label %while_cond
 
 error_success:                                    ; preds = %lookup_failure3
   br label %while_end
