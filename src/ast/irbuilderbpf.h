@@ -156,12 +156,7 @@ public:
                                 pid_t pid,
                                 AddrSpace as,
                                 const location &loc);
-  Value *CreateStrncmp(Value *str1,
-                       uint64_t str1_size,
-                       Value *str2,
-                       uint64_t str2_size,
-                       uint64_t n,
-                       bool inverse);
+  Value *CreateStrncmp(Value *str1, Value *str2, uint64_t n, bool inverse);
   Value *CreateStrcontains(Value *val1,
                            uint64_t str1_size,
                            Value *val2,

@@ -978,9 +978,7 @@ std::optional<std::string> ValToString(Value *val)
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value *str1,
-                                   uint64_t str1_size,
                                    Value *str2,
-                                   uint64_t str2_size,
                                    uint64_t n,
                                    bool inverse)
 {
@@ -1035,9 +1033,10 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
     if (literal1)
       l = getInt8(literal1->c_str()[i]);
     else {
-      auto *ptr_l = CreateGEP(ArrayType::get(getInt8Ty(), str1_size),
-                              str1,
-                              { getInt32(0), getInt32(i) });
+      auto *ptr_l = CreateGEP(getInt8Ty(),
+                              CreatePointerCast(str1,
+                                                getInt8Ty()->getPointerTo()),
+                              { getInt32(i) });
       l = CreateLoad(getInt8Ty(), ptr_l);
     }
 
@@ -1045,9 +1044,10 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
     if (literal2)
       r = getInt8(literal2->c_str()[i]);
     else {
-      auto *ptr_r = CreateGEP(ArrayType::get(getInt8Ty(), str2_size),
-                              str2,
-                              { getInt32(0), getInt32(i) });
+      auto *ptr_r = CreateGEP(getInt8Ty(),
+                              CreatePointerCast(str2,
+                                                getInt8Ty()->getPointerTo()),
+                              { getInt32(i) });
       r = CreateLoad(getInt8Ty(), ptr_r);
     }
 

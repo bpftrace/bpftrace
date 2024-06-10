@@ -39,38 +39,40 @@ entry:
   %9 = bitcast i1* %strcmp.result to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i1 false, i1* %strcmp.result, align 1
-  %10 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 0
-  %11 = load i8, i8* %10, align 1
-  %12 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 0
-  %13 = load i8, i8* %12, align 1
-  %strcmp.cmp = icmp ne i8 %11, %13
+  %10 = bitcast [64 x i8]* %str to i8*
+  %11 = getelementptr i8, i8* %10, i32 0
+  %12 = load i8, i8* %11, align 1
+  %13 = bitcast [16 x i8]* %comm to i8*
+  %14 = getelementptr i8, i8* %13, i32 0
+  %15 = load i8, i8* %14, align 1
+  %strcmp.cmp = icmp ne i8 %12, %15
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 pred_false:                                       ; preds = %strcmp.false
   ret i64 1
 
 pred_true:                                        ; preds = %strcmp.false
-  %14 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
-  %15 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
+  %16 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  %17 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
   store i64 0, i64* %"@_key", align 8
-  %16 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  %18 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
   store i64 1, i64* %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_val", i64 0)
-  %17 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
-  %18 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
+  %20 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
   ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %entry
-  %19 = load i1, i1* %strcmp.result, align 1
-  %20 = bitcast i1* %strcmp.result to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  %21 = zext i1 %19 to i64
-  %predcond = icmp eq i64 %21, 0
+  %21 = load i1, i1* %strcmp.result, align 1
+  %22 = bitcast i1* %strcmp.result to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
+  %23 = zext i1 %21 to i64
+  %predcond = icmp eq i64 %23, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
 strcmp.done:                                      ; preds = %strcmp.loop57, %strcmp.loop_null_cmp58, %strcmp.loop_null_cmp54, %strcmp.loop_null_cmp50, %strcmp.loop_null_cmp46, %strcmp.loop_null_cmp42, %strcmp.loop_null_cmp38, %strcmp.loop_null_cmp34, %strcmp.loop_null_cmp30, %strcmp.loop_null_cmp26, %strcmp.loop_null_cmp22, %strcmp.loop_null_cmp18, %strcmp.loop_null_cmp14, %strcmp.loop_null_cmp10, %strcmp.loop_null_cmp6, %strcmp.loop_null_cmp2, %strcmp.loop_null_cmp
@@ -78,190 +80,220 @@ strcmp.done:                                      ; preds = %strcmp.loop57, %str
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %22 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 1
-  %23 = load i8, i8* %22, align 1
-  %24 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 1
-  %25 = load i8, i8* %24, align 1
-  %strcmp.cmp3 = icmp ne i8 %23, %25
+  %24 = bitcast [64 x i8]* %str to i8*
+  %25 = getelementptr i8, i8* %24, i32 1
+  %26 = load i8, i8* %25, align 1
+  %27 = bitcast [16 x i8]* %comm to i8*
+  %28 = getelementptr i8, i8* %27, i32 1
+  %29 = load i8, i8* %28, align 1
+  %strcmp.cmp3 = icmp ne i8 %26, %29
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
 strcmp.loop_null_cmp:                             ; preds = %entry
-  %strcmp.cmp_null = icmp eq i8 %11, 0
+  %strcmp.cmp_null = icmp eq i8 %12, 0
   br i1 %strcmp.cmp_null, label %strcmp.done, label %strcmp.loop
 
 strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
-  %26 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 2
-  %27 = load i8, i8* %26, align 1
-  %28 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 2
-  %29 = load i8, i8* %28, align 1
-  %strcmp.cmp7 = icmp ne i8 %27, %29
+  %30 = bitcast [64 x i8]* %str to i8*
+  %31 = getelementptr i8, i8* %30, i32 2
+  %32 = load i8, i8* %31, align 1
+  %33 = bitcast [16 x i8]* %comm to i8*
+  %34 = getelementptr i8, i8* %33, i32 2
+  %35 = load i8, i8* %34, align 1
+  %strcmp.cmp7 = icmp ne i8 %32, %35
   br i1 %strcmp.cmp7, label %strcmp.false, label %strcmp.loop_null_cmp6
 
 strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
-  %strcmp.cmp_null4 = icmp eq i8 %23, 0
+  %strcmp.cmp_null4 = icmp eq i8 %26, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 
 strcmp.loop5:                                     ; preds = %strcmp.loop_null_cmp6
-  %30 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 3
-  %31 = load i8, i8* %30, align 1
-  %32 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 3
-  %33 = load i8, i8* %32, align 1
-  %strcmp.cmp11 = icmp ne i8 %31, %33
+  %36 = bitcast [64 x i8]* %str to i8*
+  %37 = getelementptr i8, i8* %36, i32 3
+  %38 = load i8, i8* %37, align 1
+  %39 = bitcast [16 x i8]* %comm to i8*
+  %40 = getelementptr i8, i8* %39, i32 3
+  %41 = load i8, i8* %40, align 1
+  %strcmp.cmp11 = icmp ne i8 %38, %41
   br i1 %strcmp.cmp11, label %strcmp.false, label %strcmp.loop_null_cmp10
 
 strcmp.loop_null_cmp6:                            ; preds = %strcmp.loop1
-  %strcmp.cmp_null8 = icmp eq i8 %27, 0
+  %strcmp.cmp_null8 = icmp eq i8 %32, 0
   br i1 %strcmp.cmp_null8, label %strcmp.done, label %strcmp.loop5
 
 strcmp.loop9:                                     ; preds = %strcmp.loop_null_cmp10
-  %34 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 4
-  %35 = load i8, i8* %34, align 1
-  %36 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 4
-  %37 = load i8, i8* %36, align 1
-  %strcmp.cmp15 = icmp ne i8 %35, %37
+  %42 = bitcast [64 x i8]* %str to i8*
+  %43 = getelementptr i8, i8* %42, i32 4
+  %44 = load i8, i8* %43, align 1
+  %45 = bitcast [16 x i8]* %comm to i8*
+  %46 = getelementptr i8, i8* %45, i32 4
+  %47 = load i8, i8* %46, align 1
+  %strcmp.cmp15 = icmp ne i8 %44, %47
   br i1 %strcmp.cmp15, label %strcmp.false, label %strcmp.loop_null_cmp14
 
 strcmp.loop_null_cmp10:                           ; preds = %strcmp.loop5
-  %strcmp.cmp_null12 = icmp eq i8 %31, 0
+  %strcmp.cmp_null12 = icmp eq i8 %38, 0
   br i1 %strcmp.cmp_null12, label %strcmp.done, label %strcmp.loop9
 
 strcmp.loop13:                                    ; preds = %strcmp.loop_null_cmp14
-  %38 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 5
-  %39 = load i8, i8* %38, align 1
-  %40 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 5
-  %41 = load i8, i8* %40, align 1
-  %strcmp.cmp19 = icmp ne i8 %39, %41
+  %48 = bitcast [64 x i8]* %str to i8*
+  %49 = getelementptr i8, i8* %48, i32 5
+  %50 = load i8, i8* %49, align 1
+  %51 = bitcast [16 x i8]* %comm to i8*
+  %52 = getelementptr i8, i8* %51, i32 5
+  %53 = load i8, i8* %52, align 1
+  %strcmp.cmp19 = icmp ne i8 %50, %53
   br i1 %strcmp.cmp19, label %strcmp.false, label %strcmp.loop_null_cmp18
 
 strcmp.loop_null_cmp14:                           ; preds = %strcmp.loop9
-  %strcmp.cmp_null16 = icmp eq i8 %35, 0
+  %strcmp.cmp_null16 = icmp eq i8 %44, 0
   br i1 %strcmp.cmp_null16, label %strcmp.done, label %strcmp.loop13
 
 strcmp.loop17:                                    ; preds = %strcmp.loop_null_cmp18
-  %42 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 6
-  %43 = load i8, i8* %42, align 1
-  %44 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 6
-  %45 = load i8, i8* %44, align 1
-  %strcmp.cmp23 = icmp ne i8 %43, %45
+  %54 = bitcast [64 x i8]* %str to i8*
+  %55 = getelementptr i8, i8* %54, i32 6
+  %56 = load i8, i8* %55, align 1
+  %57 = bitcast [16 x i8]* %comm to i8*
+  %58 = getelementptr i8, i8* %57, i32 6
+  %59 = load i8, i8* %58, align 1
+  %strcmp.cmp23 = icmp ne i8 %56, %59
   br i1 %strcmp.cmp23, label %strcmp.false, label %strcmp.loop_null_cmp22
 
 strcmp.loop_null_cmp18:                           ; preds = %strcmp.loop13
-  %strcmp.cmp_null20 = icmp eq i8 %39, 0
+  %strcmp.cmp_null20 = icmp eq i8 %50, 0
   br i1 %strcmp.cmp_null20, label %strcmp.done, label %strcmp.loop17
 
 strcmp.loop21:                                    ; preds = %strcmp.loop_null_cmp22
-  %46 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 7
-  %47 = load i8, i8* %46, align 1
-  %48 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 7
-  %49 = load i8, i8* %48, align 1
-  %strcmp.cmp27 = icmp ne i8 %47, %49
+  %60 = bitcast [64 x i8]* %str to i8*
+  %61 = getelementptr i8, i8* %60, i32 7
+  %62 = load i8, i8* %61, align 1
+  %63 = bitcast [16 x i8]* %comm to i8*
+  %64 = getelementptr i8, i8* %63, i32 7
+  %65 = load i8, i8* %64, align 1
+  %strcmp.cmp27 = icmp ne i8 %62, %65
   br i1 %strcmp.cmp27, label %strcmp.false, label %strcmp.loop_null_cmp26
 
 strcmp.loop_null_cmp22:                           ; preds = %strcmp.loop17
-  %strcmp.cmp_null24 = icmp eq i8 %43, 0
+  %strcmp.cmp_null24 = icmp eq i8 %56, 0
   br i1 %strcmp.cmp_null24, label %strcmp.done, label %strcmp.loop21
 
 strcmp.loop25:                                    ; preds = %strcmp.loop_null_cmp26
-  %50 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 8
-  %51 = load i8, i8* %50, align 1
-  %52 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 8
-  %53 = load i8, i8* %52, align 1
-  %strcmp.cmp31 = icmp ne i8 %51, %53
+  %66 = bitcast [64 x i8]* %str to i8*
+  %67 = getelementptr i8, i8* %66, i32 8
+  %68 = load i8, i8* %67, align 1
+  %69 = bitcast [16 x i8]* %comm to i8*
+  %70 = getelementptr i8, i8* %69, i32 8
+  %71 = load i8, i8* %70, align 1
+  %strcmp.cmp31 = icmp ne i8 %68, %71
   br i1 %strcmp.cmp31, label %strcmp.false, label %strcmp.loop_null_cmp30
 
 strcmp.loop_null_cmp26:                           ; preds = %strcmp.loop21
-  %strcmp.cmp_null28 = icmp eq i8 %47, 0
+  %strcmp.cmp_null28 = icmp eq i8 %62, 0
   br i1 %strcmp.cmp_null28, label %strcmp.done, label %strcmp.loop25
 
 strcmp.loop29:                                    ; preds = %strcmp.loop_null_cmp30
-  %54 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 9
-  %55 = load i8, i8* %54, align 1
-  %56 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 9
-  %57 = load i8, i8* %56, align 1
-  %strcmp.cmp35 = icmp ne i8 %55, %57
+  %72 = bitcast [64 x i8]* %str to i8*
+  %73 = getelementptr i8, i8* %72, i32 9
+  %74 = load i8, i8* %73, align 1
+  %75 = bitcast [16 x i8]* %comm to i8*
+  %76 = getelementptr i8, i8* %75, i32 9
+  %77 = load i8, i8* %76, align 1
+  %strcmp.cmp35 = icmp ne i8 %74, %77
   br i1 %strcmp.cmp35, label %strcmp.false, label %strcmp.loop_null_cmp34
 
 strcmp.loop_null_cmp30:                           ; preds = %strcmp.loop25
-  %strcmp.cmp_null32 = icmp eq i8 %51, 0
+  %strcmp.cmp_null32 = icmp eq i8 %68, 0
   br i1 %strcmp.cmp_null32, label %strcmp.done, label %strcmp.loop29
 
 strcmp.loop33:                                    ; preds = %strcmp.loop_null_cmp34
-  %58 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 10
-  %59 = load i8, i8* %58, align 1
-  %60 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 10
-  %61 = load i8, i8* %60, align 1
-  %strcmp.cmp39 = icmp ne i8 %59, %61
+  %78 = bitcast [64 x i8]* %str to i8*
+  %79 = getelementptr i8, i8* %78, i32 10
+  %80 = load i8, i8* %79, align 1
+  %81 = bitcast [16 x i8]* %comm to i8*
+  %82 = getelementptr i8, i8* %81, i32 10
+  %83 = load i8, i8* %82, align 1
+  %strcmp.cmp39 = icmp ne i8 %80, %83
   br i1 %strcmp.cmp39, label %strcmp.false, label %strcmp.loop_null_cmp38
 
 strcmp.loop_null_cmp34:                           ; preds = %strcmp.loop29
-  %strcmp.cmp_null36 = icmp eq i8 %55, 0
+  %strcmp.cmp_null36 = icmp eq i8 %74, 0
   br i1 %strcmp.cmp_null36, label %strcmp.done, label %strcmp.loop33
 
 strcmp.loop37:                                    ; preds = %strcmp.loop_null_cmp38
-  %62 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 11
-  %63 = load i8, i8* %62, align 1
-  %64 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 11
-  %65 = load i8, i8* %64, align 1
-  %strcmp.cmp43 = icmp ne i8 %63, %65
+  %84 = bitcast [64 x i8]* %str to i8*
+  %85 = getelementptr i8, i8* %84, i32 11
+  %86 = load i8, i8* %85, align 1
+  %87 = bitcast [16 x i8]* %comm to i8*
+  %88 = getelementptr i8, i8* %87, i32 11
+  %89 = load i8, i8* %88, align 1
+  %strcmp.cmp43 = icmp ne i8 %86, %89
   br i1 %strcmp.cmp43, label %strcmp.false, label %strcmp.loop_null_cmp42
 
 strcmp.loop_null_cmp38:                           ; preds = %strcmp.loop33
-  %strcmp.cmp_null40 = icmp eq i8 %59, 0
+  %strcmp.cmp_null40 = icmp eq i8 %80, 0
   br i1 %strcmp.cmp_null40, label %strcmp.done, label %strcmp.loop37
 
 strcmp.loop41:                                    ; preds = %strcmp.loop_null_cmp42
-  %66 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 12
-  %67 = load i8, i8* %66, align 1
-  %68 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 12
-  %69 = load i8, i8* %68, align 1
-  %strcmp.cmp47 = icmp ne i8 %67, %69
+  %90 = bitcast [64 x i8]* %str to i8*
+  %91 = getelementptr i8, i8* %90, i32 12
+  %92 = load i8, i8* %91, align 1
+  %93 = bitcast [16 x i8]* %comm to i8*
+  %94 = getelementptr i8, i8* %93, i32 12
+  %95 = load i8, i8* %94, align 1
+  %strcmp.cmp47 = icmp ne i8 %92, %95
   br i1 %strcmp.cmp47, label %strcmp.false, label %strcmp.loop_null_cmp46
 
 strcmp.loop_null_cmp42:                           ; preds = %strcmp.loop37
-  %strcmp.cmp_null44 = icmp eq i8 %63, 0
+  %strcmp.cmp_null44 = icmp eq i8 %86, 0
   br i1 %strcmp.cmp_null44, label %strcmp.done, label %strcmp.loop41
 
 strcmp.loop45:                                    ; preds = %strcmp.loop_null_cmp46
-  %70 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 13
-  %71 = load i8, i8* %70, align 1
-  %72 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 13
-  %73 = load i8, i8* %72, align 1
-  %strcmp.cmp51 = icmp ne i8 %71, %73
+  %96 = bitcast [64 x i8]* %str to i8*
+  %97 = getelementptr i8, i8* %96, i32 13
+  %98 = load i8, i8* %97, align 1
+  %99 = bitcast [16 x i8]* %comm to i8*
+  %100 = getelementptr i8, i8* %99, i32 13
+  %101 = load i8, i8* %100, align 1
+  %strcmp.cmp51 = icmp ne i8 %98, %101
   br i1 %strcmp.cmp51, label %strcmp.false, label %strcmp.loop_null_cmp50
 
 strcmp.loop_null_cmp46:                           ; preds = %strcmp.loop41
-  %strcmp.cmp_null48 = icmp eq i8 %67, 0
+  %strcmp.cmp_null48 = icmp eq i8 %92, 0
   br i1 %strcmp.cmp_null48, label %strcmp.done, label %strcmp.loop45
 
 strcmp.loop49:                                    ; preds = %strcmp.loop_null_cmp50
-  %74 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 14
-  %75 = load i8, i8* %74, align 1
-  %76 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 14
-  %77 = load i8, i8* %76, align 1
-  %strcmp.cmp55 = icmp ne i8 %75, %77
+  %102 = bitcast [64 x i8]* %str to i8*
+  %103 = getelementptr i8, i8* %102, i32 14
+  %104 = load i8, i8* %103, align 1
+  %105 = bitcast [16 x i8]* %comm to i8*
+  %106 = getelementptr i8, i8* %105, i32 14
+  %107 = load i8, i8* %106, align 1
+  %strcmp.cmp55 = icmp ne i8 %104, %107
   br i1 %strcmp.cmp55, label %strcmp.false, label %strcmp.loop_null_cmp54
 
 strcmp.loop_null_cmp50:                           ; preds = %strcmp.loop45
-  %strcmp.cmp_null52 = icmp eq i8 %71, 0
+  %strcmp.cmp_null52 = icmp eq i8 %98, 0
   br i1 %strcmp.cmp_null52, label %strcmp.done, label %strcmp.loop49
 
 strcmp.loop53:                                    ; preds = %strcmp.loop_null_cmp54
-  %78 = getelementptr [64 x i8], [64 x i8]* %str, i32 0, i32 15
-  %79 = load i8, i8* %78, align 1
-  %80 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 15
-  %81 = load i8, i8* %80, align 1
-  %strcmp.cmp59 = icmp ne i8 %79, %81
+  %108 = bitcast [64 x i8]* %str to i8*
+  %109 = getelementptr i8, i8* %108, i32 15
+  %110 = load i8, i8* %109, align 1
+  %111 = bitcast [16 x i8]* %comm to i8*
+  %112 = getelementptr i8, i8* %111, i32 15
+  %113 = load i8, i8* %112, align 1
+  %strcmp.cmp59 = icmp ne i8 %110, %113
   br i1 %strcmp.cmp59, label %strcmp.false, label %strcmp.loop_null_cmp58
 
 strcmp.loop_null_cmp54:                           ; preds = %strcmp.loop49
-  %strcmp.cmp_null56 = icmp eq i8 %75, 0
+  %strcmp.cmp_null56 = icmp eq i8 %104, 0
   br i1 %strcmp.cmp_null56, label %strcmp.done, label %strcmp.loop53
 
 strcmp.loop57:                                    ; preds = %strcmp.loop_null_cmp58
   br label %strcmp.done
 
 strcmp.loop_null_cmp58:                           ; preds = %strcmp.loop53
-  %strcmp.cmp_null60 = icmp eq i8 %79, 0
+  %strcmp.cmp_null60 = icmp eq i8 %110, 0
   br i1 %strcmp.cmp_null60, label %strcmp.done, label %strcmp.loop57
 }
 

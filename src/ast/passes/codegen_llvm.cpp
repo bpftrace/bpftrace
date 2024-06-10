@@ -1281,12 +1281,8 @@ void CodegenLLVM::visit(Call &call)
     auto left_string = getString(left_arg);
     auto right_string = getString(right_arg);
 
-    expr_ = b_.CreateStrncmp(left_string.first,
-                             left_string.second,
-                             right_string.first,
-                             right_string.second,
-                             size,
-                             false);
+    expr_ = b_.CreateStrncmp(
+        left_string.first, right_string.first, size, false);
   } else if (call.func == "strcontains") {
     const auto &left_arg = call.vargs->at(0);
     const auto &right_arg = call.vargs->at(1);
@@ -1478,12 +1474,7 @@ void CodegenLLVM::binop_string(Binop &binop)
   auto right_string = getString(binop.right);
 
   size_t len = std::min(left_string.second, right_string.second);
-  expr_ = b_.CreateStrncmp(left_string.first,
-                           left_string.second,
-                           right_string.first,
-                           right_string.second,
-                           len,
-                           inverse);
+  expr_ = b_.CreateStrncmp(left_string.first, right_string.first, len, inverse);
 }
 
 void CodegenLLVM::binop_integer_array(Binop &binop)
@@ -1545,12 +1536,7 @@ void CodegenLLVM::binop_buf(Binop &binop)
 
   size_t len = std::min(binop.left->type.GetSize(),
                         binop.right->type.GetSize());
-  expr_ = b_.CreateStrncmp(left_string,
-                           binop.left->type.GetSize(),
-                           right_string,
-                           binop.right->type.GetSize(),
-                           len,
-                           inverse);
+  expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
 }
 
 void CodegenLLVM::binop_int(Binop &binop)
