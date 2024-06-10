@@ -262,6 +262,7 @@ kprobe:f { fake }
   test(feature, "k:f { jiffies }", 1);
 }
 
+#ifdef HAVE_LIBLLDB
 TEST(semantic_analyser, builtin_variables_inline)
 {
   auto bpftrace = get_mock_bpftrace();
@@ -288,6 +289,7 @@ uprobe:/bin/sh:f { args }
                    ~~~~
 )");
 }
+#endif // HAVE_LIBLLDB
 
 TEST(semantic_analyser, builtin_cpid)
 {
