@@ -88,7 +88,11 @@
                     libopcodes
                     libpcap
                     libsystemtap
-                    lldb
+                    # Temporarily disable LLDB support in CI. We're waiting on upstream
+                    # nixpkgs fixes:
+                    #     https://github.com/NixOS/nixpkgs/issues/315214
+                    #     https://github.com/NixOS/nixpkgs/pull/316045
+                    #lldb
                     llvm
                     pahole
                     xxd
