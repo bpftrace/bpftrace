@@ -148,6 +148,7 @@ private:
   bool has_end_probe_ = false;
   bool has_child_ = false;
   bool has_pos_param_ = false;
+  std::optional<ast::Scope *> scope_with_for_loop_ = std::nullopt;
 };
 
 Pass CreateSemanticPass();
