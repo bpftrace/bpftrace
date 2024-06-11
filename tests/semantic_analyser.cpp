@@ -3767,6 +3767,20 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 )");
 }
 
+TEST(semantic_analyser, for_loop_multiple_probes)
+{
+  test_error(R"(
+      BEGIN { @map[0] = 1 }
+      k:f1 { for ($kv : @map) { print($kv); } }
+      k:f2 { for ($kv : @map) { print($kv); } }
+  )",
+             R"(
+stdin:3:14-17: ERROR: Currently, for-loops can be used only in a single probe.
+      k:f2 { for ($kv : @map) { print($kv); } }
+             ~~~
+)");
+}
+
 TEST_F(semantic_analyser_btf, args_builtin_mixed_probes)
 {
   test_error("kfunc:func_1,tracepoint:sched:sched_one { args }", R"(
