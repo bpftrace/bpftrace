@@ -28,8 +28,9 @@ and this project adheres to
 - Enable count, sum, min, and max map reads in kernel space (implicit casting)
   - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
   - [#3226](https://github.com/bpftrace/bpftrace/pull/3226)
-- Allow BPFTRACE_MAX_STRLEN to go above 200 (up to 1024)
+- Remove limit on BPFTRACE_MAX_STRLEN
   - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
+  - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
