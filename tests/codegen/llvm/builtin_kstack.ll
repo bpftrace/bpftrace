@@ -57,21 +57,20 @@ lookup_stack_scratch_failure:                     ; preds = %entry
   br label %stack_scratch_failure
 
 lookup_stack_scratch_merge:                       ; preds = %entry
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([127 x i64]*, i32, i8*)*)([127 x i64]* %lookup_stack_scratch_map, i32 1016, i8* null)
   %9 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %9, i8 0, i64 1016, i1 false)
-  %10 = bitcast [127 x i64]* %lookup_stack_scratch_map to i8*
-  %get_stack = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %10, i32 1016, i64 0)
-  %11 = icmp sge i32 %get_stack, 0
-  br i1 %11, label %get_stack_success, label %get_stack_fail
+  %get_stack = call i32 inttoptr (i64 67 to i32 (i8*, i8*, i32, i64)*)(i8* %0, i8* %9, i32 1016, i64 0)
+  %10 = icmp sge i32 %get_stack, 0
+  br i1 %10, label %get_stack_success, label %get_stack_fail
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
-  %12 = udiv i32 %get_stack, 8
-  %13 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 1
-  store i32 %12, i32* %13, align 4
-  %14 = trunc i32 %12 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(i8* %10, i8 %14, i64 1)
-  %15 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, i64* %15, align 8
+  %11 = udiv i32 %get_stack, 8
+  %12 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 1
+  store i32 %11, i32* %12, align 4
+  %13 = trunc i32 %11 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(i8* %9, i8 %13, i64 1)
+  %14 = getelementptr %stack_key, %stack_key* %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, i64* %14, align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, %stack_key*, [127 x i64]*, i64)*)(%"struct map_t.0"* @stack_bpftrace_127, %stack_key* %stack_key, [127 x i64]* %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
@@ -169,13 +168,9 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #2
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #2
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
-
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn }
-attributes #3 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
 !llvm.dbg.cu = !{!82}
 !llvm.module.flags = !{!85}

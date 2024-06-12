@@ -30,14 +30,6 @@
 #error Unsupported LLVM version
 #endif
 
-#if LLVM_VERSION_MAJOR >= 10
-#define CREATE_MEMSET(ptr, val, size, align)                                   \
-  CreateMemSet((ptr), (val), (size), MaybeAlign((align)))
-#else
-#define CREATE_MEMSET(ptr, val, size, align)                                   \
-  CreateMemSet((ptr), (val), (size), (align))
-#endif
-
 #if LLVM_VERSION_MAJOR >= 13
 #define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
   CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))

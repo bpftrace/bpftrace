@@ -132,7 +132,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
             module_->getContext(), pstr, true);
         AllocaInst *buf = b_.CreateAllocaBPF(
             ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-        b_.CREATE_MEMSET(buf, b_.getInt8(0), pstr.length() + 1, 1);
+        b_.CreateMemsetBPF(buf, b_.getInt8(0), pstr.length() + 1);
         b_.CreateStore(const_str, buf);
         expr_ = b_.CreatePtrToInt(buf, b_.getInt64Ty());
         expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -204,8 +204,9 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   Value *stack_trace = b_.CreateGetStackScratchMap(stack_type,
                                                    stack_scratch_failure,
                                                    loc);
-  b_.CREATE_MEMSET(
-      stack_trace, b_.getInt8(0), uint64_size * stack_type.limit, 1);
+  b_.CreateMemsetBPF(stack_trace,
+                     b_.getInt8(0),
+                     uint64_size * stack_type.limit);
 
   BasicBlock *get_stack_success = BasicBlock::Create(module_->getContext(),
                                                      "get_stack_success",
@@ -372,7 +373,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "comm") {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
     // initializing memory needed for older kernels:
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), builtin.type.GetSize(), 1);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.type.GetSize());
     b_.CreateGetCurrentComm(ctx_, buf, builtin.type.GetSize(), builtin.loc);
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -744,7 +745,7 @@ void CodegenLLVM::visit(Call &call)
     Value *buf = b_.CreateGetStrScratchMap(str_id_,
                                            lookup_failure_block,
                                            call.loc);
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), max_strlen, 1);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
     b_.CreateProbeReadStr(
@@ -807,10 +808,9 @@ void CodegenLLVM::visit(Call &call)
     Value *buf_data_offset = b_.CreateGEP(buf_struct,
                                           buf,
                                           { b_.getInt32(0), b_.getInt32(1) });
-    b_.CREATE_MEMSET(buf_data_offset,
-                     b_.GetIntSameSize(0, elements.at(0)),
-                     fixed_buffer_length,
-                     1);
+    b_.CreateMemsetBPF(buf_data_offset,
+                       b_.GetIntSameSize(0, elements.at(0)),
+                       fixed_buffer_length);
 
     auto scoped_del = accept(call.vargs->front());
     auto arg0 = call.vargs->front();
@@ -833,8 +833,9 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "path") {
     AllocaInst *buf = b_.CreateAllocaBPF(
         bpftrace_.config_.get(ConfigKeyInt::max_strlen), "path");
-    b_.CREATE_MEMSET(
-        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::max_strlen), 1);
+    b_.CreateMemsetBPF(buf,
+                       b_.getInt8(0),
+                       bpftrace_.config_.get(ConfigKeyInt::max_strlen));
     call.vargs->front()->accept(*this);
     b_.CreatePath(ctx_,
                   buf,
@@ -975,7 +976,7 @@ void CodegenLLVM::visit(Call &call)
     Value *inet_offset = b_.CreateGEP(inet_struct,
                                       buf,
                                       { b_.getInt32(0), b_.getInt32(1) });
-    b_.CREATE_MEMSET(inet_offset, b_.getInt8(0), 16, 1);
+    b_.CreateMemsetBPF(inet_offset, b_.getInt8(0), 16);
 
     auto scoped_del = accept(inet);
     if (inet->type.IsArrayTy() || inet->type.IsStringTy()) {
@@ -2019,7 +2020,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                                    acc.field);
           // memset so verifier doesn't complain about reading uninitialized
           // stack
-          b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.GetSize(), 1);
+          b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
           b_.CreateProbeRead(ctx_,
                              dst,
                              b_.getInt32(field.bitfield->read_bytes),
@@ -2189,7 +2190,7 @@ AllocaInst *CodegenLLVM::createTuple(
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
   AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, name);
-  b_.CREATE_MEMSET(buf, b_.getInt8(0), tuple_size, 1);
+  b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
     auto [val, loc] = vals[i];
@@ -2252,7 +2253,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
          assignment.expr->type.IsTupleTy()) &&
         assignment.expr->type.GetSize() != map.type.GetSize()) {
       val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CREATE_MEMSET(val, b_.getInt8(0), map.type.GetSize(), 1);
+      b_.CreateMemsetBPF(val, b_.getInt8(0), map.type.GetSize());
       b_.CREATE_MEMCPY(val, expr, assignment.expr->type.GetSize(), 1);
       self_alloca = true;
     } else
@@ -2325,7 +2326,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   } else if (needMemcpy(var.type)) {
     auto *val = variables_[var.ident];
     if (assignment.expr->type.GetSize() != var.type.GetSize())
-      b_.CREATE_MEMSET(val, b_.getInt8(0), var.type.GetSize(), 1);
+      b_.CreateMemsetBPF(val, b_.getInt8(0), var.type.GetSize());
     b_.CREATE_MEMCPY(val, expr_, assignment.expr->type.GetSize(), 1);
   } else {
     b_.CreateStore(expr_, variables_[var.ident]);
@@ -2775,7 +2776,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
         if (expr->type.IsStringTy() &&
             expr->type.GetSize() != key_type.GetSize()) {
           key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
-          b_.CREATE_MEMSET(key, b_.getInt8(0), key_type.GetSize(), 1);
+          b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
           b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
         } else {
           key = expr_;
@@ -2843,7 +2844,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
     if (onStack(expr->type)) {
       if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
-        b_.CREATE_MEMSET(offset_val, b_.getInt8(0), map_key_size, 1);
+        b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
       if ((expr->type.GetSize() % 8) != 0)
         aligned = false;
@@ -3268,7 +3269,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
 
   AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
   // as the struct is not packed we need to memset it.
-  b_.CREATE_MEMSET(fmt_args, b_.getInt8(0), struct_size, 1);
+  b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
   Value *id_offset = b_.CreateGEP(fmt_struct,
                                   fmt_args,
@@ -3428,7 +3429,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   Value *content_offset = b_.CreateGEP(print_struct,
                                        buf,
                                        { b_.getInt32(0), b_.getInt32(2) });
-  b_.CREATE_MEMSET(content_offset, b_.getInt8(0), arg.type.GetSize(), 1);
+  b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type.GetSize());
   if (needMemcpy(arg.type)) {
     if (onStack(arg.type))
       b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
