@@ -77,6 +77,7 @@ public:
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
   Value *GetMapVar(const std::string &map_name);
+  Value *GetNull();
   CallInst *CreateMapLookup(Map &map,
                             Value *key,
                             const std::string &name = "lookup_elem");
