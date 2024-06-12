@@ -73,6 +73,7 @@ public:
                               llvm::Value *arraysize,
                               const std::string &name = "");
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
+  void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);

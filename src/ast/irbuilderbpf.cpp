@@ -200,6 +200,49 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
   return CreateAllocaBPF(ty, name);
 }
 
+void IRBuilderBPF::CreateMemsetBPF(Value *ptr, Value *val, uint32_t size)
+{
+  if (size > 512 && bpftrace_.feature_->has_helper_probe_read_kernel()) {
+    // Note we are "abusing" bpf_probe_read_kernel() by reading from NULL
+    // which triggers a call into the kernel-optimized memset().
+    //
+    // Upstream blesses this trick so we should be able to count on them
+    // to maintain these semantics.
+    //
+    // Also note we are avoiding a call to CreateProbeRead(), as it wraps
+    // calls to probe read helpers with the -kk error reporting feature.
+    // The call here will always fail and we want it that way. So avoid
+    // reporting errors to the user.
+    auto probe_read_id = libbpf::BPF_FUNC_probe_read_kernel;
+    FunctionType *proberead_func_type = FunctionType::get(
+        getInt64Ty(),
+        { ptr->getType(), getInt32Ty(), GetNull()->getType() },
+        false);
+    PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type,
+                                                            0);
+    Constant *proberead_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                     getInt64(probe_read_id),
+                                                     proberead_func_ptr_type);
+    createCall(proberead_func_type,
+               proberead_func,
+               { ptr, getInt32(size), GetNull() },
+               probeReadHelperName(probe_read_id));
+  } else {
+    // Use unrolled memset for memsets less than 512 bytes mostly for
+    // correctness.
+    //
+    // It appears that helper based memsets obscure LLVM stack optimizer view
+    // into memory usage such that programs that were below stack limit with
+    // builtin memsets will bloat with helper based memsets enough to where
+    // LLVM BPF backend will barf.
+    //
+    // So only use helper based memset when we really need it. And that's when
+    // we're memset()ing off-stack. We know it's off stack b/c 512 is program
+    // stack limit.
+    CREATE_MEMSET(ptr, val, getInt64(size), 1);
+  }
+}
+
 llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Type *ty)
 {
   assert(ty->isIntegerTy());
