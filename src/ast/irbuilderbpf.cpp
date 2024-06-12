@@ -15,6 +15,14 @@
 #include "log.h"
 #include "utils.h"
 
+#if LLVM_VERSION_MAJOR >= 10
+#define CREATE_MEMSET(ptr, val, size, align)                                   \
+  CreateMemSet((ptr), (val), (size), MaybeAlign((align)))
+#else
+#define CREATE_MEMSET(ptr, val, size, align)                                   \
+  CreateMemSet((ptr), (val), (size), (align))
+#endif
+
 namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
@@ -178,7 +186,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
     alloca = CreateAlloca(ty, nullptr, name);
     CreateLifetimeStart(alloca);
     if (needMemcpy(stype)) {
-      CREATE_MEMSET(alloca, getInt8(0), stype.GetSize(), 1);
+      CreateMemsetBPF(alloca, getInt8(0), stype.GetSize());
     } else {
       CreateStore(ConstantInt::get(ty, 0), alloca);
     }
@@ -524,7 +532,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   SetInsertPoint(lookup_failure_block);
   if (needMemcpy(type))
-    CREATE_MEMSET(value, getInt8(0), type.GetSize(), 1);
+    CreateMemsetBPF(value, getInt8(0), type.GetSize());
   else
     CreateStore(getInt64(0), value);
   CreateHelperError(ctx, getInt32(0), libbpf::BPF_FUNC_map_lookup_elem, loc);
@@ -1860,7 +1868,7 @@ void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,
                                                      true);
   AllocaInst *fmt = CreateAllocaBPF(
       ArrayType::get(getInt8Ty(), fmt_str.length() + 1), "fmt_str");
-  CREATE_MEMSET(fmt, getInt8(0), fmt_str.length() + 1, 1);
+  CreateMemsetBPF(fmt, getInt8(0), fmt_str.length() + 1);
   CreateStore(const_str, fmt);
   CreateTracePrintk(CreatePointerCast(fmt, getInt8Ty()->getPointerTo()),
                     getInt32(fmt_str.length() + 1),
@@ -2248,7 +2256,7 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
 #endif
 
   if (ptr_size != type.GetSize())
-    CREATE_MEMSET(dst, getInt8(0), type.GetSize(), 1);
+    CreateMemsetBPF(dst, getInt8(0), type.GetSize());
 
   CreateProbeRead(ctx, dst, getInt32(ptr_size), src, as, loc);
 }
