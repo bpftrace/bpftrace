@@ -533,9 +533,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
     Value *condition = b_.CreateICmpNE(
         b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
-        ConstantExpr::getCast(Instruction::IntToPtr,
-                              b_.getInt64(0),
-                              b_.GET_PTR_TY()),
+        b_.GetNull(),
         "map_lookup_cond");
     b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
@@ -590,9 +588,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
     Value *condition = b_.CreateICmpNE(
         b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
-        ConstantExpr::getCast(Instruction::IntToPtr,
-                              b_.getInt64(0),
-                              b_.GET_PTR_TY()),
+        b_.GetNull(),
         "map_lookup_cond");
     b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 

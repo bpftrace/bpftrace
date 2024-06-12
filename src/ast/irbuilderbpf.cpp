@@ -293,6 +293,13 @@ Value *IRBuilderBPF::GetMapVar(const std::string &map_name)
   return module_.getGlobalVariable(bpf_map_name(map_name));
 }
 
+Value *IRBuilderBPF::GetNull()
+{
+  return ConstantExpr::getCast(Instruction::IntToPtr,
+                               getInt64(0),
+                               GET_PTR_TY());
+}
+
 CallInst *IRBuilderBPF::CreateMapLookup(Map &map,
                                         Value *key,
                                         const std::string &name)
@@ -410,10 +417,9 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
       module_.getContext(), "lookup_" + name + "_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(
       module_.getContext(), "lookup_" + name + "_merge", parent);
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, GET_PTR_TY(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
-      "lookup_" + name + "_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "lookup_" + name + "_cond");
   CreateCondBr(condition, lookup_merge_block, lookup_failure_block);
 
   SetInsertPoint(lookup_failure_block);
@@ -457,10 +463,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                                       parent);
 
   AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, GET_PTR_TY(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
@@ -564,10 +569,9 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_failure",
                                                         lookup_parent);
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, GET_PTR_TY(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
@@ -1696,10 +1700,9 @@ void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
                                                       "lookup_merge",
                                                       parent);
 
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, GET_PTR_TY(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
@@ -1753,10 +1756,9 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                                       parent);
 
   AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, GET_PTR_TY(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), GET_PTR_TY()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
