@@ -1,0 +1,53 @@
+NAME add two numbers
+PROG fn add($a: int64, $b: int64): int64 { return $a + $b; } BEGIN { print(add(5, 11)); exit(); }
+EXPECT 16
+TIMEOUT 5
+
+NAME nested call
+PROG fn f1(): void { printf("1"); f2(); } fn f2(): void { printf("2"); f3(); } fn f3(): void { printf("3\n"); } BEGIN { f1(); exit(); }
+EXPECT 123
+TIMEOUT 5
+
+NAME recursive factorial
+PROG fn fact($x: int64): int64 { if ($x == 0) { return 1; } else { return (int64)($x * fact($x - 1)); } } BEGIN { print(fact(5)); exit(); }
+EXPECT 120
+TIMEOUT 5
+
+NAME recursive factorial with two functions
+RUN {{BPFTRACE}} -ve 'fn fact1($x: int64): int64 { if ($x == 0) { return 1; } else { return (int64)($x * fact2($x - 1)); } } fn fact2($x: int64): int64 { if ($x == 0) { return 1; } else { return (int64)($x * fact1($x - 1)); } } BEGIN { print(fact1(5)); exit(); }'
+#EXPECT 120
+EXPECT_REGEX the call stack of .* frames is too deep
+TIMEOUT 5
+WILL_FAIL # currently rejected by BPF verifier
+
+NAME recursive Fibonacci
+RUN {{BPFTRACE}} -ve 'fn fib($i: int64): int64 { if ($i == 0 || $i == 1) { return 1; } else { return (int64)(fib($i - 1) + fib($i - 2)); } } BEGIN { print(fib(10)); exit(); }'
+#EXPECT 89
+EXPECT_REGEX the call stack of .* frames is too deep
+TIMEOUT 5
+WILL_FAIL # currently rejected by BPF verifier
+
+NAME print from subprog
+PROG fn print_int_twice($x: int64): void { printf("%d %d\n", $x, $x); } BEGIN { print_int_twice(42); exit(); }
+EXPECT 42 42
+TIMEOUT 5
+
+NAME map access from subprog
+PROG fn print_from_map($idx: int64): void { print(@x[$idx]); } BEGIN { @x[0] = 1; @x[1] = 2; print_from_map(1); exit(); }
+EXPECT 2
+TIMEOUT 5
+
+NAME cpu builtin from subprog
+PROG fn print_cpu(): void { printf("cpu: %d", cpu); } BEGIN { print_cpu(); exit(); }
+EXPECT_REGEX cpu: [0-9]*
+TIMEOUT 5
+
+NAME comm builtin from subprog
+PROG fn print_comm(): void { print(comm); } BEGIN { print_comm(); exit(); }
+EXPECT bpftrace
+TIMEOUT 5
+
+NAME cgroup_path builtin from subprog
+PROG fn print_cgroup_path(): void { printf("path: %s", cgroup_path(cgroup)); } BEGIN { print_cgroup_path(); exit() }
+EXPECT_REGEX path: .*
+TIMEOUT 5

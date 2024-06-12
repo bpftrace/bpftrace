@@ -2715,6 +2715,20 @@ TEST(Parser, subprog_enum)
        " f: enum x()\n");
 }
 
+TEST(Parser, subprog_call)
+{
+  test("BEGIN { f(); }",
+       "Program\n"
+       " BEGIN\n"
+       "  call: f\n");
+  test("BEGIN { f(1, \"2\"); }",
+       "Program\n"
+       " BEGIN\n"
+       "  call: f\n"
+       "   int: 1\n"
+       "   string: 2\n");
+}
+
 TEST(Parser, for_loop)
 {
   test("BEGIN { for ($kv : @map) { print($kv) } }", R"(
