@@ -269,17 +269,6 @@ static void parse_env(BPFtrace& bpftrace)
     config_setter.set(ConfigKeyInt::max_strlen, x);
   });
 
-  // The current 1024B limit comes from LLVM builtin memset(). Once
-  // we have a custom memset(), we can go above 1024B.
-  uint64_t max_strlen = bpftrace.config_.get(ConfigKeyInt::max_strlen);
-  if (max_strlen > 1024) {
-    LOG(ERROR) << "'BPFTRACE_MAX_STRLEN' " << max_strlen
-               << " exceeds the current maximum of 1024 bytes.\n"
-               << "Larger support is tracked in: "
-                  "https://github.com/bpftrace/bpftrace/issues/3229";
-    exit(1);
-  }
-
   if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
     config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
 
