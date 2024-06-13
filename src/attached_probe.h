@@ -78,7 +78,7 @@ private:
   int detach_raw_tracepoint(void);
 
   static std::map<std::string, int> cached_prog_fds_;
-  bool use_cached_progfd(void);
+  bool use_cached_progfd(BPFfeature &feature);
   void cache_progfd(void);
 
   Probe &probe_;

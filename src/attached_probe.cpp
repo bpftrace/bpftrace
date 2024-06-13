@@ -600,7 +600,7 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
 
 std::map<std::string, int> AttachedProbe::cached_prog_fds_;
 
-bool AttachedProbe::use_cached_progfd(void)
+bool AttachedProbe::use_cached_progfd(BPFfeature &feature)
 {
   // Enabled for so far only for kprobes/kretprobes
   if (probe_.type != ProbeType::kprobe && probe_.type != ProbeType::kretprobe)
@@ -609,6 +609,9 @@ bool AttachedProbe::use_cached_progfd(void)
   // Only for a wildcard probe which does not need expansion,
   // because we can have multiple programs attached to a single probe
   if (!has_wildcard(probe_.orig_name) || probe_.need_expansion)
+    return false;
+
+  if (feature.has_kprobe_multi())
     return false;
 
   // Keep map of loaded programs based on their 'orig_name',
@@ -683,7 +686,7 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 
 void AttachedProbe::load_prog(BPFfeature &feature)
 {
-  if (use_cached_progfd())
+  if (use_cached_progfd(feature))
     return;
 
   auto &insns = prog_.getCode();

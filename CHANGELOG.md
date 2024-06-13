@@ -78,6 +78,8 @@ and this project adheres to
   - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
 - Fix type resolution for pointers with BTF_KIND_TYPE_TAG
   - [#3240](https://github.com/bpftrace/bpftrace/pull/3240)
+- Fix attachment of probes attaching to wildcarded and non-wildcarded kprobes
+  - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
 #### Security
 - Don't unpack kernel headers or look in tmp
   - [#3156](https://github.com/bpftrace/bpftrace/pull/3156)
