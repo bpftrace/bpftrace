@@ -8,6 +8,7 @@
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
+#include "config.h"
 #include "types.h"
 
 #include <bcc/libbpf.h>
@@ -23,13 +24,11 @@ public:
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
                 bool safe_mode,
-                BPFfeature &feature,
-                BTF &btf);
+                BPFtrace &bpftrace);
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
                 int pid,
-                BPFfeature &feature,
-                BTF &btf,
+                BPFtrace &bpftrace,
                 bool safe_mode = true);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
@@ -43,7 +42,7 @@ private:
   std::string eventprefix() const;
   std::string eventname() const;
   void resolve_offset_kprobe(bool safe_mode);
-  bool resolve_offset_uprobe(bool safe_mode, bool error_on_missing_symbol);
+  bool resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps);
   void load_prog(BPFfeature &feature);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
@@ -91,7 +90,7 @@ private:
   std::function<void()> usdt_destructor_;
   USDTHelper usdt_helper;
 
-  BTF &btf_;
+  BPFtrace &bpftrace_;
 };
 
 class HelperVerifierError : public std::runtime_error {

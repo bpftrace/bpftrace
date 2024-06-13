@@ -47,6 +47,7 @@ private:
                          ConfigKeyString key);
   void set_stack_mode_config(AssignConfigVarStatement &assignment);
   void set_user_symbol_cache_type_config(AssignConfigVarStatement &assignment);
+  void set_missing_probes_config(AssignConfigVarStatement &assignment);
 
   void log_type_error(SizedType &type,
                       Type expected_type,

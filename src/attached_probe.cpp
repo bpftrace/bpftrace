@@ -155,17 +155,16 @@ int AttachedProbe::detach_raw_tracepoint(void)
 AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              bool safe_mode,
-                             BPFfeature &feature,
-                             BTF &btf)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+                             BPFtrace &bpftrace)
+    : probe_(probe), prog_(std::move(prog)), bpftrace_(bpftrace)
 {
-  load_prog(feature);
+  load_prog(*bpftrace.feature_);
   LOG(V1) << "Attaching " << probe_.orig_name;
   switch (probe_.type) {
     case ProbeType::special:
       // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
       // to anything -- we will simply BPF_PROG_RUN it
-      if (!feature.has_raw_tp_special())
+      if (!bpftrace_.feature_->has_raw_tp_special())
         attach_uprobe(getpid(), safe_mode);
       break;
     case ProbeType::kprobe:
@@ -207,15 +206,14 @@ AttachedProbe::AttachedProbe(Probe &probe,
 AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              int pid,
-                             BPFfeature &feature,
-                             BTF &btf,
+                             BPFtrace &bpftrace,
                              bool safe_mode)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+    : probe_(probe), prog_(std::move(prog)), bpftrace_(bpftrace)
 {
-  load_prog(feature);
+  load_prog(*bpftrace_.feature_);
   switch (probe_.type) {
     case ProbeType::usdt:
-      attach_usdt(pid, feature);
+      attach_usdt(pid, *bpftrace_.feature_);
       break;
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
@@ -441,8 +439,7 @@ static void check_alignment(std::string &path,
   }
 }
 
-bool AttachedProbe::resolve_offset_uprobe(bool safe_mode,
-                                          bool error_on_missing_symbol)
+bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
 {
   struct bcc_symbol_option option = {};
   struct symbol sym = {};
@@ -482,10 +479,13 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode,
     if (!sym.start) {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
-      if (error_on_missing_symbol) {
+      auto missing_probes = bpftrace_.config_.get(
+          ConfigKeyMissingProbes::default_);
+      if (!has_multiple_aps || missing_probes == ConfigMissingProbes::error) {
         throw FatalUserException(msg + ", cannot attach probe.");
       } else {
-        LOG(WARNING) << msg << ", skipping probe.";
+        if (missing_probes == ConfigMissingProbes::warn)
+          LOG(WARNING) << msg << ", skipping probe.";
         return 0;
       }
     }
@@ -790,7 +790,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         std::string fun = probe_.attach_point;
         if (probe_.type == ProbeType::iter)
           fun = "bpf_iter_" + fun;
-        auto btf_id = btf_.get_btf_id_fd(fun, mod);
+        auto btf_id = bpftrace_.btf_->get_btf_id_fd(fun, mod);
         if (btf_id.first < 0) {
           std::string msg = "No BTF found for " + mod + ":" + fun;
           if (probe_.orig_name != probe_.name) {
@@ -987,6 +987,15 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
     funcname = modname + ":" + funcname;
   }
 
+  // If the user requested to ignore warnings on non-existing probes and the
+  // function is not traceable, do not even try to attach as that would yield
+  // warnings from BCC which we don't want to see.
+  if (bpftrace_.config_.get(ConfigKeyMissingProbes::default_) ==
+          ConfigMissingProbes::ignore &&
+      probe_.name != probe_.orig_name && funcname != "" &&
+      !bpftrace_.is_traceable_func(funcname))
+    return;
+
   resolve_offset_kprobe(safe_mode);
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
@@ -996,7 +1005,9 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
                                         0);
 
   if (perf_event_fd < 0) {
-    if (probe_.orig_name != probe_.name) {
+    if (probe_.orig_name != probe_.name &&
+        bpftrace_.config_.get(ConfigKeyMissingProbes::default_) ==
+            ConfigMissingProbes::warn) {
       // a wildcard expansion couldn't probe something, just print a warning
       // as this is normal for some kernel functions (eg, do_debug())
       LOG(WARNING) << "could not attach probe " << probe_.name << ", skipping.";
@@ -1163,7 +1174,7 @@ void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
     return;
   }
 
-  if (!resolve_offset_uprobe(safe_mode, probe_.orig_name == probe_.name))
+  if (!resolve_offset_uprobe(safe_mode, probe_.orig_name != probe_.name))
     return;
 
   int perf_event_fd = bpf_attach_uprobe(progfd_,

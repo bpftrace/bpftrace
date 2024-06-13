@@ -32,6 +32,8 @@ and this project adheres to
   - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
   - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
   - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
+- Add config option for handling missing probes
+  - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)

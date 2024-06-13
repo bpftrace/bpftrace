@@ -155,7 +155,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
         resources.probes.push_back(std::move(pair.second));
       }
     } else {
-      probe.funcs.assign(matches.begin(), matches.end());
+      probe.funcs = std::vector<std::string>(matches.begin(), matches.end());
       resources.probes.push_back(std::move(probe));
     }
   } else if (probetype(ap.provider) == ProbeType::uprobe) {
@@ -677,8 +677,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
   if (feature_->has_uprobe_refcnt() ||
       !(file_activation && probe.path.size())) {
-    ret.emplace_back(std::make_unique<AttachedProbe>(
-        probe, std::move(program), pid, *feature_, *btf_));
+    ret.emplace_back(
+        std::make_unique<AttachedProbe>(probe, std::move(program), pid, *this));
     return ret;
   }
 
@@ -732,7 +732,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       }
 
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(program), pid_parsed, *feature_, *btf_));
+          probe, std::move(program), pid_parsed, *this));
       break;
     }
   }
@@ -801,16 +801,16 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     } else if (probe.type == ProbeType::uprobe ||
                probe.type == ProbeType::uretprobe) {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_, safe_mode_));
+          probe, std::move(*program), pid, *this, safe_mode_));
       return ret;
     } else if (probe.type == ProbeType::watchpoint ||
                probe.type == ProbeType::asyncwatchpoint) {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), pid, *feature_, *btf_));
+          probe, std::move(*program), pid, *this));
       return ret;
     } else {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), safe_mode_, *feature_, *btf_));
+          probe, std::move(*program), safe_mode_, *this));
       return ret;
     }
   } catch (const EnospcException &e) {
