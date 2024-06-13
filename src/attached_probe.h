@@ -43,7 +43,7 @@ private:
   std::string eventprefix() const;
   std::string eventname() const;
   void resolve_offset_kprobe(bool safe_mode);
-  bool resolve_offset_uprobe(bool safe_mode);
+  bool resolve_offset_uprobe(bool safe_mode, bool error_on_missing_symbol);
   void load_prog(BPFfeature &feature);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
