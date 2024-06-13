@@ -24,6 +24,8 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
     { ConfigKeyInt::perf_rb_pages, { .value = (uint64_t)64 } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },
     { ConfigKeyString::str_trunc_trailer, { .value = std::string("..") } },
+    { ConfigKeyMissingProbes::default_,
+      { .value = ConfigMissingProbes::warn } },
     // by default, cache user symbols per program if ASLR is disabled on system
     // or `-c` option is given
     { ConfigKeyUserSymbolCacheType::default_,
@@ -141,6 +143,23 @@ bool ConfigSetter::set_user_symbol_cache_type(const std::string &s)
     return false;
   }
   return config_.set(ConfigKeyUserSymbolCacheType::default_, usct, source_);
+}
+
+bool ConfigSetter::set_missing_probes_config(const std::string &s)
+{
+  ConfigMissingProbes mp;
+  if (s == "ignore") {
+    mp = ConfigMissingProbes::ignore;
+  } else if (s == "warn") {
+    mp = ConfigMissingProbes::warn;
+  } else if (s == "error") {
+    mp = ConfigMissingProbes::error;
+  } else {
+    LOG(ERROR) << "Invalid value for missing_probes: valid values are "
+                  "\"ignore\", \"warn\", and \"error\".";
+    return false;
+  }
+  return config_.set(ConfigKeyMissingProbes::default_, mp, source_);
 }
 
 } // namespace bpftrace

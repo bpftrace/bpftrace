@@ -51,11 +51,22 @@ enum class ConfigKeyUserSymbolCacheType {
   default_,
 };
 
+enum class ConfigMissingProbes {
+  ignore,
+  warn,
+  error,
+};
+
+enum class ConfigKeyMissingProbes {
+  default_,
+};
+
 typedef std::variant<ConfigKeyBool,
                      ConfigKeyInt,
                      ConfigKeyString,
                      ConfigKeyStackMode,
-                     ConfigKeyUserSymbolCacheType>
+                     ConfigKeyUserSymbolCacheType,
+                     ConfigKeyMissingProbes>
     ConfigKey;
 
 // The strings in CONFIG_KEY_MAP AND ENV_ONLY match the env variables (minus the
@@ -75,6 +86,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "probe_inline", ConfigKeyBool::probe_inline },
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
+  { "missing_probes", ConfigKeyMissingProbes::default_ },
 };
 
 // These are not tracked by the config class
@@ -85,7 +97,12 @@ const std::set<std::string> ENV_ONLY = {
 
 struct ConfigValue {
   ConfigSource source = ConfigSource::default_;
-  std::variant<bool, uint64_t, std::string, StackMode, UserSymbolCacheType>
+  std::variant<bool,
+               uint64_t,
+               std::string,
+               StackMode,
+               UserSymbolCacheType,
+               ConfigMissingProbes>
       value;
 };
 
@@ -116,6 +133,11 @@ public:
   UserSymbolCacheType get(ConfigKeyUserSymbolCacheType key) const
   {
     return get<UserSymbolCacheType>(key);
+  }
+
+  ConfigMissingProbes get(ConfigKeyMissingProbes key) const
+  {
+    return get<ConfigMissingProbes>(key);
   }
 
   static std::optional<StackMode> get_stack_mode(const std::string &s);
@@ -194,8 +216,14 @@ public:
     return config_.set(ConfigKeyUserSymbolCacheType::default_, val, source_);
   }
 
+  bool set(ConfigMissingProbes val)
+  {
+    return config_.set(ConfigKeyMissingProbes::default_, val, source_);
+  }
+
   bool set_stack_mode(const std::string &s);
   bool set_user_symbol_cache_type(const std::string &s);
+  bool set_missing_probes_config(const std::string &s);
 
   Config &config_;
 

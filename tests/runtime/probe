@@ -234,6 +234,22 @@ TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
+NAME kprobe_warn_missing_probes
+PROG kprobe:vfs_read,kprobe:nonsense { exit(); }
+EXPECT WARNING: could not attach probe kprobe:nonsense, skipping.
+TIMEOUT 5
+
+NAME kprobe_ignore_missing_probes
+PROG config = { missing_probes = "ignore" } kprobe:vfs_read,kprobe:nonsense { exit(); }
+EXPECT_NONE WARNING: could not attach probe kprobe:nonsense, skipping.
+TIMEOUT 5
+
+NAME kprobe_error_missing_probes
+PROG config = { missing_probes = "error" } kprobe:vfs_read,kprobe:nonsense { exit(); }
+EXPECT ERROR: Error attaching probe: kprobe:nonsense
+TIMEOUT 5
+WILL_FAIL
+
 NAME kretprobe
 PROG kretprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
@@ -341,6 +357,19 @@ PROG uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_te
 EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
 TIMEOUT 5
 AFTER ./testprogs/uprobe_test
+
+NAME uprobe_ignore_missing_probes
+PROG config = { missing_probes = "ignore" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT_NONE WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test
+
+NAME uprobe_error_missing_probes
+PROG config = { missing_probes = "error" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT ERROR: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, cannot attach probe.
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test
+WILL_FAIL
 
 NAME uretprobe
 PROG uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}

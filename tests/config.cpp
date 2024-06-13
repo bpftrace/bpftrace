@@ -52,6 +52,10 @@ TEST(Config, get_and_set)
   EXPECT_TRUE(config_setter.set(UserSymbolCacheType::per_program));
   EXPECT_EQ(config.get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);
+
+  EXPECT_TRUE(config_setter.set(ConfigMissingProbes::ignore));
+  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
+            ConfigMissingProbes::ignore);
 }
 
 TEST(Config, get_config_key)
@@ -91,6 +95,19 @@ TEST(ConfigSetter, set_user_symbol_cache_type)
   EXPECT_TRUE(config_setter.set_user_symbol_cache_type("NONE"));
   EXPECT_EQ(config.get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::none);
+}
+
+TEST(ConfigSetter, set_missing_probes)
+{
+  auto config = Config();
+  auto config_setter = ConfigSetter(config, ConfigSource::script);
+
+  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
+            ConfigMissingProbes::warn);
+  EXPECT_FALSE(config_setter.set_missing_probes_config("invalid"));
+  EXPECT_TRUE(config_setter.set_missing_probes_config("error"));
+  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
+            ConfigMissingProbes::error);
 }
 
 TEST(ConfigSetter, source_precedence)

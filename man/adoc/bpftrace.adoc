@@ -3427,6 +3427,19 @@ Default: 0
 Maximum number of levels of nested field accesses for tracepoint args.
 0 is unlimited.
 
+=== missing_probes
+
+Default: `warn`
+
+Controls handling of probes with multiple kprobe or uprobe attach points which
+cannot be attached to some functions because they do not exist in the kernel or
+in the traced binary.
+
+The possible options are:
+- `error` - always fail on missing probes
+- `warn` - print a warning but continue execution
+- `ignore` - silently ignore missing probes
+
 === perf_rb_pages
 
 Default: 64
