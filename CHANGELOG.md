@@ -48,6 +48,8 @@ and this project adheres to
   - [#3212](https://github.com/bpftrace/bpftrace/pull/3212)
 - Allow trailing semicolons and empty blocks in config syntax
   - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
+- Allow attaching to 'spin_lock' functions with mitigations to prevent deadlocks
+  - [#3206](https://github.com/bpftrace/bpftrace/pull/3206) 
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)

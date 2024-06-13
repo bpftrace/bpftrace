@@ -867,6 +867,8 @@ int main(int argc, char* argv[])
       break;
   }
 
+  bpftrace.kfunc_recursion_check(ast_prog.get());
+
   auto pmresult = pm.Run(std::move(ast_prog), ctx);
   if (!pmresult.Ok())
     return 1;

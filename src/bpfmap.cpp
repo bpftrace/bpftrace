@@ -71,6 +71,8 @@ std::string to_string(MapType t)
       return "ringbuf_loss_counter";
     case MapType::StrBuffer:
       return "str_buffer";
+    case MapType::RecursionPrevention:
+      return "recursion_prevention";
   }
   return {}; // unreached
 }

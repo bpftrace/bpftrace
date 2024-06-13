@@ -2512,6 +2512,7 @@ void CodegenLLVM::visit(Predicate &pred)
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
   b_.SetInsertPoint(pred_false_block);
+
   createRet();
 
   b_.SetInsertPoint(pred_true_block);
@@ -2531,7 +2532,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
 {
   // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
   // by args builtin.
-  if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
+  auto probe_type = probetype(current_attach_point_->provider);
+  if (probe_type == ProbeType::tracepoint)
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
 
   int index = current_attach_point_->index() ?: probe.index();
@@ -2547,6 +2549,12 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   // check: do the following 8 lines need to be in the wildcard loop?
   ctx_ = func->arg_begin();
+
+  if (bpftrace_.need_recursion_check_) {
+    b_.CreateCheckSetRecursion(current_attach_point_->loc,
+                               getReturnValueForProbe(probe_type));
+  }
+
   if (probe.pred) {
     auto scoped_del = accept(probe.pred);
   }
@@ -2554,6 +2562,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   for (Statement *stmt : *probe.stmts) {
     auto scoped_del = accept(stmt);
   }
+
   createRet();
 
   if (dummy) {
@@ -2653,6 +2662,10 @@ void CodegenLLVM::visit(Subprog &subprog)
 
 void CodegenLLVM::createRet(Value *value)
 {
+  if (bpftrace_.need_recursion_check_) {
+    b_.CreateUnSetRecursion(current_attach_point_->loc);
+  }
+
   // If value is explicitly provided, use it
   if (value) {
     b_.CreateRet(value);
@@ -2662,18 +2675,24 @@ void CodegenLLVM::createRet(Value *value)
     return;
   }
 
+  int ret_val = getReturnValueForProbe(
+      probetype(current_attach_point_->provider));
+  b_.CreateRet(b_.getInt64(ret_val));
+}
+
+int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
+{
   // Fall back to default return value
-  switch (probetype(current_attach_point_->provider)) {
+  switch (probe_type) {
     case ProbeType::invalid:
       LOG(BUG) << "Returning from invalid probetype";
-      break;
+      return 0;
     case ProbeType::tracepoint:
       // Classic (ie. *not* raw) tracepoints have a kernel quirk stopping perf
       // subsystem from seeing a tracepoint event if BPF program returns 0.
       // This breaks perf in some situations and generally makes such BPF
       // programs bad citizens. Return 1 instead.
-      b_.CreateRet(b_.getInt64(1));
-      break;
+      return 1;
     case ProbeType::special:
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
@@ -2690,9 +2709,10 @@ void CodegenLLVM::createRet(Value *value)
     case ProbeType::kretfunc:
     case ProbeType::iter:
     case ProbeType::rawtracepoint:
-      b_.CreateRet(b_.getInt64(0));
-      break;
+      return 0;
   }
+  LOG(BUG) << "Unknown probetype";
+  return 0;
 }
 
 void CodegenLLVM::visit(Probe &probe)
@@ -3577,6 +3597,14 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         libbpf::BPF_MAP_TYPE_HASH,
                         1,
                         MapKey(),
+                        CreateUInt64());
+  }
+
+  if (bpftrace_.need_recursion_check_) {
+    createMapDefinition(to_string(MapType::RecursionPrevention),
+                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        1,
+                        MapKey({ CreateInt32() }),
                         CreateUInt64());
   }
 

@@ -169,6 +169,7 @@ public:
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
+  void kfunc_recursion_check(ast::Program *prog);
 
   std::string cmd_;
   bool finalize_ = false;
@@ -204,6 +205,7 @@ public:
   std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
   static constexpr uint64_t rb_loss_cnt_val_ = 0;
+  bool need_recursion_check_ = false;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,

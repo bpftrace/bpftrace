@@ -33,17 +33,6 @@
 
 namespace bpftrace {
 
-/*
- * Kernel functions that are unsafe to trace are excluded in the Kernel with
- * `notrace`. However, the ones below are not excluded.
- */
-const std::set<std::string> banned_kretprobes = {
-  "_raw_spin_lock",
-  "_raw_spin_lock_irqsave",
-  "_raw_spin_unlock_irqrestore",
-  "queued_spin_lock_slowpath",
-};
-
 bpf_probe_attach_type attachtype(ProbeType t)
 {
   // clang-format off
@@ -101,14 +90,6 @@ std::string progtypeName(libbpf::bpf_prog_type t)
     // clang-format on
     default:
       LOG(BUG) << "invalid program type: " << t;
-  }
-}
-
-void check_banned_kretprobes(std::string const &kprobe_name)
-{
-  if (banned_kretprobes.find(kprobe_name) != banned_kretprobes.end()) {
-    throw FatalUserException("kretprobe:" + kprobe_name +
-                             " can't be used as it might lock up your system.");
   }
 }
 
@@ -191,7 +172,6 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_kprobe(safe_mode);
       break;
     case ProbeType::kretprobe:
-      check_banned_kretprobes(probe_.attach_point);
       attach_kprobe(safe_mode);
       break;
     case ProbeType::tracepoint:
