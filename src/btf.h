@@ -103,6 +103,13 @@ private:
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
   std::unordered_set<std::string> get_all_iters_from_btf(
       const struct btf* btf) const;
+  /*
+   * Similar to btf_type_skip_modifiers this returns the id of the first
+   * type that is not a BTF_KIND_TYPE_TAG while also populating the tags set
+   * with the tag/attribute names from the BTF_KIND_TYPE_TAG types it finds.
+   */
+  __u32 get_type_tags(std::unordered_set<std::string>& tags,
+                      const BTFId& btf_id) const;
 
   __s32 start_id(const struct btf* btf) const;
 

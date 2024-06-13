@@ -2270,6 +2270,22 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     } else {
       const auto &field = record->GetField(acc.field);
 
+      if (field.type.IsPtrTy()) {
+        const auto &tags = field.type.GetBtfTypeTags();
+        /*
+         * Currently only "rcu" is safe. "percpu", for example, requires special
+         * unwrapping with `bpf_per_cpu_ptr` which is not yet supported.
+         */
+        static const std::string_view allowed_tag = "rcu";
+        for (const auto &tag : tags) {
+          if (tag != allowed_tag) {
+            LOG(ERROR, acc.loc, err_)
+                << "Attempting to access pointer field '" << acc.field
+                << "' with unsupported tag attribute: " << tag;
+          }
+        }
+      }
+
       acc.type = field.type;
       if (acc.expr->type.IsCtxAccess() &&
           (acc.type.IsArrayTy() || acc.type.IsRecordTy())) {

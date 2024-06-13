@@ -41,7 +41,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                                   "sched_extra:sched_extra\n"
                                   "notsched:bar\n"
                                   "file:filename\n"
-                                  "tcp:some_tcp_tp\n";
+                                  "tcp:some_tcp_tp\n"
+                                  "btf:tag\n";
         return std::unique_ptr<std::istream>(
             new std::istringstream(tracepoints));
       });
@@ -124,6 +125,17 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   bpftrace.structs.Lookup("struct _tracepoint_file_filename")
       .lock()
       ->AddField("filename", ptr_type, 8, std::nullopt, false);
+  bpftrace.structs.Add("struct _tracepoint_btf_tag", 16);
+  auto ptr_type_w_tag = CreatePointer(CreateInt8());
+  ptr_type_w_tag.SetBtfTypeTags({ "rcu" });
+  auto ptr_type_w_bad_tag = CreatePointer(CreateInt8());
+  ptr_type_w_bad_tag.SetBtfTypeTags({ "rcu", "percpu" });
+  bpftrace.structs.Lookup("struct _tracepoint_btf_tag")
+      .lock()
+      ->AddField("parent", ptr_type_w_tag, 8, std::nullopt, false);
+  bpftrace.structs.Lookup("struct _tracepoint_btf_tag")
+      .lock()
+      ->AddField("real_parent", ptr_type_w_bad_tag, 16, std::nullopt, false);
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

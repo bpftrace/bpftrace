@@ -3457,6 +3457,16 @@ fexit:func_1 { reg("ip") }
   test("fentry:func_1 { $x = args->a; }");
 }
 
+TEST(semantic_analyser, btf_type_tags)
+{
+  test("t:btf:tag { args.parent }");
+  test_error("t:btf:tag { args.real_parent }", R"(
+stdin:1:13-18: ERROR: Attempting to access pointer field 'real_parent' with unsupported tag attribute: percpu
+t:btf:tag { args.real_parent }
+            ~~~~~
+)");
+}
+
 TEST(semantic_analyser, for_loop_map_one_key)
 {
   test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }", R"(
