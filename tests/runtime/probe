@@ -336,6 +336,12 @@ EXPECT_REGEX arg0: [0-9]*
 TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 
+NAME uprobe_warn_missing_probes
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test
+
 NAME uretprobe
 PROG uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}
 EXPECT_REGEX readline: [0-9]*

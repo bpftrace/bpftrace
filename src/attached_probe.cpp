@@ -441,7 +441,8 @@ static void check_alignment(std::string &path,
   }
 }
 
-bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
+bool AttachedProbe::resolve_offset_uprobe(bool safe_mode,
+                                          bool error_on_missing_symbol)
 {
   struct bcc_symbol_option option = {};
   struct symbol sym = {};
@@ -478,9 +479,16 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
     sym.name = symbol;
     bcc_elf_foreach_sym(probe_.path.c_str(), sym_name_cb, &option, &sym);
 
-    if (!sym.start)
-      throw FatalUserException("Could not resolve symbol: " + probe_.path +
-                               ":" + symbol);
+    if (!sym.start) {
+      const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
+                              symbol;
+      if (error_on_missing_symbol) {
+        throw FatalUserException(msg + ", cannot attach probe.");
+      } else {
+        LOG(WARNING) << msg << ", skipping probe.";
+        return 0;
+      }
+    }
   }
 
   if (probe_.type == ProbeType::uretprobe && func_offset != 0) {
@@ -1155,7 +1163,7 @@ void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
     return;
   }
 
-  if (!resolve_offset_uprobe(safe_mode))
+  if (!resolve_offset_uprobe(safe_mode, probe_.orig_name == probe_.name))
     return;
 
   int perf_event_fd = bpf_attach_uprobe(progfd_,
