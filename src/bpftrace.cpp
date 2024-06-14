@@ -553,12 +553,14 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
             config_.get(ConfigKeyString::str_trunc_trailer).c_str()));
         break;
       }
-      case Type::buffer:
+      case Type::buffer: {
+        auto length =
+            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)->length;
         arg_values.push_back(std::make_unique<PrintableBuffer>(
             reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)->content,
-            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)
-                ->length));
+            length));
         break;
+      }
       case Type::ksym:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_ksym(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));

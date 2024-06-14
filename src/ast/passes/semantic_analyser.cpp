@@ -9,6 +9,7 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
+#include "ast/async_event_types.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -721,8 +722,10 @@ void SemanticAnalyser::visit(Call &call)
           << typestr(arg.type.GetTy());
     }
 
-    size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
-    size_t buffer_size = max_buffer_size;
+    // Subtract out metadata headroom
+    uint32_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen) -
+                               sizeof(AsyncEvent::Buf);
+    uint32_t buffer_size = max_buffer_size;
 
     if (call.vargs->size() == 1) {
       if (arg.type.IsArrayTy())

@@ -6,6 +6,7 @@
 #include <csignal>
 #include <ctime>
 #include <fstream>
+#include <limits>
 #include <llvm/IR/GlobalValue.h>
 
 #if LLVM_VERSION_MAJOR <= 16
@@ -745,10 +746,14 @@ void CodegenLLVM::visit(Call &call)
     str_id_++;
     expr_ = buf;
   } else if (call.func == "buf") {
-    Value *max_length = b_.getInt64(
-        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
-    size_t fixed_buffer_length = bpftrace_.config_.get(
-        ConfigKeyInt::max_strlen);
+    uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    // Eventually we codegen a u32 store, so ensure we are within limits
+    assert(max_strlen <= std::numeric_limits<uint32_t>::max());
+
+    // Subtract out metadata headroom
+    uint64_t max_buffer_size = max_strlen - sizeof(AsyncEvent::Buf);
+    Value *max_length = b_.getInt64(max_buffer_size);
+    uint64_t fixed_buffer_length = max_buffer_size;
     Value *length;
 
     if (call.vargs->size() > 1) {
@@ -769,16 +774,17 @@ void CodegenLLVM::visit(Call &call)
       auto &arg = *call.vargs->at(0);
       fixed_buffer_length = arg.type.GetNumElements() *
                             arg.type.GetElementTy()->GetSize();
-      length = b_.getInt8(fixed_buffer_length);
+      length = b_.getInt32(fixed_buffer_length);
     }
 
+    Value *scratch_buf = b_.CreateGetStrScratchMap(str_id_, nullptr, call.loc);
     auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
     std::ostringstream dynamic_sized_struct_name;
     dynamic_sized_struct_name << "buffer_" << fixed_buffer_length << "_t";
     StructType *buf_struct = b_.GetStructType(dynamic_sized_struct_name.str(),
                                               elements,
-                                              false);
-    AllocaInst *buf = b_.CreateAllocaBPF(buf_struct, "buffer");
+                                              true);
+    Value *buf = b_.CreatePointerCast(scratch_buf, buf_struct->getPointerTo());
 
     Value *buf_len_offset = b_.CreateGEP(buf_struct,
                                          buf,
@@ -789,9 +795,7 @@ void CodegenLLVM::visit(Call &call)
     Value *buf_data_offset = b_.CreateGEP(buf_struct,
                                           buf,
                                           { b_.getInt32(0), b_.getInt32(1) });
-    b_.CreateMemsetBPF(buf_data_offset,
-                       b_.GetIntSameSize(0, elements.at(0)),
-                       fixed_buffer_length);
+    b_.CreateMemsetBPF(buf_data_offset, b_.getInt8(0), fixed_buffer_length);
 
     auto scoped_del = accept(call.vargs->front());
     auto arg0 = call.vargs->front();
@@ -803,14 +807,14 @@ void CodegenLLVM::visit(Call &call)
       b_.CREATE_MEMCPY(buf_data_offset, expr_, length, 1);
     else
       b_.CreateProbeRead(ctx_,
-                         static_cast<AllocaInst *>(buf_data_offset),
+                         buf_data_offset,
                          length,
                          expr_,
                          find_addrspace_stack(arg0->type),
                          call.loc);
 
+    str_id_++;
     expr_ = buf;
-    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "path") {
     Value *buf = b_.CreateGetStrScratchMap(str_id_, nullptr, call.loc);
     b_.CreateMemsetBPF(buf,
