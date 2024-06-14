@@ -1022,39 +1022,36 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
 }
 
 #ifdef HAVE_LIBBPF_UPROBE_MULTI
-struct bcc_sym_cb_data {
-  std::vector<std::string> &syms;
-  std::set<uint64_t> &offsets;
-};
+using TrapLocations = std::vector<TrapLocation>;
+using TrapIndex = std::unordered_multimap<std::string_view, TrapLocation &>;
 
 static int bcc_sym_cb(const char *symname, uint64_t start, uint64_t, void *p)
 {
-  struct bcc_sym_cb_data *data = static_cast<struct bcc_sym_cb_data *>(p);
-  std::vector<std::string> &syms = data->syms;
-
-  if (std::binary_search(syms.begin(), syms.end(), symname)) {
-    data->offsets.insert(start);
+  // #traps << #symbols: so we optimise symbol lookup with an index.
+  auto *traps = static_cast<TrapIndex *>(p);
+  auto range = traps->equal_range(symname);
+  for (auto it = range.first; it != range.second; ++it) {
+    if (it->second.file_address != 0)
+      continue;
+    it->second.file_address = start;
   }
 
   return 0;
 }
-
-struct addr_offset {
-  uint64_t addr;
-  uint64_t offset;
-};
 
 static int bcc_load_cb(uint64_t v_addr,
                        uint64_t mem_sz,
                        uint64_t file_offset,
                        void *p)
 {
-  std::vector<struct addr_offset> *addrs =
-      static_cast<std::vector<struct addr_offset> *>(p);
-
-  for (auto &a : *addrs) {
-    if (a.addr >= v_addr && a.addr < (v_addr + mem_sz)) {
-      a.offset = a.addr - v_addr + file_offset;
+  // #sections < #traps:
+  TrapLocations *traps = static_cast<TrapLocations *>(p);
+  for (auto &trap : *traps) {
+    if (trap.load_address != 0)
+      continue; // Skip already resolved offsets.
+    if (trap.file_address == v_addr ||
+        (v_addr < trap.file_address && trap.file_address < (v_addr + mem_sz))) {
+      trap.load_address = trap.file_address + file_offset - v_addr;
     }
   }
 
@@ -1063,66 +1060,49 @@ static int bcc_load_cb(uint64_t v_addr,
 
 static void resolve_offset_uprobe_multi(const std::string &path,
                                         const std::string &probe_name,
-                                        const std::vector<TrapLocation> &funcs,
-                                        std::vector<std::string> &syms,
-                                        std::vector<unsigned long> &offsets)
+                                        TrapLocations &funcs)
 {
-  struct bcc_symbol_option option = {};
-  int err;
-
-  // Parse symbols names into syms vector
-  for (const auto &func : funcs) {
-    syms.push_back(func.symbol_name);
+  // Index the locations by symbol name
+  TrapIndex index;
+  for (auto &fn : funcs) {
+    index.emplace(fn.symbol_name.data(), fn);
   }
-
-  std::sort(std::begin(syms), std::end(syms));
-
-  option.use_debug_file = 1;
-  option.use_symbol_type = 0xffffffff;
-
-  std::vector<struct addr_offset> addrs;
-  std::set<uint64_t> set;
-  struct bcc_sym_cb_data data = {
-    .syms = syms,
-    .offsets = set,
-  };
 
   // Resolve symbols into addresses
-  err = bcc_elf_foreach_sym(path.c_str(), bcc_sym_cb, &option, &data);
-  if (err) {
-    throw FatalUserException("Failed to list symbols for probe: " + probe_name);
-  }
-
-  for (auto a : set) {
-    struct addr_offset addr = {
-      .addr = a,
-      .offset = 0x0,
+  bool has_missing_address = std::any_of(
+      funcs.begin(), funcs.end(), [](auto &f) { return f.file_address == 0; });
+  if (has_missing_address) {
+    bcc_symbol_option option = {
+      .use_debug_file = 1,
+      .check_debug_file_crc = 0,
+      .lazy_symbolize = 0,
+      .use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE),
     };
-
-    addrs.push_back(addr);
+    if (bcc_elf_foreach_sym(path.c_str(), bcc_sym_cb, &option, &index))
+      throw FatalUserException("Failed to list symbols for probe: " +
+                               probe_name);
   }
 
   // Translate addresses into offsets
-  err = bcc_elf_foreach_load_section(path.c_str(), bcc_load_cb, &addrs);
-  if (err) {
-    throw FatalUserException("Failed to resolve symbols offsets for probe: " +
-                             probe_name);
-  }
-
-  for (auto a : addrs) {
-    offsets.push_back(a.offset);
+  bool has_missing_offset = std::any_of(
+      funcs.begin(), funcs.end(), [](auto &f) { return f.load_address == 0; });
+  if (has_missing_offset) {
+    if (bcc_elf_foreach_load_section(path.c_str(), bcc_load_cb, &funcs))
+      throw FatalUserException("Failed to resolve symbols offsets for probe: " +
+                               probe_name);
   }
 }
 
 void AttachedProbe::attach_multi_uprobe(int pid)
 {
-  std::vector<std::string> syms;
-  std::vector<unsigned long> offsets;
-  unsigned int i;
-
-  // Resolve probe_.funcs into offsets and syms vector
-  resolve_offset_uprobe_multi(
-      probe_.path, probe_.name, probe_.funcs, syms, offsets);
+  // Resolve probe_.funcs' file and load addresses.
+  resolve_offset_uprobe_multi(probe_.path, probe_.name, probe_.funcs);
+  std::vector<unsigned long> offsets(probe_.funcs.size());
+  for (size_t i = 0; i < probe_.funcs.size(); i++) {
+    const auto &fn = probe_.funcs[i];
+    offsets[i] = fn.load_address +
+                 (probe_.type == ProbeType::uprobe ? fn.offset : 0);
+  }
 
   // Attach uprobe through uprobe_multi link
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
@@ -1139,9 +1119,8 @@ void AttachedProbe::attach_multi_uprobe(int pid)
 
   if (bt_verbose) {
     LOG(V1) << "Attaching to " << probe_.funcs.size() << " functions";
-    for (i = 0; i < syms.size(); i++) {
-      LOG(V1) << probe_.path << ":" << syms[i];
-    }
+    for (auto &fn : probe_.funcs)
+      LOG(V1) << probe_.path << ":" << fn.symbol_name;
   }
 
   linkfd_ = bpf_link_create(progfd_,
