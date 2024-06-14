@@ -53,10 +53,10 @@ std::vector<llvm::Type*> Strftime::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
-std::vector<llvm::Type*> Buf::asLLVMType(ast::IRBuilderBPF& b, size_t length)
+std::vector<llvm::Type*> Buf::asLLVMType(ast::IRBuilderBPF& b, uint32_t length)
 {
   return {
-    b.getInt8Ty(),                               // buffer length
+    b.getInt32Ty(),                              // buffer length
     llvm::ArrayType::get(b.getInt8Ty(), length), // buffer content
   };
 }
