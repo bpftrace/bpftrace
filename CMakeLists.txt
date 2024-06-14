@@ -22,6 +22,8 @@ set(BUILD_FUZZ OFF CACHE BOOL "Build bpftrace for fuzzing")
 set(USE_LIBFUZZER OFF CACHE BOOL "Use libfuzzer for fuzzing")
 set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 set(ENABLE_SYSTEMD OFF CACHE BOOL "Enable systemd integration")
+set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
+set(SYSTEM_INCLUDE_PATHS "auto" CACHE STRING "Hard-code system include paths (colon separated, the default value \"auto\" queries clang at runtime)")
 
 set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
 

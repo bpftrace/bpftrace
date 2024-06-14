@@ -841,9 +841,8 @@ std::string ClangParser::get_arch_include_path()
   return "/usr/include/" + std::string(utsname.machine) + "-linux-gnu";
 }
 
-std::vector<std::string> ClangParser::system_include_paths()
+static void query_clang_include_dirs(std::vector<std::string> &result)
 {
-  std::vector<std::string> result;
   try {
     auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
     auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
@@ -856,6 +855,19 @@ std::vector<std::string> ClangParser::system_include_paths()
     while (std::getline(lines, line) && line != "End of search list.")
       result.push_back(trim(line));
   } catch (std::runtime_error &) { // If exec_system fails, just ignore it
+  }
+}
+
+std::vector<std::string> ClangParser::system_include_paths()
+{
+  std::vector<std::string> result;
+  std::istringstream lines(SYSTEM_INCLUDE_PATHS);
+  std::string line;
+  while (std::getline(lines, line, ':')) {
+    if (line == "auto")
+      query_clang_include_dirs(result);
+    else
+      result.push_back(trim(line));
   }
 
   if (result.empty())

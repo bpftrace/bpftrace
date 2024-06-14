@@ -90,11 +90,15 @@ endif()
 
 # compile definitions
 
-set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 if (KERNEL_HEADERS_DIR)
   MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
   target_compile_definitions(runtime PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 endif()
+
+if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
+  MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
+endif()
+target_compile_definitions(runtime PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE_PATHS}")
 
 # This is run on every build to ensure the version string is always up-to-date
 add_custom_target(version_h
