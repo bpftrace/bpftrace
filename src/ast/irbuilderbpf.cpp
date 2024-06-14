@@ -2306,7 +2306,7 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
 }
 
 void IRBuilderBPF::CreatePath(Value *ctx,
-                              AllocaInst *buf,
+                              Value *buf,
                               Value *path,
                               const location &loc)
 {

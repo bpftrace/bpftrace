@@ -812,8 +812,7 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "path") {
-    AllocaInst *buf = b_.CreateAllocaBPF(
-        bpftrace_.config_.get(ConfigKeyInt::max_strlen), "path");
+    Value *buf = b_.CreateGetStrScratchMap(str_id_, nullptr, call.loc);
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
                        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
@@ -826,8 +825,8 @@ void CodegenLLVM::visit(Call &call)
                                 expr_,
                                 b_.GET_PTR_TY()),
                   call.loc);
+    str_id_++;
     expr_ = buf;
-    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "kaddr") {
     uint64_t addr;
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
