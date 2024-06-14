@@ -1900,7 +1900,7 @@ void IRBuilderBPF::CreateMapElemInit(Value *ctx,
                                      Value *val,
                                      const location &loc)
 {
-  AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
+  AllocaInst *initValue = CreateAllocaBPF(val->getType(), "initial_value");
   CreateStore(val, initValue);
   CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
   CreateLifetimeEnd(initValue);
@@ -1937,7 +1937,8 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, value->getType(), "cast");
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), val), cast);
+  CreateStore(CreateAdd(CreateLoad(value->getAllocatedType(), cast), val),
+              cast);
 
   CreateBr(lookup_merge_block);
 
