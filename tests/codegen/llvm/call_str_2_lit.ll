@@ -30,28 +30,22 @@ entry:
   %lookup_str_cond = icmp ne i8* %lookup_str_map, null
   br i1 %lookup_str_cond, label %lookup_str_merge, label %lookup_str_failure
 
-scratch_lookup_failure:                           ; preds = %lookup_str_failure
-  ret i64 0
-
-scratch_lookup_merge:                             ; preds = %lookup_str_merge
-  %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  store i64 0, i64* %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i8*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", i8* %lookup_str_map, i64 0)
-  %4 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
-  ret i64 0
-
 lookup_str_failure:                               ; preds = %entry
-  br label %scratch_lookup_failure
+  ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
   call void @llvm.memset.p0i8.i64(i8* align 1 %lookup_str_map, i8 0, i64 64, i1 false)
-  %5 = bitcast i8* %0 to i64*
-  %6 = getelementptr i64, i64* %5, i64 14
-  %arg0 = load volatile i64, i64* %6, align 8
+  %3 = bitcast i8* %0 to i64*
+  %4 = getelementptr i64, i64* %3, i64 14
+  %arg0 = load volatile i64, i64* %4, align 8
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 7, i64 %arg0)
-  br label %scratch_lookup_merge
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
+  store i64 0, i64* %"@x_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i8*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", i8* %lookup_str_map, i64 0)
+  %6 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  ret i64 0
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn

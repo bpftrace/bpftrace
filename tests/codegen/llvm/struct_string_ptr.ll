@@ -39,33 +39,27 @@ entry:
   %lookup_str_cond = icmp ne i8* %lookup_str_map, null
   br i1 %lookup_str_cond, label %lookup_str_merge, label %lookup_str_failure
 
-scratch_lookup_failure:                           ; preds = %lookup_str_failure
-  ret i64 0
-
-scratch_lookup_merge:                             ; preds = %lookup_str_merge
-  %6 = bitcast i64* %"@mystr_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 0, i64* %"@mystr_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i8*, i64)*)(%"struct map_t"* @AT_mystr, i64* %"@mystr_key", i8* %lookup_str_map, i64 0)
-  %7 = bitcast i64* %"@mystr_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  ret i64 0
-
 lookup_str_failure:                               ; preds = %entry
-  br label %scratch_lookup_failure
+  ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
   call void @llvm.memset.p0i8.i64(i8* align 1 %lookup_str_map, i8 0, i64 64, i1 false)
-  %8 = load i64, i64* %"$foo", align 8
-  %9 = add i64 %8, 0
+  %6 = load i64, i64* %"$foo", align 8
+  %7 = add i64 %6, 0
+  %8 = bitcast i64* %"struct Foo.str" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* %"struct Foo.str", i32 8, i64 %7)
+  %9 = load i64, i64* %"struct Foo.str", align 8
   %10 = bitcast i64* %"struct Foo.str" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* %"struct Foo.str", i32 8, i64 %9)
-  %11 = load i64, i64* %"struct Foo.str", align 8
-  %12 = bitcast i64* %"struct Foo.str" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %9)
+  %11 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store i64 0, i64* %"@mystr_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i8*, i64)*)(%"struct map_t"* @AT_mystr, i64* %"@mystr_key", i8* %lookup_str_map, i64 0)
+  %12 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %11)
-  br label %scratch_lookup_merge
+  ret i64 0
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn

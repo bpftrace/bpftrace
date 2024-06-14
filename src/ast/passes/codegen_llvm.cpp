@@ -735,31 +735,12 @@ void CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    Function *parent = b_.GetInsertBlock()->getParent();
-    BasicBlock *lookup_failure_block = BasicBlock::Create(
-        module_->getContext(), "scratch_lookup_failure", parent);
-    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
-                                                        "scratch_lookup_merge",
-                                                        parent);
-
-    Value *buf = b_.CreateGetStrScratchMap(str_id_,
-                                           lookup_failure_block,
-                                           call.loc);
+    Value *buf = b_.CreateGetStrScratchMap(str_id_, nullptr, call.loc);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
     b_.CreateProbeReadStr(
         ctx_, buf, strlen, expr_, arg0->type.GetAS(), call.loc);
-    b_.CreateBr(lookup_merge_block);
-
-    // Think of this like an assert(). In practice, we cannot fail to lookup a
-    // percpu array map unless we have a coding error. Rather than have some
-    // kind of complicated fallback path where we provide an error string for
-    // our caller, just indicate to verifier we want to terminate execution.
-    b_.SetInsertPoint(lookup_failure_block);
-    createRet();
-
-    b_.SetInsertPoint(lookup_merge_block);
 
     str_id_++;
     expr_ = buf;

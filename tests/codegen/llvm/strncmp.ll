@@ -52,39 +52,33 @@ pred_true:                                        ; preds = %strcmp.false
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
   ret i64 1
 
-scratch_lookup_failure:                           ; preds = %lookup_str_failure
-  ret i64 1
-
-scratch_lookup_merge:                             ; preds = %lookup_str_merge
-  %8 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %9 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %9, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm, i64 16)
-  %10 = bitcast i1* %strcmp.result to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  store i1 false, i1* %strcmp.result, align 1
-  %11 = getelementptr i8, i8* %lookup_str_map, i32 0
-  %12 = load i8, i8* %11, align 1
-  %13 = bitcast [16 x i8]* %comm to i8*
-  %14 = getelementptr i8, i8* %13, i32 0
-  %15 = load i8, i8* %14, align 1
-  %strcmp.cmp = icmp ne i8 %12, %15
-  br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
-
 lookup_str_failure:                               ; preds = %entry
-  br label %scratch_lookup_failure
+  ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
   call void @llvm.memset.p0i8.i64(i8* align 1 %lookup_str_map, i8 0, i64 64, i1 false)
-  %16 = ptrtoint i8* %0 to i64
-  %17 = add i64 %16, 8
-  %18 = inttoptr i64 %17 to i64*
-  %19 = load volatile i64, i64* %18, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %19)
-  br label %scratch_lookup_merge
+  %8 = ptrtoint i8* %0 to i64
+  %9 = add i64 %8, 8
+  %10 = inttoptr i64 %9 to i64*
+  %11 = load volatile i64, i64* %10, align 8
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %11)
+  %12 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  %13 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %13, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm, i64 16)
+  %14 = bitcast i1* %strcmp.result to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
+  store i1 false, i1* %strcmp.result, align 1
+  %15 = getelementptr i8, i8* %lookup_str_map, i32 0
+  %16 = load i8, i8* %15, align 1
+  %17 = bitcast [16 x i8]* %comm to i8*
+  %18 = getelementptr i8, i8* %17, i32 0
+  %19 = load i8, i8* %18, align 1
+  %strcmp.cmp = icmp ne i8 %16, %19
+  br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
-strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %scratch_lookup_merge
+strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %lookup_str_merge
   %20 = load i1, i1* %strcmp.result, align 1
   %21 = bitcast i1* %strcmp.result to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
@@ -105,8 +99,8 @@ strcmp.loop:                                      ; preds = %strcmp.loop_null_cm
   %strcmp.cmp3 = icmp ne i8 %24, %27
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
-strcmp.loop_null_cmp:                             ; preds = %scratch_lookup_merge
-  %strcmp.cmp_null = icmp eq i8 %12, 0
+strcmp.loop_null_cmp:                             ; preds = %lookup_str_merge
+  %strcmp.cmp_null = icmp eq i8 %16, 0
   br i1 %strcmp.cmp_null, label %strcmp.done, label %strcmp.loop
 
 strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
