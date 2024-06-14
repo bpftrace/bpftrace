@@ -445,8 +445,14 @@ CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
                              idx);
 }
 
-// createGetScratchMap will jump to failure_callback if it cannot find the map
-// value
+/*
+ * Failure to lookup a scratch map will result in a jump to the
+ * failure_callback, if non-null.
+ *
+ * In practice, a properly constructed percpu lookup will never fail. The only
+ * way it can fail is if we have a bug in our code. So a null failure_callback
+ * simply causes a blind 0 return. See comment in function for why this is ok.
+ */
 CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             const std::string &name,
                                             PointerType *val_ptr_ty,
@@ -477,7 +483,21 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
   CreateDebugOutput("unable to find the scratch map value for " + name,
                     std::vector<Value *>{},
                     loc);
-  CreateBr(failure_callback);
+  if (failure_callback) {
+    CreateBr(failure_callback);
+  } else {
+    /*
+     * Think of this like an assert(). In practice, we cannot fail to lookup a
+     * percpu array map unless we have a coding error. Rather than have some
+     * kind of complicated fallback path where we provide an error string for
+     * our caller, just indicate to verifier we want to terminate execution.
+     *
+     * Note that we blindly return 0 in contrast to the logic inside
+     * CodegenLLVM::createRet(). That's b/c the return value doesn't matter
+     * if it'll never get executed.
+     */
+    CreateRet(getInt64(0));
+  }
 
   SetInsertPoint(lookup_merge_block);
   return call;

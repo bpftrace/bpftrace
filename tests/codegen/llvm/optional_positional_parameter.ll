@@ -46,33 +46,27 @@ entry:
   %lookup_str_cond = icmp ne i8* %lookup_str_map, null
   br i1 %lookup_str_cond, label %lookup_str_merge, label %lookup_str_failure
 
-scratch_lookup_failure:                           ; preds = %lookup_str_failure
-  ret i64 0
-
-scratch_lookup_merge:                             ; preds = %lookup_str_merge
-  %7 = bitcast [1 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  %8 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  store i64 0, i64* %"@y_key", align 8
-  %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, i8*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", i8* %lookup_str_map, i64 0)
-  %9 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  ret i64 0
-
 lookup_str_failure:                               ; preds = %entry
-  br label %scratch_lookup_failure
+  ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
   call void @llvm.memset.p0i8.i64(i8* align 1 %lookup_str_map, i8 0, i64 64, i1 false)
-  %10 = bitcast [1 x i8]* %str to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  %11 = bitcast [1 x i8]* %str to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %11, i8 0, i64 1, i1 false)
+  %7 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 1, i1 false)
   store [1 x i8] zeroinitializer, [1 x i8]* %str, align 1
-  %12 = ptrtoint [1 x i8]* %str to i64
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %12)
-  br label %scratch_lookup_merge
+  %9 = ptrtoint [1 x i8]* %str to i64
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 (i8*, i32, i64)*)(i8* %lookup_str_map, i32 64, i64 %9)
+  %10 = bitcast [1 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %11 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store i64 0, i64* %"@y_key", align 8
+  %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, i8*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", i8* %lookup_str_map, i64 0)
+  %12 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  ret i64 0
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
