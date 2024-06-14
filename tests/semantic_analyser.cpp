@@ -3790,6 +3790,25 @@ kfunc:func_1,tracepoint:sched:sched_one { args }
 )");
 }
 
+TEST(semantic_analyser, buf_strlen_too_large)
+{
+  auto bpftrace = get_mock_bpftrace();
+  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  configs.set(ConfigKeyInt::max_strlen, 9999999999);
+
+  test_error(*bpftrace, "uprobe:/bin/sh:f { buf(arg0, 4) }", R"(
+stdin:1:20-32: ERROR: BPFTRACE_MAX_STRLEN too large to use on buffer (9999999999 > 4294967295)
+uprobe:/bin/sh:f { buf(arg0, 4) }
+                   ~~~~~~~~~~~~
+)");
+
+  test_error(*bpftrace, "uprobe:/bin/sh:f { buf(arg0) }", R"(
+stdin:1:20-29: ERROR: BPFTRACE_MAX_STRLEN too large to use on buffer (9999999999 > 4294967295)
+uprobe:/bin/sh:f { buf(arg0) }
+                   ~~~~~~~~~
+)");
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace
