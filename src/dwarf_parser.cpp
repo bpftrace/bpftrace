@@ -50,8 +50,9 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   }
 }
 
-std::vector<uint64_t> Dwarf::get_function_locations(const std::string &function,
-                                                    bool include_inlined)
+std::vector<TrapLocation> Dwarf::get_function_locations(
+    const std::string &function,
+    bool include_inlined)
 {
   // Locating every inlined instances of a function is expensive,
   // so we only do it if the user explicitly requests it.
@@ -62,14 +63,33 @@ std::vector<uint64_t> Dwarf::get_function_locations(const std::string &function,
     if (syms.GetSize() != 1)
       return {};
     auto sym = syms.GetContextAtIndex(0).GetSymbol();
-    return { sym.GetStartAddress().GetFileAddress() +
-             sym.GetPrologueByteSize() };
+    return { TrapLocation{
+        .name = function,
+        .symbol_name = sym.GetName(),
+        .file_address = sym.GetStartAddress().GetFileAddress(),
+        .load_address = 0,
+        .offset = sym.GetPrologueByteSize(),
+    } };
   } else {
     auto bps = target_.BreakpointCreateByName(function.c_str());
-    std::vector<uint64_t> result(bps.GetNumLocations());
+    std::vector<TrapLocation> result(bps.GetNumLocations());
     for (uint32_t i = 0; i < bps.GetNumLocations(); i++) {
       auto loc = bps.GetLocationAtIndex(i);
-      result[i] = loc.GetAddress().GetFileAddress();
+      auto sym = loc.GetAddress().GetSymbol();
+
+      size_t offset = 0;
+      auto trap_address = loc.GetAddress().GetFileAddress();
+      auto sym_address = sym.GetStartAddress().GetFileAddress();
+      if (__builtin_sub_overflow(trap_address, sym_address, &offset))
+        offset = 0; // Reset the offset to 0, if the subtraction failed
+
+      result[i] = TrapLocation{
+        .name = function,
+        .symbol_name = sym.GetName(),
+        .file_address = sym_address,
+        .load_address = 0,
+        .offset = offset,
+      };
     }
     return result;
   }
