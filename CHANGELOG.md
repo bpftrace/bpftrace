@@ -31,6 +31,7 @@ and this project adheres to
 - Remove limit on BPFTRACE_MAX_STRLEN
   - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
   - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
+  - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
@@ -49,7 +50,7 @@ and this project adheres to
 - Allow trailing semicolons and empty blocks in config syntax
   - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
 - Allow attaching to 'spin_lock' functions with mitigations to prevent deadlocks
-  - [#3206](https://github.com/bpftrace/bpftrace/pull/3206) 
+  - [#3206](https://github.com/bpftrace/bpftrace/pull/3206)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
