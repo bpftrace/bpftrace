@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "ast/async_event_types.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "struct.h"
@@ -434,7 +435,8 @@ SizedType CreateKSym()
 
 SizedType CreateBuffer(size_t size)
 {
-  return SizedType(Type::buffer, size);
+  auto metadata_headroom_bits = sizeof(AsyncEvent::Buf) * 8;
+  return SizedType(Type::buffer, size + metadata_headroom_bits);
 }
 
 SizedType CreateTimestamp()
