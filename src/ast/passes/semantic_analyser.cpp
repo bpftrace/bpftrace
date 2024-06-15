@@ -760,7 +760,6 @@ void SemanticAnalyser::visit(Call &call)
       buffer_size = max_buffer_size;
     }
 
-    buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
     // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
     // The result of buf is copied to bpf stack. Hence kernel probe read
