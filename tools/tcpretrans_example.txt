@@ -5,17 +5,17 @@ This tool traces the kernel TCP retransmit function to show details of these
 retransmits. For example:
 
 # ./tcpretrans.bt
-TIME     PID               LADDR:LPORT           RADDR:RPORT  STATE
-01:55:05 0        10.153.223.157:22       69.53.245.40:34619  ESTABLISHED
-01:55:05 0        10.153.223.157:22       69.53.245.40:34619  ESTABLISHED
-01:55:17 0        10.153.223.157:22       69.53.245.40:22957  ESTABLISHED
-[...]
+TIME     PID      NETNS               LADDR:LPORT           RADDR:RPORT  STATE
+21:54:32 0        4026531992    192.168.5.1:29716     192.168.5.2:80     SYN_SENT
+21:54:36 0        4026531992    192.168.5.1:29718     192.168.5.2:80     SYN_SENT
+21:54:36 59827    4026532261    192.168.5.2:80        192.168.5.1:29718  ESTABLISHED
 
 This output shows three TCP retransmits, the first two were for an IPv4
-connection from 10.153.223.157 port 22 to 69.53.245.40 port 34619. The TCP
-state was "ESTABLISHED" at the time of the retransmit. The on-CPU PID at the
-time of the retransmit is printed, in this case 0 (the kernel, which will
-be the case most of the time).
+connection from 192.168.5.1 to 192.168.5.2 port 80. The TCP state was
+"SYN_SENT" at the time of the retransmit. The on-CPU PID at the time of
+the retransmit is printed, in this case 0 (the kernel, which will
+be the case most of the time). The NETNS column shows which netns this
+connection belongs.
 
 Retransmits are usually a sign of poor network health, and this tool is
 useful for their investigation. Unlike using tcpdump, this tool has very
