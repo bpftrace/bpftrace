@@ -240,13 +240,27 @@ public:
     return size_bits_ / 8;
   }
 
-  void SetSize(size_t size)
+  void SetSize(size_t byte_size)
   {
-    size_bits_ = size * 8;
-    if (IsIntTy()) {
-      assert(size == 0 || size == 1 || size == 8 || size == 16 || size == 32 ||
-             size == 64);
-    }
+    if (IsIntTy())
+      SetIntBitWidth(byte_size * 8);
+    else
+      size_bits_ = byte_size * 8;
+  }
+
+  void SetIntBitWidth(size_t bits)
+  {
+    assert(IsIntTy());
+    // Truncate integers too large to fit in BPF registers (64-bits).
+    if (bits > 64)
+      bits = 64;
+    // Zero sized integers are not usually valid. However, during semantic
+    // analysis when we're inferring types, the first pass may not have
+    // enough information to figure out the exact size of the integer. Later
+    // passes infer the exact size.
+    assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
+           bits == 64);
+    size_bits_ = bits;
   }
 
   size_t GetIntBitWidth() const

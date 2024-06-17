@@ -45,6 +45,33 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+# NAME uprobe arg by index - 128-bits integer
+# PROG uprobe:./testprogs/uprobe_test:uprobeFunctionUint128 { printf("x = %x\ny = %x\nz = %x\nw = %x\n", arg0, arg1, arg2, arg3); exit(); }
+# EXPECT x = 9abcdef0
+#        y = efefefef
+#        z = cdcdcdcd
+#        w = abababab
+# REQUIRES_FEATURE dwarf
+# TIMEOUT 5
+# BEFORE ./testprogs/uprobe_test
+
+# NAME uprobe arg by name - 128-bits integer
+# PROG uprobe:./testprogs/uprobe_test:uprobeFunctionUint128 { printf("x = %x\ny = %x\nz = %x\nw = %x\n", args.x, args.y, args.z, args.w); exit(); }
+# EXPECT x = 9abcdef0
+#        y = efefefef
+#        z = cdcdcdcd
+#        w = abababab
+# REQUIRES_FEATURE dwarf
+# TIMEOUT 5
+# BEFORE ./testprogs/uprobe_test
+
+NAME uprobe arg by name - struct with 128-bits integer
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->d = %x\n", args.foo1->d); exit(); }
+EXPECT foo1->d = 9abcdef0
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
 NAME uprobe skip inlined function
 PROG config = { probe_inline = 0 }
      uprobe:./testprogs/inline_function:square { @count++ }

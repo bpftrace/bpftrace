@@ -450,7 +450,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
 
   sym.name = "";
   option.use_debug_file = 1;
-  option.use_symbol_type = 0xffffffff;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
 
   if (symbol.empty()) {
     sym.address = probe_.address;
@@ -530,7 +530,7 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
 {
   struct bcc_symbol_option option = {};
   option.use_debug_file = 0;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
   struct utsname buf;
 
   uname(&buf);
@@ -1064,7 +1064,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   std::sort(std::begin(syms), std::end(syms));
 
   option.use_debug_file = 1;
-  option.use_symbol_type = 0xffffffff;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
 
   std::vector<struct addr_offset> addrs;
   std::set<uint64_t> set;

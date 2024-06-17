@@ -1,4 +1,4 @@
-set(testprog_cflags "-g -O0")
+set(testprog_cflags "-g -O0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer")
 if(LLVM_VERSION_MAJOR VERSION_LESS 13)
   # CI's GCC compile the testprogs using DWARF version 5
   # LLDB doesn't support DWARF5 before version 13, so we force DWARF4
