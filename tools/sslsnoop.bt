@@ -12,6 +12,8 @@
  * 15-Dec-2021	Tao Xu	created this.
  */
 
+config = { missing_probes = "ignore" }
+
 BEGIN
 {
 	printf("Tracing SSL/TLS handshake... Hit Ctrl-C to end.\n");

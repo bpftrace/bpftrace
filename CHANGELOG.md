@@ -87,6 +87,8 @@ and this project adheres to
   - [#3156](https://github.com/bpftrace/bpftrace/pull/3156)
 #### Docs
 #### Tools
+- Ignore warnings for missing probes
+  - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
 
 ## [0.20.0] 2024-01-22
 

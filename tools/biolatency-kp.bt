@@ -11,6 +11,8 @@
  * 13-Sep-2018	Brendan Gregg	Created this.
  */
 
+config = { missing_probes = "ignore" }
+
 BEGIN
 {
 	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");

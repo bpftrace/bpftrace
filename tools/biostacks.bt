@@ -13,6 +13,8 @@
  * 19-Mar-2019  Brendan Gregg   Created this.
  */
 
+config = { missing_probes = "ignore" }
+
 BEGIN
 {
 	printf("Tracing block I/O with init stacks. Hit Ctrl-C to end.\n");
