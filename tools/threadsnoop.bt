@@ -13,6 +13,8 @@
  * 15-Feb-2019  Brendan Gregg   Created this.
  */
 
+config = { missing_probes = "ignore" }
+
 BEGIN
 {
 	printf("%-15s %7s %-16s %s\n", "TIME", "PID", "COMM", "FUNC");

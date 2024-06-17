@@ -14,10 +14,12 @@
  * 31-May-2024  Rong Tao        Add folio support.
  */
 
+config = { missing_probes = "ignore" }
+
 /**
  * kernel commit c9bdf768dd93("mm: convert swap_readpage() to swap_read_folio()")
- * convert swap_readpage() to swap_read_folio(), try attaching two kprobes, one
- * will trigger a warning and the other will be attached successfully.
+ * convert swap_readpage() to swap_read_folio(), try attaching two kprobes,
+ * only one will succeed and the other will be silently ignored.
  */
 kprobe:swap_readpage,
 kprobe:swap_read_folio
