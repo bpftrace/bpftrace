@@ -211,9 +211,9 @@ class Runner(object):
             try:
                 if expect.mode == "text":
                     # Raw text match on an entire line, ignoring leading/trailing whitespace
-                    return re.search(f"^\s*{re.escape(expect.expect)}\s*$", output, re.M)
+                    return re.search(f"^\\s*{re.escape(expect.expect)}\\s*$", output, re.M)
                 elif expect.mode == "text_none":
-                    return not re.search(f"^\s*{re.escape(expect.expect)}\s*$", output, re.M)
+                    return not re.search(f"^\\s*{re.escape(expect.expect)}\\s*$", output, re.M)
                 elif expect.mode == "regex":
                     return re.search(expect.expect, output, re.M)
                 elif expect.mode == "regex_none":
