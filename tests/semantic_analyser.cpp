@@ -1051,7 +1051,7 @@ TEST(semantic_analyser, call_str_state_leak_regression_test)
   // call. This would make the semantic analyser think it's still processing
   // a positional parameter in the second str() call causing confusing error
   // messages.
-  test(R"PROG(kprobe:f { $x = str($1) == "asdf"; $y = str(arg0) })PROG");
+  test(R"PROG(kprobe:f { $x = str($1) == "asdf"; $y = str(arg0, 1) })PROG");
 }
 
 TEST(semantic_analyser, call_buf)
@@ -3378,8 +3378,8 @@ TEST_F(semantic_analyser_btf, short_name)
 
 TEST_F(semantic_analyser_btf, call_path)
 {
-  test("kfunc:func_1 { $k = path( args.foo1 ) }");
-  test("kretfunc:func_1 { $k = path( retval->foo1 ) }");
+  test("kfunc:func_1 { @k = path( args.foo1 ) }");
+  test("kretfunc:func_1 { @k = path( retval->foo1 ) }");
 }
 
 TEST_F(semantic_analyser_btf, call_skb_output)
@@ -3823,6 +3823,61 @@ stdin:1:20-29: ERROR: BPFTRACE_MAX_STRLEN too large to use on buffer (9999999999
 uprobe:/bin/sh:f { buf(arg0) }
                    ~~~~~~~~~
 )");
+}
+
+TEST(semantic_analyser, large_scratch_variables)
+{
+  test_error("BEGIN { $s = str(0, 999) }", R"(
+stdin:1:9-25: ERROR: Value is too big (999 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
+
+Examples:
+    `$s = str(..);` => `$s = str(.., 32);`
+    `$s = str(..);` => `@s = str(..);`
+    `$s = str(..); print($s);` => `print(str(..));`
+
+BEGIN { $s = str(0, 999) }
+        ~~~~~~~~~~~~~~~~
+)");
+
+  test_error("BEGIN { $s = str(0) }", R"(
+stdin:1:9-20: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
+
+Examples:
+    `$s = str(..);` => `$s = str(.., 32);`
+    `$s = str(..);` => `@s = str(..);`
+    `$s = str(..); print($s);` => `print(str(..));`
+
+BEGIN { $s = str(0) }
+        ~~~~~~~~~~~
+)");
+
+  test_error("BEGIN { $l = 1; $b = buf(0, $l) }", R"(
+stdin:1:17-32: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
+
+Examples:
+    `$s = str(..);` => `$s = str(.., 32);`
+    `$s = str(..);` => `@s = str(..);`
+    `$s = str(..); print($s);` => `print(str(..));`
+
+BEGIN { $l = 1; $b = buf(0, $l) }
+                ~~~~~~~~~~~~~~~
+)");
+
+  test_error("kfunc:foo { $p = path((uint8 *)0) }", R"(
+stdin:1:13-34: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
+
+Examples:
+    `$s = str(..);` => `$s = str(.., 32);`
+    `$s = str(..);` => `@s = str(..);`
+    `$s = str(..); print($s);` => `print(str(..));`
+
+kfunc:foo { $p = path((uint8 *)0) }
+            ~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  // Values clamped small enough should fit
+  test("BEGIN { $s = str(0, 10) }");
+  test("BEGIN { $b = buf(0, 10) }");
 }
 
 } // namespace semantic_analyser

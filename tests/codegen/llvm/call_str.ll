@@ -32,10 +32,10 @@ lookup_str_failure:                               ; preds = %entry
   ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
-  call void @llvm.memset.p0.i64(ptr align 1 %lookup_str_map, i8 0, i64 64, i1 false)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_str_map, i32 1024, ptr null)
   %1 = getelementptr i64, ptr %0, i64 14
   %arg0 = load volatile i64, ptr %1, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 64, i64 %arg0)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 1024, i64 %arg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %lookup_str_map, i64 0)
@@ -49,12 +49,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!55}
 !llvm.module.flags = !{!57}
@@ -80,10 +76,10 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !18 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 512, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 8192, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 64, lowerBound: 0)
+!24 = !DISubrange(count: 1024, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
 !27 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !28)
