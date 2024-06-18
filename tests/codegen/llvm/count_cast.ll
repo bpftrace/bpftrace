@@ -6,20 +6,22 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { i8*, i8*, i8*, i8* }
 %"struct map_t.0" = type { i8*, i8* }
 %"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t.2" = type { i8*, i8*, i8*, i8* }
 %print_integer_8_t = type <{ i64, i64, [8 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
+@fmt_string_args = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !45
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !49 {
+define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !59 {
 entry:
   %key = alloca i32, align 4
-  %print_integer_8_t = alloca %print_integer_8_t, align 8
+  %lookup_fmtstr_key = alloca i32, align 4
   %i = alloca i32, align 4
   %ret = alloca i64, align 8
   %"@x_key1" = alloca i64, align 8
@@ -68,95 +70,107 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br label %while_cond
 
 if_body:                                          ; preds = %while_end
-  %12 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
+  %12 = bitcast i32* %lookup_fmtstr_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
-  %13 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 0
-  store i64 30007, i64* %13, align 8
-  %14 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 1
-  store i64 0, i64* %14, align 8
-  %15 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i32 0, i32 2
-  %16 = bitcast [8 x i8]* %15 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %16, i8 0, i64 8, i1 false)
-  %17 = bitcast [8 x i8]* %15 to i64*
-  store i64 6, i64* %17, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, %print_integer_8_t*, i64, i64)*)(%"struct map_t.0"* @ringbuf, %print_integer_8_t* %print_integer_8_t, i64 24, i64 0)
-  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
-  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+  store i32 0, i32* %lookup_fmtstr_key, align 4
+  %lookup_fmtstr_map = call i8* inttoptr (i64 1 to i8* (%"struct map_t.2"*, i32*)*)(%"struct map_t.2"* @fmt_string_args, i32* %lookup_fmtstr_key)
+  %13 = bitcast i32* %lookup_fmtstr_key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
+  %lookup_fmtstr_cond = icmp ne i8* %lookup_fmtstr_map, null
+  br i1 %lookup_fmtstr_cond, label %lookup_fmtstr_merge, label %lookup_fmtstr_failure
 
 if_end:                                           ; preds = %counter_merge, %while_end
   ret i64 0
 
 while_cond:                                       ; preds = %lookup_success2, %lookup_merge
-  %18 = load i32, i32* %i, align 4
-  %num_cpu.cmp = icmp ult i32 %18, 20
+  %14 = load i32, i32* %i, align 4
+  %num_cpu.cmp = icmp ult i32 %14, 20
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %19 = load i32, i32* %i, align 4
-  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %"@x_key1", i32 %19)
+  %15 = load i32, i32* %i, align 4
+  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %"@x_key1", i32 %15)
   %map_lookup_cond4 = icmp ne i8* %lookup_percpu_elem, null
   br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
-  %20 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  %21 = load i64, i64* %ret, align 8
-  %22 = bitcast i64* %ret to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  %23 = bitcast i64* %"@x_key1" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
-  %24 = icmp sgt i64 %21, 5
-  %25 = zext i1 %24 to i64
-  %true_cond = icmp ne i64 %25, 0
+  %16 = bitcast i32* %i to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  %17 = load i64, i64* %ret, align 8
+  %18 = bitcast i64* %ret to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = bitcast i64* %"@x_key1" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
+  %20 = icmp sgt i64 %17, 5
+  %21 = zext i1 %20 to i64
+  %true_cond = icmp ne i64 %21, 0
   br i1 %true_cond, label %if_body, label %if_end
 
 lookup_success2:                                  ; preds = %while_body
   %cast5 = bitcast i8* %lookup_percpu_elem to i64*
-  %26 = load i64, i64* %ret, align 8
-  %27 = load i64, i64* %cast5, align 8
-  %28 = add i64 %27, %26
-  store i64 %28, i64* %ret, align 8
-  %29 = load i32, i32* %i, align 4
-  %30 = add i32 %29, 1
-  store i32 %30, i32* %i, align 4
+  %22 = load i64, i64* %ret, align 8
+  %23 = load i64, i64* %cast5, align 8
+  %24 = add i64 %23, %22
+  store i64 %24, i64* %ret, align 8
+  %25 = load i32, i32* %i, align 4
+  %26 = add i32 %25, 1
+  store i32 %26, i32* %i, align 4
   br label %while_cond
 
 lookup_failure3:                                  ; preds = %while_body
-  %31 = load i32, i32* %i, align 4
-  %error_lookup_cond = icmp eq i32 %31, 0
+  %27 = load i32, i32* %i, align 4
+  %error_lookup_cond = icmp eq i32 %27, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure3
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure3
-  %32 = load i32, i32* %i, align 4
+  %28 = load i32, i32* %i, align 4
   br label %while_end
 
-event_loss_counter:                               ; preds = %if_body
-  %33 = bitcast i32* %key to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %33)
+lookup_fmtstr_failure:                            ; preds = %if_body
+  ret i64 0
+
+lookup_fmtstr_merge:                              ; preds = %if_body
+  %29 = bitcast i8* %lookup_fmtstr_map to %print_integer_8_t*
+  %30 = getelementptr %print_integer_8_t, %print_integer_8_t* %29, i64 0, i32 0
+  store i64 30007, i64* %30, align 8
+  %31 = bitcast i8* %lookup_fmtstr_map to %print_integer_8_t*
+  %32 = getelementptr %print_integer_8_t, %print_integer_8_t* %31, i64 0, i32 1
+  store i64 0, i64* %32, align 8
+  %33 = bitcast i8* %lookup_fmtstr_map to %print_integer_8_t*
+  %34 = getelementptr %print_integer_8_t, %print_integer_8_t* %33, i32 0, i32 2
+  %35 = bitcast [8 x i8]* %34 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %35, i8 0, i64 8, i1 false)
+  %36 = bitcast [8 x i8]* %34 to i64*
+  store i64 6, i64* %36, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, i8*, i64, i64)*)(%"struct map_t.0"* @ringbuf, i8* %lookup_fmtstr_map, i64 24, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+event_loss_counter:                               ; preds = %lookup_fmtstr_merge
+  %37 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %37)
   store i32 0, i32* %key, align 4
   %lookup_elem6 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key)
   %map_lookup_cond10 = icmp ne i8* %lookup_elem6, null
   br i1 %map_lookup_cond10, label %lookup_success7, label %lookup_failure8
 
-counter_merge:                                    ; preds = %lookup_merge9, %if_body
-  %34 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %34)
+counter_merge:                                    ; preds = %lookup_merge9, %lookup_fmtstr_merge
   br label %if_end
 
 lookup_success7:                                  ; preds = %event_loss_counter
-  %35 = bitcast i8* %lookup_elem6 to i64*
-  %36 = atomicrmw add i64* %35, i64 1 seq_cst
+  %38 = bitcast i8* %lookup_elem6 to i64*
+  %39 = atomicrmw add i64* %38, i64 1 seq_cst
   br label %lookup_merge9
 
 lookup_failure8:                                  ; preds = %event_loss_counter
   br label %lookup_merge9
 
 lookup_merge9:                                    ; preds = %lookup_failure8, %lookup_success7
-  %37 = bitcast i32* %key to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %37)
+  %40 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %40)
   br label %counter_merge
 }
 
@@ -173,8 +187,8 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
-!llvm.dbg.cu = !{!45}
-!llvm.module.flags = !{!48}
+!llvm.dbg.cu = !{!55}
+!llvm.module.flags = !{!58}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -221,14 +235,23 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !43)
 !43 = !{!44}
 !44 = !DISubrange(count: 2, lowerBound: 0)
-!45 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !46, globals: !47)
-!46 = !{}
-!47 = !{!0, !22, !36}
-!48 = !{i32 2, !"Debug Info Version", i32 3}
-!49 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !45, retainedNodes: !54)
-!50 = !DISubroutineType(types: !51)
-!51 = !{!21, !52}
-!52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !53, size: 64)
-!53 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!54 = !{!55}
-!55 = !DILocalVariable(name: "ctx", arg: 1, scope: !49, file: !2, type: !52)
+!45 = !DIGlobalVariableExpression(var: !46, expr: !DIExpression())
+!46 = distinct !DIGlobalVariable(name: "fmt_string_args", linkageName: "global", scope: !2, file: !2, type: !47, isLocal: false, isDefinition: true)
+!47 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !48)
+!48 = !{!5, !11, !16, !49}
+!49 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !50, size: 64, offset: 192)
+!50 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !51, size: 64)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 192, elements: !53)
+!52 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!53 = !{!54}
+!54 = !DISubrange(count: 24, lowerBound: 0)
+!55 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !56, globals: !57)
+!56 = !{}
+!57 = !{!0, !22, !36, !45}
+!58 = !{i32 2, !"Debug Info Version", i32 3}
+!59 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !63)
+!60 = !DISubroutineType(types: !61)
+!61 = !{!21, !62}
+!62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)
+!63 = !{!64}
+!64 = !DILocalVariable(name: "ctx", arg: 1, scope: !59, file: !2, type: !62)
