@@ -10,6 +10,8 @@ aot.builtin.cat limited output
 aot.builtin.comm
 aot.builtin.func_uprobe_elf_symtable
 aot.builtin.print args in kfunc
+# AOT shim needs to parse config and set up BPFTRACE_MAX_STRLEN
+aot.call.str_big_printf
 aot.call.cgroup_path
 aot.call.cgroup_path printf
 aot.call.hist_10g
