@@ -214,6 +214,7 @@ bool is_compile_time_func(const std::string &func_name);
 bool is_supported_lang(const std::string &lang);
 bool is_type_name(std::string_view str);
 std::string exec_system(const char *cmd);
+bool is_exe(const std::string &path);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);
 std::string path_for_pid_mountns(int pid, const std::string &path);
