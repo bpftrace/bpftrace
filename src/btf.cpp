@@ -78,7 +78,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 {
   vmlinux_btf = btf__load_vmlinux_btf();
   if (libbpf_get_error(vmlinux_btf)) {
-    LOG(V1) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
+    LOG(V1) << "BTF: failed to find BTF data for vmlinux: " << strerror(errno);
     return;
   }
   btf_objects.push_back(
@@ -94,7 +94,8 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     int err = bpf_btf_get_next_id(id, &id);
     if (err) {
       if (errno != ENOENT)
-        LOG(V1) << "BTF: failed to iterate modules BTF objects";
+        LOG(V1) << "BTF: failed to iterate modules BTF objects: "
+                << strerror(errno);
       break;
     }
 
