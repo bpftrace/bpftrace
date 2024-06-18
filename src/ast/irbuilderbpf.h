@@ -174,6 +174,8 @@ public:
   CallInst *CreateGetStrScratchMap(int idx,
                                    BasicBlock *failure_callback,
                                    const location &loc);
+  CallInst *CreateGetFmtStringArgsScratchMap(BasicBlock *failure_callback,
+                                             const location &loc);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
