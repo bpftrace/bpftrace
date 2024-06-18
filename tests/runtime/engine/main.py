@@ -19,8 +19,7 @@ def main(test_filter, skiplist_file, run_aot_tests):
     skiplist = set()
     if skiplist_file:
         with open(skiplist_file, 'r') as f:
-            for line in f:
-                skiplist.add(line.strip())
+            skiplist = { line.strip() for line in f if not line.startswith("#") }
 
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
