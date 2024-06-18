@@ -3,6 +3,7 @@
 #include <cassert>
 #include <map>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -154,6 +155,8 @@ private:
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
   bool ctx_ = false; // Is bpf program context
+  std::unordered_set<std::string> btf_type_tags_ = {}; // Only populated for
+                                                       // Type::pointer
 
   friend class cereal::access;
   template <typename Archive>
@@ -204,6 +207,18 @@ public:
   void SetAS(AddrSpace as)
   {
     as_ = as;
+  }
+
+  void SetBtfTypeTags(std::unordered_set<std::string> &&tags)
+  {
+    assert(IsPtrTy());
+    btf_type_tags_ = std::move(tags);
+  }
+
+  const std::unordered_set<std::string> &GetBtfTypeTags() const
+  {
+    assert(IsPtrTy());
+    return btf_type_tags_;
   }
 
   bool IsCtxAccess() const

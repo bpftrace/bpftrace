@@ -76,6 +76,8 @@ and this project adheres to
   - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
 - Fix crash when assigning a record type to a map
   - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
+- Fix type resolution for pointers with BTF_KIND_TYPE_TAG
+  - [#3240](https://github.com/bpftrace/bpftrace/pull/3240)
 #### Security
 - Don't unpack kernel headers or look in tmp
   - [#3156](https://github.com/bpftrace/bpftrace/pull/3156)

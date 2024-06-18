@@ -97,3 +97,11 @@ PROG kprobe:kvm:x86_emulate_insn { $ctxt = (struct x86_emulate_ctxt *) arg0; pri
 EXPECT Attaching 1 probe...
 TIMEOUT 2
 REQUIRES lsmod | grep '^kvm'
+
+# This test only matters on Clang-built kernels, which support btf_type_tag
+# and require special handling in bpftrace
+NAME btf_type_tag_access
+PROG BEGIN { printf("SUCCESS %d\n", curtask->parent->pid); exit() }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+TIMEOUT 5
+REQUIRES_FEATURE btf
