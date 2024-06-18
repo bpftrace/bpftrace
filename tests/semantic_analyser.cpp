@@ -3757,6 +3757,16 @@ BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }
              false);
 }
 
+TEST(semantic_analyser, for_loop_no_ctx_access)
+{
+  test_error("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }",
+             R"(
+stdin:1:45-49: ERROR: 'arg0' builtin is not allowed in a for-loop
+kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
+                                            ~~~~
+)");
+}
+
 TEST_F(semantic_analyser_btf, args_builtin_mixed_probes)
 {
   test_error("kfunc:func_1,tracepoint:sched:sched_one { args }", R"(

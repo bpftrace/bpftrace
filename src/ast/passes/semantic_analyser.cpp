@@ -355,8 +355,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                "using the 'probe' builtin instead.";
       }
     }
-  } else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
-             builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+  } else if (builtin.is_argx()) {
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
@@ -2139,6 +2138,20 @@ void SemanticAnalyser::visit(For &f)
   loop_depth_++;
   accept_statements(f.stmts);
   loop_depth_--;
+
+  // Currently, we do not pass BPF context to the callback so disable builtins
+  // which require ctx access.
+  CollectNodes<Builtin> builtins;
+  for (auto *stmt : *f.stmts) {
+    builtins.run(*stmt);
+  }
+  for (const Builtin &builtin : builtins.nodes()) {
+    if (builtin.type.IsCtxAccess() || builtin.is_argx() ||
+        builtin.ident == "retval") {
+      LOG(ERROR, builtin.loc, err_)
+          << "'" << builtin.ident << "' builtin is not allowed in a for-loop";
+    }
+  }
 
   // Decl variable is not valid beyond this for-loop
   variable_val_[scope_].erase(decl_name);

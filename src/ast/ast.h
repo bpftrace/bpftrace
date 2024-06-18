@@ -199,6 +199,13 @@ public:
   std::string ident;
   int probe_id;
 
+  // Check if the builtin is 'arg0' - 'arg9'
+  bool is_argx() const
+  {
+    return !ident.compare(0, 3, "arg") && ident.size() == 4 &&
+           ident.at(3) >= '0' && ident.at(3) <= '9';
+  }
+
 private:
   Builtin(const Builtin &other) = default;
 };

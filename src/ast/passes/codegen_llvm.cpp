@@ -405,10 +405,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       Value *expr = expr_;
       expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
     }
-  } else if ((!builtin.ident.compare(0, 3, "arg") &&
-              builtin.ident.size() == 4 && builtin.ident.at(3) >= '0' &&
-              builtin.ident.at(3) <= '9') ||
-             builtin.ident == "retval") {
+  } else if (builtin.is_argx() || builtin.ident == "retval") {
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.type.is_funcarg) {
@@ -429,8 +426,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       return;
     }
 
-    if (!builtin.ident.compare(0, 3, "arg") &&
-        probe_type == ProbeType::rawtracepoint)
+    if (builtin.is_argx() && probe_type == ProbeType::rawtracepoint)
       expr_ = b_.CreateRawTracepointArg(ctx_, builtin.ident);
     else
       expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
