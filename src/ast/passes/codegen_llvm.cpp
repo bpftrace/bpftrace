@@ -3345,21 +3345,23 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                << " does not match LLVM offset=" << expected_offset;
   }
 
-  AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
-  // as the struct is not packed we need to memset it.
+  Value *fmt_args = b_.CreateGetFmtStringArgsScratchMap(nullptr, call.loc);
+  // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
-  Value *id_offset = b_.CreateGEP(fmt_struct,
-                                  fmt_args,
-                                  { b_.getInt32(0), b_.getInt32(0) });
+  Value *id_offset = b_.CreateGEP(
+      fmt_struct,
+      b_.CreatePointerCast(fmt_args, fmt_struct->getPointerTo()),
+      { b_.getInt32(0), b_.getInt32(0) });
   b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
 
   for (size_t i = 1; i < call.vargs.size(); i++) {
     Expression &arg = *call.vargs.at(i);
     auto scoped_del = accept(&arg);
-    Value *offset = b_.CreateGEP(fmt_struct,
-                                 fmt_args,
-                                 { b_.getInt32(0), b_.getInt32(i) });
+    Value *offset = b_.CreateGEP(
+        fmt_struct,
+        b_.CreatePointerCast(fmt_args, fmt_struct->getPointerTo()),
+        { b_.getInt32(0), b_.getInt32(i) });
     if (needMemcpy(arg.type))
       b_.CreateMemcpyBPF(offset, expr_, arg.type.GetSize());
     else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
@@ -3371,7 +3373,6 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   }
 
   b_.CreateOutput(ctx_, fmt_args, struct_size, &call.loc);
-  b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
 }
 
@@ -3488,23 +3489,28 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   StructType *print_struct = b_.GetStructType(struct_name.str(),
                                               elements,
                                               true);
-  AllocaInst *buf = b_.CreateAllocaBPF(print_struct, struct_name.str());
+  Value *buf = b_.CreateGetFmtStringArgsScratchMap(nullptr, call.loc);
   size_t struct_size = datalayout().getTypeAllocSize(print_struct);
 
   // Store asyncactionid:
   b_.CreateStore(
       b_.getInt64(asyncactionint(AsyncAction::print_non_map)),
-      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
+      b_.CreateGEP(print_struct,
+                   b_.CreatePointerCast(buf, print_struct->getPointerTo()),
+                   { b_.getInt64(0), b_.getInt32(0) }));
 
   // Store print id
   b_.CreateStore(
       b_.getInt64(id),
-      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+      b_.CreateGEP(print_struct,
+                   b_.CreatePointerCast(buf, print_struct->getPointerTo()),
+                   { b_.getInt64(0), b_.getInt32(1) }));
 
   // Store content
-  Value *content_offset = b_.CreateGEP(print_struct,
-                                       buf,
-                                       { b_.getInt32(0), b_.getInt32(2) });
+  Value *content_offset = b_.CreateGEP(
+      print_struct,
+      b_.CreatePointerCast(buf, print_struct->getPointerTo()),
+      { b_.getInt32(0), b_.getInt32(2) });
   b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type.GetSize());
   if (needMemcpy(arg.type)) {
     if (onStack(arg.type))
@@ -3518,7 +3524,6 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   }
 
   b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
-  b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
 
@@ -3695,6 +3700,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         MapKey({ CreateInt32() }),
                         CreateArray(max_strlen, CreateInt8()));
   }
+
   int loss_cnt_key_size = sizeof(bpftrace_.event_loss_cnt_key_) * 8;
   int loss_cnt_val_size = sizeof(bpftrace_.event_loss_cnt_val_) * 8;
   createMapDefinition(to_string(MapType::EventLossCounter),
@@ -3702,6 +3708,15 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                       1,
                       MapKey({ CreateInt(loss_cnt_key_size) }),
                       CreateInt(loss_cnt_val_size));
+
+  if (resources.max_fmtstring_args_size > 0) {
+    createMapDefinition(to_string(MapType::FmtStringArgs),
+                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        1,
+                        MapKey({ CreateInt32() }),
+                        CreateArray(resources.max_fmtstring_args_size,
+                                    CreateInt8()));
+  }
 }
 
 void CodegenLLVM::generate_global_vars(const RequiredResources &resources)
