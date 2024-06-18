@@ -3294,9 +3294,17 @@ void CodegenLLVM::createFormatStringCall(Call &call,
         fmt_struct,
         b_.CreatePointerCast(fmt_args, fmt_struct->getPointerTo()),
         { b_.getInt32(0), b_.getInt32(i) });
-    if (needMemcpy(arg.type))
-      b_.CREATE_MEMCPY(offset, expr_, arg.type.GetSize(), 1);
-    else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
+    if (needMemcpy(arg.type)) {
+      if (shouldBeOnStackAlready(arg.type))
+        b_.CREATE_MEMCPY(offset, expr_, arg.type.GetSize(), 1);
+      else
+        b_.CreateProbeRead(ctx_,
+                           offset,
+                           b_.getInt32(arg.type.GetSize()),
+                           expr_,
+                           find_addrspace_stack(arg.type),
+                           call.loc);
+    } else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
       b_.CreateStore(
           b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.IsSigned()),
           offset);
