@@ -3311,7 +3311,7 @@ MDNode *CodegenLLVM::createLoopMetadata()
 
 void CodegenLLVM::createFormatStringCall(Call &call,
                                          int id,
-                                         CallArgs &call_args,
+                                         const CallArgs &call_args,
                                          const std::string &call_name,
                                          AsyncAction async_action)
 {
@@ -3323,8 +3323,8 @@ void CodegenLLVM::createFormatStringCall(Call &call,
    */
   std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
 
-  auto &args = std::get<1>(call_args.at(id));
-  for (Field &arg : args) {
+  const auto &args = std::get<1>(call_args.at(id));
+  for (const Field &arg : args) {
     llvm::Type *ty = b_.GetType(arg.type);
     elements.push_back(ty);
   }
@@ -3333,10 +3333,16 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                               false);
   int struct_size = datalayout().getTypeAllocSize(fmt_struct);
 
+  // Check that offsets created during resource analysis match what LLVM
+  // expects. This is just a guard rail against bad padding analysis logic.
   auto *struct_layout = datalayout().getStructLayout(fmt_struct);
   for (size_t i = 0; i < args.size(); i++) {
-    Field &arg = args[i];
-    arg.offset = struct_layout->getElementOffset(i + 1); // +1 for the id field
+    size_t offset = static_cast<size_t>(args[i].offset);
+    // +1 for the id field
+    size_t expected_offset = struct_layout->getElementOffset(i + 1);
+    if (offset != expected_offset)
+      LOG(BUG) << "Calculated offset=" << offset
+               << " does not match LLVM offset=" << expected_offset;
   }
 
   AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
