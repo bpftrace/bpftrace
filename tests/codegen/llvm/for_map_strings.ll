@@ -20,6 +20,8 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !68 {
 entry:
+  %"@map_val" = alloca [4 x i8], align 1
+  %"@map_key" = alloca [4 x i8], align 1
   %str1 = alloca [4 x i8], align 1
   %str = alloca [4 x i8], align 1
   %1 = bitcast [4 x i8]* %str to i8*
@@ -28,9 +30,23 @@ entry:
   %2 = bitcast [4 x i8]* %str1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store [4 x i8] c"abc\00", [4 x i8]* %str1, align 1
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, [4 x i8]*, i64)*)(%"struct map_t"* @AT_map, [4 x i8]* %str1, [4 x i8]* %str, i64 0)
-  %3 = bitcast [4 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
+  %3 = bitcast [4 x i8]* %"@map_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  %4 = bitcast [4 x i8]* %"@map_key" to [4 x i8]**
+  %5 = zext [4 x i8]* %str1 to i64
+  store i64 %5, [4 x i8]** %4, align 8
+  %6 = bitcast [4 x i8]* %str1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %7 = bitcast [4 x i8]* %"@map_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store [4 x i8]* %str, [4 x i8]* %"@map_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, [4 x i8]*, i64)*)(%"struct map_t"* @AT_map, [4 x i8]* %"@map_key", [4 x i8]* %"@map_val", i64 0)
+  %8 = bitcast [4 x i8]* %"@map_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %9 = bitcast [4 x i8]* %"@map_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
+  %10 = bitcast [4 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   %for_each_map_elem = call i64 inttoptr (i64 164 to i64 (%"struct map_t"*, i64 (i8*, i8*, i8*, i8*)*, i8*, i64)*)(%"struct map_t"* @AT_map, i64 (i8*, i8*, i8*, i8*)* @map_for_each_cb, i8* null, i64 0)
   ret i64 0
 }
@@ -44,30 +60,27 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !74 {
   %"@x_key" = alloca i64, align 8
   %"$kv" = alloca %"string[4]_string[4]__tuple_t", align 8
+  %key = load [4 x i8], i8* %1, align 1
+  %val = load [4 x i8], i8* %2, align 1
   %5 = bitcast %"string[4]_string[4]__tuple_t"* %"$kv" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   %6 = bitcast %"string[4]_string[4]__tuple_t"* %"$kv" to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %6, i8 0, i64 8, i1 false)
   %7 = getelementptr %"string[4]_string[4]__tuple_t", %"string[4]_string[4]__tuple_t"* %"$kv", i32 0, i32 0
-  %8 = bitcast [4 x i8]* %7 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %8, i8* align 1 %1, i64 4, i1 false)
-  %9 = getelementptr %"string[4]_string[4]__tuple_t", %"string[4]_string[4]__tuple_t"* %"$kv", i32 0, i32 1
-  %10 = bitcast [4 x i8]* %9 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %10, i8* align 1 %2, i64 4, i1 false)
-  %11 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store [4 x i8] %key, [4 x i8]* %7, align 1
+  %8 = getelementptr %"string[4]_string[4]__tuple_t", %"string[4]_string[4]__tuple_t"* %"$kv", i32 0, i32 1
+  store [4 x i8] %val, [4 x i8]* %8, align 1
+  %9 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i64 0, i64* %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, %"string[4]_string[4]__tuple_t"*, i64)*)(%"struct map_t.0"* @AT_x, i64* %"@x_key", %"string[4]_string[4]__tuple_t"* %"$kv", i64 0)
-  %12 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %10 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
-
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

@@ -19,6 +19,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !66 {
 entry:
+  %"@mystr_val" = alloca [64 x i8], align 1
   %"@mystr_key" = alloca i64, align 8
   %"struct Foo.str" = alloca i64, align 8
   %lookup_str_key = alloca i32, align 4
@@ -56,9 +57,14 @@ lookup_str_merge:                                 ; preds = %entry
   %11 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
   store i64 0, i64* %"@mystr_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i8*, i64)*)(%"struct map_t"* @AT_mystr, i64* %"@mystr_key", i8* %lookup_str_map, i64 0)
-  %12 = bitcast i64* %"@mystr_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %12 = bitcast [64 x i8]* %"@mystr_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  store i8* %lookup_str_map, [64 x i8]* %"@mystr_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [64 x i8]*, i64)*)(%"struct map_t"* @AT_mystr, i64* %"@mystr_key", [64 x i8]* %"@mystr_val", i64 0)
+  %13 = bitcast [64 x i8]* %"@mystr_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
+  %14 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
   ret i64 0
 }
 

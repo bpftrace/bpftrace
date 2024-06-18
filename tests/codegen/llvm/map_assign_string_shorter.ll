@@ -17,9 +17,10 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
-  %"@x_val" = alloca [6 x i8], align 1
+  %"@x_val3" = alloca [6 x i8], align 1
   %"@x_key2" = alloca i64, align 8
   %str1 = alloca [2 x i8], align 1
+  %"@x_val" = alloca [6 x i8], align 1
   %"@x_key" = alloca i64, align 8
   %str = alloca [6 x i8], align 1
   %1 = bitcast [6 x i8]* %str to i8*
@@ -28,31 +29,32 @@ entry:
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store i64 0, i64* %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [6 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", [6 x i8]* %str, i64 0)
-  %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [6 x i8]* %str to i8*
+  %3 = bitcast [6 x i8]* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  store [6 x i8]* %str, [6 x i8]* %"@x_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [6 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", [6 x i8]* %"@x_val", i64 0)
+  %4 = bitcast [6 x i8]* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
-  %5 = bitcast [2 x i8]* %str1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  store [2 x i8] c"a\00", [2 x i8]* %str1, align 1
-  %6 = bitcast i64* %"@x_key2" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 0, i64* %"@x_key2", align 8
-  %7 = bitcast [6 x i8]* %"@x_val" to i8*
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
+  %6 = bitcast [6 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %7 = bitcast [2 x i8]* %str1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %8 = bitcast [6 x i8]* %"@x_val" to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 6, i1 false)
-  %9 = bitcast [6 x i8]* %"@x_val" to i8*
-  %10 = bitcast [2 x i8]* %str1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %9, i8* align 1 %10, i64 2, i1 false)
-  %update_elem3 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [6 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key2", [6 x i8]* %"@x_val", i64 0)
-  %11 = bitcast [6 x i8]* %"@x_val" to i8*
+  store [2 x i8] c"a\00", [2 x i8]* %str1, align 1
+  %8 = bitcast i64* %"@x_key2" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  store i64 0, i64* %"@x_key2", align 8
+  %9 = bitcast [6 x i8]* %"@x_val3" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
+  store [2 x i8]* %str1, [6 x i8]* %"@x_val3", align 8
+  %update_elem4 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [6 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key2", [6 x i8]* %"@x_val3", i64 0)
+  %10 = bitcast [6 x i8]* %"@x_val3" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %11 = bitcast i64* %"@x_key2" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast i64* %"@x_key2" to i8*
+  %12 = bitcast [2 x i8]* %str1 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast [2 x i8]* %str1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0
 }
 
@@ -62,15 +64,8 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
-
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
-
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
 !llvm.dbg.cu = !{!53}
 !llvm.module.flags = !{!56}

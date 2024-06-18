@@ -17,8 +17,10 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !56 {
 entry:
-  %"@x_val1" = alloca i64, align 8
+  %"@x_val2" = alloca i64, align 8
+  %"@x_key1" = alloca [4 x i8], align 1
   %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca [4 x i8], align 1
   %"$myvar" = alloca [4 x i8], align 1
   %1 = bitcast [4 x i8]* %"$myvar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -33,18 +35,32 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %4, i8* align 1 %5, i64 4, i1 false)
   %6 = bitcast [4 x i8]* %str to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
-  %7 = bitcast i64* %"@x_val" to i8*
+  %7 = bitcast [4 x i8]* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = bitcast [4 x i8]* %"@x_key" to [4 x i8]**
+  %9 = zext [4 x i8]* %"$myvar" to i64
+  store i64 %9, [4 x i8]** %8, align 8
+  %10 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   store i64 1, i64* %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"$myvar", i64* %"@x_val", i64 0)
-  %8 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
-  %9 = bitcast i64* %"@x_val1" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
-  store i64 1, i64* %"@x_val1", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"$myvar", i64* %"@x_val1", i64 0)
-  %10 = bitcast i64* %"@x_val1" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"@x_key", i64* %"@x_val", i64 0)
+  %11 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = bitcast [4 x i8]* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %13 = bitcast [4 x i8]* %"@x_key1" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
+  %14 = bitcast [4 x i8]* %"@x_key1" to [4 x i8]**
+  %15 = zext [4 x i8]* %"$myvar" to i64
+  store i64 %15, [4 x i8]** %14, align 8
+  %16 = bitcast i64* %"@x_val2" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  store i64 1, i64* %"@x_val2", align 8
+  %update_elem3 = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, [4 x i8]*, i64*, i64)*)(%"struct map_t"* @AT_x, [4 x i8]* %"@x_key1", i64* %"@x_val2", i64 0)
+  %17 = bitcast i64* %"@x_val2" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
+  %18 = bitcast [4 x i8]* %"@x_key1" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
   ret i64 0
 }
 
