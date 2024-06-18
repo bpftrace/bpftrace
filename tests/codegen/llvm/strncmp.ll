@@ -49,12 +49,12 @@ lookup_str_failure:                               ; preds = %entry
   ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
-  call void @llvm.memset.p0.i64(ptr align 1 %lookup_str_map, i8 0, i64 64, i1 false)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_str_map, i32 1024, ptr null)
   %1 = ptrtoint ptr %0 to i64
   %2 = add i64 %1, 8
   %3 = inttoptr i64 %2 to ptr
   %4 = load volatile i64, ptr %3, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 64, i64 %4)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 1024, i64 %4)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
   call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
@@ -329,10 +329,10 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !44 = !DISubrange(count: 6, lowerBound: 0)
 !45 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !46, size: 64, offset: 192)
 !46 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !47, size: 64)
-!47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !48, size: 512, elements: !49)
+!47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !48, size: 8192, elements: !49)
 !48 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !49 = !{!50}
-!50 = !DISubrange(count: 64, lowerBound: 0)
+!50 = !DISubrange(count: 1024, lowerBound: 0)
 !51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
 !52 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)

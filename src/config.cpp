@@ -19,7 +19,7 @@ Config::Config(bool has_cmd)
     { ConfigKeyInt::max_cat_bytes, { .value = (uint64_t)10240 } },
     { ConfigKeyInt::max_map_keys, { .value = (uint64_t)4096 } },
     { ConfigKeyInt::max_probes, { .value = (uint64_t)512 } },
-    { ConfigKeyInt::max_strlen, { .value = (uint64_t)64 } },
+    { ConfigKeyInt::max_strlen, { .value = (uint64_t)1024 } },
     { ConfigKeyInt::max_type_res_iterations, { .value = (uint64_t)0 } },
     { ConfigKeyInt::perf_rb_pages, { .value = (uint64_t)64 } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },

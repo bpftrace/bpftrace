@@ -32,7 +32,7 @@ lookup_str_failure:                               ; preds = %entry
   ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
-  call void @llvm.memset.p0.i64(ptr align 1 %lookup_str_map, i8 0, i64 64, i1 false)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_str_map, i32 1024, ptr null)
   %1 = getelementptr i64, ptr %0, i64 14
   %arg0 = load volatile i64, ptr %1, align 8
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 7, i64 %arg0)
@@ -49,12 +49,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!58}
 !llvm.module.flags = !{!60}
@@ -107,9 +103,9 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !45 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !23)
 !46 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !47, size: 64, offset: 192)
 !47 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !48, size: 64)
-!48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 512, elements: !49)
+!48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 8192, elements: !49)
 !49 = !{!50}
-!50 = !DISubrange(count: 64, lowerBound: 0)
+!50 = !DISubrange(count: 1024, lowerBound: 0)
 !51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
 !52 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
 !53 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !54)
