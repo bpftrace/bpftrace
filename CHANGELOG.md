@@ -79,6 +79,8 @@ and this project adheres to
   - [#3226](https://github.com/bpftrace/bpftrace/pull/3226)
 - Add config option for handling missing probes
   - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
+- Support large arguments for printf() and print()
+  - [#3252](https://github.com/bpftrace/bpftrace/pull/3252)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
@@ -102,6 +104,8 @@ and this project adheres to
   - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
   - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
   - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
+- Increase default size of strings from 64 to 1024
+  - [#3252](https://github.com/bpftrace/bpftrace/pull/3252)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
