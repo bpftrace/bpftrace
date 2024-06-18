@@ -79,6 +79,8 @@ and this project adheres to
   - [#3226](https://github.com/bpftrace/bpftrace/pull/3226)
 - Add config option for handling missing probes
   - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
+- Support large arguments for printf() and print()
+  - [#3368](https://github.com/bpftrace/bpftrace/pull/3368)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
