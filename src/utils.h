@@ -19,6 +19,8 @@
 #include <variant>
 #include <vector>
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 namespace bpftrace {
 
 struct vmlinux_location {
