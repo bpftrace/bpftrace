@@ -78,7 +78,7 @@ public:
   void DumpIR(const std::string filename);
   void createFormatStringCall(Call &call,
                               int id,
-                              CallArgs &call_args,
+                              const CallArgs &call_args,
                               const std::string &call_name,
                               AsyncAction async_action);
 
