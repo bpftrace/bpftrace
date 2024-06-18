@@ -2636,6 +2636,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           << "String size mismatch: " << var_size << " != " << expr_size
           << ". The value may be truncated.";
     }
+    // Scratch variables are on stack. Big strings do not fit on the BPF stack.
+    if (is_final_pass() && expr_size > 200) {
+      LOG(ERROR, assignment.loc, err_)
+          << "Trying to store a big string "
+          << "(" << var_size << "B) on stack. "
+          << "It will not fit. Try storing in a map or only using str() in "
+          << "argument position for print()/printf() calls.";
+    }
   } else if (assignTy.IsBufferTy()) {
     auto var_size = storedTy.GetSize();
     auto expr_size = assignTy.GetSize();

@@ -134,7 +134,7 @@ void usage()
   std::cerr << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
   std::cerr << "    BPFTRACE_MAX_MAP_KEYS             [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 1024] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
   std::cerr << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
   std::cerr << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
