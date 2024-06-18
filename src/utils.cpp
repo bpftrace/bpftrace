@@ -13,6 +13,7 @@
 #include <link.h>
 #include <map>
 #include <memory>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -868,6 +869,70 @@ std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
 }
 
 /*
+Check whether 'path' refers to a ELF file. Errors are swallowed silently and
+result in return of 'nullopt'. On success, the ELF type (e.g., ET_DYN) is
+returned.
+*/
+static std::optional<int> is_elf(const std::string &path)
+{
+  int fd;
+  Elf *elf;
+  void *ret;
+  GElf_Ehdr ehdr;
+  std::optional<int> result = {};
+
+  if (elf_version(EV_CURRENT) == EV_NONE) {
+    return result;
+  }
+
+  fd = open(path.c_str(), O_RDONLY, 0);
+  if (fd < 0) {
+    return result;
+  }
+
+  elf = elf_begin(fd, ELF_C_READ, NULL);
+  if (elf == NULL) {
+    goto err_close;
+  }
+
+  if (elf_kind(elf) != ELF_K_ELF) {
+    goto err_close;
+  }
+
+  ret = (void *)gelf_getehdr(elf, &ehdr);
+  if (ret == NULL) {
+    goto err_end;
+  }
+
+  result = ehdr.e_type;
+
+err_end:
+  (void)elf_end(elf);
+err_close:
+  (void)close(fd);
+  return result;
+}
+
+static bool has_exec_permission(const std::string &path)
+{
+  using std::filesystem::perms;
+
+  auto perms = std::filesystem::status(path).permissions();
+  return (perms & perms::owner_exec) != perms::none;
+}
+
+/*
+Check whether 'path' refers to an executable ELF file.
+*/
+bool is_exe(const std::string &path)
+{
+  if (auto e_type = is_elf(path)) {
+    return e_type == ET_EXEC && has_exec_permission(path);
+  }
+  return false;
+}
+
+/*
 Private interface to resolve_binary_path, used for the exposed variants above,
 allowing for a PID whose mount namespace should be optionally considered.
 */
@@ -891,9 +956,14 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
       rel_path = path_for_pid_mountns(pid, path);
     else
       rel_path = path;
-    if (bcc_elf_is_exe(rel_path.c_str()) ||
-        bcc_elf_is_shared_obj(rel_path.c_str()))
-      valid_executable_paths.push_back(rel_path);
+
+    // Both executables and shared objects are game.
+    if (auto e_type = is_elf(rel_path)) {
+      if ((e_type == ET_EXEC && has_exec_permission(rel_path)) ||
+          e_type == ET_DYN) {
+        valid_executable_paths.push_back(rel_path);
+      }
+    }
   }
 
   return valid_executable_paths;

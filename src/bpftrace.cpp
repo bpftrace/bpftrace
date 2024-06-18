@@ -194,7 +194,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
   // Preload symbol tables if necessary
   if (resources.probes_using_usym.find(&p) !=
           resources.probes_using_usym.end() &&
-      bcc_elf_is_exe(ap.target.c_str())) {
+      is_exe(ap.target)) {
     auto user_symbol_cache_type = config_.get(
         ConfigKeyUserSymbolCacheType::default_);
     // preload symbol table for executable to make it available even if the
