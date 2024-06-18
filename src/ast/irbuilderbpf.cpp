@@ -483,6 +483,17 @@ CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
                              idx);
 }
 
+CallInst *IRBuilderBPF::CreateGetFmtStringArgsScratchMap(
+    BasicBlock *failure_callback,
+    const location &loc)
+{
+  return createGetScratchMap(to_string(MapType::FmtStringArgs),
+                             "fmtstr",
+                             GET_PTR_TY(),
+                             loc,
+                             failure_callback);
+}
+
 /*
  * Failure to lookup a scratch map will result in a jump to the
  * failure_callback, if non-null.
