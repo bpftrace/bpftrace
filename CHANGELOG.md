@@ -33,6 +33,10 @@ and this project adheres to
   - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
   - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
   - [#3249](https://github.com/bpftrace/bpftrace/pull/3249)
+- Support large arguments for printf() and print()
+  - [#3252](https://github.com/bpftrace/bpftrace/pull/3252)
+- Increase default size of strings from 64 to 1024
+  - [#3252](https://github.com/bpftrace/bpftrace/pull/3252)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)
