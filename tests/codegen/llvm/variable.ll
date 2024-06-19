@@ -19,7 +19,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !59 {
 entry:
+  %"@y_val" = alloca [16 x i8], align 1
   %"@y_key" = alloca i64, align 8
+  %"@x_val" = alloca [16 x i8], align 1
   %"@x_key" = alloca i64, align 8
   %"$var" = alloca [16 x i8], align 1
   %1 = bitcast [16 x i8]* %"$var" to i8*
@@ -40,15 +42,25 @@ entry:
   %8 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i64 0, i64* %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [16 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", [16 x i8]* %"$var", i64 0)
-  %9 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  %10 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  store i64 0, i64* %"@y_key", align 8
-  %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, [16 x i8]*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", [16 x i8]* %"$var", i64 0)
-  %11 = bitcast i64* %"@y_key" to i8*
+  %9 = bitcast [16 x i8]* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
+  store [16 x i8]* %"$var", [16 x i8]* %"@x_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, [16 x i8]*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", [16 x i8]* %"@x_val", i64 0)
+  %10 = bitcast [16 x i8]* %"@x_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %11 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  store i64 0, i64* %"@y_key", align 8
+  %13 = bitcast [16 x i8]* %"@y_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
+  store [16 x i8]* %"$var", [16 x i8]* %"@y_val", align 8
+  %update_elem1 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, [16 x i8]*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", [16 x i8]* %"@y_val", i64 0)
+  %14 = bitcast [16 x i8]* %"@y_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
+  %15 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
   ret i64 0
 }
 

@@ -9,6 +9,7 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
+#include "ast/async_event_types.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -720,8 +721,10 @@ void SemanticAnalyser::visit(Call &call)
           << typestr(arg.type.GetTy());
     }
 
-    size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
-    size_t buffer_size = max_buffer_size;
+    // Subtract out metadata headroom
+    uint32_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen) -
+                               sizeof(AsyncEvent::Buf);
+    uint32_t buffer_size = max_buffer_size;
 
     if (call.vargs->size() == 1) {
       if (arg.type.IsArrayTy())
@@ -760,7 +763,6 @@ void SemanticAnalyser::visit(Call &call)
       buffer_size = max_buffer_size;
     }
 
-    buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
     // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
     // The result of buf is copied to bpf stack. Hence kernel probe read
@@ -2552,6 +2554,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       LOG(WARNING, assignment.loc, out_)
           << "String size mismatch: " << var_size << " != " << expr_size
           << ". The value may be truncated.";
+    }
+    // Scratch variables are on stack. Big strings do not fit on the BPF stack.
+    if (is_final_pass() && expr_size > 200) {
+      LOG(ERROR, assignment.loc, err_)
+          << "Trying to store a big string "
+          << "(" << var_size << "B) on stack. "
+          << "It will not fit. Try storing in a map or only using str() in "
+          << "argument position for print()/printf() calls.";
     }
   } else if (assignTy.IsBufferTy()) {
     auto var_size = storedTy.GetSize();

@@ -267,10 +267,12 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                  (uint8_t *)(value.data() + 8));
   else if (type.IsUsernameTy())
     return bpftrace.resolve_uid(read_data<uint64_t>(value.data()));
-  else if (type.IsBufferTy())
-    return bpftrace.resolve_buf(reinterpret_cast<char *>(value.data() + 1),
-                                *reinterpret_cast<uint8_t *>(value.data()));
-  else if (type.IsStringTy()) {
+  else if (type.IsBufferTy()) {
+    return bpftrace.resolve_buf(
+        reinterpret_cast<AsyncEvent::Buf *>(value.data())->content,
+        reinterpret_cast<AsyncEvent::Buf *>(value.data())->length);
+
+  } else if (type.IsStringTy()) {
     auto p = reinterpret_cast<const char *>(value.data());
     return std::string(p, strnlen(p, type.GetSize()));
   } else if (type.IsArrayTy()) {

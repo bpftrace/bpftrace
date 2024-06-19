@@ -86,7 +86,10 @@ public:
   void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
+  uint64_t max_fmtstring_args_size = 0;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> printf_args;
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
   // mapped_printf_args stores seq_printf, debugf arguments
   std::vector<std::tuple<FormatString, std::vector<Field>>> mapped_printf_args;
   // mapped_printf_ids stores the starting indices and length of each format
@@ -96,7 +99,6 @@ public:
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
   std::vector<std::string> cgroup_path_args;
-  std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
   std::vector<SizedType> non_map_print_args;
   std::vector<std::tuple<std::string, long>> skboutput_args_;
 
@@ -105,9 +107,6 @@ public:
   //
   // Don't add more async arguments here!.
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info;
-  // `printf_args` is created here but the field offsets are fixed up
-  // by codegen -- only codegen knows data layout to compute offsets
-  std::vector<std::tuple<FormatString, std::vector<Field>>> printf_args;
   std::vector<std::string> probe_ids;
 
   // Map metadata
@@ -145,6 +144,7 @@ private:
             non_map_print_args,
             // Hard to annotate flex types, so skip
             // helper_error_info,
+            max_fmtstring_args_size,
             printf_args,
             probe_ids,
             maps_info,

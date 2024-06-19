@@ -12,10 +12,9 @@ inline bool needMemcpy(const SizedType &stype)
 
 inline bool shouldBeOnStackAlready(const SizedType &type)
 {
-  return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
-         type.IsUsymTy() || type.IsKstackTy() || type.IsUstackTy() ||
-         type.IsTupleTy() || type.IsTimestampTy() || type.IsMacAddressTy() ||
-         type.IsCgroupPathTy();
+  return type.IsInetTy() || type.IsUsymTy() || type.IsKstackTy() ||
+         type.IsUstackTy() || type.IsTupleTy() || type.IsTimestampTy() ||
+         type.IsMacAddressTy() || type.IsCgroupPathTy();
 }
 
 inline bool onStack(const SizedType &type)

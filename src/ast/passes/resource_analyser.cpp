@@ -1,5 +1,8 @@
 #include "resource_analyser.h"
 
+#include <algorithm>
+
+#include "ast/async_event_types.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "struct.h"
@@ -80,7 +83,12 @@ void ResourceAnalyser::visit(Call &call)
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
-    std::vector<Field> args;
+    // Implicit first field is the 64bit printf ID.
+    //
+    // Put it in initially so that offset and alignment calculation is
+    // accurate. We'll take it out before saving into resources.
+    std::vector<SizedType> args = { CreateInt64() };
+
     // NOTE: the same logic can be found in the semantic_analyser pass
     for (auto it = call.vargs->begin() + 1; it != call.vargs->end(); it++) {
       // Promote to 64-bit if it's not an aggregate type
@@ -88,30 +96,45 @@ void ResourceAnalyser::visit(Call &call)
       if (!ty.IsAggregate() && !ty.IsTimestampTy())
         ty.SetSize(8);
 
-      args.push_back(Field{
-          .name = "",
-          .type = ty,
-          .offset = 0,
-          .bitfield = std::nullopt,
-      });
+      args.push_back(ty);
     }
+
+    // It may seem odd that we're creating a tuple as part of format
+    // string analysis, but it kinda makes sense. When we transmit
+    // the format string from kernelspace to userspace, we are basically
+    // creating a tuple. Namely: a bunch of values without names, back to
+    // back, and with struct alignment rules.
+    //
+    // Thus, we are good to reuse the padding logic present in tuple
+    // creation to generate offsets for each argument in the args "tuple".
+    auto tuple = Struct::CreateTuple(args);
+
+    // Remove implicit printf ID field. Downstream consumers do not
+    // expect it nor do they care about it.
+    tuple->fields.erase(tuple->fields.begin());
+
+    // Keep track of max "tuple" size needed for fmt string args. Codegen
+    // will use this information to create a percpu array map of large
+    // enough size for all fmt string calls to use.
+    resources_.max_fmtstring_args_size = std::max(
+        resources_.max_fmtstring_args_size, static_cast<uint64_t>(tuple->size));
 
     auto fmtstr = get_literal_string(*call.vargs->at(0));
     if (call.func == "printf") {
       if (probe_ != nullptr &&
           single_provider_type_postsema(probe_) == ProbeType::iter) {
-        resources_.mapped_printf_args.emplace_back(fmtstr, args);
+        resources_.mapped_printf_args.emplace_back(fmtstr, tuple->fields);
         resources_.needs_data_map = true;
       } else {
-        resources_.printf_args.emplace_back(fmtstr, args);
+        resources_.printf_args.emplace_back(fmtstr, tuple->fields);
       }
     } else if (call.func == "debugf") {
-      resources_.mapped_printf_args.emplace_back(fmtstr, args);
+      resources_.mapped_printf_args.emplace_back(fmtstr, tuple->fields);
       resources_.needs_data_map = true;
     } else if (call.func == "system") {
-      resources_.system_args.emplace_back(fmtstr, args);
+      resources_.system_args.emplace_back(fmtstr, tuple->fields);
     } else {
-      resources_.cat_args.emplace_back(fmtstr, args);
+      resources_.cat_args.emplace_back(fmtstr, tuple->fields);
     }
   } else if (call.func == "join") {
     auto delim = call.vargs->size() > 1 ? get_literal_string(*call.vargs->at(1))
@@ -155,18 +178,26 @@ void ResourceAnalyser::visit(Call &call)
       resources_.time_args.push_back(get_literal_string(*call.vargs->at(0)));
     else
       resources_.time_args.push_back("%H:%M:%S\n");
-  } else if (call.func == "str" || call.func == "path") {
+  } else if (call.func == "str" || call.func == "buf" || call.func == "path") {
     resources_.str_buffers++;
   } else if (call.func == "strftime") {
     resources_.strftime_args.push_back(get_literal_string(*call.vargs->at(0)));
   } else if (call.func == "print") {
+    constexpr auto nonmap_headroom = sizeof(AsyncEvent::PrintNonMap);
     auto &arg = *call.vargs->at(0);
-    if (!arg.is_map)
+    if (!arg.is_map) {
       resources_.non_map_print_args.push_back(arg.type);
-    else {
+      resources_.max_fmtstring_args_size = std::max(
+          resources_.max_fmtstring_args_size,
+          nonmap_headroom + arg.type.GetSize());
+    } else {
       auto &map = static_cast<Map &>(arg);
-      if (map.vargs)
+      if (map.vargs) {
         resources_.non_map_print_args.push_back(map.type);
+        resources_.max_fmtstring_args_size = std::max(
+            resources_.max_fmtstring_args_size,
+            nonmap_headroom + map.type.GetSize());
+      }
     }
   } else if (call.func == "kstack" || call.func == "ustack") {
     resources_.stackid_maps.insert(call.type.stack_type);

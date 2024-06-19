@@ -25,6 +25,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !67 {
 entry:
+  %"@e_val" = alloca [4 x i8], align 1
   %"@e_key" = alloca i64, align 8
   %"struct x.e" = alloca [4 x i8], align 1
   %"@d_val" = alloca i64, align 8
@@ -120,11 +121,16 @@ entry:
   %45 = bitcast i64* %"@e_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %45)
   store i64 0, i64* %"@e_key", align 8
-  %update_elem5 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.3"*, i64*, [4 x i8]*, i64)*)(%"struct map_t.3"* @AT_e, i64* %"@e_key", [4 x i8]* %"struct x.e", i64 0)
-  %46 = bitcast i64* %"@e_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %46)
-  %47 = bitcast [4 x i8]* %"struct x.e" to i8*
+  %46 = bitcast [4 x i8]* %"@e_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %46)
+  store [4 x i8]* %"struct x.e", [4 x i8]* %"@e_val", align 8
+  %update_elem5 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.3"*, i64*, [4 x i8]*, i64)*)(%"struct map_t.3"* @AT_e, i64* %"@e_key", [4 x i8]* %"@e_val", i64 0)
+  %47 = bitcast [4 x i8]* %"@e_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %47)
+  %48 = bitcast i64* %"@e_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %48)
+  %49 = bitcast [4 x i8]* %"struct x.e" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %49)
   ret i64 0
 }
 
