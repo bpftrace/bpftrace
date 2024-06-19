@@ -92,8 +92,9 @@ void ConfigAnalyser::set_user_symbol_cache_type_config(
     return;
   }
 
-  config_setter_.set_user_symbol_cache_type(
-      dynamic_cast<String *>(assignment.expr)->str);
+  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  if (!config_setter_.set_user_symbol_cache_type(val))
+    LOG(ERROR, assignment.expr->loc, err_);
 }
 
 void ConfigAnalyser::visit(Integer &integer)
