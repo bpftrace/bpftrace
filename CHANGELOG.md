@@ -9,7 +9,7 @@ and this project adheres to
 ## Unreleased
 
 #### Added
-- Add 'lazy_symbolication' config option
+- Add `lazy_symbolication` config option
   - [#2958](https://github.com/bpftrace/bpftrace/pull/2958)
 - Add ability to list all probes in a program
   - [#2969](https://github.com/bpftrace/bpftrace/pull/2969)
@@ -28,10 +28,6 @@ and this project adheres to
 - Enable count, sum, min, and max map reads in kernel space (implicit casting)
   - [#3189](https://github.com/bpftrace/bpftrace/pull/3189)
   - [#3226](https://github.com/bpftrace/bpftrace/pull/3226)
-- Remove limit on BPFTRACE_MAX_STRLEN
-  - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
-  - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
-  - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
 - Add config option for handling missing probes
   - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
 #### Changed
@@ -51,8 +47,12 @@ and this project adheres to
   - [#3212](https://github.com/bpftrace/bpftrace/pull/3212)
 - Allow trailing semicolons and empty blocks in config syntax
   - [#3077](https://github.com/bpftrace/bpftrace/pull/3077)
-- Allow attaching to 'spin_lock' functions with mitigations to prevent deadlocks
+- Allow attaching to `spin_lock` functions with mitigations to prevent deadlocks
   - [#3206](https://github.com/bpftrace/bpftrace/pull/3206)
+- Remove length limitations for strings coming out of `str()` and `path()`
+  - [#3228](https://github.com/bpftrace/bpftrace/pull/3228)
+  - [#3237](https://github.com/bpftrace/bpftrace/pull/3237)
+  - [#3245](https://github.com/bpftrace/bpftrace/pull/3245)
 #### Deprecated
 - Deprecate `sarg` builtin
   - [#3095](https://github.com/bpftrace/bpftrace/pull/3095)
@@ -78,7 +78,7 @@ and this project adheres to
   - [#3195](https://github.com/bpftrace/bpftrace/pull/3195)
 - Fix crash when assigning a record type to a map
   - [#3220](https://github.com/bpftrace/bpftrace/pull/3220)
-- Fix type resolution for pointers with BTF_KIND_TYPE_TAG
+- Fix type resolution for pointers with `BTF_KIND_TYPE_TAG`
   - [#3240](https://github.com/bpftrace/bpftrace/pull/3240)
 - Fix attachment of probes attaching to wildcarded and non-wildcarded kprobes
   - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
