@@ -5,7 +5,7 @@ cmake_policy(SET CMP0057 NEW)
 
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
-set(bpftrace_VERSION_MINOR 20)
+set(bpftrace_VERSION_MINOR 21)
 set(bpftrace_VERSION_PATCH 0)
 
 include(GNUInstallDirs)
