@@ -11,7 +11,17 @@
  * 17-Sep-2018	Brendan Gregg	Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/sched.h>
+#else
+/*
+ * With BTF providing types, full headers are not needed.
+ * We only need to supply the preprocessor defines used in this script.
+ * TASK_RUNNING is not arch-dependant and has not changed in the linux
+ * git history (it is not part of the stable API though)
+ */
+#define TASK_RUNNING 0
+#endif
 
 BEGIN
 {
