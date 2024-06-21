@@ -53,8 +53,6 @@ public:
   };
 
   // Write map to output
-  // Ideally, the implementation should use map_to_str to convert a map into
-  // a string, format it properly, and print it to out_.
   virtual void map(
       BPFtrace &bpftrace,
       const BpfMap &map,
@@ -63,8 +61,6 @@ public:
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key) const = 0;
   // Write map histogram to output
-  // Ideally, the implementation should use map_hist_to_str to convert a map
-  // histogram into a string, format it properly, and print it to out_.
   virtual void map_hist(
       BPFtrace &bpftrace,
       const BpfMap &map,
@@ -75,8 +71,6 @@ public:
       const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
           &total_counts_by_key) const = 0;
   // Write map statistics to output
-  // Ideally, the implementation should use map_stats_to_str to convert map
-  // statistics into a string, format it properly, and print it to out_.
   virtual void map_stats(
       BPFtrace &bpftrace,
       const BpfMap &map,
@@ -131,7 +125,7 @@ protected:
   // Convert map into string
   // Default behaviour: format each (key, value) pair using output-specific
   // methods and join them into a single string
-  virtual std::string map_to_str(
+  virtual void map_contents(
       BPFtrace &bpftrace,
       const BpfMap &map,
       uint32_t top,
@@ -141,7 +135,7 @@ protected:
   // Convert map histogram into string
   // Default behaviour: format each (key, hist) pair using output-specific
   // methods and join them into a single string
-  virtual std::string map_hist_to_str(
+  virtual void map_hist_contents(
       BPFtrace &bpftrace,
       const BpfMap &map,
       uint32_t top,
@@ -153,7 +147,7 @@ protected:
   // Convert map statistics into string
   // Default behaviour: format each (key, stats) pair using output-specific
   // methods and join them into a single string
-  virtual std::string map_stats_to_str(
+  virtual void map_stats_contents(
       BPFtrace &bpftrace,
       const BpfMap &map,
       uint32_t top,
@@ -166,12 +160,11 @@ protected:
                                      const BpfMap &map,
                                      const std::vector<uint8_t> &key) const = 0;
   // Properly join map key and value strings
-  virtual std::string map_keyval_to_str(const SizedType &map_type,
-                                        const std::string &key,
-                                        const std::string &val) const = 0;
+  virtual void map_key_val(const SizedType &map_type,
+                           const std::string &key,
+                           const std::string &val) const = 0;
   // Delimiter to join (properly formatted) map elements into a single string
-  virtual std::string map_elem_delim_to_str(
-      const SizedType &map_type) const = 0;
+  virtual void map_elem_delim(const SizedType &map_type) const = 0;
   // Convert non-map value into string
   // This method should properly handle all non-map value types.
   // Aggregate types (array, struct, tuple) are formatted using output-specific
@@ -261,10 +254,10 @@ protected:
   std::string map_key_to_str(BPFtrace &bpftrace,
                              const BpfMap &map,
                              const std::vector<uint8_t> &key) const override;
-  std::string map_keyval_to_str(const SizedType &map_type,
-                                const std::string &key,
-                                const std::string &val) const override;
-  std::string map_elem_delim_to_str(const SizedType &map_type) const override;
+  void map_key_val(const SizedType &map_type,
+                   const std::string &key,
+                   const std::string &val) const override;
+  void map_elem_delim(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
   std::string tuple_to_str(
@@ -340,10 +333,10 @@ protected:
   std::string map_key_to_str(BPFtrace &bpftrace,
                              const BpfMap &map,
                              const std::vector<uint8_t> &key) const override;
-  std::string map_keyval_to_str(const SizedType &map_type,
-                                const std::string &key,
-                                const std::string &val) const override;
-  std::string map_elem_delim_to_str(const SizedType &map_type) const override;
+  void map_key_val(const SizedType &map_type,
+                   const std::string &key,
+                   const std::string &val) const override;
+  void map_elem_delim(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
   std::string tuple_to_str(

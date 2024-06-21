@@ -382,7 +382,7 @@ std::string Output::struct_to_str(const std::vector<std::string> &elems) const
   return "{ " + str_join(elems, ", ") + " }";
 }
 
-std::string Output::map_to_str(
+void Output::map_contents(
     BPFtrace &bpftrace,
     const BpfMap &map,
     uint32_t top,
@@ -390,10 +390,11 @@ std::string Output::map_to_str(
     const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
         &values_by_key) const
 {
-  std::vector<std::string> elems;
   uint32_t i = 0;
   size_t total = values_by_key.size();
   const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
+
+  bool first = true;
   for (auto &pair : values_by_key) {
     auto key = pair.first;
     auto value = pair.second;
@@ -403,16 +404,19 @@ std::string Output::map_to_str(
         continue;
     }
 
+    if (first)
+      first = false;
+    else
+      map_elem_delim(map_type);
+
     auto key_str = map_key_to_str(bpftrace, map, key);
     auto value_str = value_to_str(
         bpftrace, map_type, value, map.is_per_cpu_type(), div);
-    elems.push_back(map_keyval_to_str(map_type, key_str, value_str));
+    map_key_val(map_type, key_str, value_str);
   }
-
-  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
-std::string Output::map_hist_to_str(
+void Output::map_hist_contents(
     BPFtrace &bpftrace,
     const BpfMap &map,
     uint32_t top,
@@ -421,16 +425,21 @@ std::string Output::map_hist_to_str(
     const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
         &total_counts_by_key) const
 {
-  std::vector<std::string> elems;
   uint32_t i = 0;
   const auto &map_info = bpftrace.resources.maps_info.at(map.name());
   const auto &map_type = map_info.value_type;
+  bool first = true;
   for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
     if (top && values_by_key.size() > top && i++ < (values_by_key.size() - top))
       continue;
+
+    if (first)
+      first = false;
+    else
+      map_elem_delim(map_type);
 
     auto key_str = map_key_to_str(bpftrace, map, key);
     std::string val_str;
@@ -440,13 +449,11 @@ std::string Output::map_hist_to_str(
       auto &args = map_info.lhist_args;
       val_str = lhist_to_str(value, args->min, args->max, args->step);
     }
-
-    elems.push_back(map_keyval_to_str(map_type, key_str, val_str));
+    map_key_val(map_type, key_str, val_str);
   }
-  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
-std::string Output::map_stats_to_str(
+void Output::map_stats_contents(
     BPFtrace &bpftrace,
     const BpfMap &map,
     uint32_t top,
@@ -455,9 +462,9 @@ std::string Output::map_stats_to_str(
     const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
         &total_counts_by_key) const
 {
-  std::vector<std::string> elems;
   const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
   uint32_t i = 0;
+  bool first = true;
   for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
@@ -465,6 +472,11 @@ std::string Output::map_stats_to_str(
     if (map_type.IsAvgTy() && top && values_by_key.size() > top &&
         i++ < (values_by_key.size() - top))
       continue;
+
+    if (first)
+      first = false;
+    else
+      map_elem_delim(map_type);
 
     auto key_str = map_key_to_str(bpftrace, map, key);
 
@@ -484,10 +496,8 @@ std::string Output::map_stats_to_str(
     } else
       value_str = std::to_string(average / div);
 
-    elems.push_back(map_keyval_to_str(map_type, key_str, value_str));
+    map_key_val(map_type, key_str, value_str);
   }
-
-  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
 void TextOutput::map(
@@ -498,7 +508,7 @@ void TextOutput::map(
     const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
         &values_by_key) const
 {
-  out_ << map_to_str(bpftrace, map, top, div, values_by_key);
+  map_contents(bpftrace, map, top, div, values_by_key);
   out_ << std::endl;
 }
 
@@ -599,7 +609,7 @@ void TextOutput::map_hist(
     const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
         &total_counts_by_key) const
 {
-  out_ << map_hist_to_str(
+  map_hist_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
   out_ << std::endl;
 }
@@ -613,7 +623,7 @@ void TextOutput::map_stats(
     const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
         &total_counts_by_key) const
 {
-  out_ << map_stats_to_str(
+  map_stats_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
   out_ << std::endl << std::endl;
 }
@@ -677,24 +687,21 @@ std::string TextOutput::map_key_to_str(BPFtrace &bpftrace,
   return map.name() + map_key.argument_value_list_str(bpftrace, key);
 }
 
-std::string TextOutput::map_keyval_to_str(const SizedType &map_type,
-                                          const std::string &key,
-                                          const std::string &val) const
+void TextOutput::map_key_val(const SizedType &map_type,
+                             const std::string &key,
+                             const std::string &val) const
 {
-  std::string res = key + ": ";
+  out_ << key + ": ";
   if (map_type.IsHistTy() || map_type.IsLhistTy())
-    res += "\n";
-  res += val;
-  return res;
+    out_ << "\n";
+  out_ << val;
 }
 
-std::string TextOutput::map_elem_delim_to_str(const SizedType &map_type) const
+void TextOutput::map_elem_delim(const SizedType &map_type) const
 {
   if (!map_type.IsKstackTy() && !map_type.IsUstackTy() &&
       !map_type.IsKsymTy() && !map_type.IsUsymTy() && !map_type.IsInetTy())
-    return "\n";
-
-  return "";
+    out_ << "\n";
 }
 
 std::string TextOutput::key_value_pairs_to_str(
@@ -762,7 +769,7 @@ void JsonOutput::map(
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
-  out_ << map_to_str(bpftrace, map, top, div, values_by_key);
+  map_contents(bpftrace, map, top, div, values_by_key);
 
   if (map_key.size() > 0)
     out_ << "}";
@@ -872,7 +879,7 @@ void JsonOutput::map_hist(
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
-  out_ << map_hist_to_str(
+  map_hist_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
   if (map_key.size() > 0)
@@ -899,7 +906,7 @@ void JsonOutput::map_stats(
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
-  out_ << map_stats_to_str(
+  map_stats_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
   if (map_key.size() > 0)
@@ -991,18 +998,17 @@ std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
   return "";
 }
 
-std::string JsonOutput::map_keyval_to_str(const SizedType &map_type
-                                          __attribute__((unused)),
-                                          const std::string &key,
-                                          const std::string &val) const
+void JsonOutput::map_key_val(const SizedType &map_type __attribute__((unused)),
+                             const std::string &key,
+                             const std::string &val) const
 {
-  return key.empty() ? val : key + ": " + val;
+  out_ << (key.empty() ? val : key + ": " + val);
 }
 
-std::string JsonOutput::map_elem_delim_to_str(const SizedType &map
-                                              __attribute__((unused))) const
+void JsonOutput::map_elem_delim(const SizedType &map
+                                __attribute__((unused))) const
 {
-  return ", ";
+  out_ << ", ";
 }
 
 std::string JsonOutput::key_value_pairs_to_str(
