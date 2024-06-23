@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Add --dry-run CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
+- Enable avg map reads in kernel space (implicit casting)
+  - [#3268](https://github.com/bpftrace/bpftrace/pull/3268)
 #### Changed
 - Stream output when printing maps
   - [#3264](https://github.com/bpftrace/bpftrace/pull/3264)

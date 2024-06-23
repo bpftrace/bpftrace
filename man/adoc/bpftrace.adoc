@@ -2384,7 +2384,10 @@ i:s:1 {
 ----
 
 Internally this keeps two values in the map: value count and running total.
-The average is computed in user-space when printing by dividing the total by the count.
+The average is computed in user-space when printing by dividing the total by the
+count. However, you can get the average in kernel space in expressions like
+`if (@y == 5)` but this is expensive as bpftrace needs to iterate over all the 
+cpus to collect and sum BOTH count and total.
 
 [#map-functions-clear]
 === clear

@@ -1410,8 +1410,21 @@ void CodegenLLVM::visit(Map &map)
   const auto &val_type = map_info->second.value_type;
   Value *value;
   if (canAggPerCpuMapElems(val_type, map_info->second.key)) {
-    value = b_.CreatePerCpuMapAggElems(
-        ctx_, map, key, val_type, map.loc, is_aot_);
+    if (val_type.IsAvgTy()) {
+      AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
+      Value *count_val = b_.CreatePerCpuMapAggElems(
+          ctx_, map, count_key, val_type, map.loc, is_aot_);
+      b_.CreateLifetimeEnd(count_key);
+
+      AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
+      Value *total_val = b_.CreatePerCpuMapAggElems(
+          ctx_, map, total_key, val_type, map.loc, is_aot_);
+      b_.CreateLifetimeEnd(total_key);
+      value = b_.CreateUDiv(total_val, count_val);
+    } else {
+      value = b_.CreatePerCpuMapAggElems(
+          ctx_, map, key, val_type, map.loc, is_aot_);
+    }
   } else {
     value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
   }
