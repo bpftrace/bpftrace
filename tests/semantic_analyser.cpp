@@ -2066,11 +2066,12 @@ TEST(semantic_analyser, map_aggregations_implicit_cast)
   test("kprobe:f { @ = sum(5); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = min(5); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = max(5); if (@ > 0) { print((1)); } }");
+  test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
-  test_error("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }", R"(
-stdin:1:27-33: ERROR: Type mismatch for '>': comparing 'avg' with 'int64'
-kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }
-                          ~~~~~~
+  test_error("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", R"(
+stdin:1:28-34: ERROR: Type mismatch for '>': comparing 'hist' with 'int64'
+kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
+                           ~~~~~~
 )");
   test_error("kprobe:f { @ = count(); @ += 5 }", R"(
 stdin:1:25-26: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count'
@@ -2085,11 +2086,12 @@ TEST(semantic_analyser, map_aggregations_explicit_cast)
   test("kprobe:f { @ = sum(5); print((1, (uint16)@)); }");
   test("kprobe:f { @ = min(5); print((1, (uint16)@)); }");
   test("kprobe:f { @ = max(5); print((1, (uint16)@)); }");
+  test("kprobe:f { @ = avg(5); print((1, (uint16)@)); }");
 
-  test_error("kprobe:f { @ = avg(5); print((1, (uint16)@)); }", R"(
-stdin:1:34-42: ERROR: Cannot cast from "avg" to "unsigned int16"
-kprobe:f { @ = avg(5); print((1, (uint16)@)); }
-                                 ~~~~~~~~
+  test_error("kprobe:f { @ = hist(5); print((1, (uint16)@)); }", R"(
+stdin:1:35-43: ERROR: Cannot cast from "hist" to "unsigned int16"
+kprobe:f { @ = hist(5); print((1, (uint16)@)); }
+                                  ~~~~~~~~
 )");
 }
 

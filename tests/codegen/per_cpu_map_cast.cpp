@@ -24,6 +24,11 @@ TEST(codegen, max_cast)
   test("kprobe:f { @x = max(2); if (@x > 5) { print((6)); } }", NAME);
 }
 
+TEST(codegen, avg_cast)
+{
+  test("kprobe:f { @x = avg(2); if (@x == 2) { print((6)); } }", NAME);
+}
+
 TEST(codegen, count_cast_loop)
 {
   test(

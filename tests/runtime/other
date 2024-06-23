@@ -297,6 +297,11 @@ PROG BEGIN { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n"
 EXPECT done
 TIMEOUT 5
 
+NAME per_cpu_map_avg_if
+PROG BEGIN { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n"); exit(); }}
+EXPECT done
+TIMEOUT 5
+
 NAME per_cpu_map_arithmetic
 PROG BEGIN { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } exit();}
 EXPECT done

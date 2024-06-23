@@ -649,7 +649,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, getInt64Ty()->getPointerTo(), "cast");
 
-  if (type.IsSumTy() || type.IsCountTy()) {
+  if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
     createPerCpuSum(ret, cast);
   } else if (type.IsMaxTy()) {
     createPerCpuMinMax(ret, cast, true);
