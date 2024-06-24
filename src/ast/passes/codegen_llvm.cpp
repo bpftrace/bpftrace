@@ -2198,7 +2198,7 @@ void CodegenLLVM::visit(Tuple &tuple)
   vals.reserve(tuple.elems->size());
 
   for (Expression *elem : *tuple.elems) {
-    scoped_dels.emplace_back(std::move(accept(elem)));
+    scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
   AllocaInst *buf = createTuple(tuple.type, vals, "tuple");
