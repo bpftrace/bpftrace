@@ -17,6 +17,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.21.1] 2024-06-24
+
+- Fix include path on loongarch, mips, riscv, and s390
+  - [#3267](https://github.com/bpftrace/bpftrace/pull/3267)
+
 ## [0.21.0] 2024-06-21
 
 #### Added
