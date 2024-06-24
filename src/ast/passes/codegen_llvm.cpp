@@ -986,9 +986,9 @@ void CodegenLLVM::visit(Call &call)
       buf = b_.CreateAllocaBPF(array_t, "addr4");
     }
 
-    char dst[addr_size];
+    std::vector<char> dst(addr_size);
     Value *octet;
-    auto ret = inet_pton(af_type, addr.c_str(), &dst);
+    auto ret = inet_pton(af_type, addr.c_str(), dst.data());
     if (ret != 1) {
       throw FatalUserException("inet_pton() call returns " +
                                std::to_string(ret));
