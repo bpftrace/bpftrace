@@ -11,6 +11,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
 
+#include "ast/async_ids.h"
 #include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
 #include "ast/visitors.h"
@@ -76,13 +77,13 @@ public:
   void DumpIR(std::ostream &out);
   void DumpIR(const std::string filename);
   void createFormatStringCall(Call &call,
-                              int &id,
+                              int id,
                               CallArgs &call_args,
                               const std::string &call_name,
                               AsyncAction async_action);
 
   void createPrintMapCall(Call &call);
-  void createPrintNonMapCall(Call &call, int &id);
+  void createPrintNonMapCall(Call &call, int id);
 
   void createMapDefinition(const std::string &name,
                            libbpf::bpf_map_type map_type,
@@ -238,12 +239,6 @@ private:
                                      const std::vector<Statement *> &stmts);
   Function *createMurmurHash2Func();
 
-  // Return a lambda that has captured-by-value CodegenLLVM's async id state
-  // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
-  // will restore `CodegenLLVM`s async id state back to when this function was
-  // first called.
-  std::function<void()> create_reset_ids();
-
   bool canAggPerCpuMapElems(const SizedType &val_type, const MapKey &key);
 
   Node *root_ = nullptr;
@@ -253,6 +248,7 @@ private:
   std::unique_ptr<LLVMContext> context_;
   std::unique_ptr<TargetMachine> target_machine_;
   std::unique_ptr<Module> module_;
+  AsyncIds async_ids_;
   IRBuilderBPF b_;
 
   DIBuilderBPF debug_;
@@ -278,21 +274,6 @@ private:
   bool inside_subprog_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
-
-  // NB: ensure all IDs are saved/restored in create_reset_ids()
-  int printf_id_ = 0;
-  int mapped_printf_id_ = 0;
-  int time_id_ = 0;
-  int cat_id_ = 0;
-  int strftime_id_ = 0;
-  uint64_t join_id_ = 0;
-  int system_id_ = 0;
-  int non_map_print_id_ = 0;
-  uint64_t watchpoint_id_ = 0;
-  int cgroup_path_id_ = 0;
-  int skb_output_id_ = 0;
-  int str_id_ = 0;
-
   std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
 
   Function *linear_func_ = nullptr;
