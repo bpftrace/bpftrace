@@ -1754,11 +1754,17 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
-  char timestr[config_.get(ConfigKeyInt::max_strlen)];
-  if (strftime(timestr, sizeof(timestr), fmt.c_str(), &tmp) == 0) {
+  uint64_t timestr_size = config_.get(ConfigKeyInt::max_strlen);
+  std::string timestr(timestr_size, '\0');
+  size_t timestr_len = strftime(
+      timestr.data(), timestr_size, fmt.c_str(), &tmp);
+  if (timestr_len == 0) {
     LOG(ERROR) << "strftime returned 0";
     return "(?)";
   }
+
+  // Fit return value to formatted length
+  timestr.resize(timestr_len);
   return timestr;
 }
 

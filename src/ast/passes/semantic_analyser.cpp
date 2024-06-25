@@ -841,8 +841,8 @@ void SemanticAnalyser::visit(Call &call)
       return;
     }
 
-    char dst[addr_size];
-    auto ret = inet_pton(af_type, addr.c_str(), &dst);
+    std::vector<char> dst(addr_size);
+    auto ret = inet_pton(af_type, addr.c_str(), dst.data());
     if (ret != 1) {
       LOG(ERROR, call.loc, err_)
           << call.func << "() expects a valid IPv4/IPv6 address, got " << addr;

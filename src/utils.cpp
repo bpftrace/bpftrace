@@ -1071,7 +1071,8 @@ std::string hex_format_buffer(const char *buf,
                               bool escape_hex)
 {
   // Allow enough space for every byte to be sanitized in the form "\x00"
-  char s[size * 4 + 1];
+  std::string str(size * 4 + 1, '\0');
+  char *s = str.data();
 
   size_t offset = 0;
   for (size_t i = 0; i < size; i++)
@@ -1084,9 +1085,9 @@ std::string hex_format_buffer(const char *buf,
                         i == size - 1 ? "%02x" : "%02x ",
                         ((const uint8_t *)buf)[i]);
 
-  s[offset] = '\0';
-
-  return std::string(s);
+  // Fit return value to actual length
+  str.resize(offset);
+  return str;
 }
 
 /*
