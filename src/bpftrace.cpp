@@ -1764,7 +1764,8 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   }
 
   // Fit return value to formatted length
-  return timestr.substr(0, timestr_len);
+  timestr.resize(timestr_len);
+  return timestr;
 }
 
 std::string BPFtrace::resolve_buf(char *buf, size_t size)

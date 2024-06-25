@@ -1086,7 +1086,8 @@ std::string hex_format_buffer(const char *buf,
                         ((const uint8_t *)buf)[i]);
 
   // Fit return value to actual length
-  return str.substr(0, offset);
+  str.resize(offset);
+  return str;
 }
 
 /*
