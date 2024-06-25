@@ -124,8 +124,12 @@ StructType *IRBuilderBPF::GetStructType(
 
 IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
                            Module &module,
-                           BPFtrace &bpftrace)
-    : IRBuilder<>(context), module_(module), bpftrace_(bpftrace)
+                           BPFtrace &bpftrace,
+                           AsyncIds &async_ids)
+    : IRBuilder<>(context),
+      module_(module),
+      bpftrace_(bpftrace),
+      async_ids_(async_ids)
 {
   // Declare external LLVM function
   FunctionType *pseudo_func_type = FunctionType::get(
@@ -2246,7 +2250,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
       (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
     return;
 
-  int error_id = helper_error_id_++;
+  int error_id = async_ids_.helper_error();
   bpftrace_.resources.helper_error_info[error_id] = { .func_id = func_id,
                                                       .loc = loc };
 
