@@ -382,20 +382,15 @@ static void parse_env(BPFtrace& bpftrace)
 
   if (should_clang_parse) {
     ClangParser clang;
+    std::string ksrc, kobj;
+    struct utsname utsname;
     std::vector<std::string> extra_flags;
-    {
-      struct utsname utsname;
-      uname(&utsname);
-      std::string ksrc, kobj;
-      auto kdirs = get_kernel_dirs(utsname);
-      ksrc = std::get<0>(kdirs);
-      kobj = std::get<1>(kdirs);
+    uname(&utsname);
+    bool found_kernel_headers = get_kernel_dirs(utsname, ksrc, kobj);
 
-      if (ksrc != "") {
-        extra_flags = get_kernel_cflags(
-            utsname.machine, ksrc, kobj, bpftrace.kconfig);
-      }
-    }
+    if (found_kernel_headers)
+      extra_flags = get_kernel_cflags(
+          utsname.machine, ksrc, kobj, bpftrace.kconfig);
     extra_flags.push_back("-include");
     extra_flags.push_back("/bpftrace/include/" CLANG_WORKAROUNDS_H);
 
@@ -408,8 +403,20 @@ static void parse_env(BPFtrace& bpftrace)
       extra_flags.push_back(file);
     }
 
-    if (!clang.parse(driver.root.get(), bpftrace, extra_flags))
+    if (!clang.parse(driver.root.get(), bpftrace, extra_flags)) {
+      if (!found_kernel_headers) {
+        LOG(WARNING)
+            << "Could not find kernel headers in " << ksrc << " / " << kobj
+            << ". To specify a particular path to kernel headers, set the env "
+            << "variables BPFTRACE_KERNEL_SOURCE and, optionally, "
+            << "BPFTRACE_KERNEL_BUILD if the kernel was built in a different "
+            << "directory than its source. You can also point the variable to "
+            << "a directory with built-in headers extracted from the following "
+            << "snippet:\nmodprobe kheaders && tar -C <directory> -xf "
+            << "/sys/kernel/kheaders.tar.xz";
+      }
       return nullptr;
+    }
   }
 
   err = driver.parse();

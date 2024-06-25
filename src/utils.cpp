@@ -703,8 +703,8 @@ bool is_dir(const std::string &path)
   return std_filesystem::is_directory(buf, ec);
 }
 
-// get_kernel_dirs returns {ksrc, kobj} - directories for pristine and
-// generated kernel sources.
+// get_kernel_dirs fills {ksrc, kobj} - directories for pristine and
+// generated kernel sources - and returns if they were found.
 //
 // When the kernel was built in its source tree ksrc == kobj, however when
 // the kernel was build in a different directory than its source, ksrc != kobj.
@@ -717,43 +717,40 @@ bool is_dir(const std::string &path)
 //
 //   /lib/modules/`uname -r`/build/
 //
-// {"", ""} is returned if no trace of kernel headers was found at all.
-// Both ksrc and kobj are guaranteed to be != "", if at least some trace of
-// kernel sources was found.
-std::tuple<std::string, std::string> get_kernel_dirs(
-    const struct utsname &utsname)
+// false is returned if no trace of kernel headers was found at all, with the
+// guessed location set anyway for later warning.
+//
+// Both ksrc and kobj are guaranteed to be != ""
+bool get_kernel_dirs(const struct utsname &utsname,
+                     std::string &ksrc,
+                     std::string &kobj)
 {
-#ifdef KERNEL_HEADERS_DIR
-  return { KERNEL_HEADERS_DIR, KERNEL_HEADERS_DIR };
-#endif
+  ksrc = kobj = std::string(KERNEL_HEADERS_DIR);
+  if (!ksrc.empty())
+    return true;
 
   const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
   if (kpath_env) {
+    ksrc = std::string(kpath_env);
     const char *kpath_build_env = ::getenv("BPFTRACE_KERNEL_BUILD");
-    if (!kpath_build_env) {
-      kpath_build_env = kpath_env;
+    if (kpath_build_env) {
+      kobj = std::string(kpath_build_env);
+    } else {
+      kobj = ksrc;
     }
-    return std::make_tuple(kpath_env, kpath_build_env);
+    return true;
   }
 
   std::string kdir = std::string("/lib/modules/") + utsname.release;
-  auto ksrc = kdir + "/source";
-  auto kobj = kdir + "/build";
+  ksrc = kdir + "/source";
+  kobj = kdir + "/build";
 
   // if one of source/ or build/ is not present - try to use the other one for
   // both.
   auto has_ksrc = is_dir(ksrc);
   auto has_kobj = is_dir(kobj);
   if (!has_ksrc && !has_kobj) {
-    LOG(WARNING) << "Could not find kernel headers in " << ksrc << " or "
-                 << kobj
-                 << ". To specify a particular path to kernel headers, set the "
-                    "env variables BPFTRACE_KERNEL_SOURCE and, optionally, "
-                    "BPFTRACE_KERNEL_BUILD if the kernel was built in a "
-                    "different directory than its source. To create kernel "
-                    "headers run 'modprobe kheaders', which will create a tar "
-                    "file at /sys/kernel/kheaders.tar.xz";
-    return std::make_tuple("", "");
+    return false;
   }
   if (!has_ksrc) {
     ksrc = kobj;
@@ -761,7 +758,7 @@ std::tuple<std::string, std::string> get_kernel_dirs(
     kobj = ksrc;
   }
 
-  return std::make_tuple(ksrc, kobj);
+  return true;
 }
 
 const std::string &is_deprecated(const std::string &str)
