@@ -8,7 +8,7 @@
 
 namespace bpftrace {
 
-Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
+Config::Config(bool has_cmd)
 {
   config_map_ = {
     { ConfigKeyBool::cpp_demangle, { .value = true } },

@@ -724,7 +724,7 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  Config config = Config(!args.cmd_str.empty(), bt_verbose);
+  Config config = Config(!args.cmd_str.empty());
   BPFtrace bpftrace(std::move(output), args.no_feature, config);
 
   if (!args.cmd_str.empty())
