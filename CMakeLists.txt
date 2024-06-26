@@ -35,6 +35,7 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
+add_compile_options("-Werror=missing-field-initializers")
 add_compile_options("-Werror=undef")
 add_compile_options("-Wpointer-arith")
 add_compile_options("-Wcast-align")
