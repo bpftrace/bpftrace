@@ -59,7 +59,7 @@ static bool try_load_(const char* name,
       continue;
     }
 
-    LIBBPF_OPTS(bpf_prog_load_opts, opts);
+    BPFTRACE_LIBBPF_OPTS(bpf_prog_load_opts, opts);
     opts.log_buf = logbuf;
     opts.log_size = logbuf_size;
     opts.log_level = loglevel;
@@ -131,11 +131,11 @@ bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
 {
   constexpr int log_size = 4096;
   char log_buf[log_size] = {};
-  LIBBPF_OPTS(bpf_btf_load_opts,
-              btf_opts,
-              .log_buf = log_buf,
-              .log_level = 0,
-              .log_size = log_size, );
+  BPFTRACE_LIBBPF_OPTS(bpf_btf_load_opts,
+                       btf_opts,
+                       .log_buf = log_buf,
+                       .log_level = 0,
+                       .log_size = log_size, );
 
   int fd = bpf_btf_load(btf_data, btf_size, &btf_opts);
   if (fd >= 0) {
@@ -220,7 +220,7 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
       break;
   }
 
-  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
   map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(map_type),
                           nullptr,
@@ -341,7 +341,7 @@ bool BPFfeature::has_map_batch()
   if (has_map_batch_.has_value())
     return *has_map_batch_;
 
-  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
   map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
                               libbpf::BPF_MAP_TYPE_HASH),
@@ -413,7 +413,7 @@ bool BPFfeature::has_kprobe_multi()
   }
 
   const char* sym = "ksys_read";
-  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   int progfd, linkfd = -1;
 
   struct bpf_insn insns[] = {
@@ -424,7 +424,7 @@ bool BPFfeature::has_kprobe_multi()
   link_opts.kprobe_multi.syms = &sym;
   link_opts.kprobe_multi.cnt = 1;
 
-  LIBBPF_OPTS(bpf_prog_load_opts, load_opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_prog_load_opts, load_opts);
   load_opts.expected_attach_type = static_cast<enum ::bpf_attach_type>(
       libbpf::BPF_TRACE_KPROBE_MULTI);
 
@@ -466,10 +466,11 @@ bool BPFfeature::has_uprobe_multi()
     return *has_uprobe_multi_;
   }
 
-  LIBBPF_OPTS(bpf_prog_load_opts,
-              load_opts,
-              .expected_attach_type = static_cast<enum ::bpf_attach_type>(
-                  libbpf::BPF_TRACE_UPROBE_MULTI), );
+  BPFTRACE_LIBBPF_OPTS(
+      bpf_prog_load_opts,
+      load_opts,
+      .expected_attach_type = static_cast<enum ::bpf_attach_type>(
+          libbpf::BPF_TRACE_UPROBE_MULTI), );
 
   int err = 0, progfd, linkfd = -1;
 
@@ -487,7 +488,7 @@ bool BPFfeature::has_uprobe_multi()
                          &load_opts);
 
   if (progfd >= 0) {
-    LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
     const unsigned long offset = 0;
 
     link_opts.uprobe_multi.path = "/";
@@ -526,7 +527,7 @@ bool BPFfeature::has_skb_output(void)
 
   int map_fd = 0;
 
-  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = 0;
   map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
                               libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY),
