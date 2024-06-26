@@ -108,7 +108,7 @@ struct ConfigValue {
 
 class Config {
 public:
-  explicit Config(bool has_cmd = false, bool bt_verbose = false);
+  explicit Config(bool has_cmd = false);
 
   bool get(ConfigKeyBool key) const
   {
@@ -181,7 +181,6 @@ private:
 private:
   bool can_set(ConfigSource prevSource, ConfigSource);
   bool is_aslr_enabled();
-  bool bt_verbose_ = false;
 
   std::map<ConfigKey, ConfigValue> config_map_;
 };

@@ -276,7 +276,6 @@ private:
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
-  bool need_recursion_check_ = false;
 
   std::map<std::string, AllocaInst *> variables_;
 
