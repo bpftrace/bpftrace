@@ -48,7 +48,7 @@ bool BpfBytecode::create_maps()
 {
   int failed_maps = 0;
   for (auto &map : maps_) {
-    LIBBPF_OPTS(bpf_map_create_opts, opts);
+    BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
     map.second.fd = bpf_map_create(static_cast<::bpf_map_type>(
                                        map.second.type()),
                                    map.second.bpf_name().c_str(),

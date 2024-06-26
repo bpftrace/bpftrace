@@ -567,16 +567,11 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     if (!t)
       continue;
 
-    _Pragma("GCC diagnostic push")
-        _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+    BPFTRACE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
+                         decl_opts,
+                         .field_name = "");
 
-            DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
-                                decl_opts,
-                                .field_name = "");
-
-    _Pragma("GCC diagnostic pop")
-
-        const struct btf_param *p;
+    const struct btf_param *p;
     int j;
 
     for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++) {

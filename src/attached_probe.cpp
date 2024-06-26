@@ -752,7 +752,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       prog_type = progtype(ProbeType::uprobe);
 
     {
-      LIBBPF_OPTS(bpf_prog_load_opts, opts);
+      BPFTRACE_LIBBPF_OPTS(bpf_prog_load_opts, opts);
       opts.log_buf = log_buf.get();
       opts.log_size = log_buf_size;
       opts.log_level = log_level;
@@ -824,11 +824,11 @@ void AttachedProbe::load_prog(BPFfeature &feature)
 
         int btf_fd = -1;
         if (load_config.btf) {
-          LIBBPF_OPTS(bpf_btf_load_opts,
-                      btf_opts,
-                      .log_buf = log_buf.get(),
-                      .log_level = static_cast<__u32>(log_level),
-                      .log_size = static_cast<__u32>(log_buf_size), );
+          BPFTRACE_LIBBPF_OPTS(bpf_btf_load_opts,
+                               btf_opts,
+                               .log_buf = log_buf.get(),
+                               .log_level = static_cast<__u32>(log_level),
+                               .log_size = static_cast<__u32>(log_buf_size), );
 
           auto &btf = prog_.getBTF();
           btf_fd = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
@@ -927,7 +927,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
 
 void AttachedProbe::attach_multi_kprobe(void)
 {
-  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
   std::vector<const char *> syms;
   unsigned int i = 0;
 
@@ -1133,7 +1133,7 @@ void AttachedProbe::attach_multi_uprobe(int pid)
       probe_.path, probe_.name, probe_.funcs, syms, offsets);
 
   // Attach uprobe through uprobe_multi link
-  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
 
   opts.uprobe_multi.path = probe_.path.c_str();
   opts.uprobe_multi.offsets = offsets.data();

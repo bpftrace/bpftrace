@@ -365,4 +365,9 @@ enum bpf_func_id {
 	__BPF_FUNC_MAX_ID,
 };
 #undef __BPF_ENUM_FN
+
+#define BPFTRACE_LIBBPF_OPTS(TYPE, NAME, ...)                                  \
+  _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")           \
+      LIBBPF_OPTS(TYPE, NAME, __VA_ARGS__)
+
 // clang-format on
