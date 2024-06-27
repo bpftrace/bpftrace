@@ -1020,7 +1020,7 @@ void CodegenLLVM::visit(Call &call)
       int data_size = 0;
 
       // create buffer to store the argument expression values
-      SizedType data_type = CreateBuffer(nargs * 8);
+      SizedType data_type = CreateArray(nargs, CreateUInt64());
       AllocaInst *data = b_.CreateAllocaBPFInit(data_type, "data");
 
       for (size_t i = 1; i < call.vargs->size(); i++) {
