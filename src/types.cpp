@@ -435,8 +435,8 @@ SizedType CreateKSym()
 
 SizedType CreateBuffer(size_t size)
 {
-  auto metadata_headroom_bits = sizeof(AsyncEvent::Buf) * 8;
-  return SizedType(Type::buffer, size + metadata_headroom_bits);
+  auto metadata_headroom_bytes = sizeof(AsyncEvent::Buf);
+  return SizedType(Type::buffer, size + metadata_headroom_bytes);
 }
 
 SizedType CreateTimestamp()
