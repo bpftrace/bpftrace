@@ -17,6 +17,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix incorrect buf() size calculation which could lead to verifier errors
+  - [#3281](https://github.com/bpftrace/bpftrace/pull/3281)
 #### Security
 #### Docs
 #### Tools
