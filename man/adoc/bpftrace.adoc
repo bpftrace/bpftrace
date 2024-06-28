@@ -501,7 +501,7 @@ Identifiers must match the following regular expression: `[_a-zA-Z][_a-zA-Z0-9]*
 
 === Literals
 
-Integer, char, and string literals are supported.
+Integer and string literals are supported.
 
 Integer literals can be defined in the following formats:
 
@@ -520,11 +520,17 @@ To improve the readability of big literals an underscore `_` can be used as fiel
 Integer suffixes as found in the C language are parsed by bpftrace to ensure compatibility with C headers/definitions but they're not used as size specifiers.
 `123UL`, `123U` and `123LL` all result in the same integer type with a value of `123`.
 
-Character literals can be defined by enclosing the character in single quotes e.g. `$c = 'c';`.
+Character literals are not supported at this time, and the corresponding ASCII code must be used instead:
+
+----
+BEGIN {
+  printf("Echo A: %c\n", 65);
+}
+----
 
 String literals can be defined by enclosing the character string in double quotes e.g. `$str = "Hello world";`.
 
-Characters and strings support the following escape sequences:
+Strings support the following escape sequences:
 
 [cols="~,~"]
 |===

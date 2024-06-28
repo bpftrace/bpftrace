@@ -29,6 +29,8 @@ and this project adheres to
   - [#3281](https://github.com/bpftrace/bpftrace/pull/3281)
 #### Security
 #### Docs
+- Remove mention of unsupported character literals
+  - [#3283](https://github.com/bpftrace/bpftrace/pull/3283)
 #### Tools
 
 ## [0.21.0] 2024-06-21
