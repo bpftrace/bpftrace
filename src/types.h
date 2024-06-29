@@ -449,7 +449,8 @@ public:
   bool IsMapIterableTy() const
   {
     return !(type_ == Type::avg || type_ == Type::hist ||
-             type_ == Type::lhist || type_ == Type::stats);
+             type_ == Type::lhist || type_ == Type::stats ||
+             type_ == Type::max || type_ == Type::min);
   }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);

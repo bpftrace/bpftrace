@@ -29,6 +29,8 @@ and this project adheres to
 #### Fixed
 - Fix incorrect buf() size calculation which could lead to verifier errors
   - [#3281](https://github.com/bpftrace/bpftrace/pull/3281)
+- Fix min/max map functions
+  - [#3286](https://github.com/bpftrace/bpftrace/issues/3286)
 #### Security
 #### Docs
 #### Tools

@@ -3556,6 +3556,16 @@ BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }
 
 TEST(semantic_analyser, for_loop_map_restricted_types)
 {
+  test_error("BEGIN { @map[0] = min(1); for ($kv : @map) { } }", R"(
+stdin:1:38-43: ERROR: Loop expression does not support type: min
+BEGIN { @map[0] = min(1); for ($kv : @map) { } }
+                                     ~~~~~
+)");
+  test_error("BEGIN { @map[0] = max(1); for ($kv : @map) { } }", R"(
+stdin:1:38-43: ERROR: Loop expression does not support type: max
+BEGIN { @map[0] = max(1); for ($kv : @map) { } }
+                                     ~~~~~
+)");
   test_error("BEGIN { @map[0] = avg(1); for ($kv : @map) { } }", R"(
 stdin:1:38-43: ERROR: Loop expression does not support type: avg
 BEGIN { @map[0] = avg(1); for ($kv : @map) { } }

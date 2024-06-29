@@ -79,6 +79,13 @@ public:
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
           &total_counts_by_key) const = 0;
+  virtual void map_min_max(
+      BPFtrace &bpftrace,
+      const BpfMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+          &min_max_by_key) const = 0;
   // Write non-map value to output
   // Ideally, the implementation should use value_to_str to convert a value into
   // a string, format it properly, and print it to out_.
@@ -155,6 +162,13 @@ protected:
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
           &total_counts_by_key) const;
+  virtual void map_min_max_contents(
+      BPFtrace &bpftrace,
+      const BpfMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+          &min_max_by_key) const;
   // Convert map key to string
   virtual std::string map_key_to_str(BPFtrace &bpftrace,
                                      const BpfMap &map,
@@ -227,6 +241,12 @@ public:
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
           &total_counts_by_key) const override;
+  void map_min_max(BPFtrace &bpftrace,
+                   const BpfMap &map,
+                   uint32_t top,
+                   uint32_t div,
+                   const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+                       &min_max_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;
@@ -297,6 +317,12 @@ public:
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
           &total_counts_by_key) const override;
+  void map_min_max(BPFtrace &bpftrace,
+                   const BpfMap &map,
+                   uint32_t top,
+                   uint32_t div,
+                   const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+                       &min_max_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;

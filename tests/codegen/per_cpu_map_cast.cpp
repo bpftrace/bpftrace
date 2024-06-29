@@ -42,18 +42,6 @@ TEST(codegen, sum_cast_loop)
        NAME);
 }
 
-TEST(codegen, min_cast_loop)
-{
-  test("kprobe:f { @x[1] = min(2); for ($kv : @x) { print(($kv.0, $kv.1)); } }",
-       NAME);
-}
-
-TEST(codegen, max_cast_loop)
-{
-  test("kprobe:f { @x[1] = max(2); for ($kv : @x) { print(($kv.0, $kv.1)); } }",
-       NAME);
-}
-
 TEST(codegen, count_no_cast_for_print)
 {
   test("BEGIN { @ = count(); print(@) }", NAME);

@@ -350,11 +350,18 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  } else if (type.IsMinTy())
-    return std::to_string(min_value(value, nvalues) / div);
-  else if (type.IsMaxTy())
-    return std::to_string(max_value(value, nvalues) / div);
-  else if (type.IsProbeTy())
+  } else if (type.IsMinTy() || type.IsMaxTy()) {
+    /*
+     * on this code path, min/max is calculated in the kernel while
+     * printing the entire map is handled in a different function
+     * which shouldn't call this
+     */
+    assert(!is_per_cpu);
+    if (type.IsSigned()) {
+      return std::to_string(read_data<int64_t>(value.data()) / div);
+    }
+    return std::to_string(read_data<uint64_t>(value.data()) / div);
+  } else if (type.IsProbeTy())
     return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
   else if (type.IsTimestampTy())
     return bpftrace.resolve_timestamp(
@@ -508,6 +515,36 @@ void Output::map_stats_contents(
   }
 }
 
+void Output::map_min_max_contents(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    uint32_t top,
+    uint32_t div,
+    const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &min_max_by_key)
+    const
+{
+  const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
+  uint32_t i = 0;
+  bool first = true;
+  for (auto &key_value : min_max_by_key) {
+    auto &key = key_value.first;
+    auto value = key_value.second;
+
+    if (top && min_max_by_key.size() > top &&
+        i++ < (min_max_by_key.size() - top))
+      continue;
+
+    if (first)
+      first = false;
+    else
+      map_elem_delim(map_type);
+
+    auto key_str = map_key_to_str(bpftrace, map, key);
+    std::string value_str = std::to_string(value / div);
+    map_key_val(map_type, key_str, value_str);
+  }
+}
+
 void TextOutput::map(
     BPFtrace &bpftrace,
     const BpfMap &map,
@@ -633,6 +670,18 @@ void TextOutput::map_stats(
 {
   map_stats_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
+  out_ << std::endl << std::endl;
+}
+
+void TextOutput::map_min_max(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    uint32_t top,
+    uint32_t div,
+    const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &min_max_by_key)
+    const
+{
+  map_min_max_contents(bpftrace, map, top, div, min_max_by_key);
   out_ << std::endl << std::endl;
 }
 
@@ -916,6 +965,31 @@ void JsonOutput::map_stats(
 
   map_stats_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
+
+  if (map_key.size() > 0)
+    out_ << "}";
+  out_ << "}}" << std::endl;
+}
+
+void JsonOutput::map_min_max(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    uint32_t top,
+    uint32_t div,
+    const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &min_max_by_key)
+    const
+{
+  if (min_max_by_key.empty())
+    return;
+
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+
+  out_ << "{\"type\": \"" << MessageType::map << "\", \"data\": {";
+  out_ << "\"" << json_escape(map.name()) << "\": ";
+  if (map_key.size() > 0) // check if this map has keys
+    out_ << "{";
+
+  map_min_max_contents(bpftrace, map, top, div, min_max_by_key);
 
   if (map_key.size() > 0)
     out_ << "}";

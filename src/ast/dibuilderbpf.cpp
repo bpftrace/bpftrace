@@ -174,7 +174,7 @@ DIType *DIBuilderBPF::GetMapKeyType(const MapKey &key,
   // Some map types need an extra 8-byte key.
   uint64_t extra_arg_size = 0;
   if (value_type.IsHistTy() || value_type.IsLhistTy() || value_type.IsAvgTy() ||
-      value_type.IsStatsTy())
+      value_type.IsStatsTy() || value_type.IsMinTy() || value_type.IsMaxTy())
     extra_arg_size = 8;
 
   // Single map key -> use the appropriate type.
