@@ -504,17 +504,21 @@ void CodegenLLVM::visit(Call &call)
                              call.vargs->front()->type.IsSigned());
     b_.CreateMapElemAdd(ctx_, map, key, expr_, call.loc);
     expr_ = nullptr;
-  } else if (call.func == "min") {
+  } else if (call.func == "max" || call.func == "min") {
+    bool is_max = call.func == "max";
     Map &map = *call.map;
+
     auto [key, scoped_key_deleter] = getMapKey(map);
+
     CallInst *lookup = b_.CreateMapLookup(map, key);
-    SizedType &type = map.type;
 
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
+
+    llvm::Type *mm_struct_ty = b_.GetMapValueType(map.type);
 
     Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
@@ -527,91 +531,86 @@ void CodegenLLVM::visit(Call &call)
                                                         "lookup_merge",
                                                         parent);
 
-    AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
-    Value *condition = b_.CreateICmpNE(
+    Value *lookup_condition = b_.CreateICmpNE(
         b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
         b_.GetNull(),
-        "map_lookup_cond");
-    b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+        "lookup_cond");
+    b_.CreateCondBr(lookup_condition,
+                    lookup_success_block,
+                    lookup_failure_block);
 
     b_.SetInsertPoint(lookup_success_block);
 
-    auto *cast = b_.CreatePointerCast(lookup, value->getType(), "cast");
-    BasicBlock *ge = BasicBlock::Create(module_->getContext(),
-                                        "min.ge",
-                                        parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(b_.CreateLoad(b_.getInt64Ty(), cast),
-                                     expr_),
-                    ge,
-                    lookup_merge_block);
+    auto *cast = b_.CreatePointerCast(lookup,
+                                      mm_struct_ty->getPointerTo(),
+                                      "cast");
 
-    b_.SetInsertPoint(ge);
-    b_.CreateStore(expr_, cast);
+    Value *mm_val = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(mm_struct_ty, cast, { b_.getInt64(0), b_.getInt32(0) }));
+
+    Value *is_set_val = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(mm_struct_ty, cast, { b_.getInt64(0), b_.getInt32(1) }));
+
+    BasicBlock *is_set_block = BasicBlock::Create(module_->getContext(),
+                                                  "is_set",
+                                                  parent);
+    BasicBlock *min_max_block = BasicBlock::Create(module_->getContext(),
+                                                   "min_max",
+                                                   parent);
+
+    Value *is_set_condition = b_.CreateICmpEQ(is_set_val,
+                                              b_.getInt64(1),
+                                              "is_set_cond");
+
+    // If the value has not been set jump past the min_max_condition
+    b_.CreateCondBr(is_set_condition, is_set_block, min_max_block);
+
+    b_.SetInsertPoint(is_set_block);
+
+    Value *min_max_condition;
+
+    if (is_max) {
+      min_max_condition = map.type.IsSigned() ? b_.CreateICmpSGE(expr_, mm_val)
+                                              : b_.CreateICmpUGE(expr_, mm_val);
+    } else {
+      min_max_condition = map.type.IsSigned() ? b_.CreateICmpSGE(mm_val, expr_)
+                                              : b_.CreateICmpUGE(mm_val, expr_);
+    }
+
+    b_.CreateCondBr(min_max_condition, min_max_block, lookup_merge_block);
+
+    b_.SetInsertPoint(min_max_block);
+
+    b_.CreateStore(
+        expr_,
+        b_.CreateGEP(mm_struct_ty, cast, { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(
+        b_.getInt64(1),
+        b_.CreateGEP(mm_struct_ty, cast, { b_.getInt64(0), b_.getInt32(1) }));
 
     b_.CreateBr(lookup_merge_block);
 
     b_.SetInsertPoint(lookup_failure_block);
 
-    b_.CreateMapElemInit(ctx_, map, key, expr_, call.loc);
+    AllocaInst *mm_struct = b_.CreateAllocaBPF(mm_struct_ty, "mm_struct");
+
+    b_.CreateStore(expr_,
+                   b_.CreateGEP(mm_struct_ty,
+                                mm_struct,
+                                { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(b_.getInt64(1),
+                   b_.CreateGEP(mm_struct_ty,
+                                mm_struct,
+                                { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateMapUpdateElem(ctx_, map.ident, key, mm_struct, call.loc);
+
+    b_.CreateLifetimeEnd(mm_struct);
 
     b_.CreateBr(lookup_merge_block);
     b_.SetInsertPoint(lookup_merge_block);
-    b_.CreateLifetimeEnd(value);
-
-    expr_ = nullptr;
-  } else if (call.func == "max") {
-    Map &map = *call.map;
-    auto [key, scoped_key_deleter] = getMapKey(map);
-    CallInst *lookup = b_.CreateMapLookup(map, key);
-    SizedType &type = map.type;
-
-    auto scoped_del = accept(call.vargs->front());
-    // promote int to 64-bit
-    expr_ = b_.CreateIntCast(expr_,
-                             b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
-
-    Function *parent = b_.GetInsertBlock()->getParent();
-    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
-                                                          "lookup_success",
-                                                          parent);
-    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
-                                                          "lookup_failure",
-                                                          parent);
-    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
-                                                        "lookup_merge",
-                                                        parent);
-
-    AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
-    Value *condition = b_.CreateICmpNE(
-        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
-        b_.GetNull(),
-        "map_lookup_cond");
-    b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
-
-    b_.SetInsertPoint(lookup_success_block);
-
-    auto *cast = b_.CreatePointerCast(lookup, value->getType(), "cast");
-    BasicBlock *ge = BasicBlock::Create(module_->getContext(),
-                                        "max.ge",
-                                        parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(expr_,
-                                     b_.CreateLoad(b_.getInt64Ty(), cast)),
-                    ge,
-                    lookup_merge_block);
-
-    b_.SetInsertPoint(ge);
-    b_.CreateStore(expr_, cast);
-
-    b_.CreateBr(lookup_merge_block);
-
-    b_.SetInsertPoint(lookup_failure_block);
-
-    b_.CreateMapElemInit(ctx_, map, key, expr_, call.loc);
-
-    b_.CreateBr(lookup_merge_block);
-    b_.SetInsertPoint(lookup_merge_block);
-    b_.CreateLifetimeEnd(value);
 
     expr_ = nullptr;
   } else if (call.func == "avg" || call.func == "stats") {

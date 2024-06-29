@@ -690,7 +690,7 @@ void maybe_throw_helper_verifier_error(std::string_view log,
                     exception_msg_suffix;
   throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
 }
-}
+} // namespace
 
 void AttachedProbe::load_prog(BPFfeature &feature)
 {

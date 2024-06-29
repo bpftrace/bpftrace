@@ -295,3 +295,8 @@ NAME map strings are memset
 PROG BEGIN { @x = "xxxxx"; @x = "a"; @[@x] = 1; @y = "yyyyy"; @y = "a"; @[@y] = 1; printf("len: %d\n", len(@)); exit(); }
 EXPECT len: 1
 TIMEOUT 1
+
+NAME print_per_cpu_map_vals
+PROG BEGIN { @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@c, @s, @mn, @mx)); exit(); }
+EXPECT (1, 5, 1, -1)
+TIMEOUT 3

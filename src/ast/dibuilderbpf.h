@@ -34,6 +34,7 @@ public:
 
   DIType *GetType(const SizedType &stype);
   DIType *CreateTupleType(const SizedType &stype);
+  DIType *CreateMinMaxType(const SizedType &stype);
   DIType *createPointerMemberType(const std::string &name,
                                   uint64_t offset,
                                   DIType *type);
