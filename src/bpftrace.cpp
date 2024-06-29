@@ -1388,16 +1388,17 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                 return reduce_value<uint64_t>(a.second, nvalues) <
                        reduce_value<uint64_t>(b.second, nvalues);
               });
-  } else if (value_type.IsMinTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return min_value(a.second, nvalues) < min_value(b.second, nvalues);
-        });
-  } else if (value_type.IsMaxTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return max_value(a.second, nvalues) < max_value(b.second, nvalues);
-        });
+  } else if (value_type.IsMinTy() || value_type.IsMaxTy()) {
+    std::sort(values_by_key.begin(),
+              values_by_key.end(),
+              [&](auto &a, auto &b) {
+                return min_max_value<uint64_t>(a.second,
+                                               nvalues,
+                                               value_type.IsMaxTy()) <
+                       min_max_value<uint64_t>(b.second,
+                                               nvalues,
+                                               value_type.IsMaxTy());
+              });
   } else {
     sort_by_key(map_info.key.args_, values_by_key);
   };

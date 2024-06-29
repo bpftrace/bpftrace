@@ -350,11 +350,20 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  } else if (type.IsMinTy())
-    return std::to_string(min_value(value, nvalues) / div);
-  else if (type.IsMaxTy())
-    return std::to_string(max_value(value, nvalues) / div);
-  else if (type.IsProbeTy())
+  } else if (type.IsMinTy() || type.IsMaxTy()) {
+    if (is_per_cpu) {
+      if (type.IsSigned()) {
+        return std::to_string(
+            min_max_value<int64_t>(value, nvalues, type.IsMaxTy()) / div);
+      }
+      return std::to_string(
+          min_max_value<uint64_t>(value, nvalues, type.IsMaxTy()) / div);
+    }
+    if (type.IsSigned()) {
+      return std::to_string(read_data<int64_t>(value.data()) / div);
+    }
+    return std::to_string(read_data<uint64_t>(value.data()) / div);
+  } else if (type.IsProbeTy())
     return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
   else if (type.IsTimestampTy())
     return bpftrace.resolve_timestamp(
