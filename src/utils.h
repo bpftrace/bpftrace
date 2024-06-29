@@ -328,8 +328,30 @@ T reduce_value(const std::vector<uint8_t> &value, int nvalues)
   }
   return sum;
 }
-int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
-uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
+
+template <typename T>
+T min_max_value(const std::vector<uint8_t> &value, int nvalues, bool is_max)
+{
+  T mm_val = 0;
+  bool mm_set = false;
+  for (int i = 0; i < nvalues; i++) {
+    T val = read_data<T>(value.data() + i * (sizeof(T) * 2));
+    uint32_t is_set = read_data<uint32_t>(value.data() + sizeof(T) +
+                                          i * (sizeof(T) * 2));
+    if (!is_set) {
+      continue;
+    }
+    if (!mm_set) {
+      mm_val = val;
+      mm_set = true;
+    } else if (is_max && val > mm_val) {
+      mm_val = val;
+    } else if (!is_max && val < mm_val) {
+      mm_val = val;
+    }
+  }
+  return mm_val;
+}
 
 // Combination of 2 hashes
 // The algorithm is taken from boost::hash_combine

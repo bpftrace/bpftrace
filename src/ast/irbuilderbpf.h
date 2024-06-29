@@ -71,6 +71,7 @@ public:
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
   void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
   llvm::Type *GetType(const SizedType &stype);
+  llvm::Type *GetMapValueType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
   Value *GetMapVar(const std::string &map_name);
@@ -332,8 +333,11 @@ private:
                              size_t size,
                              const location *loc = nullptr);
 
-  void createPerCpuSum(AllocaInst *ret, Value *cpu_value);
-  void createPerCpuMinMax(AllocaInst *ret, Value *cpu_value, bool is_max);
+  void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
+  void createPerCpuMinMax(AllocaInst *ret,
+                          AllocaInst *is_ret_set,
+                          CallInst *call,
+                          const SizedType &type);
 
   std::map<std::string, StructType *> structs_;
 };

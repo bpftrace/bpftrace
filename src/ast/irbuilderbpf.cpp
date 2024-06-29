@@ -316,6 +316,21 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   return ty;
 }
 
+llvm::Type *IRBuilderBPF::GetMapValueType(const SizedType &stype)
+{
+  llvm::Type *ty;
+  if (stype.IsMinTy() || stype.IsMaxTy()) {
+    // The first field is the value
+    // The second field is the "value is set" flag
+    std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
+    ty = GetStructType("min_max_val", llvm_elems, false);
+  } else {
+    ty = GetType(stype);
+  }
+
+  return ty;
+}
+
 CallInst *IRBuilderBPF::CreateHelperCall(libbpf::bpf_func_id func_id,
                                          FunctionType *helper_type,
                                          ArrayRef<Value *> args,
@@ -591,7 +606,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
    *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
    *     break;
    *   }
-   *   // Get the sum, min, or max value
+   *   // update ret for sum, count, avg, min, max
    *   i++;
    * }
    * return ret;
@@ -601,11 +616,14 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
 
   const std::string &map_name = map.ident;
 
-  AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
+  AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
+  // used only for min/max
+  AllocaInst *is_ret_set = CreateAllocaBPF(getInt64Ty(), "is_ret_set");
 
   CreateStore(getInt32(0), i);
   CreateStore(getInt64(0), ret);
+  CreateStore(getInt64(0), is_ret_set);
 
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
@@ -647,15 +665,11 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
-  // createMapLookup  returns an u8*
-  auto *cast = CreatePointerCast(call, getInt64Ty()->getPointerTo(), "cast");
 
-  if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
-    createPerCpuSum(ret, cast);
-  } else if (type.IsMaxTy()) {
-    createPerCpuMinMax(ret, cast, true);
-  } else if (type.IsMinTy()) {
-    createPerCpuMinMax(ret, cast, false);
+  if (type.IsMinTy() || type.IsMaxTy()) {
+    createPerCpuMinMax(ret, is_ret_set, call, type);
+  } else if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
+    createPerCpuSum(ret, call, type);
   } else {
     LOG(BUG) << "Unsupported map aggregation type: " << type;
   }
@@ -698,46 +712,110 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   SetInsertPoint(while_end);
 
   CreateLifetimeEnd(i);
+  CreateLifetimeEnd(is_ret_set);
+
   Value *ret_reg = CreateLoad(getInt64Ty(), ret);
+
   CreateLifetimeEnd(ret);
   return ret_reg;
 }
 
-void IRBuilderBPF::createPerCpuSum(AllocaInst *ret, Value *cpu_value)
+void IRBuilderBPF::createPerCpuSum(AllocaInst *ret,
+                                   CallInst *call,
+                                   const SizedType &type)
 {
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cpu_value),
+  auto *cast = CreatePointerCast(call, GetType(type)->getPointerTo(), "cast");
+  CreateStore(CreateAdd(CreateLoad(GetType(type), cast),
                         CreateLoad(getInt64Ty(), ret)),
               ret);
 }
 
 void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
-                                      Value *cpu_value,
-                                      bool is_max)
+                                      AllocaInst *is_ret_set,
+                                      CallInst *call,
+                                      const SizedType &type)
 {
+  auto *value_type = GetMapValueType(type);
+  auto *cast = CreatePointerCast(call, value_type->getPointerTo(), "cast");
+  bool is_max = type.IsMaxTy();
+
+  Value *mm_val = CreateLoad(
+      getInt64Ty(), CreateGEP(value_type, cast, { getInt64(0), getInt32(0) }));
+
+  Value *is_val_set = CreateLoad(
+      getInt64Ty(), CreateGEP(value_type, cast, { getInt64(0), getInt32(1) }));
+
+  /*
+   * (ret, is_ret_set, min_max_val, is_val_set) {
+   * // if the min_max_val is 0, which is the initial map value,
+   * // we need to know if it was explicitly set by user
+   * if (!is_val_set == 1) {
+   *   return;
+   * }
+   * if (!is_ret_set == 1) {
+   *   ret = min_max_val;
+   *   is_ret_set = 1;
+   * } else if (min_max_val > ret) { // or min_max_val < ret if min operation
+   *   ret = min_max_val;
+   *   is_ret_set = 1;
+   * }
+   */
+
   Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *success_block = BasicBlock::Create(module_.getContext(),
-                                                 "min_max_success",
-                                                 parent);
+  BasicBlock *val_set_success = BasicBlock::Create(module_.getContext(),
+                                                   "val_set_success",
+                                                   parent);
+  BasicBlock *min_max_success = BasicBlock::Create(module_.getContext(),
+                                                   "min_max_success",
+                                                   parent);
+  BasicBlock *ret_set_success = BasicBlock::Create(module_.getContext(),
+                                                   "ret_set_success",
+                                                   parent);
   BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
                                                "min_max_merge",
                                                parent);
-  Value *condition;
+
+  Value *val_set_condition = CreateICmpEQ(is_val_set,
+                                          getInt64(1),
+                                          "val_set_cond");
+
+  Value *ret_set_condition = CreateICmpEQ(CreateLoad(getInt64Ty(), is_ret_set),
+                                          getInt64(1),
+                                          "ret_set_cond");
+
+  Value *min_max_condition;
 
   if (is_max) {
-    condition = CreateICmpSGT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "max_cond");
+    min_max_condition =
+        type.IsSigned()
+            ? CreateICmpSGT(mm_val, CreateLoad(getInt64Ty(), ret), "max_cond")
+            : CreateICmpUGT(mm_val, CreateLoad(getInt64Ty(), ret), "max_cond");
   } else {
-    condition = CreateICmpSLT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "min_cond");
+    min_max_condition =
+        type.IsSigned()
+            ? CreateICmpSLT(mm_val, CreateLoad(getInt64Ty(), ret), "min_cond")
+            : CreateICmpULT(mm_val, CreateLoad(getInt64Ty(), ret), "max_cond");
   }
-  CreateCondBr(condition, success_block, merge_block);
 
-  SetInsertPoint(success_block);
+  // if (is_val_set == 1)
+  CreateCondBr(val_set_condition, val_set_success, merge_block);
+
+  SetInsertPoint(val_set_success);
+
+  // if (is_ret_set == 1)
+  CreateCondBr(ret_set_condition, ret_set_success, min_max_success);
+
+  SetInsertPoint(ret_set_success);
+
+  // if (min_max_val > ret) or if (min_max_val < ret)
+  CreateCondBr(min_max_condition, min_max_success, merge_block);
+
+  SetInsertPoint(min_max_success);
 
   // ret = cpu_value;
-  CreateStore(CreateLoad(getInt64Ty(), cpu_value), ret);
+  CreateStore(mm_val, ret);
+  // is_ret_set = 1;
+  CreateStore(getInt64(1), is_ret_set);
 
   CreateBr(merge_block);
 

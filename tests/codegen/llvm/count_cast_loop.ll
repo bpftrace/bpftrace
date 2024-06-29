@@ -68,124 +68,130 @@ define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".t
   %print_tuple_16_t = alloca %print_tuple_16_t, align 8
   %tuple = alloca %"unsigned int64_count__tuple_t", align 8
   %"$kv" = alloca %"unsigned int64_count__tuple_t", align 8
-  %i = alloca i32, align 4
+  %is_ret_set = alloca i64, align 8
   %ret = alloca i64, align 8
+  %i = alloca i32, align 4
   %lookup_key = alloca i64, align 8
   %key = load i64, i8* %1, align 8
   %5 = bitcast i64* %lookup_key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   store i64 %key, i64* %lookup_key, align 8
-  %6 = bitcast i64* %ret to i8*
+  %6 = bitcast i32* %i to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  %7 = bitcast i32* %i to i8*
+  %7 = bitcast i64* %ret to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = bitcast i64* %is_ret_set to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i32 0, i32* %i, align 4
   store i64 0, i64* %ret, align 8
+  store i64 0, i64* %is_ret_set, align 8
   br label %while_cond
 
 while_cond:                                       ; preds = %lookup_success, %4
-  %8 = load i32, i64* @num_cpus, align 4
-  %9 = load i32, i32* %i, align 4
-  %num_cpu.cmp = icmp ult i32 %9, %8
+  %9 = load i32, i64* @num_cpus, align 4
+  %10 = load i32, i32* %i, align 4
+  %num_cpu.cmp = icmp ult i32 %10, %9
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %10 = load i32, i32* %i, align 4
-  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %lookup_key, i32 %10)
+  %11 = load i32, i32* %i, align 4
+  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %lookup_key, i32 %11)
   %map_lookup_cond = icmp ne i8* %lookup_percpu_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
-  %11 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = load i64, i64* %ret, align 8
-  %13 = bitcast i64* %ret to i8*
+  %12 = bitcast i32* %i to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %13 = bitcast i64* %is_ret_set to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  %14 = bitcast %"unsigned int64_count__tuple_t"* %"$kv" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
-  %15 = bitcast %"unsigned int64_count__tuple_t"* %"$kv" to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %15, i8 0, i64 16, i1 false)
-  %16 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 0
-  store i64 %key, i64* %16, align 8
-  %17 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 1
-  store i64 %12, i64* %17, align 8
+  %14 = load i64, i64* %ret, align 8
+  %15 = bitcast i64* %ret to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
+  %16 = bitcast %"unsigned int64_count__tuple_t"* %"$kv" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  %17 = bitcast %"unsigned int64_count__tuple_t"* %"$kv" to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %17, i8 0, i64 16, i1 false)
   %18 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 0
-  %19 = load i64, i64* %18, align 8
-  %20 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 1
+  store i64 %key, i64* %18, align 8
+  %19 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 1
+  store i64 %14, i64* %19, align 8
+  %20 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 0
   %21 = load i64, i64* %20, align 8
-  %22 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %22)
-  %23 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %23, i8 0, i64 16, i1 false)
-  %24 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %tuple, i32 0, i32 0
-  store i64 %19, i64* %24, align 8
-  %25 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %tuple, i32 0, i32 1
-  store i64 %21, i64* %25, align 8
-  %26 = bitcast %print_tuple_16_t* %print_tuple_16_t to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %26)
-  %27 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i64 0, i32 0
-  store i64 30007, i64* %27, align 8
-  %28 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i64 0, i32 1
-  store i64 0, i64* %28, align 8
-  %29 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i32 0, i32 2
-  %30 = bitcast [16 x i8]* %29 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %30, i8 0, i64 16, i1 false)
-  %31 = bitcast [16 x i8]* %29 to i8*
-  %32 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %31, i8* align 1 %32, i64 16, i1 false)
+  %22 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %"$kv", i32 0, i32 1
+  %23 = load i64, i64* %22, align 8
+  %24 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
+  %25 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %25, i8 0, i64 16, i1 false)
+  %26 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %tuple, i32 0, i32 0
+  store i64 %21, i64* %26, align 8
+  %27 = getelementptr %"unsigned int64_count__tuple_t", %"unsigned int64_count__tuple_t"* %tuple, i32 0, i32 1
+  store i64 %23, i64* %27, align 8
+  %28 = bitcast %print_tuple_16_t* %print_tuple_16_t to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %28)
+  %29 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i64 0, i32 0
+  store i64 30007, i64* %29, align 8
+  %30 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i64 0, i32 1
+  store i64 0, i64* %30, align 8
+  %31 = getelementptr %print_tuple_16_t, %print_tuple_16_t* %print_tuple_16_t, i32 0, i32 2
+  %32 = bitcast [16 x i8]* %31 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %32, i8 0, i64 16, i1 false)
+  %33 = bitcast [16 x i8]* %31 to i8*
+  %34 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %33, i8* align 1 %34, i64 16, i1 false)
   %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, %print_tuple_16_t*, i64, i64)*)(%"struct map_t.0"* @ringbuf, %print_tuple_16_t* %print_tuple_16_t, i64 32, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 lookup_success:                                   ; preds = %while_body
   %cast = bitcast i8* %lookup_percpu_elem to i64*
-  %33 = load i64, i64* %ret, align 8
-  %34 = load i64, i64* %cast, align 8
-  %35 = add i64 %34, %33
-  store i64 %35, i64* %ret, align 8
-  %36 = load i32, i32* %i, align 4
-  %37 = add i32 %36, 1
-  store i32 %37, i32* %i, align 4
+  %35 = load i64, i64* %ret, align 8
+  %36 = load i64, i64* %cast, align 8
+  %37 = add i64 %36, %35
+  store i64 %37, i64* %ret, align 8
+  %38 = load i32, i32* %i, align 4
+  %39 = add i32 %38, 1
+  store i32 %39, i32* %i, align 4
   br label %while_cond
 
 lookup_failure:                                   ; preds = %while_body
-  %38 = load i32, i32* %i, align 4
-  %error_lookup_cond = icmp eq i32 %38, 0
+  %40 = load i32, i32* %i, align 4
+  %error_lookup_cond = icmp eq i32 %40, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %39 = load i32, i32* %i, align 4
+  %41 = load i32, i32* %i, align 4
   br label %while_end
 
 event_loss_counter:                               ; preds = %while_end
-  %40 = bitcast i32* %key1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %40)
+  %42 = bitcast i32* %key1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %42)
   store i32 0, i32* %key1, align 4
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key1)
   %map_lookup_cond4 = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
 
 counter_merge:                                    ; preds = %lookup_merge, %while_end
-  %41 = bitcast %print_tuple_16_t* %print_tuple_16_t to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %41)
-  %42 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %42)
+  %43 = bitcast %print_tuple_16_t* %print_tuple_16_t to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %43)
+  %44 = bitcast %"unsigned int64_count__tuple_t"* %tuple to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %44)
   ret i64 0
 
 lookup_success2:                                  ; preds = %event_loss_counter
-  %43 = bitcast i8* %lookup_elem to i64*
-  %44 = atomicrmw add i64* %43, i64 1 seq_cst
+  %45 = bitcast i8* %lookup_elem to i64*
+  %46 = atomicrmw add i64* %45, i64 1 seq_cst
   br label %lookup_merge
 
 lookup_failure3:                                  ; preds = %event_loss_counter
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure3, %lookup_success2
-  %45 = bitcast i32* %key1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %45)
+  %47 = bitcast i32* %key1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %47)
   br label %counter_merge
 }
 

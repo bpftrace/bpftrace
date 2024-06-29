@@ -37,6 +37,8 @@ and this project adheres to
   - [#3274](https://github.com/bpftrace/bpftrace/pull/3274)
 - Fix verifier error from misaligned stack access when using strings as map keys
   - [#3294](https://github.com/bpftrace/bpftrace/issues/3294)
+- Fix min/max map functions
+  - [#3298](https://github.com/bpftrace/bpftrace/pull/3298)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
