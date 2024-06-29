@@ -154,7 +154,7 @@ private:
                                        // StructManager
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
-  bool ctx_ = false; // Is bpf program context
+  bool ctx_ = false;                                   // Is bpf program context
   std::unordered_set<std::string> btf_type_tags_ = {}; // Only populated for
                                                        // Type::pointer
 

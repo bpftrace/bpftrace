@@ -123,6 +123,43 @@ DIType *DIBuilderBPF::CreateTupleType(const SizedType &stype)
   return result;
 }
 
+DIType *DIBuilderBPF::CreateMinMaxType(const SizedType &stype)
+{
+  assert(stype.IsMinTy() || stype.IsMaxTy());
+
+  // The first field is the value
+  // The second field is the "value is set" flag
+  SmallVector<Metadata *, 2> fields = { createMemberType(file,
+                                                         "",
+                                                         file,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         0,
+                                                         0,
+                                                         DINode::FlagZero,
+                                                         getInt64Ty()),
+                                        createMemberType(file,
+                                                         "",
+                                                         file,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         DINode::FlagZero,
+                                                         getInt32Ty()) };
+
+  DICompositeType *result = createStructType(file,
+                                             "",
+                                             file,
+                                             0,
+                                             (stype.GetSize() * 8) * 2,
+                                             0,
+                                             DINode::FlagZero,
+                                             nullptr,
+                                             getOrCreateArray(fields));
+  return result;
+}
+
 DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
   if (stype.IsByteArray() || stype.IsRecordTy()) {
@@ -141,6 +178,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
 
   if (stype.IsTupleTy())
     return CreateTupleType(stype);
+
+  if (stype.IsMinTy() || stype.IsMaxTy())
+    return CreateMinMaxType(stype);
 
   if (stype.IsPtrTy())
     return getInt64Ty();
