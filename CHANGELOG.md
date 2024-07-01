@@ -29,6 +29,8 @@ and this project adheres to
 - Remove the `-dd` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 #### Fixed
+- Fix segfault for multi-tracepoint probes
+  - [#3274](https://github.com/bpftrace/bpftrace/pull/3274)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
