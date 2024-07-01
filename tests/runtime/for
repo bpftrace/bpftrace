@@ -40,7 +40,6 @@ EXPECT (64, 128)
 EXPECT (65, 129)
 TIMEOUT 5
 
-# Disabled due to https://github.com/bpftrace/bpftrace/issues/3021
 NAME map multiple probes
 PROG BEGIN { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); } exit(); } END { for ($kv : @mapB) { print($kv); } }
 EXPECT (16, 32)
@@ -48,7 +47,6 @@ EXPECT (17, 33)
 EXPECT (64, 128)
 EXPECT (65, 129)
 TIMEOUT 5
-REQUIRES bash -c "exit 1"
 
 NAME map nested vals
 PROG BEGIN { @mapA[16] = 32; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); for ($kv2 : @mapB) { print($kv2); } } exit(); }

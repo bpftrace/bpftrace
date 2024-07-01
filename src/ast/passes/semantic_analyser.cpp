@@ -2073,13 +2073,6 @@ void SemanticAnalyser::visit(For &f)
    *     }
    */
 
-  if (scope_with_for_loop_.has_value() && *scope_with_for_loop_ != scope_) {
-    LOG(ERROR, f.loc, err_)
-        << "Currently, for-loops can be used only in a single probe.";
-  } else {
-    scope_with_for_loop_ = scope_;
-  }
-
   // Validate decl
   const auto &decl_name = f.decl->ident;
   if (variable_val_[scope_].find(decl_name) != variable_val_[scope_].end()) {
