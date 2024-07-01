@@ -2699,6 +2699,7 @@ void CodegenLLVM::visit(Probe &probe)
   // We begin by saving state that gets changed by the codegen pass, so we
   // can restore it for the next pass (printf_id_, time_id_).
   auto reset_ids = create_reset_ids();
+  bool generated = false;
   for (auto *attach_point : *probe.attach_points) {
     reset_ids();
     current_attach_point_ = attach_point;
@@ -2728,15 +2729,17 @@ void CodegenLLVM::visit(Probe &probe)
 
         auto match_ap = attach_point->create_expansion_copy(match);
         add_probe(match_ap, probe, match, func_type);
-      }
-      if (matches.empty()) {
-        generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
+        generated = true;
       }
     } else {
       if (probe.index() == 0)
         probe.set_index(getNextIndexForProbe());
       add_probe(*attach_point, probe, attach_point->name(), func_type);
+      generated = true;
     }
+  }
+  if (!generated) {
+    generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
   }
 
   current_attach_point_ = nullptr;
