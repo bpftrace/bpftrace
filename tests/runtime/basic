@@ -296,8 +296,7 @@ PROG BEGIN { @x = "xxxxx"; @x = "a"; @[@x] = 1; @y = "yyyyy"; @y = "a"; @[@y] = 
 EXPECT len: 1
 TIMEOUT 1
 
-# Re-add min/max after they are fixed: https://github.com/bpftrace/bpftrace/issues/3286
 NAME print_per_cpu_map_vals
-PROG BEGIN { @a = avg(5); @c = count(); @s = sum(5); print((@a, @c, @s)); exit(); }
-EXPECT (5, 1, 5)
+PROG BEGIN { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx)); exit(); }
+EXPECT (5, 1, 5, 1, -1)
 TIMEOUT 3

@@ -571,7 +571,6 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              Map &map,
                                              Value *key,
-                                             const SizedType &type,
                                              const location &loc,
                                              bool is_aot)
 {
@@ -587,7 +586,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
    *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
    *     break;
    *   }
-   *   // Get the sum, min, or max value
+   *   ret += *cpu_value;
    *   i++;
    * }
    * return ret;
@@ -649,15 +648,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, getInt64Ty()->getPointerTo(), "cast");
 
-  if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
-    createPerCpuSum(ret, cast);
-  } else if (type.IsMaxTy()) {
-    createPerCpuMinMax(ret, cast, true);
-  } else if (type.IsMinTy()) {
-    createPerCpuMinMax(ret, cast, false);
-  } else {
-    LOG(BUG) << "Unsupported map aggregation type: " << type;
-  }
+  createPerCpuSum(ret, cast);
 
   // ++i;
   CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
@@ -702,6 +693,169 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   return ret_reg;
 }
 
+Value *IRBuilderBPF::CreatePerCpuHistMapAggElems(Value *ctx,
+                                                 Map &map,
+                                                 Value *key1,
+                                                 Value *key2,
+                                                 const SizedType &type,
+                                                 const location &loc,
+                                                 bool is_aot)
+{
+  /*
+   * int ret = 0;
+   * int i = 0;
+   * while (i < nr_cpus) {
+   *   int * cpu_value_1 = map_lookup_percpu_elem(map, key1, i);
+   *   int * cpu_value_2 = map_lookup_percpu_elem(map, key2, i);
+   *   if (cpu_value_1 == NULL || cpu_value_2 == NULL) {
+   *     if (i == 0)
+   *        log_error("Key not found")
+   *     else
+   *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
+   *     break;
+   *   }
+   *   // Get the min, max, or avg value
+   *   i++;
+   * }
+   * return ret;
+   */
+
+  assert(ctx && ctx->getType() == GET_PTR_TY());
+
+  const std::string &map_name = map.ident;
+
+  AllocaInst *ret_1 = CreateAllocaBPF(getInt64Ty(), "ret_1");
+  AllocaInst *ret_2 = CreateAllocaBPF(getInt64Ty(), "ret_2");
+  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
+
+  // Set a large upper bound if we don't know the number of cpus
+  // when generating the instructions
+  int nr_cpus = is_aot ? 1024 : bpftrace_.get_num_possible_cpus();
+
+  CreateStore(getInt32(0), i);
+  CreateStore(getInt64(0), ret_1);
+  CreateStore(getInt64(0), ret_2);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
+                                              "while_cond",
+                                              parent);
+  BasicBlock *while_body = BasicBlock::Create(module_.getContext(),
+                                              "while_body",
+                                              parent);
+  BasicBlock *while_end = BasicBlock::Create(module_.getContext(),
+                                             "while_end",
+                                             parent);
+  CreateBr(while_cond);
+  SetInsertPoint(while_cond);
+  // TODO: after full libbpf support update the number of cpus from userspace
+  // dynamically using a global mutable variable and the skeleton
+  auto *cond = CreateICmp(CmpInst::ICMP_ULT,
+                          CreateLoad(getInt32Ty(), i),
+                          getInt32(nr_cpus),
+                          "num_cpu.cmp");
+
+  CreateCondBr(cond, while_body, while_end);
+
+  SetInsertPoint(while_body);
+
+  CallInst *call_1 = createPerCpuMapLookup(map_name,
+                                           key1,
+                                           CreateLoad(getInt32Ty(), i));
+  CallInst *call_2 = createPerCpuMapLookup(map_name,
+                                           key2,
+                                           CreateLoad(getInt32Ty(), i));
+
+  Function *lookup_parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block_1 = BasicBlock::Create(module_.getContext(),
+                                                          "lookup_success_1",
+                                                          lookup_parent);
+  BasicBlock *lookup_success_block_2 = BasicBlock::Create(module_.getContext(),
+                                                          "lookup_success_2",
+                                                          lookup_parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        lookup_parent);
+  Value *null_check_1 = CreateICmpNE(CreateIntCast(call_1, GET_PTR_TY(), true),
+                                     GetNull(),
+                                     "null_check_1");
+  Value *null_check_2 = CreateICmpNE(CreateIntCast(call_2, GET_PTR_TY(), true),
+                                     GetNull(),
+                                     "null_check_2");
+  CreateCondBr(null_check_1, lookup_success_block_1, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block_1);
+
+  CreateCondBr(null_check_2, lookup_success_block_2, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block_2);
+
+  // createMapLookup  returns an u8*
+  auto *cast_1 = CreatePointerCast(call_1,
+                                   getInt64Ty()->getPointerTo(),
+                                   "cast_1");
+  auto *cast_2 = CreatePointerCast(call_2,
+                                   getInt64Ty()->getPointerTo(),
+                                   "cast_2");
+
+  if (type.IsAvgTy()) {
+    createPerCpuSum(ret_1, cast_1);
+    createPerCpuSum(ret_2, cast_2);
+  } else {
+    createPerCpuMinMax(ret_1, ret_2, cast_1, cast_2, type.IsMaxTy());
+  }
+
+  // ++i;
+  CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
+
+  CreateBr(while_cond);
+  SetInsertPoint(lookup_failure_block);
+
+  Function *error_parent = GetInsertBlock()->getParent();
+  BasicBlock *error_success_block = BasicBlock::Create(module_.getContext(),
+                                                       "error_success",
+                                                       error_parent);
+  BasicBlock *error_failure_block = BasicBlock::Create(module_.getContext(),
+                                                       "error_failure",
+                                                       error_parent);
+
+  // If the CPU is 0 and the map lookup fails it means the key doesn't exist
+  Value *error_condition = CreateICmpEQ(CreateLoad(getInt32Ty(), i),
+                                        getInt32(0),
+                                        "error_lookup_cond");
+  CreateCondBr(error_condition, error_success_block, error_failure_block);
+
+  SetInsertPoint(error_success_block);
+
+  CreateHelperError(
+      ctx, getInt32(0), libbpf::BPF_FUNC_map_lookup_percpu_elem, loc);
+  CreateBr(while_end);
+
+  SetInsertPoint(error_failure_block);
+
+  // This should only get triggered in the AOT case
+  CreateDebugOutput("No cpu found for cpu id: %lu",
+                    std::vector<Value *>{ CreateLoad(getInt32Ty(), i) },
+                    loc);
+
+  CreateBr(while_end);
+
+  SetInsertPoint(while_end);
+
+  CreateLifetimeEnd(i);
+  Value *ret_reg;
+  if (type.IsAvgTy()) {
+    // total is ret_2 and count is ret_1
+    ret_reg = CreateUDiv(CreateLoad(getInt64Ty(), ret_2),
+                         CreateLoad(getInt64Ty(), ret_1));
+  } else {
+    ret_reg = CreateLoad(getInt64Ty(), ret_1);
+  }
+  CreateLifetimeEnd(ret_1);
+  CreateLifetimeEnd(ret_2);
+  return ret_reg;
+}
+
 void IRBuilderBPF::createPerCpuSum(AllocaInst *ret, Value *cpu_value)
 {
   CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cpu_value),
@@ -710,33 +864,80 @@ void IRBuilderBPF::createPerCpuSum(AllocaInst *ret, Value *cpu_value)
 }
 
 void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
-                                      Value *cpu_value,
+                                      AllocaInst *is_ret_set,
+                                      Value *min_max_val,
+                                      Value *is_val_set,
                                       bool is_max)
 {
+  /*
+   * (ret, is_ret_set, min_max_val, is_val_set) {
+   * // if the min_max_val is 0, which is the initial map value,
+   * // we need to know if it was explicitly set by user
+   * if (!is_val_set == 1) {
+   *   return;
+   * }
+   * if (!is_ret_set == 1) {
+   *   ret = min_max_val;
+   *   is_ret_set = 1;
+   * } else if (min_max_val > ret) { // or min_max_val < ret if min operation
+   *   ret = min_max_val;
+   *   is_ret_set = 1;
+   * }
+   */
+
   Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *success_block = BasicBlock::Create(module_.getContext(),
-                                                 "min_max_success",
-                                                 parent);
+  BasicBlock *val_set_success = BasicBlock::Create(module_.getContext(),
+                                                   "val_set_success",
+                                                   parent);
+  BasicBlock *min_max_success = BasicBlock::Create(module_.getContext(),
+                                                   "min_max_success",
+                                                   parent);
+  BasicBlock *ret_set_success = BasicBlock::Create(module_.getContext(),
+                                                   "ret_set_success",
+                                                   parent);
   BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
                                                "min_max_merge",
                                                parent);
-  Value *condition;
+
+  Value *val_set_condition = CreateICmpEQ(CreateLoad(getInt64Ty(), is_val_set),
+                                          getInt64(1),
+                                          "val_set_cond");
+
+  Value *ret_set_condition = CreateICmpEQ(CreateLoad(getInt64Ty(), is_ret_set),
+                                          getInt64(1),
+                                          "ret_set_cond");
+
+  Value *min_max_condition;
 
   if (is_max) {
-    condition = CreateICmpSGT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "max_cond");
+    min_max_condition = CreateICmpSGT(CreateLoad(getInt64Ty(), min_max_val),
+                                      CreateLoad(getInt64Ty(), ret),
+                                      "max_cond");
   } else {
-    condition = CreateICmpSLT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "min_cond");
+    min_max_condition = CreateICmpSLT(CreateLoad(getInt64Ty(), min_max_val),
+                                      CreateLoad(getInt64Ty(), ret),
+                                      "min_cond");
   }
-  CreateCondBr(condition, success_block, merge_block);
 
-  SetInsertPoint(success_block);
+  // if (is_val_set == 1)
+  CreateCondBr(val_set_condition, val_set_success, merge_block);
+
+  SetInsertPoint(val_set_success);
+
+  // if (is_ret_set == 1)
+  CreateCondBr(ret_set_condition, ret_set_success, min_max_success);
+
+  SetInsertPoint(ret_set_success);
+
+  // if (min_max_val > ret) or if (min_max_val < ret)
+  CreateCondBr(min_max_condition, min_max_success, merge_block);
+
+  SetInsertPoint(min_max_success);
 
   // ret = cpu_value;
-  CreateStore(CreateLoad(getInt64Ty(), cpu_value), ret);
+  CreateStore(CreateLoad(getInt64Ty(), min_max_val), ret);
+  // is_ret_set = 1;
+  CreateStore(getInt64(1), is_ret_set);
 
   CreateBr(merge_block);
 

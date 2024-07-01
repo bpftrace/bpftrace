@@ -1364,29 +1364,6 @@ std::optional<std::string> abs_path(const std::string &rel_path)
   }
 }
 
-int64_t min_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  int64_t val, max = 0;
-  for (int i = 0; i < nvalues; i++) {
-    val = read_data<int64_t>(value.data() + i * sizeof(int64_t));
-    if (val > max)
-      max = val;
-  }
-
-  return max;
-}
-
-uint64_t max_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  uint64_t val, max = 0;
-  for (int i = 0; i < nvalues; i++) {
-    val = read_data<uint64_t>(value.data() + i * sizeof(uint64_t));
-    if (val > max)
-      max = val;
-  }
-  return max;
-}
-
 bool symbol_has_module(const std::string &symbol)
 {
   return !symbol.empty() && symbol[symbol.size() - 1] == ']';

@@ -1371,6 +1371,8 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
     return print_map_hist(map, top, div);
   else if (value_type.IsAvgTy() || value_type.IsStatsTy())
     return print_map_stats(map, top, div);
+  else if (value_type.IsMinTy() || value_type.IsMaxTy())
+    return print_map_min_max(map, top, div, value_type.IsMaxTy());
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   auto maybe_old_key = find_empty_key(map);
@@ -1411,16 +1413,6 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                 return reduce_value<uint64_t>(a.second, nvalues) <
                        reduce_value<uint64_t>(b.second, nvalues);
               });
-  } else if (value_type.IsMinTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return min_value(a.second, nvalues) < min_value(b.second, nvalues);
-        });
-  } else if (value_type.IsMaxTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return max_value(a.second, nvalues) < max_value(b.second, nvalues);
-        });
   } else {
     sort_by_key(map_info.key.args_, values_by_key);
   };
@@ -1563,6 +1555,96 @@ int BPFtrace::print_map_stats(const BpfMap &map, uint32_t top, uint32_t div)
   if (div == 0)
     div = 1;
   out_->map_stats(*this, map, top, div, values_by_key, total_counts_by_key);
+  return 0;
+}
+
+int BPFtrace::print_map_min_max(const BpfMap &map,
+                                uint32_t top,
+                                uint32_t div,
+                                bool is_max)
+{
+  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
+  // min() and max() maps add an extra 8 bytes onto the end of their key for
+  // storing if the value was set explicitly by the user/prog
+
+  auto maybe_old_key = find_empty_key(map);
+  if (!maybe_old_key.has_value()) {
+    return -2;
+  }
+  auto old_key(std::move(*maybe_old_key));
+  auto key(old_key);
+
+  std::map<std::vector<uint8_t>, std::vector<std::vector<int64_t>>>
+      values_by_key;
+
+  const auto &map_key = resources.maps_info.at(map.name()).key;
+  while (bpf_get_next_key(map.fd, old_key.data(), key.data()) == 0) {
+    auto key_prefix = std::vector<uint8_t>(map_key.size());
+    uint64_t bucket = read_data<uint64_t>(key.data() + map_key.size());
+
+    for (size_t i = 0; i < map_key.size(); i++)
+      key_prefix.at(i) = key.at(i);
+
+    auto value = std::vector<uint8_t>(map.value_size() * nvalues);
+    int err = bpf_lookup_elem(map.fd, key.data(), value.data());
+    if (err == -ENOENT) {
+      // key was removed by the eBPF program during bpf_get_next_key() and
+      // bpf_lookup_elem(), let's skip this key
+      continue;
+    } else if (err) {
+      LOG(ERROR) << "failed to look up elem: " << err;
+      return -1;
+    }
+
+    if (values_by_key.find(key_prefix) == values_by_key.end()) {
+      values_by_key[key_prefix] = std::vector<std::vector<int64_t>>(2);
+    }
+    std::vector<int64_t> cpu_vals;
+    for (uint64_t i = 0; i < nvalues; i++) {
+      cpu_vals.push_back(
+          read_data<int64_t>(value.data() + i * sizeof(int64_t)));
+    }
+    values_by_key[key_prefix].at(bucket) = std::move(cpu_vals);
+
+    old_key = key;
+  }
+
+  std::vector<std::pair<std::vector<uint8_t>, int64_t>> min_max_by_key;
+  for (auto &map_elem : values_by_key) {
+    assert(map_elem.second.size() == 2);
+    auto &min_max_vals = map_elem.second.at(0);
+    auto &is_val_set_vals = map_elem.second.at(1);
+
+    int64_t min_max_val = 0;
+    int64_t cpu_val = 0;
+    bool is_min_max_set = false;
+
+    for (uint64_t i = 0; i < nvalues; i++) {
+      if (is_val_set_vals.at(i) == 0) {
+        continue;
+      }
+      cpu_val = min_max_vals.at(i);
+      if (!is_min_max_set) {
+        min_max_val = cpu_val;
+        is_min_max_set = true;
+      } else {
+        if (is_max && cpu_val > min_max_val) {
+          min_max_val = cpu_val;
+        } else if (!is_max && cpu_val < min_max_val) {
+          min_max_val = cpu_val;
+        }
+      }
+    }
+
+    min_max_by_key.push_back({ map_elem.first, min_max_val });
+  }
+  std::sort(min_max_by_key.begin(),
+            min_max_by_key.end(),
+            [&](auto &a, auto &b) { return a.second < b.second; });
+
+  if (div == 0)
+    div = 1;
+  out_->map_min_max(*this, map, top, div, min_max_by_key);
   return 0;
 }
 
