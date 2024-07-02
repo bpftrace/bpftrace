@@ -18,7 +18,6 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
-#include "ast/elf_parser.h"
 #include "filesystem.h"
 #include "log.h"
 #include "utils.h"
@@ -340,9 +339,9 @@ int load(BPFtrace &bpftrace, const std::string &in)
   if (err)
     goto out;
 
-  bpftrace.bytecode_ = elf::parseBpfBytecodeFromElfObject(btaot_section +
-                                                              hdr->elf_off,
-                                                          hdr->elf_len);
+  bpftrace.bytecode_ = BpfBytecode(btaot_section + hdr->elf_off,
+                                   hdr->elf_len,
+                                   bpftrace.config_);
   if (err)
     goto out;
 

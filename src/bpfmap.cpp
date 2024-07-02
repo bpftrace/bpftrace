@@ -2,6 +2,11 @@
 
 namespace bpftrace {
 
+int BpfMap::fd() const
+{
+  return bpf_map__fd(bpf_map_);
+}
+
 libbpf::bpf_map_type BpfMap::type() const
 {
   return type_;
@@ -63,8 +68,6 @@ std::string to_string(MapType t)
       return "join";
     case MapType::Elapsed:
       return "elapsed";
-    case MapType::MappedPrintfData:
-      return "mapped_printf_data";
     case MapType::Ringbuf:
       return "ringbuf";
     case MapType::StrBuffer:

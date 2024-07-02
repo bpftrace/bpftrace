@@ -32,11 +32,6 @@ private:
   void visit(Call &call) override;
   void visit(Map &map) override;
 
-  // seq_printf, debugf format strings are stored head to tail in a data
-  // map. This method loads `RequiredResources::mapped_printf_ids` with the
-  // starting indices and lengths of each format string in the data map.
-  void prepare_mapped_printf_ids();
-
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.
   bool uses_usym_table(const std::string &fun);

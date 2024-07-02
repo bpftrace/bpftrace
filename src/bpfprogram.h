@@ -2,14 +2,10 @@
 
 #include "bpffeature.h"
 #include "btf.h"
+#include "config.h"
 #include "types.h"
 
 #include <bpf/libbpf.h>
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <tuple>
-#include <vector>
 
 namespace bpftrace {
 
@@ -17,19 +13,19 @@ class BpfBytecode;
 class BPFtrace;
 
 // This class abstracts a single BPF program by encapsulating libbpf's
-// 'struct bpf_prog'. Currently, it also performs relocations of BPF bytecode
-// which will go away once we move to libbpf-based loading.
+// 'struct bpf_prog'.
 class BpfProgram {
 public:
-  explicit BpfProgram(struct bpf_program *bpf_prog);
+  explicit BpfProgram(struct bpf_program *bpf_prog, size_t log_size);
 
-  void assemble(const BpfBytecode &bytecode);
-  void load(const Probe &probe,
-            const BpfBytecode &bytecode,
-            const BTF &btf,
-            BPFfeature &feature);
+  void set_prog_type(const Probe &probe, BPFfeature &feature);
+  void set_expected_attach_type(const Probe &probe, BPFfeature &feature);
+  void set_attach_target(const Probe &probe, BTF &btf, const Config &config);
+  void set_no_autoattach();
 
   int fd() const;
+  struct bpf_program *bpf_prog() const;
+  char *log_buf() const;
 
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;
@@ -37,30 +33,9 @@ public:
   BpfProgram &operator=(BpfProgram &&) = delete;
 
 private:
-  const std::vector<uint8_t> &getCode() const;
-  const std::vector<uint8_t> &getFuncInfos() const;
-
-  void relocateInsns(const BpfBytecode &bytecode);
-  void relocateSection(const std::string &relsecname,
-                       bpf_insn *,
-                       const BpfBytecode &bytecode);
-  void relocateFuncInfos(const BpfBytecode &bytecode);
-  void appendFileFuncInfos(const struct btf_ext_info_sec *src,
-                           size_t func_info_rec_size,
-                           size_t insn_offset);
-
   struct bpf_program *bpf_prog_;
-  int fd_ = -1;
 
-  std::vector<uint8_t> code_;
-  // Offset in code_ where the .text begins (if .text was appended)
-  size_t text_offset_ = 0;
-
-  // Storage for kernel bpf_func_infos.
-  // Note that ELF bpf_func_infos  store byte offsets from the section
-  // start in insn_off, while the kernel expects _instruction_ offsets
-  // from the beginning of the program code (i.e. what's in code_).
-  std::vector<uint8_t> func_infos_;
+  std::unique_ptr<char[]> log_buf_;
 };
 
 } // namespace bpftrace

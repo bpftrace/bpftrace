@@ -87,11 +87,8 @@ public:
 
   // Async argument metadata
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
-  // mapped_printf_args stores seq_printf, debugf arguments
-  std::vector<std::tuple<FormatString, std::vector<Field>>> mapped_printf_args;
-  // mapped_printf_ids stores the starting indices and length of each format
-  // string in the data map of MapType::MappedPrintfData
-  std::vector<std::tuple<int, int>> mapped_printf_ids;
+  // fmt strings for BPF helpers (bpf_seq_printf, bpf_trace_printk)
+  std::vector<FormatString> bpf_print_fmts;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
@@ -115,7 +112,6 @@ public:
   std::unordered_set<StackType> stackid_maps;
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
-  bool needs_data_map = false;
   bool needs_perf_event_map = false;
   uint32_t str_buffers = 0;
 
@@ -136,8 +132,7 @@ private:
   void serialize(Archive &archive)
   {
     archive(system_args,
-            mapped_printf_args,
-            mapped_printf_ids,
+            bpf_print_fmts,
             join_args,
             time_args,
             strftime_args,
@@ -151,7 +146,6 @@ private:
             stackid_maps,
             needs_join_map,
             needs_elapsed_map,
-            needs_data_map,
             needs_perf_event_map,
             probes,
             special_probes);

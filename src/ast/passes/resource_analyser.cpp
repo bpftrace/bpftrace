@@ -37,7 +37,6 @@ ResourceAnalyser::ResourceAnalyser(Node *root, std::ostream &out)
 std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
   Visit(*root_);
-  prepare_mapped_printf_ids();
 
   if (!err_.str().empty()) {
     out_ << err_.str();
@@ -100,14 +99,12 @@ void ResourceAnalyser::visit(Call &call)
     if (call.func == "printf") {
       if (probe_ != nullptr &&
           single_provider_type_postsema(probe_) == ProbeType::iter) {
-        resources_.mapped_printf_args.emplace_back(fmtstr, args);
-        resources_.needs_data_map = true;
+        resources_.bpf_print_fmts.push_back(fmtstr);
       } else {
         resources_.printf_args.emplace_back(fmtstr, args);
       }
     } else if (call.func == "debugf") {
-      resources_.mapped_printf_args.emplace_back(fmtstr, args);
-      resources_.needs_data_map = true;
+      resources_.bpf_print_fmts.push_back(fmtstr);
     } else if (call.func == "system") {
       resources_.system_args.emplace_back(fmtstr, args);
     } else {
@@ -211,18 +208,6 @@ void ResourceAnalyser::visit(Map &map)
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
   map_info.key = map.key_type;
-}
-
-void ResourceAnalyser::prepare_mapped_printf_ids()
-{
-  int idx = 0;
-
-  for (auto &arg : resources_.mapped_printf_args) {
-    assert(resources_.needs_data_map);
-    auto len = std::get<0>(arg).size();
-    resources_.mapped_printf_ids.push_back({ idx, len + 1 });
-    idx += len + 1;
-  }
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

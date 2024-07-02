@@ -1,5 +1,6 @@
 #include "bpfbytecode.h"
 
+#include "bpftrace.h"
 #include "log.h"
 #include "utils.h"
 
@@ -10,43 +11,39 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
+BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, Config &config)
+    : log_size_(config.get(ConfigKeyInt::log_size))
 {
+  int log_level = 0;
+  // In debug mode, show full verifier log.
+  // In verbose mode, only show verifier log for failures.
+  if (bt_debug.find(DebugStage::Verifier) != bt_debug.end())
+    log_level = 15;
+  else if (bt_verbose)
+    log_level = 1;
+
+  BPFTRACE_LIBBPF_OPTS(bpf_object_open_opts,
+                       opts,
+                       .kernel_log_level = static_cast<__u32>(log_level));
+
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
-      bpf_object__open_mem(elf, elf_size, nullptr));
+      bpf_object__open_mem(elf, elf_size, &opts));
   if (!bpf_object_)
     LOG(BUG) << "The produced ELF is not a valid BPF object";
 
+  // Discover maps
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
     maps_.emplace(bpftrace_map_name(bpf_map__name(m)), m);
   }
 
+  // Discover programs
   struct bpf_program *p;
-  bpf_object__for_each_program(p, bpf_object_.get())
-  {
-    programs_.emplace(bpf_program__name(p), p);
+  bpf_object__for_each_program (p, bpf_object_.get()) {
+    auto prog = programs_.emplace(bpf_program__name(p),
+                                  BpfProgram(p, log_size_));
+    bpf_program__set_log_buf(p, prog.first->second.log_buf(), log_size_);
   }
-}
-
-void BpfBytecode::addSection(const std::string &name,
-                             std::vector<uint8_t> &&data)
-{
-  sections_.emplace(name, data);
-}
-
-bool BpfBytecode::hasSection(const std::string &name) const
-{
-  return sections_.find(name) != sections_.end();
-}
-
-const std::vector<uint8_t> &BpfBytecode::getSection(
-    const std::string &name) const
-{
-  if (!hasSection(name)) {
-    LOG(BUG) << "Bytecode is missing section: " << name;
-  }
-  return sections_.at(name);
 }
 
 const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
@@ -83,51 +80,159 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
       const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
 }
 
+namespace {
+/*
+ * Searches the verifier's log for err_pattern. If a match is found, extracts
+ * the name and ID of the problematic helper and throws a HelperVerifierError.
+ *
+ * Example verfier log extract:
+ *     [...]
+ *     36: (b7) r3 = 64                      ; R3_w=64
+ *     37: (85) call bpf_d_path#147
+ *     helper call is not allowed in probe
+ *     [...]
+ *
+ *  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
+ */
+void maybe_throw_helper_verifier_error(std::string_view log,
+                                       std::string_view err_pattern,
+                                       const std::string &exception_msg_suffix)
+{
+  auto err_pos = log.find(err_pattern);
+  if (err_pos == log.npos)
+    return;
+
+  std::string_view call_pattern = " call ";
+  auto call_pos = log.rfind(call_pattern, err_pos);
+  if (call_pos == log.npos)
+    return;
+
+  auto helper_begin = call_pos + call_pattern.size();
+  auto hash_pos = log.find("#", helper_begin);
+  if (hash_pos == log.npos)
+    return;
+
+  auto eol = log.find("\n", hash_pos + 1);
+  if (eol == log.npos)
+    return;
+
+  auto helper_name = std::string{ log.substr(helper_begin,
+                                             hash_pos - helper_begin) };
+  auto func_id = std::stoi(
+      std::string{ log.substr(hash_pos + 1, eol - hash_pos - 1) });
+
+  std::string msg = std::string{ "helper " } + helper_name +
+                    exception_msg_suffix;
+  throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
+}
+
+// The log should end with line:
+//     processed N insns (limit 1000000) ...
+// so we try to find it. If it's not there, it's very likely that the log has
+// been trimmed due to insufficient log limit. This function checks if that
+// happened.
+bool is_log_trimmed(const std::string &log)
+{
+  std::vector<std::string> tokens = { "processed", "insns" };
+  return !wildcard_match(log, tokens, true, true);
+}
+} // namespace
+
 void BpfBytecode::load_progs(const RequiredResources &resources,
                              BTF &btf,
-                             BPFfeature &feature)
+                             BPFfeature &feature,
+                             const Config &config)
 {
-  load_progs(resources.probes, btf, feature);
-  load_progs(resources.special_probes, btf, feature);
-  load_progs(resources.watchpoint_probes, btf, feature);
-}
+  prepare_progs(resources.probes, btf, feature, config);
+  prepare_progs(resources.special_probes, btf, feature, config);
+  prepare_progs(resources.watchpoint_probes, btf, feature, config);
 
-void BpfBytecode::load_progs(const std::vector<Probe> &probes,
-                             BTF &btf,
-                             BPFfeature &feature)
-{
-  for (auto &probe : probes) {
-    auto &program = getProgramForProbe(probe);
-    program.assemble(*this);
-    program.load(probe, *this, btf, feature);
-  }
-}
+  int res = bpf_object__load(bpf_object_.get());
 
-bool BpfBytecode::create_maps()
-{
-  int failed_maps = 0;
-  for (auto &map : maps_) {
-    BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
-    map.second.fd = bpf_map_create(static_cast<::bpf_map_type>(
-                                       map.second.type()),
-                                   map.second.bpf_name().c_str(),
-                                   map.second.key_size(),
-                                   map.second.value_size(),
-                                   map.second.max_entries(),
-                                   &opts);
-    if (map.second.fd < 0) {
-      failed_maps++;
-      LOG(ERROR) << "failed to create map: '" << map.first
-                 << "': " << strerror(errno);
+  // If requested, print the entire verifier logs, even if loading succeeded.
+  for (auto &[name, prog] : programs_) {
+    if (bt_debug.find(DebugStage::Verifier) != bt_debug.end()) {
+      std::cout << "BPF verifier log for " << name << ":\n";
+      std::cout << "--------------------------------------\n";
+      std::cout << prog.log_buf() << std::endl;
     }
   }
 
-  if (failed_maps > 0) {
-    LOG(ERROR) << "Creation of the required BPF maps has failed. \nMake sure "
-                  "you have all the required permissions and are not confined "
-                  "(e.g. like snapcraft does).\n`dmesg` will likely have "
-                  "useful output for further troubleshooting";
-    return false;
+  if (res == 0)
+    return;
+
+  // If loading of bpf_object failed, we try to give user some hints of what
+  // could've gone wrong.
+  std::ostringstream err;
+  for (auto &[name, prog] : programs_) {
+    if (res == 0 || prog.fd() >= 0)
+      continue;
+
+    // Unfortunately, a negative fd does not mean that this specific program
+    // caused the failure. It can mean that libbpf didn't even try to load it
+    // b/c some other program failed to load. So, we only log program load
+    // failures when the verifier log is non-empty.
+    std::string log(prog.log_buf());
+    if (!log.empty()) {
+      // This should be the only error that may occur here and does not imply
+      // a bpftrace bug so throw immediately with a proper error message.
+      maybe_throw_helper_verifier_error(log,
+                                        "helper call is not allowed in probe",
+                                        " not allowed in probe");
+
+      std::stringstream errmsg;
+      errmsg << "Error loading BPF program for " << name << ".";
+      if (bt_verbose) {
+        errmsg << std::endl
+               << "Kernel error log: " << std::endl
+               << log << std::endl;
+        if (is_log_trimmed(log)) {
+          LOG(WARNING, errmsg)
+              << "Kernel log seems to be trimmed. This may be due to buffer "
+                 "not being big enough, try increasing the BPFTRACE_LOG_SIZE "
+                 "environment variable beyond the current value of "
+              << log_size_ << " bytes";
+        }
+      } else {
+        errmsg << " Use -v for full kernel error log.";
+      }
+      LOG(ERROR, err) << errmsg.str();
+    }
+  }
+
+  if (err.str().empty()) {
+    // The problem does not seem to be in program loading. It may be something
+    // else (e.g. maps failing to load) but we're not able to figure out what
+    // it is so advice user to check libbf output which should contain more
+    // information.
+    LOG(ERROR, err)
+        << "Unknown BPF object load failure. Try using the \"-d libbpf\" "
+           "option to see the full loading log.";
+  }
+
+  std::cerr << err.str();
+  throw FatalUserException("Loading BPF object(s) failed.");
+}
+
+void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
+                                BTF &btf,
+                                BPFfeature &feature,
+                                const Config &config)
+{
+  for (auto &probe : probes) {
+    auto &program = getProgramForProbe(probe);
+    program.set_prog_type(probe, feature);
+    program.set_expected_attach_type(probe, feature);
+    program.set_attach_target(probe, btf, config);
+    program.set_no_autoattach();
+  }
+}
+
+bool BpfBytecode::all_progs_loaded()
+{
+  for (auto &prog : programs_) {
+    if (prog.second.fd() < 0)
+      return false;
   }
   return true;
 }
@@ -187,155 +292,6 @@ void BpfBytecode::set_map_ids(RequiredResources &resources)
     if (map_info != resources.maps_info.end() && map_info->second.id != -1)
       maps_by_id_.emplace(map_info->second.id, &map.second);
   }
-}
-
-// This is taken from libbpf (btf.c) and we need it to manually iterate BTF
-// entries so that we can fix them up in place.
-// Should go away once we let libbpf do the BTF fixup.
-static int btf_type_size(const struct btf_type *t)
-{
-  const int base_size = sizeof(struct btf_type);
-  __u16 vlen = btf_vlen(t);
-
-  switch (btf_kind(t)) {
-    case BTF_KIND_FWD:
-    case BTF_KIND_CONST:
-    case BTF_KIND_VOLATILE:
-    case BTF_KIND_RESTRICT:
-    case BTF_KIND_PTR:
-    case BTF_KIND_TYPEDEF:
-    case BTF_KIND_FUNC:
-    case BTF_KIND_FLOAT:
-    case BTF_KIND_TYPE_TAG:
-      return base_size;
-    case BTF_KIND_INT:
-      return base_size + sizeof(__u32);
-    case BTF_KIND_ENUM:
-      return base_size + vlen * sizeof(struct btf_enum);
-    case BTF_KIND_ENUM64:
-      /* struct btf_enum64 is not available in UAPI header until v6.0,
-       * calculate its size with array instead. Its definition is:
-       *
-       * struct btf_enum64 {
-       *	__u32	name_off;
-       *	__u32	val_lo32;
-       *	__u32	val_hi32;
-       * };
-       */
-      return base_size + vlen * sizeof(__u32[3]);
-    case BTF_KIND_ARRAY:
-      return base_size + sizeof(struct btf_array);
-    case BTF_KIND_STRUCT:
-    case BTF_KIND_UNION:
-      return base_size + vlen * sizeof(struct btf_member);
-    case BTF_KIND_FUNC_PROTO:
-      return base_size + vlen * sizeof(struct btf_param);
-    case BTF_KIND_VAR:
-      return base_size + sizeof(struct btf_var);
-    case BTF_KIND_DATASEC:
-      return base_size + vlen * sizeof(struct btf_var_secinfo);
-    case BTF_KIND_DECL_TAG:
-      /* struct btf_decl_tag is not available until v5.16. Use the same trick
-       * as btf_enum64 above. Its definition is:
-       *
-       * struct btf_decl_tag {
-       *  __s32   component_idx;
-       * };
-       */
-      return base_size + sizeof(__s32);
-    default:
-      return -EINVAL;
-  }
-}
-
-uint64_t getSymbolOffset(std::string_view name,
-                         const std::vector<uint8_t> &symtab,
-                         const std::vector<uint8_t> &strtab)
-{
-  auto *ptr = symtab.data();
-  while (ptr < symtab.data() + symtab.size()) {
-    auto *sym = reinterpret_cast<const Elf64_Sym *>(ptr);
-    auto *sym_name = reinterpret_cast<const char *>(strtab.data() +
-                                                    sym->st_name);
-    if (sym_name == name)
-      return sym->st_value;
-
-    ptr += sizeof(Elf64_Sym);
-  }
-  throw std::invalid_argument("Entry for " + std::string(name) +
-                              " not found in the symbol table");
-}
-
-// There are cases when BTF generated by LLVM needs to be patched. This is
-// normally done by libbpf but only when loading via bpf_object is used. We're
-// currently using direct loading using bpf_btf_load and bpf_prog_load so we
-// need to mimic libbpf's behavior and do the patching manually.
-// This should go away once we move to bpf_object-based loading.
-//
-// Transformations done:
-// - If running on a kernel not supporting BTF func entries with BTF_FUNC_GLOBAL
-//   linkage, change the linkage type to 0. We cannot do this directly in
-//   codegen b/c LLVM would optimize our functions away.
-// - Fill section size and symbol offsets to DATASEC BTF entries which describe
-//   sections with data (in our case ".maps").
-void BpfBytecode::fixupBTF(BPFfeature &feature)
-{
-  if (!hasSection(".BTF"))
-    return;
-
-  auto &symtab = sections_.find(".symtab")->second;
-  auto &strtab = sections_.find(".strtab")->second;
-
-  auto &btfsec = sections_[".BTF"];
-  auto *btfhdr = reinterpret_cast<struct btf_header *>(btfsec.data());
-  auto *btf = btf__new(btfsec.data(), btfsec.size());
-
-  auto *types_start = btfsec.data() + sizeof(struct btf_header) +
-                      btfhdr->type_off;
-  auto *types_end = types_start + btfhdr->type_len;
-
-  // Unfortunately, libbpf's btf__type_by_id returns a const pointer which
-  // doesn't allow modification. So, we must iterate the types manually.
-  auto *ptr = types_start;
-  while (ptr + sizeof(struct btf_type) <= types_end) {
-    auto *btf_type = reinterpret_cast<struct btf_type *>(ptr);
-    ptr += btf_type_size(btf_type);
-
-    // Change linkage type to 0 if the kernel doesn't support BTF_FUNC_GLOBAL.
-    if (!feature.has_btf_func_global() &&
-        BTF_INFO_KIND(btf_type->info) == BTF_KIND_FUNC) {
-      btf_type->info = BTF_INFO_ENC(BTF_KIND_FUNC, 0, 0);
-    }
-
-    // Fill section size and offsets for DATASEC entries
-    if (BTF_INFO_KIND(btf_type->info) == BTF_KIND_DATASEC) {
-      auto *sec_name = btf__name_by_offset(btf, btf_type->name_off);
-
-      if (!hasSection(sec_name)) {
-        btf__free(btf);
-        throw std::logic_error("Found BTF entry for section " +
-                               std::string(sec_name) +
-                               " but the section was not found");
-      }
-
-      // Fix section size
-      btf_type->size = getSection(sec_name).size();
-
-      auto *members = btf_var_secinfos(btf_type);
-      for (unsigned i = 0; i < BTF_INFO_VLEN(btf_type->info); i++) {
-        auto *sym = btf__type_by_id(btf, members[i].type);
-        if (!sym) {
-          btf__free(btf);
-          throw std::logic_error("No BTF entry for type id " +
-                                 std::to_string(members[i].type));
-        }
-        auto *sym_name = btf__name_by_offset(btf, sym->name_off);
-        // Fix symbol offsets
-        members[i].offset = getSymbolOffset(sym_name, symtab, strtab);
-      }
-    }
-  }
-  btf__free(btf);
 }
 
 } // namespace bpftrace

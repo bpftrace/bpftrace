@@ -18,7 +18,8 @@ namespace bpftrace {
 class BpfMap {
 public:
   BpfMap(struct bpf_map *bpf_map)
-      : type_(static_cast<libbpf::bpf_map_type>(bpf_map__type(bpf_map))),
+      : bpf_map_(bpf_map),
+        type_(static_cast<libbpf::bpf_map_type>(bpf_map__type(bpf_map))),
         name_(bpf_map__name(bpf_map)),
         key_size_(bpf_map__key_size(bpf_map)),
         value_size_(bpf_map__value_size(bpf_map)),
@@ -39,8 +40,7 @@ public:
   {
   }
 
-  int fd = -1;
-
+  int fd() const;
   libbpf::bpf_map_type type() const;
   cstring_view bpf_name() const;
   std::string name() const;
@@ -54,6 +54,7 @@ public:
   bool is_printable() const;
 
 private:
+  struct bpf_map *bpf_map_;
   libbpf::bpf_map_type type_;
   cstring_view name_;
   uint32_t key_size_;
@@ -69,7 +70,6 @@ enum class MapType {
   PerfEvent,
   Join,
   Elapsed,
-  MappedPrintfData,
   Ringbuf,
   StrBuffer,
   EventLossCounter,
