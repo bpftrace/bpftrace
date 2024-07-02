@@ -1426,10 +1426,10 @@ void CodegenLLVM::visit(Variable &var)
   // Arrays and structs are not memcopied for local variables
   if (needMemcpy(var.type) &&
       !(var.type.IsArrayTy() || var.type.IsRecordTy())) {
-    expr_ = variables_[var.ident];
+    expr_ = variables_[var.ident].value;
   } else {
-    auto *var_alloca = variables_[var.ident];
-    expr_ = b_.CreateLoad(var_alloca->getAllocatedType(), var_alloca);
+    auto &var_llvm = variables_[var.ident];
+    expr_ = b_.CreateLoad(var_llvm.type, var_llvm.value);
   }
 }
 
@@ -2289,22 +2289,22 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     }
 
     AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
-    variables_[var.ident] = val;
+    variables_[var.ident] = VariableLLVM{ val, val->getAllocatedType() };
   }
 
   if (var.type.IsArrayTy() || var.type.IsRecordTy()) {
     // For arrays and structs, only the pointer is stored
     b_.CreateStore(b_.CreatePtrToInt(expr_, b_.getInt64Ty()),
-                   variables_[var.ident]);
+                   variables_[var.ident].value);
     // Extend lifetime of RHS up to the end of probe
     scoped_del.disarm();
   } else if (needMemcpy(var.type)) {
-    auto *val = variables_[var.ident];
+    auto *val = variables_[var.ident].value;
     if (assignment.expr->type.GetSize() != var.type.GetSize())
       b_.CreateMemsetBPF(val, b_.getInt8(0), var.type.GetSize());
     b_.CREATE_MEMCPY(val, expr_, assignment.expr->type.GetSize(), 1);
   } else {
-    b_.CreateStore(expr_, variables_[var.ident]);
+    b_.CreateStore(expr_, variables_[var.ident].value);
   }
 }
 
@@ -2464,8 +2464,41 @@ void CodegenLLVM::visit(For &f)
   auto &map = static_cast<Map &>(*f.expr);
 
   Value *ctx = b_.getInt64(0);
+  llvm::Type *ctx_t = nullptr;
+
+  const auto &ctx_fields = f.ctx_type.GetFields();
+  if (!ctx_fields.empty()) {
+    // Pack pointers to variables into context struct for use in the callback
+
+#if LLVM_VERSION_MAJOR < 15
+    std::vector<llvm::Type *> ctx_field_types;
+    ctx_field_types.reserve(ctx_fields.size());
+    for (const auto &field : ctx_fields) {
+      ctx_field_types.push_back(b_.GetType(field.type)->getPointerTo());
+    }
+#else
+    std::vector<llvm::Type *> ctx_field_types(ctx_fields.size(),
+                                              b_.GET_PTR_TY());
+#endif
+    ctx_t = b_.GetStructType("ctx_t", ctx_field_types);
+    ctx = b_.CreateAllocaBPF(ctx_t, "ctx");
+
+    for (size_t i = 0; i < ctx_fields.size(); i++) {
+      const auto &field = ctx_fields[i];
+      auto *field_expr = variables_[field.name].value;
+      auto *ctx_field_ptr = b_.CreateGEP(
+          ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
+#if LLVM_VERSION_MAJOR < 15
+      // An extra cast is required for older LLVM versions, pre-opaque-pointers
+      ctx_field_ptr = b_.CreatePointerCast(
+          ctx_field_ptr, field_expr->getType()->getPointerTo());
+#endif
+      b_.CreateStore(field_expr, ctx_field_ptr);
+    }
+  }
+
   b_.CreateForEachMapElem(
-      ctx_, map, createForEachMapCallback(map, *f.decl, *f.stmts), ctx, f.loc);
+      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
@@ -2617,7 +2650,8 @@ void CodegenLLVM::visit(Subprog &subprog)
   for (SubprogArg *arg : *subprog.args) {
     auto alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name());
     b_.CreateStore(func->getArg(arg_index + 1), alloca);
-    variables_.insert({ arg->name(), alloca });
+    variables_[arg->name()] = VariableLLVM{ alloca,
+                                            alloca->getAllocatedType() };
     ++arg_index;
   }
 
@@ -3917,14 +3951,14 @@ void CodegenLLVM::createIncDec(Unop &unop)
     b_.CreateLifetimeEnd(newval);
   } else if (unop.expr->is_variable) {
     Variable &var = static_cast<Variable &>(*unop.expr);
-    Value *oldval = b_.CreateLoad(variables_[var.ident]->getAllocatedType(),
-                                  variables_[var.ident]);
+    Value *oldval = b_.CreateLoad(variables_[var.ident].type,
+                                  variables_[var.ident].value);
     Value *newval;
     if (is_increment)
       newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
     else
       newval = b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval));
-    b_.CreateStore(newval, variables_[var.ident]);
+    b_.CreateStore(newval, variables_[var.ident].value);
 
     if (unop.is_post_op)
       expr_ = oldval;
@@ -4139,10 +4173,7 @@ Function *CodegenLLVM::createMapLenCallback()
   return callback;
 }
 
-Function *CodegenLLVM::createForEachMapCallback(
-    Map &map,
-    const Variable &decl,
-    const std::vector<Statement *> &stmts)
+Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 {
   /*
    * Create a callback function suitable for passing to bpf_for_each_map_elem,
@@ -4157,9 +4188,15 @@ Function *CodegenLLVM::createForEachMapCallback(
 
   auto saved_ip = b_.saveIP();
 
+#if LLVM_VERSION_MAJOR < 15
+  llvm::Type *ctx_ptr_ty = ctx_t ? ctx_t->getPointerTo() : b_.GET_PTR_TY();
+#else
+  llvm::Type *ctx_ptr_ty = b_.GET_PTR_TY();
+#endif
   std::array<llvm::Type *, 4> args = {
-    b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY()
+    b_.GET_PTR_TY(), b_.GET_PTR_TY(), b_.GET_PTR_TY(), ctx_ptr_ty
   };
+
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
   Function *callback = Function::Create(callback_type,
                                         Function::LinkageTypes::InternalLinkage,
@@ -4173,18 +4210,19 @@ Function *CodegenLLVM::createForEachMapCallback(
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
 
-  auto &key_type = decl.type.GetField(0).type;
+  auto &key_type = f.decl->type.GetField(0).type;
   Value *key = callback->getArg(1);
   if (!onStack(key_type)) {
     key = b_.CreateLoad(b_.GetType(key_type), key, "key");
   }
 
+  auto &map = static_cast<Map &>(*f.expr);
   auto map_info = bpftrace_.resources.maps_info.find(map.ident);
   if (map_info == bpftrace_.resources.maps_info.end()) {
     LOG(BUG) << "map name: \"" << map.ident << "\" not found";
   }
 
-  auto &val_type = decl.type.GetField(1).type;
+  auto &val_type = f.decl->type.GetField(1).type;
   Value *val = callback->getArg(2);
 
   const auto &map_val_type = map_info->second.value_type;
@@ -4203,23 +4241,54 @@ Function *CodegenLLVM::createForEachMapCallback(
   // used before. This is a hack to simulate block scoping in the absence of the
   // real thing (#3017).
   CollectNodes<Variable> new_vars;
-  for (auto *stmt : stmts) {
+  for (auto *stmt : *f.stmts) {
     new_vars.run(*stmt, [this](const auto &var) {
       return variables_.find(var.ident) == variables_.end();
     });
   }
 
   // Create decl variable for use in this iteration of the loop
-  variables_[decl.ident] = createTuple(
-      decl.type, { { key, &decl.loc }, { val, &decl.loc } }, decl.ident);
+  AllocaInst *tuple = createTuple(f.decl->type,
+                                  { { key, &f.decl->loc },
+                                    { val, &f.decl->loc } },
+                                  f.decl->ident);
+  variables_[f.decl->ident] = VariableLLVM{ tuple, tuple->getAllocatedType() };
 
-  for (Statement *stmt : stmts) {
+  // 1. Save original locations of variables which will form part of the
+  //    callback context
+  // 2. Replace variable expressions with those from the context
+  Value *ctx = callback->getArg(3);
+  const auto &ctx_fields = f.ctx_type.GetFields();
+  std::unordered_map<std::string, Value *> orig_ctx_vars;
+  for (size_t i = 0; i < ctx_fields.size(); i++) {
+    const auto &field = ctx_fields[i];
+    orig_ctx_vars[field.name] = variables_[field.name].value;
+
+    auto *ctx_field_ptr = b_.CreateGEP(
+        ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
+#if LLVM_VERSION_MAJOR < 15
+    auto *field_ty = variables_[field.name].value->getType();
+#else
+    auto *field_ty = b_.GET_PTR_TY();
+#endif
+    variables_[field.name].value = b_.CreateLoad(field_ty,
+                                                 ctx_field_ptr,
+                                                 field.name);
+  }
+
+  // Generate code for the loop body
+  for (Statement *stmt : *f.stmts) {
     auto scoped_del = accept(stmt);
   }
   b_.CreateRet(b_.getInt64(0));
 
+  // Restore original non-context variables
+  for (const auto &[ident, expr] : orig_ctx_vars) {
+    variables_[ident].value = expr;
+  }
+
   // Decl variable is not valid beyond this for loop
-  variables_.erase(decl.ident);
+  variables_.erase(f.decl->ident);
 
   // Variables declared in a for-loop are not valid beyond it
   for (const Variable &var : new_vars.nodes()) {

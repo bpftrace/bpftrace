@@ -97,7 +97,11 @@ struct Struct {
   bool HasFields() const;
   void ClearFields();
 
-  static std::unique_ptr<Struct> CreateTuple(std::vector<SizedType> fields);
+  static std::unique_ptr<Struct> CreateRecord(
+      const std::vector<SizedType> &fields,
+      const std::vector<std::string_view> &field_names);
+  static std::unique_ptr<Struct> CreateTuple(
+      const std::vector<SizedType> &fields);
   void Dump(std::ostream &os);
 
   bool operator==(const Struct &rhs) const
@@ -166,8 +170,10 @@ public:
                                     bool allow_override = true);
   bool Has(const std::string &name) const;
 
-  // tuples set manipulation
-  std::weak_ptr<Struct> AddTuple(std::vector<SizedType> fields);
+  std::weak_ptr<Struct> AddAnonymousStruct(
+      const std::vector<SizedType> &fields,
+      const std::vector<std::string_view> &field_names);
+  std::weak_ptr<Struct> AddTuple(const std::vector<SizedType> &fields);
   size_t GetTuplesCnt() const;
 
   // probe args lookup
@@ -176,7 +182,7 @@ public:
 
 private:
   std::map<std::string, std::shared_ptr<Struct>> struct_map_;
-  std::unordered_set<std::shared_ptr<Struct>> tuples_;
+  std::unordered_set<std::shared_ptr<Struct>> anonymous_types_;
 };
 
 } // namespace bpftrace

@@ -234,9 +234,7 @@ private:
   void createIncDec(Unop &unop);
 
   Function *createMapLenCallback();
-  Function *createForEachMapCallback(Map &map,
-                                     const Variable &decl,
-                                     const std::vector<Statement *> &stmts);
+  Function *createForEachMapCallback(const For &f, llvm::Type *ctx_t);
   Function *createMurmurHash2Func();
 
   Value *createFmtString(int print_id);
@@ -275,7 +273,12 @@ private:
   int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
 
-  std::map<std::string, AllocaInst *> variables_;
+  struct VariableLLVM {
+    llvm::Value *value;
+    llvm::Type *type;
+  };
+  std::unordered_map<std::string, VariableLLVM> variables_;
+
   std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
 
   Function *linear_func_ = nullptr;

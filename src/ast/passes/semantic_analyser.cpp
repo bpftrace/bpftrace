@@ -2045,10 +2045,6 @@ void SemanticAnalyser::visit(For &f)
    * For-loops are implemented using the bpf_for_each_map_elem helper function,
    * which requires them to be rewritten into a callback style.
    *
-   * In this first implementation, we do not allow any variables to be shared
-   * between the main probe and the loop's body. Maps are global so are not a
-   * problem.
-   *
    * Pseudo code for the transformation we apply:
    *
    * Before:
@@ -2070,6 +2066,62 @@ void SemanticAnalyser::visit(For &f)
    *                          void *ctx) {
    *       $kv = ((uint64)key, (uint64)value);
    *       [LOOP BODY]
+   *     }
+   *
+   *
+   * To allow variables to be shared between the loop callback and the main
+   * program, some extra steps are taken:
+   *
+   * 1. Determine which variables need to be shared with the loop callback
+   * 2. Pack pointers to them into a context struct
+   * 3. Pass pointer to the context struct to the callback function
+   * 4. In the callback, override the shared variables so that they read and
+   *    write through the context pointers instead of directly from their
+   *    original addresses
+   *
+   * Example transformation with context:
+   *
+   * Before:
+   *     PROBE {
+   *       $str = "hello";
+   *       $not_shared = 2;
+   *       $len = 0;
+   *       @map[11, 12] = "c";
+   *       for ($kv : @map) {
+   *         print($str);
+   *         $len++;
+   *       }
+   *       print($len);
+   *       print($not_shared);
+   *     }
+   *
+   * After:
+   *     struct ctx_t {
+   *       string *str;
+   *       uint64 *len;
+   *     };
+   *     PROBE {
+   *       $str = "hello";
+   *       $not_shared = 2;
+   *       $len = 0;
+   *       @map[11, 12] = "c";
+   *
+   *       ctx_t ctx { .str = &$str, .len = &$len };
+   *       bpf_for_each_map_elem(@map, &map_for_each_cb, &ctx, 0);
+   *
+   *       print($len);
+   *       print($not_shared);
+   *     }
+   *     long map_for_each_cb(bpf_map *map,
+   *                          const void *key,
+   *                          void *value,
+   *                          void *ctx) {
+   *       $kv = (((uint64, uint64))key, (string)value);
+   *       $str = ((ctx_t*)ctx)->str;
+   *       $len = ((ctx_t*)ctx)->len;
+   *
+   *       print($str);
+   *       $len++;
    *     }
    */
 
@@ -2094,17 +2146,6 @@ void SemanticAnalyser::visit(For &f)
   }
 
   // Validate body
-  CollectNodes<Variable> vars_referenced;
-  for (auto *stmt : *f.stmts) {
-    vars_referenced.run(*stmt);
-  }
-  for (const Variable &var : vars_referenced.nodes()) {
-    if (variable_val_[scope_].find(var.ident) != variable_val_[scope_].end()) {
-      LOG(ERROR, var.loc, err_) << "Variables defined outside of a for-loop "
-                                   "can not be accessed in the loop's scope";
-    }
-  }
-
   // This could be relaxed in the future:
   CollectNodes<Jump> jumps;
   for (auto *stmt : *f.stmts) {
@@ -2121,6 +2162,35 @@ void SemanticAnalyser::visit(For &f)
   if (has_error())
     return;
 
+  // Collect a list of unique variables which are referenced in the loop's body
+  // and declared before the loop. These will be passed into the loop callback
+  // function as the context parameter.
+  CollectNodes<Variable> vars_referenced;
+  std::unordered_set<std::string> var_set;
+  for (auto *stmt : *f.stmts) {
+    const auto &live_vars = variable_val_[scope_];
+    vars_referenced.run(*stmt, [&live_vars, &var_set](const auto &var) {
+      if (live_vars.find(var.ident) == live_vars.end())
+        return false;
+      if (var_set.find(var.ident) != var_set.end())
+        return false;
+      var_set.insert(var.ident);
+      return true;
+    });
+  }
+
+  // Collect a list of variables which are used in the loop without having been
+  // used before. This is a hack to simulate block scoping in the absence of the
+  // real thing (#3017).
+  CollectNodes<Variable> new_vars;
+  for (auto *stmt : *f.stmts) {
+    const auto &live_vars = variable_val_[scope_];
+    new_vars.run(*stmt, [&live_vars](const auto &var) {
+      return live_vars.find(var.ident) == live_vars.end();
+    });
+  }
+
+  // Create type for the loop's decl
   // Iterating over a map provides a tuple: (map_key, map_val)
   auto *mapkey = get_map_key_type(map);
   auto *mapval = get_map_type(map);
@@ -2165,9 +2235,20 @@ void SemanticAnalyser::visit(For &f)
   variable_val_[scope_].erase(decl_name);
 
   // Variables declared in a for-loop are not valid beyond it
-  for (const Variable &var : vars_referenced.nodes()) {
+  for (const Variable &var : new_vars.nodes()) {
     variable_val_[scope_].erase(var.ident);
   }
+
+  // Finally, create the context tuple now that all variables inside the loop
+  // have been visited.
+  std::vector<SizedType> ctx_types;
+  std::vector<std::string_view> ctx_idents;
+  for (const Variable &var : vars_referenced.nodes()) {
+    ctx_types.push_back(CreatePointer(var.type, AddrSpace::bpf));
+    ctx_idents.push_back(var.ident);
+  }
+  f.ctx_type = CreateRecord(
+      "", bpftrace_.structs.AddAnonymousStruct(ctx_types, ctx_idents));
 }
 
 void SemanticAnalyser::visit(FieldAccess &acc)

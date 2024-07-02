@@ -67,3 +67,23 @@ EXPECT @[0, 0, 1]: 1
 EXPECT @[1, 0, 0]: 1
 EXPECT_NONE @[0, 1, 0]: 1
 TIMEOUT 5
+
+NAME variable context read only
+PROG BEGIN { @map[0] = 0; $var = 123; for ($kv : @map) { print($var); } exit(); }
+EXPECT 123
+TIMEOUT 5
+
+NAME variable context update
+PROG BEGIN { @map[0] = 0; @map[1] = 1; $var = 123; for ($kv : @map) { print($var); $var *= 2; } print($var); exit(); }
+EXPECT_REGEX ^123\n246\n492$
+TIMEOUT 5
+
+NAME variable context string
+PROG BEGIN { @map[0] = 0; @map[1] = 1; $var = "abc"; for ($kv : @map) { print($var); $var = "def"; } print($var); exit(); }
+EXPECT_REGEX ^abc\ndef\ndef$
+TIMEOUT 5
+
+NAME variable context multiple
+PROG BEGIN { @map[0] = 0; $var1 = 123; $var2 = "abc"; for ($kv : @map) { print(($var1, $var2)); } exit(); }
+EXPECT (123, abc)
+TIMEOUT 5

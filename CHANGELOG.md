@@ -15,6 +15,8 @@ and this project adheres to
   - [#3268](https://github.com/bpftrace/bpftrace/pull/3268)
 - Enable for-loops in multiple probes
   - [#3285](https://github.com/bpftrace/bpftrace/pull/3285)
+- For-loops: Allow sharing variables between the main probe and the loop's body
+  - [#3014](https://github.com/bpftrace/bpftrace/pull/3014)
 #### Changed
 - Stream output when printing maps
   - [#3264](https://github.com/bpftrace/bpftrace/pull/3264)
