@@ -67,7 +67,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
                           [&](const std::string& token) {
                             return token.find("(") == std::string::npos;
                           })) {
-            match_line = match_line.substr(0, match_line.find_last_of("("));
+            match_line = match_line.substr(0, match_line.find_first_of("("));
           }
 
           if (!wildcard_match(
