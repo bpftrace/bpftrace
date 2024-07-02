@@ -59,6 +59,7 @@ enum class AddrSpace : uint8_t {
   none,
   kernel,
   user,
+  bpf,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);

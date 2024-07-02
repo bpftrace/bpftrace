@@ -197,12 +197,21 @@ void test(std::string_view input, std::string_view expected_ast)
   Driver driver(*bpftrace);
   test(*bpftrace, true, driver, input, 0, {}, true, false);
 
-  if (!expected_ast.empty() && expected_ast[0] == '\n')
+  if (expected_ast[0] == '\n')
     expected_ast.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
   ast::Printer printer(out);
   printer.print(driver.root.get());
+
+  if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
+    // Remove globs from beginning and end
+    expected_ast.remove_prefix(1);
+    expected_ast.remove_suffix(1);
+    EXPECT_THAT(out.str(), HasSubstr(expected_ast));
+    return;
+  }
+
   EXPECT_EQ(expected_ast, out.str());
 }
 
@@ -3594,10 +3603,9 @@ stdin:4:11-15: ERROR: Loop declaration shadows existing variable: $kv
 )");
 }
 
-TEST(semantic_analyser, for_loop_variables)
+TEST(semantic_analyser, for_loop_variables_read_only)
 {
-  // Read-only
-  test_error(R"(
+  test(R"(
     BEGIN {
       $var = 0;
       @map[0] = 1;
@@ -3606,31 +3614,17 @@ TEST(semantic_analyser, for_loop_variables)
       }
       print($var);
     })",
-             R"(
-stdin:5:9-19: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
-        print($var);
-        ~~~~~~~~~~
-)");
+       R"(*
+  for
+   ctx
+    $var :: [int64 *, AS(bpf)]
+   decl
+*)");
+}
 
-  // Modified after loop
-  test_error(R"(
-    BEGIN {
-      $var = 0;
-      @map[0] = 1;
-      for ($kv : @map) {
-        print($var);
-      }
-      $var = 1;
-      print($var);
-    })",
-             R"(
-stdin:5:9-19: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
-        print($var);
-        ~~~~~~~~~~
-)");
-
-  // Modified during loop
-  test_error(R"(
+TEST(semantic_analyser, for_loop_variables_modified_during_loop)
+{
+  test(R"(
     BEGIN {
       $var = 0;
       @map[0] = 1;
@@ -3639,13 +3633,17 @@ stdin:5:9-19: ERROR: Variables defined outside of a for-loop can not be accessed
       }
       print($var);
     })",
-             R"(
-stdin:5:9-13: ERROR: Variables defined outside of a for-loop can not be accessed in the loop's scope
-        $var++;
-        ~~~~
-)");
+       R"(*
+  for
+   ctx
+    $var :: [int64 *, AS(bpf)]
+   decl
+*)");
+}
 
-  // Created in loop
+TEST(semantic_analyser, for_loop_variables_created_in_loop)
+{
+  // $var should not appear in ctx
   test(R"(
     BEGIN {
       @map[0] = 1;
@@ -3653,7 +3651,33 @@ stdin:5:9-13: ERROR: Variables defined outside of a for-loop can not be accessed
         $var = 2;
         print($var);
       }
-    })");
+    })",
+       R"(*
+  for
+   decl
+*)");
+}
+
+TEST(semantic_analyser, for_loop_variables_multiple)
+{
+  test(R"(
+    BEGIN {
+      @map[0] = 1;
+      $var1 = 123;
+      $var2 = "abc";
+      $var3 = "def";
+      for ($kv : @map) {
+        $var1 = 456;
+        print($var3);
+      }
+    })",
+       R"(*
+  for
+   ctx
+    $var1 :: [int64 *, AS(bpf)]
+    $var3 :: [string[4] *, AS(bpf)]
+   decl
+*)");
 }
 
 TEST(semantic_analyser, for_loop_variables_created_in_loop_used_after)
