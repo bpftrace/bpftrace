@@ -330,7 +330,6 @@ private:
                              const location *loc = nullptr);
 
   void createPerCpuSum(AllocaInst *ret, Value *cpu_value);
-  void createPerCpuMinMax(AllocaInst *ret, Value *cpu_value, bool is_max);
 
   std::map<std::string, StructType *> structs_;
 };

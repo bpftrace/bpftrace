@@ -328,8 +328,6 @@ T reduce_value(const std::vector<uint8_t> &value, int nvalues)
   }
   return sum;
 }
-int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
-uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
 
 // Combination of 2 hashes
 // The algorithm is taken from boost::hash_combine

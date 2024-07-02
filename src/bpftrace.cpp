@@ -1400,7 +1400,8 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
     old_key = key;
   }
 
-  if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy()) {
+  if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy() ||
+      value_type.IsMinTy() || value_type.IsMaxTy()) {
     bool is_signed = value_type.IsSigned();
     std::sort(values_by_key.begin(),
               values_by_key.end(),
@@ -1411,16 +1412,6 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                 return reduce_value<uint64_t>(a.second, nvalues) <
                        reduce_value<uint64_t>(b.second, nvalues);
               });
-  } else if (value_type.IsMinTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return min_value(a.second, nvalues) < min_value(b.second, nvalues);
-        });
-  } else if (value_type.IsMaxTy()) {
-    std::sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return max_value(a.second, nvalues) < max_value(b.second, nvalues);
-        });
   } else {
     sort_by_key(map_info.key.args_, values_by_key);
   };

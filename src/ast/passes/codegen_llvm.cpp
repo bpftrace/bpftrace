@@ -505,17 +505,17 @@ void CodegenLLVM::visit(Call &call)
                              call.vargs->front()->type.IsSigned());
     b_.CreateMapElemAdd(ctx_, map, key, expr_, call.loc);
     expr_ = nullptr;
-  } else if (call.func == "min") {
+  } else if (call.func == "min" || call.func == "max") {
+    bool is_max = call.func == "max";
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
     CallInst *lookup = b_.CreateMapLookup(map, key);
     SizedType &type = map.type;
 
     auto scoped_del = accept(call.vargs->front());
+    bool is_signed = call.vargs->front()->type.IsSigned();
     // promote int to 64-bit
-    expr_ = b_.CreateIntCast(expr_,
-                             b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), is_signed);
 
     Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
@@ -538,71 +538,24 @@ void CodegenLLVM::visit(Call &call)
     b_.SetInsertPoint(lookup_success_block);
 
     auto *cast = b_.CreatePointerCast(lookup, value->getType(), "cast");
+
     BasicBlock *ge = BasicBlock::Create(module_->getContext(),
-                                        "min.ge",
+                                        "min_max.ge",
                                         parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(b_.CreateLoad(b_.getInt64Ty(), cast),
-                                     expr_),
-                    ge,
-                    lookup_merge_block);
+
+    Value *ge_condition =
+        is_max ? b_.CreateICmpSGE(expr_, b_.CreateLoad(b_.getInt64Ty(), cast))
+               : b_.CreateICmpSGE(b_.CreateLoad(b_.getInt64Ty(), cast), expr_);
+
+    b_.CreateCondBr(ge_condition, ge, lookup_merge_block);
 
     b_.SetInsertPoint(ge);
-    b_.CreateStore(expr_, cast);
 
-    b_.CreateBr(lookup_merge_block);
-
-    b_.SetInsertPoint(lookup_failure_block);
-
-    b_.CreateMapElemInit(ctx_, map, key, expr_, call.loc);
-
-    b_.CreateBr(lookup_merge_block);
-    b_.SetInsertPoint(lookup_merge_block);
-    b_.CreateLifetimeEnd(value);
-
-    expr_ = nullptr;
-  } else if (call.func == "max") {
-    Map &map = *call.map;
-    auto [key, scoped_key_deleter] = getMapKey(map);
-    CallInst *lookup = b_.CreateMapLookup(map, key);
-    SizedType &type = map.type;
-
-    auto scoped_del = accept(call.vargs->front());
-    // promote int to 64-bit
-    expr_ = b_.CreateIntCast(expr_,
-                             b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
-
-    Function *parent = b_.GetInsertBlock()->getParent();
-    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
-                                                          "lookup_success",
-                                                          parent);
-    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
-                                                          "lookup_failure",
-                                                          parent);
-    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
-                                                        "lookup_merge",
-                                                        parent);
-
-    AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
-    Value *condition = b_.CreateICmpNE(
-        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
-        b_.GetNull(),
-        "map_lookup_cond");
-    b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
-
-    b_.SetInsertPoint(lookup_success_block);
-
-    auto *cast = b_.CreatePointerCast(lookup, value->getType(), "cast");
-    BasicBlock *ge = BasicBlock::Create(module_->getContext(),
-                                        "max.ge",
-                                        parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(expr_,
-                                     b_.CreateLoad(b_.getInt64Ty(), cast)),
-                    ge,
-                    lookup_merge_block);
-
-    b_.SetInsertPoint(ge);
-    b_.CreateStore(expr_, cast);
+    b_.CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Xchg,
+                         cast,
+                         expr_,
+                         8,
+                         AtomicOrdering::SequentiallyConsistent);
 
     b_.CreateBr(lookup_merge_block);
 
@@ -3502,8 +3455,7 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
   } else if (bpftrace_.feature_->has_map_percpu_hash() &&
              (val_type.IsHistTy() || val_type.IsLhistTy() ||
               val_type.IsCountTy() || val_type.IsSumTy() ||
-              val_type.IsMinTy() || val_type.IsMaxTy() || val_type.IsAvgTy() ||
-              val_type.IsStatsTy())) {
+              val_type.IsAvgTy() || val_type.IsStatsTy())) {
     return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
   } else {
     return libbpf::BPF_MAP_TYPE_HASH;

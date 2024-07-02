@@ -651,10 +651,6 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
 
   if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
     createPerCpuSum(ret, cast);
-  } else if (type.IsMaxTy()) {
-    createPerCpuMinMax(ret, cast, true);
-  } else if (type.IsMinTy()) {
-    createPerCpuMinMax(ret, cast, false);
   } else {
     LOG(BUG) << "Unsupported map aggregation type: " << type;
   }
@@ -707,40 +703,6 @@ void IRBuilderBPF::createPerCpuSum(AllocaInst *ret, Value *cpu_value)
   CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cpu_value),
                         CreateLoad(getInt64Ty(), ret)),
               ret);
-}
-
-void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
-                                      Value *cpu_value,
-                                      bool is_max)
-{
-  Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *success_block = BasicBlock::Create(module_.getContext(),
-                                                 "min_max_success",
-                                                 parent);
-  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
-                                               "min_max_merge",
-                                               parent);
-  Value *condition;
-
-  if (is_max) {
-    condition = CreateICmpSGT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "max_cond");
-  } else {
-    condition = CreateICmpSLT(CreateLoad(getInt64Ty(), cpu_value),
-                              CreateLoad(getInt64Ty(), ret),
-                              "min_cond");
-  }
-  CreateCondBr(condition, success_block, merge_block);
-
-  SetInsertPoint(success_block);
-
-  // ret = cpu_value;
-  CreateStore(CreateLoad(getInt64Ty(), cpu_value), ret);
-
-  CreateBr(merge_block);
-
-  SetInsertPoint(merge_block);
 }
 
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
