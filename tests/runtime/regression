@@ -97,3 +97,8 @@ PROG kfunc:__module_get { print(args.module->trace_events[1]->flags); exit(); }
 AFTER lsmod
 EXPECT Attaching 1 probe...
 TIMEOUT 1
+
+NAME unaligned key with aligned value
+PROG BEGIN { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
+EXPECT Attaching 1 probe...
+TIMEOUT 1
