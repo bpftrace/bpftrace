@@ -2844,13 +2844,13 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
       if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
         b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
-      if ((expr->type.GetSize() % 8) != 0)
+      if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
       if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
         // Read the array/struct into the key
         b_.CreateProbeRead(ctx_, offset_val, expr->type, expr_, expr->loc);
-        if ((expr->type.GetSize() % 8) != 0)
+        if ((map_key_size % 8) != 0)
           aligned = false;
       } else {
         // promote map key to 64-bit:
