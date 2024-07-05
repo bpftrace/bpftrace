@@ -429,8 +429,8 @@ std::string erase_prefix(std::string &str)
   return prefix;
 }
 
-bool wildcard_match(const std::string &str,
-                    std::vector<std::string> &tokens,
+bool wildcard_match(std::string_view str,
+                    const std::vector<std::string> &tokens,
                     bool start_wildcard,
                     bool end_wildcard)
 {
@@ -440,7 +440,7 @@ bool wildcard_match(const std::string &str,
     if (str.find(tokens[0], next) != next)
       return false;
 
-  for (std::string token : tokens) {
+  for (const std::string &token : tokens) {
     size_t found = str.find(token, next);
     if (found == std::string::npos)
       return false;

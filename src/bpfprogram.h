@@ -20,7 +20,9 @@ public:
 
   void set_prog_type(const Probe &probe, BPFfeature &feature);
   void set_expected_attach_type(const Probe &probe, BPFfeature &feature);
-  void set_attach_target(const Probe &probe, BTF &btf, const Config &config);
+  void set_attach_target(const Probe &probe,
+                         const BTF &btf,
+                         const Config &config);
   void set_no_autoattach();
 
   int fd() const;
