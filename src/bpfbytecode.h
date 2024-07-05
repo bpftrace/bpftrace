@@ -23,7 +23,7 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(const void *elf, size_t elf_size, Config &config);
+  BpfBytecode(const void *elf, size_t elf_size, const Config &config);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
@@ -31,7 +31,7 @@ public:
   BpfBytecode &operator=(BpfBytecode &&) = default;
 
   void load_progs(const RequiredResources &resources,
-                  BTF &btf,
+                  const BTF &btf,
                   BPFfeature &feature,
                   const Config &config);
 
@@ -50,7 +50,7 @@ public:
 
 private:
   void prepare_progs(const std::vector<Probe> &probes,
-                     BTF &btf,
+                     const BTF &btf,
                      BPFfeature &feature,
                      const Config &config);
   bool all_progs_loaded();

@@ -10,7 +10,7 @@ namespace bpftrace {
 namespace test {
 namespace bpfbytecode {
 
-BpfBytecode codegen(const std::string &input)
+BpfBytecode codegen(std::string_view input)
 {
   auto bpftrace = get_mock_bpftrace();
 
@@ -35,8 +35,9 @@ TEST(bpfbytecode, create_programs)
 
   auto &program = bytecode.getProgramForProbe(foo);
 
-  EXPECT_EQ(std::string(bpf_program__name(program.bpf_prog())), "kprobe_foo_1");
-  EXPECT_EQ(std::string(bpf_program__section_name(program.bpf_prog())),
+  EXPECT_EQ(std::string_view{ bpf_program__name(program.bpf_prog()) },
+            "kprobe_foo_1");
+  EXPECT_EQ(std::string_view{ bpf_program__section_name(program.bpf_prog()) },
             "s_kprobe_foo_1");
 }
 

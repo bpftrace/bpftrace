@@ -11,7 +11,7 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, Config &config)
+BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, const Config &config)
     : log_size_(config.get(ConfigKeyInt::log_size))
 {
   int log_level = 0;
@@ -131,15 +131,15 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 // so we try to find it. If it's not there, it's very likely that the log has
 // been trimmed due to insufficient log limit. This function checks if that
 // happened.
-bool is_log_trimmed(const std::string &log)
+bool is_log_trimmed(std::string_view log)
 {
-  std::vector<std::string> tokens = { "processed", "insns" };
+  static const std::vector<std::string> tokens = { "processed", "insns" };
   return !wildcard_match(log, tokens, true, true);
 }
 } // namespace
 
 void BpfBytecode::load_progs(const RequiredResources &resources,
-                             BTF &btf,
+                             const BTF &btf,
                              BPFfeature &feature,
                              const Config &config)
 {
@@ -150,7 +150,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   int res = bpf_object__load(bpf_object_.get());
 
   // If requested, print the entire verifier logs, even if loading succeeded.
-  for (auto &[name, prog] : programs_) {
+  for (const auto &[name, prog] : programs_) {
     if (bt_debug.find(DebugStage::Verifier) != bt_debug.end()) {
       std::cout << "BPF verifier log for " << name << ":\n";
       std::cout << "--------------------------------------\n";
@@ -164,7 +164,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   // If loading of bpf_object failed, we try to give user some hints of what
   // could've gone wrong.
   std::ostringstream err;
-  for (auto &[name, prog] : programs_) {
+  for (const auto &[name, prog] : programs_) {
     if (res == 0 || prog.fd() >= 0)
       continue;
 
@@ -172,7 +172,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     // caused the failure. It can mean that libbpf didn't even try to load it
     // b/c some other program failed to load. So, we only log program load
     // failures when the verifier log is non-empty.
-    std::string log(prog.log_buf());
+    std::string_view log(prog.log_buf());
     if (!log.empty()) {
       // This should be the only error that may occur here and does not imply
       // a bpftrace bug so throw immediately with a proper error message.
@@ -203,7 +203,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   if (err.str().empty()) {
     // The problem does not seem to be in program loading. It may be something
     // else (e.g. maps failing to load) but we're not able to figure out what
-    // it is so advice user to check libbf output which should contain more
+    // it is so advise user to check libbf output which should contain more
     // information.
     LOG(ERROR, err)
         << "Unknown BPF object load failure. Try using the \"-d libbpf\" "
@@ -215,7 +215,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
 }
 
 void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
-                                BTF &btf,
+                                const BTF &btf,
                                 BPFfeature &feature,
                                 const Config &config)
 {
@@ -230,7 +230,7 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
 
 bool BpfBytecode::all_progs_loaded()
 {
-  for (auto &prog : programs_) {
+  for (const auto &prog : programs_) {
     if (prog.second.fd() < 0)
       return false;
   }

@@ -57,17 +57,18 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
 }
 
 void BpfProgram::set_attach_target(const Probe &probe,
-                                   BTF &btf,
+                                   const BTF &btf,
                                    const Config &config)
 {
   if (probe.type != ProbeType::kfunc && probe.type != ProbeType::kretfunc &&
       probe.type != ProbeType::iter)
     return;
 
-  std::string mod = probe.path;
-  std::string fun = probe.attach_point;
+  const std::string &mod = probe.path;
+  const std::string &fun = probe.attach_point;
 
-  std::string btf_fun = probe.type == ProbeType::iter ? "bpf_iter_" + fun : fun;
+  const std::string &btf_fun = probe.type == ProbeType::iter ? "bpf_iter_" + fun
+                                                             : fun;
   if (btf.get_btf_id(btf_fun, mod) < 0) {
     std::string msg = "No BTF found for " + mod + ":" + fun;
     if (probe.orig_name != probe.name &&
@@ -82,7 +83,7 @@ void BpfProgram::set_attach_target(const Probe &probe,
     }
   }
 
-  auto attach_target = !mod.empty() ? mod + ":" + fun : fun;
+  const std::string &attach_target = !mod.empty() ? mod + ":" + fun : fun;
   bpf_program__set_attach_target(bpf_prog_, 0, attach_target.c_str());
 }
 
