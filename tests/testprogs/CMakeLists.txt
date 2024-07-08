@@ -1,4 +1,24 @@
-set(testprog_cflags "-g -O0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer")
+set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags "-g -O0")
+
+# Check and add CFLAG to testprog_cflags
+function(test_and_add_testprog_cflag flag)
+  execute_process(
+    COMMAND echo "int main(void) { return 0; }"
+    COMMAND ${CMAKE_C_COMPILER} -x c -Wall - ${flag} -o -
+    OUTPUT_VARIABLE /dev/null
+    ERROR_VARIABLE /dev/null
+    RESULT_VARIABLE NO_THIS_FLAG)
+  if(NOT ${NO_THIS_FLAG})
+    set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags " ${flag}")
+  else()
+    message(STATUS "${CMAKE_C_COMPILER} does not support ${flag}")
+  endif()
+endfunction()
+
+test_and_add_testprog_cflag("-fno-omit-frame-pointer")
+test_and_add_testprog_cflag("-mno-omit-leaf-frame-pointer")
+get_property(testprog_cflags GLOBAL PROPERTY testprog_cflags)
+
 if(LLVM_VERSION_MAJOR VERSION_LESS 13)
   # CI's GCC compile the testprogs using DWARF version 5
   # LLDB doesn't support DWARF5 before version 13, so we force DWARF4
