@@ -91,8 +91,7 @@ public:
                                  Map &map,
                                  Value *key,
                                  const SizedType &type,
-                                 const location &loc,
-                                 bool is_aot);
+                                 const location &loc);
   void CreateMapUpdateElem(Value *ctx,
                            const std::string &map_ident,
                            Value *key,

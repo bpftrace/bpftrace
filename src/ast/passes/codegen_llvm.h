@@ -29,10 +29,9 @@ using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot = false);
+  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
   explicit CodegenLLVM(Node *root,
                        BPFtrace &bpftrace,
-                       bool is_aot,
                        std::unique_ptr<USDTHelper> usdt_helper);
 
   void visit(Integer &integer) override;
@@ -99,6 +98,7 @@ public:
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const MapKey &key);
   void generate_maps(const RequiredResources &resources);
+  void generate_global_vars(const RequiredResources &resources);
   void optimize(void);
   bool verify(void);
   BpfBytecode emit(void);
@@ -252,7 +252,6 @@ private:
   IRBuilderBPF b_;
 
   DIBuilderBPF debug_;
-  bool is_aot_;
 
   const DataLayout &datalayout() const
   {

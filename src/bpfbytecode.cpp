@@ -1,6 +1,7 @@
 #include "bpfbytecode.h"
 
 #include "bpftrace.h"
+#include "globalvars.h"
 #include "log.h"
 #include "utils.h"
 
@@ -11,8 +12,8 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, const Config &config)
-    : log_size_(config.get(ConfigKeyInt::log_size))
+BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, BPFtrace &bpftrace)
+    : log_size_(bpftrace.config_.get(ConfigKeyInt::log_size))
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -31,10 +32,31 @@ BpfBytecode::BpfBytecode(const void *elf, size_t elf_size, const Config &config)
   if (!bpf_object_)
     LOG(BUG) << "The produced ELF is not a valid BPF object";
 
+  struct bpf_map *global_vars_map = nullptr;
+  bool needs_global_vars = !bpftrace.resources.needed_global_vars.empty();
+
   // Discover maps
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
+    if (needs_global_vars) {
+      std::string_view name = bpf_map__name(m);
+      // there are some random chars in the beginning of the map name
+      if (name.npos != name.find(globalvars::SECTION_NAME)) {
+        global_vars_map = m;
+        continue;
+      }
+    }
     maps_.emplace(bpftrace_map_name(bpf_map__name(m)), m);
+  }
+
+  if (needs_global_vars) {
+    if (!global_vars_map) {
+      LOG(BUG) << "No map found for " << globalvars::SECTION_NAME
+               << " which is needed to set global variables";
+    }
+    globalvars::update_global_vars(bpf_object_.get(),
+                                   global_vars_map,
+                                   bpftrace);
   }
 
   // Discover programs

@@ -240,5 +240,12 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
       file, name, "global", file, 0, map_entry_type, false);
 }
 
+DIGlobalVariableExpression *DIBuilderBPF::createGlobalInt64(
+    std::string_view name)
+{
+  return createGlobalVariableExpression(
+      file, name, "global", file, 0, getInt64Ty(), false);
+}
+
 } // namespace ast
 } // namespace bpftrace

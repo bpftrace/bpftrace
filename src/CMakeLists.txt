@@ -29,6 +29,7 @@ add_library(runtime
   disasm.cpp
   dwarf_parser.cpp
   format_string.cpp
+  globalvars.cpp
   log.cpp
   mapkey.cpp
   output.cpp

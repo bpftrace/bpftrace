@@ -81,11 +81,6 @@ public:
     mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
   }
 
-  int get_num_possible_cpus() const override
-  {
-    return 20;
-  }
-
   MockProbeMatcher *mock_probe_matcher;
 };
 

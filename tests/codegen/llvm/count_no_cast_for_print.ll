@@ -12,11 +12,12 @@ target triple = "bpf-pc-linux"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
+@num_cpus = dso_local externally_initialized constant i64 1, section ".rodata", !dbg !45
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !49 {
+define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !51 {
 entry:
   %key = alloca i32, align 4
   %"print_@" = alloca %print_t, align 8
@@ -103,8 +104,8 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 
-!llvm.dbg.cu = !{!45}
-!llvm.module.flags = !{!48}
+!llvm.dbg.cu = !{!47}
+!llvm.module.flags = !{!50}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -151,14 +152,16 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !43)
 !43 = !{!44}
 !44 = !DISubrange(count: 2, lowerBound: 0)
-!45 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !46, globals: !47)
-!46 = !{}
-!47 = !{!0, !22, !36}
-!48 = !{i32 2, !"Debug Info Version", i32 3}
-!49 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !45, retainedNodes: !54)
-!50 = !DISubroutineType(types: !51)
-!51 = !{!21, !52}
-!52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !53, size: 64)
-!53 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!54 = !{!55}
-!55 = !DILocalVariable(name: "ctx", arg: 1, scope: !49, file: !2, type: !52)
+!45 = !DIGlobalVariableExpression(var: !46, expr: !DIExpression())
+!46 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !21, isLocal: false, isDefinition: true)
+!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !48, globals: !49)
+!48 = !{}
+!49 = !{!0, !22, !36, !45}
+!50 = !{i32 2, !"Debug Info Version", i32 3}
+!51 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !56)
+!52 = !DISubroutineType(types: !53)
+!53 = !{!21, !54}
+!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
+!55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!56 = !{!57}
+!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)

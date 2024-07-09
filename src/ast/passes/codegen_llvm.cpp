@@ -39,6 +39,7 @@
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
 #include "collect_nodes.h"
+#include "globalvars.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -47,14 +48,13 @@
 namespace bpftrace {
 namespace ast {
 
-CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace, bool is_aot)
-    : CodegenLLVM(root, bpftrace, is_aot, std::make_unique<USDTHelper>())
+CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
+    : CodegenLLVM(root, bpftrace, std::make_unique<USDTHelper>())
 {
 }
 
 CodegenLLVM::CodegenLLVM(Node *root,
                          BPFtrace &bpftrace,
-                         bool is_aot,
                          std::unique_ptr<USDTHelper> usdt_helper)
     : root_(root),
       bpftrace_(bpftrace),
@@ -63,8 +63,7 @@ CodegenLLVM::CodegenLLVM(Node *root,
       module_(std::make_unique<Module>("bpftrace", *context_)),
       async_ids_(AsyncIds()),
       b_(*context_, *module_, bpftrace, async_ids_),
-      debug_(*module_),
-      is_aot_(is_aot)
+      debug_(*module_)
 {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -1399,17 +1398,16 @@ void CodegenLLVM::visit(Map &map)
     if (val_type.IsAvgTy()) {
       AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
       Value *count_val = b_.CreatePerCpuMapAggElems(
-          ctx_, map, count_key, val_type, map.loc, is_aot_);
+          ctx_, map, count_key, val_type, map.loc);
       b_.CreateLifetimeEnd(count_key);
 
       AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
       Value *total_val = b_.CreatePerCpuMapAggElems(
-          ctx_, map, total_key, val_type, map.loc, is_aot_);
+          ctx_, map, total_key, val_type, map.loc);
       b_.CreateLifetimeEnd(total_key);
       value = b_.CreateUDiv(total_val, count_val);
     } else {
-      value = b_.CreatePerCpuMapAggElems(
-          ctx_, map, key, val_type, map.loc, is_aot_);
+      value = b_.CreatePerCpuMapAggElems(ctx_, map, key, val_type, map.loc);
     }
   } else {
     value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
@@ -3480,6 +3478,8 @@ void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
   generate_maps(bpftrace_.resources);
+  generate_global_vars(bpftrace_.resources);
+
   auto scoped_del = accept(root_);
   debug_.finalize();
   state_ = State::IR;
@@ -3652,6 +3652,20 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                       CreateInt(loss_cnt_val_size));
 }
 
+void CodegenLLVM::generate_global_vars(const RequiredResources &resources)
+{
+  for (const auto &name : resources.needed_global_vars) {
+    auto var = llvm::dyn_cast<GlobalVariable>(
+        module_->getOrInsertGlobal(name, b_.getInt64Ty()));
+    var->setInitializer(b_.getInt64(1));
+    var->setConstant(true);
+    var->setSection(bpftrace::globalvars::SECTION_NAME);
+    var->setExternallyInitialized(true);
+    var->setDSOLocal(true);
+    var->addDebugInfo(debug_.createGlobalInt64(name));
+  }
+}
+
 void CodegenLLVM::emit_elf(const std::string &filename)
 {
   assert(state_ == State::OPT);
@@ -3759,7 +3773,7 @@ BpfBytecode CodegenLLVM::emit(void)
   assert(!output.empty());
 
   state_ = State::DONE;
-  return BpfBytecode(output.data(), output.size(), bpftrace_.config_);
+  return BpfBytecode(output.data(), output.size(), bpftrace_);
 }
 
 BpfBytecode CodegenLLVM::compile(void)
@@ -4231,8 +4245,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
                                              "lookup_key");
     b_.CreateStore(key, key_ptr);
 
-    val = b_.CreatePerCpuMapAggElems(
-        ctx_, map, key_ptr, map_val_type, map.loc, is_aot_);
+    val = b_.CreatePerCpuMapAggElems(ctx_, map, key_ptr, map_val_type, map.loc);
   } else if (!onStack(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

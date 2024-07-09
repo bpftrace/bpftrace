@@ -2180,11 +2180,6 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
   return symopts;
 }
 
-int BPFtrace::get_num_possible_cpus() const
-{
-  return libbpf_num_possible_cpus();
-}
-
 /*
  * This prevents an ABBA deadlock when attaching to spin lock internal
  * functions e.g. "kfunc:queued_spin_lock_slowpath".

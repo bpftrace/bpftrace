@@ -12,6 +12,7 @@
 #include "ast/codegen_helper.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
+#include "globalvars.h"
 #include "log.h"
 #include "utils.h"
 
@@ -576,8 +577,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              Map &map,
                                              Value *key,
                                              const SizedType &type,
-                                             const location &loc,
-                                             bool is_aot)
+                                             const location &loc)
 {
   /*
    * int ret = 0;
@@ -604,10 +604,6 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
 
-  // Set a large upper bound if we don't know the number of cpus
-  // when generating the instructions
-  int nr_cpus = is_aot ? 1024 : bpftrace_.get_num_possible_cpus();
-
   CreateStore(getInt32(0), i);
   CreateStore(getInt64(0), ret);
 
@@ -623,11 +619,12 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              parent);
   CreateBr(while_cond);
   SetInsertPoint(while_cond);
-  // TODO: after full libbpf support update the number of cpus from userspace
-  // dynamically using a global mutable variable and the skeleton
+
   auto *cond = CreateICmp(CmpInst::ICMP_ULT,
                           CreateLoad(getInt32Ty(), i),
-                          getInt32(nr_cpus),
+                          CreateLoad(getInt32Ty(),
+                                     module_.getGlobalVariable(
+                                         bpftrace::globalvars::NUM_CPUS)),
                           "num_cpu.cmp");
   CreateCondBr(cond, while_body, while_end);
 

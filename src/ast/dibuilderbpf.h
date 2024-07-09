@@ -44,6 +44,7 @@ public:
                                              uint64_t max_entries,
                                              const MapKey &key,
                                              const SizedType &value_type);
+  DIGlobalVariableExpression *createGlobalInt64(std::string_view name);
 
   DIFile *file = nullptr;
 
