@@ -4,98 +4,83 @@
 [![IRC#bpftrace](https://img.shields.io/badge/IRC-bpftrace-blue.svg)](https://webchat.oftc.net/?channels=bpftrace)
 [![CodeQL](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml/badge.svg)](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml)
 
-bpftrace is a high-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4.x). bpftrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), and tracepoints. The bpftrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap. bpftrace was created by [Alastair Robertson](https://github.com/ajor).
+bpftrace is a high-level tracing language for Linux [eBPF](https://ebpf.io/what-is-ebpf/) available in recent Linux kernels (4.x). bpftrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [libbpf](https://github.com/libbpf/libbpf) and [bcc](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), tracepoints, etc. The bpftrace language is inspired by awk, C, and predecessor tracers such as DTrace and SystemTap. bpftrace was created by [Alastair Robertson](https://github.com/ajor).
 
-To learn more about bpftrace, see the [Manual](man/adoc/bpftrace.adoc) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
+- [How to Install and Build](INSTALL.md)
+- [Manual / Reference Guide](man/adoc/bpftrace.adoc)
+- [Tutorial](docs/tutorial_one_liners.md)
+- [Example One-Liners](#example-one-liners)
+- [Tools](tools/README.md)
+- [Contribute](#contribute)
+- [Development](#development)
+- [Support](#support)
+- [Probtypes](#probe-types)
+- [Plugins](#plugins)
+- [License](#license)
 
-We are also holding regular [office hours](https://docs.google.com/document/d/1nt010RfL4s4gydhCPSJ-Z5mnFMFuD4NrcpVmUcyvu2E/edit?usp=sharing) open to the public.
-
-## One-Liners
+## Example One-Liners
 
 The following one-liners demonstrate different capabilities:
 
 ```
-# Files opened by process
+# Files opened by thread name
 bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
 
-# Syscall count by program
+# Syscall count by thread name
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
 
-# Read bytes by process:
+# Read bytes by thread name:
 bpftrace -e 'tracepoint:syscalls:sys_exit_read /args->ret/ { @[comm] = sum(args->ret); }'
 
-# Read size distribution by process:
+# Read size distribution by thread name:
 bpftrace -e 'tracepoint:syscalls:sys_exit_read { @[comm] = hist(args->ret); }'
 
 # Show per-second syscall rates:
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @ = count(); } interval:s:1 { print(@); clear(@); }'
 
-# Trace disk size by process
+# Trace disk size by PID and thread name
 bpftrace -e 'tracepoint:block:block_rq_issue { printf("%d %s %d\n", pid, comm, args->bytes); }'
 
-# Count page faults by process
+# Count page faults by thread name
 bpftrace -e 'software:faults:1 { @[comm] = count(); }'
 
-# Count LLC cache misses by process name and PID (uses PMCs):
+# Count LLC cache misses by thread name and PID (uses PMCs):
 bpftrace -e 'hardware:cache-misses:1000000 { @[comm, pid] = count(); }'
 
-# Profile user-level stacks at 99 Hertz, for PID 189:
+# Profile user-level stacks at 99 Hertz for PID 189:
 bpftrace -e 'profile:hz:99 /pid == 189/ { @[ustack] = count(); }'
 
-# Files opened, for processes in the root cgroup-v2
+# Files opened in the root cgroup-v2
 bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/ { printf("%s\n", str(args->filename)); }'
 ```
 
-More powerful scripts can easily be constructed. See [Tools](tools) for examples.
+More powerful scripts can easily be constructed. See [Tools](tools/README.md) for examples.
 
-## Install
+## Contribute
 
-For build and install instructions, see [INSTALL.md](INSTALL.md).
+Contributions are welcome! Please see the [development section](#development) below for more information. For new bpftrace tools, please add them to the new [user-tools repository](https://github.com/bpftrace/user-tools/blob/master/CONTRIBUTING.md). The tools that exist in this repository are a small collection curated by the bpftrace maintainers.
 
-## Tools
+* Bug reports and feature requests: [Issue Tracker](https://github.com/bpftrace/bpftrace/issues)
 
-bpftrace contains various tools, which also serve as examples of programming in the bpftrace language.
+* Development IRC: #bpftrace at irc.oftc.net
 
-- tools/[bashreadline.bt](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
-- tools/[biolatency.bt](tools/biolatency.bt): Block I/O latency as a histogram. [Examples](tools/biolatency_example.txt).
-- tools/[biosnoop.bt](tools/biosnoop.bt): Block I/O tracing tool, showing per I/O latency. [Examples](tools/biosnoop_example.txt).
-- tools/[biostacks.bt](tools/biostacks.bt): Show disk I/O latency with initialization stacks. [Examples](tools/biostacks_example.txt).
-- tools/[bitesize.bt](tools/bitesize.bt): Show disk I/O size as a histogram. [Examples](tools/bitesize_example.txt).
-- tools/[capable.bt](tools/capable.bt): Trace security capability checks. [Examples](tools/capable_example.txt).
-- tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
-- tools/[dcsnoop.bt](tools/dcsnoop.bt): Trace directory entry cache (dcache) lookups. [Examples](tools/dcsnoop_example.txt).
-- tools/[execsnoop.bt](tools/execsnoop.bt): Trace new processes via exec() syscalls. [Examples](tools/execsnoop_example.txt).
-- tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
-- tools/[killsnoop.bt](tools/killsnoop.bt): Trace signals issued by the kill() syscall. [Examples](tools/killsnoop_example.txt).
-- tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
-- tools/[mdflush.bt](tools/mdflush.bt): Trace md flush events. [Examples](tools/mdflush_example.txt).
-- tools/[naptime.bt](tools/naptime.bt): Show voluntary sleep calls. [Examples](tools/naptime_example.txt).
-- tools/[opensnoop.bt](tools/opensnoop.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
-- tools/[oomkill.bt](tools/oomkill.bt): Trace OOM killer. [Examples](tools/oomkill_example.txt).
-- tools/[pidpersec.bt](tools/pidpersec.bt): Count new processes (via fork). [Examples](tools/pidpersec_example.txt).
-- tools/[runqlat.bt](tools/runqlat.bt): CPU scheduler run queue latency as a histogram. [Examples](tools/runqlat_example.txt).
-- tools/[runqlen.bt](tools/runqlen.bt): CPU scheduler run queue length as a histogram. [Examples](tools/runqlen_example.txt).
-- tools/[setuids.bt](tools/setuids.bt): Trace the setuid syscalls: privilege escalation. [Examples](tools/setuids_example.txt).
-- tools/[ssllatency.bt](tools/ssllatency.bt): Summarize SSL/TLS handshake latency as a histogram. [Examples](tools/ssllatency_example.txt)
-- tools/[sslsnoop.bt](tools/sslsnoop.bt): Trace SSL/TLS handshake, showing latency and return value. [Examples](tools/sslsnoop_example.txt)
-- tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
-- tools/[swapin.bt](tools/swapin.bt): Show swapins by process. [Examples](tools/swapin_example.txt).
-- tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).
-- tools/[syscount.bt](tools/syscount.bt): Count system calls. [Examples](tools/syscount_example.txt).
-- tools/[tcpaccept.bt](tools/tcpaccept.bt): Trace TCP passive connections (accept()). [Examples](tools/tcpaccept_example.txt).
-- tools/[tcpconnect.bt](tools/tcpconnect.bt): Trace TCP active connections (connect()). [Examples](tools/tcpconnect_example.txt).
-- tools/[tcpdrop.bt](tools/tcpdrop.bt): Trace kernel-based TCP packet drops with details. [Examples](tools/tcpdrop_example.txt).
-- tools/[tcplife.bt](tools/tcplife.bt): Trace TCP session lifespans with connection details. [Examples](tools/tcplife_example.txt).
-- tools/[tcpretrans.bt](tools/tcpretrans.bt): Trace TCP retransmits. [Examples](tools/tcpretrans_example.txt).
-- tools/[tcpsynbl.bt](tools/tcpsynbl.bt): Show TCP SYN backlog as a histogram. [Examples](tools/tcpsynbl_example.txt).
-- tools/[threadsnoop.bt](tools/threadsnoop.bt): List new thread creation. [Examples](tools/threadsnoop_example.txt).
-- tools/[undump.bt](tools/undump.bt): Capture UNIX domain socket packages. [Examples](tools/undump_example.txt).
-- tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
-- tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
-- tools/[writeback.bt](tools/writeback.bt): Trace file system writeback events with details. [Examples](tools/writeback_example.txt).
-- tools/[xfsdist.bt](tools/xfsdist.bt): Summarize XFS operation latency distribution as a histogram. [Examples](tools/xfsdist_example.txt).
+* [Good first issues](https://github.com/bpftrace/bpftrace/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
 
-For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
+## Development
+
+* [Coding Guidelines](docs/coding_guidelines.md)
+* [Development Guide](docs/developers.md)
+* [Development Roadmap](https://docs.google.com/document/d/17729Rlyo1xzlJObzHpFLDzeCVgvwRh0ktAmMEJLK-EU/edit)
+* [Fuzzing](docs/fuzzing.md)
+* [Nix](docs/nix.md)
+* [Release Process](docs/release_process.md)
+* [Tests](tests/README.md)
+
+## Support
+
+For additional help / discussion, please use our [discussions](https://github.com/bpftrace/bpftrace/discussions) page.
+
+We are also holding regular [office hours](https://docs.google.com/document/d/1nt010RfL4s4gydhCPSJ-Z5mnFMFuD4NrcpVmUcyvu2E/edit?usp=sharing) open to the public.
 
 ## Probe types
 <center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
@@ -110,24 +95,6 @@ bpftrace has several plugins/definitions, integrating the syntax into your edito
 - [Emacs](https://gitlab.com/jgkamat/bpftrace-mode)
 - [Vim](https://github.com/mmarchini/bpftrace.vim)
 - [VS Code](https://github.com/bolinfest/bpftrace-vscode)
-
-## Support
-
-For additional help / discussion, please use our [discussions](https://github.com/bpftrace/bpftrace/discussions) page.
-
-## Contributing
-
-* Have ideas for new bpftrace tools? [CONTRIBUTING-TOOLS.md](CONTRIBUTING-TOOLS.md)
-
-* Bugs reports and feature requests: [Issue Tracker](https://github.com/bpftrace/bpftrace/issues)
-
-* bpftrace development IRC: #bpftrace at irc.oftc.net
-
-* Development guidelines: [developers.md](docs/developers.md)
-
-## Development
-
-Please see [developers.md](docs/developers.md) for all development related topics.
 
 ## License
 
