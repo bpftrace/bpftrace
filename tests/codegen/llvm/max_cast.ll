@@ -12,11 +12,12 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
+@num_cpus = dso_local externally_initialized constant i64 1, section ".rodata", !dbg !51
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !55 {
+define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
   %key = alloca i32, align 4
   %print_integer_8_t = alloca %print_integer_8_t, align 8
@@ -90,83 +91,84 @@ if_end:                                           ; preds = %counter_merge, %whi
   ret i64 0
 
 while_cond:                                       ; preds = %min_max_merge, %lookup_merge
-  %18 = load i32, i32* %i, align 4
-  %num_cpu.cmp = icmp ult i32 %18, 20
+  %18 = load i32, i64* @num_cpus, align 4
+  %19 = load i32, i32* %i, align 4
+  %num_cpu.cmp = icmp ult i32 %19, %18
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %19 = load i32, i32* %i, align 4
-  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %"@x_key1", i32 %19)
+  %20 = load i32, i32* %i, align 4
+  %lookup_percpu_elem = call i8* inttoptr (i64 195 to i8* (%"struct map_t"*, i64*, i32)*)(%"struct map_t"* @AT_x, i64* %"@x_key1", i32 %20)
   %map_lookup_cond4 = icmp ne i8* %lookup_percpu_elem, null
   br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
-  %20 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  %21 = load i64, i64* %ret, align 8
-  %22 = bitcast i64* %ret to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  %23 = bitcast i64* %"@x_key1" to i8*
+  %21 = bitcast i32* %i to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
+  %22 = load i64, i64* %ret, align 8
+  %23 = bitcast i64* %ret to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
-  %24 = icmp sgt i64 %21, 5
-  %25 = zext i1 %24 to i64
-  %true_cond = icmp ne i64 %25, 0
+  %24 = bitcast i64* %"@x_key1" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
+  %25 = icmp sgt i64 %22, 5
+  %26 = zext i1 %25 to i64
+  %true_cond = icmp ne i64 %26, 0
   br i1 %true_cond, label %if_body, label %if_end
 
 lookup_success2:                                  ; preds = %while_body
   %cast5 = bitcast i8* %lookup_percpu_elem to i64*
-  %26 = load i64, i64* %ret, align 8
-  %27 = load i64, i64* %cast5, align 8
-  %max_cond = icmp sgt i64 %27, %26
+  %27 = load i64, i64* %ret, align 8
+  %28 = load i64, i64* %cast5, align 8
+  %max_cond = icmp sgt i64 %28, %27
   br i1 %max_cond, label %min_max_success, label %min_max_merge
 
 lookup_failure3:                                  ; preds = %while_body
-  %28 = load i32, i32* %i, align 4
-  %error_lookup_cond = icmp eq i32 %28, 0
+  %29 = load i32, i32* %i, align 4
+  %error_lookup_cond = icmp eq i32 %29, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 min_max_success:                                  ; preds = %lookup_success2
-  %29 = load i64, i64* %cast5, align 8
-  store i64 %29, i64* %ret, align 8
+  %30 = load i64, i64* %cast5, align 8
+  store i64 %30, i64* %ret, align 8
   br label %min_max_merge
 
 min_max_merge:                                    ; preds = %min_max_success, %lookup_success2
-  %30 = load i32, i32* %i, align 4
-  %31 = add i32 %30, 1
-  store i32 %31, i32* %i, align 4
+  %31 = load i32, i32* %i, align 4
+  %32 = add i32 %31, 1
+  store i32 %32, i32* %i, align 4
   br label %while_cond
 
 error_success:                                    ; preds = %lookup_failure3
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure3
-  %32 = load i32, i32* %i, align 4
+  %33 = load i32, i32* %i, align 4
   br label %while_end
 
 event_loss_counter:                               ; preds = %if_body
-  %33 = bitcast i32* %key to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %33)
+  %34 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %34)
   store i32 0, i32* %key, align 4
   %lookup_elem6 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @event_loss_counter, i32* %key)
   %map_lookup_cond10 = icmp ne i8* %lookup_elem6, null
   br i1 %map_lookup_cond10, label %lookup_success7, label %lookup_failure8
 
 counter_merge:                                    ; preds = %lookup_merge9, %if_body
-  %34 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %34)
+  %35 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %35)
   br label %if_end
 
 lookup_success7:                                  ; preds = %event_loss_counter
-  %35 = bitcast i8* %lookup_elem6 to i64*
-  %36 = atomicrmw add i64* %35, i64 1 seq_cst
+  %36 = bitcast i8* %lookup_elem6 to i64*
+  %37 = atomicrmw add i64* %36, i64 1 seq_cst
   br label %lookup_merge9
 
 lookup_failure8:                                  ; preds = %event_loss_counter
   br label %lookup_merge9
 
 lookup_merge9:                                    ; preds = %lookup_failure8, %lookup_success7
-  %37 = bitcast i32* %key to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %37)
+  %38 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %38)
   br label %counter_merge
 }
 
@@ -183,8 +185,8 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 
-!llvm.dbg.cu = !{!51}
-!llvm.module.flags = !{!54}
+!llvm.dbg.cu = !{!53}
+!llvm.module.flags = !{!56}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -237,14 +239,16 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !48 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !49, size: 64, offset: 128)
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
 !50 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !52, globals: !53)
-!52 = !{}
-!53 = !{!0, !20, !34}
-!54 = !{i32 2, !"Debug Info Version", i32 3}
-!55 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !60)
-!56 = !DISubroutineType(types: !57)
-!57 = !{!18, !58}
-!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)
-!59 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)
+!51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
+!52 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
+!53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !54, globals: !55)
+!54 = !{}
+!55 = !{!0, !20, !34, !51}
+!56 = !{i32 2, !"Debug Info Version", i32 3}
+!57 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !62)
+!58 = !DISubroutineType(types: !59)
+!59 = !{!18, !60}
+!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !61, size: 64)
+!61 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!62 = !{!63}
+!63 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)

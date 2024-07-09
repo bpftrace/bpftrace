@@ -45,11 +45,6 @@ public:
   {
     return feature_->has_loop();
   }
-
-  int get_num_possible_cpus() const override
-  {
-    return 20;
-  }
 };
 
 TEST(codegen, printf_offsets)

@@ -51,8 +51,7 @@ static auto parse_probe(const std::string &str,
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;
-  ast::CodegenLLVM codegen(
-      driver.root.get(), bpftrace, false, std::move(usdt_helper));
+  ast::CodegenLLVM codegen(driver.root.get(), bpftrace, std::move(usdt_helper));
   codegen.generate_ir();
 }
 

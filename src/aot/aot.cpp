@@ -341,7 +341,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
 
   bpftrace.bytecode_ = BpfBytecode(btaot_section + hdr->elf_off,
                                    hdr->elf_len,
-                                   bpftrace.config_);
+                                   bpftrace);
   if (err)
     goto out;
 

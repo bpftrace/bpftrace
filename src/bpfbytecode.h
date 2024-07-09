@@ -23,7 +23,7 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(const void *elf, size_t elf_size, const Config &config);
+  BpfBytecode(const void *elf, size_t elf_size, BPFtrace &bpftrace);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
