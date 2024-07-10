@@ -1,2 +1,3 @@
 *.bt linguist-language=D
 *.bt linguist-vendored
+*.ll linguist-detectable=false
