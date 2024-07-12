@@ -31,6 +31,7 @@ TEST(LogStream, basic)
   LOG(V1) << content_1 << content_2;
   EXPECT_EQ(ss.str(), content_1 + content_2 + "\n");
   std::cerr.rdbuf(cerr_buf);
+  DISABLE_LOG(V1);
 }
 
 TEST(LogStream, with_location)
