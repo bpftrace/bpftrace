@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_usym_key)
 {
-  test("kprobe:f { @x[usym(0)] = count() }",
+  test("kprobe:f { @x[usym(0)] = 1; }",
 
        NAME);
 }

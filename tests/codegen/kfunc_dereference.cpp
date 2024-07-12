@@ -6,8 +6,7 @@ namespace codegen {
 
 TEST(codegen, kfunc_dereference)
 {
-  test("kfunc:tcp_sendmsg { @[args->sk->__sk_common.skc_daddr] = count(); }",
-       NAME);
+  test("kfunc:tcp_sendmsg { @[args->sk->__sk_common.skc_daddr] = 1; }", NAME);
 }
 
 } // namespace codegen

@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, iter_dereference)
 {
-  test("iter:task_file { @[ctx->meta->session_id] = count()}", NAME);
+  test("iter:task_file { @[ctx->meta->session_id] = 1; }", NAME);
 }
 
 } // namespace codegen

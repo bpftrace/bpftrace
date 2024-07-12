@@ -6,8 +6,7 @@ namespace codegen {
 
 TEST(codegen, argN_rawtracepoint)
 {
-  test("rawtracepoint:sched_switch { "
-       "@[arg0] = count(); }",
+  test("rawtracepoint:sched_switch { @[arg0] = 1; }",
 
        NAME);
 }

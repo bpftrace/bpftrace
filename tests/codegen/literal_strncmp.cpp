@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, literal_strncmp)
 {
-  test("kretprobe:vfs_read /strncmp(comm, \"sshd\", 2)/ { @[comm] = count(); }",
+  test("kprobe:f { @[strncmp(comm, \"sshd\", 2)] = 1; }",
 
        NAME);
 }
