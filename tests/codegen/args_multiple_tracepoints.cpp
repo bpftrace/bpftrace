@@ -11,7 +11,7 @@ namespace codegen {
 TEST(codegen, args_multiple_tracepoints)
 {
   test("tracepoint:sched:sched_one,tracepoint:sched:sched_two { "
-       "@[args.common_field] = count(); }",
+       "@[args.common_field] = 1; }",
        NAME);
 }
 

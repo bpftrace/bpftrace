@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, string_not_equal_comparison)
 {
-  test("kretprobe:vfs_read /comm != \"sshd\"/ { @[comm] = count(); }",
+  test("kprobe:f { @[comm != \"sshd\"] = 1; }",
 
        NAME);
 }

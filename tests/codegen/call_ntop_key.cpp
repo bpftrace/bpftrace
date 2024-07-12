@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_ntop_key)
 {
-  test("kprobe:f { @x[ntop(2, 0xFFFFFFFF)] = count()}",
+  test("kprobe:f { @x[ntop(2, 0xFFFFFFFF)] = 1; }",
 
        NAME);
 }
