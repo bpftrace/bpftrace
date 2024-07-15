@@ -2478,7 +2478,7 @@ void CodegenLLVM::visit(For &f)
     std::vector<llvm::Type *> ctx_field_types(ctx_fields.size(),
                                               b_.GET_PTR_TY());
 #endif
-    ctx_t = b_.GetStructType("ctx_t", ctx_field_types);
+    ctx_t = StructType::create(ctx_field_types, "ctx_t");
     ctx = b_.CreateAllocaBPF(ctx_t, "ctx");
 
     for (size_t i = 0; i < ctx_fields.size(); i++) {
