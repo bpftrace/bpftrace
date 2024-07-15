@@ -2,7 +2,7 @@
 
 ## Don't add to this
 EXIT=0
-LLVM_VERSION=12
+LLVM_VERSION=18
 
 if ! LLVM=$(command -v "llvm-as-${LLVM_VERSION}" || command -v llvm-as); then
   echo "llvm-as not found, exiting"

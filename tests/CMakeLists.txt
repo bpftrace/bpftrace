@@ -15,11 +15,14 @@ add_custom_command(
   DEPENDS
     ${CODEGEN_SOURCES})
 
-if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
+# Codegen tests are based on the IR produced by LLVM 18. The compiler used to
+# build bpftrace is also important, as decisions on order of evaluation can
+# influence the order of the generated IR.
+if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18 AND ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
   set(CODEGEN_SRC ${CODEGEN_INCLUDES_CPP})
 else()
   set(CODEGEN_SRC "")
-  message(STATUS "Disabled codegen test for LLVM != 12 (found ${LLVM_VERSION_MAJOR})")
+  message(STATUS "Disabled codegen tests. Requires GNU/GCC and LLVM 18 (found ${CMAKE_CXX_COMPILER_ID}, LLVM ${LLVM_VERSION_MAJOR})")
 endif()
 
 add_executable(bpftrace_test
@@ -170,13 +173,13 @@ if (BUILD_ASAN)
 endif()
 
 if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
+  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)
     message(STATUS "Adding codegen-validator test")
     configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
     add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
     add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
   else()
-    message(STATUS "Not building with LLVM 12, skipping codegen-validator test")
+    message(STATUS "Not building with LLVM 18, skipping codegen-validator test")
   endif()
 else()
   message(STATUS "codegen-validator test disabled")

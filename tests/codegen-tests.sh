@@ -15,7 +15,7 @@ UPDATE_TESTS=${BPFTRACE_UPDATE_TESTS:-0}
 SCRIPT_NAME=$0
 
 function run() {
-  nix develop .#bpftrace-llvm12 --command "$@"
+  nix develop .#bpftrace-llvm18 --command "$@"
 }
 
 usage() {
