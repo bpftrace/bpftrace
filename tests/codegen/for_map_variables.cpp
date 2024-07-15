@@ -20,4 +20,26 @@ TEST(codegen, for_map_variables)
        NAME);
 }
 
+TEST(codegen, for_map_variables_multiple_loops)
+{
+  test(R"(
+    BEGIN
+    {
+      @[0] = 0;
+
+      $var1 = 0;
+      $var2 = 0;
+
+      // Ensure we get unique ctx_t types for each loop
+      for ($_ : @) {
+        $var1++;
+      }
+      for ($_ : @) {
+        $var1++;
+        $var2++;
+      }
+    })",
+       NAME);
+}
+
 } // namespace bpftrace::test::codegen
