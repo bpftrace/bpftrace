@@ -515,6 +515,12 @@ EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 TIMEOUT 5
 
+NAME iter printf multiple values
+PROG iter:task { printf("%s: %d\n", "hello", 0); exit(); }
+EXPECT hello: 0
+REQUIRES_FEATURE iter
+TIMEOUT 5
+
 NAME cgroup_path
 PROG BEGIN { print(cgroup_path(cgroup & ((1 << 32) - 1))); exit(); }
 EXPECT_REGEX ([a-z]*:\/.*;)*[a-z]*:\/.*
