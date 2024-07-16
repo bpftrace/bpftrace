@@ -475,6 +475,8 @@ primary_expr:
                   auto args = new ast::ExpressionList;
                   args->emplace_back($2);
                   args->insert(args->end(), $4->begin(), $4->end());
+                  delete $4;
+                  $4 = nullptr;
                   $$ = new ast::Tuple(args, @$);
                 }
                 ;
