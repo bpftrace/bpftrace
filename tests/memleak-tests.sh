@@ -51,6 +51,7 @@ run_tests () {
 program_tests=(
     '"BEGIN { exit(); }"'
     $'"#include <linux/skbuff.h>\n BEGIN { \$x = ((struct sk_buff *)curtask)->data_len; exit(); }"'
+    '"BEGIN { print((1, 2)); exit(); }"'
 )
 
 listing_tests=(
