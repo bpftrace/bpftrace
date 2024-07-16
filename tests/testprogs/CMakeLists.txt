@@ -13,6 +13,7 @@ function(test_and_add_testprog_cflag flag)
   else()
     message(STATUS "${CMAKE_C_COMPILER} does not support ${flag}")
   endif()
+  execute_process(COMMAND rm -rf -)
 endfunction()
 
 test_and_add_testprog_cflag("-fno-omit-frame-pointer")
