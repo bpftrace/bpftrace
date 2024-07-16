@@ -1084,8 +1084,7 @@ void CodegenLLVM::visit(Call &call)
         // and store it to data area
         Value *offset = b_.CreateGEP(b_.GetType(data_type),
                                      data,
-                                     { b_.getInt64(0),
-                                       b_.getInt64((i - 1) * ptr_size) });
+                                     { b_.getInt64(0), b_.getInt32(i - 1) });
         b_.CreateStore(
             expr_, b_.CreateBitCast(offset, expr_->getType()->getPointerTo()));
 
