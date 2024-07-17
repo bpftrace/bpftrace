@@ -18,12 +18,6 @@ test_and_add_testprog_cflag("-fno-omit-frame-pointer")
 test_and_add_testprog_cflag("-mno-omit-leaf-frame-pointer")
 get_property(testprog_cflags GLOBAL PROPERTY testprog_cflags)
 
-if(LLVM_VERSION_MAJOR VERSION_LESS 13)
-  # CI's GCC compile the testprogs using DWARF version 5
-  # LLDB doesn't support DWARF5 before version 13, so we force DWARF4
-  set(testprog_cflags "${testprog_cflags} -gdwarf-4")
-endif()
-
 file(GLOB testprog_sources CONFIGURE_DEPENDS *.c)
 set(testprogtargets "")
 foreach(testprog_source ${testprog_sources})

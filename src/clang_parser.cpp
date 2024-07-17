@@ -87,102 +87,6 @@ static std::string get_clang_string(CXString string)
 }
 
 /*
- * is_anonymous
- *
- * Determine whether the provided cursor points to an anonymous struct.
- *
- * This union is anonymous:
- *   struct { int i; };
- * This is not, although it is marked as such in LLVM 8:
- *   struct { int i; } obj;
- * This is not, and does not actually declare an instance of a struct:
- *   struct X { int i; };
- *
- * The libclang API was changed in LLVM 8 and restored under a different
- * function in LLVM 9. For LLVM 8 there is no way to properly tell if
- * a record declaration is anonymous, so we do some hacks here.
- *
- * LLVM version differences:
- *   https://reviews.llvm.org/D54996
- *   https://reviews.llvm.org/D61232
- */
-static bool is_anonymous(CXCursor c)
-{
-#if LLVM_VERSION_MAJOR <= 7
-  return clang_Cursor_isAnonymous(c);
-#elif LLVM_VERSION_MAJOR >= 9
-  return clang_Cursor_isAnonymousRecordDecl(c);
-#else // LLVM 8
-  if (!clang_Cursor_isAnonymous(c))
-    return false;
-
-  // In LLVM 8, some structs which the above function says are anonymous
-  // are actually not. We iterate through the siblings of our struct
-  // definition to see if there is a field giving it a name.
-  //
-  // struct Parent                 struct Parent
-  // {                             {
-  //   struct                        struct
-  //   {                             {
-  //     ...                           ...
-  //   } name;                       };
-  //   int sibling;                  int sibling;
-  // };                            };
-  //
-  // Children of parent:           Children of parent:
-  //   Struct: (cursor c)            Struct: (cursor c)
-  //   Field:  (Record)name          Field:  (int)sibling
-  //   Field:  (int)sibling
-  //
-  // Record field found after      No record field found after
-  // cursor - not anonymous        cursor - anonymous
-
-  auto parent = clang_getCursorSemanticParent(c);
-  if (clang_Cursor_isNull(parent))
-    return false;
-
-  struct AnonFinderState {
-    CXCursor struct_to_check;
-    bool is_anon;
-    bool prev_was_definition;
-  } state;
-
-  state.struct_to_check = c;
-  state.is_anon = true;
-  state.prev_was_definition = false;
-
-  clang_visitChildren(
-      parent,
-      [](CXCursor c2, CXCursor, CXClientData client_data) {
-        auto state = static_cast<struct AnonFinderState *>(client_data);
-        if (state->prev_was_definition) {
-          // This is the next child after the definition of the struct we're
-          // interested in. If it is a field containing a record, we assume
-          // that it must be the field for our struct, so our struct is not
-          // anonymous.
-          state->prev_was_definition = false;
-          auto kind = clang_getCursorKind(c2);
-          auto type = clang_getCanonicalType(clang_getCursorType(c2));
-          if (kind == CXCursor_FieldDecl && type.kind == CXType_Record) {
-            state->is_anon = false;
-            return CXChildVisit_Break;
-          }
-        }
-
-        // We've found the definition of the struct we're interested in
-        if (memcmp(c2.data,
-                   state->struct_to_check.data,
-                   3 * sizeof(uintptr_t)) == 0)
-          state->prev_was_definition = true;
-        return CXChildVisit_Continue;
-      },
-      &state);
-
-  return state.is_anon;
-#endif
-}
-
-/*
  * get_named_parent
  *
  * Find the parent struct of the field pointed to by the cursor.
@@ -192,7 +96,8 @@ static CXCursor get_named_parent(CXCursor c)
 {
   CXCursor parent = clang_getCursorSemanticParent(c);
 
-  while (!clang_Cursor_isNull(parent) && is_anonymous(parent)) {
+  while (!clang_Cursor_isNull(parent) &&
+         clang_Cursor_isAnonymousRecordDecl(parent)) {
     parent = clang_getCursorSemanticParent(parent);
   }
 

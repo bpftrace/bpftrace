@@ -11,17 +11,11 @@ find_program(AWK awk REQUIRED)
 find_program(STRIP strip REQUIRED)
 
 # Build data_source.o and inject BTF into it
-set(DATA_SOURCE_CFLAGS -g)
-if(LLVM_VERSION_MAJOR VERSION_LESS 13)
-  # CI's GCC compile the testprogs using DWARF version 5
-  # LLDB doesn't support DWARF5 before version 13, so we force DWARF4
-  set(DATA_SOURCE_CFLAGS ${DATA_SOURCE_CFLAGS} -gdwarf-4)
-endif()
 set(DATA_SOURCE_C ${CMAKE_CURRENT_SOURCE_DIR}/data_source.c)
 set(DATA_SOURCE_O ${CMAKE_CURRENT_BINARY_DIR}/data_source.o)
 add_custom_command(
   OUTPUT ${DATA_SOURCE_O}
-  COMMAND gcc ${DATA_SOURCE_CFLAGS} -o ${DATA_SOURCE_O} ${DATA_SOURCE_C}
+  COMMAND gcc -g -o ${DATA_SOURCE_O} ${DATA_SOURCE_C}
   # pahole uses LLVM_OBJCOPY env var.
   # We must hack it like this b/c cmake does not support setting env vars at build time
   COMMAND bash -c "LLVM_OBJCOPY=${LLVM_OBJCOPY} pahole -J ${DATA_SOURCE_O}"

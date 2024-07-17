@@ -149,7 +149,6 @@
             bpftrace-llvm15 = mkBpftrace pkgs.llvmPackages_15;
             bpftrace-llvm14 = mkBpftrace pkgs.llvmPackages_14;
             bpftrace-llvm13 = mkBpftrace pkgs.llvmPackages_13;
-            bpftrace-llvm12 = mkBpftrace pkgs.llvmPackages_12;
 
             # Self-contained static binary with all dependencies
             appimage = nix-appimage.mkappimage.${system} {
@@ -196,7 +195,6 @@
             bpftrace-llvm15 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm15;
             bpftrace-llvm14 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm14;
             bpftrace-llvm13 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm13;
-            bpftrace-llvm12 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm12;
           };
         });
 }

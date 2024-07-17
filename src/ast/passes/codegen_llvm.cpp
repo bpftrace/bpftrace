@@ -3750,10 +3750,8 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
 
 #if LLVM_VERSION_MAJOR >= 18
   auto type = CodeGenFileType::ObjectFile;
-#elif LLVM_VERSION_MAJOR >= 10
-  auto type = llvm::CGFT_ObjectFile;
 #else
-  auto type = llvm::TargetMachine::CGFT_ObjectFile;
+  auto type = llvm::CGFT_ObjectFile;
 #endif
 
   if (target_machine_->addPassesToEmitFile(PM, stream, nullptr, type))
