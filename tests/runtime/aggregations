@@ -1,0 +1,72 @@
+NAME count
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @cnt = count() }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @cnt: 100
+
+NAME hist
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @hist = hist(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @hist:
+       [1]                    1 |@                                                   |
+       [2, 4)                 2 |@@                                                  |
+       [4, 8)                 4 |@@@@@                                               |
+       [8, 16)                8 |@@@@@@@@@@@                                         |
+       [16, 32)              16 |@@@@@@@@@@@@@@@@@@@@@@                              |
+       [32, 64)              32 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@        |
+       [64, 128)             37 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+NAME lhist
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @lhist = lhist(arg0, 0, 100, 20) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @lhist:
+       [0, 20)               19 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   |
+       [20, 40)              20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+       [40, 60)              20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+       [60, 80)              20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+       [80, 100)             20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+       [100, ...)             1 |@@                                                  |
+
+NAME min
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @min = min(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @min: 1
+
+NAME min_negative
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @min = min(-arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @min: -100
+
+NAME max
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @max = max(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @max: 100
+
+NAME max_negative
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @max = max(-arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @max: -1
+
+NAME sum
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @sum = sum(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @sum: 5050
+
+NAME avg
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @avg = avg(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @avg: 50
+
+NAME stats
+PROG uprobe:testprogs/multithreaded_data:accept_positive { @stats = stats(arg0) }
+     uretprobe:testprogs/multithreaded_data:main { exit() }
+AFTER ./testprogs/multithreaded_data
+EXPECT @stats: count 100, average 50, total 5050
