@@ -36,7 +36,7 @@ void test(BPFtrace &bpftrace,
   ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ResourceAnalyser resource_analyser(driver.root.get(), out);
+  ast::ResourceAnalyser resource_analyser(driver.root.get(), bpftrace, out);
   auto resources_optional = resource_analyser.analyse();
   EXPECT_EQ(resources_optional.has_value(), expected_result)
       << msg.str() << out.str();
