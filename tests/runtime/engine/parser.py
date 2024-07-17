@@ -4,6 +4,7 @@ from collections import namedtuple
 import os
 import platform
 
+DEFAULT_TIMEOUT = 5
 
 class RequiredFieldError(Exception):
     pass
@@ -236,7 +237,7 @@ class TestParser(object):
         elif len(expects) > 1 and has_exact_expect:
             raise InvalidFieldError('EXPECT_JSON or EXPECT_FILE can not be used with other EXPECTs. Suite: ' + test_suite)
         elif timeout == '':
-            raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
+            timeout = DEFAULT_TIMEOUT
 
         return TestStruct(
             name,
