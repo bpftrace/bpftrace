@@ -3,9 +3,9 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8* }
-%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -16,53 +16,46 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @uprobe__tmp_bpftrace_test_dwarf_data_func_1_1(i8* %0) section "s_uprobe__tmp_bpftrace_test_dwarf_data_func_1_1" !dbg !57 {
+define i64 @uprobe__tmp_bpftrace_test_dwarf_data_func_1_1(ptr %0) section "s_uprobe__tmp_bpftrace_test_dwarf_data_func_1_1" !dbg !56 {
 entry:
   %"@_key" = alloca i64, align 8
   %args = alloca %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", align 8
-  %1 = bitcast %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = bitcast i8* %0 to i64*
-  %3 = getelementptr i64, i64* %2, i64 14
-  %arg0 = load volatile i64, i64* %3, align 8
-  %4 = trunc i64 %arg0 to i32
-  %5 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 0
-  store i32 %4, i32* %5, align 4
-  %6 = bitcast i8* %0 to i64*
-  %7 = getelementptr i64, i64* %6, i64 13
-  %arg1 = load volatile i64, i64* %7, align 8
-  %8 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 1
-  store i64 %arg1, i64* %8, align 8
-  %9 = bitcast i8* %0 to i64*
-  %10 = getelementptr i64, i64* %9, i64 12
-  %arg2 = load volatile i64, i64* %10, align 8
-  %11 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 2
-  store i64 %arg2, i64* %11, align 8
-  %12 = bitcast i8* %0 to i64*
-  %13 = getelementptr i64, i64* %12, i64 11
-  %arg3 = load volatile i64, i64* %13, align 8
-  %14 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0, i32 3
-  store i64 %arg3, i64* %14, align 8
-  %15 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
-  store i64 0, i64* %"@_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0)
-  %16 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %args)
+  %1 = getelementptr i64, ptr %0, i64 14
+  %arg0 = load volatile i64, ptr %1, align 8
+  %2 = trunc i64 %arg0 to i32
+  %3 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 0
+  store i32 %2, ptr %3, align 4
+  %4 = getelementptr i64, ptr %0, i64 13
+  %arg1 = load volatile i64, ptr %4, align 8
+  %5 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 1
+  store i64 %arg1, ptr %5, align 8
+  %6 = getelementptr i64, ptr %0, i64 12
+  %arg2 = load volatile i64, ptr %6, align 8
+  %7 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 2
+  store i64 %arg2, ptr %7, align 8
+  %8 = getelementptr i64, ptr %0, i64 11
+  %arg3 = load volatile i64, ptr %8, align 8
+  %9 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
+  store i64 %arg3, ptr %9, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
+  store i64 0, ptr %"@_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %args, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   ret i64 0
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!53}
-!llvm.module.flags = !{!56}
+!llvm.module.flags = !{!55}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -117,13 +110,12 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !50 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !51, size: 64)
 !51 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !52 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !17, size: 64, offset: 192)
-!53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !54, globals: !55)
-!54 = !{}
-!55 = !{!0, !25, !39}
-!56 = !{i32 2, !"Debug Info Version", i32 3}
-!57 = distinct !DISubprogram(name: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", linkageName: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
-!58 = !DISubroutineType(types: !59)
-!59 = !{!18, !60}
-!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
-!61 = !{!62}
-!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)
+!53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
+!54 = !{!0, !25, !39}
+!55 = !{i32 2, !"Debug Info Version", i32 3}
+!56 = distinct !DISubprogram(name: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", linkageName: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
+!57 = !DISubroutineType(types: !58)
+!58 = !{!18, !59}
+!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+!60 = !{!61}
+!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !59)

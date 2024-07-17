@@ -3,8 +3,8 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8* }
-%"struct map_t.0" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -13,20 +13,19 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !40 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !39 {
 entry:
-  %1 = bitcast i8* %0 to i64*
-  %2 = getelementptr i64, i64* %1, i64 14
-  %arg0 = load volatile i64, i64* %2, align 8
-  %3 = trunc i64 %arg0 to i32
-  %signal = call i64 inttoptr (i64 109 to i64 (i32)*)(i32 %3)
+  %1 = getelementptr i64, ptr %0, i64 14
+  %arg0 = load volatile i64, ptr %1, align 8
+  %2 = trunc i64 %arg0 to i32
+  %signal = call i64 inttoptr (i64 109 to ptr)(i32 %2)
   ret i64 0
 }
 
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!36}
-!llvm.module.flags = !{!39}
+!llvm.module.flags = !{!38}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -64,14 +63,13 @@ attributes #0 = { nounwind }
 !33 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !34, size: 64, offset: 192)
 !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 64)
 !35 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!36 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !37, globals: !38)
-!37 = !{}
-!38 = !{!0, !16}
-!39 = !{i32 2, !"Debug Info Version", i32 3}
-!40 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !41, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !45)
-!41 = !DISubroutineType(types: !42)
-!42 = !{!35, !43}
-!43 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !44, size: 64)
-!44 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!45 = !{!46}
-!46 = !DILocalVariable(name: "ctx", arg: 1, scope: !40, file: !2, type: !43)
+!36 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !37)
+!37 = !{!0, !16}
+!38 = !{i32 2, !"Debug Info Version", i32 3}
+!39 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !40, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !44)
+!40 = !DISubroutineType(types: !41)
+!41 = !{!35, !42}
+!42 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !43, size: 64)
+!43 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!44 = !{!45}
+!45 = !DILocalVariable(name: "ctx", arg: 1, scope: !39, file: !2, type: !42)

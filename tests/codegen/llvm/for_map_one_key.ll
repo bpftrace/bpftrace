@@ -3,10 +3,10 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.1" = type { i8*, i8* }
-%"struct map_t.2" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr }
+%"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 %"unsigned int64_int64__tuple_t" = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -18,62 +18,54 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(i8* %0) section "s_BEGIN_1" !dbg !61 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !60 {
 entry:
   %"@map_val" = alloca i64, align 8
   %"@map_key" = alloca i64, align 8
-  %1 = bitcast i64* %"@map_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  store i64 16, i64* %"@map_key", align 8
-  %2 = bitcast i64* %"@map_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
-  store i64 32, i64* %"@map_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_map, i64* %"@map_key", i64* %"@map_val", i64 0)
-  %3 = bitcast i64* %"@map_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast i64* %"@map_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
-  %for_each_map_elem = call i64 inttoptr (i64 164 to i64 (%"struct map_t"*, i64 (i8*, i8*, i8*, i8*)*, i8*, i64)*)(%"struct map_t"* @AT_map, i64 (i8*, i8*, i8*, i8*)* @map_for_each_cb, i8* null, i64 0)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_key")
+  store i64 16, ptr %"@map_key", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_val")
+  store i64 32, ptr %"@map_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %"@map_key", ptr %"@map_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_key")
+  %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define internal i64 @map_for_each_cb(i8* %0, i8* %1, i8* %2, i8* %3) section ".text" !dbg !68 {
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !67 {
   %"@x_key" = alloca i64, align 8
   %"$kv" = alloca %"unsigned int64_int64__tuple_t", align 8
-  %key = load i64, i8* %1, align 8
-  %val = load i64, i8* %2, align 8
-  %5 = bitcast %"unsigned int64_int64__tuple_t"* %"$kv" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  %6 = bitcast %"unsigned int64_int64__tuple_t"* %"$kv" to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %6, i8 0, i64 16, i1 false)
-  %7 = getelementptr %"unsigned int64_int64__tuple_t", %"unsigned int64_int64__tuple_t"* %"$kv", i32 0, i32 0
-  store i64 %key, i64* %7, align 8
-  %8 = getelementptr %"unsigned int64_int64__tuple_t", %"unsigned int64_int64__tuple_t"* %"$kv", i32 0, i32 1
-  store i64 %val, i64* %8, align 8
-  %9 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
-  store i64 0, i64* %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, %"unsigned int64_int64__tuple_t"*, i64)*)(%"struct map_t.0"* @AT_x, i64* %"@x_key", %"unsigned int64_int64__tuple_t"* %"$kv", i64 0)
-  %10 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %key = load i64, ptr %1, align 8
+  %val = load i64, ptr %2, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
+  %5 = getelementptr %"unsigned int64_int64__tuple_t", ptr %"$kv", i32 0, i32 0
+  store i64 %key, ptr %5, align 8
+  %6 = getelementptr %"unsigned int64_int64__tuple_t", ptr %"$kv", i32 0, i32 1
+  store i64 %val, ptr %6, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
+  store i64 0, ptr %"@x_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"$kv", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!57}
-!llvm.module.flags = !{!60}
+!llvm.module.flags = !{!59}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_map", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -132,17 +124,16 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !54 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !55, size: 64, offset: 128)
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !56, size: 64)
 !56 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!57 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !58, globals: !59)
-!58 = !{}
-!59 = !{!0, !20, !30, !44}
-!60 = !{i32 2, !"Debug Info Version", i32 3}
-!61 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !66)
-!62 = !DISubroutineType(types: !63)
-!63 = !{!18, !64}
-!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !65, size: 64)
-!65 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!66 = !{!67}
-!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)
-!68 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !69)
-!69 = !{!70}
-!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !68, file: !2, type: !64)
+!57 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !58)
+!58 = !{!0, !20, !30, !44}
+!59 = !{i32 2, !"Debug Info Version", i32 3}
+!60 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !65)
+!61 = !DISubroutineType(types: !62)
+!62 = !{!18, !63}
+!63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !64, size: 64)
+!64 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!65 = !{!66}
+!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !60, file: !2, type: !63)
+!67 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !68)
+!68 = !{!69}
+!69 = !DILocalVariable(name: "ctx", arg: 1, scope: !67, file: !2, type: !63)
