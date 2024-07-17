@@ -12,32 +12,13 @@
 #include "bpftrace.h"
 #include "types.h"
 
-#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
-#define CREATE_MEMCPY(dst, src, size, algn)                                    \
-  CreateMemCpy((dst), (src), (size), (algn))
-#define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
-  CreateMemCpy((dst), (src), (size), (algn), true)
-#elif LLVM_VERSION_MAJOR >= 7 && LLVM_VERSION_MAJOR < 10
-#define CREATE_MEMCPY(dst, src, size, algn)                                    \
-  CreateMemCpy((dst), (algn), (src), (algn), (size))
-#define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
-  CreateMemCpy((dst), (algn), (src), (algn), (size), true)
-#elif LLVM_VERSION_MAJOR >= 10
 #define CREATE_MEMCPY(dst, src, size, algn)                                    \
   CreateMemCpy((dst), MaybeAlign(algn), (src), MaybeAlign(algn), (size))
 #define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
   CreateMemCpy((dst), MaybeAlign(algn), (src), MaybeAlign(algn), (size), true)
-#else
-#error Unsupported LLVM version
-#endif
 
-#if LLVM_VERSION_MAJOR >= 13
 #define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
   CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))
-#else
-#define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
-  CreateAtomicRMW((op), (ptr), (val), (order))
-#endif
 
 #if LLVM_VERSION_MAJOR >= 15
 #define GET_PTR_TY() getPtrTy()

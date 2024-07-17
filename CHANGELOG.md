@@ -32,6 +32,8 @@ and this project adheres to
 #### Removed
 - Remove the `-dd` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
+- Drop support for LLVM 12 and below
+  - [#3325](https://github.com/bpftrace/bpftrace/pull/3325)
 #### Fixed
 - Fix segfault for multi-tracepoint probes
   - [#3274](https://github.com/bpftrace/bpftrace/pull/3274)

@@ -28,10 +28,6 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 12 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm12
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 13 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm13
