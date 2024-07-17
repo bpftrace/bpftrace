@@ -3,9 +3,9 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8* }
-%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %inet_t = type { i64, [16 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -16,43 +16,38 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !56 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !55 {
 entry:
   %"@x_val" = alloca i64, align 8
   %inet = alloca %inet_t, align 8
-  %1 = bitcast %inet_t* %inet to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  %2 = getelementptr %inet_t, %inet_t* %inet, i64 0, i32 0
-  store i64 2, i64* %2, align 8
-  %3 = getelementptr %inet_t, %inet_t* %inet, i32 0, i32 1
-  %4 = bitcast [16 x i8]* %3 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 16, i1 false)
-  %5 = bitcast [16 x i8]* %3 to i32*
-  store i32 -1, i32* %5, align 4
-  %6 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 1, i64* %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, %inet_t*, i64*, i64)*)(%"struct map_t"* @AT_x, %inet_t* %inet, i64* %"@x_val", i64 0)
-  %7 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %inet)
+  %1 = getelementptr %inet_t, ptr %inet, i64 0, i32 0
+  store i64 2, ptr %1, align 8
+  %2 = getelementptr %inet_t, ptr %inet, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
+  store i32 -1, ptr %2, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
+  store i64 1, ptr %"@x_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %inet, ptr %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   ret i64 0
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!52}
-!llvm.module.flags = !{!55}
+!llvm.module.flags = !{!54}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -106,13 +101,12 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !49 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !50, size: 64, offset: 128)
 !50 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !51, size: 64)
 !51 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!52 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !53, globals: !54)
-!53 = !{}
-!54 = !{!0, !25, !39}
-!55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !52, retainedNodes: !60)
-!57 = !DISubroutineType(types: !58)
-!58 = !{!24, !59}
-!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
-!60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !59)
+!52 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !53)
+!53 = !{!0, !25, !39}
+!54 = !{i32 2, !"Debug Info Version", i32 3}
+!55 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !52, retainedNodes: !59)
+!56 = !DISubroutineType(types: !57)
+!57 = !{!24, !58}
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)

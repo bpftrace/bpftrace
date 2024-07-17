@@ -3,9 +3,9 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8* }
-%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -15,44 +15,37 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !55 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !54 {
 entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
   %log2 = call i64 @log2(i64 %1, i64 0)
-  %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
-  store i64 %log2, i64* %"@x_key", align 8
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i64*)*)(%"struct map_t"* @AT_x, i64* %"@x_key")
-  %3 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
+  store i64 %log2, ptr %"@x_key", align 8
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
+  %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %cast = bitcast i8* %lookup_elem to i64*
-  %4 = load i64, i64* %cast, align 8
-  %5 = add i64 %4, 1
-  store i64 %5, i64* %cast, align 8
+  %2 = load i64, ptr %lookup_elem, align 8
+  %3 = add i64 %2, 1
+  store i64 %3, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  %6 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 1, i64* %initial_value, align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", i64* %initial_value, i64 1)
-  %7 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
+  store i64 1, ptr %initial_value, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %initial_value, i64 1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %8 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
-  %9 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
 }
 
@@ -61,84 +54,82 @@ define internal i64 @log2(i64 %0, i64 %1) #1 section "helpers" {
 entry:
   %2 = alloca i64, align 8
   %3 = alloca i64, align 8
-  %4 = bitcast i64* %3 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
-  store i64 %0, i64* %3, align 8
-  %5 = bitcast i64* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  store i64 %1, i64* %2, align 8
-  %6 = load i64, i64* %3, align 8
-  %7 = icmp slt i64 %6, 0
-  br i1 %7, label %hist.is_less_than_zero, label %hist.is_not_less_than_zero
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %3)
+  store i64 %0, ptr %3, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %2)
+  store i64 %1, ptr %2, align 8
+  %4 = load i64, ptr %3, align 8
+  %5 = icmp slt i64 %4, 0
+  br i1 %5, label %hist.is_less_than_zero, label %hist.is_not_less_than_zero
 
 hist.is_less_than_zero:                           ; preds = %entry
   ret i64 0
 
 hist.is_not_less_than_zero:                       ; preds = %entry
-  %8 = load i64, i64* %2, align 8
-  %9 = shl i64 1, %8
-  %10 = sub i64 %9, 1
-  %11 = icmp ule i64 %6, %10
-  br i1 %11, label %hist.is_zero, label %hist.is_not_zero
+  %6 = load i64, ptr %2, align 8
+  %7 = shl i64 1, %6
+  %8 = sub i64 %7, 1
+  %9 = icmp ule i64 %4, %8
+  br i1 %9, label %hist.is_zero, label %hist.is_not_zero
 
 hist.is_zero:                                     ; preds = %hist.is_not_less_than_zero
-  %12 = add i64 %6, 1
-  ret i64 %12
+  %10 = add i64 %4, 1
+  ret i64 %10
 
 hist.is_not_zero:                                 ; preds = %hist.is_not_less_than_zero
-  %13 = icmp sge i64 %6, 4294967296
-  %14 = zext i1 %13 to i64
-  %15 = shl i64 %14, 5
-  %16 = lshr i64 %6, %15
-  %17 = add i64 0, %15
-  %18 = icmp sge i64 %16, 65536
-  %19 = zext i1 %18 to i64
-  %20 = shl i64 %19, 4
-  %21 = lshr i64 %16, %20
-  %22 = add i64 %17, %20
-  %23 = icmp sge i64 %21, 256
-  %24 = zext i1 %23 to i64
-  %25 = shl i64 %24, 3
-  %26 = lshr i64 %21, %25
-  %27 = add i64 %22, %25
-  %28 = icmp sge i64 %26, 16
-  %29 = zext i1 %28 to i64
-  %30 = shl i64 %29, 2
-  %31 = lshr i64 %26, %30
-  %32 = add i64 %27, %30
-  %33 = icmp sge i64 %31, 4
-  %34 = zext i1 %33 to i64
-  %35 = shl i64 %34, 1
-  %36 = lshr i64 %31, %35
-  %37 = add i64 %32, %35
-  %38 = icmp sge i64 %36, 2
-  %39 = zext i1 %38 to i64
-  %40 = shl i64 %39, 0
-  %41 = lshr i64 %36, %40
-  %42 = add i64 %37, %40
-  %43 = sub i64 %42, %8
-  %44 = load i64, i64* %3, align 8
-  %45 = lshr i64 %44, %43
-  %46 = and i64 %45, %10
-  %47 = add i64 %43, 1
-  %48 = shl i64 %47, %8
-  %49 = add i64 %48, %46
-  %50 = add i64 %49, 1
-  ret i64 %50
+  %11 = icmp sge i64 %4, 4294967296
+  %12 = zext i1 %11 to i64
+  %13 = shl i64 %12, 5
+  %14 = lshr i64 %4, %13
+  %15 = add i64 0, %13
+  %16 = icmp sge i64 %14, 65536
+  %17 = zext i1 %16 to i64
+  %18 = shl i64 %17, 4
+  %19 = lshr i64 %14, %18
+  %20 = add i64 %15, %18
+  %21 = icmp sge i64 %19, 256
+  %22 = zext i1 %21 to i64
+  %23 = shl i64 %22, 3
+  %24 = lshr i64 %19, %23
+  %25 = add i64 %20, %23
+  %26 = icmp sge i64 %24, 16
+  %27 = zext i1 %26 to i64
+  %28 = shl i64 %27, 2
+  %29 = lshr i64 %24, %28
+  %30 = add i64 %25, %28
+  %31 = icmp sge i64 %29, 4
+  %32 = zext i1 %31 to i64
+  %33 = shl i64 %32, 1
+  %34 = lshr i64 %29, %33
+  %35 = add i64 %30, %33
+  %36 = icmp sge i64 %34, 2
+  %37 = zext i1 %36 to i64
+  %38 = shl i64 %37, 0
+  %39 = lshr i64 %34, %38
+  %40 = add i64 %35, %38
+  %41 = sub i64 %40, %6
+  %42 = load i64, ptr %3, align 8
+  %43 = lshr i64 %42, %41
+  %44 = and i64 %43, %8
+  %45 = add i64 %41, 1
+  %46 = shl i64 %45, %6
+  %47 = add i64 %46, %44
+  %48 = add i64 %47, 1
+  ret i64 %48
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #2
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #2
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline }
-attributes #2 = { argmemonly nofree nosync nounwind willreturn }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!51}
-!llvm.module.flags = !{!54}
+!llvm.module.flags = !{!53}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -191,14 +182,13 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn }
 !48 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !49, size: 64, offset: 128)
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
 !50 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !52, globals: !53)
-!52 = !{}
-!53 = !{!0, !20, !34}
-!54 = !{i32 2, !"Debug Info Version", i32 3}
-!55 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !60)
-!56 = !DISubroutineType(types: !57)
-!57 = !{!18, !58}
-!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)
-!59 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)
+!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !52)
+!52 = !{!0, !20, !34}
+!53 = !{i32 2, !"Debug Info Version", i32 3}
+!54 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !55, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!55 = !DISubroutineType(types: !56)
+!56 = !{!18, !57}
+!57 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !58, size: 64)
+!58 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !54, file: !2, type: !57)

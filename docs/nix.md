@@ -80,10 +80,10 @@ few more tools available.
 ### Build bpftrace with a different LLVM in developer shell
 
 ```
-$ nix develop .#bpftrace-llvm12
+$ nix develop .#bpftrace-llvm18
 dxu@kashmir bpftrace]$ cmake -B build-nix -GNinja
 [...]
--- Found LLVM 12.0.1: ///nix/store/xs06qigbqln7piypm7dfj5wqd38ndgcz-llvm-12.0.1-dev/lib/cmake/llvm/
+-- Found LLVM 18.1.7: /nix/store/50fcd75v40wca7vdk9bypgcvv6xhkfhx-llvm-18.1.7-dev/lib/cmake/llvm
 [...]
 ```
 

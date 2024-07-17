@@ -3,9 +3,9 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8* }
-%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -15,61 +15,53 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @tracepoint_sched_sched_one_1(i8* %0) section "s_tracepoint_sched_sched_one_1" !dbg !51 {
+define i64 @tracepoint_sched_sched_one_1(ptr %0) section "s_tracepoint_sched_sched_one_1" !dbg !50 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
-  %1 = ptrtoint i8* %0 to i64
+  %1 = ptrtoint ptr %0 to i64
   %2 = add i64 %1, 8
-  %3 = inttoptr i64 %2 to i64*
-  %4 = load volatile i64, i64* %3, align 8
-  %5 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  store i64 %4, i64* %"@_key", align 8
-  %6 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 1, i64* %"@_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_val", i64 0)
-  %7 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  %8 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load volatile i64, ptr %3, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
+  store i64 %4, ptr %"@_key", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
+  store i64 1, ptr %"@_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   ret i64 1
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define i64 @tracepoint_sched_sched_two_1(i8* %0) section "s_tracepoint_sched_sched_two_1" !dbg !58 {
+define i64 @tracepoint_sched_sched_two_1(ptr %0) section "s_tracepoint_sched_sched_two_1" !dbg !57 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
-  %1 = ptrtoint i8* %0 to i64
+  %1 = ptrtoint ptr %0 to i64
   %2 = add i64 %1, 16
-  %3 = inttoptr i64 %2 to i64*
-  %4 = load volatile i64, i64* %3, align 8
-  %5 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
-  store i64 %4, i64* %"@_key", align 8
-  %6 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store i64 1, i64* %"@_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_val", i64 0)
-  %7 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  %8 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load volatile i64, ptr %3, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
+  store i64 %4, ptr %"@_key", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
+  store i64 1, ptr %"@_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   ret i64 1
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!47}
-!llvm.module.flags = !{!50}
+!llvm.module.flags = !{!49}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -118,17 +110,16 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !44 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !45, size: 64, offset: 128)
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !46, size: 64)
 !46 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !48, globals: !49)
-!48 = !{}
-!49 = !{!0, !20, !34}
-!50 = !{i32 2, !"Debug Info Version", i32 3}
-!51 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !56)
-!52 = !DISubroutineType(types: !53)
-!53 = !{!18, !54}
-!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
-!55 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!56 = !{!57}
-!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
-!58 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_1", linkageName: "tracepoint_sched_sched_two_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !59)
-!59 = !{!60}
-!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !54)
+!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
+!48 = !{!0, !20, !34}
+!49 = !{i32 2, !"Debug Info Version", i32 3}
+!50 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
+!51 = !DISubroutineType(types: !52)
+!52 = !{!18, !53}
+!53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
+!54 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!55 = !{!56}
+!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !50, file: !2, type: !53)
+!57 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_1", linkageName: "tracepoint_sched_sched_two_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !58)
+!58 = !{!59}
+!59 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !53)

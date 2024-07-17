@@ -3,8 +3,8 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8* }
-%"struct map_t.0" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -13,30 +13,28 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define internal i64 @add(i8* %0, i64 %1, i64 %2) {
+define internal i64 @add(ptr %0, i64 %1, i64 %2) {
 entry:
   %"$b" = alloca i64, align 8
   %"$a" = alloca i64, align 8
-  %3 = bitcast i64* %"$a" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  store i64 %1, i64* %"$a", align 8
-  %4 = bitcast i64* %"$b" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
-  store i64 %2, i64* %"$b", align 8
-  %5 = load i64, i64* %"$a", align 8
-  %6 = load i64, i64* %"$b", align 8
-  %7 = add i64 %5, %6
-  ret i64 %7
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
+  store i64 %1, ptr %"$a", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$b")
+  store i64 %2, ptr %"$b", align 8
+  %3 = load i64, ptr %"$a", align 8
+  %4 = load i64, ptr %"$b", align 8
+  %5 = add i64 %3, %4
+  ret i64 %5
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!36}
-!llvm.module.flags = !{!39}
+!llvm.module.flags = !{!38}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -74,7 +72,6 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !33 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !34, size: 64, offset: 192)
 !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 64)
 !35 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!36 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !37, globals: !38)
-!37 = !{}
-!38 = !{!0, !16}
-!39 = !{i32 2, !"Debug Info Version", i32 3}
+!36 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !37)
+!37 = !{!0, !16}
+!38 = !{i32 2, !"Debug Info Version", i32 3}

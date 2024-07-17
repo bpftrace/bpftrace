@@ -3,9 +3,9 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%"struct map_t" = type { i8*, i8*, i8*, i8* }
-%"struct map_t.0" = type { i8*, i8* }
-%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
+%"struct map_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.0" = type { ptr, ptr }
+%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"unsigned int8_usym_int64__tuple_t" = type { i8, [24 x i8], i64 }
 %usym_t = type { i64, i64, i64 }
 
@@ -17,65 +17,57 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(i8* %0) section "s_kprobe_f_1" !dbg !62 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !61 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"unsigned int8_usym_int64__tuple_t", align 8
   %usym = alloca %usym_t, align 8
-  %1 = bitcast i8* %0 to i64*
-  %2 = getelementptr i64, i64* %1, i64 16
-  %reg_ip = load volatile i64, i64* %2, align 8
-  %3 = bitcast %usym_t* %usym to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
-  %4 = lshr i64 %get_pid_tgid, 32
-  %5 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 0
-  %6 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 1
-  %7 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 2
-  store i64 %reg_ip, i64* %5, align 8
-  store i64 %4, i64* %6, align 8
-  store i64 0, i64* %7, align 8
-  %8 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %9 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %9, i8 0, i64 40, i1 false)
-  %10 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 0
-  store i8 1, i8* %10, align 1
-  %11 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 1
-  %12 = bitcast [24 x i8]* %11 to i8*
-  %13 = bitcast %usym_t* %usym to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %12, i8* align 1 %13, i64 24, i1 false)
-  %14 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 2
-  store i64 10, i64* %14, align 8
-  %15 = bitcast i64* %"@t_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
-  store i64 0, i64* %"@t_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %"unsigned int8_usym_int64__tuple_t"*, i64)*)(%"struct map_t"* @AT_t, i64* %"@t_key", %"unsigned int8_usym_int64__tuple_t"* %tuple, i64 0)
-  %16 = bitcast i64* %"@t_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
+  %1 = getelementptr i64, ptr %0, i64 16
+  %reg_ip = load volatile i64, ptr %1, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %2 = lshr i64 %get_pid_tgid, 32
+  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
+  %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
+  %5 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
+  store i64 %reg_ip, ptr %3, align 8
+  store i64 %2, ptr %4, align 8
+  store i64 0, ptr %5, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 40, i1 false)
+  %6 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 0
+  store i8 1, ptr %6, align 1
+  %7 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %usym, i64 24, i1 false)
+  %8 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 2
+  store i64 10, ptr %8, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
+  store i64 0, ptr %"@t_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %tuple, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@t_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
 }
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #3
 
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nofree nosync nounwind willreturn }
-attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!58}
-!llvm.module.flags = !{!61}
+!llvm.module.flags = !{!60}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_t", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -135,13 +127,12 @@ attributes #2 = { argmemonly nofree nosync nounwind willreturn writeonly }
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !56, size: 64)
 !56 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !57 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !17, size: 64, offset: 192)
-!58 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !59, globals: !60)
-!59 = !{}
-!60 = !{!0, !30, !44}
-!61 = !{i32 2, !"Debug Info Version", i32 3}
-!62 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !58, retainedNodes: !66)
-!63 = !DISubroutineType(types: !64)
-!64 = !{!18, !65}
-!65 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !24, size: 64)
-!66 = !{!67}
-!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !65)
+!58 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !59)
+!59 = !{!0, !30, !44}
+!60 = !{i32 2, !"Debug Info Version", i32 3}
+!61 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !58, retainedNodes: !65)
+!62 = !DISubroutineType(types: !63)
+!63 = !{!18, !64}
+!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !24, size: 64)
+!65 = !{!66}
+!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)
