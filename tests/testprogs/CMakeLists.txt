@@ -2,13 +2,12 @@ set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags "-g -O0")
 
 # Check and add CFLAG to testprog_cflags
 function(test_and_add_testprog_cflag flag)
-  execute_process(
-    COMMAND echo "int main(void) { return 0; }"
-    COMMAND ${CMAKE_C_COMPILER} -x c -Wall - ${flag} -o -
-    OUTPUT_VARIABLE /dev/null
-    ERROR_VARIABLE /dev/null
-    RESULT_VARIABLE NO_THIS_FLAG)
-  if(NOT ${NO_THIS_FLAG})
+  try_compile(FLAG_AVAILABLE
+    ${CMAKE_CURRENT_BINARY_DIR}
+    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/simple_struct.c
+    LINK_OPTIONS ${flag}
+  )
+  if(${FLAG_AVAILABLE})
     set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags " ${flag}")
   else()
     message(STATUS "${CMAKE_C_COMPILER} does not support ${flag}")
