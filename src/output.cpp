@@ -708,9 +708,11 @@ void TextOutput::map_key_val(const SizedType &map_type,
                              const std::string &key,
                              const std::string &val) const
 {
-  out_ << key + ": ";
+  out_ << key << ":";
   if (map_type.IsHistTy() || map_type.IsLhistTy())
     out_ << "\n";
+  else
+    out_ << " ";
   out_ << val;
 }
 
