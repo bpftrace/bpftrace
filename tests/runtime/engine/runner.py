@@ -457,6 +457,7 @@ class Runner(object):
                 return Runner.FAIL
 
         def to_utf8(s):
+            return s
             return s.encode("unicode_escape").decode("utf-8")
 
         def print_befores_and_after_output():
