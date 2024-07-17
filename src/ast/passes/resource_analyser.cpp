@@ -30,8 +30,10 @@ std::string get_literal_string(Expression &expr)
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(Node *root, std::ostream &out)
-    : root_(root), out_(out), probe_(nullptr)
+ResourceAnalyser::ResourceAnalyser(Node *root,
+                                   BPFtrace &bpftrace,
+                                   std::ostream &out)
+    : root_(root), bpftrace_(bpftrace), out_(out), probe_(nullptr)
 {
 }
 
@@ -64,7 +66,8 @@ void ResourceAnalyser::visit(Builtin &builtin)
   if (builtin.ident == "elapsed") {
     resources_.needs_elapsed_map = true;
   } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
-    resources_.stackid_maps.insert(StackType{});
+    resources_.stackid_maps.insert(StackType{
+        .mode = bpftrace_.config_.get(ConfigKeyStackMode::default_) });
   }
 
   if (uses_usym_table(builtin.ident)) {
@@ -222,7 +225,7 @@ bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 Pass CreateResourcePass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
-    ResourceAnalyser analyser{ &n };
+    ResourceAnalyser analyser{ &n, ctx.b };
     auto pass_result = analyser.analyse();
 
     if (!pass_result.has_value())

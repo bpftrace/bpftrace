@@ -319,9 +319,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // For uretprobe -> AddrSpace::user
     builtin.type.SetAS(find_addrspace(type));
   } else if (builtin.ident == "kstack") {
-    builtin.type = CreateStack(true, StackType());
+    builtin.type = CreateStack(true,
+                               StackType{ .mode = bpftrace_.config_.get(
+                                              ConfigKeyStackMode::default_) });
   } else if (builtin.ident == "ustack") {
-    builtin.type = CreateStack(false, StackType());
+    builtin.type = CreateStack(false,
+                               StackType{ .mode = bpftrace_.config_.get(
+                                              ConfigKeyStackMode::default_) });
   } else if (builtin.ident == "comm") {
     builtin.type = CreateString(COMM_SIZE);
     // comm allocated in the bpf stack. See codegen

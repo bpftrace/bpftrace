@@ -270,3 +270,15 @@ EXPECT_REGEX SUCCESS [0-9]+
 REQUIRES_FEATURE jiffies64
 TIMEOUT 5
 MIN_KERNEL 5.9
+
+NAME ustack builtin with stack_mode config
+RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { @c[ustack] = 1; exit(); }' -p {{BEFORE_PID}}
+EXPECT_REGEX ^@c\[\n[0-9a-f]+$
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME kstack builtin with stack_mode config
+RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } k:do_nanosleep { @c[kstack] = 1; exit(); }'
+EXPECT_REGEX ^@c\[\n[0-9a-f]+$
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8

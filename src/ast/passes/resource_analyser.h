@@ -21,7 +21,9 @@ namespace ast {
 // example the helper error metadata is still being collected during codegen.
 class ResourceAnalyser : public Visitor {
 public:
-  ResourceAnalyser(Node *root, std::ostream &out = std::cerr);
+  ResourceAnalyser(Node *root,
+                   BPFtrace &bpftrace,
+                   std::ostream &out = std::cerr);
 
   std::optional<RequiredResources> analyse();
 
@@ -38,6 +40,7 @@ private:
 
   RequiredResources resources_;
   Node *root_;
+  BPFtrace &bpftrace_;
   std::ostream &out_;
   std::ostringstream err_;
   // Current probe we're analysing
