@@ -17,6 +17,13 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.21.2] 2024-07-17
+
+- Fix min/max map functions
+  - [#3298](https://github.com/bpftrace/bpftrace/pull/3298)
+- Fix segfault for multi-tracepoint probes
+  - [#3274](https://github.com/bpftrace/bpftrace/pull/3274)
+
 ## [0.21.1] 2024-06-24
 
 - Fix include path on loongarch, mips, riscv, and s390
