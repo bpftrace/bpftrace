@@ -24,7 +24,7 @@ if(LLVM_VERSION_MAJOR VERSION_LESS 13)
   set(testprog_cflags "${testprog_cflags} -gdwarf-4")
 endif()
 
-file(GLOB testprog_sources CONFIGURE_DEPENDS *.c)
+file(GLOB testprog_sources CONFIGURE_DEPENDS *.c *.cpp)
 set(testprogtargets "")
 foreach(testprog_source ${testprog_sources})
   get_filename_component(testprog_name ${testprog_source} NAME_WE)
