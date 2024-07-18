@@ -453,6 +453,8 @@ public:
              type_ == Type::lhist || type_ == Type::stats);
   }
 
+  bool NeedsPercpuMap() const;
+
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
 

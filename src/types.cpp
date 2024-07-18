@@ -568,6 +568,11 @@ bool SizedType::FitsInto(const SizedType &t) const
   return IsEqual(t);
 }
 
+bool SizedType::NeedsPercpuMap() const
+{
+  return IsHistTy() || IsLhistTy() || IsCountTy() || IsSumTy() || IsMinTy() ||
+         IsMaxTy() || IsAvgTy() || IsStatsTy();
+}
 } // namespace bpftrace
 
 namespace std {
