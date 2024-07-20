@@ -54,6 +54,12 @@ TEST(codegen, max_cast_loop)
        NAME);
 }
 
+TEST(codegen, avg_cast_loop)
+{
+  test("kprobe:f { @x[1] = avg(2); for ($kv : @x) { print(($kv.0, $kv.1)); } }",
+       NAME);
+}
+
 TEST(codegen, count_no_cast_for_print)
 {
   test("BEGIN { @ = count(); print(@) }", NAME);

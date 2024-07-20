@@ -76,9 +76,8 @@ public:
       const BpfMap &map,
       uint32_t top,
       uint32_t div,
-      const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-          &total_counts_by_key) const = 0;
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const = 0;
   // Write non-map value to output
   // Ideally, the implementation should use value_to_str to convert a value into
   // a string, format it properly, and print it to out_.
@@ -152,9 +151,8 @@ protected:
       const BpfMap &map,
       uint32_t top,
       uint32_t div,
-      const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-          &total_counts_by_key) const;
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const;
   // Convert map key to string
   virtual std::string map_key_to_str(BPFtrace &bpftrace,
                                      const BpfMap &map,
@@ -189,11 +187,9 @@ protected:
   virtual std::string tuple_to_str(
       const std::vector<std::string> &elems) const = 0;
   // Convert a vector of (key, value) pairs into string
-  // keys are strings
-  // values are 64-bit integers
   // Used for properly formatting map statistics
   virtual std::string key_value_pairs_to_str(
-      std::vector<std::pair<std::string, int64_t>> &keyvals) const = 0;
+      std::vector<std::pair<std::string, std::string>> &keyvals) const = 0;
 };
 
 class TextOutput : public Output {
@@ -224,9 +220,8 @@ public:
       const BpfMap &map,
       uint32_t top,
       uint32_t div,
-      const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-          &total_counts_by_key) const override;
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;
@@ -263,7 +258,7 @@ protected:
   std::string tuple_to_str(
       const std::vector<std::string> &elems) const override;
   std::string key_value_pairs_to_str(
-      std::vector<std::pair<std::string, int64_t>> &keyvals) const override;
+      std::vector<std::pair<std::string, std::string>> &keyvals) const override;
 };
 
 class JsonOutput : public Output {
@@ -294,9 +289,8 @@ public:
       const BpfMap &map,
       uint32_t top,
       uint32_t div,
-      const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-      const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-          &total_counts_by_key) const override;
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;
@@ -342,7 +336,7 @@ protected:
   std::string tuple_to_str(
       const std::vector<std::string> &elems) const override;
   std::string key_value_pairs_to_str(
-      std::vector<std::pair<std::string, int64_t>> &keyvals) const override;
+      std::vector<std::pair<std::string, std::string>> &keyvals) const override;
 };
 
 } // namespace bpftrace

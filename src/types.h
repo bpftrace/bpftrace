@@ -449,8 +449,8 @@ public:
   }
   bool IsMapIterableTy() const
   {
-    return !(type_ == Type::avg || type_ == Type::hist ||
-             type_ == Type::lhist || type_ == Type::stats);
+    return !(type_ == Type::hist || type_ == Type::lhist ||
+             type_ == Type::stats);
   }
 
   bool NeedsPercpuMap() const;
