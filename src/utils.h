@@ -353,6 +353,20 @@ T min_max_value(const std::vector<uint8_t> &value, int nvalues, bool is_max)
   return mm_val;
 }
 
+template <typename T>
+T avg_value(const std::vector<uint8_t> &value, int nvalues)
+{
+  T mm_val = 0;
+  T count = 0;
+  for (int i = 0; i < nvalues; i++) {
+    T val = read_data<T>(value.data() + i * (sizeof(T) * 2));
+    T cpu_count = read_data<T>(value.data() + sizeof(T) + i * (sizeof(T) * 2));
+    count += cpu_count;
+    mm_val += val;
+  }
+  return (T)(mm_val / count);
+}
+
 // Combination of 2 hashes
 // The algorithm is taken from boost::hash_combine
 template <class T>

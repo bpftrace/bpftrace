@@ -156,12 +156,12 @@ AFTER ./testprogs/simple_struct
 
 NAME print_avg_map_args
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@); exit(); }'
-EXPECT {"type": "stats", "data": {"@": {"c": 3, "d": 4}}}
+EXPECT {"type": "map", "data": {"@": {"c": 3, "d": 4}}}
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@); exit(); }'
-EXPECT {"type": "stats", "data": {"@": {"a": 1, "b": 2, "c": 3, "d": 4}}}
+EXPECT {"type": "map", "data": {"@": {"a": 1, "b": 2, "c": 3, "d": 4}}}
 TIMEOUT 1
 
 NAME print_hist_with_top_arg

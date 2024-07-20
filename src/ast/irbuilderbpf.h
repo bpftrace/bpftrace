@@ -319,6 +319,10 @@ private:
                           AllocaInst *is_ret_set,
                           CallInst *call,
                           const SizedType &type);
+  void createPerCpuAvg(AllocaInst *total,
+                       AllocaInst *count,
+                       CallInst *call,
+                       const SizedType &type);
 
   std::map<std::string, StructType *> structs_;
 };

@@ -6,9 +6,9 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%min_max_val = type { i64, i64 }
+%avg_val = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
-%"unsigned int64_max__tuple_t" = type { i64, i64 }
+%"unsigned int64_avg__tuple_t" = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -21,7 +21,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !62 {
 entry:
-  %mm_struct = alloca %min_max_val, align 8
+  %avg_struct = alloca %avg_val, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 1, ptr %"@x_key", align 8
@@ -30,38 +30,32 @@ entry:
   br i1 %lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
+  %1 = getelementptr %avg_val, ptr %lookup_elem, i64 0, i32 0
   %2 = load i64, ptr %1, align 8
-  %3 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
+  %3 = getelementptr %avg_val, ptr %lookup_elem, i64 0, i32 1
   %4 = load i64, ptr %3, align 8
-  %is_set_cond = icmp eq i64 %4, 1
-  br i1 %is_set_cond, label %is_set, label %min_max
-
-lookup_failure:                                   ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %mm_struct)
-  %5 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 0
-  store i64 2, ptr %5, align 8
-  %6 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 1
-  store i64 1, ptr %6, align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %mm_struct, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %mm_struct)
+  %5 = getelementptr %avg_val, ptr %lookup_elem, i64 0, i32 0
+  %6 = add i64 %2, 2
+  store i64 %6, ptr %5, align 8
+  %7 = getelementptr %avg_val, ptr %lookup_elem, i64 0, i32 1
+  %8 = add i64 1, %4
+  store i64 %8, ptr %7, align 8
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %lookup_failure, %min_max, %is_set
+lookup_failure:                                   ; preds = %entry
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %avg_struct)
+  %9 = getelementptr %avg_val, ptr %avg_struct, i64 0, i32 0
+  store i64 2, ptr %9, align 8
+  %10 = getelementptr %avg_val, ptr %avg_struct, i64 0, i32 1
+  store i64 1, ptr %10, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %avg_struct, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %avg_struct)
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0
-
-is_set:                                           ; preds = %lookup_success
-  %7 = icmp sge i64 2, %2
-  br i1 %7, label %min_max, label %lookup_merge
-
-min_max:                                          ; preds = %is_set, %lookup_success
-  %8 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
-  store i64 2, ptr %8, align 8
-  %9 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
-  store i64 1, ptr %9, align 8
-  br label %lookup_merge
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -73,8 +67,9 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !69 {
   %key1 = alloca i32, align 4
   %print_tuple_16_t = alloca %print_tuple_16_t, align 8
-  %tuple = alloca %"unsigned int64_max__tuple_t", align 8
-  %"$kv" = alloca %"unsigned int64_max__tuple_t", align 8
+  %tuple = alloca %"unsigned int64_avg__tuple_t", align 8
+  %"$kv" = alloca %"unsigned int64_avg__tuple_t", align 8
+  %ret = alloca i64, align 8
   %val_2 = alloca i64, align 8
   %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
@@ -90,7 +85,7 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   store i64 0, ptr %val_2, align 8
   br label %while_cond
 
-while_cond:                                       ; preds = %min_max_merge, %4
+while_cond:                                       ; preds = %lookup_success, %4
   %5 = load i32, ptr @num_cpus, align 4
   %6 = load i32, ptr %i, align 4
   %num_cpu.cmp = icmp ult i32 %6, %5
@@ -104,92 +99,103 @@ while_body:                                       ; preds = %while_cond
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %ret)
   %8 = load i64, ptr %val_1, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %9 = getelementptr %"unsigned int64_max__tuple_t", ptr %"$kv", i32 0, i32 0
-  store i64 %key, ptr %9, align 8
-  %10 = getelementptr %"unsigned int64_max__tuple_t", ptr %"$kv", i32 0, i32 1
-  store i64 %8, ptr %10, align 8
-  %11 = getelementptr %"unsigned int64_max__tuple_t", ptr %"$kv", i32 0, i32 0
-  %12 = load i64, ptr %11, align 8
-  %13 = getelementptr %"unsigned int64_max__tuple_t", ptr %"$kv", i32 0, i32 1
-  %14 = load i64, ptr %13, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %15 = getelementptr %"unsigned int64_max__tuple_t", ptr %tuple, i32 0, i32 0
-  store i64 %12, ptr %15, align 8
-  %16 = getelementptr %"unsigned int64_max__tuple_t", ptr %tuple, i32 0, i32 1
-  store i64 %14, ptr %16, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_tuple_16_t)
-  %17 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 0
-  store i64 30007, ptr %17, align 8
-  %18 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 1
-  store i64 0, ptr %18, align 8
-  %19 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %19, i8 0, i64 16, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %19, ptr align 1 %tuple, i64 16, i1 false)
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_tuple_16_t, i64 32, i64 0)
-  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
-  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+  %is_negative_cond = icmp slt i64 %8, 0
+  br i1 %is_negative_cond, label %is_negative, label %is_positive
 
 lookup_success:                                   ; preds = %while_body
-  %20 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 0
-  %21 = load i64, ptr %20, align 8
-  %22 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 1
-  %23 = load i64, ptr %22, align 8
-  %val_set_cond = icmp eq i64 %23, 1
-  %24 = load i64, ptr %val_2, align 8
-  %ret_set_cond = icmp eq i64 %24, 1
-  %25 = load i64, ptr %val_1, align 8
-  %max_cond = icmp sgt i64 %21, %25
-  br i1 %val_set_cond, label %val_set_success, label %min_max_merge
+  %9 = getelementptr %avg_val, ptr %lookup_percpu_elem, i64 0, i32 0
+  %10 = load i64, ptr %9, align 8
+  %11 = getelementptr %avg_val, ptr %lookup_percpu_elem, i64 0, i32 1
+  %12 = load i64, ptr %11, align 8
+  %13 = load i64, ptr %val_1, align 8
+  %14 = add i64 %10, %13
+  store i64 %14, ptr %val_1, align 8
+  %15 = load i64, ptr %val_2, align 8
+  %16 = add i64 %12, %15
+  store i64 %16, ptr %val_2, align 8
+  %17 = load i32, ptr %i, align 4
+  %18 = add i32 %17, 1
+  store i32 %18, ptr %i, align 4
+  br label %while_cond
 
 lookup_failure:                                   ; preds = %while_body
-  %26 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %26, 0
+  %19 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %19, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
-
-val_set_success:                                  ; preds = %lookup_success
-  br i1 %ret_set_cond, label %ret_set_success, label %min_max_success
-
-min_max_success:                                  ; preds = %ret_set_success, %val_set_success
-  store i64 %21, ptr %val_1, align 8
-  store i64 1, ptr %val_2, align 8
-  br label %min_max_merge
-
-ret_set_success:                                  ; preds = %val_set_success
-  br i1 %max_cond, label %min_max_success, label %min_max_merge
-
-min_max_merge:                                    ; preds = %min_max_success, %ret_set_success, %lookup_success
-  %27 = load i32, ptr %i, align 4
-  %28 = add i32 %27, 1
-  store i32 %28, ptr %i, align 4
-  br label %while_cond
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %29 = load i32, ptr %i, align 4
+  %20 = load i32, ptr %i, align 4
   br label %while_end
 
-event_loss_counter:                               ; preds = %while_end
+is_negative:                                      ; preds = %while_end
+  %21 = load i64, ptr %val_1, align 8
+  %22 = xor i64 %21, -1
+  %23 = add i64 %22, 1
+  %24 = load i64, ptr %val_2, align 8
+  %25 = udiv i64 %23, %24
+  %26 = sub i64 0, %25
+  store i64 %26, ptr %ret, align 8
+  br label %is_negative_merge_block
+
+is_positive:                                      ; preds = %while_end
+  %27 = load i64, ptr %val_2, align 8
+  %28 = load i64, ptr %val_1, align 8
+  %29 = udiv i64 %28, %27
+  store i64 %29, ptr %ret, align 8
+  br label %is_negative_merge_block
+
+is_negative_merge_block:                          ; preds = %is_positive, %is_negative
+  %30 = load i64, ptr %ret, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
+  %31 = getelementptr %"unsigned int64_avg__tuple_t", ptr %"$kv", i32 0, i32 0
+  store i64 %key, ptr %31, align 8
+  %32 = getelementptr %"unsigned int64_avg__tuple_t", ptr %"$kv", i32 0, i32 1
+  store i64 %30, ptr %32, align 8
+  %33 = getelementptr %"unsigned int64_avg__tuple_t", ptr %"$kv", i32 0, i32 0
+  %34 = load i64, ptr %33, align 8
+  %35 = getelementptr %"unsigned int64_avg__tuple_t", ptr %"$kv", i32 0, i32 1
+  %36 = load i64, ptr %35, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
+  %37 = getelementptr %"unsigned int64_avg__tuple_t", ptr %tuple, i32 0, i32 0
+  store i64 %34, ptr %37, align 8
+  %38 = getelementptr %"unsigned int64_avg__tuple_t", ptr %tuple, i32 0, i32 1
+  store i64 %36, ptr %38, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_tuple_16_t)
+  %39 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 0
+  store i64 30007, ptr %39, align 8
+  %40 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 1
+  store i64 0, ptr %40, align 8
+  %41 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %41, i8 0, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %41, ptr align 1 %tuple, i64 16, i1 false)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_tuple_16_t, i64 32, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+event_loss_counter:                               ; preds = %is_negative_merge_block
   call void @llvm.lifetime.start.p0(i64 -1, ptr %key1)
   store i32 0, ptr %key1, align 4
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key1)
   %map_lookup_cond4 = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
 
-counter_merge:                                    ; preds = %lookup_merge, %while_end
+counter_merge:                                    ; preds = %lookup_merge, %is_negative_merge_block
   call void @llvm.lifetime.end.p0(i64 -1, ptr %print_tuple_16_t)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
 
 lookup_success2:                                  ; preds = %event_loss_counter
-  %30 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %42 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure3:                                  ; preds = %event_loss_counter

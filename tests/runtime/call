@@ -425,7 +425,6 @@ PROG BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30
 EXPECT BEGIN
        @[c]: 3
        @[d]: 4
-       
        END
 TIMEOUT 1
 
@@ -436,7 +435,6 @@ EXPECT BEGIN
        @[b]: 2
        @[c]: 3
        @[d]: 4
-       
        END
 TIMEOUT 1
 

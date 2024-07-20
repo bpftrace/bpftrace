@@ -309,12 +309,15 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   } else if (type.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (type.IsAvgTy()) {
-    /*
-     * on this code path, avg is calculated in the kernel while
-     * printing the entire map is handled in a different function
-     * which shouldn't call this
-     */
-    assert(!is_per_cpu);
+    if (is_per_cpu) {
+      if (type.IsSigned()) {
+        return std::to_string(avg_value<int64_t>(value, nvalues) / div);
+      }
+      return std::to_string(avg_value<uint64_t>(value, nvalues) / div);
+    }
+    if (type.IsSigned()) {
+      return std::to_string(read_data<int64_t>(value.data()) / div);
+    }
     return std::to_string(read_data<uint64_t>(value.data()) / div);
   } else if (type.IsIntTy()) {
     auto sign = type.IsSigned();
@@ -485,10 +488,6 @@ void Output::map_stats_contents(
   for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
-
-    if (map_type.IsAvgTy() && top && values_by_key.size() > top &&
-        i++ < (values_by_key.size() - top))
-      continue;
 
     if (first)
       first = false;

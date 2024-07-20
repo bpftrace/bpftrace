@@ -1346,7 +1346,7 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
   const auto &value_type = map_info.value_type;
   if (value_type.IsHistTy() || value_type.IsLhistTy())
     return print_map_hist(map, top, div);
-  else if (value_type.IsAvgTy() || value_type.IsStatsTy())
+  else if (value_type.IsStatsTy())
     return print_map_stats(map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
@@ -1398,6 +1398,13 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                        min_max_value<uint64_t>(b.second,
                                                nvalues,
                                                value_type.IsMaxTy());
+              });
+  } else if (value_type.IsAvgTy()) {
+    std::sort(values_by_key.begin(),
+              values_by_key.end(),
+              [&](auto &a, auto &b) {
+                return avg_value<uint64_t>(a.second, nvalues) <
+                       avg_value<uint64_t>(b.second, nvalues);
               });
   } else {
     sort_by_key(map_info.key.args_, values_by_key);

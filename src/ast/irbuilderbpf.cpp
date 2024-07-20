@@ -316,6 +316,11 @@ llvm::Type *IRBuilderBPF::GetMapValueType(const SizedType &stype)
     // The second field is the "value is set" flag
     std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
     ty = GetStructType("min_max_val", llvm_elems, false);
+  } else if (stype.IsAvgTy()) {
+    // The first field is the sum value
+    // The second is the count value
+    std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
+    ty = GetStructType("avg_val", llvm_elems, false);
   } else {
     ty = GetType(stype);
   }
@@ -605,13 +610,13 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   const std::string &map_name = map.ident;
 
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
-  AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
-  // used only for min/max
-  AllocaInst *is_ret_set = CreateAllocaBPF(getInt64Ty(), "is_ret_set");
+  AllocaInst *val_1 = CreateAllocaBPF(getInt64Ty(), "val_1");
+  // used for min/max/avg
+  AllocaInst *val_2 = CreateAllocaBPF(getInt64Ty(), "val_2");
 
   CreateStore(getInt32(0), i);
-  CreateStore(getInt64(0), ret);
-  CreateStore(getInt64(0), is_ret_set);
+  CreateStore(getInt64(0), val_1);
+  CreateStore(getInt64(0), val_2);
 
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
@@ -655,9 +660,11 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   SetInsertPoint(lookup_success_block);
 
   if (type.IsMinTy() || type.IsMaxTy()) {
-    createPerCpuMinMax(ret, is_ret_set, call, type);
-  } else if (type.IsSumTy() || type.IsCountTy() || type.IsAvgTy()) {
-    createPerCpuSum(ret, call, type);
+    createPerCpuMinMax(val_1, val_2, call, type);
+  } else if (type.IsAvgTy()) {
+    createPerCpuAvg(val_1, val_2, call, type);
+  } else if (type.IsSumTy() || type.IsCountTy()) {
+    createPerCpuSum(val_1, call, type);
   } else {
     LOG(BUG) << "Unsupported map aggregation type: " << type;
   }
@@ -700,11 +707,60 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   SetInsertPoint(while_end);
 
   CreateLifetimeEnd(i);
-  CreateLifetimeEnd(is_ret_set);
 
-  Value *ret_reg = CreateLoad(getInt64Ty(), ret);
+  Value *ret_reg;
 
-  CreateLifetimeEnd(ret);
+  if (type.IsAvgTy()) {
+    AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
+    // BPF doesn't yet support a signed division so we have to check if
+    // the value is negative, flip it, do an unsigned division, and then
+    // flip it back
+    if (type.IsSigned()) {
+      Function *avg_parent = GetInsertBlock()->getParent();
+      BasicBlock *is_negative_block = BasicBlock::Create(module_.getContext(),
+                                                         "is_negative",
+                                                         avg_parent);
+      BasicBlock *is_positive_block = BasicBlock::Create(module_.getContext(),
+                                                         "is_positive",
+                                                         avg_parent);
+      BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                                   "is_negative_merge_block",
+                                                   avg_parent);
+
+      Value *is_negative_condition = CreateICmpSLT(
+          CreateLoad(getInt64Ty(), val_1), getInt64(0), "is_negative_cond");
+      CreateCondBr(is_negative_condition, is_negative_block, is_positive_block);
+
+      SetInsertPoint(is_negative_block);
+
+      Value *pos_total = CreateAdd(CreateNot(CreateLoad(getInt64Ty(), val_1)),
+                                   getInt64(1));
+      Value *pos_avg = CreateUDiv(pos_total, CreateLoad(getInt64Ty(), val_2));
+      CreateStore(CreateNeg(pos_avg), ret);
+
+      CreateBr(merge_block);
+
+      SetInsertPoint(is_positive_block);
+
+      CreateStore(CreateUDiv(CreateLoad(getInt64Ty(), val_1),
+                             CreateLoad(getInt64Ty(), val_2)),
+                  ret);
+
+      CreateBr(merge_block);
+
+      SetInsertPoint(merge_block);
+      ret_reg = CreateLoad(getInt64Ty(), ret);
+      CreateLifetimeEnd(ret);
+    } else {
+      ret_reg = CreateUDiv(CreateLoad(getInt64Ty(), val_1),
+                           CreateLoad(getInt64Ty(), val_2));
+    }
+  } else {
+    ret_reg = CreateLoad(getInt64Ty(), val_1);
+  }
+
+  CreateLifetimeEnd(val_1);
+  CreateLifetimeEnd(val_2);
   return ret_reg;
 }
 
@@ -808,6 +864,24 @@ void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
+}
+
+void IRBuilderBPF::createPerCpuAvg(AllocaInst *total,
+                                   AllocaInst *count,
+                                   CallInst *call,
+                                   const SizedType &type)
+{
+  auto *value_type = GetMapValueType(type);
+  auto *cast = CreatePointerCast(call, value_type->getPointerTo(), "cast");
+
+  Value *total_val = CreateLoad(
+      getInt64Ty(), CreateGEP(value_type, cast, { getInt64(0), getInt32(0) }));
+
+  Value *count_val = CreateLoad(
+      getInt64Ty(), CreateGEP(value_type, cast, { getInt64(0), getInt32(1) }));
+
+  CreateStore(CreateAdd(total_val, CreateLoad(getInt64Ty(), total)), total);
+  CreateStore(CreateAdd(count_val, CreateLoad(getInt64Ty(), count)), count);
 }
 
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,

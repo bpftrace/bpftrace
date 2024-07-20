@@ -123,12 +123,13 @@ DIType *DIBuilderBPF::CreateTupleType(const SizedType &stype)
   return result;
 }
 
-DIType *DIBuilderBPF::CreateMinMaxType(const SizedType &stype)
+DIType *DIBuilderBPF::CreateMinMaxAvgType(const SizedType &stype)
 {
-  assert(stype.IsMinTy() || stype.IsMaxTy());
+  assert(stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy());
 
-  // The first field is the value
-  // The second field is the "value is set" flag
+  // For Min/Max, the first field is the value and the second field is the
+  // "value is set" flag. For Avg, the first field is the total and the second
+  // field is the count.
   SmallVector<Metadata *, 2> fields = { createMemberType(file,
                                                          "",
                                                          file,
@@ -179,8 +180,8 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
   if (stype.IsTupleTy())
     return CreateTupleType(stype);
 
-  if (stype.IsMinTy() || stype.IsMaxTy())
-    return CreateMinMaxType(stype);
+  if (stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy())
+    return CreateMinMaxAvgType(stype);
 
   if (stype.IsPtrTy())
     return getInt64Ty();
@@ -213,8 +214,7 @@ DIType *DIBuilderBPF::GetMapKeyType(const MapKey &key,
 
   // Some map types need an extra 8-byte key.
   uint64_t extra_arg_size = 0;
-  if (value_type.IsHistTy() || value_type.IsLhistTy() || value_type.IsAvgTy() ||
-      value_type.IsStatsTy())
+  if (value_type.IsHistTy() || value_type.IsLhistTy() || value_type.IsStatsTy())
     extra_arg_size = 8;
 
   // Single map key -> use the appropriate type.
