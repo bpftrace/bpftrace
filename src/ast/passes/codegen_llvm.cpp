@@ -614,22 +614,81 @@ void CodegenLLVM::visit(Call &call)
 
     expr_ = nullptr;
   } else if (call.func == "avg" || call.func == "stats") {
-    // avg stores the count and total in a hist map using indexes 0 and 1
-    // respectively, and the calculation is made when printing.
     Map &map = *call.map;
 
-    AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-    b_.CreateMapElemAdd(ctx_, map, count_key, b_.getInt64(1), call.loc);
-    b_.CreateLifetimeEnd(count_key);
+    auto [key, scoped_key_deleter] = getMapKey(map);
 
-    AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
+    CallInst *lookup = b_.CreateMapLookup(map, key);
+
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    b_.CreateMapElemAdd(ctx_, map, total_key, expr_, call.loc);
-    b_.CreateLifetimeEnd(total_key);
+
+    llvm::Type *avg_struct_ty = b_.GetMapValueType(map.type);
+
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_success",
+                                                          parent);
+    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_failure",
+                                                          parent);
+    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
+                                                        "lookup_merge",
+                                                        parent);
+
+    Value *lookup_condition = b_.CreateICmpNE(
+        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
+        b_.GetNull(),
+        "lookup_cond");
+    b_.CreateCondBr(lookup_condition,
+                    lookup_success_block,
+                    lookup_failure_block);
+
+    b_.SetInsertPoint(lookup_success_block);
+
+    auto *cast = b_.CreatePointerCast(lookup,
+                                      avg_struct_ty->getPointerTo(),
+                                      "cast");
+
+    Value *total_val = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(avg_struct_ty, cast, { b_.getInt64(0), b_.getInt32(0) }));
+
+    Value *count_val = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(avg_struct_ty, cast, { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateStore(
+        b_.CreateAdd(total_val, expr_),
+        b_.CreateGEP(avg_struct_ty, cast, { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(
+        b_.CreateAdd(b_.getInt64(1), count_val),
+        b_.CreateGEP(avg_struct_ty, cast, { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateBr(lookup_merge_block);
+
+    b_.SetInsertPoint(lookup_failure_block);
+
+    AllocaInst *avg_struct = b_.CreateAllocaBPF(avg_struct_ty, "avg_struct");
+
+    b_.CreateStore(expr_,
+                   b_.CreateGEP(avg_struct_ty,
+                                avg_struct,
+                                { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(b_.getInt64(1),
+                   b_.CreateGEP(avg_struct_ty,
+                                avg_struct,
+                                { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateMapUpdateElem(ctx_, map.ident, key, avg_struct, call.loc);
+
+    b_.CreateLifetimeEnd(avg_struct);
+
+    b_.CreateBr(lookup_merge_block);
+    b_.SetInsertPoint(lookup_merge_block);
 
     expr_ = nullptr;
   } else if (call.func == "hist") {
@@ -1394,20 +1453,7 @@ void CodegenLLVM::visit(Map &map)
   const auto &val_type = map_info->second.value_type;
   Value *value;
   if (canAggPerCpuMapElems(val_type, map_info->second.key)) {
-    if (val_type.IsAvgTy()) {
-      AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-      Value *count_val = b_.CreatePerCpuMapAggElems(
-          ctx_, map, count_key, val_type, map.loc);
-      b_.CreateLifetimeEnd(count_key);
-
-      AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
-      Value *total_val = b_.CreatePerCpuMapAggElems(
-          ctx_, map, total_key, val_type, map.loc);
-      b_.CreateLifetimeEnd(total_key);
-      value = b_.CreateUDiv(total_val, count_val);
-    } else {
-      value = b_.CreatePerCpuMapAggElems(ctx_, map, key, val_type, map.loc);
-    }
+    value = b_.CreatePerCpuMapAggElems(ctx_, map, key, val_type, map.loc);
   } else {
     value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
   }

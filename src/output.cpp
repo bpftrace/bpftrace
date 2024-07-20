@@ -315,6 +315,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
      * which shouldn't call this
      */
     assert(!is_per_cpu);
+    if (type.IsSigned()) {
+      return std::to_string(read_data<int64_t>(value.data()) / div);
+    }
     return std::to_string(read_data<uint64_t>(value.data()) / div);
   } else if (type.IsIntTy()) {
     auto sign = type.IsSigned();
@@ -475,20 +478,19 @@ void Output::map_stats_contents(
     const BpfMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-        &total_counts_by_key) const
+    const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+        &values_by_key) const
 {
   const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
   uint32_t i = 0;
+  size_t total = values_by_key.size();
   bool first = true;
-  for (auto &key_count : total_counts_by_key) {
-    auto &key = key_count.first;
-    auto &value = values_by_key.at(key);
 
-    if (map_type.IsAvgTy() && top && values_by_key.size() > top &&
-        i++ < (values_by_key.size() - top))
-      continue;
+  for (auto &[key, value] : values_by_key) {
+    if (top && map_type.IsAvgTy()) {
+      if (total > top && i++ < (total - top))
+        continue;
+    }
 
     if (first)
       first = false;
@@ -497,21 +499,33 @@ void Output::map_stats_contents(
 
     auto key_str = map_key_to_str(bpftrace, map, key);
 
-    int64_t count = (int64_t)value.at(0);
-    int64_t total = value.at(1);
-    int64_t average = 0;
+    std::string total_str;
+    std::string count_str;
+    std::string avg_str;
 
-    if (count != 0)
-      average = total / count;
+    if (map_type.IsSigned()) {
+      auto stats = stats_value<int64_t>(value, bpftrace.ncpus_);
+      avg_str = std::to_string(stats.avg / div);
+      total_str = std::to_string(stats.total);
+      count_str = std::to_string(stats.count);
+    } else {
+      auto stats = stats_value<uint64_t>(value, bpftrace.ncpus_);
+      avg_str = std::to_string(stats.avg / div);
+      total_str = std::to_string(stats.total);
+      count_str = std::to_string(stats.count);
+    }
 
     std::string value_str;
     if (map_type.IsStatsTy()) {
-      std::vector<std::pair<std::string, int64_t>> stats = {
-        { "count", count }, { "average", average }, { "total", total }
+      std::vector<std::pair<std::string, std::string>> stats = {
+        { "count", std::move(count_str) },
+        { "average", std::move(avg_str) },
+        { "total", std::move(total_str) }
       };
       value_str = key_value_pairs_to_str(stats);
-    } else
-      value_str = std::to_string(average / div);
+    } else {
+      value_str = std::move(avg_str);
+    }
 
     map_key_val(map_type, key_str, value_str);
   }
@@ -636,12 +650,10 @@ void TextOutput::map_stats(
     const BpfMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-        &total_counts_by_key) const
+    const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+        &values_by_key) const
 {
-  map_stats_contents(
-      bpftrace, map, top, div, values_by_key, total_counts_by_key);
+  map_stats_contents(bpftrace, map, top, div, values_by_key);
   out_ << std::endl << std::endl;
 }
 
@@ -722,11 +734,11 @@ void TextOutput::map_elem_delim(const SizedType &map_type) const
 }
 
 std::string TextOutput::key_value_pairs_to_str(
-    std::vector<std::pair<std::string, int64_t>> &keyvals) const
+    std::vector<std::pair<std::string, std::string>> &keyvals) const
 {
   std::vector<std::string> elems;
   for (auto &e : keyvals)
-    elems.push_back(e.first + " " + std::to_string(e.second));
+    elems.push_back(e.first + " " + e.second);
   return str_join(elems, ", ");
 }
 
@@ -909,11 +921,10 @@ void JsonOutput::map_stats(
     const BpfMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
-        &total_counts_by_key) const
+    const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+        &values_by_key) const
 {
-  if (total_counts_by_key.empty())
+  if (values_by_key.empty())
     return;
 
   const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
@@ -923,8 +934,7 @@ void JsonOutput::map_stats(
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
-  map_stats_contents(
-      bpftrace, map, top, div, values_by_key, total_counts_by_key);
+  map_stats_contents(bpftrace, map, top, div, values_by_key);
 
   if (map_key.size() > 0)
     out_ << "}";
@@ -1029,11 +1039,11 @@ void JsonOutput::map_elem_delim(const SizedType &map
 }
 
 std::string JsonOutput::key_value_pairs_to_str(
-    std::vector<std::pair<std::string, int64_t>> &keyvals) const
+    std::vector<std::pair<std::string, std::string>> &keyvals) const
 {
   std::vector<std::string> elems;
   for (auto &e : keyvals)
-    elems.push_back("\"" + e.first + "\": " + std::to_string(e.second));
+    elems.push_back("\"" + e.first + "\": " + e.second);
   return "{" + str_join(elems, ", ") + "}";
 }
 

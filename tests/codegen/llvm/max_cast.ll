@@ -22,8 +22,8 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !62 {
 entry:
   %key = alloca i32, align 4
   %print_integer_8_t = alloca %print_integer_8_t, align 8
-  %is_ret_set = alloca i64, align 8
-  %ret = alloca i64, align 8
+  %val_2 = alloca i64, align 8
+  %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
   %"@x_key1" = alloca i64, align 8
   %mm_struct = alloca %min_max_val, align 8
@@ -57,11 +57,11 @@ lookup_merge:                                     ; preds = %lookup_failure, %mi
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 0, ptr %"@x_key1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %ret)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %is_ret_set)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_2)
   store i32 0, ptr %i, align 4
-  store i64 0, ptr %ret, align 8
-  store i64 0, ptr %is_ret_set, align 8
+  store i64 0, ptr %val_1, align 8
+  store i64 0, ptr %val_2, align 8
   br label %while_cond
 
 is_set:                                           ; preds = %lookup_success
@@ -105,9 +105,9 @@ while_body:                                       ; preds = %while_cond
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %is_ret_set)
-  %16 = load i64, ptr %ret, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
+  %16 = load i64, ptr %val_1, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   %17 = icmp sgt i64 %16, 5
   %18 = zext i1 %17 to i64
@@ -120,9 +120,9 @@ lookup_success2:                                  ; preds = %while_body
   %21 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 1
   %22 = load i64, ptr %21, align 8
   %val_set_cond = icmp eq i64 %22, 1
-  %23 = load i64, ptr %is_ret_set, align 8
+  %23 = load i64, ptr %val_2, align 8
   %ret_set_cond = icmp eq i64 %23, 1
-  %24 = load i64, ptr %ret, align 8
+  %24 = load i64, ptr %val_1, align 8
   %max_cond = icmp sgt i64 %20, %24
   br i1 %val_set_cond, label %val_set_success, label %min_max_merge
 
@@ -135,8 +135,8 @@ val_set_success:                                  ; preds = %lookup_success2
   br i1 %ret_set_cond, label %ret_set_success, label %min_max_success
 
 min_max_success:                                  ; preds = %ret_set_success, %val_set_success
-  store i64 %20, ptr %ret, align 8
-  store i64 1, ptr %is_ret_set, align 8
+  store i64 %20, ptr %val_1, align 8
+  store i64 1, ptr %val_2, align 8
   br label %min_max_merge
 
 ret_set_success:                                  ; preds = %val_set_success

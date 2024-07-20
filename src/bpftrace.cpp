@@ -1346,8 +1346,6 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
   const auto &value_type = map_info.value_type;
   if (value_type.IsHistTy() || value_type.IsLhistTy())
     return print_map_hist(map, top, div);
-  else if (value_type.IsAvgTy() || value_type.IsStatsTy())
-    return print_map_stats(map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   auto maybe_old_key = find_empty_key(map);
@@ -1399,12 +1397,34 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                                                nvalues,
                                                value_type.IsMaxTy());
               });
+  } else if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
+    if (value_type.IsSigned()) {
+      std::sort(values_by_key.begin(),
+                values_by_key.end(),
+                [&](auto &a, auto &b) {
+                  return avg_value<int64_t>(a.second, nvalues) <
+                         avg_value<int64_t>(b.second, nvalues);
+                });
+    } else {
+      std::sort(values_by_key.begin(),
+                values_by_key.end(),
+                [&](auto &a, auto &b) {
+                  return avg_value<uint64_t>(a.second, nvalues) <
+                         avg_value<uint64_t>(b.second, nvalues);
+                });
+    }
   } else {
     sort_by_key(map_info.key.args_, values_by_key);
   };
 
   if (div == 0)
     div = 1;
+
+  if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
+    out_->map_stats(*this, map, top, div, values_by_key);
+    return 0;
+  }
+
   out_->map(*this, map, top, div, values_by_key);
   return 0;
 }
@@ -1474,73 +1494,6 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
   if (div == 0)
     div = 1;
   out_->map_hist(*this, map, top, div, values_by_key, total_counts_by_key);
-  return 0;
-}
-
-int BPFtrace::print_map_stats(const BpfMap &map, uint32_t top, uint32_t div)
-{
-  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  // stats() and avg() maps add an extra 8 bytes onto the end of their key for
-  // storing the bucket number.
-
-  auto maybe_old_key = find_empty_key(map);
-  if (!maybe_old_key.has_value()) {
-    return -2;
-  }
-  auto old_key(std::move(*maybe_old_key));
-  auto key(old_key);
-
-  std::map<std::vector<uint8_t>, std::vector<int64_t>> values_by_key;
-
-  const auto &map_key = resources.maps_info.at(map.name()).key;
-  while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
-    auto key_prefix = std::vector<uint8_t>(map_key.size());
-    uint64_t bucket = read_data<uint64_t>(key.data() + map_key.size());
-
-    for (size_t i = 0; i < map_key.size(); i++)
-      key_prefix.at(i) = key.at(i);
-
-    auto value = std::vector<uint8_t>(map.value_size() * nvalues);
-    int err = bpf_lookup_elem(map.fd(), key.data(), value.data());
-    if (err == -ENOENT) {
-      // key was removed by the eBPF program during bpf_get_next_key() and
-      // bpf_lookup_elem(), let's skip this key
-      continue;
-    } else if (err) {
-      LOG(ERROR) << "failed to look up elem: " << err;
-      return -1;
-    }
-
-    if (values_by_key.find(key_prefix) == values_by_key.end()) {
-      // New key - create a list of buckets for it
-      values_by_key[key_prefix] = std::vector<int64_t>(2);
-    }
-    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value,
-                                                                 nvalues);
-
-    old_key = key;
-  }
-
-  // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, int64_t>> total_counts_by_key;
-  for (auto &map_elem : values_by_key) {
-    assert(map_elem.second.size() == 2);
-    int64_t count = map_elem.second.at(0);
-    int64_t total = map_elem.second.at(1);
-    int64_t value = 0;
-
-    if (count != 0)
-      value = total / count;
-
-    total_counts_by_key.push_back({ map_elem.first, value });
-  }
-  std::sort(total_counts_by_key.begin(),
-            total_counts_by_key.end(),
-            [&](auto &a, auto &b) { return a.second < b.second; });
-
-  if (div == 0)
-    div = 1;
-  out_->map_stats(*this, map, top, div, values_by_key, total_counts_by_key);
   return 0;
 }
 

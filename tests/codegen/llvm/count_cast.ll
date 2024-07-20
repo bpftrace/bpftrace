@@ -21,8 +21,8 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !50 {
 entry:
   %key = alloca i32, align 4
   %print_integer_8_t = alloca %print_integer_8_t, align 8
-  %is_ret_set = alloca i64, align 8
-  %ret = alloca i64, align 8
+  %val_2 = alloca i64, align 8
+  %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
   %"@x_key1" = alloca i64, align 8
   %initial_value = alloca i64, align 8
@@ -54,11 +54,11 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 0, ptr %"@x_key1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %ret)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %is_ret_set)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_2)
   store i32 0, ptr %i, align 4
-  store i64 0, ptr %ret, align 8
-  store i64 0, ptr %is_ret_set, align 8
+  store i64 0, ptr %val_1, align 8
+  store i64 0, ptr %val_2, align 8
   br label %while_cond
 
 if_body:                                          ; preds = %while_end
@@ -91,9 +91,9 @@ while_body:                                       ; preds = %while_cond
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %is_ret_set)
-  %9 = load i64, ptr %ret, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
+  %9 = load i64, ptr %val_1, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   %10 = icmp sgt i64 %9, 5
   %11 = zext i1 %10 to i64
@@ -101,10 +101,10 @@ while_end:                                        ; preds = %error_failure, %err
   br i1 %true_cond, label %if_body, label %if_end
 
 lookup_success2:                                  ; preds = %while_body
-  %12 = load i64, ptr %ret, align 8
+  %12 = load i64, ptr %val_1, align 8
   %13 = load i64, ptr %lookup_percpu_elem, align 8
   %14 = add i64 %13, %12
-  store i64 %14, ptr %ret, align 8
+  store i64 %14, ptr %val_1, align 8
   %15 = load i32, ptr %i, align 4
   %16 = add i32 %15, 1
   store i32 %16, ptr %i, align 4

@@ -61,19 +61,19 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %print_tuple_16_t = alloca %print_tuple_16_t, align 8
   %tuple = alloca %"unsigned int64_count__tuple_t", align 8
   %"$kv" = alloca %"unsigned int64_count__tuple_t", align 8
-  %is_ret_set = alloca i64, align 8
-  %ret = alloca i64, align 8
+  %val_2 = alloca i64, align 8
+  %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
   %lookup_key = alloca i64, align 8
   %key = load i64, ptr %1, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_key)
   store i64 %key, ptr %lookup_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %ret)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %is_ret_set)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %val_2)
   store i32 0, ptr %i, align 4
-  store i64 0, ptr %ret, align 8
-  store i64 0, ptr %is_ret_set, align 8
+  store i64 0, ptr %val_1, align 8
+  store i64 0, ptr %val_2, align 8
   br label %while_cond
 
 while_cond:                                       ; preds = %lookup_success, %4
@@ -90,9 +90,9 @@ while_body:                                       ; preds = %while_cond
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %is_ret_set)
-  %8 = load i64, ptr %ret, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
+  %8 = load i64, ptr %val_1, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
   %9 = getelementptr %"unsigned int64_count__tuple_t", ptr %"$kv", i32 0, i32 0
@@ -122,10 +122,10 @@ while_end:                                        ; preds = %error_failure, %err
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 lookup_success:                                   ; preds = %while_body
-  %20 = load i64, ptr %ret, align 8
+  %20 = load i64, ptr %val_1, align 8
   %21 = load i64, ptr %lookup_percpu_elem, align 8
   %22 = add i64 %21, %20
-  store i64 %22, ptr %ret, align 8
+  store i64 %22, ptr %val_1, align 8
   %23 = load i32, ptr %i, align 4
   %24 = add i32 %23, 1
   store i32 %24, ptr %i, align 4
