@@ -129,6 +129,11 @@ RUN {{BPFTRACE}} -e '$1 { printf("hello world\n"); exit(); }' i:ms:1
 EXPECT hello world
 TIMEOUT 1
 
+NAME positional unsigned hex
+RUN {{BPFTRACE}} -e 'BEGIN {printf("%lu", $1);}' 0xffffffffffffffff
+EXPECT 18446744073709551615
+TIMEOUT 1
+
 NAME string compare map lookup
 RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
 EXPECT @[syscall]: 1

@@ -2050,13 +2050,17 @@ std::optional<int64_t> BPFtrace::get_int_literal(
                  expr)) {
       if (pos_param->ptype == PositionalParameterType::positional) {
         auto param_str = get_param(pos_param->n, false);
-        if (is_numeric(param_str))
-          return std::stoll(param_str);
-        else {
+        auto param_int = get_int_from_str(param_str);
+        if (!param_int.has_value()) {
           LOG(ERROR, pos_param->loc)
               << "$" << pos_param->n << " used numerically but given \""
               << param_str << "\"";
           return std::nullopt;
+        }
+        if (std::holds_alternative<int64_t>(*param_int)) {
+          return std::get<int64_t>(*param_int);
+        } else {
+          return (int64_t)std::get<uint64_t>(*param_int);
         }
       } else
         return (int64_t)num_params();

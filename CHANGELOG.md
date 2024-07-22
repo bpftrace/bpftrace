@@ -47,6 +47,8 @@ and this project adheres to
   - [#3322](https://github.com/bpftrace/bpftrace/pull/3322)
 - Fix lldb support in appimage builds
   - #[3339](https://github.com/bpftrace/bpftrace/pull/3339)
+- Fix parsing large unsigned int strings as positional params
+  - [#3336](https://github.com/bpftrace/bpftrace/pull/3336)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
