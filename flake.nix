@@ -159,6 +159,7 @@
               # Exclude the following groups to reduce appimage size:
               #
               # *.a: Static archives are not necessary at runtime
+              # *.h: Header files are not necessary at runtime (some ARM headers for clang are large)
               # *.pyc, *.py, *.whl: bpftrace does not use python at runtime
               # libLLVM-11.so: Appimage uses the latest llvm we support, so not llvm11
               #
@@ -172,6 +173,7 @@
               # ```
               exclude = [
                 "... *.a"
+                "... *.h"
                 "... *.pyc"
                 "... *.py"
                 "... *.whl"
