@@ -1,6 +1,7 @@
 = bpftrace(8)
 :doctype: manpage
 :toc: true
+:toclevels: 1
 
 ////
 Style guide:
@@ -232,20 +233,21 @@ For more details see the <<Verbose Output>> section.
 Programs saved as files are often called scripts and can be executed by specifying their file name.
 We use a `.bt` file extension, short for bpftrace, but the extension is not required.
 
-For example, listing the sleepers.bt file using `cat -n`:
+For example, listing the sleepers.bt file using `cat`:
 
 ----
-# cat -n sleepers.bt
-1 tracepoint:syscalls:sys_enter_nanosleep
-2 {
-3   printf("%s is sleeping.\n", comm);
-4 }
+# cat sleepers.bt
+
+tracepoint:syscalls:sys_enter_nanosleep {
+  printf("%s is sleeping.\n", comm);
+}
 ----
 
 And then calling it:
 
 ----
 # bpftrace sleepers.bt
+
 Attaching 1 probe...
 iscsid is sleeping.
 iscsid is sleeping.
@@ -255,13 +257,11 @@ It can also be made executable to run stand-alone.
 Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
 
 ----
-# cat -n sleepers.bt
-1 #!/usr/local/bin/bpftrace
-2
-3 tracepoint:syscalls:sys_enter_nanosleep
-4 {
-5   printf("%s is sleeping.\n", comm);
-6 }
+#!/usr/local/bin/bpftrace
+
+tracepoint:syscalls:sys_enter_nanosleep {
+  printf("%s is sleeping.\n", comm);
+}
 ----
 
 Then make it executable:
@@ -269,6 +269,7 @@ Then make it executable:
 ----
 # chmod 755 sleepers.bt
 # ./sleepers.bt
+
 Attaching 1 probe...
 iscsid is sleeping.
 iscsid is sleeping.
@@ -366,7 +367,7 @@ Both single line and multi line comments are supported.
 
 ----
 // A single line comment
-i:s:1 { // can also be used to comment inline
+interval:s:1 { // can also be used to comment inline
 /*
  a multi line comment
 
@@ -607,7 +608,7 @@ Within a while-loop the following control flow statements can be used:
 |===
 
 ----
-i:s:1 {
+interval:s:1 {
   $i = 0;
   while ($i <= 100) {
     printf("%d ", $i);
@@ -636,13 +637,13 @@ As this happens at compile time `n` must be a constant greater than 0 (`n > 0`).
 The following two probes compile into the same code:
 
 ----
-i:s:1 {
+interval:s:1 {
   unroll(3) {
     print("Unrolled")
   }
 }
 
-i:s:1 {
+interval:s:1 {
   print("Unrolled")
   print("Unrolled")
   print("Unrolled")
@@ -852,7 +853,7 @@ Individual fields can be accessed with the `.` operator.
 Tuples are zero indexed like arrays are.
 
 ----
-i:s:1 {
+interval:s:1 {
   $a = (1,2);
   $b = (3,4, $a);
   print($a);
@@ -1392,7 +1393,7 @@ The `buf_t` object returned by `buf` can safely be printed as a hex encoded stri
 Bytes with values >=32 and \<=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters. The similar `%rh` format specifier prints everything in hex form without `\x` and with spaces between bytes (e.g. `0a fe`).
 
 ----
-i:s:1 {
+interval:s:1 {
   printf("%r\n", buf(kaddr("avenrun"), 8));
 }
 ----
@@ -1415,7 +1416,7 @@ Dump the contents of the named file to stdout.
 If the file cannot be opened or read an error is printed to stderr.
 
 ----
-t:syscalls:sys_enter_execve {
+tracepoint:syscalls:sys_enter_execve {
   cat("/proc/%d/maps", pid);
 }
 ----
@@ -1513,7 +1514,15 @@ tracepoint:syscalls:sys_enter_execve {
 
 Get the address of the kernel symbol `name`.
 
-The following script:
+----
+interval:s:1 {
+  $avenrun = kaddr("avenrun");
+  $load1 = *$avenrun;
+}
+----
+
+You can find all kernel symbols at `/proc/kallsyms`.
+
 
 [#functions-kptr]
 === kptr
@@ -1648,7 +1657,7 @@ Defaults to `boot` if no clock is explicitly requested.
 - `nsecs(sw_tai)` - approximation of TAI timestamp in nanoseconds, is obtained through the "triple vdso sandwich" method. For older kernels without direct TAI timestamp access in BPF.
 
 ----
-i:s:1 {
+interval:s:1 {
   $sw_tai1 = nsecs(sw_tai);
   $tai = nsecs(tai);
   $sw_tai2 = nsecs(sw_tai);
@@ -1708,7 +1717,7 @@ Note that subfields are not yet supported.
 When using `override` the probed function will not be executed and instead `rc` will be returned.
 
 ----
-k:__x64_sys_getuid
+kprobe:__x64_sys_getuid
 /comm == "id"/ {
   override(2<<21);
 }
@@ -1758,7 +1767,7 @@ This function can only be used by functions that are allowed to, these functions
 `print` prints a the value, which can be a map or a scalar value, with the default formatting for the type.
 
 ----
-i:s:1 {
+interval:s:1 {
   print(123);
   print("abc");
   exit();
@@ -1772,8 +1781,8 @@ i:s:1 {
 ----
 
 ----
-i:ms:10 { @=hist(rand); }
-i:s:1 {
+interval:ms:10 { @=hist(rand); }
+interval:s:1 {
   print(@);
   exit();
 }
@@ -1824,7 +1833,7 @@ Scaling values before storing them can result in rounding errors.
 Consider the following program:
 
 ----
-k:f {
+kprobe:f {
   @[func] += arg0/10;
 }
 ----
@@ -2055,7 +2064,7 @@ The time conversion and formatting happens in user space, therefore  the `timest
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 
 ----
-i:s:1 {
+interval:s:1 {
   printf("%s\n", strftime("%H:%M:%S", nsecs));
 }
 ----
@@ -2098,19 +2107,19 @@ The use of the `==` and `!=` operators is recommended over calling `strncmp` dir
 The `command` is run with the same privileges as bpftrace and it blocks execution of the processing threads which can lead to missed events and delays processing of async events.
 
 ----
-i:s:1 {
+interval:s:1 {
   time("%H:%M:%S: ");
   printf("%d\n", @++);
 }
-i:s:10 {
+interval:s:10 {
   system("/bin/sleep 10");
 }
-i:s:30 {
+interval:s:30 {
   exit();
 }
 ----
 
-Note how the async `time` and `printf` first print every second until the `i:s:10` probe hits, then they print every 10 seconds due to bpftrace blocking on `sleep`.
+Note how the async `time` and `printf` first print every second until the `interval:s:10` probe hits, then they print every 10 seconds due to bpftrace blocking on `sleep`.
 
 ----
 Attaching 3 probes...
@@ -2139,7 +2148,7 @@ Attaching 3 probes...
 `system` supports the same format string and arguments that `printf` does.
 
 ----
-t:syscalls:sys_enter_execve {
+tracepoint:syscalls:sys_enter_execve {
   system("/bin/grep %s /proc/%d/status", "vmswap", pid);
 }
 ----
@@ -2381,7 +2390,7 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 Calculate the running average of `n` between consecutive calls.
 
 ----
-i:s:1 {
+interval:s:1 {
   @x++;
   @y = avg(@x);
   print(@x);
@@ -2392,7 +2401,7 @@ i:s:1 {
 Internally this keeps two values in the map: value count and running total.
 The average is computed in user-space when printing by dividing the total by the
 count. However, you can get the average in kernel space in expressions like
-`if (@y == 5)` but this is expensive as bpftrace needs to iterate over all the 
+`if (@y == 5)` but this is expensive as bpftrace needs to iterate over all the
 cpus to collect and sum BOTH count and total.
 
 [#map-functions-clear]
@@ -2406,11 +2415,11 @@ cpus to collect and sum BOTH count and total.
 Clear all keys/values from map `m`.
 
 ----
-i:ms:100 {
+interval:ms:100 {
   @[rand % 10] = count();
 }
 
-i:s:10 {
+interval:s:10 {
   print(@);
   clear(@);
 }
@@ -2433,11 +2442,11 @@ Note: In contrast to hash maps (e.g. `@++`), multiple writers to a shared
 global var might lose counts as bpftrace doesn't update them atomically.
 
 ----
-i:ms:100 {
+interval:ms:100 {
   @ = count();
 }
 
-i:s:10 {
+interval:s:10 {
   // async read
   print(@);
   // sync read
@@ -2460,7 +2469,7 @@ For an associative-array the key to delete has to be specified.
 Multiple arguments can be passed to delete many keys at once.
 
 ```
-k:dummy {
+kprobe:dummy {
   @scalar = 1;
   @associative[1,2] = 1;
   delete(@scalar);
@@ -2523,11 +2532,11 @@ Create a linear histogram of `n`.
 Values in the range `(-inf, min)` and `(max, inf)` get their get their own bucket too, bringing the total amount of buckets created to `M+2`.
 
 ----
-i:ms:1 {
+interval:ms:1 {
   @ = lhist(rand %10, 0, 10, 1);
 }
 
-i:s:5 {
+interval:s:5 {
   exit();
 }
 ----
@@ -2604,11 +2613,11 @@ Note: In contrast to hash maps (e.g. `@+=5`), multiple writers to a shared
 global var might lose updates as bpftrace doesn't update them atomically.
 
 ----
-i:ms:100 {
+interval:ms:100 {
   @ = sum(5);
 }
 
-i:s:10 {
+interval:s:10 {
   // async read
   print(@);
   // sync read
@@ -2664,61 +2673,75 @@ kprobe:tcp_reset,kprobe:*socket* {
 
 Most providers also support a short name which can be used instead of the full name, e.g. `kprobe:f` and `k:f` are identical.
 
-[cols="~,~,~"]
+[cols="~,~,~,~"]
 |===
 |*Probe Name*
+|*Short Name*
 |*Description*
 |*Kernel/User Level*
 
 | <<probes-begin-end, `BEGIN/END`>>
+| -
 | Built-in events
 | Kernel/User
 
 | <<probes-hardware, `hardware`>>
+| `h`
 | Processor-level events
 | Kernel
 
 | <<probes-interval, `interval`>>
+| `i`
 | Timed output
 | Kernel/User
 
 | <<probes-iterator, `iter`>>
+| `it`
 | Iterators tracing
 | Kernel
 
 | <<probes-kfunc, `kfunc/kretfunc`>>
+| `f`/`fr`
 | Kernel functions tracing with BTF support
 | Kernel
 
 | <<probes-kprobe, `kprobe/kretprobe`>>
+| `k`/`kr`
 | Kernel function start/return
 | Kernel
 
 | <<probes-profile, `profile`>>
+| `p`
 | Timed sampling
 | Kernel/User
 
 | <<probes-rawtracepoint, `rawtracepoint`>>
+| `rt`
 | Kernel static tracepoints with raw arguments
 | Kernel
 
 | <<probes-software, `software`>>
+| `s`
 | Kernel software events
 | Kernel
 
 | <<probes-tracepoint, `tracepoint`>>
+| `t`
 | Kernel static tracepoints
 | Kernel
 
 | <<probes-uprobe, `uprobe/uretprobe`>>
+| `u`/`ur`
 | User-level function start/return
 | User
 
 | <<probes-usdt, `usdt`>>
+| `U`
 | User-level static tracepoints
 | User
 
 | <<probes-watchpoint, `watchpoint/asyncwatchpoint`>>
+| `w`/`aw`
 | Memory watchpoints
 | Kernel
 |===
@@ -3574,7 +3597,7 @@ combined with `-e` or filename args to see all the probes that a program would a
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
 
 ----
-# bpftrace -l 'fr:tcp_reset,t:syscalls:sys_enter_openat' -v
+# bpftrace -l 'kretfunc:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
 kretfunc:tcp_reset
     struct sock * sk
     struct sk_buff * skb
