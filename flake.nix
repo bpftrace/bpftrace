@@ -160,7 +160,8 @@
               #
               # *.a: Static archives are not necessary at runtime
               # *.h: Header files are not necessary at runtime (some ARM headers for clang are large)
-              # *.pyc, *.py, *.whl: bpftrace does not use python at runtime
+              # *.pyc, *.whl: bpftrace does not use python at runtime (with exception
+              #               of stdlib for unfortunate lldb python bindings)
               # libLLVM-11.so: Appimage uses the latest llvm we support, so not llvm11
               #
               # The basic process to identify large and useless files is to:
@@ -175,7 +176,6 @@
                 "... *.a"
                 "... *.h"
                 "... *.pyc"
-                "... *.py"
                 "... *.whl"
                 "... libLLVM-11.so"
               ];
