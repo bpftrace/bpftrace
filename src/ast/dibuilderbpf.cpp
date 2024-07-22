@@ -209,9 +209,8 @@ DIType *DIBuilderBPF::GetMapKeyType(const MapKey &key,
                                     libbpf::bpf_map_type map_type)
 {
   // No-key maps use '0' as the key.
-  // No-key count() maps use BPF_MAP_TYPE_PERCPU_ARRAY which needs 4-byte key.
-  // No-key maps excluding ones specified in SizedType::NeedsPercpuMap will use
-  // BPF_MAP_TYPE_ARRAY
+  // - BPF requires 4-byte keys for array maps
+  // - bpftrace uses 8 bytes for the implicit '0' key in hash maps
   if (key.args_.size() == 0)
     return (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
             map_type == libbpf::BPF_MAP_TYPE_ARRAY)
