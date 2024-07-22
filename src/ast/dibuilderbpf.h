@@ -38,7 +38,9 @@ public:
   DIType *createPointerMemberType(const std::string &name,
                                   uint64_t offset,
                                   DIType *type);
-  DIType *GetMapKeyType(const MapKey &key, const SizedType &value_type);
+  DIType *GetMapKeyType(const MapKey &key,
+                        const SizedType &value_type,
+                        libbpf::bpf_map_type map_type);
   DIType *GetMapFieldInt(int value);
   DIGlobalVariableExpression *createMapEntry(const std::string &name,
                                              libbpf::bpf_map_type map_type,

@@ -3519,11 +3519,10 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
   if (val_type.IsCountTy() && key.args_.empty()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
   } else if (bpftrace_.feature_->has_map_percpu_hash() &&
-             (val_type.IsHistTy() || val_type.IsLhistTy() ||
-              val_type.IsCountTy() || val_type.IsSumTy() ||
-              val_type.IsMinTy() || val_type.IsMaxTy() || val_type.IsAvgTy() ||
-              val_type.IsStatsTy())) {
+             val_type.NeedsPercpuMap()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
+  } else if (!val_type.NeedsPercpuMap() && key.args_.empty()) {
+    return libbpf::BPF_MAP_TYPE_ARRAY;
   } else {
     return libbpf::BPF_MAP_TYPE_HASH;
   }
@@ -3563,7 +3562,12 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
     auto map_type = get_map_type(val_type, key);
-    if (val_type.IsCountTy() && key.args_.empty()) {
+    // This is special casing for keyless maps eg: @x or @++. For a subset of
+    // keyless maps we can special case them to BPF_MAP_TYPE_ARRAY instead of
+    // HASH for efficiency
+    if ((map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
+         map_type == libbpf::BPF_MAP_TYPE_ARRAY) &&
+        key.args_.empty()) {
       max_entries = 1;
     }
 

@@ -1,5 +1,6 @@
 #include "dibuilderbpf.h"
 
+#include "libbpf/bpf.h"
 #include "log.h"
 #include "struct.h"
 #include "utils.h"
@@ -204,12 +205,17 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
 }
 
 DIType *DIBuilderBPF::GetMapKeyType(const MapKey &key,
-                                    const SizedType &value_type)
+                                    const SizedType &value_type,
+                                    libbpf::bpf_map_type map_type)
 {
   // No-key maps use '0' as the key.
-  // No-key count() maps use BPF_MAP_TYPE_PERCPU_ARRAY which needs 4-byte key.
+  // - BPF requires 4-byte keys for array maps
+  // - bpftrace uses 8 bytes for the implicit '0' key in hash maps
   if (key.args_.size() == 0)
-    return value_type.IsCountTy() ? getInt32Ty() : getInt64Ty();
+    return (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
+            map_type == libbpf::BPF_MAP_TYPE_ARRAY)
+               ? getInt32Ty()
+               : getInt64Ty();
 
   // Some map types need an extra 8-byte key.
   uint64_t extra_arg_size = 0;
@@ -261,7 +267,9 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
   uint64_t size = 128;
   if (!value_type.IsNoneTy()) {
     fields.push_back(createPointerMemberType(
-        "key", size, createPointerType(GetMapKeyType(key, value_type), 64)));
+        "key",
+        size,
+        createPointerType(GetMapKeyType(key, value_type, map_type), 64)));
     fields.push_back(createPointerMemberType(
         "value", size + 64, createPointerType(GetType(value_type), 64)));
     size += 128;
