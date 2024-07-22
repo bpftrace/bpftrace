@@ -45,6 +45,8 @@ and this project adheres to
   - [#3298](https://github.com/bpftrace/bpftrace/pull/3298)
 - Fix stack mode for stack builtin
   - [#3322](https://github.com/bpftrace/bpftrace/pull/3322)
+- Fix lldb support in appimage builds
+  - #[3339](https://github.com/bpftrace/bpftrace/pull/3339)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
