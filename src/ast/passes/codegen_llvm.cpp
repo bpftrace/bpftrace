@@ -126,7 +126,11 @@ void CodegenLLVM::visit(PositionalParameter &param)
     case PositionalParameterType::positional: {
       std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
       if (!param.is_in_str) {
-        expr_ = b_.getInt64(std::stoll(pstr, nullptr, 0));
+        if (param.type.IsSigned()) {
+          expr_ = b_.getInt64(std::stoll(pstr, nullptr, 0));
+        } else {
+          expr_ = b_.getInt64(std::stoull(pstr, nullptr, 0));
+        }
       } else {
         Constant *const_str = ConstantDataArray::getString(
             module_->getContext(), pstr, true);

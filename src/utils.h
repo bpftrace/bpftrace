@@ -15,6 +15,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 #include "filesystem.h"
@@ -222,7 +223,8 @@ std::string path_for_pid_mountns(int pid, const std::string &path);
 void cat_file(const char *filename, size_t, std::ostream &);
 std::string str_join(const std::vector<std::string> &list,
                      const std::string &delim);
-bool is_numeric(const std::string &str);
+std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
+    const std::string &s);
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
 std::string hex_format_buffer(const char *buf,

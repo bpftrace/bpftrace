@@ -2303,7 +2303,7 @@ TEST(semantic_analyser, positional_parameters)
   auto stmt = static_cast<ast::ExprStatement *>(
       driver.ctx.root->probes->at(0)->stmts->at(0));
   auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
-  EXPECT_EQ(CreateInt64(), pp->type);
+  EXPECT_EQ(CreateUInt64(), pp->type);
   EXPECT_TRUE(pp->is_literal);
 
   bpftrace.add_param("0999");

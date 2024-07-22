@@ -57,10 +57,14 @@ void SemanticAnalyser::visit(PositionalParameter &param)
             << "$" << std::to_string(param.n) + " is not a valid parameter";
       if (is_final_pass()) {
         std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        if (!is_numeric(pstr) && !param.is_in_str) {
+        auto param_int = get_int_from_str(pstr);
+        if (!param_int.has_value() && !param.is_in_str) {
           LOG(ERROR, param.loc, err_)
               << "$" << param.n << " used numerically but given \"" << pstr
               << "\". Try using str($" << param.n << ").";
+        }
+        if (std::holds_alternative<uint64_t>(*param_int)) {
+          param.type = CreateUInt64();
         }
         // string allocated in bpf stack. See codegen.
         if (param.is_in_str)

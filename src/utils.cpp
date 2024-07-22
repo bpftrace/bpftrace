@@ -1077,15 +1077,47 @@ std::string str_join(const std::vector<std::string> &list,
   return str;
 }
 
-bool is_numeric(const std::string &s)
+std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
+    const std::string &s)
 {
-  std::size_t idx;
-  try {
-    std::stoll(s, &idx, 0);
-  } catch (...) {
-    return false;
+  if (s.size() == 0) {
+    return std::nullopt;
   }
-  return idx == s.size();
+
+  if (s.starts_with("0x") || s.starts_with("0X")) {
+    // Treat all hex's as unsigned
+    std::size_t idx;
+    try {
+      uint64_t ret = std::stoull(s, &idx, 0);
+      if (idx == s.size()) {
+        return ret;
+      } else {
+        return std::nullopt;
+      }
+    } catch (...) {
+      return std::nullopt;
+    }
+  }
+
+  char *endptr;
+  const char *s_ptr = s.c_str();
+  errno = 0;
+
+  if (s.at(0) == '-') {
+    int64_t ret = strtol(s_ptr, &endptr, 0);
+    if (endptr == s_ptr || *endptr != '\0' || errno == ERANGE ||
+        errno == EINVAL) {
+      return std::nullopt;
+    }
+    return ret;
+  }
+
+  uint64_t ret = strtoul(s_ptr, &endptr, 0);
+  if (endptr == s_ptr || *endptr != '\0' || errno == ERANGE ||
+      errno == EINVAL) {
+    return std::nullopt;
+  }
+  return ret;
 }
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
