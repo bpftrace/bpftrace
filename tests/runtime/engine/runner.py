@@ -463,17 +463,15 @@ class Runner(object):
         def print_befores_and_after_output():
             if len(befores_output) > 0:
                 for out in befores_output:
-                    out = out.encode("unicode_escape").decode("utf-8")
-                    print(f"\tBefore cmd output: {out}")
+                    print(f"\tBefore cmd output: {to_utf8(out)}")
             if after_output is not None:
-                out = after_output.encode("unicode_escape").decode("utf-8")
-                print(f"\tAfter cmd output: {out}")
+                print(f"\tAfter cmd output: {to_utf8(after_output)}")
 
         if p and p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
-            print('\tOutput: ' + output.encode("unicode_escape").decode("utf-8"))
+            print('\tOutput: ' + to_utf8(output))
             print_befores_and_after_output()
             return Runner.FAIL
 
