@@ -38,6 +38,7 @@ NIX_TARGET = os.environ.get("NIX_TARGET", "")
 CMAKE_BUILD_TYPE = os.environ.get("CMAKE_BUILD_TYPE", "Release")
 RUN_TESTS = os.environ.get("RUN_TESTS", "1")
 RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
+RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
 GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
@@ -45,6 +46,7 @@ CI = os.environ.get("CI", "false")
 RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
+AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
 
 
 class TestStatus(Enum):
@@ -270,6 +272,34 @@ def test():
                 env={
                     "TOOLS_TEST_OLDVERSION": TOOLS_TEST_OLDVERSION,
                     "TOOLS_TEST_DISABLE": TOOLS_TEST_DISABLE,
+                },
+            ),
+        )
+    )
+    results.append(
+        test_one(
+            "runtime-tests.sh (AOT)",
+            lambda: truthy(RUN_AOT_TESTS),
+            lambda: shell(
+                (
+                    [
+                        "./tests/runtime-tests.sh",
+                        "--run-aot-tests",
+                        "--filter",
+                        "aot.*",
+                    ]
+                    + [
+                        "--skiplist_file",
+                        f"{root()}/{AOT_SKIPLIST_FILE}",
+                    ]
+                    if AOT_SKIPLIST_FILE
+                    else []
+                ),
+                as_root=True,
+                cwd=Path(BUILD_DIR),
+                env={
+                    "CI": CI,
+                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
                 },
             ),
         )
