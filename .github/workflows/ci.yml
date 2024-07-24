@@ -62,6 +62,12 @@ jobs:
           CC: clang
           CXX: clang++
           TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: AOT (LLVM 18 Debug)
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm18
+          RUN_TESTS: 0
+          RUN_AOT_TESTS: 1
+          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
         - NAME: Memleak test (LLVM 18 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18

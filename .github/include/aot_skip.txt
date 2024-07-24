@@ -1,0 +1,78 @@
+aot.basic.print_per_cpu_map_vals
+aot.btf.kernel_module_type_fwd
+aot.builtin.args in kfunc as a map key
+aot.builtin.args in kfunc store in map
+aot.builtin.args in uprobe as a map key
+aot.builtin.args in uprobe print
+aot.builtin.args in uprobe store in map
+aot.builtin.args in uprobe store in map and access field
+aot.builtin.cat limited output
+aot.builtin.comm
+aot.builtin.func_uprobe_elf_symtable
+aot.builtin.print args in kfunc
+aot.call.cgroup_path
+aot.call.cgroup_path printf
+aot.call.hist_10g
+aot.call.iter:task
+aot.call.iter:task_file
+aot.call.iter:task_vma
+aot.call.path_in_unsupported_kfunc
+aot.call.print_map_item_tuple
+aot.call.print_non_map_builtin
+aot.call.print_non_map_struct_kfunc
+aot.call.print_non_map_tuple
+aot.call.str_truncated
+aot.call.str_truncated_custom
+aot.call.strftime
+aot.call.strftime_as_map_key
+aot.call.strftime_as_map_value
+aot.call.ustack_elf_symtable
+aot.dwarf.uprobe inlined function
+aot.for.map multiple loops
+aot.for.map multiple probes
+aot.for.map nested vals
+aot.for.map one key
+aot.for.map strings
+aot.for.map two keys
+aot.for.variable context multiple
+aot.json-output.complex
+aot.json-output.histogram
+aot.json-output.histogram zero
+aot.json-output.histogram-finegrain
+aot.json-output.linear histogram
+aot.json-output.linear histogram zero
+aot.json-output.map
+aot.json-output.multiple histograms
+aot.json-output.multiple linear histograms
+aot.json-output.multiple maps
+aot.json-output.multiple stats
+aot.json-output.scalar
+aot.json-output.scalar_str
+aot.json-output.stats
+aot.other.if_compare_and_print_string
+aot.other.per_cpu_map_arithmetic
+aot.other.per_cpu_map_avg_if
+aot.probe.fentry
+aot.probe.fexit
+aot.probe.kfunc
+aot.probe.kfunc args
+aot.probe.kfunc args as a pointer
+aot.probe.kfunc func builtin
+aot.probe.kfunc_module
+aot.probe.kfunc_module_wildcard
+aot.probe.kfunc_multiple_attach_point_multiple_functions
+aot.probe.kfunc_wildcard
+aot.probe.kprobe_error_missing_probes
+aot.probe.kprobe_ignore_missing_probes
+aot.probe.kretfunc
+aot.probe.uprobe_error_missing_probes
+aot.probe.uprobe_ignore_missing_probes
+aot.regression.kfunc double pointer array access
+aot.regression.kfunc double pointer dereference
+aot.tuples.basic tuple map
+aot.tuples.tuple print
+aot.tuples.tuple strftime type is packed
+aot.variable.tuple string resize
+aot.dwarf.uprobe inlined function - func
+aot.dwarf.uprobe inlined function - probe
+aot.dwarf.uprobe inlined function - ustack
