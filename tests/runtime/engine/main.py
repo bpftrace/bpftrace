@@ -12,9 +12,15 @@ from runner import Runner, ok, fail, warn
 
 TEST_FILTER = os.getenv("TEST_FILTER")
 
-def main(test_filter, run_aot_tests):
+def main(test_filter, skiplist_file, run_aot_tests):
     if not test_filter:
         test_filter = ".*"
+
+    skiplist = set()
+    if skiplist_file:
+        with open(skiplist_file, 'r') as f:
+            for line in f:
+                skiplist.add(line.strip())
 
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
@@ -46,6 +52,9 @@ def main(test_filter, run_aot_tests):
     for fname, tests in test_suite:
         print(ok("[----------]") + " %d tests from %s" % (len(tests), fname))
         for test in tests:
+            if f"{fname}.{test.name}" in skiplist:
+                skipped_tests.append((fname, test, Runner.SKIP_IN_SKIPLIST))
+                continue
             status = Runner.run_test(test)
             if Runner.skipped(status):
                 skipped_tests.append((fname, test, status))
@@ -81,9 +90,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Runtime tests for bpftrace.')
     parser.add_argument('--filter', type=str, dest='test_filter',
                         help='Run only specified runtime test. Format should be "<test feature/test group>.<testcase name>"')
+    parser.add_argument('--skiplist_file', type=str,
+                        help='Path to file containing tests to skip. Format is one test per line. Subtracts tests from --filter.')
     parser.add_argument('--run-aot-tests', action='store_true',
                         help='Run ahead-of-time compilation tests. Note this would roughly double test time.')
 
     args = parser.parse_args()
 
-    main(args.test_filter or TEST_FILTER, args.run_aot_tests)
+    main(args.test_filter or TEST_FILTER, args.skiplist_file, args.run_aot_tests)
