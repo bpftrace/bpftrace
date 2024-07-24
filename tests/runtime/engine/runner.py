@@ -467,6 +467,10 @@ class Runner(object):
             if after_output is not None:
                 print(f"\tAfter cmd output: {to_utf8(after_output)}")
 
+        if '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED' in to_utf8(output):
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Runner.SKIP_AOT_NOT_SUPPORTED
+
         if p and p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
@@ -478,9 +482,6 @@ class Runner(object):
         if result:
             print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.PASS
-        elif '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED' in output:
-            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-            return Runner.SKIP_AOT_NOT_SUPPORTED
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
