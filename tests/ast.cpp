@@ -52,12 +52,11 @@ TEST(ast, probe_name_kprobe)
   Probe kprobe1(attach_points1, nullptr, nullptr);
   EXPECT_EQ(kprobe1.name(), "kprobe:sys_read");
 
-  auto ap2_copy1 = ap2->leafcopy();
   auto attach_points2 = APL({ ap1, ap2 });
   Probe kprobe2(attach_points2, nullptr, nullptr);
   EXPECT_EQ(kprobe2.name(), "kprobe:sys_read,kprobe:sys_write");
 
-  auto attach_points3 = APL({ ap1, ap2_copy1, ap3 });
+  auto attach_points3 = APL({ ap1, ap2, ap3 });
   Probe kprobe3(attach_points3, nullptr, nullptr);
   EXPECT_EQ(kprobe3.name(),
             "kprobe:sys_read,kprobe:sys_write,kprobe:sys_read+10");

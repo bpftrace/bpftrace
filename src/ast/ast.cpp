@@ -699,88 +699,6 @@ void Probe::set_index(int index)
   index_ = index;
 }
 
-Expression::Expression(const Expression &other) : Node(other)
-{
-  type = other.type;
-  is_literal = other.is_literal;
-  is_variable = other.is_variable;
-  is_map = other.is_map;
-}
-
-Call::Call(const Call &other) : Expression(other)
-{
-  func = other.func;
-}
-
-Sizeof::Sizeof(const Sizeof &other) : Expression(other)
-{
-}
-
-Offsetof::Offsetof(const Offsetof &other) : Expression(other)
-{
-}
-
-Binop::Binop(const Binop &other) : Expression(other)
-{
-  op = other.op;
-}
-
-Unop::Unop(const Unop &other) : Expression(other)
-{
-  op = other.op;
-  is_post_op = other.is_post_op;
-}
-
-Map::Map(const Map &other) : Expression(other)
-{
-  ident = other.ident;
-  skip_key_validation = other.skip_key_validation;
-}
-
-FieldAccess::FieldAccess(const FieldAccess &other)
-    : Expression(other), expr(nullptr)
-{
-  field = other.field;
-  index = other.index;
-}
-
-Unroll::Unroll(const Unroll &other) : Statement(other)
-{
-  var = other.var;
-}
-
-Program::Program(const Program &other) : Node(other)
-{
-  c_definitions = other.c_definitions;
-  config = other.config;
-}
-
-Config::Config(const Config &other) : Statement(other)
-{
-}
-
-Cast::Cast(const Cast &other) : Expression(other)
-{
-}
-
-SubprogArg::SubprogArg(const SubprogArg &other) : Node(other)
-{
-  name_ = other.name_;
-  type = other.type;
-}
-
-Subprog::Subprog(const Subprog &other) : Scope(other)
-{
-  name_ = other.name_;
-}
-
-Probe::Probe(const Probe &other) : Scope(static_cast<const Scope &>(other))
-{
-  need_expansion = other.need_expansion;
-  tp_args_structs_level = other.tp_args_structs_level;
-  index_ = other.index_;
-}
-
 std::string Subprog::name() const
 {
   return name_;
@@ -796,38 +714,6 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
   }
   return false;
 }
-
-While::While(const While &other) : Statement(other)
-{
-}
-
-For::For(const For &other) : Statement(other)
-{
-}
-
-Tuple::Tuple(const Tuple &other) : Expression(other)
-{
-}
-
-If::If(const If &other) : Statement(other)
-{
-}
-
-AssignVarStatement::AssignVarStatement(const AssignVarStatement &other)
-    : Statement(other)
-{
-  compound = other.compound;
-};
-
-AssignMapStatement::AssignMapStatement(const AssignMapStatement &other)
-    : Statement(other)
-{
-  compound = other.compound;
-};
-
-AssignConfigVarStatement::AssignConfigVarStatement(
-    const AssignConfigVarStatement &other)
-    : Statement(other){};
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)
 {
