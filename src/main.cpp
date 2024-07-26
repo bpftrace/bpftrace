@@ -348,7 +348,7 @@ static void parse_env(BPFtrace& bpftrace)
   });
 }
 
-[[nodiscard]] std::unique_ptr<ast::Program> parse(
+[[nodiscard]] std::optional<ast::ASTContext> parse(
     BPFtrace& bpftrace,
     const std::string& name,
     const std::string& program,
@@ -361,26 +361,26 @@ static void parse_env(BPFtrace& bpftrace)
 
   err = driver.parse();
   if (err)
-    return nullptr;
+    return {};
 
   bpftrace.parse_btf(driver.list_modules());
 
-  ast::FieldAnalyser fields(driver.root.get(), bpftrace);
+  ast::FieldAnalyser fields(driver.ctx.root, bpftrace);
   err = fields.analyse();
   if (err)
-    return nullptr;
+    return {};
 
-  if (TracepointFormatParser::parse(driver.root.get(), bpftrace) == false)
-    return nullptr;
+  if (TracepointFormatParser::parse(driver.ctx.root, bpftrace) == false)
+    return {};
 
   // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
   // avoid issues in some versions. Since we're including files in the command
   // line, we want to force parsing, so we make sure C definitions are not
   // empty before going to clang parser stage.
-  if (!include_files.empty() && driver.root->c_definitions.empty())
-    driver.root->c_definitions = "#define __BPFTRACE_DUMMY__";
+  if (!include_files.empty() && driver.ctx.root->c_definitions.empty())
+    driver.ctx.root->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  bool should_clang_parse = !(driver.root.get()->c_definitions.empty() &&
+  bool should_clang_parse = !(driver.ctx.root->c_definitions.empty() &&
                               bpftrace.btf_set_.empty());
 
   if (should_clang_parse) {
@@ -406,7 +406,7 @@ static void parse_env(BPFtrace& bpftrace)
       extra_flags.push_back(file);
     }
 
-    if (!clang.parse(driver.root.get(), bpftrace, extra_flags)) {
+    if (!clang.parse(driver.ctx.root, bpftrace, extra_flags)) {
       if (!found_kernel_headers) {
         LOG(WARNING)
             << "Could not find kernel headers in " << ksrc << " / " << kobj
@@ -418,15 +418,15 @@ static void parse_env(BPFtrace& bpftrace)
             << "snippet:\nmodprobe kheaders && tar -C <directory> -xf "
             << "/sys/kernel/kheaders.tar.xz";
       }
-      return nullptr;
+      return {};
     }
   }
 
   err = driver.parse();
   if (err)
-    return nullptr;
+    return {};
 
-  return std::move(driver.root);
+  return std::move(driver.ctx);
 }
 
 ast::PassManager CreateDynamicPM()
@@ -811,12 +811,12 @@ int main(int argc, char* argv[])
 
     bpftrace.parse_btf(driver.list_modules());
 
-    ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, false, true);
+    ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
     err = semantics.analyse();
     if (err)
       return err;
 
-    bpftrace.probe_matcher_->list_probes(driver.root.get());
+    bpftrace.probe_matcher_->list_probes(driver.ctx.root);
     return 0;
   }
 
@@ -872,17 +872,17 @@ int main(int argc, char* argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  auto ast_prog = parse(
+  auto ast_ctx = parse(
       bpftrace, filename, program, args.include_dirs, args.include_files);
-  if (!ast_prog)
+  if (!ast_ctx)
     return 1;
 
   if (args.listing) {
-    bpftrace.probe_matcher_->list_probes(ast_prog.get());
+    bpftrace.probe_matcher_->list_probes(ast_ctx->root);
     return 0;
   }
 
-  ast::PassContext ctx(bpftrace);
+  ast::PassContext ctx(bpftrace, *ast_ctx);
   ast::PassManager pm;
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
@@ -893,13 +893,13 @@ int main(int argc, char* argv[])
       break;
   }
 
-  bpftrace.kfunc_recursion_check(ast_prog.get());
+  bpftrace.kfunc_recursion_check(ast_ctx->root);
 
-  auto pmresult = pm.Run(std::move(ast_prog), ctx);
+  auto pmresult = pm.Run(ast_ctx->root, ctx);
   if (!pmresult.Ok())
     return 1;
 
-  auto ast_root = std::unique_ptr<ast::Node>(pmresult.Root());
+  auto* ast_root = pmresult.Root();
 
   if (!bpftrace.cmd_.empty()) {
     try {
@@ -916,7 +916,7 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  ast::CodegenLLVM llvm(&*ast_root, bpftrace);
+  ast::CodegenLLVM llvm(ast_root, bpftrace);
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();

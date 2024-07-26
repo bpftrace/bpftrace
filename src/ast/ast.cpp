@@ -51,226 +51,6 @@ MAKE_ACCEPT(Program)
 
 #undef MAKE_ACCEPT
 
-Call::~Call()
-{
-  if (vargs)
-    for (Expression *expr : *vargs)
-      delete expr;
-
-  delete vargs;
-  vargs = nullptr;
-}
-Sizeof::~Sizeof()
-{
-  if (expr)
-    delete expr;
-  expr = nullptr;
-}
-Offsetof::~Offsetof()
-{
-  if (expr)
-    delete expr;
-  expr = nullptr;
-}
-Map::~Map()
-{
-  if (vargs)
-    for (Expression *expr : *vargs)
-      delete expr;
-
-  delete vargs;
-  vargs = nullptr;
-}
-Binop::~Binop()
-{
-  delete left;
-  delete right;
-  left = nullptr;
-  right = nullptr;
-}
-
-Unop::~Unop()
-{
-  delete expr;
-  expr = nullptr;
-}
-
-FieldAccess::~FieldAccess()
-{
-  delete expr;
-  expr = nullptr;
-}
-
-ArrayAccess::~ArrayAccess()
-{
-  delete expr;
-  delete indexpr;
-  expr = nullptr;
-  indexpr = nullptr;
-}
-
-Cast::~Cast()
-{
-  delete expr;
-  expr = nullptr;
-}
-
-Tuple::~Tuple()
-{
-  for (Expression *expr : *elems)
-    delete expr;
-  delete elems;
-}
-
-ExprStatement::~ExprStatement()
-{
-  delete expr;
-  expr = nullptr;
-}
-
-AssignMapStatement::~AssignMapStatement()
-{
-  // In a compound assignment, the expression owns the map so
-  // we shouldn't free
-  if (!compound)
-    delete map;
-  delete expr;
-  map = nullptr;
-  expr = nullptr;
-}
-
-AssignVarStatement::~AssignVarStatement()
-{
-  // In a compound assignment, the expression owns the map so
-  // we shouldn't free
-  if (!compound)
-    delete var;
-  delete expr;
-  var = nullptr;
-  expr = nullptr;
-}
-
-AssignConfigVarStatement::~AssignConfigVarStatement()
-{
-  delete expr;
-  expr = nullptr;
-}
-
-If::~If()
-{
-  delete cond;
-  cond = nullptr;
-
-  if (stmts)
-    for (Statement *s : *stmts)
-      delete s;
-  delete stmts;
-  stmts = nullptr;
-
-  if (else_stmts)
-    for (Statement *s : *else_stmts)
-      delete s;
-  delete else_stmts;
-  else_stmts = nullptr;
-}
-
-Unroll::~Unroll()
-{
-  if (stmts)
-    for (Statement *s : *stmts)
-      delete s;
-  delete stmts;
-  stmts = nullptr;
-}
-Jump::~Jump()
-{
-  if (return_value)
-    delete return_value;
-  return_value = nullptr;
-}
-Predicate::~Predicate()
-{
-  delete expr;
-  expr = nullptr;
-}
-Ternary::~Ternary()
-{
-  delete cond;
-  delete left;
-  delete right;
-  cond = nullptr;
-  left = nullptr;
-  right = nullptr;
-}
-
-While::~While()
-{
-  delete cond;
-  for (auto *stmt : *stmts)
-    delete stmt;
-  delete stmts;
-}
-
-For::~For()
-{
-  delete decl;
-  delete expr;
-  for (auto *stmt : *stmts)
-    delete stmt;
-  delete stmts;
-}
-
-Config::~Config()
-{
-  for (auto *stmt : *stmts)
-    delete stmt;
-  delete stmts;
-}
-
-Scope::~Scope()
-{
-  if (stmts)
-    for (auto *stmt : *stmts)
-      delete stmt;
-  delete stmts;
-  stmts = nullptr;
-}
-
-Probe::~Probe()
-{
-  if (attach_points)
-    for (AttachPoint *ap : *attach_points)
-      delete ap;
-  delete attach_points;
-  attach_points = nullptr;
-
-  delete pred;
-  pred = nullptr;
-}
-
-Subprog::~Subprog()
-{
-  if (args)
-    for (SubprogArg *a : *args)
-      delete a;
-  delete args;
-}
-
-Program::~Program()
-{
-  if (functions)
-    for (Subprog *s : *functions)
-      delete s;
-  delete functions;
-  if (probes)
-    for (Probe *p : *probes)
-      delete p;
-  delete probes;
-  probes = nullptr;
-  delete config;
-  config = nullptr;
-}
-
 Integer::Integer(int64_t n, location loc) : Expression(loc), n(n)
 {
   is_literal = true;
@@ -310,8 +90,8 @@ Call::Call(const std::string &func, location loc)
 {
 }
 
-Call::Call(const std::string &func, ExpressionList *vargs, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(vargs)
+Call::Call(const std::string &func, ExpressionList &&vargs, location loc)
+    : Expression(loc), func(is_deprecated(func)), vargs_(std::move(vargs))
 {
 }
 
@@ -340,11 +120,11 @@ Map::Map(const std::string &ident, location loc)
   is_map = true;
 }
 
-Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
-    : Expression(loc), ident(ident), vargs(vargs)
+Map::Map(const std::string &ident, ExpressionList &&vargs, location loc)
+    : Expression(loc), ident(ident), vargs_(std::move(vargs))
 {
   is_map = true;
-  for (auto expr : *vargs) {
+  for (auto expr : vargs_) {
     expr->key_for_map = this;
   }
 }
@@ -401,8 +181,8 @@ Cast::Cast(SizedType cast_type, Expression *expr, location loc)
   type = cast_type;
 }
 
-Tuple::Tuple(ExpressionList *elems, location loc)
-    : Expression(loc), elems(elems)
+Tuple::Tuple(ExpressionList &&elems, location loc)
+    : Expression(loc), elems_(std::move(elems))
 {
 }
 
@@ -411,20 +191,16 @@ ExprStatement::ExprStatement(Expression *expr, location loc)
 {
 }
 
-AssignMapStatement::AssignMapStatement(Map *map,
-                                       Expression *expr,
-                                       bool compound,
-                                       location loc)
-    : Statement(loc), map(map), expr(expr), compound(compound)
+AssignMapStatement::AssignMapStatement(Map *map, Expression *expr, location loc)
+    : Statement(loc), map(map), expr(expr)
 {
   expr->map = map;
 };
 
 AssignVarStatement::AssignVarStatement(Variable *var,
                                        Expression *expr,
-                                       bool compound,
                                        location loc)
-    : Statement(loc), var(var), expr(expr), compound(compound)
+    : Statement(loc), var(var), expr(expr)
 {
   expr->var = var;
 }
@@ -446,28 +222,31 @@ AttachPoint::AttachPoint(const std::string &raw_input, location loc)
 {
 }
 
-If::If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts)
+If::If(Expression *cond, StatementList &&stmts)
+    : cond(cond), else_stmts(nullptr), stmts_(std::move(stmts))
 {
 }
 
-If::If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
-    : cond(cond), stmts(stmts), else_stmts(else_stmts)
+If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
+    : cond(cond), stmts_(std::move(stmts)), else_stmts_(std::move(else_stmts))
 {
 }
 
-Unroll::Unroll(Expression *expr, StatementList *stmts, location loc)
-    : Statement(loc), expr(expr), stmts(stmts)
+Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
+    : Statement(loc), expr(expr), stmts_(std::move(stmts))
 {
 }
 
-Scope::Scope(StatementList *stmts) : stmts(stmts)
+Scope::Scope(StatementList &&stmts) : stmts_(std::move(stmts))
 {
 }
 
-Probe::Probe(AttachPointList *attach_points,
+Probe::Probe(AttachPointList &&attach_points,
              Predicate *pred,
-             StatementList *stmts)
-    : Scope(stmts), attach_points(attach_points), pred(pred)
+             StatementList &&stmts)
+    : Scope(std::move(stmts)),
+      pred(pred),
+      attach_points_(std::move(attach_points))
 {
 }
 
@@ -483,23 +262,23 @@ std::string SubprogArg::name() const
 
 Subprog::Subprog(std::string name,
                  SizedType return_type,
-                 SubprogArgList *args,
-                 StatementList *stmts)
-    : Scope(stmts),
-      args(args),
+                 SubprogArgList &&args,
+                 StatementList &&stmts)
+    : Scope(std::move(stmts)),
       return_type(std::move(return_type)),
-      name_(std::move(name))
+      name_(std::move(name)),
+      args_(std::move(args))
 {
 }
 
 Program::Program(const std::string &c_definitions,
                  Config *config,
-                 SubprogList *functions,
-                 ProbeList *probes)
+                 SubprogList &&functions,
+                 ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
-      functions(functions),
-      probes(probes)
+      functions_(std::move(functions)),
+      probes_(std::move(probes))
 {
 }
 

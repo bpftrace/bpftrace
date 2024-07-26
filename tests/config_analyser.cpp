@@ -26,14 +26,14 @@ void test(BPFtrace &bpftrace,
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.root.get(), bpftrace));
+  ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
-  ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, out, false);
+  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ConfigAnalyser config_analyser(driver.root.get(), bpftrace, out);
+  ast::ConfigAnalyser config_analyser(driver.ctx.root, bpftrace, out);
   EXPECT_EQ(config_analyser.analyse(), expected_result)
       << msg.str() << out.str();
   if (expected_error.data()) {

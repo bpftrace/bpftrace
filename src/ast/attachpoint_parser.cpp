@@ -52,21 +52,21 @@ std::optional<int64_t> AttachPointParser::stoll(const std::string &str)
   }
 }
 
-AttachPointParser::AttachPointParser(Program *root,
+AttachPointParser::AttachPointParser(ASTContext &ctx,
                                      BPFtrace &bpftrace,
                                      std::ostream &sink,
                                      bool listing)
-    : root_(root), bpftrace_(bpftrace), sink_(sink), listing_(listing)
+    : ctx_(ctx), bpftrace_(bpftrace), sink_(sink), listing_(listing)
 {
 }
 
 int AttachPointParser::parse()
 {
-  if (!root_)
+  if (!ctx_.root)
     return 1;
 
   uint32_t failed = 0;
-  for (Probe *probe : *(root_->probes)) {
+  for (Probe *probe : *(ctx_.root->probes)) {
     for (size_t i = 0; i < probe->attach_points->size(); ++i) {
       auto ap_ptr = (*probe->attach_points)[i];
       auto &ap = *ap_ptr;
@@ -78,7 +78,6 @@ int AttachPointParser::parse()
         LOG(ERROR, ap.loc, sink_) << errs_.str();
       } else if (s == SKIP || s == NEW_APS) {
         // Remove the current attach point
-        delete ap_ptr;
         probe->attach_points->erase(probe->attach_points->begin() + i);
         i--;
         if (s == NEW_APS) {
@@ -166,7 +165,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       // New attach points have ignore_invalid set to true - probe types for
       // which raw_input has invalid number of parts will be ignored (instead
       // of throwing an error)
-      new_attach_points.push_back(new AttachPoint(raw_input, true));
+      new_attach_points.push_back(ctx_.make_node<AttachPoint>(raw_input, true));
     }
     return NEW_APS;
   }

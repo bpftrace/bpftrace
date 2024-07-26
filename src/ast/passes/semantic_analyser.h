@@ -16,12 +16,12 @@ namespace ast {
 
 class SemanticAnalyser : public Visitor {
 public:
-  explicit SemanticAnalyser(Node *root,
+  explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
                             std::ostream &out = std::cerr,
                             bool has_child = true,
                             bool listing = false)
-      : root_(root),
+      : ctx_(ctx),
         bpftrace_(bpftrace),
         out_(out),
         listing_(listing),
@@ -29,16 +29,16 @@ public:
   {
   }
 
-  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, bool has_child)
-      : SemanticAnalyser(root, bpftrace, std::cerr, has_child)
+  explicit SemanticAnalyser(ASTContext &ctx, BPFtrace &bpftrace, bool has_child)
+      : SemanticAnalyser(ctx, bpftrace, std::cerr, has_child)
   {
   }
 
-  explicit SemanticAnalyser(Node *root,
+  explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
                             bool has_child,
                             bool listing)
-      : SemanticAnalyser(root, bpftrace, std::cerr, has_child, listing)
+      : SemanticAnalyser(ctx, bpftrace, std::cerr, has_child, listing)
   {
   }
 
@@ -79,7 +79,7 @@ public:
   int analyse();
 
 private:
-  Node *root_ = nullptr;
+  ASTContext &ctx_;
   BPFtrace &bpftrace_;
   std::ostream &out_;
   std::ostringstream err_;
