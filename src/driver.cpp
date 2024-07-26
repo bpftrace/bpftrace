@@ -81,8 +81,8 @@ void Driver::error(const std::string &m)
 std::set<std::string> Driver::list_modules() const
 {
   std::set<std::string> modules;
-  for (auto &probe : *ctx.root->probes) {
-    for (auto &ap : *probe->attach_points) {
+  for (auto &probe : ctx.root->probes) {
+    for (auto &ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
           ((probe_type == ProbeType::kprobe ||

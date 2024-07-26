@@ -194,11 +194,10 @@ public:
   Call(const std::string &func, ExpressionList &&vargs, location loc);
 
   std::string func;
-  ExpressionList *vargs = &vargs_;
+  ExpressionList vargs;
 
 private:
   Call(const Call &other) = default;
-  ExpressionList vargs_;
 };
 
 class Sizeof : public Expression {
@@ -208,7 +207,7 @@ public:
   Sizeof(SizedType type, location loc);
   Sizeof(Expression *expr, location loc);
 
-  Expression *expr;
+  Expression *expr = nullptr;
   SizedType argtype;
 
 private:
@@ -223,7 +222,7 @@ public:
   Offsetof(Expression *expr, std::string &field, location loc);
 
   SizedType record;
-  Expression *expr;
+  Expression *expr = nullptr;
   std::string field;
 
 private:
@@ -239,12 +238,11 @@ public:
 
   std::string ident;
   MapKey key_type;
-  ExpressionList *vargs = &vargs_;
+  ExpressionList vargs;
   bool skip_key_validation = false;
 
 private:
   Map(const Map &other) = default;
-  ExpressionList vargs_;
 };
 
 class Variable : public Expression {
@@ -339,11 +337,10 @@ public:
 
   Tuple(ExpressionList &&elems, location loc);
 
-  ExpressionList *elems = &elems_;
+  ExpressionList elems;
 
 private:
   Tuple(const Tuple &other) = default;
-  ExpressionList elems_;
 };
 
 class Statement : public Node {
@@ -423,13 +420,11 @@ public:
   If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
 
   Expression *cond = nullptr;
-  StatementList *stmts = &stmts_;
-  StatementList *else_stmts = &else_stmts_;
+  StatementList stmts;
+  StatementList else_stmts;
 
 private:
   If(const If &other) = default;
-  StatementList stmts_;
-  StatementList else_stmts_;
 };
 
 class Unroll : public Statement {
@@ -440,11 +435,10 @@ public:
 
   long int var = 0;
   Expression *expr = nullptr;
-  StatementList *stmts = &stmts_;
+  StatementList stmts;
 
 private:
   Unroll(const Unroll &other) = default;
-  StatementList stmts_;
 };
 
 class Jump : public Statement {
@@ -495,16 +489,15 @@ public:
   DEFINE_ACCEPT
 
   While(Expression *cond, StatementList &&stmts, location loc)
-      : Statement(loc), cond(cond), stmts_(std::move(stmts))
+      : Statement(loc), cond(cond), stmts(std::move(stmts))
   {
   }
 
   Expression *cond = nullptr;
-  StatementList *stmts = &stmts_;
+  StatementList stmts;
 
 private:
   While(const While &other) = default;
-  StatementList stmts_;
 };
 
 class For : public Statement {
@@ -512,34 +505,32 @@ public:
   DEFINE_ACCEPT
 
   For(Variable *decl, Expression *expr, StatementList &&stmts, location loc)
-      : Statement(loc), decl(decl), expr(expr), stmts_(std::move(stmts))
+      : Statement(loc), decl(decl), expr(expr), stmts(std::move(stmts))
   {
   }
 
   Variable *decl = nullptr;
   Expression *expr = nullptr;
-  StatementList *stmts = &stmts_;
+  StatementList stmts;
 
   SizedType ctx_type;
 
 private:
   For(const For &other) = default;
-  StatementList stmts_;
 };
 
 class Config : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Config(StatementList &&stmts) : stmts_(std::move(stmts))
+  Config(StatementList &&stmts) : stmts(std::move(stmts))
   {
   }
 
-  StatementList *stmts = &stmts_;
+  StatementList stmts;
 
 private:
   Config(const Config &other) = default;
-  StatementList stmts_;
 };
 
 class Scope : public Node {
@@ -547,10 +538,7 @@ public:
   Scope(StatementList &&stmts);
   virtual ~Scope() = default;
 
-  StatementList *stmts = &stmts_;
-
-private:
-  StatementList stmts_;
+  StatementList stmts;
 };
 
 class AttachPoint : public Node {
@@ -608,7 +596,7 @@ public:
         Predicate *pred,
         StatementList &&stmts);
 
-  AttachPointList *attach_points = &attach_points_;
+  AttachPointList attach_points;
   Predicate *pred = nullptr;
 
   std::string name() const;
@@ -625,7 +613,6 @@ public:
 private:
   Probe(const Probe &other) = default;
   int index_ = 0;
-  AttachPointList attach_points_;
 };
 using ProbeList = std::vector<Probe *>;
 
@@ -653,7 +640,7 @@ public:
           SubprogArgList &&args,
           StatementList &&stmts);
 
-  SubprogArgList *args = &args_;
+  SubprogArgList args;
   SizedType return_type;
 
   std::string name() const;
@@ -661,7 +648,6 @@ public:
 private:
   Subprog(const Subprog &other) = default;
   std::string name_;
-  SubprogArgList args_;
 };
 using SubprogList = std::vector<Subprog *>;
 
@@ -676,13 +662,11 @@ public:
 
   std::string c_definitions;
   Config *config = nullptr;
-  SubprogList *functions = &functions_;
-  ProbeList *probes = &probes_;
+  SubprogList functions;
+  ProbeList probes;
 
 private:
   Program(const Program &other) = default;
-  SubprogList functions_;
-  ProbeList probes_;
 };
 
 std::string opstr(const Binop &binop);

@@ -1983,7 +1983,7 @@ std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
       // Positional parameters in the form str($1) can be used as literals
       if (str_call->func == "str") {
         if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                str_call->vargs->at(0)))
+                str_call->vargs.at(0)))
           return get_param(pos_param->n, true);
       }
     }
@@ -2154,8 +2154,8 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
  */
 void BPFtrace::kfunc_recursion_check(ast::Program *prog)
 {
-  for (auto *probe : *prog->probes) {
-    for (auto *ap : *probe->attach_points) {
+  for (auto *probe : prog->probes) {
+    for (auto *ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
         auto matches = probe_matcher_->get_matches_for_ap(*ap);

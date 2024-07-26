@@ -17,7 +17,7 @@ std::set<std::string> TracepointFormatParser::struct_list;
 bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   std::vector<ast::Probe *> probes_with_tracepoint;
-  for (ast::Probe *probe : *program->probes) {
+  for (ast::Probe *probe : program->probes) {
     if (probe->has_ap_of_probetype(ProbeType::tracepoint))
       probes_with_tracepoint.push_back(probe);
   }
@@ -31,7 +31,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
   for (ast::Probe *probe : probes_with_tracepoint) {
     n.visit(*probe);
 
-    for (ast::AttachPoint *ap : *probe->attach_points) {
+    for (ast::AttachPoint *ap : probe->attach_points) {
       if (ap->provider == "tracepoint") {
         std::string &category = ap->target;
         std::string &event_name = ap->func;
@@ -96,7 +96,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 
             // Do not fail if trying to attach to multiple tracepoints
             // (at least one of them could succeed)
-            bool fail = probe->attach_points->size() == 1;
+            bool fail = probe->attach_points.size() == 1;
             auto msg = "tracepoint not found: " + category + ":" + event_name;
             if (fail)
               LOG(ERROR, ap->loc, std::cerr) << msg;

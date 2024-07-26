@@ -110,10 +110,8 @@ void Printer::visit(Call &call)
   out_ << indent << "call: " << call.func << type(call.type) << std::endl;
 
   ++depth_;
-  if (call.vargs) {
-    for (Expression *expr : *call.vargs) {
-      expr->accept(*this);
-    }
+  for (Expression *expr : call.vargs) {
+    expr->accept(*this);
   }
   --depth_;
 }
@@ -154,10 +152,8 @@ void Printer::visit(Map &map)
   out_ << indent << "map: " << map.ident << type(map.type) << std::endl;
 
   ++depth_;
-  if (map.vargs) {
-    for (Expression *expr : *map.vargs) {
-      expr->accept(*this);
-    }
+  for (Expression *expr : map.vargs) {
+    expr->accept(*this);
   }
   --depth_;
 }
@@ -250,7 +246,7 @@ void Printer::visit(Tuple &tuple)
   out_ << indent << "tuple:" << std::endl;
 
   ++depth_;
-  for (Expression *expr : *tuple.elems)
+  for (Expression *expr : tuple.elems)
     expr->accept(*this);
   --depth_;
 }
@@ -306,13 +302,13 @@ void Printer::visit(If &if_block)
   ++depth_;
   out_ << indent << " then" << std::endl;
 
-  for (Statement *stmt : *if_block.stmts) {
+  for (Statement *stmt : if_block.stmts) {
     stmt->accept(*this);
   }
 
-  if (if_block.else_stmts) {
+  if (!if_block.else_stmts.empty()) {
     out_ << indent << " else" << std::endl;
-    for (Statement *stmt : *if_block.else_stmts) {
+    for (Statement *stmt : if_block.else_stmts) {
       stmt->accept(*this);
     }
   }
@@ -329,7 +325,7 @@ void Printer::visit(Unroll &unroll)
   out_ << indent << " block" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : *unroll.stmts) {
+  for (Statement *stmt : unroll.stmts) {
     stmt->accept(*this);
   }
   depth_ -= 2;
@@ -347,7 +343,7 @@ void Printer::visit(While &while_block)
   ++depth_;
   out_ << indent << " )" << std::endl;
 
-  for (Statement *stmt : *while_block.stmts) {
+  for (Statement *stmt : while_block.stmts) {
     stmt->accept(*this);
   }
 }
@@ -373,7 +369,7 @@ void Printer::visit(For &for_loop)
   print(for_loop.expr);
 
   out_ << indent << " stmts\n";
-  for (Statement *stmt : *for_loop.stmts) {
+  for (Statement *stmt : for_loop.stmts) {
     print(stmt);
   }
   --depth_;
@@ -386,7 +382,7 @@ void Printer::visit(Config &config)
   out_ << indent << "config" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : *config.stmts) {
+  for (Statement *stmt : config.stmts) {
     stmt->accept(*this);
   }
   --depth_;
@@ -421,7 +417,7 @@ void Printer::visit(AttachPoint &ap)
 
 void Printer::visit(Probe &probe)
 {
-  for (AttachPoint *ap : *probe.attach_points) {
+  for (AttachPoint *ap : probe.attach_points) {
     ap->accept(*this);
   }
 
@@ -429,7 +425,7 @@ void Printer::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  for (Statement *stmt : *probe.stmts) {
+  for (Statement *stmt : probe.stmts) {
     stmt->accept(*this);
   }
   --depth_;
@@ -441,16 +437,16 @@ void Printer::visit(Subprog &subprog)
   out_ << indent << subprog.name() << ": " << subprog.return_type;
 
   out_ << "(";
-  for (size_t i = 0; i < subprog.args->size(); i++) {
-    auto &arg = subprog.args->at(i);
+  for (size_t i = 0; i < subprog.args.size(); i++) {
+    auto &arg = subprog.args.at(i);
     out_ << arg->name() << " : " << arg->type;
-    if (i < subprog.args->size() - 1)
+    if (i < subprog.args.size() - 1)
       out_ << ", ";
   }
   out_ << ")" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : *subprog.stmts) {
+  for (Statement *stmt : subprog.stmts) {
     stmt->accept(*this);
   }
   --depth_;
@@ -471,9 +467,9 @@ void Printer::visit(Program &program)
   }
 
   ++depth_;
-  for (Subprog *subprog : *program.functions)
+  for (Subprog *subprog : program.functions)
     subprog->accept(*this);
-  for (Probe *probe : *program.probes)
+  for (Probe *probe : program.probes)
     probe->accept(*this);
   --depth_;
 }

@@ -86,17 +86,16 @@ PositionalParameter::PositionalParameter(PositionalParameterType ptype,
 }
 
 Call::Call(const std::string &func, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
+    : Expression(loc), func(is_deprecated(func))
 {
 }
 
 Call::Call(const std::string &func, ExpressionList &&vargs, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs_(std::move(vargs))
+    : Expression(loc), func(is_deprecated(func)), vargs(std::move(vargs))
 {
 }
 
-Sizeof::Sizeof(SizedType type, location loc)
-    : Expression(loc), expr(nullptr), argtype(type)
+Sizeof::Sizeof(SizedType type, location loc) : Expression(loc), argtype(type)
 {
 }
 
@@ -105,7 +104,7 @@ Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
 }
 
 Offsetof::Offsetof(SizedType record, std::string &field, location loc)
-    : Expression(loc), record(record), expr(nullptr), field(field)
+    : Expression(loc), record(record), field(field)
 {
 }
 
@@ -114,17 +113,16 @@ Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
 {
 }
 
-Map::Map(const std::string &ident, location loc)
-    : Expression(loc), ident(ident), vargs(nullptr)
+Map::Map(const std::string &ident, location loc) : Expression(loc), ident(ident)
 {
   is_map = true;
 }
 
-Map::Map(const std::string &ident, ExpressionList &&vargs, location loc)
-    : Expression(loc), ident(ident), vargs_(std::move(vargs))
+Map::Map(const std::string &ident, ExpressionList &&vargs_, location loc)
+    : Expression(loc), ident(ident), vargs(std::move(vargs_))
 {
   is_map = true;
-  for (auto expr : vargs_) {
+  for (auto *expr : vargs) {
     expr->key_for_map = this;
   }
 }
@@ -182,7 +180,7 @@ Cast::Cast(SizedType cast_type, Expression *expr, location loc)
 }
 
 Tuple::Tuple(ExpressionList &&elems, location loc)
-    : Expression(loc), elems_(std::move(elems))
+    : Expression(loc), elems(std::move(elems))
 {
 }
 
@@ -223,21 +221,21 @@ AttachPoint::AttachPoint(const std::string &raw_input, location loc)
 }
 
 If::If(Expression *cond, StatementList &&stmts)
-    : cond(cond), else_stmts(nullptr), stmts_(std::move(stmts))
+    : cond(cond), stmts(std::move(stmts))
 {
 }
 
 If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
-    : cond(cond), stmts_(std::move(stmts)), else_stmts_(std::move(else_stmts))
+    : cond(cond), stmts(std::move(stmts)), else_stmts(std::move(else_stmts))
 {
 }
 
 Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
-    : Statement(loc), expr(expr), stmts_(std::move(stmts))
+    : Statement(loc), expr(expr), stmts(std::move(stmts))
 {
 }
 
-Scope::Scope(StatementList &&stmts) : stmts_(std::move(stmts))
+Scope::Scope(StatementList &&stmts) : stmts(std::move(stmts))
 {
 }
 
@@ -245,8 +243,8 @@ Probe::Probe(AttachPointList &&attach_points,
              Predicate *pred,
              StatementList &&stmts)
     : Scope(std::move(stmts)),
-      pred(pred),
-      attach_points_(std::move(attach_points))
+      attach_points(std::move(attach_points)),
+      pred(pred)
 {
 }
 
@@ -265,9 +263,9 @@ Subprog::Subprog(std::string name,
                  SubprogArgList &&args,
                  StatementList &&stmts)
     : Scope(std::move(stmts)),
+      args(std::move(args)),
       return_type(std::move(return_type)),
-      name_(std::move(name)),
-      args_(std::move(args))
+      name_(std::move(name))
 {
 }
 
@@ -277,8 +275,8 @@ Program::Program(const std::string &c_definitions,
                  ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
-      functions_(std::move(functions)),
-      probes_(std::move(probes))
+      functions(std::move(functions)),
+      probes(std::move(probes))
 {
 }
 
@@ -456,8 +454,8 @@ void AttachPoint::set_index(int index)
 std::string Probe::name() const
 {
   std::vector<std::string> ap_names;
-  std::transform(attach_points->begin(),
-                 attach_points->end(),
+  std::transform(attach_points.begin(),
+                 attach_points.end(),
                  std::back_inserter(ap_names),
                  [](const AttachPoint *ap) { return ap->name(); });
   return str_join(ap_names, ",");
@@ -485,9 +483,7 @@ std::string Subprog::name() const
 
 bool Probe::has_ap_of_probetype(ProbeType probe_type)
 {
-  if (!attach_points)
-    return false;
-  for (auto ap : *attach_points) {
+  for (auto *ap : attach_points) {
     if (probetype(ap->provider) == probe_type)
       return true;
   }

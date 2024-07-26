@@ -38,7 +38,7 @@ private:
    * and update the input files with the definitions.
    */
   void resolve_incomplete_types_from_btf(BPFtrace &bpftrace,
-                                         const ast::ProbeList *probes);
+                                         const ast::ProbeList &probes);
 
   /*
    * Collect names of types defined by typedefs that are in non-included

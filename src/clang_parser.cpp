@@ -495,14 +495,14 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types()
 
 void ClangParser::resolve_incomplete_types_from_btf(
     BPFtrace &bpftrace,
-    const ast::ProbeList *probes)
+    const ast::ProbeList &probes)
 {
   // Resolution of incomplete types must run at least once, maximum should be
   // the number of levels of nested field accesses for tracepoint args.
   // The maximum number of iterations can be also controlled by the
   // BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable (0 is unlimited).
   uint64_t field_lvl = 1;
-  for (auto &probe : *probes)
+  for (auto &probe : probes)
     if (probe->tp_args_structs_level > (int)field_lvl)
       field_lvl = probe->tp_args_structs_level;
 

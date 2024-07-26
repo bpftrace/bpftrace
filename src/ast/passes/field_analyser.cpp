@@ -63,10 +63,8 @@ void FieldAnalyser::visit(Builtin &builtin)
 void FieldAnalyser::visit(Map &map)
 {
   MapKey key;
-  if (map.vargs) {
-    for (Expression *expr : *map.vargs) {
-      Visit(*expr);
-    }
+  for (Expression *expr : map.vargs) {
+    Visit(*expr);
   }
 
   auto it = var_types_.find(map.ident);
@@ -169,7 +167,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
 {
   // load probe arguments into a special record type "struct <probename>_args"
   Struct probe_args;
-  for (auto *ap : *probe.attach_points) {
+  for (auto *ap : probe.attach_points) {
     auto probe_type = probetype(ap->provider);
     if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
         probe_type != ProbeType::uprobe)
@@ -272,7 +270,7 @@ void FieldAnalyser::resolve_fields(SizedType &type)
     return;
 
   if (probe_) {
-    for (auto &ap : *probe_->attach_points)
+    for (auto &ap : probe_->attach_points)
       if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
         dwarf->resolve_fields(type);
   }
@@ -293,7 +291,7 @@ void FieldAnalyser::resolve_type(SizedType &type)
   auto name = inner_type->GetName();
 
   if (probe_) {
-    for (auto &ap : *probe_->attach_points)
+    for (auto &ap : probe_->attach_points)
       if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
         sized_type_ = dwarf->get_stype(name);
   }
@@ -310,7 +308,7 @@ void FieldAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
 
-  for (AttachPoint *ap : *probe.attach_points) {
+  for (AttachPoint *ap : probe.attach_points) {
     probe_type_ = probetype(ap->provider);
     prog_type_ = progtype(probe_type_);
     attach_func_ = ap->func;
@@ -318,7 +316,7 @@ void FieldAnalyser::visit(Probe &probe)
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  for (Statement *stmt : *probe.stmts) {
+  for (Statement *stmt : probe.stmts) {
     Visit(*stmt);
   }
 }
@@ -327,7 +325,7 @@ void FieldAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
 
-  for (Statement *stmt : *subprog.stmts) {
+  for (Statement *stmt : subprog.stmts) {
     Visit(*stmt);
   }
 }
