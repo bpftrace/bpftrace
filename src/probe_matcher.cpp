@@ -445,8 +445,8 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
 
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
-  for (auto* probe : *prog->probes) {
-    for (auto* ap : *probe->attach_points) {
+  for (auto* probe : prog->probes) {
+    for (auto* ap : probe->attach_points) {
       auto matches = get_matches_for_ap(*ap);
       auto probe_type = probetype(ap->provider);
       FuncParamLists param_lists;

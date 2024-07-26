@@ -502,11 +502,11 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "sum") {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+                             call.vargs.front()->type.IsSigned());
     b_.CreateMapElemAdd(ctx_, map, key, expr_, call.loc);
     expr_ = nullptr;
   } else if (call.func == "max" || call.func == "min") {
@@ -517,11 +517,11 @@ void CodegenLLVM::visit(Call &call)
 
     CallInst *lookup = b_.CreateMapLookup(map, key);
 
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+                             call.vargs.front()->type.IsSigned());
 
     llvm::Type *mm_struct_ty = b_.GetMapValueType(map.type);
 
@@ -625,11 +625,11 @@ void CodegenLLVM::visit(Call &call)
 
     CallInst *lookup = b_.CreateMapLookup(map, key);
 
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+                             call.vargs.front()->type.IsSigned());
 
     llvm::Type *avg_struct_ty = b_.GetMapValueType(map.type);
 
@@ -705,14 +705,14 @@ void CodegenLLVM::visit(Call &call)
     // as an argument even though it is a constant 0..5
     // Possible optimization is create one function per different value
     // of the second argument.
-    auto scoped_del_arg2 = accept(call.vargs->at(1));
+    auto scoped_del_arg2 = accept(call.vargs.at(1));
     Value *k = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+                             call.vargs.front()->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr_, k }, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
@@ -723,13 +723,13 @@ void CodegenLLVM::visit(Call &call)
       linear_func_ = createLinearFunction();
 
     Map &map = *call.map;
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
 
     // prepare arguments
-    auto *value_arg = call.vargs->at(0);
-    auto *min_arg = call.vargs->at(1);
-    auto *max_arg = call.vargs->at(2);
-    auto *step_arg = call.vargs->at(3);
+    auto *value_arg = call.vargs.at(0);
+    auto *min_arg = call.vargs.at(1);
+    auto *max_arg = call.vargs.at(2);
+    auto *step_arg = call.vargs.at(3);
     Value *value, *min, *max, *step;
     auto scoped_del_value_arg = accept(value_arg);
     value = expr_;
@@ -743,7 +743,7 @@ void CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     value = b_.CreateIntCast(value,
                              b_.getInt64Ty(),
-                             call.vargs->front()->type.IsSigned());
+                             call.vargs.front()->type.IsSigned());
     min = b_.CreateIntCast(min, b_.getInt64Ty(), false);
     max = b_.CreateIntCast(max, b_.getInt64Ty(), false);
     step = b_.CreateIntCast(step, b_.getInt64Ty(), false);
@@ -758,7 +758,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   } else if (call.func == "delete") {
-    for (const auto &arg : *call.vargs) {
+    for (const auto &arg : call.vargs) {
       auto &map = static_cast<Map &>(*arg);
       auto [key, scoped_key_deleter] = getMapKey(map);
       if (!is_bpf_map_clearable(map_types_[map.ident])) {
@@ -776,8 +776,8 @@ void CodegenLLVM::visit(Call &call)
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     // Largest read we'll allow = our global string buffer size
     Value *strlen = b_.getInt64(max_strlen);
-    if (call.vargs->size() > 1) {
-      auto scoped_del = accept(call.vargs->at(1));
+    if (call.vargs.size() > 1) {
+      auto scoped_del = accept(call.vargs.at(1));
       expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
       Value *proposed_strlen = b_.CreateAdd(expr_,
                                             b_.getInt64(1)); // add 1 to
@@ -796,8 +796,8 @@ void CodegenLLVM::visit(Call &call)
 
     Value *buf = b_.CreateGetStrScratchMap(async_ids_.str(), nullptr, call.loc);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
-    auto arg0 = call.vargs->front();
-    auto scoped_del = accept(call.vargs->front());
+    auto arg0 = call.vargs.front();
+    auto scoped_del = accept(call.vargs.front());
     b_.CreateProbeReadStr(
         ctx_, buf, strlen, expr_, arg0->type.GetAS(), call.loc);
 
@@ -809,8 +809,8 @@ void CodegenLLVM::visit(Call &call)
     Value *max_length = b_.getInt64(fixed_buffer_length);
     Value *length;
 
-    if (call.vargs->size() > 1) {
-      auto &arg = *call.vargs->at(1);
+    if (call.vargs.size() > 1) {
+      auto &arg = *call.vargs.at(1);
       auto scoped_del = accept(&arg);
 
       Value *proposed_length = expr_;
@@ -824,7 +824,7 @@ void CodegenLLVM::visit(Call &call)
       if (arg.is_literal)
         fixed_buffer_length = *bpftrace_.get_int_literal(&arg);
     } else {
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       fixed_buffer_length = arg.type.GetNumElements() *
                             arg.type.GetElementTy()->GetSize();
       length = b_.getInt32(fixed_buffer_length);
@@ -852,8 +852,8 @@ void CodegenLLVM::visit(Call &call)
                                           { b_.getInt32(0), b_.getInt32(1) });
     b_.CreateMemsetBPF(buf_data_offset, b_.getInt8(0), fixed_buffer_length);
 
-    auto scoped_del = accept(call.vargs->front());
-    auto arg0 = call.vargs->front();
+    auto scoped_del = accept(call.vargs.front());
+    auto arg0 = call.vargs.front();
     // arg0 is already on the bpf stack -> use memcpy
     // otherwise -> probe read in addrspace of arg0->type
     // case : struct MyStruct { char b[4]; };
@@ -874,7 +874,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
                        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
-    call.vargs->front()->accept(*this);
+    call.vargs.front()->accept(*this);
     b_.CreatePath(ctx_,
                   buf,
                   b_.CreateCast(expr_->getType()->isPointerTy()
@@ -886,13 +886,13 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
   } else if (call.func == "kaddr") {
     uint64_t addr;
-    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
+    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
       throw FatalUserException("Failed to resolve kernel symbol: " + name);
     expr_ = b_.getInt64(addr);
   } else if (call.func == "uaddr") {
-    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
+    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
     struct symbol sym = {};
     int err = bpftrace_.resolve_uname(name,
                                       &sym,
@@ -903,11 +903,11 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.getInt64(sym.address);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
-    auto path = bpftrace_.get_string_literal(call.vargs->at(0));
+    auto path = bpftrace_.get_string_literal(call.vargs.at(0));
     cgroupid = bpftrace_.resolve_cgroupid(path);
     expr_ = b_.getInt64(cgroupid);
   } else if (call.func == "join") {
-    auto arg0 = call.vargs->front();
+    auto arg0 = call.vargs.front();
     auto scoped_del = accept(arg0);
     auto addrspace = arg0->type.GetAS();
 
@@ -971,9 +971,9 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "ksym") {
     // We want expr_ to just pass through from the child node - don't set it
     // here
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
   } else if (call.func == "usym") {
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
     expr_ = b_.CreateUSym(expr_, get_probe_id(), call.loc);
   } else if (call.func == "ntop") {
     // struct {
@@ -995,16 +995,16 @@ void CodegenLLVM::visit(Call &call)
                                     { b_.getInt64(0), b_.getInt32(0) });
     Value *af_type;
 
-    auto inet = call.vargs->at(0);
-    if (call.vargs->size() == 1) {
+    auto inet = call.vargs.at(0);
+    if (call.vargs.size() == 1) {
       if (inet->type.IsIntegerTy() || inet->type.GetSize() == 4) {
         af_type = b_.getInt64(AF_INET);
       } else {
         af_type = b_.getInt64(AF_INET6);
       }
     } else {
-      inet = call.vargs->at(1);
-      auto scoped_del = accept(call.vargs->at(0));
+      inet = call.vargs.at(1);
+      auto scoped_del = accept(call.vargs.at(0));
       af_type = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
     }
     b_.CreateStore(af_type, af_offset);
@@ -1032,7 +1032,7 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "pton") {
     auto af_type = AF_INET;
     int addr_size = 4;
-    std::string addr = bpftrace_.get_string_literal(call.vargs->at(0));
+    std::string addr = bpftrace_.get_string_literal(call.vargs.at(0));
     if (addr.find(":") != std::string::npos) {
       af_type = AF_INET6;
       addr_size = 16;
@@ -1063,7 +1063,7 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "reg") {
-    auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
+    auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
     int offset = arch::offset(reg_name);
     if (offset == -1) {
       throw FatalUserException("negative offset on reg() call");
@@ -1074,7 +1074,7 @@ void CodegenLLVM::visit(Call &call)
     // We overload printf call for iterator probe's seq_printf helper.
     if (!inside_subprog_ &&
         probetype(current_attach_point_->provider) == ProbeType::iter) {
-      auto nargs = call.vargs->size() - 1;
+      auto nargs = call.vargs.size() - 1;
 
       int ptr_size = sizeof(unsigned long);
       int data_size = 0;
@@ -1083,9 +1083,9 @@ void CodegenLLVM::visit(Call &call)
       SizedType data_type = CreateArray(nargs, CreateUInt64());
       AllocaInst *data = b_.CreateAllocaBPFInit(data_type, "data");
 
-      for (size_t i = 1; i < call.vargs->size(); i++) {
+      for (size_t i = 1; i < call.vargs.size(); i++) {
         // process argument expression
-        Expression &arg = *call.vargs->at(i);
+        Expression &arg = *call.vargs.at(i);
         auto scoped_del = accept(&arg);
 
         // and store it to data area
@@ -1127,8 +1127,8 @@ void CodegenLLVM::visit(Call &call)
     auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
 
     std::vector<Value *> values;
-    for (size_t i = 1; i < call.vargs->size(); i++) {
-      Expression &arg = *call.vargs->at(i);
+    for (size_t i = 1; i < call.vargs.size(); i++) {
+      Expression &arg = *call.vargs.at(i);
       auto scoped_del = accept(&arg);
       values.push_back(expr_);
     }
@@ -1170,10 +1170,10 @@ void CodegenLLVM::visit(Call &call)
                                               b_.GetInsertBlock()->getParent());
     b_.SetInsertPoint(deadcode);
   } else if (call.func == "print") {
-    if (call.vargs->at(0)->is_map) {
-      auto &arg = *call.vargs->at(0);
+    if (call.vargs.at(0)->is_map) {
+      auto &arg = *call.vargs.at(0);
       auto &map = static_cast<Map &>(arg);
-      if (!map.vargs)
+      if (map.vargs.size() == 0)
         createPrintMapCall(call);
       else
         createPrintNonMapCall(call, async_ids_.non_map_print());
@@ -1194,7 +1194,7 @@ void CodegenLLVM::visit(Call &call)
                                 { b_.getInt64(0), b_.getInt32(0) }));
 
     // Store cgroup id
-    auto arg = call.vargs->at(0);
+    auto arg = call.vargs.at(0);
     auto scoped_del = accept(arg);
     b_.CreateStore(expr_,
                    b_.CreateGEP(cgroup_path_struct,
@@ -1208,7 +1208,7 @@ void CodegenLLVM::visit(Call &call)
                                                 elements,
                                                 true);
 
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
     AllocaInst *buf = b_.CreateAllocaBPF(event_struct,
@@ -1239,7 +1239,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   } else if (call.func == "len") {
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
     AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
@@ -1287,7 +1287,7 @@ void CodegenLLVM::visit(Call &call)
                 call.type.ts_mode),
             elements.at(1)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    Expression *arg = call.vargs->at(1);
+    Expression *arg = call.vargs.at(1);
     auto scoped_del = accept(arg);
     b_.CreateStore(
         expr_,
@@ -1297,7 +1297,7 @@ void CodegenLLVM::visit(Call &call)
     kstack_ustack(call.func, call.type.stack_type, call.loc);
   } else if (call.func == "signal") {
     // long bpf_send_signal(u32 sig)
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     if (arg.type.IsStringTy()) {
       auto signame = bpftrace_.get_string_literal(&arg);
       int sigid = signal_name_to_num(signame);
@@ -1312,11 +1312,11 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.IsSigned());
     b_.CreateSignal(ctx_, expr_, call.loc);
   } else if (call.func == "strerror") {
-    auto scoped_del = accept(call.vargs->front());
+    auto scoped_del = accept(call.vargs.front());
   } else if (call.func == "strncmp") {
-    uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs->at(2));
-    const auto &left_arg = call.vargs->at(0);
-    const auto &right_arg = call.vargs->at(1);
+    uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs.at(2));
+    const auto &left_arg = call.vargs.at(0);
+    const auto &right_arg = call.vargs.at(1);
 
     auto left_string = getString(left_arg);
     auto right_string = getString(right_arg);
@@ -1324,8 +1324,8 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateStrncmp(
         left_string.first, right_string.first, size, false);
   } else if (call.func == "strcontains") {
-    const auto &left_arg = call.vargs->at(0);
-    const auto &right_arg = call.vargs->at(1);
+    const auto &left_arg = call.vargs.at(0);
+    const auto &right_arg = call.vargs.at(1);
 
     auto left_string = getString(left_arg);
     auto right_string = getString(right_arg);
@@ -1338,17 +1338,17 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     auto scoped_del = accept(&arg);
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.IsSigned());
     b_.CreateOverrideReturn(ctx_, expr_);
   } else if (call.func == "kptr" || call.func == "uptr") {
-    auto arg = call.vargs->at(0);
+    auto arg = call.vargs.at(0);
     auto scoped_del = accept(arg);
   } else if (call.func == "macaddr") {
     // MAC addresses are presented as char[6]
     AllocaInst *buf = b_.CreateAllocaBPFInit(call.type, "macaddr");
-    auto macaddr = call.vargs->front();
+    auto macaddr = call.vargs.front();
     auto scoped_del = accept(macaddr);
 
     if (onStack(macaddr->type))
@@ -1360,7 +1360,7 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "unwatch") {
-    Expression *addr = call.vargs->at(0);
+    Expression *addr = call.vargs.at(0);
     addr->accept(*this);
 
     auto elements = AsyncEvent::WatchpointUnwatch().asLLVMType(b_);
@@ -1378,7 +1378,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   } else if (call.func == "bswap") {
-    bpftrace::ast::Expression *arg = call.vargs->at(0);
+    bpftrace::ast::Expression *arg = call.vargs.at(0);
     auto scoped_del_arg = accept(arg);
 
     assert(arg->type.IsIntegerTy());
@@ -1411,11 +1411,11 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(async_ids_.skb_output()), id_addr);
     b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
 
-    auto &arg_skb = *call.vargs->at(1);
+    auto &arg_skb = *call.vargs.at(1);
     arg_skb.accept(*this);
     Value *skb = expr_;
 
-    auto &arg_len = *call.vargs->at(2);
+    auto &arg_len = *call.vargs.at(2);
     arg_len.accept(*this);
     Value *len = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 
@@ -2242,9 +2242,9 @@ void CodegenLLVM::visit(Tuple &tuple)
 
   std::vector<std::pair<llvm::Value *, const location *>> vals;
   std::vector<ScopedExprDeleter> scoped_dels;
-  vals.reserve(tuple.elems->size());
+  vals.reserve(tuple.elems.size());
 
-  for (Expression *elem : *tuple.elems) {
+  for (Expression *elem : tuple.elems) {
     scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
@@ -2382,7 +2382,7 @@ void CodegenLLVM::visit(If &if_block)
   // if condition is false, with else
   //   parent -> if_else -> if_end
   //
-  if (if_block.else_stmts) {
+  if (!if_block.else_stmts.empty()) {
     // LLVM doesn't accept empty basic block, only create when needed
     if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
     b_.CreateCondBr(cond, if_true, if_else);
@@ -2391,16 +2391,16 @@ void CodegenLLVM::visit(If &if_block)
   }
 
   b_.SetInsertPoint(if_true);
-  for (Statement *stmt : *if_block.stmts)
+  for (Statement *stmt : if_block.stmts)
     auto scoped_del = accept(stmt);
 
   b_.CreateBr(if_end);
 
   b_.SetInsertPoint(if_end);
 
-  if (if_block.else_stmts) {
+  if (!if_block.else_stmts.empty()) {
     b_.SetInsertPoint(if_else);
-    for (Statement *stmt : *if_block.else_stmts)
+    for (Statement *stmt : if_block.else_stmts)
       auto scoped_del = accept(stmt);
 
     b_.CreateBr(if_end);
@@ -2415,7 +2415,7 @@ void CodegenLLVM::visit(Unroll &unroll)
     // the same async calls multiple times.
     auto reset_ids = async_ids_.create_reset_ids();
 
-    for (Statement *stmt : *unroll.stmts) {
+    for (Statement *stmt : unroll.stmts) {
       auto scoped_del = accept(stmt);
     }
 
@@ -2498,7 +2498,7 @@ void CodegenLLVM::visit(While &while_block)
   loop_hdr->setMetadata(LLVMContext::MD_loop, loop_metadata_);
 
   b_.SetInsertPoint(while_body);
-  for (Statement *stmt : *while_block.stmts) {
+  for (Statement *stmt : while_block.stmts) {
     auto scoped_del = accept(stmt);
   }
   b_.CreateBr(while_cond);
@@ -2615,7 +2615,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
     auto scoped_del = accept(probe.pred);
   }
   variables_.clear();
-  for (Statement *stmt : *probe.stmts) {
+  for (Statement *stmt : probe.stmts) {
     auto scoped_del = accept(stmt);
   }
 
@@ -2677,8 +2677,8 @@ void CodegenLLVM::visit(Subprog &subprog)
   // First argument is for passing ctx pointer for output, rest are proper
   // arguments to the function
   arg_types.push_back(b_.GET_PTR_TY());
-  std::transform(subprog.args->begin(),
-                 subprog.args->end(),
+  std::transform(subprog.args.begin(),
+                 subprog.args.end(),
                  std::back_inserter(arg_types),
                  [this](SubprogArg *arg) { return b_.GetType(arg->type); });
   FunctionType *func_type = FunctionType::get(b_.GetType(subprog.return_type),
@@ -2695,7 +2695,7 @@ void CodegenLLVM::visit(Subprog &subprog)
   inside_subprog_ = true;
 
   int arg_index = 0;
-  for (SubprogArg *arg : *subprog.args) {
+  for (SubprogArg *arg : subprog.args) {
     auto alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name());
     b_.CreateStore(func->getArg(arg_index + 1), alloca);
     variables_[arg->name()] = VariableLLVM{ alloca,
@@ -2703,7 +2703,7 @@ void CodegenLLVM::visit(Subprog &subprog)
     ++arg_index;
   }
 
-  for (Statement *stmt : *subprog.stmts) {
+  for (Statement *stmt : subprog.stmts) {
     auto scoped_del = accept(stmt);
   }
   if (subprog.return_type.IsVoidTy())
@@ -2782,7 +2782,7 @@ void CodegenLLVM::visit(Probe &probe)
   // can restore it for the next pass (printf_id_, time_id_).
   auto reset_ids = async_ids_.create_reset_ids();
   bool generated = false;
-  for (auto *attach_point : *probe.attach_points) {
+  for (auto *attach_point : probe.attach_points) {
     reset_ids();
     current_attach_point_ = attach_point;
     if (probe.need_expansion ||
@@ -2829,10 +2829,9 @@ void CodegenLLVM::visit(Probe &probe)
 
 void CodegenLLVM::visit(Program &program)
 {
-  if (program.functions)
-    for (Subprog *subprog : *program.functions)
-      auto scoped_del = accept(subprog);
-  for (Probe *probe : *program.probes)
+  for (Subprog *subprog : program.functions)
+    auto scoped_del = accept(subprog);
+  for (Probe *probe : program.probes)
     auto scoped_del = accept(probe);
 }
 
@@ -2846,10 +2845,10 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
 {
   Value *key;
   bool alloca_created_here = true;
-  if (map.vargs) {
+  if (map.vargs.size() > 0) {
     // A single value as a map key (e.g., @[comm] = 0;)
-    if (map.vargs->size() == 1) {
-      Expression *expr = map.vargs->at(0);
+    if (map.vargs.size() == 1) {
+      Expression *expr = map.vargs.at(0);
       auto scoped_del = accept(expr);
       if (onStack(expr->type)) {
         auto &key_type = map.key_type.args_[0];
@@ -2915,7 +2914,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   bool aligned = true;
   int i = 0;
   // Construct a map key in the stack
-  for (Expression *expr : *map.vargs) {
+  for (Expression *expr : map.vargs) {
     auto scoped_del = accept(expr);
     Value *offset_val = b_.CreateGEP(key_type,
                                      key,
@@ -2969,7 +2968,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
 AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
-  if (map.vargs)
+  if (map.vargs.size() > 0)
     return getMultiMapKey(map, { log2 });
 
   AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
@@ -3356,8 +3355,8 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                   { b_.getInt32(0), b_.getInt32(0) });
   b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
 
-  for (size_t i = 1; i < call.vargs->size(); i++) {
-    Expression &arg = *call.vargs->at(i);
+  for (size_t i = 1; i < call.vargs.size(); i++) {
+    Expression &arg = *call.vargs.at(i);
     auto scoped_del = accept(&arg);
     Value *offset = b_.CreateGEP(fmt_struct,
                                  fmt_args,
@@ -3433,7 +3432,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   auto elements = AsyncEvent::Print().asLLVMType(b_);
   StructType *print_struct = b_.GetStructType(call.func + "_t", elements, true);
 
-  auto &arg = *call.vargs->at(0);
+  auto &arg = *call.vargs.at(0);
   auto &map = static_cast<Map &>(arg);
 
   AllocaInst *buf = b_.CreateAllocaBPF(print_struct,
@@ -3457,8 +3456,8 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   // first loops sets the arguments as passed by user. The second one zeros
   // the rest
   size_t arg_idx = 1;
-  for (; arg_idx < call.vargs->size(); arg_idx++) {
-    auto scoped_del = accept(call.vargs->at(arg_idx));
+  for (; arg_idx < call.vargs.size(); arg_idx++) {
+    auto scoped_del = accept(call.vargs.at(arg_idx));
 
     b_.CreateStore(b_.CreateIntCast(expr_, elements.at(arg_idx), false),
                    b_.CreateGEP(print_struct,
@@ -3480,7 +3479,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
 
 void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 {
-  auto &arg = *call.vargs->at(0);
+  auto &arg = *call.vargs.at(0);
   auto scoped_del = accept(&arg);
 
   auto elements = AsyncEvent::PrintNonMap().asLLVMType(b_, arg.type.GetSize());
@@ -4306,7 +4305,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   // used before. This is a hack to simulate block scoping in the absence of the
   // real thing (#3017).
   CollectNodes<Variable> new_vars;
-  for (auto *stmt : *f.stmts) {
+  for (auto *stmt : f.stmts) {
     new_vars.run(*stmt, [this](const auto &var) {
       return variables_.find(var.ident) == variables_.end();
     });
@@ -4342,7 +4341,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   }
 
   // Generate code for the loop body
-  for (Statement *stmt : *f.stmts) {
+  for (Statement *stmt : f.stmts) {
     auto scoped_del = accept(stmt);
   }
   b_.CreateRet(b_.getInt64(0));

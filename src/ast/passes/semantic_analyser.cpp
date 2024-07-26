@@ -173,7 +173,7 @@ ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
 {
   ProbeType type = ProbeType::invalid;
 
-  for (auto &attach_point : *probe->attach_points) {
+  for (auto *attach_point : probe->attach_points) {
     ProbeType ap = probetype(attach_point->provider);
 
     if (type == ProbeType::invalid)
@@ -224,11 +224,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    ProbeType pt = probetype((*probe->attach_points)[0]->provider);
+    ProbeType pt = probetype(probe->attach_points[0]->provider);
     libbpf::bpf_prog_type bt = progtype(pt);
-    std::string func = (*probe->attach_points)[0]->func;
+    std::string func = probe->attach_points[0]->func;
 
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType pt = probetype(attach_point->provider);
       libbpf::bpf_prog_type bt2 = progtype(pt);
       if (bt != bt2)
@@ -339,7 +339,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
         builtin.type = CreateKSym();
@@ -368,9 +368,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    ProbeType pt = probetype((*probe->attach_points)[0]->provider);
+    ProbeType pt = probetype(probe->attach_points[0]->provider);
     AddrSpace addrspace = find_addrspace(pt);
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type == ProbeType::uprobe &&
           bpftrace_.config_.get(ConfigKeyBool::probe_inline))
@@ -395,9 +395,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    ProbeType pt = probetype((*probe->attach_points)[0]->provider);
+    ProbeType pt = probetype(probe->attach_points[0]->provider);
     AddrSpace addrspace = find_addrspace(pt);
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kprobe && type != ProbeType::uprobe)
         LOG(ERROR, builtin.loc, err_)
@@ -438,7 +438,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
@@ -526,24 +526,22 @@ void SemanticAnalyser::visit(Call &call)
 
   func_setter scope_bound_func_setter{ *this, call.func };
 
-  if (call.vargs) {
-    for (size_t i = 0; i < call.vargs->size(); ++i) {
-      auto &expr = *(*call.vargs)[i];
-      func_arg_idx_ = i;
+  for (size_t i = 0; i < call.vargs.size(); ++i) {
+    auto &expr = *call.vargs[i];
+    func_arg_idx_ = i;
 
-      if (expr.is_map) {
-        Map &map = static_cast<Map &>(expr);
-        // If the map is indexed, don't skip key validation
-        if (!map.vargs && skip_key_validation(call))
-          map.skip_key_validation = true;
-      }
-
-      expr.accept(*this);
+    if (expr.is_map) {
+      Map &map = static_cast<Map &>(expr);
+      // If the map is indexed, don't skip key validation
+      if (map.vargs.empty() && skip_key_validation(call))
+        map.skip_key_validation = true;
     }
+
+    expr.accept(*this);
   }
 
   if (auto probe = dynamic_cast<Probe *>(scope_)) {
-    for (auto &ap : *probe->attach_points) {
+    for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
         LOG(ERROR, call.loc, err_) << call.func << " can not be used with \""
                                    << ap->provider << "\" probes";
@@ -555,13 +553,13 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (!check_varargs(call, 1, 2))
       return;
-    if (call.vargs->size() == 1) {
-      call.vargs->push_back(ctx_.make_node<Integer>(0, call.loc)); // default
-                                                                   // bits is 0
+    if (call.vargs.size() == 1) {
+      call.vargs.push_back(ctx_.make_node<Integer>(0, call.loc)); // default
+                                                                  // bits is 0
     } else {
       if (!check_arg(call, Type::integer, 1, true))
         return;
-      const auto bits = bpftrace_.get_int_literal(call.vargs->at(1));
+      const auto bits = bpftrace_.get_int_literal(call.vargs.at(1));
       if (bits < 0 || bits > 5) {
         LOG(ERROR, call.loc, err_)
             << call.func << ": bits " << *bits << " must be 0..5";
@@ -580,9 +578,9 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     if (is_final_pass()) {
-      Expression *min_arg = call.vargs->at(1);
-      Expression *max_arg = call.vargs->at(2);
-      Expression *step_arg = call.vargs->at(3);
+      Expression *min_arg = call.vargs.at(1);
+      Expression *max_arg = call.vargs.at(2);
+      Expression *step_arg = call.vargs.at(3);
       auto min = bpftrace_.get_int_literal(min_arg);
       auto max = bpftrace_.get_int_literal(max_arg);
       auto step = bpftrace_.get_int_literal(step_arg);
@@ -637,7 +635,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.IsSigned();
+      sign = call.vargs.at(0)->type.IsSigned();
     }
     call.type = CreateSum(sign);
   } else if (call.func == "min") {
@@ -645,7 +643,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.IsSigned();
+      sign = call.vargs.at(0)->type.IsSigned();
     }
     call.type = CreateMin(sign);
   } else if (call.func == "max") {
@@ -653,7 +651,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.IsSigned();
+      sign = call.vargs.at(0)->type.IsSigned();
     }
     call.type = CreateMax(sign);
   } else if (call.func == "avg") {
@@ -671,7 +669,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, std::numeric_limits<size_t>::max())) {
-      for (const auto &arg : *call.vargs) {
+      for (const auto *arg : call.vargs) {
         if (!arg->is_map)
           LOG(ERROR, arg->loc, err_)
               << "delete() only expects maps to be provided";
@@ -680,7 +678,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateNone();
   } else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
-      auto *arg = call.vargs->at(0);
+      auto *arg = call.vargs.at(0);
       auto &t = arg->type;
       if (!t.IsIntegerTy() && !t.IsPtrTy()) {
         LOG(ERROR, call.loc, err_)
@@ -703,9 +701,9 @@ void SemanticAnalyser::visit(Call &call)
         }
       }
 
-      if (is_final_pass() && call.vargs->size() == 2 &&
+      if (is_final_pass() && call.vargs.size() == 2 &&
           check_arg(call, Type::integer, 1, false)) {
-        auto &size_arg = *call.vargs->at(1);
+        auto &size_arg = *call.vargs.at(1);
         if (size_arg.is_literal) {
           auto &integer = static_cast<Integer &>(size_arg);
           long value = integer.n;
@@ -731,7 +729,7 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
 
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     if (is_final_pass() && !(arg.type.IsIntTy() || arg.type.IsStringTy() ||
                              arg.type.IsPtrTy() || arg.type.IsArrayTy())) {
       LOG(ERROR, call.loc, err_)
@@ -744,7 +742,7 @@ void SemanticAnalyser::visit(Call &call)
     uint32_t max_buffer_size = max_strlen - sizeof(AsyncEvent::Buf);
     uint32_t buffer_size = max_buffer_size;
 
-    if (call.vargs->size() == 1) {
+    if (call.vargs.size() == 1) {
       if (arg.type.IsArrayTy())
         buffer_size = arg.type.GetNumElements() *
                       arg.type.GetElementTy()->GetSize();
@@ -756,7 +754,7 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass())
         check_arg(call, Type::integer, 1, false);
 
-      auto &size_arg = *call.vargs->at(1);
+      auto &size_arg = *call.vargs.at(1);
       if (size_arg.type.IsIntTy() && size_arg.is_literal) {
         auto value = bpftrace_.get_int_literal(&size_arg);
         if (value.has_value()) {
@@ -787,7 +785,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "ksym" || call.func == "usym") {
     if (check_nargs(call, 1)) {
       // allow symbol lookups on casts (eg, function pointers)
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       auto &type = arg.type;
       if (!type.IsIntegerTy() && !type.IsPtrTy())
         LOG(ERROR, call.loc, err_)
@@ -802,9 +800,9 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
 
-    auto arg = call.vargs->at(0);
-    if (call.vargs->size() == 2) {
-      arg = call.vargs->at(1);
+    auto arg = call.vargs.at(0);
+    if (call.vargs.size() == 2) {
+      arg = call.vargs.at(1);
       check_arg(call, Type::integer, 0);
     }
 
@@ -835,7 +833,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "pton") {
     if (!check_nargs(call, 1))
       return;
-    std::string addr = bpftrace_.get_string_literal(call.vargs->at(0));
+    std::string addr = bpftrace_.get_string_literal(call.vargs.at(0));
     int af_type, addr_size;
     // use '.' and ':' to determine the address family
     if (addr.find(".") != std::string::npos) {
@@ -874,18 +872,18 @@ void SemanticAnalyser::visit(Call &call)
     if (!is_final_pass())
       return;
 
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     if (!(arg.type.IsIntTy() || arg.type.IsPtrTy())) {
       LOG(ERROR, call.loc, err_) << "() only supports int or pointer arguments"
                                  << " (" << arg.type.GetTy() << " provided)";
     }
 
-    if (call.vargs && call.vargs->size() > 1)
+    if (call.vargs.size() > 1)
       check_arg(call, Type::string, 1, true);
   } else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
-        auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
+        auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
         int offset = arch::offset(reg_name);
         ;
         if (offset == -1) {
@@ -922,8 +920,8 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     std::vector<int> sizes;
-    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
-    for (auto &ap : *probe->attach_points) {
+    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
+    for (auto *ap : probe->attach_points) {
       struct symbol sym = {};
       int err = bpftrace_.resolve_uname(name, &sym, ap->target);
       if (err < 0 || sym.address == 0) {
@@ -938,9 +936,9 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_)
             << "Symbol size mismatch between probes. Symbol \"" << name
             << "\" has size " << sizes.at(0) << " for probe \""
-            << probe->attach_points->at(0)->name() << "\" but size "
+            << probe->attach_points.at(0)->name() << "\" but size "
             << sizes.at(i) << " for probe \""
-            << probe->attach_points->at(i)->name() << "\"";
+            << probe->attach_points.at(i)->name() << "\"";
       }
     }
     size_t pointee_size = 0;
@@ -966,10 +964,10 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::string, 0, true);
       if (is_final_pass()) {
         // NOTE: the same logic can be found in the resource_analyser pass
-        auto &fmt_arg = *call.vargs->at(0);
+        auto &fmt_arg = *call.vargs.at(0);
         String &fmt = static_cast<String &>(fmt_arg);
         std::vector<Field> args;
-        for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
+        for (auto iter = call.vargs.begin() + 1; iter != call.vargs.end();
              iter++) {
           // NOTE: modifying the type will break the resizing that happens
           // in the codegen. We have to copy the type here to avoid modification
@@ -1002,29 +1000,29 @@ void SemanticAnalyser::visit(Call &call)
     (void)check_nargs(call, 0);
   } else if (call.func == "print") {
     check_assignment(call, false, false, false);
-    if (in_loop() && is_final_pass() && call.vargs->at(0)->is_map) {
+    if (in_loop() && is_final_pass() && call.vargs.at(0)->is_map) {
       LOG(WARNING, call.loc, out_)
           << "Due to it's asynchronous nature using 'print()' in a loop can "
              "lead to unexpected behavior. The map will likely be updated "
              "before the runtime can 'print' it.";
     }
     if (check_varargs(call, 1, 3)) {
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
-        if (map.vargs != nullptr) {
-          if (call.vargs->size() > 1)
+        if (!map.vargs.empty()) {
+          if (call.vargs.size() > 1)
             LOG(ERROR, call.loc, err_) << "Single-value (i.e. indexed) map "
                                           "print cannot take additional "
                                           "arguments.";
         }
 
         if (is_final_pass()) {
-          if (call.vargs->size() > 1)
+          if (call.vargs.size() > 1)
             check_arg(call, Type::integer, 1, true);
-          if (call.vargs->size() > 2)
+          if (call.vargs.size() > 2)
             check_arg(call, Type::integer, 2, true);
-          if (map.type.IsStatsTy() && call.vargs->size() > 1) {
+          if (map.type.IsStatsTy() && call.vargs.size() > 1) {
             LOG(WARNING, call.loc, out_)
                 << "print()'s top and div arguments are ignored when used on "
                    "stats() maps.";
@@ -1040,9 +1038,9 @@ void SemanticAnalyser::visit(Call &call)
       // min(), max(), etc. to be assigned directly to a map. This ensures that
       // the previous `arg.is_map` arm is hit first.
       else if (arg.type.IsPrintableTy()) {
-        if (call.vargs->size() != 1)
+        if (call.vargs.size() != 1)
           LOG(ERROR, call.loc, err_)
-              << "Non-map print() only takes 1 argument, " << call.vargs->size()
+              << "Non-map print() only takes 1 argument, " << call.vargs.size()
               << " found";
       } else {
         if (is_final_pass())
@@ -1054,17 +1052,17 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateCgroupPath();
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0, false);
-      call.vargs->size() > 1 && check_arg(call, Type::string, 1, false);
+      call.vargs.size() > 1 && check_arg(call, Type::string, 1, false);
     }
   } else if (call.func == "clear") {
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       if (!arg.is_map)
         LOG(ERROR, call.loc, err_) << "clear() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (map.vargs != nullptr) {
+        if (!map.vargs.empty()) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1074,12 +1072,12 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "zero") {
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       if (!arg.is_map)
         LOG(ERROR, call.loc, err_) << "zero() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (map.vargs != nullptr) {
+        if (!map.vargs.empty()) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1088,12 +1086,12 @@ void SemanticAnalyser::visit(Call &call)
     }
   } else if (call.func == "len") {
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs->at(0);
+      auto &arg = *call.vargs.at(0);
       if (!arg.is_map)
         LOG(ERROR, call.loc, err_) << "len() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (map.vargs != nullptr) {
+        if (!map.vargs.empty()) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1105,7 +1103,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, false, false, false);
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
-        if (call.vargs && call.vargs->size() > 0)
+        if (call.vargs.size() > 0)
           check_arg(call, Type::string, 0, true);
       }
     }
@@ -1114,7 +1112,7 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 2, 2) && is_final_pass() &&
         check_arg(call, Type::string, 0, true) &&
         check_arg(call, Type::integer, 1, false)) {
-      auto &arg = *call.vargs->at(1);
+      auto &arg = *call.vargs.at(1);
       call.type.ts_mode = arg.type.ts_mode;
       if (call.type.ts_mode == TimestampMode::monotonic) {
         LOG(ERROR, call.loc, err_)
@@ -1137,7 +1135,7 @@ void SemanticAnalyser::visit(Call &call)
       return;
     }
 
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     if (arg.type.IsStringTy() && arg.is_literal) {
       auto sig = bpftrace_.get_string_literal(&arg);
       if (signal_name_to_num(sig) < 1) {
@@ -1172,7 +1170,7 @@ void SemanticAnalyser::visit(Call &call)
       // member, like: path(args.filp->f_path))
       if (!check_arg(call, Type::record, 0, false, false) &&
           !check_arg(call, Type::pointer, 0, false, false)) {
-        auto &arg = *call.vargs->at(0);
+        auto &arg = *call.vargs.at(0);
 
         LOG(ERROR, call.loc, err_)
             << "path() only supports pointer or record argument ("
@@ -1183,7 +1181,7 @@ void SemanticAnalyser::visit(Call &call)
                             bpftrace_.config_.get(ConfigKeyInt::max_strlen));
     }
 
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kfunc && type != ProbeType::kretfunc &&
           type != ProbeType::iter)
@@ -1199,7 +1197,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::string, 0);
       check_arg(call, Type::string, 1);
       if (check_arg(call, Type::integer, 2, true)) {
-        auto size = bpftrace_.get_int_literal(call.vargs->at(2));
+        auto size = bpftrace_.get_int_literal(call.vargs.at(2));
         if (size.has_value()) {
           if (size < 0)
             LOG(ERROR, call.loc, err_)
@@ -1229,7 +1227,7 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 1, 1)) {
       check_arg(call, Type::integer, 0, false);
     }
-    for (auto &attach_point : *probe->attach_points) {
+    for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kprobe) {
         LOG(ERROR, call.loc, err_)
@@ -1241,7 +1239,7 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     // kptr should accept both integer or pointer. Consider case: kptr($1)
-    auto &arg = *call.vargs->at(0);
+    auto &arg = *call.vargs.at(0);
     if (!arg.type.IsIntTy() && !arg.type.IsPtrTy()) {
       LOG(ERROR, call.loc, err_) << call.func << "() only supports "
                                  << "integer or pointer arguments ("
@@ -1250,13 +1248,13 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     auto as = (call.func == "kptr" ? AddrSpace::kernel : AddrSpace::user);
-    call.type = call.vargs->front()->type;
+    call.type = call.vargs.front()->type;
     call.type.SetAS(as);
   } else if (call.func == "macaddr") {
     if (!check_nargs(call, 1))
       return;
 
-    auto &arg = call.vargs->at(0);
+    auto &arg = call.vargs.at(0);
 
     if (!arg->type.IsIntTy() && !arg->type.IsArrayTy() &&
         !arg->type.IsByteArray() && !arg->type.IsPtrTy())
@@ -1284,7 +1282,7 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_nargs(call, 1))
       return;
 
-    Expression *arg = call.vargs->at(0);
+    Expression *arg = call.vargs.at(0);
     if (!arg->type.IsIntTy()) {
       LOG(ERROR, call.loc, err_)
           << call.func << "() only supports integer arguments ("
@@ -1320,9 +1318,8 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 0, 1)) {
       call.type = CreateUInt64();
       call.type.ts_mode = TimestampMode::boot;
-      if (call.vargs && call.vargs->size() == 1 &&
-          check_arg(call, Type::timestamp_mode, 0)) {
-        call.type.ts_mode = call.vargs->at(0)->type.ts_mode;
+      if (call.vargs.size() == 1 && check_arg(call, Type::timestamp_mode, 0)) {
+        call.type.ts_mode = call.vargs.at(0)->type.ts_mode;
       }
 
       if (call.type.ts_mode == TimestampMode::tai &&
@@ -1378,51 +1375,47 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   StackType stack_type;
   stack_type.mode = bpftrace_.config_.get(ConfigKeyStackMode::default_);
 
-  if (call.vargs) {
-    switch (call.vargs->size()) {
-      case 0:
-        break;
-      case 1: {
-        auto &arg = *call.vargs->at(0);
-        // If we have a single argument it can be either
-        // stack-mode or stack-size
-        if (arg.type.IsStackModeTy()) {
-          if (check_arg(call, Type::stack_mode, 0, true))
-            stack_type.mode =
-                static_cast<StackMode &>(arg).type.stack_type.mode;
-        } else {
-          if (check_arg(call, Type::integer, 0, true)) {
-            auto limit = bpftrace_.get_int_literal(&arg);
-            if (limit.has_value())
-              stack_type.limit = *limit;
-            else
-              LOG(ERROR, call.loc, err_)
-                  << call.func << ": invalid limit value";
-          }
-        }
-        break;
-      }
-      case 2: {
-        if (check_arg(call, Type::stack_mode, 0, true)) {
-          auto &mode_arg = *call.vargs->at(0);
-          stack_type.mode =
-              static_cast<StackMode &>(mode_arg).type.stack_type.mode;
-        }
-
-        if (check_arg(call, Type::integer, 1, true)) {
-          auto &limit_arg = call.vargs->at(1);
-          auto limit = bpftrace_.get_int_literal(limit_arg);
+  switch (call.vargs.size()) {
+    case 0:
+      break;
+    case 1: {
+      auto &arg = *call.vargs.at(0);
+      // If we have a single argument it can be either
+      // stack-mode or stack-size
+      if (arg.type.IsStackModeTy()) {
+        if (check_arg(call, Type::stack_mode, 0, true))
+          stack_type.mode = static_cast<StackMode &>(arg).type.stack_type.mode;
+      } else {
+        if (check_arg(call, Type::integer, 0, true)) {
+          auto limit = bpftrace_.get_int_literal(&arg);
           if (limit.has_value())
             stack_type.limit = *limit;
           else
             LOG(ERROR, call.loc, err_) << call.func << ": invalid limit value";
         }
-        break;
       }
-      default:
-        LOG(ERROR, call.loc, err_) << "Invalid number of arguments";
-        break;
+      break;
     }
+    case 2: {
+      if (check_arg(call, Type::stack_mode, 0, true)) {
+        auto &mode_arg = *call.vargs.at(0);
+        stack_type.mode =
+            static_cast<StackMode &>(mode_arg).type.stack_type.mode;
+      }
+
+      if (check_arg(call, Type::integer, 1, true)) {
+        auto &limit_arg = call.vargs.at(1);
+        auto limit = bpftrace_.get_int_literal(limit_arg);
+        if (limit.has_value())
+          stack_type.limit = *limit;
+        else
+          LOG(ERROR, call.loc, err_) << call.func << ": invalid limit value";
+      }
+      break;
+    }
+    default:
+      LOG(ERROR, call.loc, err_) << "Invalid number of arguments";
+      break;
   }
   if (stack_type.limit > MAX_STACK_SIZE) {
     LOG(ERROR, call.loc, err_)
@@ -1454,42 +1447,40 @@ void SemanticAnalyser::visit(Map &map)
 {
   MapKey key;
 
-  if (map.vargs) {
-    for (unsigned int i = 0; i < map.vargs->size(); i++) {
-      Expression *expr = map.vargs->at(i);
-      expr->accept(*this);
+  for (unsigned int i = 0; i < map.vargs.size(); i++) {
+    Expression *expr = map.vargs.at(i);
+    expr->accept(*this);
 
-      // Insert a cast to 64 bits if needed by injecting
-      // a cast into the ast.
-      if (expr->type.IsIntTy() && expr->type.GetSize() < 8) {
-        Expression *cast = ctx_.make_node<Cast>(expr->type.IsSigned()
-                                                    ? CreateInt64()
-                                                    : CreateUInt64(),
-                                                expr,
-                                                map.loc);
-        cast->accept(*this);
-        map.vargs->at(i) = cast;
-        expr = cast;
-      } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
-        // map functions only accepts a pointer to a element in the stack
-        LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
-      } else if (expr->type.IsTupleTy()) {
-        LOG(ERROR, map.loc, err_)
-            << "tuple cannot be used as a map key. Try a multi-key associative"
-               " array instead (eg `@map[$1, $2] = ...)`.";
-      }
-
-      if (is_final_pass() && expr->type.IsNoneTy())
-        LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
-
-      SizedType keytype = expr->type;
-      // Skip.IsSigned() when comparing keys to not break existing scripts
-      // which use maps as a lookup table
-      // TODO (fbs): This needs a better solution
-      if (expr->type.IsIntTy())
-        keytype = CreateUInt(keytype.GetSize() * 8);
-      key.args_.push_back(keytype);
+    // Insert a cast to 64 bits if needed by injecting
+    // a cast into the ast.
+    if (expr->type.IsIntTy() && expr->type.GetSize() < 8) {
+      Expression *cast = ctx_.make_node<Cast>(expr->type.IsSigned()
+                                                  ? CreateInt64()
+                                                  : CreateUInt64(),
+                                              expr,
+                                              map.loc);
+      cast->accept(*this);
+      map.vargs.at(i) = cast;
+      expr = cast;
+    } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
+      // map functions only accepts a pointer to a element in the stack
+      LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
+    } else if (expr->type.IsTupleTy()) {
+      LOG(ERROR, map.loc, err_)
+          << "tuple cannot be used as a map key. Try a multi-key associative"
+             " array instead (eg `@map[$1, $2] = ...)`.";
     }
+
+    if (is_final_pass() && expr->type.IsNoneTy())
+      LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
+
+    SizedType keytype = expr->type;
+    // Skip.IsSigned() when comparing keys to not break existing scripts
+    // which use maps as a lookup table
+    // TODO (fbs): This needs a better solution
+    if (expr->type.IsIntTy())
+      keytype = CreateUInt(keytype.GetSize() * 8);
+    key.args_.push_back(keytype);
   }
 
   if (!map.skip_key_validation)
@@ -1977,9 +1968,7 @@ void SemanticAnalyser::visit(If &if_block)
   }
 
   accept_statements(if_block.stmts);
-
-  if (if_block.else_stmts)
-    accept_statements(if_block.else_stmts);
+  accept_statements(if_block.else_stmts);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -2160,7 +2149,7 @@ void SemanticAnalyser::visit(For &f)
   // Validate body
   // This could be relaxed in the future:
   CollectNodes<Jump> jumps;
-  for (auto *stmt : *f.stmts) {
+  for (auto *stmt : f.stmts) {
     jumps.run(*stmt);
   }
   for (const Jump &n : jumps.nodes()) {
@@ -2179,7 +2168,7 @@ void SemanticAnalyser::visit(For &f)
   // function as the context parameter.
   CollectNodes<Variable> vars_referenced;
   std::unordered_set<std::string> var_set;
-  for (auto *stmt : *f.stmts) {
+  for (auto *stmt : f.stmts) {
     const auto &live_vars = variable_val_[scope_];
     vars_referenced.run(*stmt, [&live_vars, &var_set](const auto &var) {
       if (live_vars.find(var.ident) == live_vars.end())
@@ -2195,7 +2184,7 @@ void SemanticAnalyser::visit(For &f)
   // used before. This is a hack to simulate block scoping in the absence of the
   // real thing (#3017).
   CollectNodes<Variable> new_vars;
-  for (auto *stmt : *f.stmts) {
+  for (auto *stmt : f.stmts) {
     const auto &live_vars = variable_val_[scope_];
     new_vars.run(*stmt, [&live_vars](const auto &var) {
       return live_vars.find(var.ident) == live_vars.end();
@@ -2232,7 +2221,7 @@ void SemanticAnalyser::visit(For &f)
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
   CollectNodes<Builtin> builtins;
-  for (auto *stmt : *f.stmts) {
+  for (auto *stmt : f.stmts) {
     builtins.run(*stmt);
   }
   for (const Builtin &builtin : builtins.nodes()) {
@@ -2353,7 +2342,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     if (probe == nullptr)
       return;
 
-    for (AttachPoint *attach_point : *probe->attach_points) {
+    for (AttachPoint *attach_point : probe->attach_points) {
       if (probetype(attach_point->provider) != ProbeType::tracepoint) {
         // The args builtin can only be used with tracepoint
         // an error message is already generated in visit(Builtin)
@@ -2499,8 +2488,8 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
-  for (size_t i = 0; i < tuple.elems->size(); ++i) {
-    Expression *elem = tuple.elems->at(i);
+  for (size_t i = 0; i < tuple.elems.size(); ++i) {
+    Expression *elem = tuple.elems.at(i);
     elem->accept(*this);
 
     // If elem type is none that means that the tuple contains some
@@ -2967,11 +2956,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
-  auto aps = probe.attach_points->size();
+  auto aps = probe.attach_points.size();
 
   scope_ = &probe;
 
-  for (AttachPoint *ap : *probe.attach_points) {
+  for (AttachPoint *ap : probe.attach_points) {
     if (!listing_ && aps > 1 && ap->provider == "iter") {
       LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
       return;
@@ -2981,10 +2970,8 @@ void SemanticAnalyser::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  if (probe.stmts) {
-    for (Statement *stmt : *probe.stmts) {
-      stmt->accept(*this);
-    }
+  for (Statement *stmt : probe.stmts) {
+    stmt->accept(*this);
   }
 }
 
@@ -2996,7 +2983,7 @@ void SemanticAnalyser::visit(Config &config)
 void SemanticAnalyser::visit(Subprog &subprog)
 {
   scope_ = &subprog;
-  for (SubprogArg *arg : *subprog.args) {
+  for (SubprogArg *arg : subprog.args) {
     variable_val_[scope_].insert({ arg->name(), arg->type });
   }
   Visitor::visit(subprog);
@@ -3004,10 +2991,9 @@ void SemanticAnalyser::visit(Subprog &subprog)
 
 void SemanticAnalyser::visit(Program &program)
 {
-  if (program.functions)
-    for (Subprog *subprog : *program.functions)
-      subprog->accept(*this);
-  for (Probe *probe : *program.probes)
+  for (Subprog *subprog : program.functions)
+    subprog->accept(*this);
+  for (Probe *probe : program.probes)
     probe->accept(*this);
 
   if (program.config)
@@ -3104,9 +3090,7 @@ bool SemanticAnalyser::check_assignment(const Call &call,
 bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::stringstream err;
-  std::vector<Expression *>::size_type nargs = 0;
-  if (call.vargs)
-    nargs = call.vargs->size();
+  auto nargs = call.vargs.size();
 
   if (nargs != expected_nargs) {
     if (expected_nargs == 0)
@@ -3131,10 +3115,8 @@ bool SemanticAnalyser::check_varargs(const Call &call,
                                      size_t min_nargs,
                                      size_t max_nargs)
 {
-  std::vector<Expression *>::size_type nargs = 0;
   std::stringstream err;
-  if (call.vargs)
-    nargs = call.vargs->size();
+  auto nargs = call.vargs.size();
 
   if (nargs < min_nargs) {
     if (min_nargs == 1)
@@ -3174,10 +3156,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
                                  bool want_literal,
                                  bool fail)
 {
-  if (!call.vargs)
-    return false;
-
-  auto &arg = *call.vargs->at(arg_num);
+  auto &arg = *call.vargs.at(arg_num);
   if (want_literal && (!arg.is_literal || arg.type.GetTy() != type)) {
     if (fail) {
       LOG(ERROR, call.loc, err_)
@@ -3207,10 +3186,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
 bool SemanticAnalyser::check_symbol(const Call &call,
                                     int arg_num __attribute__((unused)))
 {
-  if (!call.vargs)
-    return false;
-
-  auto arg = bpftrace_.get_string_literal(call.vargs->at(0));
+  auto arg = bpftrace_.get_string_literal(call.vargs.at(0));
 
   std::string re = "^[a-zA-Z0-9./_-]+$";
   bool is_valid = std::regex_match(arg, std::regex(re));
@@ -3365,21 +3341,22 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
   }
 }
 
-void SemanticAnalyser::accept_statements(StatementList *stmts)
+void SemanticAnalyser::accept_statements(StatementList &stmts)
 {
-  for (size_t i = 0; i < stmts->size(); i++) {
-    auto stmt = stmts->at(i);
+  for (size_t i = 0; i < stmts.size(); i++) {
+    auto stmt = stmts.at(i);
     stmt->accept(*this);
 
     if (is_final_pass()) {
       auto *jump = dynamic_cast<Jump *>(stmt);
-      if (jump && i < (stmts->size() - 1)) {
+      if (jump && i < (stmts.size() - 1)) {
         LOG(WARNING, jump->loc, out_)
             << "All code after a '" << opstr(*jump) << "' is unreachable.";
       }
     }
   }
 }
+
 void SemanticAnalyser::update_key_type(const Map &map, const MapKey &new_key)
 {
   if (const auto &key = map_key_.find(map.ident); key != map_key_.end()) {

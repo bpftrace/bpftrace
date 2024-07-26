@@ -54,10 +54,8 @@ void PortabilityAnalyser::visit(Builtin &builtin)
 
 void PortabilityAnalyser::visit(Call &call)
 {
-  if (call.vargs) {
-    for (Expression *expr : *call.vargs)
-      Visit(*expr);
-  }
+  for (Expression *expr : call.vargs)
+    Visit(*expr);
 
   // kaddr() and uaddr() both resolve symbols -> address during codegen and
   // embeds the values into the bytecode. For AOT to support kaddr()/uaddr(),

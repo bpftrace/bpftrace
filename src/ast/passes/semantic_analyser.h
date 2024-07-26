@@ -131,7 +131,7 @@ private:
   {
     return loop_depth_ > 0;
   };
-  void accept_statements(StatementList *stmts);
+  void accept_statements(StatementList &stmts);
 
   Scope *scope_;
 
