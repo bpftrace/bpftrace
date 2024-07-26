@@ -20,7 +20,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   Driver driver(bpftrace);
   EXPECT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.root.get(), bpftrace, out);
+  ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
   EXPECT_EQ(fields.analyse(), expected_result) << msg.str() + out.str();
 }
 

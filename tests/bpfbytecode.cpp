@@ -17,10 +17,10 @@ BpfBytecode codegen(std::string_view input)
   Driver driver(*bpftrace);
   EXPECT_EQ(driver.parse_str(input), 0);
 
-  ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
+  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   EXPECT_EQ(semantics.analyse(), 0);
 
-  ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
+  ast::CodegenLLVM codegen(driver.ctx.root, *bpftrace);
   return codegen.compile();
 }
 

@@ -121,7 +121,6 @@ public:
   explicit PositionalParameter(PositionalParameterType ptype,
                                long n,
                                location loc);
-  ~PositionalParameter() = default;
 
   PositionalParameterType ptype;
   long n;
@@ -136,7 +135,6 @@ public:
   DEFINE_ACCEPT
 
   explicit String(const std::string &str, location loc);
-  ~String() = default;
 
   std::string str;
 
@@ -149,7 +147,6 @@ public:
   DEFINE_ACCEPT
 
   explicit StackMode(const std::string &mode, location loc);
-  ~StackMode() = default;
 
   std::string mode;
 
@@ -162,7 +159,6 @@ public:
   DEFINE_ACCEPT
 
   explicit Identifier(const std::string &ident, location loc);
-  ~Identifier() = default;
 
   std::string ident;
 
@@ -175,7 +171,6 @@ public:
   DEFINE_ACCEPT
 
   explicit Builtin(const std::string &ident, location loc);
-  ~Builtin() = default;
 
   std::string ident;
   int probe_id;
@@ -196,14 +191,14 @@ public:
   DEFINE_ACCEPT
 
   explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs, location loc);
-  ~Call();
+  Call(const std::string &func, ExpressionList &&vargs, location loc);
 
   std::string func;
-  ExpressionList *vargs = nullptr;
+  ExpressionList *vargs = &vargs_;
 
 private:
   Call(const Call &other) = default;
+  ExpressionList vargs_;
 };
 
 class Sizeof : public Expression {
@@ -212,7 +207,6 @@ public:
 
   Sizeof(SizedType type, location loc);
   Sizeof(Expression *expr, location loc);
-  ~Sizeof();
 
   Expression *expr;
   SizedType argtype;
@@ -227,7 +221,6 @@ public:
 
   Offsetof(SizedType record, std::string &field, location loc);
   Offsetof(Expression *expr, std::string &field, location loc);
-  ~Offsetof();
 
   SizedType record;
   Expression *expr;
@@ -242,16 +235,16 @@ public:
   DEFINE_ACCEPT
 
   explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, ExpressionList *vargs, location loc);
-  ~Map();
+  Map(const std::string &ident, ExpressionList &&vargs, location loc);
 
   std::string ident;
   MapKey key_type;
-  ExpressionList *vargs = nullptr;
+  ExpressionList *vargs = &vargs_;
   bool skip_key_validation = false;
 
 private:
   Map(const Map &other) = default;
+  ExpressionList vargs_;
 };
 
 class Variable : public Expression {
@@ -259,7 +252,6 @@ public:
   DEFINE_ACCEPT
 
   explicit Variable(const std::string &ident, location loc);
-  ~Variable() = default;
 
   std::string ident;
 
@@ -272,8 +264,6 @@ public:
   DEFINE_ACCEPT
 
   Binop(Expression *left, Operator op, Expression *right, location loc);
-
-  ~Binop();
 
   Expression *left = nullptr;
   Expression *right = nullptr;
@@ -293,8 +283,6 @@ public:
        bool is_post_op = false,
        location loc = location());
 
-  ~Unop();
-
   Expression *expr = nullptr;
   Operator op;
   bool is_post_op;
@@ -310,7 +298,6 @@ public:
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
-  ~FieldAccess();
 
   Expression *expr = nullptr;
   std::string field;
@@ -326,7 +313,6 @@ public:
 
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
-  ~ArrayAccess();
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
@@ -340,7 +326,6 @@ public:
   DEFINE_ACCEPT
 
   Cast(SizedType type, Expression *expr, location loc);
-  ~Cast();
 
   Expression *expr = nullptr;
 
@@ -352,13 +337,13 @@ class Tuple : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Tuple(ExpressionList *elems, location loc);
-  ~Tuple();
+  Tuple(ExpressionList &&elems, location loc);
 
-  ExpressionList *elems = nullptr;
+  ExpressionList *elems = &elems_;
 
 private:
   Tuple(const Tuple &other) = default;
+  ExpressionList elems_;
 };
 
 class Statement : public Node {
@@ -380,7 +365,6 @@ public:
   DEFINE_ACCEPT
 
   explicit ExprStatement(Expression *expr, location loc);
-  ~ExprStatement();
 
   Expression *expr = nullptr;
 
@@ -392,15 +376,10 @@ class AssignMapStatement : public Statement {
 public:
   DEFINE_ACCEPT
 
-  AssignMapStatement(Map *map,
-                     Expression *expr,
-                     bool compound = false,
-                     location loc = location());
-  ~AssignMapStatement();
+  AssignMapStatement(Map *map, Expression *expr, location loc = location());
 
   Map *map = nullptr;
   Expression *expr = nullptr;
-  bool compound;
 
 private:
   AssignMapStatement(const AssignMapStatement &other) = default;
@@ -412,13 +391,10 @@ public:
 
   AssignVarStatement(Variable *var,
                      Expression *expr,
-                     bool compound = false,
                      location loc = location());
-  ~AssignVarStatement();
 
   Variable *var = nullptr;
   Expression *expr = nullptr;
-  bool compound;
 
 private:
   AssignVarStatement(const AssignVarStatement &other) = default;
@@ -431,7 +407,6 @@ public:
   AssignConfigVarStatement(const std::string &config_var,
                            Expression *expr,
                            location loc = location());
-  ~AssignConfigVarStatement();
 
   std::string config_var;
   Expression *expr = nullptr;
@@ -444,31 +419,32 @@ class If : public Statement {
 public:
   DEFINE_ACCEPT
 
-  If(Expression *cond, StatementList *stmts);
-  If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
-  ~If();
+  If(Expression *cond, StatementList &&stmts);
+  If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
 
   Expression *cond = nullptr;
-  StatementList *stmts = nullptr;
-  StatementList *else_stmts = nullptr;
+  StatementList *stmts = &stmts_;
+  StatementList *else_stmts = &else_stmts_;
 
 private:
   If(const If &other) = default;
+  StatementList stmts_;
+  StatementList else_stmts_;
 };
 
 class Unroll : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Unroll(Expression *expr, StatementList *stmts, location loc);
-  ~Unroll();
+  Unroll(Expression *expr, StatementList &&stmts, location loc);
 
   long int var = 0;
   Expression *expr = nullptr;
-  StatementList *stmts = nullptr;
+  StatementList *stmts = &stmts_;
 
 private:
   Unroll(const Unroll &other) = default;
+  StatementList stmts_;
 };
 
 class Jump : public Statement {
@@ -483,7 +459,6 @@ public:
       : Statement(loc), ident(ident), return_value(nullptr)
   {
   }
-  ~Jump();
 
   JumpType ident = JumpType::INVALID;
   Expression *return_value;
@@ -497,7 +472,6 @@ public:
   DEFINE_ACCEPT
 
   explicit Predicate(Expression *expr, location loc);
-  ~Predicate();
 
   Expression *expr = nullptr;
 
@@ -510,7 +484,6 @@ public:
   DEFINE_ACCEPT
 
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
-  ~Ternary();
 
   Expression *cond = nullptr;
   Expression *left = nullptr;
@@ -521,60 +494,63 @@ class While : public Statement {
 public:
   DEFINE_ACCEPT
 
-  While(Expression *cond, StatementList *stmts, location loc)
-      : Statement(loc), cond(cond), stmts(stmts)
+  While(Expression *cond, StatementList &&stmts, location loc)
+      : Statement(loc), cond(cond), stmts_(std::move(stmts))
   {
   }
-  ~While();
 
   Expression *cond = nullptr;
-  StatementList *stmts = nullptr;
+  StatementList *stmts = &stmts_;
 
 private:
   While(const While &other) = default;
+  StatementList stmts_;
 };
 
 class For : public Statement {
 public:
   DEFINE_ACCEPT
 
-  For(Variable *decl, Expression *expr, StatementList *stmts, location loc)
-      : Statement(loc), decl(decl), expr(expr), stmts(stmts)
+  For(Variable *decl, Expression *expr, StatementList &&stmts, location loc)
+      : Statement(loc), decl(decl), expr(expr), stmts_(std::move(stmts))
   {
   }
-  ~For();
 
   Variable *decl = nullptr;
   Expression *expr = nullptr;
-  StatementList *stmts = nullptr;
+  StatementList *stmts = &stmts_;
 
   SizedType ctx_type;
 
 private:
   For(const For &other) = default;
+  StatementList stmts_;
 };
 
 class Config : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Config(StatementList *stmts) : stmts(stmts)
+  Config(StatementList &&stmts) : stmts_(std::move(stmts))
   {
   }
-  ~Config();
 
-  StatementList *stmts = nullptr;
+  StatementList *stmts = &stmts_;
 
 private:
   Config(const Config &other) = default;
+  StatementList stmts_;
 };
 
 class Scope : public Node {
 public:
-  Scope(StatementList *stmts);
-  virtual ~Scope() = 0;
+  Scope(StatementList &&stmts);
+  virtual ~Scope() = default;
 
-  StatementList *stmts;
+  StatementList *stmts = &stmts_;
+
+private:
+  StatementList stmts_;
 };
 
 class AttachPoint : public Node {
@@ -586,13 +562,6 @@ public:
       : AttachPoint(raw_input)
   {
     this->ignore_invalid = ignore_invalid;
-  }
-
-  // TODO delete this function when migrating away from manual memory management
-  // It has been left to keep tests working during a refactoring
-  AttachPoint *leafcopy()
-  {
-    return new AttachPoint(*this);
   }
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
@@ -635,10 +604,11 @@ class Probe : public Scope {
 public:
   DEFINE_ACCEPT
 
-  Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
-  ~Probe();
+  Probe(AttachPointList &&attach_points,
+        Predicate *pred,
+        StatementList &&stmts);
 
-  AttachPointList *attach_points = nullptr;
+  AttachPointList *attach_points = &attach_points_;
   Predicate *pred = nullptr;
 
   std::string name() const;
@@ -655,6 +625,7 @@ public:
 private:
   Probe(const Probe &other) = default;
   int index_ = 0;
+  AttachPointList attach_points_;
 };
 using ProbeList = std::vector<Probe *>;
 
@@ -679,11 +650,10 @@ public:
 
   Subprog(std::string name,
           SizedType return_type,
-          SubprogArgList *args,
-          StatementList *stmts);
-  ~Subprog();
+          SubprogArgList &&args,
+          StatementList &&stmts);
 
-  SubprogArgList *args = nullptr;
+  SubprogArgList *args = &args_;
   SizedType return_type;
 
   std::string name() const;
@@ -691,6 +661,7 @@ public:
 private:
   Subprog(const Subprog &other) = default;
   std::string name_;
+  SubprogArgList args_;
 };
 using SubprogList = std::vector<Subprog *>;
 
@@ -700,17 +671,18 @@ public:
 
   Program(const std::string &c_definitions,
           Config *config,
-          SubprogList *functions,
-          ProbeList *probes);
-  ~Program();
+          SubprogList &&functions,
+          ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
-  SubprogList *functions = nullptr;
-  ProbeList *probes = nullptr;
+  SubprogList *functions = &functions_;
+  ProbeList *probes = &probes_;
 
 private:
   Program(const Program &other) = default;
+  SubprogList functions_;
+  ProbeList probes_;
 };
 
 std::string opstr(const Binop &binop);
@@ -718,6 +690,35 @@ std::string opstr(const Unop &unop);
 std::string opstr(const Jump &jump);
 
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
+
+template <typename T>
+concept NodeType = std::derived_from<T, Node>;
+
+/*
+ * Manages the lifetime of AST nodes.
+ *
+ * Nodes allocated by an ASTContext will be kept alive for the duration of the
+ * owning ASTContext object.
+ */
+class ASTContext {
+public:
+  Program *root = nullptr;
+
+  /*
+   * Creates and returns a pointer to an AST node.
+   */
+  template <NodeType T, typename... Args>
+  T *make_node(Args &&...args)
+  {
+    auto uniq_ptr = std::make_unique<T>(std::forward<Args>(args)...);
+    auto *raw_ptr = uniq_ptr.get();
+    nodes_.push_back(std::move(uniq_ptr));
+    return raw_ptr;
+  }
+
+private:
+  std::vector<std::unique_ptr<Node>> nodes_;
+};
 
 #undef DEFINE_ACCEPT
 

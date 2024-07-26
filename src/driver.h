@@ -1,7 +1,6 @@
 #pragma once
 
 #include <fstream>
-#include <memory>
 #include <string_view>
 
 #include "ast/ast.h"
@@ -21,7 +20,7 @@ public:
   void error(std::ostream &, const location &, const std::string &);
   void error(const location &l, const std::string &m);
   void error(const std::string &m);
-  std::unique_ptr<ast::Program> root;
+  ast::ASTContext ctx;
 
   void debug()
   {

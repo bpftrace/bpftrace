@@ -42,7 +42,7 @@ void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
 
   std::ostringstream out;
   Printer printer(out);
-  printer.print(driver.root.get());
+  printer.print(driver.ctx.root);
   EXPECT_EQ(expected, out.str());
 }
 

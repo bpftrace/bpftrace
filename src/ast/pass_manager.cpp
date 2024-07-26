@@ -24,9 +24,8 @@ void PassManager::AddPass(Pass p)
   passes_.push_back(std::move(p));
 }
 
-PassResult PassManager::Run(std::unique_ptr<Node> node, PassContext &ctx)
+PassResult PassManager::Run(Node *root, PassContext &ctx)
 {
-  Node *root = node.release();
   if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
     print(root, "parser", std::cout);
   for (auto &pass : passes_) {
@@ -35,7 +34,6 @@ PassResult PassManager::Run(std::unique_ptr<Node> node, PassContext &ctx)
       return result;
 
     if (result.Root()) {
-      delete root;
       root = result.Root();
     }
 

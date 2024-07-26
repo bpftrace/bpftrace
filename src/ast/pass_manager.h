@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -13,6 +12,7 @@ class BPFtrace;
 
 namespace ast {
 
+class ASTContext;
 class Node;
 class SemanticAnalyser;
 class Pass;
@@ -95,8 +95,9 @@ private:
 
 struct PassContext {
 public:
-  PassContext(BPFtrace &b) : b(b){};
+  PassContext(BPFtrace &b, ASTContext &ast_ctx) : b(b), ast_ctx(ast_ctx){};
   BPFtrace &b;
+  ASTContext &ast_ctx;
 };
 
 using PassFPtr = std::function<PassResult(Node &, PassContext &)>;
@@ -128,7 +129,7 @@ public:
   PassManager() = default;
 
   void AddPass(Pass p);
-  [[nodiscard]] PassResult Run(std::unique_ptr<Node> n, PassContext &ctx);
+  [[nodiscard]] PassResult Run(Node *n, PassContext &ctx);
 
 private:
   std::vector<Pass> passes_;

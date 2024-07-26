@@ -25,18 +25,18 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.root.get(), bpftrace, out);
+  ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() << out.str();
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.root.get(), bpftrace));
+  ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
-  ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, out, false);
+  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ResourceAnalyser resource_analyser(driver.root.get(), bpftrace, out);
+  ast::ResourceAnalyser resource_analyser(driver.ctx.root, bpftrace, out);
   auto resources_optional = resource_analyser.analyse();
   EXPECT_EQ(resources_optional.has_value(), expected_result)
       << msg.str() << out.str();

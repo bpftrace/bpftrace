@@ -552,7 +552,8 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
     if (call.vargs->size() == 1) {
-      call.vargs->push_back(new Integer(0, call.loc)); // default bits is 0
+      call.vargs->push_back(ctx_.make_node<Integer>(0, call.loc)); // default
+                                                                   // bits is 0
     } else {
       if (!check_arg(call, Type::integer, 1, true))
         return;
@@ -1455,10 +1456,11 @@ void SemanticAnalyser::visit(Map &map)
       // Insert a cast to 64 bits if needed by injecting
       // a cast into the ast.
       if (expr->type.IsIntTy() && expr->type.GetSize() < 8) {
-        Expression *cast = new ast::Cast(expr->type.IsSigned() ? CreateInt64()
-                                                               : CreateUInt64(),
-                                         expr,
-                                         map.loc);
+        Expression *cast = ctx_.make_node<Cast>(expr->type.IsSigned()
+                                                    ? CreateInt64()
+                                                    : CreateUInt64(),
+                                                expr,
+                                                map.loc);
         cast->accept(*this);
         map.vargs->at(i) = cast;
         expr = cast;
@@ -3013,7 +3015,7 @@ int SemanticAnalyser::analyse()
 
   int num_passes = listing_ ? 1 : num_passes_;
   for (pass_ = 1; pass_ <= num_passes; pass_++) {
-    root_->accept(*this);
+    ctx_.root->accept(*this);
     errors = err_.str();
     if (!errors.empty()) {
       out_ << errors;
@@ -3445,8 +3447,8 @@ bool SemanticAnalyser::has_error() const
 
 Pass CreateSemanticPass()
 {
-  auto fn = [](Node &n, PassContext &ctx) {
-    auto semantics = SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
+  auto fn = [](Node &, PassContext &ctx) {
+    auto semantics = SemanticAnalyser(ctx.ast_ctx, ctx.b, !ctx.b.cmd_.empty());
     int err = semantics.analyse();
     if (err)
       return PassResult::Error("Semantic", err);
