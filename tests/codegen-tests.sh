@@ -48,5 +48,5 @@ done
 cd "$(git rev-parse --show-toplevel)"
 
 run cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Debug
-run make -C "$BUILD_DIR" -j $(nproc)
+run make -C "$BUILD_DIR" -j $(nproc) bpftrace_test
 BPFTRACE_UPDATE_TESTS=${UPDATE_TESTS} run ./"$BUILD_DIR"/tests/bpftrace_test --gtest_filter="codegen*"
