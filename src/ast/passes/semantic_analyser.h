@@ -93,8 +93,10 @@ private:
                         bool want_map,
                         bool want_var,
                         bool want_map_key);
-  bool check_nargs(const Call &call, size_t expected_nargs);
-  bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
+  [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
+  [[nodiscard]] bool check_varargs(const Call &call,
+                                   size_t min_nargs,
+                                   size_t max_nargs);
   bool check_arg(const Call &call,
                  Type type,
                  int arg_num,
