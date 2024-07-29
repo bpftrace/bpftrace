@@ -62,13 +62,6 @@ tracepoint:skb:kfree_skb
 
   if ($reason > SKB_DROP_REASON_NOT_SPECIFIED &&
       ($inet_family == AF_INET || $inet_family == AF_INET6)) {
-    if ($inet_family == AF_INET) {
-      $daddr = ntop($sk->__sk_common.skc_daddr);
-      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
-    } else {
-      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
-    }
     $lport = $sk->__sk_common.skc_num;
     $dport = $sk->__sk_common.skc_dport;
 
@@ -80,7 +73,17 @@ tracepoint:skb:kfree_skb
 
     time("%H:%M:%S ");
     printf("%-8d %-16s ", pid, comm);
-    printf("%39s:%-6d %39s:%-6d %-10s\n", $saddr, $lport, $daddr, $dport, $statestr);
+        
+    if ($inet_family == AF_INET) {
+      $daddr = ntop($sk->__sk_common.skc_daddr);
+      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+      printf("%39s:%-6d %39s:%-6d %-10s\n", $saddr, $lport, $daddr, $dport, $statestr);
+    } else {
+      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+      printf("%39s:%-6d %39s:%-6d %-10s\n", $saddr, $lport, $daddr, $dport, $statestr);
+    }
+
     printf("%s\n", kstack);
   }
 }

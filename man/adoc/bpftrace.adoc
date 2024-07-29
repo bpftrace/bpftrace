@@ -929,8 +929,16 @@ kfunc:tcp_connect {
 
 bpftrace knows two types of variables, 'scratch' and 'map'.
 
-'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of the program.
-Scratch variable names always start with a `$`, e.g. `$myvar`.
+Scratch variable names always start with a `$`, e.g. `$myvar`. 
+'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of their lexical block e.g.
+```
+$a = 1;
+if ($a == 1) {
+  $b = "hello"
+  $a = 2;
+}
+// $b is not accessible here
+```
 
 'map' variables use BPF 'maps'.
 These exist for the lifetime of `bpftrace` itself and can be accessed from all action blocks and user-space.

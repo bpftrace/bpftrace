@@ -32,9 +32,6 @@ entry:
 
 if_body:                                          ; preds = %entry
   store i64 10, ptr %"$s", align 8
-  br label %if_end
-
-if_end:                                           ; preds = %if_body, %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_fmtstr_key)
   store i32 0, ptr %lookup_fmtstr_key, align 4
   %lookup_fmtstr_map = call ptr inttoptr (i64 1 to ptr)(ptr @fmt_string_args, ptr %lookup_fmtstr_key)
@@ -42,10 +39,13 @@ if_end:                                           ; preds = %if_body, %entry
   %lookup_fmtstr_cond = icmp ne ptr %lookup_fmtstr_map, null
   br i1 %lookup_fmtstr_cond, label %lookup_fmtstr_merge, label %lookup_fmtstr_failure
 
-lookup_fmtstr_failure:                            ; preds = %if_end
+if_end:                                           ; preds = %counter_merge, %entry
   ret i64 0
 
-lookup_fmtstr_merge:                              ; preds = %if_end
+lookup_fmtstr_failure:                            ; preds = %if_body
+  ret i64 0
+
+lookup_fmtstr_merge:                              ; preds = %if_body
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_fmtstr_map, i8 0, i64 16, i1 false)
   %4 = getelementptr %printf_t, ptr %lookup_fmtstr_map, i32 0, i32 0
   store i64 0, ptr %4, align 8
@@ -64,7 +64,7 @@ event_loss_counter:                               ; preds = %lookup_fmtstr_merge
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 counter_merge:                                    ; preds = %lookup_merge, %lookup_fmtstr_merge
-  ret i64 0
+  br label %if_end
 
 lookup_success:                                   ; preds = %event_loss_counter
   %7 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
