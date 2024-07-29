@@ -95,9 +95,6 @@ std::string progtypeName(libbpf::bpf_prog_type t)
 
 void AttachedProbe::attach_kfunc(void)
 {
-  if (progfd_ < 0)
-    // Errors for kfunc are handled in load_prog, ignore here
-    return;
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0) {
     throw FatalUserException("Error attaching probe: " + probe_.name);
@@ -130,9 +127,6 @@ int AttachedProbe::detach_iter(void)
 
 void AttachedProbe::attach_raw_tracepoint(void)
 {
-  if (progfd_ < 0)
-    // Errors for raw_tracepoint are handled in load_prog, ignore here
-    return;
   tracing_fd_ = bpf_raw_tracepoint_open(probe_.attach_point.c_str(), progfd_);
   if (tracing_fd_ < 0) {
     if (tracing_fd_ == -ENOENT)

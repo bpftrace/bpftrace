@@ -44,7 +44,6 @@ private:
   std::string eventname() const;
   void resolve_offset_kprobe(bool safe_mode);
   bool resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps);
-  void load_prog(BPFfeature &feature);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
   void attach_kprobe(bool safe_mode);
