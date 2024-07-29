@@ -625,7 +625,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateLhist();
   } else if (call.func == "count") {
     check_assignment(call, true, false, false);
-    check_nargs(call, 0);
+    (void)check_nargs(call, 0);
 
     call.type = CreateCount(true);
   } else if (call.func == "sum") {
@@ -654,13 +654,15 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateMax(sign);
   } else if (call.func == "avg") {
     check_assignment(call, true, false, false);
-    check_nargs(call, 1);
-    check_arg(call, Type::integer, 0);
+    if (check_nargs(call, 1)) {
+      check_arg(call, Type::integer, 0);
+    }
     call.type = CreateAvg(true);
   } else if (call.func == "stats") {
     check_assignment(call, true, false, false);
-    check_nargs(call, 1);
-    check_arg(call, Type::integer, 0);
+    if (check_nargs(call, 1)) {
+      check_arg(call, Type::integer, 0);
+    }
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
@@ -993,7 +995,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateNone();
   } else if (call.func == "exit") {
     check_assignment(call, false, false, false);
-    check_nargs(call, 0);
+    (void)check_nargs(call, 0);
   } else if (call.func == "print") {
     check_assignment(call, false, false, false);
     if (in_loop() && is_final_pass() && call.vargs->at(0)->is_map) {
@@ -3092,6 +3094,9 @@ bool SemanticAnalyser::check_assignment(const Call &call,
   return true;
 }
 
+/*
+ * Checks the number of arguments passed to a function is correct.
+ */
 bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::stringstream err;
@@ -3114,6 +3119,10 @@ bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
   return true;
 }
 
+/*
+ * Checks the number of arguments passed to a function is within a specified
+ * range.
+ */
 bool SemanticAnalyser::check_varargs(const Call &call,
                                      size_t min_nargs,
                                      size_t max_nargs)
@@ -3148,6 +3157,13 @@ bool SemanticAnalyser::check_varargs(const Call &call,
   return true;
 }
 
+/*
+ * Checks an argument passed to a function is of the correct type.
+ *
+ * This function does not check that the function has the correct number of
+ * arguments. Either check_nargs() or check_varargs() should be called first to
+ * validate this.
+ */
 bool SemanticAnalyser::check_arg(const Call &call,
                                  Type type,
                                  int arg_num,
