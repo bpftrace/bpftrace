@@ -430,6 +430,18 @@ private:
   AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
+class Block : public Statement {
+public:
+  DEFINE_ACCEPT
+
+  Block(StatementList &&stmts);
+
+  StatementList stmts;
+
+private:
+  Block(const Block &other) = default;
+};
+
 class If : public Statement {
 public:
   DEFINE_ACCEPT
@@ -438,8 +450,8 @@ public:
   If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
 
   Expression *cond = nullptr;
-  StatementList stmts;
-  StatementList else_stmts;
+  Block if_block;
+  Block else_block;
 
 private:
   If(const If &other) = default;
@@ -453,7 +465,7 @@ public:
 
   long int var = 0;
   Expression *expr = nullptr;
-  StatementList stmts;
+  Block block;
 
 private:
   Unroll(const Unroll &other) = default;
@@ -507,12 +519,12 @@ public:
   DEFINE_ACCEPT
 
   While(Expression *cond, StatementList &&stmts, location loc)
-      : Statement(loc), cond(cond), stmts(std::move(stmts))
+      : Statement(loc), cond(cond), block(std::move(stmts))
   {
   }
 
   Expression *cond = nullptr;
-  StatementList stmts;
+  Block block;
 
 private:
   While(const While &other) = default;
@@ -530,7 +542,6 @@ public:
   Variable *decl = nullptr;
   Expression *expr = nullptr;
   StatementList stmts;
-
   SizedType ctx_type;
 
 private:
@@ -549,14 +560,6 @@ public:
 
 private:
   Config(const Config &other) = default;
-};
-
-class Scope : public Node {
-public:
-  Scope(StatementList &&stmts);
-  virtual ~Scope() = default;
-
-  StatementList stmts;
 };
 
 class AttachPoint : public Node {
@@ -606,7 +609,7 @@ private:
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
-class Probe : public Scope {
+class Probe : public Node {
 public:
   DEFINE_ACCEPT
 
@@ -616,6 +619,7 @@ public:
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
+  Block block;
 
   std::string name() const;
   std::string args_typename() const;
@@ -649,7 +653,7 @@ private:
 };
 using SubprogArgList = std::vector<SubprogArg *>;
 
-class Subprog : public Scope {
+class Subprog : public Node {
 public:
   DEFINE_ACCEPT
 
@@ -660,6 +664,7 @@ public:
 
   SubprogArgList args;
   SizedType return_type;
+  StatementList stmts;
 
   std::string name() const;
 

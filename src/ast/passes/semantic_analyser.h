@@ -14,6 +14,12 @@
 namespace bpftrace {
 namespace ast {
 
+struct variable {
+  SizedType type;
+  bool can_resize;
+  bool was_assigned;
+};
+
 class SemanticAnalyser : public Visitor {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
@@ -85,12 +91,13 @@ public:
   void visit(AssignVarStatement &assignment) override;
   void visit(AssignConfigVarStatement &assignment) override;
   void visit(VarDeclStatement &decl) override;
-  void visit(If &if_block) override;
+  void visit(If &if_node) override;
   void visit(Unroll &unroll) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Config &config) override;
+  void visit(Block &block) override;
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
 
@@ -106,6 +113,7 @@ private:
   bool listing_;
 
   bool is_final_pass() const;
+  bool is_first_pass() const;
 
   bool check_assignment(const Call &call,
                         bool want_map,
@@ -125,9 +133,7 @@ private:
 
   void check_stack_call(Call &call, bool kernel);
 
-  Probe *get_probe_from_scope(Scope *scope,
-                              const location &loc,
-                              std::string name = "");
+  Probe *get_probe(const location &loc, std::string name = "");
 
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
@@ -159,7 +165,10 @@ private:
   };
   void accept_statements(StatementList &stmts);
 
-  Scope *scope_;
+  // At the moment we iterate over the stack from top to bottom as variable
+  // shadowing is not supported.
+  std::vector<Node *> scope_stack_;
+  Node *top_level_node_ = nullptr;
 
   // Holds the function currently being visited by this SemanticAnalyser.
   std::string func_;
@@ -167,14 +176,11 @@ private:
   // SemanticAnalyser.
   int func_arg_idx_ = -1;
 
-  struct variable {
-    SizedType type;
-    bool can_resize;
-    bool was_assigned;
-  };
+  variable *find_variable(const std::string &var_ident);
+  Node *find_variable_scope(const std::string &var_ident);
 
-  std::map<Scope *, std::map<std::string, variable>> variables_;
-  std::map<Scope *, std::map<std::string, location>> variable_decls_;
+  std::map<Node *, std::map<std::string, variable>> variables_;
+  std::map<Node *, std::map<std::string, location>> variable_decls_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
 

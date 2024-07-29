@@ -9,6 +9,78 @@ compatibility in some way. Each entry should contain:
 
 ## Versions 0.21.x (or earlier) to 0.22.x (or later)
 
+### Added block scoping for scratch variables
+
+https://github.com/bpftrace/bpftrace/pull/3367
+
+Previously, scratch variables were "probe" scoped meaning the following
+was valid syntax:
+```
+BEGIN {
+    if (0) {
+        $x = "hello";
+    }
+    print(($x));
+}
+
+// prints an empty line
+```
+However, the value of `$x` at the print statement was considered undefined
+behavior. Issue: https://github.com/bpftrace/bpftrace/issues/3017
+
+Now variables are "block" scoped and the the above will throw an error at the 
+print statement: "ERROR: Undefined or undeclared variable: $x".
+
+If you see this error you can do multiple things to resolve it.
+
+**Option 1: Initialize variable before use**
+```
+BEGIN {
+    $x = "";
+    if (0) {
+        $x = "hello";
+    }
+    print(($x));
+}
+```
+
+**Option 2: Declare variable before use**
+```
+BEGIN {
+    let $x;
+    // let $x = ""; is also valid
+    if (0) {
+        $x = "hello";
+    }
+    print(($x));
+}
+```
+Declaring is useful for variables that hold internal bpftrace types
+e.g. the type returned by the `macaddr` function.
+
+This is also not valid even though `$x` is set in both branches (`$x` still 
+needs to exist in the outer scope):
+```
+BEGIN {
+    if (0) {
+        $x = "hello";
+    } else {
+        $x = "bye";
+    }
+    print(($x));
+}
+```
+
+Additionally, scratch variable shadowing is not allowed e.g. this is not valid:
+```
+BEGIN {
+    let $x;
+    if (0) {
+        let $x = "hello"; // shadows $x in the parent scope
+    }
+}
+```
+
 ### multi-key `delete` removed
 
 https://github.com/bpftrace/bpftrace/pull/3506
