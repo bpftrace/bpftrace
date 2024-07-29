@@ -2090,7 +2090,7 @@ TEST(Parser, unexpected_symbol)
   Driver driver(bpftrace, out);
   EXPECT_EQ(driver.parse_str("i:s:1 { < }"), 1);
   std::string expected =
-      R"(stdin:1:9-10: ERROR: syntax error, unexpected <, expecting }
+      R"(stdin:1:9-10: ERROR: syntax error, unexpected <
 i:s:1 { < }
         ~
 )";
@@ -2121,7 +2121,7 @@ TEST(Parser, unterminated_string)
       R"(stdin:1:12-19: ERROR: unterminated string
 kprobe:f { "asdf }
            ~~~~~~~
-stdin:1:12-19: ERROR: syntax error, unexpected end of file, expecting }
+stdin:1:12-19: ERROR: syntax error, unexpected end of file
 kprobe:f { "asdf }
            ~~~~~~~
 )";
@@ -2197,7 +2197,7 @@ uretprobe:/bin/sh:f+0x10 { 1 }
 TEST(Parser, invalid_increment_decrement)
 {
   test_parse_failure("i:s:1 { @=5++}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting }
+stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting ; or }
 i:s:1 { @=5++}
         ~~~~~
 )");
@@ -2209,7 +2209,7 @@ i:s:1 { @=++5}
 )");
 
   test_parse_failure("i:s:1 { @=5--}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected --, expecting }
+stdin:1:9-14: ERROR: syntax error, unexpected --, expecting ; or }
 i:s:1 { @=5--}
         ~~~~~
 )");
@@ -2221,7 +2221,7 @@ i:s:1 { @=--5}
 )");
 
   test_parse_failure("i:s:1 { @=\"a\"++}", R"(
-stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting }
+stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting ; or }
 i:s:1 { @="a"++}
         ~~~~~~~
 )");
@@ -2392,7 +2392,7 @@ i:s:1 { @x = (1, 2); $x.1 = 1; }
 TEST(Parser, tuple_assignment_error)
 {
   test_parse_failure("i:s:1 { (1, 0) = 0 }", R"(
-stdin:1:16-17: ERROR: syntax error, unexpected =, expecting }
+stdin:1:16-17: ERROR: syntax error, unexpected =, expecting ; or }
 i:s:1 { (1, 0) = 0 }
                ~
 )");
@@ -2525,13 +2525,13 @@ i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }
 )");
 
   test_parse_failure("config = { exit(); } i:s:1 { exit(); }", R"(
-stdin:1:12-16: ERROR: syntax error, unexpected call, expecting }
+stdin:1:12-16: ERROR: syntax error, unexpected call, expecting } or identifier
 config = { exit(); } i:s:1 { exit(); }
            ~~~~
 )");
 
   test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }", R"(
-stdin:1:12-18: ERROR: syntax error, unexpected map, expecting }
+stdin:1:12-18: ERROR: syntax error, unexpected map, expecting } or identifier
 config = { @start = nsecs; } i:s:1 { exit(); }
            ~~~~~~
 )");
@@ -2547,7 +2547,7 @@ BEGIN { @start = nsecs; } config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); 
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf "
                      "BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }",
                      R"(
-stdin:1:37-56: ERROR: syntax error, unexpected identifier, expecting }
+stdin:1:37-56: ERROR: syntax error, unexpected identifier, expecting ; or }
 config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
                                     ~~~~~~~~~~~~~~~~~~~
 )");
@@ -2555,7 +2555,7 @@ config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
                      "BPFTRACE_MAX_PROBES=2; exit(); }",
                      R"(
-stdin:1:47-67: ERROR: syntax error, unexpected =, expecting }
+stdin:1:47-67: ERROR: syntax error, unexpected =, expecting ; or }
 config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
                                               ~~~~~~~~~~~~~~~~~~~~
 )");

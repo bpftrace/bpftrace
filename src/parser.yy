@@ -254,10 +254,26 @@ pointer_type:
 struct_type:
                 STRUCT IDENT { $$ = ast::ident_to_record($2); }
                 ;
-                
+
 config:
                 CONFIG ASSIGN config_block     { $$ = driver.ctx.make_node<ast::Config>(std::move($3)); }
         |        %empty                        { $$ = nullptr; }
+                ;
+
+/*
+ * The last statement in a config_block does not require a trailing semicolon.
+ */
+config_block:   "{" config_assign_stmt_list "}"                    { $$ = std::move($2); }
+            |   "{" config_assign_stmt_list config_assign_stmt "}" { $$ = std::move($2); $$.push_back($3); }
+                ;
+
+config_assign_stmt_list:
+                config_assign_stmt_list config_assign_stmt ";" { $$ = std::move($1); $$.push_back($2); }
+        |       %empty                                         { $$ = ast::StatementList{}; }
+                ;
+
+config_assign_stmt:
+                IDENT ASSIGN expr   { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @2); }
                 ;
 
 subprog:
@@ -367,30 +383,18 @@ param:
         |       PARAMCOUNT { $$ = driver.ctx.make_node<ast::PositionalParameter>(PositionalParameterType::count, 0, @$); }
                 ;
 
+/*
+ * The last statement in a block does not require a trailing semicolon.
+ */
 block:
-                "{" stmt_list "}"     { $$ = std::move($2); }
-                ;
-                
-config_block:   "{" config_assign_stmt_list "}"     { $$ = std::move($2); }
+                "{" stmt_list "}"                   { $$ = std::move($2); }
+        |       "{" stmt_list expr_stmt "}"         { $$ = std::move($2); $$.push_back($3); }
                 ;
 
 stmt_list:
-/*
- * expressions must be followed by a semicolon _unless_ its the last one
- */
-                expr_stmt ";" stmt_list { $$ = std::move($3); $$.insert($$.begin(), $1); }
-        |       expr_stmt               { $$ = ast::StatementList{$1}; }
-/*
- * blocks can't be followed by semicolon
- */
-        |       block_stmt stmt_list    { $$ = std::move($2); $$.insert($$.begin(), $1); }
+                stmt_list expr_stmt ";" { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list block_stmt    { $$ = std::move($1); $$.push_back($2); }
         |       %empty                  { $$ = ast::StatementList{}; }
-                ;
-                
-config_assign_stmt_list:
-                config_assign_stmt ";" config_assign_stmt_list { $$ = std::move($3); $$.insert($$.begin(), $1); }
-        |       config_assign_stmt                             { $$ = ast::StatementList{$1}; }
-        |       %empty                                         { $$ = ast::StatementList{}; }
                 ;
 
 block_stmt:
@@ -435,9 +439,6 @@ block_or_if:
                 block        { $$ = std::move($1); }
         |       if_stmt      { $$ = ast::StatementList{$1}; }
                 ;
-                
-config_assign_stmt:
-                IDENT ASSIGN expr   { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @2); }
 
 assign_stmt:
                 tuple_access_expr ASSIGN expr
@@ -469,11 +470,10 @@ primary_expr:
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
         |       map_or_var         { $$ = $1; }
-        |       "("expr "," vargs ")"
+        |       "(" vargs "," expr ")"
                 {
-                  auto args = ast::ExpressionList{};
-                  args.emplace_back($2);
-                  args.insert(args.end(), $4.begin(), $4.end());
+                  auto &args = $2;
+                  args.push_back($4);
                   $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
                 }
                 ;
