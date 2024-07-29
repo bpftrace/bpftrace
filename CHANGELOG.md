@@ -15,6 +15,8 @@ and this project adheres to
 - Remove multi-map `delete` functionality
   - [#3506](https://github.com/bpftrace/bpftrace/pull/3506)
   - [Migration guide](docs/migration_guide.md#multi-key-delete-removed)
+- Add lexical/block scoping for variables
+  - [#3367](https://github.com/bpftrace/bpftrace/pull/3367)
 #### Added
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
