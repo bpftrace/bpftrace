@@ -221,7 +221,9 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -298,7 +300,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                   "struct task_struct")),
                                  AddrSpace::kernel);
   } else if (builtin.ident == "retval") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType type = single_provider_type(probe);
@@ -336,7 +340,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // Case: @=comm and strncmp(@, "name")
     builtin.type.SetAS(AddrSpace::kernel);
   } else if (builtin.ident == "func") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -365,7 +371,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
   } else if (builtin.is_argx()) {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -392,7 +400,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (!builtin.ident.compare(0, 4, "sarg") &&
              builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
              builtin.ident.at(4) <= '9') {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -421,7 +431,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = CreateUInt64();
     builtin.type.SetAS(addrspace);
   } else if (builtin.ident == "probe") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     builtin.type = CreateProbe();
@@ -435,7 +447,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.type = CreateUInt32();
   } else if (builtin.ident == "args") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      builtin.loc,
+                                      builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -540,7 +554,7 @@ void SemanticAnalyser::visit(Call &call)
     expr.accept(*this);
   }
 
-  if (auto probe = dynamic_cast<Probe *>(scope_)) {
+  if (auto probe = dynamic_cast<Probe *>(scope_stack_.front())) {
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
         LOG(ERROR, call.loc, err_) << call.func << " can not be used with \""
@@ -895,7 +909,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateUInt64();
-    if (auto probe = dynamic_cast<Probe *>(scope_)) {
+    if (auto probe = dynamic_cast<Probe *>(scope_stack_.front())) {
       ProbeType pt = single_provider_type(probe);
       // In case of different attach_points, Set the addrspace to none.
       call.type.SetAS(find_addrspace(pt));
@@ -910,7 +924,9 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "uaddr") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      call.loc,
+                                      call.func);
     if (probe == nullptr)
       return;
 
@@ -1153,7 +1169,9 @@ void SemanticAnalyser::visit(Call &call)
           << "signal only accepts string literals or integers";
     }
   } else if (call.func == "path") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      call.loc,
+                                      call.func);
     if (probe == nullptr)
       return;
 
@@ -1214,7 +1232,9 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   } else if (call.func == "override") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe_from_scope(scope_stack_.front(),
+                                      call.loc,
+                                      call.func);
     if (probe == nullptr)
       return;
 
@@ -1505,14 +1525,17 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_[scope_].find(var.ident);
-  if (search_val != variable_val_[scope_].end()) {
-    var.type = search_val->second;
-  } else {
-    LOG(ERROR, var.loc, err_)
-        << "Undefined or undeclared variable: " << var.ident;
-    var.type = CreateNone();
+  for (auto scope : scope_stack_) {
+    auto search_val = variable_val_[scope].find(var.ident);
+    if (search_val != variable_val_[scope].end()) {
+      var.type = search_val->second;
+      return;
+    }
   }
+
+  LOG(ERROR, var.loc, err_)
+      << "Undefined or undeclared variable: " << var.ident;
+  var.type = CreateNone();
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
@@ -1959,6 +1982,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 
 void SemanticAnalyser::visit(If &if_block)
 {
+  scope_stack_.push_back(&if_block.if_scope);
   if_block.cond->accept(*this);
 
   if (is_final_pass()) {
@@ -1967,12 +1991,38 @@ void SemanticAnalyser::visit(If &if_block)
       LOG(ERROR, if_block.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
-  accept_statements(if_block.stmts);
-  accept_statements(if_block.else_stmts);
+  accept_statements(if_block.if_scope.stmts);
+  scope_stack_.pop_back();
+
+  if (if_block.else_scope.stmts.empty()) {
+    return;
+  }
+
+  scope_stack_.push_back(&if_block.else_scope);
+  accept_statements(if_block.else_scope.stmts);
+  scope_stack_.pop_back();
+
+  // Host variables if they exist in both branches
+  std::unordered_set<std::string> vars_to_hoist;
+  for (const auto &[var_ident, ty] : variable_val_[&if_block.if_scope]) {
+    auto search = variable_val_[&if_block.else_scope].find(var_ident);
+    if (search != variable_val_[&if_block.else_scope].end() &&
+        search->second.IsSameType(ty)) {
+      vars_to_hoist.insert(var_ident);
+    }
+  }
+
+  for (const auto &vh : vars_to_hoist) {
+    auto elem = variable_val_[&if_block.if_scope].extract(vh);
+    variable_val_[scope_stack_.back()].insert(std::move(elem));
+    auto it = variable_val_[&if_block.else_scope].find(vh);
+    variable_val_[&if_block.else_scope].erase(it);
+  }
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
+  scope_stack_.push_back(&unroll);
   unroll.expr->accept(*this);
 
   auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
@@ -1990,6 +2040,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
   }
 
   accept_statements(unroll.stmts);
+  scope_stack_.pop_back();
 }
 
 void SemanticAnalyser::visit(Jump &jump)
@@ -1998,7 +2049,7 @@ void SemanticAnalyser::visit(Jump &jump)
     case JumpType::RETURN:
       if (jump.return_value)
         jump.return_value->accept(*this);
-      if (auto subprog = dynamic_cast<Subprog *>(scope_)) {
+      if (auto subprog = dynamic_cast<Subprog *>(scope_stack_.front())) {
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
             (jump.return_value &&
@@ -2022,6 +2073,8 @@ void SemanticAnalyser::visit(Jump &jump)
 
 void SemanticAnalyser::visit(While &while_block)
 {
+  scope_stack_.push_back(&while_block);
+
   if (is_final_pass() && !bpftrace_.feature_->has_loop()) {
     LOG(WARNING, while_block.loc, out_)
         << "Kernel does not support bounded loops. Depending"
@@ -2033,6 +2086,7 @@ void SemanticAnalyser::visit(While &while_block)
   loop_depth_++;
   accept_statements(while_block.stmts);
   loop_depth_--;
+  scope_stack_.pop_back();
 }
 
 void SemanticAnalyser::visit(For &f)
@@ -2128,9 +2182,12 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate decl
   const auto &decl_name = f.decl->ident;
-  if (variable_val_[scope_].find(decl_name) != variable_val_[scope_].end()) {
-    LOG(ERROR, f.decl->loc, err_)
-        << "Loop declaration shadows existing variable: " + decl_name;
+
+  for (auto scope : scope_stack_) {
+    if (variable_val_[scope].find(decl_name) != variable_val_[scope].end()) {
+      LOG(ERROR, f.decl->loc, err_)
+          << "Loop declaration shadows existing variable: " + decl_name;
+    }
   }
 
   // Validate expr
@@ -2167,27 +2224,25 @@ void SemanticAnalyser::visit(For &f)
   // and declared before the loop. These will be passed into the loop callback
   // function as the context parameter.
   CollectNodes<Variable> vars_referenced;
-  std::unordered_set<std::string> var_set;
+  std::unordered_set<std::string> found_vars;
   for (auto *stmt : f.stmts) {
-    const auto &live_vars = variable_val_[scope_];
-    vars_referenced.run(*stmt, [&live_vars, &var_set](const auto &var) {
-      if (live_vars.find(var.ident) == live_vars.end())
+    vars_referenced.run(*stmt, [this, &f, &found_vars](const auto &var) {
+      if (found_vars.find(var.ident) != found_vars.end())
         return false;
-      if (var_set.find(var.ident) != var_set.end())
-        return false;
-      var_set.insert(var.ident);
-      return true;
-    });
-  }
 
-  // Collect a list of variables which are used in the loop without having been
-  // used before. This is a hack to simulate block scoping in the absence of the
-  // real thing (#3017).
-  CollectNodes<Variable> new_vars;
-  for (auto *stmt : f.stmts) {
-    const auto &live_vars = variable_val_[scope_];
-    new_vars.run(*stmt, [&live_vars](const auto &var) {
-      return live_vars.find(var.ident) == live_vars.end();
+      bool found = false;
+      for (auto scope : scope_stack_) {
+        const auto &live_vars = variable_val_[scope];
+        if (live_vars.find(var.ident) != live_vars.end()) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+      found_vars.insert(var.ident);
+      return true;
     });
   }
 
@@ -2212,11 +2267,15 @@ void SemanticAnalyser::visit(For &f)
   }
   f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ keytype, *mapval }));
 
-  variable_val_[scope_][decl_name] = f.decl->type;
+  scope_stack_.push_back(&f);
+
+  variable_val_[scope_stack_.back()][decl_name] = f.decl->type;
 
   loop_depth_++;
   accept_statements(f.stmts);
   loop_depth_--;
+
+  scope_stack_.pop_back();
 
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
@@ -2230,14 +2289,6 @@ void SemanticAnalyser::visit(For &f)
       LOG(ERROR, builtin.loc, err_)
           << "'" << builtin.ident << "' builtin is not allowed in a for-loop";
     }
-  }
-
-  // Decl variable is not valid beyond this for-loop
-  variable_val_[scope_].erase(decl_name);
-
-  // Variables declared in a for-loop are not valid beyond it
-  for (const Variable &var : new_vars.nodes()) {
-    variable_val_[scope_].erase(var.ident);
   }
 
   // Finally, create the context tuple now that all variables inside the loop
@@ -2283,7 +2334,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   }
 
   if (type.is_funcarg) {
-    auto probe = get_probe_from_scope(scope_, acc.loc);
+    auto probe = get_probe_from_scope(scope_stack_.front(), acc.loc);
     if (probe == nullptr)
       return;
     auto arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
@@ -2338,7 +2389,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   std::map<std::string, std::weak_ptr<const Struct>> structs;
 
   if (type.is_tparg) {
-    auto probe = get_probe_from_scope(scope_, acc.loc);
+    auto probe = get_probe_from_scope(scope_stack_.front(), acc.loc);
     if (probe == nullptr)
       return;
 
@@ -2475,7 +2526,7 @@ void SemanticAnalyser::visit(Cast &cast)
   // case : BEGIN { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (cast.type.GetAS() == AddrSpace::none) {
-    if (auto probe = dynamic_cast<Probe *>(scope_)) {
+    if (auto probe = dynamic_cast<Probe *>(scope_stack_.front())) {
       ProbeType type = single_provider_type(probe);
       cast.type.SetAS(find_addrspace(type));
     } else {
@@ -2590,33 +2641,44 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string var_ident = assignment.var->ident;
-  auto search = variable_val_[scope_].find(var_ident);
 
   auto &assignTy = assignment.expr->type;
 
-  if (search != variable_val_[scope_].end()) {
-    if (search->second.IsNoneTy()) {
-      if (is_final_pass()) {
-        LOG(ERROR, assignment.loc, err_) << "Undefined variable: " + var_ident;
-      } else {
-        search->second = assignTy;
+  Scope *var_scope = nullptr;
+  for (auto scope : scope_stack_) {
+    auto search = variable_val_[scope].find(var_ident);
+    if (search != variable_val_[scope].end()) {
+      if (search->second.IsNoneTy()) {
+        if (is_final_pass()) {
+          LOG(ERROR, assignment.loc, err_)
+              << "Undefined variable: " + var_ident;
+          return;
+        } else {
+          search->second = assignTy;
+        }
+      } else if ((search->second.IsStringTy() && assignTy.IsStringTy()) ||
+                 (search->second.IsTupleTy() && assignTy.IsTupleTy())) {
+        update_string_size(search->second, assignTy);
+      } else if (!search->second.IsSameType(assignTy)) {
+        LOG(ERROR, assignment.loc, err_)
+            << "Type mismatch for " << var_ident << ": "
+            << "trying to assign value of type '" << assignTy
+            << "' when variable already contains a value of type '"
+            << search->second << "'";
+        return;
       }
-    } else if ((search->second.IsStringTy() && assignTy.IsStringTy()) ||
-               (search->second.IsTupleTy() && assignTy.IsTupleTy())) {
-      update_string_size(search->second, assignTy);
-    } else if (!search->second.IsSameType(assignTy)) {
-      LOG(ERROR, assignment.loc, err_)
-          << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << assignTy
-          << "' when variable already contains a value of type '"
-          << search->second << "'";
+      var_scope = scope;
+      break;
     }
-  } else {
-    // This variable hasn't been seen before
-    variable_val_[scope_].insert({ var_ident, assignment.expr->type });
   }
 
-  auto &storedTy = variable_val_[scope_][var_ident];
+  if (var_scope == nullptr) {
+    variable_val_[scope_stack_.back()].insert(
+        { var_ident, assignment.expr->type });
+    var_scope = scope_stack_.back();
+  }
+
+  auto &storedTy = variable_val_[var_scope][var_ident];
 
   assignment.var->type = storedTy;
 
@@ -2958,7 +3020,7 @@ void SemanticAnalyser::visit(Probe &probe)
 {
   auto aps = probe.attach_points.size();
 
-  scope_ = &probe;
+  scope_stack_.push_back(&probe);
 
   for (AttachPoint *ap : probe.attach_points) {
     if (!listing_ && aps > 1 && ap->provider == "iter") {
@@ -2973,6 +3035,8 @@ void SemanticAnalyser::visit(Probe &probe)
   for (Statement *stmt : probe.stmts) {
     stmt->accept(*this);
   }
+
+  scope_stack_.pop_back();
 }
 
 void SemanticAnalyser::visit(Config &config)
@@ -2982,11 +3046,12 @@ void SemanticAnalyser::visit(Config &config)
 
 void SemanticAnalyser::visit(Subprog &subprog)
 {
-  scope_ = &subprog;
+  scope_stack_.push_back(&subprog);
   for (SubprogArg *arg : subprog.args) {
-    variable_val_[scope_].insert({ arg->name(), arg->type });
+    variable_val_[scope_stack_.back()].insert({ arg->name(), arg->type });
   }
   Visitor::visit(subprog);
+  scope_stack_.pop_back();
 }
 
 void SemanticAnalyser::visit(Program &program)

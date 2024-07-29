@@ -220,22 +220,24 @@ AttachPoint::AttachPoint(const std::string &raw_input, location loc)
 {
 }
 
+Scope::Scope(StatementList &&stmts) : stmts(std::move(stmts))
+{
+}
+
 If::If(Expression *cond, StatementList &&stmts)
-    : cond(cond), stmts(std::move(stmts))
+    : cond(cond), if_scope(Scope(std::move(stmts))), else_scope(Scope({}))
 {
 }
 
 If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
-    : cond(cond), stmts(std::move(stmts)), else_stmts(std::move(else_stmts))
+    : cond(cond),
+      if_scope(Scope(std::move(stmts))),
+      else_scope(Scope(std::move(else_stmts)))
 {
 }
 
 Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
-    : Statement(loc), expr(expr), stmts(std::move(stmts))
-{
-}
-
-Scope::Scope(StatementList &&stmts) : stmts(std::move(stmts))
+    : Statement(loc), Scope(std::move(stmts)), expr(expr)
 {
 }
 

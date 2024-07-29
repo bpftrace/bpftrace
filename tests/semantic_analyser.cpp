@@ -448,6 +448,55 @@ TEST(semantic_analyser, if_statements)
   test("kprobe:f { if((int32)pid) { 123 } }");
 }
 
+TEST(semantic_analyser, if_block_scope)
+{
+  test("i:s:1 { $a = 1; if (1) { print(($a)); $b = 2; if (1) { print(($a, "
+       "$b)); } else { print(($a, $b)); } } }");
+  test_error("i:s:1 { if (1) { $a = 1; } print(($a)); }",
+             R"(
+stdin:1:28-37: ERROR: Undefined or undeclared variable: $a
+i:s:1 { if (1) { $a = 1; } print(($a)); }
+                           ~~~~~~~~~
+)");
+  test_error("i:s:1 { if (1) { $a = 1; } else { print(($a)); } }",
+             R"(
+stdin:1:35-44: ERROR: Undefined or undeclared variable: $a
+i:s:1 { if (1) { $a = 1; } else { print(($a)); } }
+                                  ~~~~~~~~~
+)");
+  test_error("i:s:1 { if (1) { $a = 1; } else { $b = 2; } print(($b)); }",
+             R"(
+stdin:1:45-54: ERROR: Undefined or undeclared variable: $b
+i:s:1 { if (1) { $a = 1; } else { $b = 2; } print(($b)); }
+                                            ~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, if_block_variable_hoisting)
+{
+  test("i:s:1 { if (0) { $a = 1; } else if (0) { $a = 2; } else { $a = 3; } "
+       "print(($a)); }");
+  test("i:s:1 { if (0) { $a = 1; } else { if (1) { $a = 2 } else { $a = 3; } } "
+       "print(($a)); }");
+  test("i:s:1 { if (0) { $b = 1; } else { if (1) { $a = 2 } else { $a = 3; } "
+       "print(($a)); } }");
+  // Can't hoist when the variables are of different types
+  test_error(
+      "i:s:1 { if (1) { $a = 1; } else { $a = \"hello\" } print(($a)); }",
+      R"(
+stdin:1:50-59: ERROR: Undefined or undeclared variable: $a
+i:s:1 { if (1) { $a = 1; } else { $a = "hello" } print(($a)); }
+                                                 ~~~~~~~~~
+)");
+  test_error("i:s:1 { if (1) { $b = 1; } else { if (1) { $a = 2 } else { $a = "
+             "3; } } print(($a)); }",
+             R"(
+stdin:1:72-81: ERROR: Undefined or undeclared variable: $a
+i:s:1 { if (1) { $b = 1; } else { if (1) { $a = 2 } else { $a = 3; } } print(($a)); }
+                                                                       ~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }");
@@ -1620,6 +1669,18 @@ TEST(semantic_analyser, unroll)
   test(bpftrace, "kprobe:f { unroll($3) { printf(\"hi\\n\"); } }", 1);
 }
 
+TEST(semantic_analyser, unroll_block_scope)
+{
+  test(
+      "BEGIN { $a = 1; unroll(1) { $b = 2; unroll(2) { print(($a, $b)); } } }");
+  test_error("kprobe:f { unroll(1) { $a = 1; } print(($a)); }",
+             R"(
+stdin:1:34-43: ERROR: Undefined or undeclared variable: $a
+kprobe:f { unroll(1) { $a = 1; } print(($a)); }
+                                 ~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, map_integer_sizes)
 {
   BPFtrace bpftrace;
@@ -2755,6 +2816,18 @@ i:s:1 {
                    "'print()' in a loop");
 }
 
+TEST(semantic_analyser, while_loop_block_scope)
+{
+  test("i:s:1 { $a = 1; while (1) { print(($a)); $b = 2; while (1) { "
+       "print(($a, $b)); break; } break; } }");
+  test_error("i:s:1 { while (1) { $a = 1; break; } print(($a)); }",
+             R"(
+stdin:1:38-47: ERROR: Undefined or undeclared variable: $a
+i:s:1 { while (1) { $a = 1; break; } print(($a)); }
+                                     ~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, builtin_args)
 {
   auto bpftrace = get_mock_bpftrace();
@@ -3785,6 +3858,19 @@ TEST(semantic_analyser, for_loop_no_ctx_access)
 stdin:1:45-49: ERROR: 'arg0' builtin is not allowed in a for-loop
 kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
                                             ~~~~
+)");
+}
+
+TEST(semantic_analyser, for_loop_block_scope)
+{
+  test("BEGIN { @map[0] = count(); @pam[0] = count(); $a = 1; for ($kv : @map) "
+       "{ $b = 2; for ($ap : @pam) { print(($a, $b)); } } }");
+  test_error(
+      "kprobe:f { @map[0] = 1; for ($kv : @map) { $a = 1; } print(($a)); }",
+      R"(
+stdin:1:55-64: ERROR: Undefined or undeclared variable: $a
+kprobe:f { @map[0] = 1; for ($kv : @map) { $a = 1; } print(($a)); }
+                                                      ~~~~~~~~~
 )");
 }
 

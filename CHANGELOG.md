@@ -49,6 +49,8 @@ and this project adheres to
   - #[3339](https://github.com/bpftrace/bpftrace/pull/3339)
 - Fix parsing large unsigned int strings as positional params
   - [#3336](https://github.com/bpftrace/bpftrace/pull/3336)
+- Fix lexical scoping for variables
+  - [#3367](https://github.com/bpftrace/bpftrace/pull/3367)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

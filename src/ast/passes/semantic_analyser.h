@@ -133,7 +133,7 @@ private:
   };
   void accept_statements(StatementList &stmts);
 
-  Scope *scope_;
+  std::vector<Scope *> scope_stack_;
 
   // Holds the function currently being visited by this SemanticAnalyser.
   std::string func_;

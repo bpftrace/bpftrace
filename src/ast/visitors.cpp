@@ -125,11 +125,11 @@ void Visitor::visit(If &if_block)
 {
   Visit(*if_block.cond);
 
-  for (Statement *stmt : if_block.stmts) {
+  for (Statement *stmt : if_block.if_scope.stmts) {
     Visit(*stmt);
   }
 
-  for (Statement *stmt : if_block.else_stmts) {
+  for (Statement *stmt : if_block.else_scope.stmts) {
     Visit(*stmt);
   }
 }

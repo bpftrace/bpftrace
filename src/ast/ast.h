@@ -412,6 +412,14 @@ private:
   AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
+class Scope {
+public:
+  Scope(StatementList &&stmts);
+  virtual ~Scope() = default;
+
+  StatementList stmts;
+};
+
 class If : public Statement {
 public:
   DEFINE_ACCEPT
@@ -420,14 +428,14 @@ public:
   If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
 
   Expression *cond = nullptr;
-  StatementList stmts;
-  StatementList else_stmts;
+  Scope if_scope;
+  Scope else_scope;
 
 private:
   If(const If &other) = default;
 };
 
-class Unroll : public Statement {
+class Unroll : public Statement, public Scope {
 public:
   DEFINE_ACCEPT
 
@@ -435,7 +443,6 @@ public:
 
   long int var = 0;
   Expression *expr = nullptr;
-  StatementList stmts;
 
 private:
   Unroll(const Unroll &other) = default;
@@ -484,35 +491,32 @@ public:
   Expression *right = nullptr;
 };
 
-class While : public Statement {
+class While : public Statement, public Scope {
 public:
   DEFINE_ACCEPT
 
   While(Expression *cond, StatementList &&stmts, location loc)
-      : Statement(loc), cond(cond), stmts(std::move(stmts))
+      : Statement(loc), Scope(std::move(stmts)), cond(cond)
   {
   }
 
   Expression *cond = nullptr;
-  StatementList stmts;
 
 private:
   While(const While &other) = default;
 };
 
-class For : public Statement {
+class For : public Statement, public Scope {
 public:
   DEFINE_ACCEPT
 
   For(Variable *decl, Expression *expr, StatementList &&stmts, location loc)
-      : Statement(loc), decl(decl), expr(expr), stmts(std::move(stmts))
+      : Statement(loc), Scope(std::move(stmts)), decl(decl), expr(expr)
   {
   }
 
   Variable *decl = nullptr;
   Expression *expr = nullptr;
-  StatementList stmts;
-
   SizedType ctx_type;
 
 private:
@@ -531,14 +535,6 @@ public:
 
 private:
   Config(const Config &other) = default;
-};
-
-class Scope : public Node {
-public:
-  Scope(StatementList &&stmts);
-  virtual ~Scope() = default;
-
-  StatementList stmts;
 };
 
 class AttachPoint : public Node {
@@ -588,7 +584,7 @@ private:
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
-class Probe : public Scope {
+class Probe : public Node, public Scope {
 public:
   DEFINE_ACCEPT
 
@@ -631,7 +627,7 @@ private:
 };
 using SubprogArgList = std::vector<SubprogArg *>;
 
-class Subprog : public Scope {
+class Subprog : public Node, public Scope {
 public:
   DEFINE_ACCEPT
 
