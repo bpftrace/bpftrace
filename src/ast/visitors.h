@@ -37,7 +37,7 @@ public:
   virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(AssignConfigVarStatement &assignment) = 0;
   virtual void visit(VarDeclStatement &decl) = 0;
-  virtual void visit(If &if_block) = 0;
+  virtual void visit(If &if_node) = 0;
   virtual void visit(Jump &jump) = 0;
   virtual void visit(Unroll &unroll) = 0;
   virtual void visit(While &while_block) = 0;
@@ -46,6 +46,7 @@ public:
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Config &config) = 0;
+  virtual void visit(Block &block) = 0;
   virtual void visit(SubprogArg &subprog_arg) = 0;
   virtual void visit(Subprog &subprog) = 0;
   virtual void visit(Program &program) = 0;
@@ -118,6 +119,7 @@ public:
   void visit(SubprogArg &subprog_arg) override;
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
+  void visit(Block &block) override;
 };
 
 /**
@@ -182,6 +184,7 @@ public:
   virtual R visit(Predicate &node) DEFAULT_FN;
   virtual R visit(AttachPoint &node) DEFAULT_FN;
   virtual R visit(Probe &node) DEFAULT_FN;
+  virtual R visit(Block &node) DEFAULT_FN;
   virtual R visit(Config &node) DEFAULT_FN;
   virtual R visit(SubprogArg &node) DEFAULT_FN;
   virtual R visit(Subprog &node) DEFAULT_FN;
@@ -238,6 +241,7 @@ private:
     DEFINE_DISPATCH(Subprog);
     DEFINE_DISPATCH(Probe);
     DEFINE_DISPATCH(Config);
+    DEFINE_DISPATCH(Block);
     DEFINE_DISPATCH(Program);
 
     return table;

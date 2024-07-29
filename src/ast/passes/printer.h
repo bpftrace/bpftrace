@@ -38,11 +38,12 @@ public:
   void visit(AssignVarStatement &assignment) override;
   void visit(AssignConfigVarStatement &assignment) override;
   void visit(VarDeclStatement &decl) override;
-  void visit(If &if_block) override;
+  void visit(If &if_node) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
   void visit(For &for_loop) override;
   void visit(Config &config) override;
+  void visit(Block &block) override;
   void visit(Jump &jump) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;

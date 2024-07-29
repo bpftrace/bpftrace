@@ -55,6 +55,8 @@ BEGIN
 
 tracepoint:skb:kfree_skb
 {
+  let $daddr;
+  let $saddr;
   $reason = args.reason;
   $skb = (struct sk_buff *)args.skbaddr;
   $sk = ((struct sock *) $skb->sk);
