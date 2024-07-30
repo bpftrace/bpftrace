@@ -243,6 +243,21 @@ PROG BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a[1]); exit(); }
 EXPECT @: 0
 TIMEOUT 1
 
+NAME has_key exists
+PROG BEGIN { @a[1] = 1; if (has_key(@a[1])) { printf("ok\n"); exit(); } }
+EXPECT ok
+TIMEOUT 1
+
+NAME has_key no_exists
+PROG BEGIN { @a[1] = 1; if (has_key(@a[2])) { printf("ok\n"); exit(); } }
+EXPECT_NONE ok
+TIMEOUT 1
+
+NAME has_key count-map
+PROG BEGIN { @a = count(); if (has_key(@a)) { printf("ok\n"); exit(); } }
+EXPECT ok
+TIMEOUT 1
+
 NAME increment/decrement map
 PROG BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); exit(); }
 EXPECT 10 12 12 10

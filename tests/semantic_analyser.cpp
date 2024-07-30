@@ -327,6 +327,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
+  test("kprobe:f { @x = 1; if (has_key(@x)) {} }");
   test("kprobe:f { @x = 1; @s = len(@x) }");
   test("kprobe:f { time() }");
   test("kprobe:f { exit() }");
@@ -975,6 +976,17 @@ TEST(semantic_analyser, call_len)
   test("kprobe:f { @x[0] = 0; len(@x, 1); }", 1);
   test("kprobe:f { @x[0] = 0; len(@x[2]); }", 1);
   test("kprobe:f { $x = 0; len($x); }", 1);
+}
+
+TEST(semantic_analyser, call_has_key)
+{
+  test(
+      "kprobe:f { @x[0] = 0; if (has_key(@x[0])) { } if (has_key(@x[1])) {} }");
+  test("kprobe:f { @x = 0; has_key(@x); }");
+  test("kprobe:f { @x = 0; has_key(@x) ? 1 : 0; }");
+  test("kprobe:f { @x[0] = 0; has_key(@x); }", 10);
+  test("kprobe:f { @x[0] = 0; has_key(@x, @x[0]); }", 1);
+  test("kprobe:f { @x[0] = 0; has_key(@x, 1); }", 1);
 }
 
 TEST(semantic_analyser, call_time)

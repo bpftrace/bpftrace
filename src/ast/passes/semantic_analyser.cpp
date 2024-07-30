@@ -678,6 +678,16 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateNone();
+  } else if (call.func == "has_key") {
+    check_assignment(call, false, false, false);
+    if (check_varargs(call, 1, 1)) {
+      for (const auto &arg : *call.vargs) {
+        if (!arg->is_map)
+          LOG(ERROR, arg->loc, err_)
+              << "has_key() only expects maps to be provided";
+      }
+    }
+    call.type = CreateBool();
   } else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
       auto *arg = call.vargs->at(0);

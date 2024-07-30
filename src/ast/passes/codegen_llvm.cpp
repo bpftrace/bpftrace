@@ -771,6 +771,51 @@ void CodegenLLVM::visit(Call &call)
       }
     }
     expr_ = nullptr;
+  } else if (call.func == "has_key") {
+    auto &arg = *call.vargs->at(0);
+    auto &map = static_cast<Map &>(arg);
+    auto [key, scoped_key_deleter] = getMapKey(map);
+
+    CallInst *lookup = b_.CreateMapLookup(map, key);
+
+    AllocaInst *has_key = b_.CreateAllocaBPF(b_.getInt8Ty(), "has_key");
+
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_success",
+                                                          parent);
+    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_failure",
+                                                          parent);
+    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
+                                                        "lookup_merge",
+                                                        parent);
+
+    Value *lookup_condition = b_.CreateICmpNE(
+        b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
+        b_.GetNull(),
+        "lookup_cond");
+    b_.CreateCondBr(lookup_condition,
+                    lookup_success_block,
+                    lookup_failure_block);
+
+    b_.SetInsertPoint(lookup_success_block);
+
+    b_.CreateStore(b_.getInt8(1), has_key);
+
+    b_.CreateBr(lookup_merge_block);
+
+    b_.SetInsertPoint(lookup_failure_block);
+
+    b_.CreateStore(b_.getInt8(0), has_key);
+
+    b_.CreateBr(lookup_merge_block);
+
+    b_.SetInsertPoint(lookup_merge_block);
+
+    expr_ = b_.CreateLoad(b_.getInt8Ty(), has_key);
+
+    b_.CreateLifetimeEnd(has_key);
   } else if (call.func == "str") {
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     // Largest read we'll allow = our global string buffer size

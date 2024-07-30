@@ -2347,6 +2347,10 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 | Delete a single key from a map. For a single value map this deletes the only element. For an associative-array the key to delete has to be specified. Multiple arguments can be passed to delete many keys at once.
 | Sync
 
+| <<map-functions-has_key, `has_key(mapkey k)`>>
+| Return true if the key exists in this map. Otherwise return false. For a single value map this returns true. For an associative-array the key has to be specified.
+| Sync
+
 | <<map-functions-hist, `hist(int64 n[, int k])`>>
 | Create a log2 histogram of n using buckets per power of 2, 0 <= k <= 5, defaults to 0.
 | Sync
@@ -2478,6 +2482,32 @@ kprobe:dummy {
   delete(@scalar, @associative[1,2]);
 
   delete(@associative); // error
+}
+```
+
+[#map-functions-has_key]
+=== has_key
+
+.variants
+* `has_key(mapkey k)`
+
+Return true if the key exists in this map.
+Otherwise return false.
+For a single value map this returns true.
+For an associative-array the key has to be specified.
+
+```
+kprobe:dummy {
+  @scalar = 1;
+  @associative[1,2] = 1;
+  
+  if (has_key(@scalar)) {
+    print(("hello"));
+  }
+  
+  if (!has_key(@associative[1,3])) {
+    print(("bye"));
+  }
 }
 ```
 
