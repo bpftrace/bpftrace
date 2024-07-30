@@ -332,6 +332,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
+  test("kprobe:f { @x[1] = 1; if (has_key(@x, 1)) {} }");
   test("kprobe:f { @x = 1; @s = len(@x) }");
   test("kprobe:f { time() }");
   test("kprobe:f { exit() }");
@@ -1065,6 +1066,65 @@ TEST(semantic_analyser, call_len)
   test("kprobe:f { @x[0] = 0; len(@x, 1); }", 1);
   test("kprobe:f { @x[0] = 0; len(@x[2]); }", 1);
   test("kprobe:f { $x = 0; len($x); }", 1);
+}
+
+TEST(semantic_analyser, call_has_key)
+{
+  test("kprobe:f { @x[1] = 0; if (has_key(@x, 1)) {} }");
+  test("kprobe:f { @x[1, 2] = 0; if (has_key(@x, (3, 4))) {} }");
+  test("kprobe:f { @x[1, (int8)2] = 0; if (has_key(@x, (3, 4))) {} }");
+  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "bye"))) {} })");
+  test(
+      R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "longerstr"))) {} })");
+  test(
+      R"(kprobe:f { @x[1, "longerstr"] = 0; if (has_key(@x, (2, "hi"))) {} })");
+  test("kprobe:f { @x[1, 2] = 0; $a = (3, 4); if (has_key(@x, $a)) {} }");
+  test("kprobe:f { @x[1, 2] = 0; @a = (3, 4); if (has_key(@x, @a)) {} }");
+  test("kprobe:f { @x[1] = 0; @a = has_key(@x, 1); }");
+  test("kprobe:f { @x[1] = 0; $a = has_key(@x, 1); }");
+  test("kprobe:f { @x[1] = 0; @a[has_key(@x, 1)] = 1; }");
+
+  test_error("kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }",
+             R"(
+stdin:1:27-39: ERROR: has_key() requires at least 2 arguments (1 provided)
+kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }
+                          ~~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @x[1] = 1;  if (has_key(@x[1], 1)) {} }",
+             R"(
+stdin:1:27-41: ERROR: has_key() expects the first argument to be a map. Not a map value expression.
+kprobe:f { @x[1] = 1;  if (has_key(@x[1], 1)) {} }
+                          ~~~~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }",
+             R"(
+stdin:1:24-35: ERROR: has_key() only accepts maps that have keys. No scalar maps e.g. `@a = 1;`
+kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }
+                       ~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
+             R"(
+stdin:1:43-44: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects arguments: '(int64,int64)'
+kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }
+                                          ~
+)");
+
+  test_error(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
+             R"(
+stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,string[3])'
+kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
+                                            ~~~~~~
+)");
+
+  test_error("kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }",
+             R"(
+stdin:1:34-45: ERROR: has_key() expects the first argument to be a map
+kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }
+                                 ~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_time)

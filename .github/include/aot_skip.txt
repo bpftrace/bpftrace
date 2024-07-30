@@ -1,3 +1,4 @@
+aot.basic.has_key as a variable
 aot.basic.print_per_cpu_map_vals
 aot.btf.kernel_module_type_fwd
 aot.builtin.args in kfunc as a map key

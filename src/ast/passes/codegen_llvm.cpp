@@ -768,6 +768,19 @@ void CodegenLLVM::visit(Call &call)
       }
     }
     expr_ = nullptr;
+  } else if (call.func == "has_key") {
+    auto &arg = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg);
+    auto [key, scoped_key_deleter] = getMapKey(map, call.vargs.at(1));
+
+    CallInst *lookup = b_.CreateMapLookup(map, key);
+    expr_ = b_.CreateICmpNE(b_.CreateIntCast(lookup, b_.GET_PTR_TY(), true),
+                            b_.GetNull(),
+                            "has_key");
+#if LLVM_VERSION_MAJOR <= 14
+    // Got to cast to the correct type for earlier versions of LLVM
+    expr_ = b_.CreateIntCast(expr_, b_.getInt8Ty(), false);
+#endif
   } else if (call.func == "str") {
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     // Largest read we'll allow = our global string buffer size
@@ -2941,24 +2954,30 @@ int CodegenLLVM::getNextIndexForProbe()
 std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     Map &map)
 {
+  return getMapKey(map, map.key_expr);
+}
+
+std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
+    Map &map,
+    Expression *key_expr)
+{
   Value *key;
   bool alloca_created_here = true;
-  if (map.key_expr) {
-    Expression *expr = map.key_expr;
-    auto scoped_del = accept(expr);
-    if (inBpfMemory(expr->type)) {
+  if (key_expr) {
+    auto scoped_del = accept(key_expr);
+    if (inBpfMemory(key_expr->type)) {
       auto &key_type = map.key_type;
-      if (!expr->type.IsSameSizeRecursive(key_type)) {
+      if (!key_expr->type.IsSameSizeRecursive(key_type)) {
         key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
         b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
-        if (expr->type.IsTupleTy()) {
-          createTupleCopy(expr->type, key_type, key, expr_);
-        } else if (expr->type.IsStringTy()) {
-          b_.CreateMemcpyBPF(key, expr_, expr->type.GetSize());
+        if (key_expr->type.IsTupleTy()) {
+          createTupleCopy(key_expr->type, key_type, key, expr_);
+        } else if (key_expr->type.IsStringTy()) {
+          b_.CreateMemcpyBPF(key, expr_, key_expr->type.GetSize());
         } else {
           LOG(BUG) << "Type size mismatch. Key Type Size: "
                    << key_type.GetSize()
-                   << " Expression Type Size: " << expr->type.GetSize();
+                   << " Expression Type Size: " << key_expr->type.GetSize();
         }
       } else {
         key = expr_;
@@ -2973,15 +2992,16 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
       key = b_.CreateAllocaBPF(map.key_type, map.ident + "_key");
       // Integers are always stored as 64-bit in map keys
       b_.CreateStore(
-          b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()), key);
+          b_.CreateIntCast(expr_, b_.getInt64Ty(), key_expr->type.IsSigned()),
+          key);
     } else {
-      key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
-      if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
+      key = b_.CreateAllocaBPF(key_expr->type, map.ident + "_key");
+      if (key_expr->type.IsArrayTy() || key_expr->type.IsRecordTy()) {
         // We need to read the entire array/struct and save it
-        b_.CreateProbeRead(ctx_, key, expr->type, expr_, expr->loc);
+        b_.CreateProbeRead(ctx_, key, key_expr->type, expr_, key_expr->loc);
       } else {
         b_.CreateStore(
-            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
+            b_.CreateIntCast(expr_, b_.getInt64Ty(), key_expr->type.IsSigned()),
             b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
       }
     }

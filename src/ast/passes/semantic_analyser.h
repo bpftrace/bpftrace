@@ -132,7 +132,12 @@ private:
   SizedType *get_map_key_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
   SizedType create_key_type(const SizedType &expr_type, const location &loc);
-  void update_key_type(const Map &map, const SizedType &new_key_type);
+  void update_current_key(SizedType &current_key_type,
+                          const SizedType &new_key_type);
+  void validate_new_key(const SizedType &current_key_type,
+                        const SizedType &new_key_type,
+                        const std::string &map_ident,
+                        const location &loc);
   bool update_string_size(SizedType &type, const SizedType &new_type);
   void validate_map_key(const SizedType &key, const location &loc);
   void resolve_struct_type(SizedType &type, const location &loc);

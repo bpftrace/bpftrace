@@ -173,6 +173,9 @@ private:
 
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
+  [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(
+      Map &map,
+      Expression *key_expr);
   AllocaInst *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
