@@ -22,11 +22,15 @@ Dwarf::Dwarf(BPFtrace *bpftrace, std::string file_path)
   if (instance_count++ == 0)
     lldb::SBDebugger::Initialize();
 
-  debugger_ = lldb::SBDebugger::Create(false);
+  // Create a "hardened" debugger instance with no scripting, nor .lldbinit.
+  // We don't want a Python extension or .lldbinit to influence the byte-code
+  // that will get executed by the Kernel. It would be a security risk!
+  debugger_ = lldb::SBDebugger::Create(/* source_init_file = */ false);
+  debugger_.SetScriptLanguage(lldb::ScriptLanguage::eScriptLanguageNone);
 
   lldb::SBError error;
   target_ = debugger_.CreateTarget(
-      file_path_.c_str(), nullptr, nullptr, false, error);
+      file_path_.c_str(), nullptr, nullptr, true, error);
   if (!error.Success() || !target_.IsValid()) {
     throw error;
   }
