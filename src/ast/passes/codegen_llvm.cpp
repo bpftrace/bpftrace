@@ -65,9 +65,10 @@ CodegenLLVM::CodegenLLVM(Node *root,
       b_(*context_, *module_, bpftrace, async_ids_),
       debug_(*module_)
 {
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
+  LLVMInitializeBPFTargetInfo();
+  LLVMInitializeBPFTarget();
+  LLVMInitializeBPFTargetMC();
+  LLVMInitializeBPFAsmPrinter();
   std::string error_str;
   auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
   if (!target)
