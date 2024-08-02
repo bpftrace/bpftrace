@@ -1650,7 +1650,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
     auto *ptr_val1_elem_i = CreateGEP(GetType(val1_type),
                                       ptr_val1,
                                       { getInt32(0), getInt32(i) });
-    if (onStack(val1_type)) {
+    if (inBpfMemory(val1_type)) {
       val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
     } else {
       CreateProbeRead(ctx,
@@ -1665,7 +1665,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
     auto *ptr_val2_elem_i = CreateGEP(GetType(val2_type),
                                       ptr_val2,
                                       { getInt32(0), getInt32(i) });
-    if (onStack(val2_type)) {
+    if (inBpfMemory(val2_type)) {
       val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
     } else {
       CreateProbeRead(ctx,
@@ -1766,7 +1766,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
                                     ptr_val1,
                                     { getInt32(0),
                                       CreateLoad(getInt32Ty(), i) });
-  if (onStack(val1_type)) {
+  if (inBpfMemory(val1_type)) {
     val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
   } else {
     CreateProbeRead(ctx,
@@ -1782,7 +1782,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
                                     ptr_val2,
                                     { getInt32(0),
                                       CreateLoad(getInt32Ty(), i) });
-  if (onStack(val2_type)) {
+  if (inBpfMemory(val2_type)) {
     val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
   } else {
     CreateProbeRead(ctx,
