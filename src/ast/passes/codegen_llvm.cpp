@@ -854,19 +854,12 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(call.vargs.front());
     auto arg0 = call.vargs.front();
-    // arg0 is already on the bpf stack -> use memcpy
-    // otherwise -> probe read in addrspace of arg0->type
-    // case : struct MyStruct { char b[4]; };
-    // $s = (struct MyStruct *)arg0; buf($s->b, 4)
-    if (shouldBeOnStackAlready(arg0->type))
-      b_.CREATE_MEMCPY(buf_data_offset, expr_, length, 1);
-    else
-      b_.CreateProbeRead(ctx_,
-                         buf_data_offset,
-                         length,
-                         expr_,
-                         find_addrspace_stack(arg0->type),
-                         call.loc);
+    b_.CreateProbeRead(ctx_,
+                       buf_data_offset,
+                       length,
+                       expr_,
+                       find_addrspace_stack(arg0->type),
+                       call.loc);
 
     expr_ = buf;
   } else if (call.func == "path") {
@@ -1352,7 +1345,7 @@ void CodegenLLVM::visit(Call &call)
     auto scoped_del = accept(macaddr);
 
     if (onStack(macaddr->type))
-      b_.CREATE_MEMCPY(buf, expr_, macaddr->type.GetSize(), 1);
+      b_.CreateMemcpyBPF(buf, expr_, macaddr->type.GetSize());
     else
       b_.CreateProbeRead(
           ctx_, static_cast<AllocaInst *>(buf), macaddr->type, expr_, call.loc);
@@ -1923,12 +1916,12 @@ void CodegenLLVM::visit(Ternary &ternary)
     // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
     auto scoped_del_left = accept(ternary.left);
-    b_.CREATE_MEMCPY(buf, expr_, ternary.type.GetSize(), 1);
+    b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     auto scoped_del_right = accept(ternary.right);
-    b_.CREATE_MEMCPY(buf, expr_, ternary.type.GetSize(), 1);
+    b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
@@ -2224,7 +2217,7 @@ AllocaInst *CodegenLLVM::createTuple(
                               { b_.getInt32(0), b_.getInt32(i) });
 
     if (onStack(type))
-      b_.CREATE_MEMCPY(dst, val, type.GetSize(), 1);
+      b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
       b_.CreateProbeRead(ctx_, dst, type, val, *loc);
     else
@@ -2277,7 +2270,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
         assignment.expr->type.GetSize() != map.type.GetSize()) {
       val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateMemsetBPF(val, b_.getInt8(0), map.type.GetSize());
-      b_.CREATE_MEMCPY(val, expr, assignment.expr->type.GetSize(), 1);
+      b_.CreateMemcpyBPF(val, expr, assignment.expr->type.GetSize());
       self_alloca = true;
     } else
       val = expr;
@@ -2350,7 +2343,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     auto *val = variables_[var.ident].value;
     if (assignment.expr->type.GetSize() != var.type.GetSize())
       b_.CreateMemsetBPF(val, b_.getInt8(0), var.type.GetSize());
-    b_.CREATE_MEMCPY(val, expr_, assignment.expr->type.GetSize(), 1);
+    b_.CreateMemcpyBPF(val, expr_, assignment.expr->type.GetSize());
   } else {
     b_.CreateStore(expr_, variables_[var.ident].value);
   }
@@ -2856,7 +2849,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
             expr->type.GetSize() != key_type.GetSize()) {
           key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
           b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
-          b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
+          b_.CreateMemcpyBPF(key, expr_, expr->type.GetSize());
         } else {
           key = expr_;
           // Call-ee freed
@@ -2924,7 +2917,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
     if (onStack(expr->type)) {
       if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
         b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
-      b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
+      b_.CreateMemcpyBPF(offset_val, expr_, expr->type.GetSize());
       if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
@@ -3362,7 +3355,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                  fmt_args,
                                  { b_.getInt32(0), b_.getInt32(i) });
     if (needMemcpy(arg.type))
-      b_.CREATE_MEMCPY(offset, expr_, arg.type.GetSize(), 1);
+      b_.CreateMemcpyBPF(offset, expr_, arg.type.GetSize());
     else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
       b_.CreateStore(
           b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.IsSigned()),
@@ -3509,7 +3502,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type.GetSize());
   if (needMemcpy(arg.type)) {
     if (onStack(arg.type))
-      b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
+      b_.CreateMemcpyBPF(content_offset, expr_, arg.type.GetSize());
     else
       b_.CreateProbeRead(ctx_, content_offset, arg.type, expr_, arg.loc);
   } else {
@@ -3946,7 +3939,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
     if (elem_type.IsStringTy() && data_type.is_btftype) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
-      b_.CREATE_MEMCPY(dst, src, elem_type.GetSize(), 1);
+      b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
     } else {
       b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
     }

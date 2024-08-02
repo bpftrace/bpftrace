@@ -248,6 +248,31 @@ void IRBuilderBPF::CreateMemsetBPF(Value *ptr, Value *val, uint32_t size)
   }
 }
 
+void IRBuilderBPF::CreateMemcpyBPF(Value *dst, Value *src, uint32_t size)
+{
+  if (size > 512 && bpftrace_.feature_->has_helper_probe_read_kernel()) {
+    // Note we are avoiding a call to CreateProbeRead(), as it wraps
+    // calls to probe read helpers with the -kk error reporting feature.
+    //
+    // Errors are not ever expected, as memcpy should only be used when
+    // you're sure src and dst are both in BPF memory.
+    auto probe_read_id = libbpf::BPF_FUNC_probe_read_kernel;
+    FunctionType *proberead_func_type = FunctionType::get(
+        getInt64Ty(), { dst->getType(), getInt32Ty(), src->getType() }, false);
+    PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type,
+                                                            0);
+    Constant *proberead_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                     getInt64(probe_read_id),
+                                                     proberead_func_ptr_type);
+    createCall(proberead_func_type,
+               proberead_func,
+               { dst, getInt32(size), src },
+               probeReadHelperName(probe_read_id));
+  } else {
+    CreateMemCpy(dst, MaybeAlign(1), src, MaybeAlign(1), size);
+  }
+}
+
 llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Type *ty)
 {
   assert(ty->isIntegerTy());
@@ -554,7 +579,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   SetInsertPoint(lookup_success_block);
   if (needMemcpy(type))
-    CREATE_MEMCPY(value, call, type.GetSize(), 1);
+    CreateMemcpyBPF(value, call, type.GetSize());
   else {
     assert(value->getAllocatedType() == getInt64Ty());
     // createMapLookup  returns an u8*
