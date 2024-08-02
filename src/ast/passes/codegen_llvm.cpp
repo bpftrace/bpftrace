@@ -858,7 +858,7 @@ void CodegenLLVM::visit(Call &call)
     // otherwise -> probe read in addrspace of arg0->type
     // case : struct MyStruct { char b[4]; };
     // $s = (struct MyStruct *)arg0; buf($s->b, 4)
-    if (shouldBeOnStackAlready(arg0->type))
+    if (shouldBeInBpfMemoryAlready(arg0->type))
       b_.CREATE_MEMCPY(buf_data_offset, expr_, length, 1);
     else
       b_.CreateProbeRead(ctx_,
@@ -1351,7 +1351,7 @@ void CodegenLLVM::visit(Call &call)
     auto macaddr = call.vargs.front();
     auto scoped_del = accept(macaddr);
 
-    if (onStack(macaddr->type))
+    if (inBpfMemory(macaddr->type))
       b_.CREATE_MEMCPY(buf, expr_, macaddr->type.GetSize(), 1);
     else
       b_.CreateProbeRead(
@@ -1993,7 +1993,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
                               { b_.getInt32(0), b_.getInt32(acc.index) });
     SizedType &elem_type = type.GetFields()[acc.index].type;
 
-    if (shouldBeOnStackAlready(elem_type)) {
+    if (shouldBeInBpfMemoryAlready(elem_type)) {
       expr_ = src;
       // Extend lifetime of source buffer
       expr_deleter_ = scoped_del.disarm();
@@ -2019,7 +2019,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
   auto &field = type.GetField(acc.field);
 
-  if (onStack(type)) {
+  if (inBpfMemory(type)) {
     readDatastructElemFromStack(
         expr_, b_.getInt64(field.offset), type, field.type, scoped_del);
   } else {
@@ -2107,7 +2107,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
 
   auto scoped_del_index = accept(arr.indexpr);
 
-  if (onStack(type))
+  if (inBpfMemory(type))
     readDatastructElemFromStack(array, expr_, type, elem_type, scoped_del_expr);
   else {
     if (array->getType()->isPointerTy())
@@ -2223,7 +2223,7 @@ AllocaInst *CodegenLLVM::createTuple(
                               buf,
                               { b_.getInt32(0), b_.getInt32(i) });
 
-    if (onStack(type))
+    if (inBpfMemory(type))
       b_.CREATE_MEMCPY(dst, val, type.GetSize(), 1);
     else if (type.IsArrayTy() || type.IsRecordTy())
       b_.CreateProbeRead(ctx_, dst, type, val, *loc);
@@ -2271,7 +2271,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   auto [key, scoped_key_deleter] = getMapKey(map);
-  if (shouldBeOnStackAlready(assignment.expr->type)) {
+  if (shouldBeInBpfMemoryAlready(assignment.expr->type)) {
     if ((assignment.expr->type.IsStringTy() ||
          assignment.expr->type.IsTupleTy()) &&
         assignment.expr->type.GetSize() != map.type.GetSize()) {
@@ -2850,7 +2850,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     if (map.vargs.size() == 1) {
       Expression *expr = map.vargs.at(0);
       auto scoped_del = accept(expr);
-      if (onStack(expr->type)) {
+      if (inBpfMemory(expr->type)) {
         auto &key_type = map.key_type.args_[0];
         if (expr->type.IsStringTy() &&
             expr->type.GetSize() != key_type.GetSize()) {
@@ -2921,7 +2921,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
                                      { b_.getInt64(0), b_.getInt64(offset) });
     size_t map_key_size = map.key_type.args_[i++].GetSize();
 
-    if (onStack(expr->type)) {
+    if (inBpfMemory(expr->type)) {
       if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
         b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
@@ -3508,7 +3508,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
                                        { b_.getInt32(0), b_.getInt32(2) });
   b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type.GetSize());
   if (needMemcpy(arg.type)) {
-    if (onStack(arg.type))
+    if (inBpfMemory(arg.type))
       b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
     else
       b_.CreateProbeRead(ctx_, content_offset, arg.type, expr_, arg.loc);
@@ -4277,7 +4277,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 
   auto &key_type = f.decl->type.GetField(0).type;
   Value *key = callback->getArg(1);
-  if (!onStack(key_type)) {
+  if (!inBpfMemory(key_type)) {
     key = b_.CreateLoad(b_.GetType(key_type), key, "key");
   }
 
@@ -4297,7 +4297,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
     b_.CreateStore(key, key_ptr);
 
     val = b_.CreatePerCpuMapAggElems(ctx_, map, key_ptr, map_val_type, map.loc);
-  } else if (!onStack(val_type)) {
+  } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }
 
