@@ -12,11 +12,6 @@
 #include "bpftrace.h"
 #include "types.h"
 
-#define CREATE_MEMCPY(dst, src, size, algn)                                    \
-  CreateMemCpy((dst), MaybeAlign(algn), (src), MaybeAlign(algn), (size))
-#define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
-  CreateMemCpy((dst), MaybeAlign(algn), (src), MaybeAlign(algn), (size), true)
-
 #define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
   CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))
 
@@ -51,6 +46,7 @@ public:
                               const std::string &name = "");
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
   void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
+  void CreateMemcpyBPF(Value *dst, Value *src, uint32_t size);
   llvm::Type *GetType(const SizedType &stype);
   llvm::Type *GetMapValueType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
