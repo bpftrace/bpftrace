@@ -113,13 +113,13 @@ EXPECT @[ok_key]: 1
 TIMEOUT 5
 
 NAME buf_map_multikey
-PROG BEGIN { @[buf("ok_key", 8), 1] = hist(1); exit(); }
-EXPECT @[ok_key\x00\x00, 1]:
+PROG BEGIN { @[buf("ok_key", 7), 1] = hist(1); exit(); }
+EXPECT @[ok_key\x00, 1]:
 TIMEOUT 5
 
 NAME buf_hist_map_key
-PROG BEGIN { @[buf("ok_key", 8)] = hist(1); exit(); }
-EXPECT @[ok_key\x00\x00]:
+PROG BEGIN { @[buf("ok_key", 7)] = hist(1); exit(); }
+EXPECT @[ok_key\x00]:
 TIMEOUT 5
 
 NAME buf_map_value
