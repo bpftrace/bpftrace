@@ -82,7 +82,7 @@ def main(test_filter, skiplist_file, run_aot_tests):
         for timeouted_test in timeouted_tests:
             print(fail("[  TIMEOUT ]") + " %s" % timeouted_test)
 
-    if failed_tests:
+    if failed_tests or timeouted_tests:
         exit(1)
 
 
