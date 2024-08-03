@@ -20,8 +20,8 @@ entry:
   %"@x_key" = alloca i64, align 8
   %str1 = alloca [3 x i8], align 1
   %str = alloca [3 x i8], align 1
-  %buf = alloca [64 x i8], align 1
-  %result = alloca [64 x i8], align 1
+  %buf = alloca [3 x i8], align 1
+  %result = alloca [3 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %result)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %buf)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
@@ -34,13 +34,13 @@ entry:
 left:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
   store [3 x i8] c"lo\00", ptr %str, align 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %buf, ptr align 1 %str, i64 64, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %buf, ptr align 1 %str, i64 3, i1 false)
   br label %done
 
 right:                                            ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
   store [3 x i8] c"hi\00", ptr %str1, align 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %buf, ptr align 1 %str1, i64 64, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %buf, ptr align 1 %str1, i64 3, i1 false)
   br label %done
 
 done:                                             ; preds = %right, %left
@@ -91,10 +91,10 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !18 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 512, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 24, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 64, lowerBound: 0)
+!24 = !DISubrange(count: 3, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
 !27 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !28)
