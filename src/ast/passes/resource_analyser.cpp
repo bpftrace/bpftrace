@@ -121,7 +121,8 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needs_join_map = true;
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
-    resources_.needed_global_vars.insert(bpftrace::globalvars::NUM_CPUS);
+    resources_.needed_global_vars.insert(
+        std::string(bpftrace::globalvars::NUM_CPUS));
   } else if (call.func == "hist") {
     auto &map_info = resources_.maps_info[call.map->ident];
     int bits = static_cast<Integer *>(call.vargs.at(1))->n;
