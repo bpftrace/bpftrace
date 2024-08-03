@@ -1536,9 +1536,10 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
     if (literal1)
       str_c = getInt8(literal1->c_str()[j]);
     else {
-      auto *ptr_str = CreateGEP(ArrayType::get(getInt8Ty(), str1_size),
-                                val1,
-                                { getInt32(0), getInt32(j) });
+      auto *ptr_str = CreateGEP(getInt8Ty(),
+                                CreatePointerCast(val1,
+                                                  getInt8Ty()->getPointerTo()),
+                                { getInt32(j) });
       str_c = CreateLoad(getInt8Ty(), ptr_str);
     }
 
@@ -1554,9 +1555,10 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
       if (literal1)
         l = getInt8(literal1->c_str()[i + j]);
       else {
-        auto *ptr_l = CreateGEP(ArrayType::get(getInt8Ty(), str1_size),
-                                val1,
-                                { getInt32(0), getInt32(i + j) });
+        auto *ptr_l = CreateGEP(getInt8Ty(),
+                                CreatePointerCast(val1,
+                                                  getInt8Ty()->getPointerTo()),
+                                { getInt32(i + j) });
         l = CreateLoad(getInt8Ty(), ptr_l);
       }
 
@@ -1564,9 +1566,10 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
       if (literal2)
         r = getInt8(literal2->c_str()[i]);
       else {
-        auto *ptr_r = CreateGEP(ArrayType::get(getInt8Ty(), str2_size),
-                                val2,
-                                { getInt32(0), getInt32(i) });
+        auto *ptr_r = CreateGEP(getInt8Ty(),
+                                CreatePointerCast(val2,
+                                                  getInt8Ty()->getPointerTo()),
+                                { getInt32(i) });
         r = CreateLoad(getInt8Ty(), ptr_r);
       }
 
