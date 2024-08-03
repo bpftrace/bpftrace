@@ -110,7 +110,7 @@ public:
   // Map metadata
   std::map<std::string, MapInfo> maps_info;
   std::unordered_set<StackType> stackid_maps;
-  std::unordered_set<std::string_view> needed_global_vars;
+  std::unordered_set<std::string> needed_global_vars;
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
   bool needs_perf_event_map = false;
@@ -145,6 +145,7 @@ private:
             probe_ids,
             maps_info,
             stackid_maps,
+            needed_global_vars,
             needs_join_map,
             needs_elapsed_map,
             needs_perf_event_map,
