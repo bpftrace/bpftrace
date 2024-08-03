@@ -1028,6 +1028,15 @@ TEST(semantic_analyser, call_str_2_lit)
   test("kprobe:f { str(arg0, -3); }", 10);
   test("kprobe:f { @x = str(arg0, 3); }");
   test("kprobe:f { str(arg0, \"hello\"); }", 10);
+
+  // Check the string size
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, "kprobe:f { $x = str(arg0, 3); }");
+
+  auto x = static_cast<ast::AssignVarStatement *>(
+      driver.ctx.root->probes.at(0)->stmts.at(0));
+  EXPECT_EQ(CreateString(3), x->var->type);
 }
 
 TEST(semantic_analyser, call_str_2_expr)

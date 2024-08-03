@@ -685,7 +685,33 @@ void SemanticAnalyser::visit(Call &call)
             << call.func << "() expects an integer or a pointer type as first "
             << "argument (" << t << " provided)";
       }
-      call.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::max_strlen));
+
+      auto strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+
+      if (call.vargs.size() == 2 && check_arg(call, Type::integer, 1, false)) {
+        auto &size_arg = *call.vargs.at(1);
+        if (size_arg.is_literal) {
+          auto &integer = static_cast<Integer &>(size_arg);
+          long value = integer.n;
+          if (value < 0) {
+            if (is_final_pass())
+              LOG(ERROR, call.loc, err_)
+                  << call.func << "cannot use negative length (" << value
+                  << ")";
+          } else if (value > static_cast<int64_t>(strlen)) {
+            if (is_final_pass())
+              LOG(WARNING, call.loc, out_)
+                  << "length param (" << value
+                  << ") is too long and will be shortened to " << strlen
+                  << " bytes (see BPFTRACE_MAX_STRLEN)";
+          } else {
+            strlen = value;
+          }
+        }
+      }
+
+      call.type = CreateString(strlen);
+
       if (has_pos_param_) {
         if (dynamic_cast<PositionalParameter *>(arg))
           call.is_literal = true;
@@ -698,18 +724,6 @@ void SemanticAnalyser::visit(Call &call)
                 << call.func << "() only accepts positional parameters"
                 << " directly or with a single constant offset added";
           }
-        }
-      }
-
-      if (is_final_pass() && call.vargs.size() == 2 &&
-          check_arg(call, Type::integer, 1, false)) {
-        auto &size_arg = *call.vargs.at(1);
-        if (size_arg.is_literal) {
-          auto &integer = static_cast<Integer &>(size_arg);
-          long value = integer.n;
-          if (value < 0)
-            LOG(ERROR, call.loc, err_)
-                << call.func << "cannot use negative length (" << value << ")";
         }
       }
 
