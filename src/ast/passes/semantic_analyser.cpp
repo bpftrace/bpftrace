@@ -1959,10 +1959,11 @@ void SemanticAnalyser::visit(Ternary &ternary)
     if (cond != Type::integer)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
   }
-  if (lhs == Type::string)
-    ternary.type = CreateString(
-        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
-  else if (lhs == Type::integer)
+  if (lhs == Type::string) {
+    auto lsize = ternary.left->type.GetSize();
+    auto rsize = ternary.right->type.GetSize();
+    ternary.type = CreateString(std::max(lsize, rsize));
+  } else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else if (lhs == Type::none)
     ternary.type = CreateNone();
