@@ -16,8 +16,8 @@ static constexpr std::string_view SECTION_NAME = ".rodata";
 
 static constexpr std::string_view NUM_CPUS = "num_cpus";
 
-const std::unordered_set<std::string_view> GLOBAL_VAR_NAMES = {
-  NUM_CPUS,
+const std::unordered_set<std::string> GLOBAL_VAR_NAMES = {
+  std::string(NUM_CPUS),
 };
 
 void update_global_vars(const struct bpf_object *obj,

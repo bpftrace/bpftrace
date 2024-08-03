@@ -40,7 +40,7 @@ void update_global_vars(const struct bpf_object *bpf_object,
   // First locate the offsets of each global variable in the section with btf
   std::map<std::string_view, int> vars_and_offsets;
 
-  for (auto name : GLOBAL_VAR_NAMES) {
+  for (const auto &name : GLOBAL_VAR_NAMES) {
     if (bpftrace.resources.needed_global_vars.find(name) ==
         bpftrace.resources.needed_global_vars.end()) {
       continue;
