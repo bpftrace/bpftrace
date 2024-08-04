@@ -165,14 +165,6 @@ static void enforce_infinite_rlimit()
                  << "\"ulimit -l 8192\" to fix the problem";
 }
 
-void check_is_root()
-{
-  if (geteuid() != 0) {
-    LOG(ERROR) << "bpftrace currently only supports running as the root user.";
-    exit(1);
-  }
-}
-
 static void info(BPFnofeature no_feature)
 {
   struct utsname utsname;

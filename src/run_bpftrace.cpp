@@ -26,6 +26,14 @@ int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap)
   return vprintf(msg, ap);
 }
 
+void check_is_root()
+{
+  if (geteuid() != 0) {
+    LOG(ERROR) << "bpftrace currently only supports running as the root user.";
+    exit(1);
+  }
+}
+
 int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
 {
   int err;
