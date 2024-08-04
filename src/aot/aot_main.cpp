@@ -123,6 +123,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  check_is_root();
+
   libbpf_set_print(libbpf_print);
 
   auto output = prepare_output(output_file, output_format);
