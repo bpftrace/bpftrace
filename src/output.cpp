@@ -27,6 +27,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::probe:
     case Type::strerror:
     case Type::string:
+    case Type::timestamp:
     case Type::username:
     case Type::ustack:
     case Type::usym:
@@ -46,7 +47,6 @@ bool is_quoted_type(const SizedType &ty)
     case Type::stack_mode:
     case Type::stats:
     case Type::sum:
-    case Type::timestamp:
     case Type::timestamp_mode:
     case Type::tuple:
     case Type::voidtype:
