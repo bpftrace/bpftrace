@@ -302,13 +302,13 @@ void Printer::visit(If &if_block)
   ++depth_;
   out_ << indent << " then" << std::endl;
 
-  for (Statement *stmt : if_block.stmts) {
+  for (Statement *stmt : if_block.if_scope.stmts) {
     stmt->accept(*this);
   }
 
-  if (!if_block.else_stmts.empty()) {
+  if (!if_block.else_scope.stmts.empty()) {
     out_ << indent << " else" << std::endl;
-    for (Statement *stmt : if_block.else_stmts) {
+    for (Statement *stmt : if_block.else_scope.stmts) {
       stmt->accept(*this);
     }
   }

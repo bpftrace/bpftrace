@@ -2382,7 +2382,7 @@ void CodegenLLVM::visit(If &if_block)
   // if condition is false, with else
   //   parent -> if_else -> if_end
   //
-  if (!if_block.else_stmts.empty()) {
+  if (!if_block.else_scope.stmts.empty()) {
     // LLVM doesn't accept empty basic block, only create when needed
     if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
     b_.CreateCondBr(cond, if_true, if_else);
@@ -2391,16 +2391,16 @@ void CodegenLLVM::visit(If &if_block)
   }
 
   b_.SetInsertPoint(if_true);
-  for (Statement *stmt : if_block.stmts)
+  for (Statement *stmt : if_block.if_scope.stmts)
     auto scoped_del = accept(stmt);
 
   b_.CreateBr(if_end);
 
   b_.SetInsertPoint(if_end);
 
-  if (!if_block.else_stmts.empty()) {
+  if (!if_block.else_scope.stmts.empty()) {
     b_.SetInsertPoint(if_else);
-    for (Statement *stmt : if_block.else_stmts)
+    for (Statement *stmt : if_block.else_scope.stmts)
       auto scoped_del = accept(stmt);
 
     b_.CreateBr(if_end);

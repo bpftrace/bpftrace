@@ -36,10 +36,10 @@ bool ReturnPathAnalyser::visit(Jump &jump)
   return jump.ident == JumpType::RETURN;
 }
 
-bool ReturnPathAnalyser::visit(If &if_stmt)
+bool ReturnPathAnalyser::visit(If &if_block)
 {
   bool result = false;
-  for (Statement *stmt : if_stmt.stmts) {
+  for (Statement *stmt : if_block.if_scope.stmts) {
     if (Visit(*stmt))
       result = true;
   }
@@ -48,7 +48,7 @@ bool ReturnPathAnalyser::visit(If &if_stmt)
     return false;
   }
 
-  for (Statement *stmt : if_stmt.else_stmts) {
+  for (Statement *stmt : if_block.else_scope.stmts) {
     if (Visit(*stmt)) {
       // both blocks have a return
       return true;
