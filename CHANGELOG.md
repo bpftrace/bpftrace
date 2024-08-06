@@ -18,6 +18,8 @@ and this project adheres to
 - For-loops: Allow sharing variables between the main probe and the loop's body
   - [#3014](https://github.com/bpftrace/bpftrace/pull/3014)
 #### Changed
+- Merge output into `stdout` when `-lv`
+  - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
 - Stream output when printing maps
   - [#3264](https://github.com/bpftrace/bpftrace/pull/3264)
 - Only print kernel headers not found message if parsing fails
