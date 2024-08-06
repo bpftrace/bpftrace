@@ -163,3 +163,10 @@ EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
+
+NAME kprobe inlined function
+PROG config = { probe_inline = 1 }
+     kprobe:__down_read { exit() }
+EXPECT_NONE Attaching 1 probe...
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
