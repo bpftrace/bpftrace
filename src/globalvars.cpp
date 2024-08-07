@@ -31,8 +31,8 @@ void update_global_vars(const struct bpf_object *bpf_object,
              << " to update global vars";
   }
 
-  const struct btf_type *section_type = btf__type_by_id(self_btf,
-                                                        (__u32)section_id);
+  const struct btf_type *section_type = btf__type_by_id(
+      self_btf, static_cast<__u32>(section_id));
   if (!section_type) {
     LOG(BUG) << "Failed to get BTF type for section " << SECTION_NAME;
   }
@@ -69,8 +69,8 @@ void update_global_vars(const struct bpf_object *bpf_object,
   }
 
   size_t v_size;
-  char *global_vars_buf = (char *)bpf_map__initial_value(global_vars_map,
-                                                         &v_size);
+  char *global_vars_buf = static_cast<char *>(
+      bpf_map__initial_value(global_vars_map, &v_size));
 
   if (!global_vars_buf) {
     LOG(BUG) << "Failed to get array buf for global variable map";
@@ -83,7 +83,7 @@ void update_global_vars(const struct bpf_object *bpf_object,
                   "(codegen_llvm)";
     }
 
-    int64_t *var = (int64_t *)(global_vars_buf + offset);
+    int64_t *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
 
     if (name == NUM_CPUS) {
       *var = bpftrace.ncpus_;
