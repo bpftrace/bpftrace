@@ -1555,7 +1555,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
         auto index = bpftrace_.get_int_literal(arr.indexpr);
         if (index.has_value()) {
           size_t num = type.GetNumElements();
-          if (num != 0 && (size_t)*index >= num)
+          if (num != 0 && static_cast<size_t>(*index) >= num)
             LOG(ERROR, arr.loc, err_)
                 << "the index " << *index
                 << " is out of bounds for array of size " << num;
@@ -1673,7 +1673,7 @@ void SemanticAnalyser::binop_int(Binop &binop)
     if (pos_param) {
       auto len = bpftrace_.get_param(pos_param->n, true).length();
       if (!offset || binop.op != Operator::PLUS || offset->n < 0 ||
-          (size_t)offset->n > len) {
+          static_cast<size_t>(offset->n) > len) {
         LOG(ERROR, binop.loc + binop.right->loc, err_)
             << "only addition of a single constant less or equal to the "
             << "length of $" << pos_param->n << " (which is " << len << ")"
@@ -2503,8 +2503,7 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
-  for (size_t i = 0; i < tuple.elems.size(); ++i) {
-    Expression *elem = tuple.elems.at(i);
+  for (auto elem : tuple.elems) {
     elem->accept(*this);
 
     // If elem type is none that means that the tuple contains some

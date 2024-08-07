@@ -4,6 +4,7 @@
 #include <bpf/btf.h>
 #include <bpf/libbpf.h>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
 #include <fstream>
@@ -680,7 +681,7 @@ bool BPFfeature::has_module_btf()
 
   char name[64];
   struct bpf_btf_info info = {};
-  info.name = (__u64)name;
+  info.name = reinterpret_cast<uintptr_t>(name);
   info.name_len = sizeof(name);
   __u32 id = 0, info_len = sizeof(info);
   int err = 0, fd = -1;

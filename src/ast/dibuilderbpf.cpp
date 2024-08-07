@@ -40,7 +40,8 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
-  createParameterVariable(subprog, "ctx", 1, file, 0, (DIType *)types[1], true);
+  createParameterVariable(
+      subprog, "ctx", 1, file, 0, static_cast<DIType *>(types[1]), true);
 
   func.setSubprogram(subprog);
 }

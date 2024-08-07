@@ -874,7 +874,6 @@ static std::optional<int> is_elf(const std::string &path)
 {
   int fd;
   Elf *elf;
-  void *ret;
   GElf_Ehdr ehdr;
   std::optional<int> result = {};
 
@@ -896,8 +895,7 @@ static std::optional<int> is_elf(const std::string &path)
     goto err_close;
   }
 
-  ret = (void *)gelf_getehdr(elf, &ehdr);
-  if (ret == NULL) {
+  if (!gelf_getehdr(elf, &ehdr)) {
     goto err_end;
   }
 
@@ -1176,13 +1174,17 @@ std::string hex_format_buffer(const char *buf,
   size_t offset = 0;
   for (size_t i = 0; i < size; i++)
     if (keep_ascii && buf[i] >= 32 && buf[i] <= 126)
-      offset += sprintf(s + offset, "%c", ((const uint8_t *)buf)[i]);
+      offset += sprintf(s + offset,
+                        "%c",
+                        (reinterpret_cast<const uint8_t *>(buf))[i]);
     else if (escape_hex)
-      offset += sprintf(s + offset, "\\x%02x", ((const uint8_t *)buf)[i]);
+      offset += sprintf(s + offset,
+                        "\\x%02x",
+                        (reinterpret_cast<const uint8_t *>(buf))[i]);
     else
       offset += sprintf(s + offset,
                         i == size - 1 ? "%02x" : "%02x ",
-                        ((const uint8_t *)buf)[i]);
+                        (reinterpret_cast<const uint8_t *>(buf))[i]);
 
   // Fit return value to actual length
   str.resize(offset);

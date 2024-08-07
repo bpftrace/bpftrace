@@ -41,7 +41,9 @@ bool PCAPwriter::write(uint64_t ns, void *pkt, unsigned int size)
     .len    = size,
   };
 
-  pcap_dump((u_char *)pdumper_, &hdr, (const u_char *)pkt);
+  pcap_dump(reinterpret_cast<u_char *>(pdumper_),
+            &hdr,
+            static_cast<const u_char *>(pkt));
   return true;
 }
 

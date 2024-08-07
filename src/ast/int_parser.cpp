@@ -98,7 +98,7 @@ std::variant<T, std::string> _parse_exp(const std::string &coeff,
     return errmsg.str();
   }
 
-  return c * (T)_ten_pow(e);
+  return c * static_cast<T>(_ten_pow(e));
 }
 
 } // namespace
