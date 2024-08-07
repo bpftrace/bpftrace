@@ -429,6 +429,29 @@ std::string erase_prefix(std::string &str)
   return prefix;
 }
 
+void erase_parameter_list(std::string &demangled_name)
+{
+  size_t args_start = std::string::npos;
+  ssize_t stack = 0;
+  // Look for the parenthesis closing the parameter list, then find
+  // the matching parenthesis at the start of the parameter list...
+  for (ssize_t it = demangled_name.find_last_of(')'); it >= 0; --it) {
+    if (demangled_name[it] == ')')
+      stack++;
+    if (demangled_name[it] == '(')
+      stack--;
+    if (stack == 0) {
+      args_start = it;
+      break;
+    }
+  }
+
+  // If we found the start of the parameter list,
+  // remove the parameters from the match line.
+  if (args_start != std::string::npos)
+    demangled_name.resize(args_start);
+}
+
 bool wildcard_match(std::string_view str,
                     const std::vector<std::string> &tokens,
                     bool start_wildcard,
