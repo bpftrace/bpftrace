@@ -250,7 +250,7 @@ std::string probetypeName(ProbeType t)
 
 uint64_t asyncactionint(AsyncAction a)
 {
-  return (uint64_t)a;
+  return static_cast<uint64_t>(a);
 }
 
 // Type wrappers

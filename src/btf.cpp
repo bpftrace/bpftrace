@@ -8,6 +8,7 @@
 #include "utils.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
@@ -58,7 +59,7 @@ BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
     return;
   }
 
-  vmlinux_btf_size = (__s32)type_cnt(vmlinux_btf);
+  vmlinux_btf_size = static_cast<__s32>(type_cnt(vmlinux_btf));
 
   state = OK;
 }
@@ -103,7 +104,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     // Get BTF object info - needed to determine if this is a kernel module BTF
     char name[64];
     struct bpf_btf_info info = {};
-    info.name = (__u64)name;
+    info.name = reinterpret_cast<uintptr_t>(name);
     info.name_len = sizeof(name);
 
     __u32 info_len = sizeof(info);
@@ -195,7 +196,7 @@ std::string BTF::dump_defs_from_btf(
     return std::string("");
   }
 
-  __s32 id, max = (__s32)type_cnt(btf);
+  __s32 id, max = static_cast<__s32>(type_cnt(btf));
 
   // note that we're always iterating from 1 here as we need to go through the
   // vmlinux BTF entries, too (even for kernel module BTFs)
@@ -471,7 +472,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     // funcarg_idx to access them in codegen.
     type_size = btf__resolve_size(func_id.btf, p->type);
     args.size += type_size;
-    arg_idx += std::ceil((float)type_size / (float)8);
+    arg_idx += std::ceil(static_cast<float>(type_size) / static_cast<float>(8));
   }
 
   if (ret) {
@@ -488,7 +489,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 {
   std::string funcs;
-  __s32 id, max = (__s32)type_cnt(btf_obj.btf);
+  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
 
   for (id = start_id(btf_obj.btf); id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
@@ -533,7 +534,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &funcs) const
 {
-  __s32 id, max = (__s32)type_cnt(btf_obj.btf);
+  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
   std::string type = std::string("");
   struct btf_dump *dump;
   char err_buf[256];
@@ -633,7 +634,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
 std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
 {
   std::set<std::string> struct_set;
-  __s32 id, max = (__s32)type_cnt(btf);
+  __s32 id, max = static_cast<__s32>(type_cnt(btf));
   std::string types = std::string("");
   struct btf_dump *dump;
   char err_buf[256];
@@ -713,7 +714,7 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
   // kernel commit 6fcd486b3a0a("bpf: Refactor RCU enforcement in the
   // verifier.") add 'struct bpf_iter__task__safe_trusted'
   const std::string suffix___safe_trusted = "__safe_trusted";
-  __s32 id, max = (__s32)type_cnt(btf);
+  __s32 id, max = static_cast<__s32>(type_cnt(btf));
   for (id = start_id(btf); id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
@@ -766,7 +767,7 @@ BTF::BTFId BTF::find_id(const std::string &name,
     __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf, name.c_str(), *kind)
                     : btf__find_by_name(btf_obj.btf, name.c_str());
     if (id >= 0)
-      return { btf_obj.btf, (__u32)id };
+      return { btf_obj.btf, static_cast<__u32>(id) };
   }
 
   return { nullptr, 0 };
@@ -776,7 +777,9 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
                           std::string_view name,
                           std::optional<__u32> kind) const
 {
-  for (__s32 id = start_id(btf), max = (__s32)type_cnt(btf); id <= max; ++id) {
+  for (__s32 id = start_id(btf), max = static_cast<__s32>(type_cnt(btf));
+       id <= max;
+       ++id) {
     const struct btf_type *t = btf__type_by_id(btf, id);
     if (!t)
       continue;
