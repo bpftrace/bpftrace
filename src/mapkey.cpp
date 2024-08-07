@@ -105,7 +105,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
                                    read_data<uint64_t>(arg_data + 16));
     case Type::inet:
       return bpftrace.resolve_inet(read_data<int64_t>(data),
-                                   (const uint8_t *)(arg_data + 8));
+                                   static_cast<const uint8_t *>(arg_data + 8));
     case Type::username:
       return bpftrace.resolve_uid(read_data<uint64_t>(data));
     case Type::probe:
@@ -129,17 +129,18 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       for (size_t i = 0; i < arg.GetNumElements(); i++)
         elems.push_back(argument_value(bpftrace,
                                        *arg.GetElementTy(),
-                                       (const uint8_t *)data +
+                                       static_cast<const uint8_t *>(data) +
                                            i * arg.GetElementTy()->GetSize()));
       return "[" + str_join(elems, ",") + "]";
     }
     case Type::record: {
       std::vector<std::string> elems;
       for (auto &field : arg.GetFields()) {
-        elems.push_back("." + field.name + "=" +
-                        argument_value(bpftrace,
-                                       field.type,
-                                       (const uint8_t *)data + field.offset));
+        elems.push_back(
+            "." + field.name + "=" +
+            argument_value(bpftrace,
+                           field.type,
+                           static_cast<const uint8_t *>(data) + field.offset));
       }
       return "{" + str_join(elems, ",") + "}";
     }

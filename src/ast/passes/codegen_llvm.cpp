@@ -1307,7 +1307,8 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "strerror") {
     auto scoped_del = accept(call.vargs.front());
   } else if (call.func == "strncmp") {
-    uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs.at(2));
+    uint64_t size = static_cast<uint64_t>(
+        *bpftrace_.get_int_literal(call.vargs.at(2)));
     const auto &left_arg = call.vargs.at(0);
     const auto &right_arg = call.vargs.at(1);
 

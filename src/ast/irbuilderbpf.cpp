@@ -1605,7 +1605,8 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
 
 CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
 {
-  libbpf::bpf_func_id fn;
+  // Random default value to silence compiler warning
+  libbpf::bpf_func_id fn = libbpf::BPF_FUNC_ktime_get_ns;
   switch (ts) {
     case TimestampMode::monotonic:
       fn = libbpf::BPF_FUNC_ktime_get_ns;
