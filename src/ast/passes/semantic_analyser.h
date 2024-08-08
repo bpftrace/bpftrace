@@ -118,7 +118,7 @@ private:
   bool update_string_size(SizedType &type, const SizedType &new_type);
   void resolve_struct_type(SizedType &type, const location &loc);
 
-  void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
+  void builtin_args_tracepoint(AttachPoint &attach_point, Builtin &builtin);
   ProbeType single_provider_type(Probe *probe);
   AddrSpace find_addrspace(ProbeType pt);
 

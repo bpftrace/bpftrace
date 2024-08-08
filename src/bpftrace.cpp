@@ -1974,33 +1974,33 @@ void BPFtrace::sort_by_key(
   }
 }
 
-std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
+std::string BPFtrace::get_string_literal(const ast::Expression &expr) const
 {
-  if (expr->is_literal) {
-    if (auto *string = dynamic_cast<const ast::String *>(expr))
+  if (expr.is_literal) {
+    if (auto *string = dynamic_cast<const ast::String *>(&expr))
       return string->str;
-    else if (auto *str_call = dynamic_cast<const ast::Call *>(expr)) {
+    else if (auto *str_call = dynamic_cast<const ast::Call *>(&expr)) {
       // Positional parameters in the form str($1) can be used as literals
       if (str_call->func == "str") {
         if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                str_call->vargs.at(0)))
+                str_call->vargs.at(0).ptr()))
           return get_param(pos_param->n, true);
       }
     }
   }
 
-  LOG(ERROR) << "Expected string literal, got " << expr->type;
+  LOG(ERROR) << "Expected string literal, got " << expr.type;
   return "";
 }
 
 std::optional<int64_t> BPFtrace::get_int_literal(
-    const ast::Expression *expr) const
+    const ast::Expression &expr) const
 {
-  if (expr->is_literal) {
-    if (auto *integer = dynamic_cast<const ast::Integer *>(expr))
+  if (expr.is_literal) {
+    if (auto *integer = dynamic_cast<const ast::Integer *>(&expr))
       return integer->n;
     else if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                 expr)) {
+                 &expr)) {
       if (pos_param->ptype == PositionalParameterType::positional) {
         auto param_str = get_param(pos_param->n, false);
         auto param_int = get_int_from_str(param_str);
@@ -2154,11 +2154,11 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
  */
 void BPFtrace::kfunc_recursion_check(ast::Program *prog)
 {
-  for (auto *probe : prog->probes) {
-    for (auto *ap : probe->attach_points) {
-      auto probe_type = probetype(ap->provider);
+  for (ast::Probe &probe : prog->probes) {
+    for (ast::AttachPoint &ap : probe.attach_points) {
+      auto probe_type = probetype(ap.provider);
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
-        auto matches = probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher_->get_matches_for_ap(ap);
         for (const auto &match : matches) {
           if (is_recursive_func(match)) {
             LOG(WARNING)

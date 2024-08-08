@@ -13,7 +13,7 @@ public:
   {
   }
 
-  void print(Node *root);
+  void print(Node &root);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "container/ref.h"
 #include "location.hh"
 #include "mapkey.h"
 #include "types.h"
@@ -100,7 +101,7 @@ public:
   bool is_variable = false;
   bool is_map = false;
 };
-using ExpressionList = std::vector<Expression *>;
+using ExpressionList = std::vector<ref<Expression>>;
 
 class Integer : public Expression {
 public:
@@ -205,7 +206,7 @@ public:
   DEFINE_ACCEPT
 
   Sizeof(SizedType type, location loc);
-  Sizeof(Expression *expr, location loc);
+  Sizeof(Expression &expr, location loc);
 
   Expression *expr = nullptr;
   SizedType argtype;
@@ -219,7 +220,7 @@ public:
   DEFINE_ACCEPT
 
   Offsetof(SizedType record, std::string &field, location loc);
-  Offsetof(Expression *expr, std::string &field, location loc);
+  Offsetof(Expression &expr, std::string &field, location loc);
 
   SizedType record;
   Expression *expr = nullptr;
@@ -261,10 +262,10 @@ class Binop : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Binop(Expression *left, Operator op, Expression *right, location loc);
+  Binop(Expression &left, Operator op, Expression &right, location loc);
 
-  Expression *left = nullptr;
-  Expression *right = nullptr;
+  ref<Expression> left;
+  ref<Expression> right;
   Operator op;
 
 private:
@@ -275,13 +276,13 @@ class Unop : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Unop(Operator op, Expression *expr, location loc = location());
+  Unop(Operator op, Expression &expr, location loc = location());
   Unop(Operator op,
-       Expression *expr,
+       Expression &expr,
        bool is_post_op = false,
        location loc = location());
 
-  Expression *expr = nullptr;
+  ref<Expression> expr;
   Operator op;
   bool is_post_op;
 
@@ -293,11 +294,11 @@ class FieldAccess : public Expression {
 public:
   DEFINE_ACCEPT
 
-  FieldAccess(Expression *expr, const std::string &field);
-  FieldAccess(Expression *expr, const std::string &field, location loc);
-  FieldAccess(Expression *expr, ssize_t index, location loc);
+  FieldAccess(Expression &expr, const std::string &field);
+  FieldAccess(Expression &expr, const std::string &field, location loc);
+  FieldAccess(Expression &expr, ssize_t index, location loc);
 
-  Expression *expr = nullptr;
+  ref<Expression> expr;
   std::string field;
   ssize_t index = -1;
 
@@ -309,11 +310,11 @@ class ArrayAccess : public Expression {
 public:
   DEFINE_ACCEPT
 
-  ArrayAccess(Expression *expr, Expression *indexpr);
-  ArrayAccess(Expression *expr, Expression *indexpr, location loc);
+  ArrayAccess(Expression &expr, Expression &indexpr);
+  ArrayAccess(Expression &expr, Expression &indexpr, location loc);
 
-  Expression *expr = nullptr;
-  Expression *indexpr = nullptr;
+  ref<Expression> expr;
+  ref<Expression> indexpr;
 
 private:
   ArrayAccess(const ArrayAccess &other) = default;
@@ -323,9 +324,9 @@ class Cast : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Cast(SizedType type, Expression *expr, location loc);
+  Cast(SizedType type, Expression &expr, location loc);
 
-  Expression *expr = nullptr;
+  ref<Expression> expr;
 
 private:
   Cast(const Cast &other) = default;
@@ -355,15 +356,15 @@ public:
   Statement &operator=(Statement &&) = delete;
 };
 
-using StatementList = std::vector<Statement *>;
+using StatementList = std::vector<ref<Statement>>;
 
 class ExprStatement : public Statement {
 public:
   DEFINE_ACCEPT
 
-  explicit ExprStatement(Expression *expr, location loc);
+  explicit ExprStatement(Expression &expr, location loc);
 
-  Expression *expr = nullptr;
+  ref<Expression> expr;
 
 private:
   ExprStatement(const ExprStatement &other) = default;
@@ -373,10 +374,10 @@ class AssignMapStatement : public Statement {
 public:
   DEFINE_ACCEPT
 
-  AssignMapStatement(Map *map, Expression *expr, location loc = location());
+  AssignMapStatement(Map &map, Expression &expr, location loc = location());
 
-  Map *map = nullptr;
-  Expression *expr = nullptr;
+  ref<Map> map;
+  ref<Expression> expr;
 
 private:
   AssignMapStatement(const AssignMapStatement &other) = default;
@@ -386,12 +387,12 @@ class AssignVarStatement : public Statement {
 public:
   DEFINE_ACCEPT
 
-  AssignVarStatement(Variable *var,
-                     Expression *expr,
+  AssignVarStatement(Variable &var,
+                     Expression &expr,
                      location loc = location());
 
-  Variable *var = nullptr;
-  Expression *expr = nullptr;
+  ref<Variable> var;
+  ref<Expression> expr;
 
 private:
   AssignVarStatement(const AssignVarStatement &other) = default;
@@ -402,11 +403,11 @@ public:
   DEFINE_ACCEPT
 
   AssignConfigVarStatement(const std::string &config_var,
-                           Expression *expr,
+                           Expression &expr,
                            location loc = location());
 
   std::string config_var;
-  Expression *expr = nullptr;
+  ref<Expression> expr;
 
 private:
   AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
@@ -416,10 +417,10 @@ class If : public Statement {
 public:
   DEFINE_ACCEPT
 
-  If(Expression *cond, StatementList &&stmts);
-  If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
+  If(Expression &cond, StatementList &&stmts);
+  If(Expression &cond, StatementList &&stmts, StatementList &&else_stmts);
 
-  Expression *cond = nullptr;
+  ref<Expression> cond;
   StatementList stmts;
   StatementList else_stmts;
 
@@ -431,10 +432,10 @@ class Unroll : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Unroll(Expression *expr, StatementList &&stmts, location loc);
+  Unroll(Expression &expr, StatementList &&stmts, location loc);
 
   long int var = 0;
-  Expression *expr = nullptr;
+  ref<Expression> expr;
   StatementList stmts;
 
 private:
@@ -445,17 +446,16 @@ class Jump : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Jump(JumpType ident, Expression *return_value, location loc = location())
-      : Statement(loc), ident(ident), return_value(return_value)
+  Jump(JumpType ident, Expression &return_value, location loc = location())
+      : Statement(loc), ident(ident), return_value(&return_value)
   {
   }
-  Jump(JumpType ident, location loc = location())
-      : Statement(loc), ident(ident), return_value(nullptr)
+  Jump(JumpType ident, location loc = location()) : Statement(loc), ident(ident)
   {
   }
 
   JumpType ident = JumpType::INVALID;
-  Expression *return_value;
+  Expression *return_value = nullptr;
 
 private:
   Jump(const Jump &other) = default;
@@ -465,9 +465,9 @@ class Predicate : public Node {
 public:
   DEFINE_ACCEPT
 
-  explicit Predicate(Expression *expr, location loc);
+  explicit Predicate(Expression &expr, location loc);
 
-  Expression *expr = nullptr;
+  ref<Expression> expr;
 
 private:
   Predicate(const Predicate &other) = default;
@@ -477,23 +477,23 @@ class Ternary : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Ternary(Expression *cond, Expression *left, Expression *right, location loc);
+  Ternary(Expression &cond, Expression &left, Expression &right, location loc);
 
-  Expression *cond = nullptr;
-  Expression *left = nullptr;
-  Expression *right = nullptr;
+  ref<Expression> cond;
+  ref<Expression> left;
+  ref<Expression> right;
 };
 
 class While : public Statement {
 public:
   DEFINE_ACCEPT
 
-  While(Expression *cond, StatementList &&stmts, location loc)
+  While(Expression &cond, StatementList &&stmts, location loc)
       : Statement(loc), cond(cond), stmts(std::move(stmts))
   {
   }
 
-  Expression *cond = nullptr;
+  ref<Expression> cond;
   StatementList stmts;
 
 private:
@@ -504,13 +504,13 @@ class For : public Statement {
 public:
   DEFINE_ACCEPT
 
-  For(Variable *decl, Expression *expr, StatementList &&stmts, location loc)
+  For(Variable &decl, Expression &expr, StatementList &&stmts, location loc)
       : Statement(loc), decl(decl), expr(expr), stmts(std::move(stmts))
   {
   }
 
-  Variable *decl = nullptr;
-  Expression *expr = nullptr;
+  ref<Variable> decl;
+  ref<Expression> expr;
   StatementList stmts;
 
   SizedType ctx_type;
@@ -586,7 +586,7 @@ private:
 
   int index_ = 0;
 };
-using AttachPointList = std::vector<AttachPoint *>;
+using AttachPointList = std::vector<ref<AttachPoint>>;
 
 class Probe : public Scope {
 public:
@@ -614,7 +614,7 @@ private:
   Probe(const Probe &other) = default;
   int index_ = 0;
 };
-using ProbeList = std::vector<Probe *>;
+using ProbeList = std::vector<ref<Probe>>;
 
 class SubprogArg : public Node {
 public:
@@ -629,7 +629,7 @@ private:
   SubprogArg(const SubprogArg &other) = default;
   std::string name_;
 };
-using SubprogArgList = std::vector<SubprogArg *>;
+using SubprogArgList = std::vector<ref<SubprogArg>>;
 
 class Subprog : public Scope {
 public:
@@ -649,7 +649,7 @@ private:
   Subprog(const Subprog &other) = default;
   std::string name_;
 };
-using SubprogList = std::vector<Subprog *>;
+using SubprogList = std::vector<ref<Subprog>>;
 
 class Program : public Node {
 public:
@@ -692,12 +692,12 @@ public:
    * Creates and returns a pointer to an AST node.
    */
   template <NodeType T, typename... Args>
-  T *make_node(Args &&...args)
+  T &make_node(Args &&...args)
   {
     auto uniq_ptr = std::make_unique<T>(std::forward<Args>(args)...);
     auto *raw_ptr = uniq_ptr.get();
     nodes_.push_back(std::move(uniq_ptr));
-    return raw_ptr;
+    return *raw_ptr;
   }
 
 private:

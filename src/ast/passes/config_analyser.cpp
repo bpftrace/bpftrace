@@ -31,25 +31,25 @@ void ConfigAnalyser::log_type_error(SizedType &type,
 void ConfigAnalyser::set_uint64_config(AssignConfigVarStatement &assignment,
                                        ConfigKeyInt key)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsIntegerTy()) {
     log_type_error(assignTy, Type::integer, assignment);
     return;
   }
 
-  config_setter_.set(key, dynamic_cast<Integer *>(assignment.expr)->n);
+  config_setter_.set(key, dynamic_cast<Integer &>(assignment.expr()).n);
 }
 
 void ConfigAnalyser::set_bool_config(AssignConfigVarStatement &assignment,
                                      ConfigKeyBool key)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsIntegerTy()) {
     log_type_error(assignTy, Type::integer, assignment);
     return;
   }
 
-  auto val = dynamic_cast<Integer *>(assignment.expr)->n;
+  auto val = dynamic_cast<Integer &>(assignment.expr()).n;
   if (val == 0) {
     config_setter_.set(key, false);
   } else if (val == 1) {
@@ -63,18 +63,18 @@ void ConfigAnalyser::set_bool_config(AssignConfigVarStatement &assignment,
 void ConfigAnalyser::set_string_config(AssignConfigVarStatement &assignment,
                                        ConfigKeyString key)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsStringTy()) {
     log_type_error(assignTy, Type::string, assignment);
     return;
   }
 
-  config_setter_.set(key, dynamic_cast<String *>(assignment.expr)->str);
+  config_setter_.set(key, dynamic_cast<String &>(assignment.expr()).str);
 }
 
 void ConfigAnalyser::set_stack_mode_config(AssignConfigVarStatement &assignment)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsStackModeTy()) {
     log_type_error(assignTy, Type::stack_mode, assignment);
     return;
@@ -86,29 +86,29 @@ void ConfigAnalyser::set_stack_mode_config(AssignConfigVarStatement &assignment)
 void ConfigAnalyser::set_user_symbol_cache_type_config(
     AssignConfigVarStatement &assignment)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsStringTy()) {
     log_type_error(assignTy, Type::string, assignment);
     return;
   }
 
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  auto val = dynamic_cast<String &>(assignment.expr()).str;
   if (!config_setter_.set_user_symbol_cache_type(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    LOG(ERROR, assignment.expr().loc, err_);
 }
 
 void ConfigAnalyser::set_missing_probes_config(
     AssignConfigVarStatement &assignment)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr().type;
   if (!assignTy.IsStringTy()) {
     log_type_error(assignTy, Type::string, assignment);
     return;
   }
 
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  auto val = dynamic_cast<String &>(assignment.expr()).str;
   if (!config_setter_.set_missing_probes_config(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    LOG(ERROR, assignment.expr().loc, err_);
 }
 
 void ConfigAnalyser::visit(Integer &integer)
@@ -147,7 +147,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
     return;
   }
 
-  if (!assignment.expr->is_literal) {
+  if (!assignment.expr().is_literal) {
     LOG(ERROR, assignment.loc, err_)
         << "Assignemnt for " << assignment.config_var << " must be literal.";
     return;

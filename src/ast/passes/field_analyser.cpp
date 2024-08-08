@@ -63,8 +63,8 @@ void FieldAnalyser::visit(Builtin &builtin)
 void FieldAnalyser::visit(Map &map)
 {
   MapKey key;
-  for (Expression *expr : map.vargs) {
-    Visit(*expr);
+  for (Expression &expr : map.vargs) {
+    Visit(expr);
   }
 
   auto it = var_types_.find(map.ident);
@@ -83,7 +83,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
 {
   has_builtin_args_ = false;
 
-  Visit(*acc.expr);
+  Visit(acc.expr);
 
   if (has_builtin_args_) {
     auto arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
@@ -113,8 +113,8 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
 void FieldAnalyser::visit(ArrayAccess &arr)
 {
-  Visit(*arr.indexpr);
-  Visit(*arr.expr);
+  Visit(arr.indexpr);
+  Visit(arr.expr);
   if (sized_type_.IsPtrTy()) {
     sized_type_ = *sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
@@ -123,7 +123,7 @@ void FieldAnalyser::visit(ArrayAccess &arr)
 
 void FieldAnalyser::visit(Cast &cast)
 {
-  Visit(*cast.expr);
+  Visit(cast.expr);
   resolve_type(cast.type);
 }
 
@@ -143,20 +143,20 @@ void FieldAnalyser::visit(Offsetof &ofof)
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
-  Visit(*assignment.map);
-  Visit(*assignment.expr);
-  var_types_.emplace(assignment.map->ident, sized_type_);
+  Visit(assignment.map);
+  Visit(assignment.expr);
+  var_types_.emplace(assignment.map().ident, sized_type_);
 }
 
 void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
-  Visit(*assignment.expr);
-  var_types_.emplace(assignment.var->ident, sized_type_);
+  Visit(assignment.expr);
+  var_types_.emplace(assignment.var().ident, sized_type_);
 }
 
 void FieldAnalyser::visit(Unop &unop)
 {
-  Visit(*unop.expr);
+  Visit(unop.expr);
   if (unop.op == Operator::MUL && sized_type_.IsPtrTy()) {
     sized_type_ = *sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
@@ -167,18 +167,18 @@ void FieldAnalyser::resolve_args(Probe &probe)
 {
   // load probe arguments into a special record type "struct <probename>_args"
   Struct probe_args;
-  for (auto *ap : probe.attach_points) {
-    auto probe_type = probetype(ap->provider);
+  for (AttachPoint &ap : probe.attach_points) {
+    auto probe_type = probetype(ap.provider);
     if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
         probe_type != ProbeType::uprobe)
       continue;
 
-    if (ap->expansion != ExpansionType::NONE) {
+    if (ap.expansion != ExpansionType::NONE) {
       std::set<std::string> matches;
 
       // Find all the matches for the wildcard..
       try {
-        matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        matches = bpftrace_.probe_matcher_->get_matches_for_ap(ap);
       } catch (const WildcardException &e) {
         LOG(ERROR) << e.what();
         return;
@@ -202,7 +202,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
           auto maybe_ap_args = bpftrace_.btf_->resolve_args(
               func, probe_type == ProbeType::kretfunc, err);
           if (!maybe_ap_args.has_value()) {
-            LOG(WARNING) << "kfunc:" << ap->func << ": " << err;
+            LOG(WARNING) << "kfunc:" << ap.func << ": " << err;
             continue;
           }
           ap_args = std::move(*maybe_ap_args);
@@ -212,13 +212,13 @@ void FieldAnalyser::resolve_args(Probe &probe)
           if (dwarf)
             ap_args = dwarf->resolve_args(func);
           else
-            LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << target;
+            LOG(WARNING, ap.loc, err_) << "No debuginfo found for " << target;
         }
 
         if (probe_args.size == -1)
           probe_args = ap_args;
         else if (ap_args != probe_args) {
-          LOG(ERROR, ap->loc, err_)
+          LOG(ERROR, ap.loc, err_)
               << "Probe has attach points with mixed arguments";
           break;
         }
@@ -228,24 +228,23 @@ void FieldAnalyser::resolve_args(Probe &probe)
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
         std::string err;
         auto maybe_probe_args = bpftrace_.btf_->resolve_args(
-            ap->func, probe_type == ProbeType::kretfunc, err);
+            ap.func, probe_type == ProbeType::kretfunc, err);
         if (!maybe_probe_args.has_value()) {
-          LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << err;
+          LOG(ERROR, ap.loc, err_) << "kfunc:" << ap.func << ": " << err;
           return;
         }
         probe_args = std::move(*maybe_probe_args);
       } else // uprobe
       {
-        Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
+        Dwarf *dwarf = bpftrace_.get_dwarf(ap.target);
         if (dwarf)
-          probe_args = dwarf->resolve_args(ap->func);
+          probe_args = dwarf->resolve_args(ap.func);
         else {
-          LOG(WARNING, ap->loc, err_)
-              << "No debuginfo found for " << ap->target;
+          LOG(WARNING, ap.loc, err_) << "No debuginfo found for " << ap.target;
         }
         if ((int)probe_args.fields.size() > (arch::max_arg() + 1)) {
-          LOG(ERROR, ap->loc, err_) << "\'args\' builtin is not supported for "
-                                       "probes with stack-passed arguments.";
+          LOG(ERROR, ap.loc, err_) << "\'args\' builtin is not supported for "
+                                      "probes with stack-passed arguments.";
         }
       }
     }
@@ -254,7 +253,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
     auto args = bpftrace_.structs.Lookup(probe.args_typename()).lock();
     if (args && *args != probe_args) {
       // we did, and it's different...trigger the error
-      LOG(ERROR, ap->loc, err_)
+      LOG(ERROR, ap.loc, err_)
           << "Probe has attach points with mixed arguments";
     } else {
       // store/save args for each ap for later processing
@@ -270,8 +269,8 @@ void FieldAnalyser::resolve_fields(SizedType &type)
     return;
 
   if (probe_) {
-    for (auto &ap : probe_->attach_points)
-      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+    for (AttachPoint &ap : probe_->attach_points)
+      if (Dwarf *dwarf = bpftrace_.get_dwarf(ap))
         dwarf->resolve_fields(type);
   }
 
@@ -291,8 +290,8 @@ void FieldAnalyser::resolve_type(SizedType &type)
   auto name = inner_type->GetName();
 
   if (probe_) {
-    for (auto &ap : probe_->attach_points)
-      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+    for (AttachPoint &ap : probe_->attach_points)
+      if (Dwarf *dwarf = bpftrace_.get_dwarf(ap))
         sized_type_ = dwarf->get_stype(name);
   }
 
@@ -308,16 +307,16 @@ void FieldAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
 
-  for (AttachPoint *ap : probe.attach_points) {
-    probe_type_ = probetype(ap->provider);
+  for (AttachPoint &ap : probe.attach_points) {
+    probe_type_ = probetype(ap.provider);
     prog_type_ = progtype(probe_type_);
-    attach_func_ = ap->func;
+    attach_func_ = ap.func;
   }
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  for (Statement *stmt : probe.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : probe.stmts) {
+    Visit(stmt);
   }
 }
 
@@ -325,8 +324,8 @@ void FieldAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
 
-  for (Statement *stmt : subprog.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : subprog.stmts) {
+    Visit(stmt);
   }
 }
 

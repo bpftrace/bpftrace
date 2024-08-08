@@ -9,7 +9,7 @@ namespace bpftrace {
 namespace ast {
 
 namespace {
-void print(Node *root, const std::string &name, std::ostream &out)
+void print(Node &root, const std::string &name, std::ostream &out)
 {
   out << "\nAST after: " << name << std::endl;
   out << "-------------------\n";
@@ -27,7 +27,7 @@ void PassManager::AddPass(Pass p)
 PassResult PassManager::Run(Node *root, PassContext &ctx)
 {
   if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
-    print(root, "parser", std::cout);
+    print(*root, "parser", std::cout);
   for (auto &pass : passes_) {
     auto result = pass.Run(*root, ctx);
     if (!result.Ok())
@@ -38,7 +38,7 @@ PassResult PassManager::Run(Node *root, PassContext &ctx)
     }
 
     if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
-      print(root, pass.name, std::cout);
+      print(*root, pass.name, std::cout);
   }
   return PassResult::Success(root);
 }
