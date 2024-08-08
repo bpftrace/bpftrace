@@ -183,6 +183,7 @@ std::vector<std::string> split_string(const std::string &str,
                                       char delimiter,
                                       bool remove_empty = false);
 std::string erase_prefix(std::string &str);
+void erase_parameter_list(std::string &demangled_name);
 bool wildcard_match(std::string_view str,
                     const std::vector<std::string> &tokens,
                     bool start_wildcard,

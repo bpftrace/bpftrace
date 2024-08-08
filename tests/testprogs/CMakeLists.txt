@@ -18,7 +18,7 @@ test_and_add_testprog_cflag("-fno-omit-frame-pointer")
 test_and_add_testprog_cflag("-mno-omit-leaf-frame-pointer")
 get_property(testprog_cflags GLOBAL PROPERTY testprog_cflags)
 
-file(GLOB testprog_sources CONFIGURE_DEPENDS *.c)
+file(GLOB testprog_sources CONFIGURE_DEPENDS *.c *.cpp)
 set(testprogtargets "")
 foreach(testprog_source ${testprog_sources})
   get_filename_component(testprog_name ${testprog_source} NAME_WE)

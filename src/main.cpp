@@ -881,6 +881,12 @@ int main(int argc, char* argv[])
       pm = CreateDynamicPM();
       break;
     case BuildMode::AHEAD_OF_TIME:
+      if (bpftrace.has_dwarf_data()) {
+        LOG(ERROR) << "AOT does not support uprobe using DebugInfo.";
+        if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))
+          std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"
+                    << std::endl;
+      }
       pm = CreateAotPM();
       break;
   }

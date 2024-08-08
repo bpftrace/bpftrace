@@ -24,6 +24,7 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: true
+BreakAfterAttributes: Leave
 BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
@@ -88,4 +89,3 @@ UseTab: Never
 Language: Json
 DisableFormat: true
 ...
-
