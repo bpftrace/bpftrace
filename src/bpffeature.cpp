@@ -1,6 +1,5 @@
 #include "bpffeature.h"
 
-#include <bcc/libbpf.h>
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <bpf/libbpf.h>
@@ -11,6 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "bpf_assembler.h"
 #include "btf.h"
 #include "debugfs.h"
 #include "probe_matcher.h"
