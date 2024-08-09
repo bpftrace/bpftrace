@@ -31,7 +31,7 @@ TEST(CollectNodes, direct)
 TEST(CollectNodes, indirect)
 {
   auto &var = *new Variable{ "myvar", bpftrace::location{} };
-  auto &unop = *new Unop{ Operator::INCREMENT, &var, bpftrace::location{} };
+  auto &unop = *new Unop{ Operator::INCREMENT, var, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
   visitor.run(unop);
@@ -42,7 +42,7 @@ TEST(CollectNodes, indirect)
 TEST(CollectNodes, none)
 {
   auto &map = *new Map{ "myvar", bpftrace::location{} };
-  auto &unop = *new Unop{ Operator::INCREMENT, &map, bpftrace::location{} };
+  auto &unop = *new Unop{ Operator::INCREMENT, map, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
   visitor.run(unop);
@@ -53,10 +53,10 @@ TEST(CollectNodes, none)
 TEST(CollectNodes, multiple_runs)
 {
   auto &var1 = *new Variable{ "myvar1", bpftrace::location{} };
-  auto &unop1 = *new Unop{ Operator::INCREMENT, &var1, bpftrace::location{} };
+  auto &unop1 = *new Unop{ Operator::INCREMENT, var1, bpftrace::location{} };
 
   auto &var2 = *new Variable{ "myvar2", bpftrace::location{} };
-  auto &unop2 = *new Unop{ Operator::INCREMENT, &var2, bpftrace::location{} };
+  auto &unop2 = *new Unop{ Operator::INCREMENT, var2, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
   visitor.run(unop1);
@@ -70,9 +70,7 @@ TEST(CollectNodes, multiple_children)
   auto &var1 = *new Variable{ "myvar1", bpftrace::location{} };
   auto &var2 = *new Variable{ "myvar2", bpftrace::location{} };
 
-  auto &binop = *new Binop{
-    &var1, Operator::PLUS, &var2, bpftrace::location{}
-  };
+  auto &binop = *new Binop{ var1, Operator::PLUS, var2, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
   visitor.run(binop);
@@ -85,9 +83,7 @@ TEST(CollectNodes, predicate)
   auto &var1 = *new Variable{ "myvar1", bpftrace::location{} };
   auto &var2 = *new Variable{ "myvar2", bpftrace::location{} };
 
-  auto &binop = *new Binop{
-    &var1, Operator::PLUS, &var2, bpftrace::location{}
-  };
+  auto &binop = *new Binop{ var1, Operator::PLUS, var2, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
   visitor.run(binop, [](const auto &var) { return var.ident == "myvar2"; });
@@ -101,11 +97,9 @@ TEST(CollectNodes, nested)
   auto &var2 = *new Variable{ "myvar2", bpftrace::location{} };
   auto &var3 = *new Variable{ "myvar3", bpftrace::location{} };
 
-  auto &binop1 = *new Binop{
-    &var1, Operator::PLUS, &var2, bpftrace::location{}
-  };
+  auto &binop1 = *new Binop{ var1, Operator::PLUS, var2, bpftrace::location{} };
   auto &binop2 = *new Binop{
-    &binop1, Operator::MINUS, &var3, bpftrace::location{}
+    binop1, Operator::MINUS, var3, bpftrace::location{}
   };
 
   CollectNodes<Binop> visitor;

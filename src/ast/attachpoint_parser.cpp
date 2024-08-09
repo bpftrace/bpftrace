@@ -66,10 +66,9 @@ int AttachPointParser::parse()
     return 1;
 
   uint32_t failed = 0;
-  for (Probe *probe : ctx_.root->probes) {
-    for (size_t i = 0; i < probe->attach_points.size(); ++i) {
-      auto ap_ptr = probe->attach_points[i];
-      auto &ap = *ap_ptr;
+  for (Probe &probe : ctx_.root->probes) {
+    for (size_t i = 0; i < probe.attach_points.size(); ++i) {
+      AttachPoint &ap = probe.attach_points[i];
       new_attach_points.clear();
 
       State s = parse_attachpoint(ap);
@@ -78,13 +77,13 @@ int AttachPointParser::parse()
         LOG(ERROR, ap.loc, sink_) << errs_.str();
       } else if (s == SKIP || s == NEW_APS) {
         // Remove the current attach point
-        probe->attach_points.erase(probe->attach_points.begin() + i);
+        probe.attach_points.erase(probe.attach_points.begin() + i);
         i--;
         if (s == NEW_APS) {
           // The removed attach point is replaced by new ones
-          probe->attach_points.insert(probe->attach_points.end(),
-                                      new_attach_points.begin(),
-                                      new_attach_points.end());
+          probe.attach_points.insert(probe.attach_points.end(),
+                                     new_attach_points.begin(),
+                                     new_attach_points.end());
         }
       }
 
@@ -93,15 +92,15 @@ int AttachPointParser::parse()
       errs_.str({});
     }
 
-    auto new_end = std::remove_if(probe->attach_points.begin(),
-                                  probe->attach_points.end(),
-                                  [](const AttachPoint *ap) {
-                                    return ap->provider.empty();
+    auto new_end = std::remove_if(probe.attach_points.begin(),
+                                  probe.attach_points.end(),
+                                  [](const AttachPoint &ap) {
+                                    return ap.provider.empty();
                                   });
-    probe->attach_points.erase(new_end, probe->attach_points.end());
+    probe.attach_points.erase(new_end, probe.attach_points.end());
 
-    if (probe->attach_points.empty()) {
-      LOG(ERROR, probe->loc, sink_) << "No attach points for probe";
+    if (probe.attach_points.empty()) {
+      LOG(ERROR, probe.loc, sink_) << "No attach points for probe";
       failed++;
     }
   }

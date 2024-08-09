@@ -16,9 +16,9 @@ std::set<std::string> TracepointFormatParser::struct_list;
 
 bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
-  std::vector<ast::Probe *> probes_with_tracepoint;
-  for (ast::Probe *probe : program->probes) {
-    if (probe->has_ap_of_probetype(ProbeType::tracepoint))
+  std::vector<ref<ast::Probe>> probes_with_tracepoint;
+  for (ast::Probe &probe : program->probes) {
+    if (probe.has_ap_of_probetype(ProbeType::tracepoint))
       probes_with_tracepoint.push_back(probe);
   }
 
@@ -28,13 +28,13 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
   ast::TracepointArgsVisitor n{};
   if (!bpftrace.has_btf_data())
     program->c_definitions += "#include <linux/types.h>\n";
-  for (ast::Probe *probe : probes_with_tracepoint) {
-    n.visit(*probe);
+  for (ast::Probe &probe : probes_with_tracepoint) {
+    n.visit(probe);
 
-    for (ast::AttachPoint *ap : probe->attach_points) {
-      if (ap->provider == "tracepoint") {
-        std::string &category = ap->target;
-        std::string &event_name = ap->func;
+    for (ast::AttachPoint &ap : probe.attach_points) {
+      if (ap.provider == "tracepoint") {
+        std::string &category = ap.target;
+        std::string &event_name = ap.func;
         std::string format_file_path = tracefs::event_format_file(category,
                                                                   event_name);
         glob_t glob_result;
@@ -45,22 +45,22 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           int ret = glob(format_file_path.c_str(), 0, NULL, &glob_result);
           if (ret != 0) {
             if (ret == GLOB_NOMATCH) {
-              LOG(ERROR, ap->loc, std::cerr)
+              LOG(ERROR, ap.loc, std::cerr)
                   << "tracepoints not found: " << category << ":" << event_name;
               // helper message:
               if (category == "syscall")
-                LOG(ERROR, ap->loc, std::cerr)
+                LOG(ERROR, ap.loc, std::cerr)
                     << "Did you mean syscalls:" << event_name << "?";
               LOG(V1) << strerror(errno) << ": " << format_file_path;
               return false;
             } else {
               // unexpected error
-              LOG(ERROR, ap->loc, std::cerr) << std::string(strerror(errno));
+              LOG(ERROR, ap.loc, std::cerr) << std::string(strerror(errno));
               return false;
             }
           }
 
-          if (probe->tp_args_structs_level <= 0) {
+          if (probe.tp_args_structs_level <= 0) {
             globfree(&glob_result);
             continue;
           }
@@ -96,16 +96,16 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 
             // Do not fail if trying to attach to multiple tracepoints
             // (at least one of them could succeed)
-            bool fail = probe->attach_points.size() == 1;
+            bool fail = probe.attach_points.size() == 1;
             auto msg = "tracepoint not found: " + category + ":" + event_name;
             if (fail)
-              LOG(ERROR, ap->loc, std::cerr) << msg;
+              LOG(ERROR, ap.loc, std::cerr) << msg;
             else
-              LOG(WARNING, ap->loc, std::cerr) << msg;
+              LOG(WARNING, ap.loc, std::cerr) << msg;
 
             // helper message:
             if (category == "syscall")
-              LOG(WARNING, ap->loc, std::cerr)
+              LOG(WARNING, ap.loc, std::cerr)
                   << "Did you mean syscalls:" << event_name << "?";
 
             if (fail && bt_verbose) {
@@ -119,7 +119,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
               continue;
           }
 
-          if (probe->tp_args_structs_level <= 0)
+          if (probe.tp_args_structs_level <= 0)
             continue;
 
           // Check to avoid adding the same struct more than once to definitions

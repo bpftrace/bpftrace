@@ -11,8 +11,8 @@ ReturnPathAnalyser::ReturnPathAnalyser(Node *root, std::ostream &out)
 
 bool ReturnPathAnalyser::visit(Program &prog)
 {
-  for (Subprog *subprog : prog.functions) {
-    if (!visit(*subprog))
+  for (Subprog &subprog : prog.functions) {
+    if (!visit(subprog))
       return false;
   }
   return true;
@@ -23,8 +23,8 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
   if (subprog.return_type.IsVoidTy())
     return true;
 
-  for (Statement *stmt : subprog.stmts) {
-    if (Visit(*stmt))
+  for (Statement &stmt : subprog.stmts) {
+    if (Visit(stmt))
       return true;
   }
   LOG(ERROR, subprog.loc, err_) << "Not all code paths returned a value";
@@ -39,8 +39,8 @@ bool ReturnPathAnalyser::visit(Jump &jump)
 bool ReturnPathAnalyser::visit(If &if_stmt)
 {
   bool result = false;
-  for (Statement *stmt : if_stmt.stmts) {
-    if (Visit(*stmt))
+  for (Statement &stmt : if_stmt.stmts) {
+    if (Visit(stmt))
       result = true;
   }
   if (!result) {
@@ -48,8 +48,8 @@ bool ReturnPathAnalyser::visit(If &if_stmt)
     return false;
   }
 
-  for (Statement *stmt : if_stmt.else_stmts) {
-    if (Visit(*stmt)) {
+  for (Statement &stmt : if_stmt.else_stmts) {
+    if (Visit(stmt)) {
       // both blocks have a return
       return true;
     }

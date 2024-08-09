@@ -99,7 +99,7 @@ Sizeof::Sizeof(SizedType type, location loc) : Expression(loc), argtype(type)
 {
 }
 
-Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
+Sizeof::Sizeof(Expression &expr, location loc) : Expression(loc), expr(&expr)
 {
 }
 
@@ -108,8 +108,8 @@ Offsetof::Offsetof(SizedType record, std::string &field, location loc)
 {
 }
 
-Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
-    : Expression(loc), expr(expr), field(field)
+Offsetof::Offsetof(Expression &expr, std::string &field, location loc)
+    : Expression(loc), expr(&expr), field(field)
 {
 }
 
@@ -122,8 +122,8 @@ Map::Map(const std::string &ident, ExpressionList &&vargs_, location loc)
     : Expression(loc), ident(ident), vargs(std::move(vargs_))
 {
   is_map = true;
-  for (auto *expr : vargs) {
-    expr->key_for_map = this;
+  for (Expression &expr : vargs) {
+    expr.key_for_map = this;
   }
 }
 
@@ -133,47 +133,47 @@ Variable::Variable(const std::string &ident, location loc)
   is_variable = true;
 }
 
-Binop::Binop(Expression *left, Operator op, Expression *right, location loc)
+Binop::Binop(Expression &left, Operator op, Expression &right, location loc)
     : Expression(loc), left(left), right(right), op(op)
 {
 }
 
-Unop::Unop(Operator op, Expression *expr, location loc)
+Unop::Unop(Operator op, Expression &expr, location loc)
     : Expression(loc), expr(expr), op(op), is_post_op(false)
 {
 }
 
-Unop::Unop(Operator op, Expression *expr, bool is_post_op, location loc)
+Unop::Unop(Operator op, Expression &expr, bool is_post_op, location loc)
     : Expression(loc), expr(expr), op(op), is_post_op(is_post_op)
 {
 }
 
-Ternary::Ternary(Expression *cond,
-                 Expression *left,
-                 Expression *right,
+Ternary::Ternary(Expression &cond,
+                 Expression &left,
+                 Expression &right,
                  location loc)
     : Expression(loc), cond(cond), left(left), right(right)
 {
 }
 
-FieldAccess::FieldAccess(Expression *expr,
+FieldAccess::FieldAccess(Expression &expr,
                          const std::string &field,
                          location loc)
     : Expression(loc), expr(expr), field(field)
 {
 }
 
-FieldAccess::FieldAccess(Expression *expr, ssize_t index, location loc)
+FieldAccess::FieldAccess(Expression &expr, ssize_t index, location loc)
     : Expression(loc), expr(expr), index(index)
 {
 }
 
-ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
+ArrayAccess::ArrayAccess(Expression &expr, Expression &indexpr, location loc)
     : Expression(loc), expr(expr), indexpr(indexpr)
 {
 }
 
-Cast::Cast(SizedType cast_type, Expression *expr, location loc)
+Cast::Cast(SizedType cast_type, Expression &expr, location loc)
     : Expression(loc), expr(expr)
 {
   type = cast_type;
@@ -184,34 +184,34 @@ Tuple::Tuple(ExpressionList &&elems, location loc)
 {
 }
 
-ExprStatement::ExprStatement(Expression *expr, location loc)
+ExprStatement::ExprStatement(Expression &expr, location loc)
     : Statement(loc), expr(expr)
 {
 }
 
-AssignMapStatement::AssignMapStatement(Map *map, Expression *expr, location loc)
+AssignMapStatement::AssignMapStatement(Map &map, Expression &expr, location loc)
     : Statement(loc), map(map), expr(expr)
 {
-  expr->map = map;
+  expr.map = &map;
 };
 
-AssignVarStatement::AssignVarStatement(Variable *var,
-                                       Expression *expr,
+AssignVarStatement::AssignVarStatement(Variable &var,
+                                       Expression &expr,
                                        location loc)
     : Statement(loc), var(var), expr(expr)
 {
-  expr->var = var;
+  expr.var = &var;
 }
 
 AssignConfigVarStatement::AssignConfigVarStatement(
     const std::string &config_var,
-    Expression *expr,
+    Expression &expr,
     location loc)
     : Statement(loc), config_var(config_var), expr(expr)
 {
 }
 
-Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
+Predicate::Predicate(Expression &expr, location loc) : Node(loc), expr(expr)
 {
 }
 
@@ -220,17 +220,17 @@ AttachPoint::AttachPoint(const std::string &raw_input, location loc)
 {
 }
 
-If::If(Expression *cond, StatementList &&stmts)
+If::If(Expression &cond, StatementList &&stmts)
     : cond(cond), stmts(std::move(stmts))
 {
 }
 
-If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
+If::If(Expression &cond, StatementList &&stmts, StatementList &&else_stmts)
     : cond(cond), stmts(std::move(stmts)), else_stmts(std::move(else_stmts))
 {
 }
 
-Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
+Unroll::Unroll(Expression &expr, StatementList &&stmts, location loc)
     : Statement(loc), expr(expr), stmts(std::move(stmts))
 {
 }
@@ -457,7 +457,7 @@ std::string Probe::name() const
   std::transform(attach_points.begin(),
                  attach_points.end(),
                  std::back_inserter(ap_names),
-                 [](const AttachPoint *ap) { return ap->name(); });
+                 [](const AttachPoint &ap) { return ap.name(); });
   return str_join(ap_names, ",");
 }
 
@@ -483,8 +483,8 @@ std::string Subprog::name() const
 
 bool Probe::has_ap_of_probetype(ProbeType probe_type)
 {
-  for (auto *ap : attach_points) {
-    if (probetype(ap->provider) == probe_type)
+  for (AttachPoint &ap : attach_points) {
+    if (probetype(ap.provider) == probe_type)
       return true;
   }
   return false;

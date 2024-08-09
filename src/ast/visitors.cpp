@@ -31,8 +31,8 @@ void Visitor::visit(Identifier &identifier __attribute__((__unused__)))
 
 void Visitor::visit(Call &call)
 {
-  for (Expression *expr : call.vargs) {
-    Visit(*expr);
+  for (Expression &expr : call.vargs) {
+    Visit(expr);
   }
 }
 
@@ -50,8 +50,8 @@ void Visitor::visit(Offsetof &ofof)
 
 void Visitor::visit(Map &map)
 {
-  for (Expression *expr : map.vargs) {
-    Visit(*expr);
+  for (Expression &expr : map.vargs) {
+    Visit(expr);
   }
 }
 
@@ -61,103 +61,103 @@ void Visitor::visit(Variable &var __attribute__((__unused__)))
 
 void Visitor::visit(Binop &binop)
 {
-  Visit(*binop.left);
-  Visit(*binop.right);
+  Visit(binop.left);
+  Visit(binop.right);
 }
 
 void Visitor::visit(Unop &unop)
 {
-  Visit(*unop.expr);
+  Visit(unop.expr);
 }
 
 void Visitor::visit(Ternary &ternary)
 {
-  Visit(*ternary.cond);
-  Visit(*ternary.left);
-  Visit(*ternary.right);
+  Visit(ternary.cond);
+  Visit(ternary.left);
+  Visit(ternary.right);
 }
 
 void Visitor::visit(FieldAccess &acc)
 {
-  Visit(*acc.expr);
+  Visit(acc.expr);
 }
 
 void Visitor::visit(ArrayAccess &arr)
 {
-  Visit(*arr.expr);
-  Visit(*arr.indexpr);
+  Visit(arr.expr);
+  Visit(arr.indexpr);
 }
 
 void Visitor::visit(Cast &cast)
 {
-  Visit(*cast.expr);
+  Visit(cast.expr);
 }
 
 void Visitor::visit(Tuple &tuple)
 {
-  for (Expression *expr : tuple.elems)
-    Visit(*expr);
+  for (Expression &expr : tuple.elems)
+    Visit(expr);
 }
 
 void Visitor::visit(ExprStatement &expr)
 {
-  Visit(*expr.expr);
+  Visit(expr.expr);
 }
 
 void Visitor::visit(AssignMapStatement &assignment)
 {
-  Visit(*assignment.map);
-  Visit(*assignment.expr);
+  Visit(assignment.map);
+  Visit(assignment.expr);
 }
 
 void Visitor::visit(AssignVarStatement &assignment)
 {
-  Visit(*assignment.var);
-  Visit(*assignment.expr);
+  Visit(assignment.var);
+  Visit(assignment.expr);
 }
 
 void Visitor::visit(AssignConfigVarStatement &assignment)
 {
-  Visit(*assignment.expr);
+  Visit(assignment.expr);
 }
 
 void Visitor::visit(If &if_block)
 {
-  Visit(*if_block.cond);
+  Visit(if_block.cond);
 
-  for (Statement *stmt : if_block.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : if_block.stmts) {
+    Visit(stmt);
   }
 
-  for (Statement *stmt : if_block.else_stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : if_block.else_stmts) {
+    Visit(stmt);
   }
 }
 
 void Visitor::visit(Unroll &unroll)
 {
-  Visit(*unroll.expr);
-  for (Statement *stmt : unroll.stmts) {
-    Visit(*stmt);
+  Visit(unroll.expr);
+  for (Statement &stmt : unroll.stmts) {
+    Visit(stmt);
   }
 }
 
 void Visitor::visit(While &while_block)
 {
-  Visit(*while_block.cond);
+  Visit(while_block.cond);
 
-  for (Statement *stmt : while_block.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : while_block.stmts) {
+    Visit(stmt);
   }
 }
 
 void Visitor::visit(For &for_loop)
 {
-  Visit(*for_loop.decl);
-  Visit(*for_loop.expr);
+  Visit(for_loop.decl);
+  Visit(for_loop.expr);
 
-  for (Statement *stmt : for_loop.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : for_loop.stmts) {
+    Visit(stmt);
   }
 }
 
@@ -169,7 +169,7 @@ void Visitor::visit(Jump &jump)
 
 void Visitor::visit(Predicate &pred)
 {
-  Visit(*pred.expr);
+  Visit(pred.expr);
 }
 
 void Visitor::visit(AttachPoint &ap __attribute__((__unused__)))
@@ -178,22 +178,22 @@ void Visitor::visit(AttachPoint &ap __attribute__((__unused__)))
 
 void Visitor::visit(Probe &probe)
 {
-  for (AttachPoint *ap : probe.attach_points) {
-    Visit(*ap);
+  for (AttachPoint &ap : probe.attach_points) {
+    Visit(ap);
   }
 
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  for (Statement *stmt : probe.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : probe.stmts) {
+    Visit(stmt);
   }
 }
 
 void Visitor::visit(Config &config)
 {
-  for (Statement *stmt : config.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : config.stmts) {
+    Visit(stmt);
   }
 }
 
@@ -203,20 +203,20 @@ void Visitor::visit(SubprogArg &subprog_arg __attribute__((__unused__)))
 
 void Visitor::visit(Subprog &subprog)
 {
-  for (SubprogArg *arg : subprog.args) {
-    Visit(*arg);
+  for (SubprogArg &arg : subprog.args) {
+    Visit(arg);
   }
-  for (Statement *stmt : subprog.stmts) {
-    Visit(*stmt);
+  for (Statement &stmt : subprog.stmts) {
+    Visit(stmt);
   }
 }
 
 void Visitor::visit(Program &program)
 {
-  for (Subprog *subprog : program.functions)
-    Visit(*subprog);
-  for (Probe *probe : program.probes)
-    Visit(*probe);
+  for (Subprog &subprog : program.functions)
+    Visit(subprog);
+  for (Probe &probe : program.probes)
+    Visit(probe);
   if (program.config)
     Visit(*program.config);
 }

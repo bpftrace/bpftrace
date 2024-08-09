@@ -166,7 +166,7 @@ private:
                  const std::string &name,
                  FunctionType *func_type);
 
-  [[nodiscard]] ScopedExprDeleter accept(Node *node);
+  [[nodiscard]] ScopedExprDeleter accept(Node &node);
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
   AllocaInst *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
 
@@ -176,7 +176,7 @@ private:
   Function *createLinearFunction();
   MDNode *createLoopMetadata();
 
-  std::pair<Value *, uint64_t> getString(Expression *expr);
+  std::pair<Value *, uint64_t> getString(Expression &expr);
 
   void binop_string(Binop &binop);
   void binop_integer_array(Binop &binop);

@@ -54,8 +54,8 @@ void PortabilityAnalyser::visit(Builtin &builtin)
 
 void PortabilityAnalyser::visit(Call &call)
 {
-  for (Expression *expr : call.vargs)
-    Visit(*expr);
+  for (Expression &expr : call.vargs)
+    Visit(expr);
 
   // kaddr() and uaddr() both resolve symbols -> address during codegen and
   // embeds the values into the bytecode. For AOT to support kaddr()/uaddr(),
@@ -74,7 +74,7 @@ void PortabilityAnalyser::visit(Call &call)
 
 void PortabilityAnalyser::visit(Cast &cast)
 {
-  Visit(*cast.expr);
+  Visit(cast.expr);
 
   // The goal here is to block arbitrary field accesses but still allow `args`
   // access. `args` for tracepoint is fairly stable and should be considered

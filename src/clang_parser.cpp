@@ -502,9 +502,9 @@ void ClangParser::resolve_incomplete_types_from_btf(
   // The maximum number of iterations can be also controlled by the
   // BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable (0 is unlimited).
   uint64_t field_lvl = 1;
-  for (auto &probe : probes)
-    if (probe->tp_args_structs_level > (int)field_lvl)
-      field_lvl = probe->tp_args_structs_level;
+  for (ast::Probe &probe : probes)
+    if (probe.tp_args_structs_level > (int)field_lvl)
+      field_lvl = probe.tp_args_structs_level;
 
   unsigned max_iterations = std::max(
       bpftrace.config_.get(ConfigKeyInt::max_type_res_iterations), field_lvl);
