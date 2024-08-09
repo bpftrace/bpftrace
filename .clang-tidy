@@ -3,6 +3,7 @@ Checks: |
   performance-unnecessary-copy-initialization
   modernize-loop-convert
   google-readability-casting
+  bugprone-unchecked-optional-access
 
 WarningsAsErrors: "*"
 UseColor: true

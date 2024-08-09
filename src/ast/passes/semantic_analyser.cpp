@@ -63,7 +63,7 @@ void SemanticAnalyser::visit(PositionalParameter &param)
               << "$" << param.n << " used numerically but given \"" << pstr
               << "\". Try using str($" << param.n << ").";
         }
-        if (std::holds_alternative<uint64_t>(*param_int)) {
+        if (param_int && std::holds_alternative<uint64_t>(*param_int)) {
           param.type = CreateUInt64();
         }
         // string allocated in bpf stack. See codegen.
@@ -1341,6 +1341,11 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_)
             << "Kernel does not support tai timestamp, please try sw_tai";
       }
+      if (call.type.ts_mode == TimestampMode::sw_tai &&
+          !bpftrace_.delta_taitime_.has_value()) {
+        LOG(ERROR, call.loc, err_) << "Failed to initialize sw_tai in "
+                                      "userspace. This is very unexpected.";
+      }
     }
   } else {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";
@@ -1592,6 +1597,8 @@ void SemanticAnalyser::binop_int(Binop &binop)
 
   auto left = binop.left;
   auto right = binop.right;
+  auto left_literal = bpftrace_.get_int_literal(left);
+  auto right_literal = bpftrace_.get_int_literal(right);
 
   // First check if operand signedness is the same
   if (lsign != rsign) {
@@ -1604,13 +1611,11 @@ void SemanticAnalyser::binop_int(Binop &binop)
     //
     // No warning should be emitted as we know that 10 can be
     // represented as unsigned int
-    if (lsign && !rsign && left->is_literal &&
-        *bpftrace_.get_int_literal(left) >= 0) {
+    if (lsign && !rsign && left_literal && *left_literal >= 0) {
       lsign = false;
     }
     // The reverse (10 < a) should also hold
-    else if (!lsign && rsign && right->is_literal &&
-             *bpftrace_.get_int_literal(right) >= 0) {
+    else if (!lsign && rsign && right_literal && *right_literal >= 0) {
       rsign = false;
     } else {
       switch (binop.op) {
@@ -1647,9 +1652,9 @@ void SemanticAnalyser::binop_int(Binop &binop)
   // in kernel sources
   if (binop.op == Operator::DIV || binop.op == Operator::MOD) {
     // Convert operands to unsigned if possible
-    if (lsign && left->is_literal && *bpftrace_.get_int_literal(left) >= 0)
+    if (lsign && left_literal && *left_literal >= 0)
       lsign = false;
-    if (rsign && right->is_literal && *bpftrace_.get_int_literal(right) >= 0)
+    if (rsign && right_literal && *right_literal >= 0)
       rsign = false;
 
     // If they're still signed, we have to warn

@@ -354,10 +354,14 @@ TEST(clang_parser, bitfields)
   ASSERT_TRUE(foo->HasField("b"));
   ASSERT_TRUE(foo->HasField("c"));
 
+  // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
+  // return from function so that these are in fact checked accesses.
+  //
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
   EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
-  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("a").bitfield.has_value());
   EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 0x1U);
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFU);
@@ -377,6 +381,7 @@ TEST(clang_parser, bitfields)
   EXPECT_EQ(foo->GetField("c").bitfield->read_bytes, 0x2U);
   EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("c").bitfield->mask, 0xFFFFU);
+  // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
 TEST(clang_parser, bitfields_uneven_fields)
@@ -395,10 +400,14 @@ TEST(clang_parser, bitfields_uneven_fields)
   ASSERT_TRUE(foo->HasField("d"));
   ASSERT_TRUE(foo->HasField("e"));
 
+  // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
+  // return from function so that these are in fact checked accesses.
+  //
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
   EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
-  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("a").bitfield.has_value());
   EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 1U);
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0x1U);
@@ -406,7 +415,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 0);
-  EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("b").bitfield.has_value());
   EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 1U);
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0x1U);
@@ -414,7 +423,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_TRUE(foo->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("c").offset, 0);
-  EXPECT_TRUE(foo->GetField("c").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("c").bitfield.has_value());
   EXPECT_EQ(foo->GetField("c").bitfield->read_bytes, 1U);
   EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 2U);
   EXPECT_EQ(foo->GetField("c").bitfield->mask, 0x7U);
@@ -422,7 +431,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_TRUE(foo->GetField("d").type.IsIntTy());
   EXPECT_EQ(foo->GetField("d").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("d").offset, 0);
-  EXPECT_TRUE(foo->GetField("d").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("d").bitfield.has_value());
   EXPECT_EQ(foo->GetField("d").bitfield->read_bytes, 4U);
   EXPECT_EQ(foo->GetField("d").bitfield->access_rshift, 5U);
   EXPECT_EQ(foo->GetField("d").bitfield->mask, 0xFFFFFU);
@@ -430,10 +439,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_TRUE(foo->GetField("e").type.IsIntTy());
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 3);
-  EXPECT_TRUE(foo->GetField("e").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("e").bitfield.has_value());
   EXPECT_EQ(foo->GetField("e").bitfield->read_bytes, 1U);
   EXPECT_EQ(foo->GetField("e").bitfield->access_rshift, 1U);
   EXPECT_EQ(foo->GetField("e").bitfield->mask, 0x7FU);
+  // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
 TEST(clang_parser, bitfields_with_padding)
@@ -444,6 +454,10 @@ TEST(clang_parser, bitfields_with_padding)
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
   auto foo = bpftrace.structs.Lookup("struct Foo").lock();
 
+  // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
+  // return from function so that these are in fact checked accesses.
+  //
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
   EXPECT_EQ(foo->size, 16);
   ASSERT_EQ(foo->fields.size(), 4U);
   ASSERT_TRUE(foo->HasField("pad"));
@@ -454,7 +468,7 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 4);
-  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("a").bitfield.has_value());
   EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 4U);
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFFFFFFU);
@@ -462,10 +476,11 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 7);
-  EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
+  ASSERT_TRUE(foo->GetField("b").bitfield.has_value());
   EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 4U);
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0xFU);
+  // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
 TEST(clang_parser, builtin_headers)

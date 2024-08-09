@@ -42,7 +42,7 @@ void test(BPFtrace &bpftrace,
   EXPECT_EQ(resources_optional.has_value(), expected_result)
       << msg.str() << out.str();
 
-  if (out_p)
+  if (out_p && resources_optional)
     *out_p = *resources_optional;
 }
 
