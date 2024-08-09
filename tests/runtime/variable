@@ -68,6 +68,13 @@ PROG BEGIN { @[1] = ("hi", 1); @[1] = ("hellolongstr", 2); @[1] = ("by", 3); exi
 EXPECT @[1]: (by, 3)
 TIMEOUT 2
 
+NAME map key tuple string resize
+PROG BEGIN { @["hi", 1] = 1; @["hellolongstr", 2] = 2; @["by", 3] = 3; exit(); }
+EXPECT @[hi, 1]: 1
+EXPECT @[hellolongstr, 2]: 2
+EXPECT @[by, 3]: 3
+TIMEOUT 2
+
 NAME variable tuple string resize
 PROG BEGIN { $a = ("hi", 1); print(($a)); $a = ("hellolongstr", 2); print(($a)); $a = ("by", 3); print(($a)); exit(); }
 EXPECT (hi, 1)
@@ -84,4 +91,17 @@ TIMEOUT 2
 NAME map nested tuple string resize
 PROG BEGIN { @[1] = ("hi", ("hellolongstr", 2)); @[1] = ("hellolongstr", ("hi", 5)); exit(); }
 EXPECT @[1]: (hellolongstr, (hi, 5))
+TIMEOUT 2
+
+NAME map key nested tuple string resize
+PROG BEGIN { @["hi", ("hellolongstr", 2)] = 1; @["hellolongstr", ("hi", 5)] = 2; exit(); }
+EXPECT @[hi, (hellolongstr, 2)]: 1
+EXPECT @[hellolongstr, (hi, 5)]: 2
+TIMEOUT 2
+
+NAME map key tuple with casted ints
+PROG BEGIN { @a[(int16)-1, ((int32)-2, 3)] = 10; @a[5, (6, 7)] = 11; $c = ((int8)-4, ((int16)-5, -6)); @a[$c] = 12; exit(); }
+EXPECT @a[-4, (-5, -6)]: 12
+EXPECT @a[-1, (-2, 3)]: 10
+EXPECT @a[5, (6, 7)]: 11
 TIMEOUT 2

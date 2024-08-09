@@ -236,161 +236,256 @@ std::string Output::get_helper_error_msg(int func_id, int retcode) const
 
 std::string Output::value_to_str(BPFtrace &bpftrace,
                                  const SizedType &type,
-                                 std::vector<uint8_t> &value,
+                                 const std::vector<uint8_t> &value,
                                  bool is_per_cpu,
-                                 uint32_t div) const
+                                 uint32_t div,
+                                 bool is_map_key) const
 {
   uint32_t nvalues = is_per_cpu ? bpftrace.ncpus_ : 1;
-  if (type.IsKstackTy())
-    return bpftrace.get_stack(read_data<uint64_t>(value.data()),
-                              read_data<uint32_t>(value.data() + 8),
-                              -1,
-                              -1,
-                              false,
-                              type.stack_type,
-                              8);
-  else if (type.IsUstackTy())
-    return bpftrace.get_stack(read_data<int64_t>(value.data()),
-                              read_data<uint32_t>(value.data() + 8),
-                              read_data<int32_t>(value.data() + 12),
-                              read_data<int32_t>(value.data() + 16),
-                              true,
-                              type.stack_type,
-                              8);
-  else if (type.IsKsymTy())
-    return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
-  else if (type.IsUsymTy())
-    return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
-                                 read_data<uintptr_t>(value.data() + 8),
-                                 read_data<uint64_t>(value.data() + 16));
-  else if (type.IsInetTy())
-    return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),
-                                 static_cast<uint8_t *>(value.data() + 8));
-  else if (type.IsUsernameTy())
-    return bpftrace.resolve_uid(read_data<uint64_t>(value.data()));
-  else if (type.IsBufferTy()) {
-    return bpftrace.resolve_buf(
-        reinterpret_cast<AsyncEvent::Buf *>(value.data())->content,
-        reinterpret_cast<AsyncEvent::Buf *>(value.data())->length);
-
-  } else if (type.IsStringTy()) {
-    auto p = reinterpret_cast<const char *>(value.data());
-    return std::string(p, strnlen(p, type.GetSize()));
-  } else if (type.IsArrayTy()) {
-    size_t elem_size = type.GetElementTy()->GetSize();
-    std::vector<std::string> elems;
-    for (size_t i = 0; i < type.GetNumElements(); i++) {
-      std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
-                                     value.begin() + (i + 1) * elem_size);
-      elems.push_back(value_to_str(
-          bpftrace, *type.GetElementTy(), elem_data, is_per_cpu, div));
+  switch (type.GetTy()) {
+    case Type::kstack: {
+      return bpftrace.get_stack(read_data<uint64_t>(value.data()),
+                                read_data<uint32_t>(value.data() + 8),
+                                -1,
+                                -1,
+                                false,
+                                type.stack_type,
+                                8);
     }
-    return array_to_str(elems);
-  } else if (type.IsRecordTy()) {
-    std::vector<std::string> elems;
-    for (auto &field : type.GetFields()) {
-      std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                     value.begin() + field.offset +
-                                         field.type.GetSize());
-      elems.push_back(field_to_str(
-          field.name,
-          value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div)));
+    case Type::ustack: {
+      return bpftrace.get_stack(read_data<int64_t>(value.data()),
+                                read_data<uint32_t>(value.data() + 8),
+                                read_data<int32_t>(value.data() + 12),
+                                read_data<int32_t>(value.data() + 16),
+                                true,
+                                type.stack_type,
+                                8);
     }
-    return struct_to_str(elems);
-  } else if (type.IsTupleTy()) {
-    std::vector<std::string> elems;
-    for (auto &field : type.GetFields()) {
-      std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                     value.begin() + field.offset +
-                                         field.type.GetSize());
-      elems.push_back(
-          value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div));
+    case Type::ksym: {
+      return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
     }
-    return tuple_to_str(elems);
-  } else if (type.IsCountTy())
-    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  else if (type.IsAvgTy()) {
-    /*
-     * on this code path, avg is calculated in the kernel while
-     * printing the entire map is handled in a different function
-     * which shouldn't call this
-     */
-    assert(!is_per_cpu);
-    if (type.IsSigned()) {
-      return std::to_string(read_data<int64_t>(value.data()) / div);
+    case Type::usym: {
+      return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
+                                   read_data<uintptr_t>(value.data() + 8),
+                                   read_data<uint64_t>(value.data() + 16));
     }
-    return std::to_string(read_data<uint64_t>(value.data()) / div);
-  } else if (type.IsIntTy()) {
-    auto sign = type.IsSigned();
-    switch (type.GetIntBitWidth()) {
-      // clang-format off
-      case 64:
-        if (sign)
-          return std::to_string(reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div));
-        return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-      case 32:
-        if (sign)
-          return std::to_string(
-              reduce_value<int32_t>(value, nvalues) / static_cast<int32_t>(div));
-        return std::to_string(reduce_value<uint32_t>(value, nvalues) / div);
-      case 16:
-        if (sign)
-          return std::to_string(
-              reduce_value<int16_t>(value, nvalues) / static_cast<int16_t>(div));
-        return std::to_string(reduce_value<uint16_t>(value, nvalues) / div);
-      case 8:
-        if (sign)
-          return std::to_string(
-              reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
-        return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
-        // clang-format on
-      default:
-        LOG(BUG) << "value_to_str: Invalid int bitwidth: "
-                 << type.GetIntBitWidth() << "provided";
-        return {};
+    case Type::inet: {
+      return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),
+                                   static_cast<const uint8_t *>(value.data() +
+                                                                8));
     }
-  } else if (type.IsSumTy() || type.IsIntTy()) {
-    if (type.IsSigned())
-      return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
-
-    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  } else if (type.IsMinTy() || type.IsMaxTy()) {
-    if (is_per_cpu) {
-      if (type.IsSigned()) {
-        return std::to_string(
-            min_max_value<int64_t>(value, nvalues, type.IsMaxTy()) / div);
+    case Type::username: {
+      return bpftrace.resolve_uid(read_data<uint64_t>(value.data()));
+    }
+    case Type::buffer: {
+      return bpftrace.resolve_buf(
+          reinterpret_cast<const AsyncEvent::Buf *>(value.data())->content,
+          reinterpret_cast<const AsyncEvent::Buf *>(value.data())->length);
+    }
+    case Type::string: {
+      auto p = reinterpret_cast<const char *>(value.data());
+      return std::string(p, strnlen(p, type.GetSize()));
+    }
+    case Type::array: {
+      size_t elem_size = type.GetElementTy()->GetSize();
+      std::vector<std::string> elems;
+      for (size_t i = 0; i < type.GetNumElements(); i++) {
+        std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
+                                       value.begin() + (i + 1) * elem_size);
+        elems.push_back(value_to_str(bpftrace,
+                                     *type.GetElementTy(),
+                                     elem_data,
+                                     is_per_cpu,
+                                     div,
+                                     is_map_key));
       }
-      return std::to_string(
-          min_max_value<uint64_t>(value, nvalues, type.IsMaxTy()) / div);
+      return array_to_str(elems);
     }
-    if (type.IsSigned()) {
-      return std::to_string(read_data<int64_t>(value.data()) / div);
+    case Type::record: {
+      std::vector<std::string> elems;
+      for (auto &field : type.GetFields()) {
+        std::vector<uint8_t> elem_data(value.begin() + field.offset,
+                                       value.begin() + field.offset +
+                                           field.type.GetSize());
+        elems.push_back(field_to_str(
+            field.name,
+            value_to_str(
+                bpftrace, field.type, elem_data, is_per_cpu, div, is_map_key)));
+      }
+      return struct_to_str(elems);
     }
-    return std::to_string(read_data<uint64_t>(value.data()) / div);
-  } else if (type.IsProbeTy())
-    return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
-  else if (type.IsTimestampTy())
-    return bpftrace.resolve_timestamp(
-        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->mode,
-        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->strftime_id,
-        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->nsecs);
-  else if (type.IsMacAddressTy())
-    return bpftrace.resolve_mac_address(value.data());
-  else if (type.IsCgroupPathTy())
-    return bpftrace.resolve_cgroup_path(
-        reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())
-            ->cgroup_path_id,
-        reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())->cgroup_id);
-  else if (type.IsStrerrorTy())
-    return strerror(read_data<uint64_t>(value.data()));
-  else if (type.IsPtrTy() || type.IsRefTy()) {
-    std::ostringstream res;
-    res << "0x" << std::hex << read_data<uint64_t>(value.data());
-    return res.str();
-  } else {
-    assert(type.IsNoneTy());
-    return "";
+    case Type::tuple: {
+      std::vector<std::string> elems;
+      for (auto &field : type.GetFields()) {
+        std::vector<uint8_t> elem_data(value.begin() + field.offset,
+                                       value.begin() + field.offset +
+                                           field.type.GetSize());
+        elems.push_back(value_to_str(
+            bpftrace, field.type, elem_data, is_per_cpu, div, false));
+      }
+      return tuple_to_str(elems, false);
+    }
+    case Type::count: {
+      return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+    }
+    case Type::avg: {
+      /*
+       * on this code path, avg is calculated in the kernel while
+       * printing the entire map is handled in a different function
+       * which shouldn't call this
+       */
+      assert(!is_per_cpu);
+      if (type.IsSigned()) {
+        return std::to_string(read_data<int64_t>(value.data()) / div);
+      }
+      return std::to_string(read_data<uint64_t>(value.data()) / div);
+    }
+    case Type::integer: {
+      auto sign = type.IsSigned();
+      switch (type.GetIntBitWidth()) {
+          // clang-format off
+        case 64:
+          if (sign)
+            return std::to_string(reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div));
+          return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+        case 32:
+          if (sign)
+            return std::to_string(
+                reduce_value<int32_t>(value, nvalues) / static_cast<int32_t>(div));
+          return std::to_string(reduce_value<uint32_t>(value, nvalues) / div);
+        case 16:
+          if (sign)
+            return std::to_string(
+                reduce_value<int16_t>(value, nvalues) / static_cast<int16_t>(div));
+          return std::to_string(reduce_value<uint16_t>(value, nvalues) / div);
+        case 8:
+          if (sign)
+            return std::to_string(
+                reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
+          return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
+          // clang-format on
+        default:
+          LOG(BUG) << "value_to_str: Invalid int bitwidth: "
+                   << type.GetIntBitWidth() << "provided";
+          return {};
+      }
+    }
+    case Type::sum: {
+      if (type.IsSigned())
+        return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
+
+      return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+    }
+    case Type::max:
+    case Type::min: {
+      if (is_per_cpu) {
+        if (type.IsSigned()) {
+          return std::to_string(
+              min_max_value<int64_t>(value, nvalues, type.IsMaxTy()) / div);
+        }
+        return std::to_string(
+            min_max_value<uint64_t>(value, nvalues, type.IsMaxTy()) / div);
+      }
+      if (type.IsSigned()) {
+        return std::to_string(read_data<int64_t>(value.data()) / div);
+      }
+      return std::to_string(read_data<uint64_t>(value.data()) / div);
+    }
+    case Type::probe: {
+      return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
+    }
+    case Type::timestamp: {
+      return bpftrace.resolve_timestamp(
+          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())->mode,
+          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())
+              ->strftime_id,
+          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())->nsecs);
+    }
+    case Type::mac_address: {
+      return bpftrace.resolve_mac_address(value.data());
+    }
+    case Type::cgroup_path: {
+      return bpftrace.resolve_cgroup_path(
+          reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
+              ->cgroup_path_id,
+          reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
+              ->cgroup_id);
+    }
+    case Type::strerror: {
+      return strerror(read_data<uint64_t>(value.data()));
+    }
+    case Type::pointer:
+    case Type::reference: {
+      std::ostringstream res;
+      res << "0x" << std::hex << read_data<uint64_t>(value.data());
+      return res.str();
+    }
+    case Type::none: {
+      return "";
+    }
+    case Type::voidtype:
+    case Type::hist:
+    case Type::lhist:
+    case Type::stack_mode:
+    case Type::stats:
+    case Type::timestamp_mode: {
+      LOG(BUG) << "Invalid value type: " << type;
+    }
   }
+  return "";
+}
+
+std::string Output::map_key_str(BPFtrace &bpftrace,
+                                const SizedType &arg,
+                                const std::vector<uint8_t> &data) const
+{
+  std::ostringstream ptr;
+  switch (arg.GetTy()) {
+    case Type::integer:
+    case Type::kstack:
+    case Type::ustack:
+    case Type::timestamp:
+    case Type::ksym:
+    case Type::usym:
+    case Type::inet:
+    case Type::username:
+    case Type::probe:
+    case Type::string:
+    case Type::buffer:
+    case Type::pointer:
+    case Type::array:
+    case Type::mac_address:
+    case Type::record:
+      return value_to_str(bpftrace, arg, data, false, 1, true);
+    case Type::tuple: {
+      std::vector<std::string> elems;
+      for (auto &field : arg.GetFields()) {
+        std::vector<uint8_t> elem_data(data.begin() + field.offset,
+                                       data.begin() + field.offset +
+                                           field.type.GetSize());
+        elems.push_back(
+            value_to_str(bpftrace, field.type, elem_data, false, 1, true));
+      }
+      return tuple_to_str(elems, true);
+    }
+    case Type::cgroup_path:
+    case Type::strerror:
+    case Type::avg:
+    case Type::count:
+    case Type::hist:
+    case Type::lhist:
+    case Type::max:
+    case Type::min:
+    case Type::none:
+    case Type::reference:
+    case Type::stack_mode:
+    case Type::stats:
+    case Type::sum:
+    case Type::timestamp_mode:
+    case Type::voidtype:
+      LOG(BUG) << "Invalid mapkey argument type: " << arg;
+  }
+  return "";
 }
 
 std::string Output::array_to_str(const std::vector<std::string> &elems) const
@@ -703,18 +798,24 @@ std::string TextOutput::field_to_str(const std::string &name,
   return "." + name + " = " + value;
 }
 
-std::string TextOutput::tuple_to_str(
-    const std::vector<std::string> &elems) const
+std::string TextOutput::tuple_to_str(const std::vector<std::string> &elems,
+                                     bool is_map_key) const
 {
-  return "(" + str_join(elems, ", ") + ")";
+  if (!is_map_key) {
+    return "(" + str_join(elems, ", ") + ")";
+  }
+  return str_join(elems, ", ");
 }
 
 std::string TextOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
-  return map.name() + map_key.argument_value_list_str(bpftrace, key);
+  const auto &key_type = bpftrace.resources.maps_info.at(map.name()).key_type;
+  if (key_type.IsNoneTy())
+    return map.name();
+
+  return map.name() + "[" + map_key_str(bpftrace, key_type, key) + "]";
 }
 
 void TextOutput::map_key_val(const SizedType &map_type,
@@ -792,16 +893,16 @@ void JsonOutput::map(
   if (values_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
 
   out_ << R"({"type": ")" << MessageType::map << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (map_key.size() > 0) // check if this map has keys
+  if (!map_key.IsNoneTy()) // check if this map has keys
     out_ << "{";
 
   map_contents(bpftrace, map, top, div, values_by_key);
 
-  if (map_key.size() > 0)
+  if (!map_key.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -902,17 +1003,17 @@ void JsonOutput::map_hist(
   if (total_counts_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
 
   out_ << R"({"type": ")" << MessageType::hist << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (map_key.size() > 0) // check if this map has keys
+  if (!map_key.IsNoneTy()) // check if this map has keys
     out_ << "{";
 
   map_hist_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
-  if (map_key.size() > 0)
+  if (!map_key.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -928,16 +1029,16 @@ void JsonOutput::map_stats(
   if (values_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
 
   out_ << R"({"type": ")" << MessageType::stats << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (map_key.size() > 0) // check if this map has keys
+  if (!map_key.IsNoneTy()) // check if this map has keys
     out_ << "{";
 
   map_stats_contents(bpftrace, map, top, div, values_by_key);
 
-  if (map_key.size() > 0)
+  if (!map_key.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -947,7 +1048,8 @@ void JsonOutput::value(BPFtrace &bpftrace,
                        std::vector<uint8_t> &value) const
 {
   out_ << R"({"type": ")" << MessageType::value << R"(", "data": )"
-       << value_to_str(bpftrace, ty, value, false, 1) << "}" << std::endl;
+       << value_to_str(bpftrace, ty, value, false, 1, false) << "}"
+       << std::endl;
 }
 
 void JsonOutput::message(MessageType type,
@@ -994,35 +1096,44 @@ std::string JsonOutput::field_to_str(const std::string &name,
   return "\"" + name + "\": " + value;
 }
 
-std::string JsonOutput::tuple_to_str(
-    const std::vector<std::string> &elems) const
+std::string JsonOutput::tuple_to_str(const std::vector<std::string> &elems,
+                                     bool is_map_key) const
 {
-  return "[" + str_join(elems, ",") + "]";
+  if (!is_map_key) {
+    return "[" + str_join(elems, ",") + "]";
+  }
+  return str_join(elems, ",");
 }
 
 std::string JsonOutput::value_to_str(BPFtrace &bpftrace,
                                      const SizedType &type,
-                                     std::vector<uint8_t> &value,
+                                     const std::vector<uint8_t> &value,
                                      bool is_per_cpu,
-                                     uint32_t div) const
+                                     uint32_t div,
+                                     bool is_map_key) const
 {
-  auto str = Output::value_to_str(bpftrace, type, value, is_per_cpu, div);
-  if (is_quoted_type(type))
-    return "\"" + json_escape(str) + "\"";
-  else
-    return str;
+  auto str = Output::value_to_str(
+      bpftrace, type, value, is_per_cpu, div, is_map_key);
+  if (is_quoted_type(type)) {
+    if (is_map_key) {
+      return json_escape(str);
+    } else {
+      return "\"" + json_escape(str) + "\"";
+    }
+  }
+
+  return str;
 }
 
 std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
-  std::vector<std::string> args = map_key.argument_value_list(bpftrace, key);
-  if (!args.empty()) {
-    return "\"" + json_escape(str_join(args, ",")) + "\"";
+  const auto &key_type = bpftrace.resources.maps_info.at(map.name()).key_type;
+  if (key_type.IsNoneTy()) {
+    return "";
   }
-  return "";
+  return "\"" + json_escape(map_key_str(bpftrace, key_type, key)) + "\"";
 }
 
 void JsonOutput::map_key_val(const SizedType &map_type __attribute__((unused)),

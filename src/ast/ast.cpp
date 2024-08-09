@@ -118,13 +118,11 @@ Map::Map(const std::string &ident, location loc) : Expression(loc), ident(ident)
   is_map = true;
 }
 
-Map::Map(const std::string &ident, ExpressionList &&vargs_, location loc)
-    : Expression(loc), ident(ident), vargs(std::move(vargs_))
+Map::Map(const std::string &ident, Expression &expr, location loc)
+    : Expression(loc), ident(ident), key_expr(&expr)
 {
   is_map = true;
-  for (auto *expr : vargs) {
-    expr->key_for_map = this;
-  }
+  key_expr->key_for_map = this;
 }
 
 Variable::Variable(const std::string &ident, location loc)

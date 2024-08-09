@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 %avg_stas_val = type { i64, i64 }
-%uint64_avg__tuple_t = type { i64, i64 }
+%int64_avg__tuple_t = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -69,8 +69,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !83 {
   %key1 = alloca i32, align 4
   %lookup_fmtstr_key = alloca i32, align 4
-  %tuple = alloca %uint64_avg__tuple_t, align 8
-  %"$kv" = alloca %uint64_avg__tuple_t, align 8
+  %tuple = alloca %int64_avg__tuple_t, align 8
+  %"$kv" = alloca %int64_avg__tuple_t, align 8
   %ret = alloca i64, align 8
   %val_2 = alloca i64, align 8
   %val_1 = alloca i64, align 8
@@ -158,19 +158,19 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %31 = getelementptr %uint64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
+  %31 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
   store i64 %key, ptr %31, align 8
-  %32 = getelementptr %uint64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
+  %32 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
   store i64 %30, ptr %32, align 8
-  %33 = getelementptr %uint64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
+  %33 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
   %34 = load i64, ptr %33, align 8
-  %35 = getelementptr %uint64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
+  %35 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
   %36 = load i64, ptr %35, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %37 = getelementptr %uint64_avg__tuple_t, ptr %tuple, i32 0, i32 0
+  %37 = getelementptr %int64_avg__tuple_t, ptr %tuple, i32 0, i32 0
   store i64 %34, ptr %37, align 8
-  %38 = getelementptr %uint64_avg__tuple_t, ptr %tuple, i32 0, i32 1
+  %38 = getelementptr %int64_avg__tuple_t, ptr %tuple, i32 0, i32 1
   store i64 %36, ptr %38, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_fmtstr_key)
   store i32 0, ptr %lookup_fmtstr_key, align 4

@@ -61,10 +61,8 @@ void FieldAnalyser::visit(Builtin &builtin)
 
 void FieldAnalyser::visit(Map &map)
 {
-  MapKey key;
-  for (Expression *expr : map.vargs) {
-    Visit(*expr);
-  }
+  if (map.key_expr)
+    Visit(*map.key_expr);
 
   auto it = var_types_.find(map.ident);
   if (it != var_types_.end())

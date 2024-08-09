@@ -12,7 +12,6 @@
 
 #include "format_string.h"
 #include "location.hh"
-#include "mapkey.h"
 #include "struct.h"
 #include "types.h"
 
@@ -49,7 +48,7 @@ private:
 };
 
 struct MapInfo {
-  MapKey key;
+  SizedType key_type;
   SizedType value_type;
   std::optional<LinearHistogramArgs> lhist_args;
   std::optional<int> hist_bits_arg;
@@ -60,7 +59,7 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key, value_type, lhist_args, hist_bits_arg, id);
+    archive(key_type, value_type, lhist_args, hist_bits_arg, id);
   }
 };
 

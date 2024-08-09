@@ -35,6 +35,10 @@ NAME multiple histograms
 PROG BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }
 EXPECT_JSON runtime/outputs/hist_multiple.json
 
+NAME multiple histograms multiple keys
+PROG BEGIN { @["bpftrace", 2] = hist(2);@["curl", 3] = hist(511); @["curl", 3] = hist(1024); exit(); }
+EXPECT_JSON runtime/outputs/hist_multiple_multiple_keys.json
+
 NAME histogram-finegrain
 PROG BEGIN { $i = 0; while ($i < 1024) { @ = hist($i, 3); $i++; } exit(); }
 EXPECT_JSON runtime/outputs/hist_2args.json

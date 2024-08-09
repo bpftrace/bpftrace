@@ -163,6 +163,13 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
   return result;
 }
 
+DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
+{
+  auto subrange = getOrCreateSubrange(0, num_bytes);
+  return createArrayType(
+      num_bytes * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
+}
+
 DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
   if (stype.IsByteArray() || stype.IsRecordTy()) {
@@ -207,33 +214,26 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
   }
 }
 
-DIType *DIBuilderBPF::GetMapKeyType(const MapKey &key,
+DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
                                     const SizedType &value_type,
                                     libbpf::bpf_map_type map_type)
 {
   // No-key maps use '0' as the key.
   // - BPF requires 4-byte keys for array maps
   // - bpftrace uses 8 bytes for the implicit '0' key in hash maps
-  if (key.args_.size() == 0)
+  if (key_type.IsNoneTy())
     return (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
             map_type == libbpf::BPF_MAP_TYPE_ARRAY)
                ? getInt32Ty()
                : getInt64Ty();
 
   // Some map types need an extra 8-byte key.
-  uint64_t extra_arg_size = 0;
-  if (value_type.IsHistTy() || value_type.IsLhistTy())
-    extra_arg_size = 8;
+  if (value_type.IsHistTy() || value_type.IsLhistTy()) {
+    uint64_t size = key_type.GetSize() + 8;
+    return CreateByteArrayType(size);
+  }
 
-  // Single map key -> use the appropriate type.
-  if (key.args_.size() == 1 && extra_arg_size == 0)
-    return GetType(key.args_[0]);
-
-  // Multi map key -> use byte array.
-  uint64_t size = key.size() + extra_arg_size;
-  auto subrange = getOrCreateSubrange(0, size);
-  return createArrayType(
-      size * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
+  return GetType(key_type);
 }
 
 DIType *DIBuilderBPF::GetMapFieldInt(int value)
@@ -258,7 +258,7 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
     const std::string &name,
     libbpf::bpf_map_type map_type,
     uint64_t max_entries,
-    const MapKey &key,
+    DIType *key_type,
     const SizedType &value_type)
 {
   SmallVector<Metadata *, 4> fields = {
@@ -268,10 +268,8 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
 
   uint64_t size = 128;
   if (!value_type.IsNoneTy()) {
-    fields.push_back(createPointerMemberType(
-        "key",
-        size,
-        createPointerType(GetMapKeyType(key, value_type, map_type), 64)));
+    fields.push_back(
+        createPointerMemberType("key", size, createPointerType(key_type, 64)));
     fields.push_back(createPointerMemberType(
         "value", size + 64, createPointerType(GetType(value_type), 64)));
     size += 128;

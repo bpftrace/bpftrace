@@ -1417,7 +1417,7 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
                 });
     }
   } else {
-    sort_by_key(map_info.key.args_, values_by_key);
+    sort_by_key(map_info.key_type, values_by_key);
   };
 
   if (div == 0)
@@ -1451,10 +1451,11 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
 
   const auto &map_info = resources.maps_info.at(map.name());
   while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
-    auto key_prefix = std::vector<uint8_t>(map_info.key.size());
-    uint64_t bucket = read_data<uint64_t>(key.data() + map_info.key.size());
+    auto key_prefix = std::vector<uint8_t>(map_info.key_type.GetSize());
+    uint64_t bucket = read_data<uint64_t>(key.data() +
+                                          map_info.key_type.GetSize());
 
-    for (size_t i = 0; i < map_info.key.size(); i++)
+    for (size_t i = 0; i < map_info.key_type.GetSize(); i++)
       key_prefix.at(i) = key.at(i);
 
     auto value = std::vector<uint8_t>(map.value_size() * nvalues);
@@ -1675,7 +1676,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   return timestr;
 }
 
-std::string BPFtrace::resolve_buf(char *buf, size_t size)
+std::string BPFtrace::resolve_buf(const char *buf, size_t size)
 {
   return hex_format_buffer(buf, size);
 }
@@ -1929,54 +1930,80 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
 }
 
 void BPFtrace::sort_by_key(
-    std::vector<SizedType> key_args,
+    const SizedType &key,
     std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
         &values_by_key)
 {
-  int arg_offset = 0;
-  for (auto arg : key_args) {
-    arg_offset += arg.GetSize();
-  }
-
-  // Sort the key arguments in reverse order so the results are sorted by
-  // the first argument first, then the second, etc.
-  for (size_t i = key_args.size(); i-- > 0;) {
-    auto arg = key_args.at(i);
-    arg_offset -= arg.GetSize();
-
-    if (arg.IsIntTy()) {
-      if (arg.GetSize() == 8) {
-        std::stable_sort(
-            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-              auto va = read_data<uint64_t>(a.first.data() + arg_offset);
-              auto vb = read_data<uint64_t>(b.first.data() + arg_offset);
-              return va < vb;
-            });
-      } else if (arg.GetSize() == 4) {
-        std::stable_sort(
-            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-              auto va = read_data<uint32_t>(a.first.data() + arg_offset);
-              auto vb = read_data<uint32_t>(b.first.data() + arg_offset);
-              return va < vb;
-            });
-      } else {
-        LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
-                 << arg.GetSize() << " provided";
+  if (key.IsTupleTy()) {
+    // Sort the key arguments in reverse order so the results are sorted by
+    // the first argument first, then the second, etc.
+    auto &fields = key.GetFields();
+    for (size_t i = key.GetFieldCount(); i-- > 0;) {
+      const auto &field = fields.at(i);
+      if (field.type.IsIntTy()) {
+        if (field.type.GetSize() == 8) {
+          std::stable_sort(
+              values_by_key.begin(),
+              values_by_key.end(),
+              [&](auto &a, auto &b) {
+                auto va = read_data<uint64_t>(a.first.data() + field.offset);
+                auto vb = read_data<uint64_t>(b.first.data() + field.offset);
+                return va < vb;
+              });
+        } else if (field.type.GetSize() == 4) {
+          std::stable_sort(
+              values_by_key.begin(),
+              values_by_key.end(),
+              [&](auto &a, auto &b) {
+                auto va = read_data<uint32_t>(a.first.data() + field.offset);
+                auto vb = read_data<uint32_t>(b.first.data() + field.offset);
+                return va < vb;
+              });
+        } else {
+          LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
+                   << field.type.GetSize() << " provided";
+        }
+      } else if (field.type.IsStringTy()) {
+        std::stable_sort(values_by_key.begin(),
+                         values_by_key.end(),
+                         [&](auto &a, auto &b) {
+                           return strncmp(reinterpret_cast<const char *>(
+                                              a.first.data() + field.offset),
+                                          reinterpret_cast<const char *>(
+                                              b.first.data() + field.offset),
+                                          field.type.GetSize()) < 0;
+                         });
       }
-
-    } else if (arg.IsStringTy()) {
+    }
+  } else if (key.IsIntTy()) {
+    if (key.GetSize() == 8) {
       std::stable_sort(values_by_key.begin(),
                        values_by_key.end(),
                        [&](auto &a, auto &b) {
-                         return strncmp(reinterpret_cast<const char *>(
-                                            a.first.data() + arg_offset),
-                                        reinterpret_cast<const char *>(
-                                            b.first.data() + arg_offset),
-                                        arg.GetSize()) < 0;
+                         auto va = read_data<uint64_t>(a.first.data());
+                         auto vb = read_data<uint64_t>(b.first.data());
+                         return va < vb;
                        });
+    } else if (key.GetSize() == 4) {
+      std::stable_sort(values_by_key.begin(),
+                       values_by_key.end(),
+                       [&](auto &a, auto &b) {
+                         auto va = read_data<uint32_t>(a.first.data());
+                         auto vb = read_data<uint32_t>(b.first.data());
+                         return va < vb;
+                       });
+    } else {
+      LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
+               << key.GetSize() << " provided";
     }
 
-    // Other types don't get sorted
+  } else if (key.IsStringTy()) {
+    std::stable_sort(
+        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+          return strncmp(reinterpret_cast<const char *>(a.first.data()),
+                         reinterpret_cast<const char *>(b.first.data()),
+                         key.GetSize()) < 0;
+        });
   }
 }
 

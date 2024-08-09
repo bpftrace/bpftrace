@@ -20,13 +20,25 @@ EXPECT @: (-100, 10, 50, 100)
 
 NAME tuple map key
 PROG BEGIN { @[(1, "hello")] = 1; exit();}
-EXPECT @[(1, hello)]: 1
-TIMEOUT 5
+EXPECT @[1, hello]: 1
+
+NAME tuple map key same as assoc array
+PROG BEGIN { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@[1, "hello"]); exit();}
+EXPECT @[2, hello]: 2
 
 NAME tuple map key variable
 PROG BEGIN { $a = (1, "hello"); @[(1, "hello")] = 1; @[$a] = 2; exit();}
-EXPECT @[(1, hello)]: 2
-TIMEOUT 5
+EXPECT @[1, hello]: 2
+
+NAME tuple map key string resize
+PROG BEGIN { @a["hellotherelongstr", 4] = 1; @a["by", 6] = 2; exit(); }
+EXPECT @a[hellotherelongstr, 4]: 1
+EXPECT @a[by, 6]: 2
+
+NAME tuple map key compatible int sizes
+PROG BEGIN { $a = (1,(123,(uint64)1234)); $b = (4,(1234,(uint8)123)); @a[$a] = 1; @a[$b] = 2; exit(); }
+EXPECT @a[1, (123, 1234)]: 1
+EXPECT @a[4, (1234, 123)]: 2
 
 NAME complex tuple 1
 PROG BEGIN { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555)); exit(); }

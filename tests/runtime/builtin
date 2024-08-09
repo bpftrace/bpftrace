@@ -191,7 +191,7 @@ AFTER ./testprogs/syscall open
 
 NAME args in kfunc as a map key
 PROG kfunc:vfs_open { @[args] = 1; exit(); }
-EXPECT_REGEX @[{.path=0x[0-9a-f]+,.file=0x[0-9a-f]+}]: 1
+EXPECT_REGEX @[{ .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }]: 1
 REQUIRES_FEATURE kfunc
 AFTER ./testprogs/syscall open
 
@@ -215,7 +215,7 @@ BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe as a map key
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @[args] = 1; exit(); }
-EXPECT_REGEX @[{.n=0x[0-9a-f]+,.c=120}]: 1
+EXPECT_REGEX @[{ .n = 0x[0-9a-f]+, .c = 120 }]: 1
 REQUIRES_FEATURE dwarf
 BEFORE ./testprogs/uprobe_test
 

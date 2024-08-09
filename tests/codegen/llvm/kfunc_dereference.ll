@@ -26,9 +26,9 @@ entry:
   %4 = add i64 %3, 0
   %5 = inttoptr i64 %4 to ptr
   %6 = load volatile i32, ptr %5, align 4
-  %cast = zext i32 %6 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  store i64 %cast, ptr %"@_key", align 8
+  %7 = zext i32 %6 to i64
+  store i64 %7, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)

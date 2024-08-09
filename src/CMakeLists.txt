@@ -31,7 +31,6 @@ add_library(runtime STATIC
   format_string.cpp
   globalvars.cpp
   log.cpp
-  mapkey.cpp
   output.cpp
   probe_matcher.cpp
   procmon.cpp

@@ -1180,10 +1180,10 @@ void CodegenLLVM::visit(Call &call)
     if (call.vargs.at(0)->is_map) {
       auto &arg = *call.vargs.at(0);
       auto &map = static_cast<Map &>(arg);
-      if (map.vargs.size() == 0)
-        createPrintMapCall(call);
-      else
+      if (map.key_expr)
         createPrintNonMapCall(call, async_ids_.non_map_print());
+      else
+        createPrintMapCall(call);
     } else
       createPrintNonMapCall(call, async_ids_.non_map_print());
   } else if (call.func == "cgroup_path") {
@@ -1469,7 +1469,7 @@ void CodegenLLVM::visit(Map &map)
 
   const auto &val_type = map_info->second.value_type;
   Value *value;
-  if (canAggPerCpuMapElems(val_type, map_info->second.key)) {
+  if (canAggPerCpuMapElems(val_type, map_info->second.key_type)) {
     value = b_.CreatePerCpuMapAggElems(ctx_, map, key, val_type, map.loc);
   } else {
     value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
@@ -2263,9 +2263,15 @@ void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
                               b_.CreatePointerCast(dst_val,
                                                    tuple_ty->getPointerTo()),
                               { b_.getInt32(0), b_.getInt32(i) });
-    if (t_type.IsTupleTy() &&
-        t_type.GetSize() != var_type.GetField(i).type.GetSize()) {
+    if (t_type.IsTupleTy() && !t_type.IsSameSizeRecursive(var_type)) {
       createTupleCopy(t_type, var_type.GetField(i).type, dst, offset_val);
+    } else if (t_type.IsIntTy() && t_type.GetSize() < 8) {
+      // Integers are always stored as 64-bit in map keys
+      b_.CreateStore(b_.CreateIntCast(b_.CreateLoad(b_.GetType(t_type),
+                                                    offset_val),
+                                      b_.getInt64Ty(),
+                                      t_type.IsSigned()),
+                     dst);
     } else {
       b_.CreateMemcpyBPF(dst, offset_val, t_type.GetSize());
     }
@@ -2312,7 +2318,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   auto [key, scoped_key_deleter] = getMapKey(map);
   auto &expr_type = assignment.expr->type;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
-    if (expr_type.GetSize() != map.type.GetSize()) {
+    if (!expr_type.IsSameSizeRecursive(map.type)) {
       val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateMemsetBPF(val, b_.getInt8(0), map.type.GetSize());
       if (expr_type.IsTupleTy()) {
@@ -2392,7 +2398,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   } else if (needMemcpy(var.type)) {
     auto *val = variables_[var.ident].value;
     auto &expr_type = assignment.expr->type;
-    if (expr_type.GetSize() != var.type.GetSize()) {
+    if (!expr_type.IsSameSizeRecursive(var.type)) {
       b_.CreateMemsetBPF(val, b_.getInt8(0), var.type.GetSize());
       if (var.type.IsTupleTy()) {
         createTupleCopy(expr_type, var.type, val, expr_);
@@ -2896,41 +2902,47 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
 {
   Value *key;
   bool alloca_created_here = true;
-  if (map.vargs.size() > 0) {
-    // A single value as a map key (e.g., @[comm] = 0;)
-    if (map.vargs.size() == 1) {
-      Expression *expr = map.vargs.at(0);
-      auto scoped_del = accept(expr);
-      if (inBpfMemory(expr->type)) {
-        auto &key_type = map.key_type.args_[0];
-        if (expr->type.IsStringTy() &&
-            expr->type.GetSize() != key_type.GetSize()) {
-          key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
-          b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
+  if (map.key_expr) {
+    Expression *expr = map.key_expr;
+    auto scoped_del = accept(expr);
+    if (inBpfMemory(expr->type)) {
+      auto &key_type = map.key_type;
+      if (!expr->type.IsSameSizeRecursive(key_type)) {
+        key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
+        b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
+        if (expr->type.IsTupleTy()) {
+          createTupleCopy(expr->type, key_type, key, expr_);
+        } else if (expr->type.IsStringTy()) {
           b_.CreateMemcpyBPF(key, expr_, expr->type.GetSize());
         } else {
-          key = expr_;
-          // Call-ee freed
-          scoped_del.disarm();
-
-          // We don't have enough visibility into where key comes from to safely
-          // end its lifetime. It could be a variable, for example.
-          alloca_created_here = false;
+          LOG(BUG) << "Type size mismatch. Key Type Size: "
+                   << key_type.GetSize()
+                   << " Expression Type Size: " << expr->type.GetSize();
         }
       } else {
-        key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
-        if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
-          // We need to read the entire array/struct and save it
-          b_.CreateProbeRead(ctx_, key, expr->type, expr_, expr->loc);
-        } else {
-          b_.CreateStore(
-              b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
-              b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
-        }
+        key = expr_;
+        // Call-ee freed
+        scoped_del.disarm();
+
+        // We don't have enough visibility into where key comes from to safely
+        // end its lifetime. It could be a variable, for example.
+        alloca_created_here = false;
       }
+    } else if (map.key_type.IsIntTy()) {
+      key = b_.CreateAllocaBPF(map.key_type, map.ident + "_key");
+      // Integers are always stored as 64-bit in map keys
+      b_.CreateStore(
+          b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()), key);
     } else {
-      // Two or more values as a map key (e.g, @[comm, pid] = 1;)
-      key = getMultiMapKey(map, {});
+      key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
+      if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
+        // We need to read the entire array/struct and save it
+        b_.CreateProbeRead(ctx_, key, expr->type, expr_, expr->loc);
+      } else {
+        b_.CreateStore(
+            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
+            b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
+      }
     }
   } else {
     // No map key (e.g., @ = 1;). Use 0 as a key.
@@ -2948,10 +2960,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
 AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
                                         const std::vector<Value *> &extra_keys)
 {
-  size_t size = 0;
-  for (auto &key_type : map.key_type.args_) {
-    size += key_type.GetSize();
-  }
+  size_t size = map.key_type.GetSize();
   for (auto *extra_key : extra_keys) {
     size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
@@ -2963,42 +2972,52 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
   int offset = 0;
   bool aligned = true;
-  int i = 0;
   // Construct a map key in the stack
-  for (Expression *expr : map.vargs) {
-    auto scoped_del = accept(expr);
-    Value *offset_val = b_.CreateGEP(key_type,
-                                     key,
-                                     { b_.getInt64(0), b_.getInt64(offset) });
-    size_t map_key_size = map.key_type.args_[i++].GetSize();
+  Expression *expr = map.key_expr;
+  auto scoped_del = accept(expr);
+  Value *offset_val = b_.CreateGEP(key_type,
+                                   key,
+                                   { b_.getInt64(0), b_.getInt64(offset) });
+  size_t map_key_size = map.key_type.GetSize();
+  size_t expr_size = expr->type.GetSize();
 
-    if (inBpfMemory(expr->type)) {
-      if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
-        b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
-      b_.CreateMemcpyBPF(offset_val, expr_, expr->type.GetSize());
+  if (inBpfMemory(expr->type)) {
+    if (!expr->type.IsSameSizeRecursive(map.key_type)) {
+      b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
+      if (expr->type.IsTupleTy()) {
+        createTupleCopy(expr->type, map.key_type, offset_val, expr_);
+      } else if (expr->type.IsStringTy()) {
+        b_.CreateMemcpyBPF(offset_val, expr_, expr_size);
+      } else {
+        LOG(BUG) << "Type size mismatch. Key Type Size: "
+                 << map.key_type.GetSize()
+                 << " Expression Type Size: " << expr_size;
+      }
+    } else {
+      b_.CreateMemcpyBPF(offset_val, expr_, expr_size);
+    }
+    if ((map_key_size % 8) != 0)
+      aligned = false;
+  } else {
+    if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
+      // Read the array/struct into the key
+      b_.CreateProbeRead(ctx_, offset_val, expr->type, expr_, expr->loc);
       if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
-      if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
-        // Read the array/struct into the key
-        b_.CreateProbeRead(ctx_, offset_val, expr->type, expr_, expr->loc);
-        if ((map_key_size % 8) != 0)
-          aligned = false;
-      } else {
-        // promote map key to 64-bit:
-        Value *key_elem = b_.CreateIntCast(expr_,
-                                           b_.getInt64Ty(),
-                                           expr->type.IsSigned());
-        Value *dst_ptr = b_.CreatePointerCast(offset_val,
-                                              expr_->getType()->getPointerTo());
-        if (aligned)
-          b_.CreateStore(key_elem, dst_ptr);
-        else
-          b_.createAlignedStore(key_elem, dst_ptr, 1);
-      }
+      // promote map key to 64-bit:
+      Value *key_elem = b_.CreateIntCast(expr_,
+                                         b_.getInt64Ty(),
+                                         expr->type.IsSigned());
+      Value *dst_ptr = b_.CreatePointerCast(offset_val,
+                                            expr_->getType()->getPointerTo());
+      if (aligned)
+        b_.CreateStore(key_elem, dst_ptr);
+      else
+        b_.createAlignedStore(key_elem, dst_ptr, 1);
     }
-    offset += map_key_size;
   }
+  offset += map_key_size;
 
   for (auto *extra_key : extra_keys) {
     Value *offset_val = b_.CreateGEP(key_type,
@@ -3019,7 +3038,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
 AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
-  if (map.vargs.size() > 0)
+  if (map.key_expr)
     return getMultiMapKey(map, { log2 });
 
   AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
@@ -3603,13 +3622,14 @@ void CodegenLLVM::generate_ir()
 void CodegenLLVM::createMapDefinition(const std::string &name,
                                       libbpf::bpf_map_type map_type,
                                       uint64_t max_entries,
-                                      const MapKey &key,
+                                      const SizedType &key_type,
                                       const SizedType &value_type)
 {
+  DIType *di_key_type = debug_.GetMapKeyType(key_type, value_type, map_type);
   map_types_.emplace(name, map_type);
   auto var_name = bpf_map_name(name);
   auto debuginfo = debug_.createMapEntry(
-      var_name, map_type, max_entries, key, value_type);
+      var_name, map_type, max_entries, di_key_type, value_type);
 
   // It's sufficient that the global variable has the correct size (struct with
   // one pointer per field). The actual inner types are defined in debug info.
@@ -3630,14 +3650,14 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 }
 
 libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
-                                               const MapKey &key)
+                                               const SizedType &key_type)
 {
-  if (val_type.IsCountTy() && key.args_.empty()) {
+  if (val_type.IsCountTy() && key_type.IsNoneTy()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
   } else if (bpftrace_.feature_->has_map_percpu_hash() &&
              val_type.NeedsPercpuMap()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
-  } else if (!val_type.NeedsPercpuMap() && key.args_.empty()) {
+  } else if (!val_type.NeedsPercpuMap() && key_type.IsNoneTy()) {
     return libbpf::BPF_MAP_TYPE_ARRAY;
   } else {
     return libbpf::BPF_MAP_TYPE_HASH;
@@ -3675,20 +3695,20 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   // User-defined maps
   for (const auto &[name, info] : required_resources.maps_info) {
     const auto &val_type = info.value_type;
-    const auto &key = info.key;
+    const auto &key_type = info.key_type;
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
-    auto map_type = get_map_type(val_type, key);
+    auto map_type = get_map_type(val_type, key_type);
     // This is special casing for keyless maps eg: @x or @++. For a subset of
     // keyless maps we can special case them to BPF_MAP_TYPE_ARRAY instead of
     // HASH for efficiency
     if ((map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
          map_type == libbpf::BPF_MAP_TYPE_ARRAY) &&
-        key.args_.empty()) {
+        key_type.IsNoneTy()) {
       max_entries = 1;
     }
 
-    createMapDefinition(name, map_type, max_entries, key, val_type);
+    createMapDefinition(name, map_type, max_entries, key_type, val_type);
   }
 
   // bpftrace internal maps
@@ -3698,7 +3718,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(stack_type.name(),
                         libbpf::BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
-                        MapKey({ CreateUInt64(), CreateUInt32() }),
+                        CreateArray(12, CreateInt8()),
                         CreateArray(stack_type.limit, CreateUInt64()));
     max_stack_limit = std::max(stack_type.limit, max_stack_limit);
   }
@@ -3707,7 +3727,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(StackType::scratch_name(),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         CreateArray(max_stack_limit, CreateUInt64()));
   }
 
@@ -3717,7 +3737,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::Join),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         value_type);
   }
 
@@ -3725,7 +3745,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::Elapsed),
                         libbpf::BPF_MAP_TYPE_HASH,
                         1,
-                        MapKey(),
+                        CreateNone(),
                         CreateUInt64());
   }
 
@@ -3733,7 +3753,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::RecursionPrevention),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         CreateUInt64());
   }
 
@@ -3742,7 +3762,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         get_online_cpus().size(),
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         CreateInt32());
   }
 
@@ -3751,7 +3771,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::Ringbuf),
                         libbpf::BPF_MAP_TYPE_RINGBUF,
                         entries,
-                        MapKey(),
+                        CreateNone(),
                         CreateNone());
   }
 
@@ -3760,7 +3780,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(to_string(MapType::StrBuffer),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         codegen_resources.str_buffers,
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         CreateArray(max_strlen, CreateInt8()));
   }
 
@@ -3769,14 +3789,14 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   createMapDefinition(to_string(MapType::EventLossCounter),
                       libbpf::BPF_MAP_TYPE_ARRAY,
                       1,
-                      MapKey({ CreateInt(loss_cnt_key_size) }),
+                      CreateInt(loss_cnt_key_size),
                       CreateInt(loss_cnt_val_size));
 
   if (required_resources.max_fmtstring_args_size > 0) {
     createMapDefinition(to_string(MapType::FmtStringArgs),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
-                        MapKey({ CreateInt32() }),
+                        CreateInt32(),
                         CreateArray(required_resources.max_fmtstring_args_size,
                                     CreateInt8()));
   }
@@ -4368,7 +4388,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   Value *val = callback->getArg(2);
 
   const auto &map_val_type = map_info->second.value_type;
-  if (canAggPerCpuMapElems(map_val_type, map_info->second.key)) {
+  if (canAggPerCpuMapElems(map_val_type, map_info->second.key_type)) {
     AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
                                              "lookup_key");
     b_.CreateStore(key, key_ptr);
@@ -4441,9 +4461,9 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 }
 
 bool CodegenLLVM::canAggPerCpuMapElems(const SizedType &val_type,
-                                       const MapKey &key)
+                                       const SizedType &key_type)
 {
-  auto map_type = get_map_type(val_type, key);
+  auto map_type = get_map_type(val_type, key_type);
   return val_type.IsCastableMapTy() &&
          (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
           map_type == libbpf::BPF_MAP_TYPE_PERCPU_HASH);

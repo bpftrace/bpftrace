@@ -129,10 +129,12 @@ private:
                               std::string name = "");
 
   SizedType *get_map_type(const Map &map);
-  MapKey *get_map_key_type(const Map &map);
+  SizedType *get_map_key_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
-  void update_key_type(const Map &map, const MapKey &new_key);
+  SizedType create_key_type(const SizedType &expr_type, const location &loc);
+  void update_key_type(const Map &map, const SizedType &new_key_type);
   bool update_string_size(SizedType &type, const SizedType &new_type);
+  void validate_map_key(const SizedType &key, const location &loc);
   void resolve_struct_type(SizedType &type, const location &loc);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
@@ -161,7 +163,7 @@ private:
 
   std::map<Scope *, std::map<std::string, SizedType>> variable_val_;
   std::map<std::string, SizedType> map_val_;
-  std::map<std::string, MapKey> map_key_;
+  std::map<std::string, SizedType> map_key_;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
