@@ -69,8 +69,8 @@ void update_global_vars(const struct bpf_object *bpf_object,
   }
 
   size_t v_size;
-  char *global_vars_buf = (char *)bpf_map__initial_value(global_vars_map,
-                                                         &v_size);
+  char *global_vars_buf = reinterpret_cast<char *>(
+      const_cast<void *>(bpf_map__initial_value(global_vars_map, &v_size)));
 
   if (!global_vars_buf) {
     LOG(BUG) << "Failed to get array buf for global variable map";
