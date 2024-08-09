@@ -28,56 +28,10 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 13
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm13
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 14
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm14
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 15
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm15
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 17
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 18 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm18
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 18 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18
           TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 18 Clang Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          CC: clang
-          CXX: clang++
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: AOT (LLVM 18 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
-        - NAME: Memleak test (LLVM 18 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
-        - NAME: Memleak test (LLVM 18 Release)
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11

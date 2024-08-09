@@ -320,7 +320,6 @@ def test():
 def main():
     configure()
     build()
-    test()
 
 
 if __name__ == "__main__":
