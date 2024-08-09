@@ -70,13 +70,13 @@
 		.dst_reg = DST,					\
 		.src_reg = SRC,					\
 		.off   = 0,					\
-		.imm   = (__u32) (IMM) }),			\
+		.imm   = (__s32) (IMM) }),			\
 	((struct bpf_insn) {					\
 		.code  = 0, /* zero is reserved opcode */	\
 		.dst_reg = 0,					\
 		.src_reg = 0,					\
 		.off   = 0,					\
-		.imm   = ((__u64) (IMM)) >> 32 })
+		.imm   = (__s32)(((__u64) (IMM)) >> 32) })
 
 #define BPF_PSEUDO_MAP_FD	1
 
