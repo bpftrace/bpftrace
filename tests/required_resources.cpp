@@ -65,10 +65,13 @@ TEST(required_resources, round_trip_field_sized_type)
     EXPECT_TRUE(field.type.IsIntTy());
     EXPECT_EQ(field.type.GetSize(), 4ul);
     EXPECT_EQ(field.offset, 123);
-    EXPECT_TRUE(field.bitfield.has_value());
+    // clang-tidy does not recognize ASSERT_*() terminates testcase
+    // NOLINTBEGIN(bugprone-unchecked-optional-access)
+    ASSERT_TRUE(field.bitfield.has_value());
     EXPECT_EQ(field.bitfield->read_bytes, 1ul);
     EXPECT_EQ(field.bitfield->access_rshift, 2ul);
     EXPECT_EQ(field.bitfield->mask, 0xFFul);
+    // NOLINTEND(bugprone-unchecked-optional-access)
   }
 }
 
@@ -108,10 +111,13 @@ TEST(required_resources, round_trip_map_info)
     EXPECT_TRUE(map_info.key.args_[0].IsIntegerTy());
     EXPECT_EQ(map_info.key.args_[0].GetSize(), 4);
 
-    EXPECT_TRUE(map_info.lhist_args.has_value());
+    // clang-tidy does not recognize ASSERT_*() terminates testcase
+    // NOLINTBEGIN(bugprone-unchecked-optional-access)
+    ASSERT_TRUE(map_info.lhist_args.has_value());
     EXPECT_EQ(map_info.lhist_args->min, 99);
     EXPECT_EQ(map_info.lhist_args->max, 123);
     EXPECT_EQ(map_info.lhist_args->step, 33);
+    // NOLINTEND(bugprone-unchecked-optional-access)
 
     EXPECT_TRUE(map_info.hist_bits_arg.has_value());
     EXPECT_EQ(map_info.hist_bits_arg, 1);

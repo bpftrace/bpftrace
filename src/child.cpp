@@ -107,7 +107,10 @@ static void validate_cmd(std::vector<std::string>& cmd)
       // /usr/bin/ping
       std::unordered_set<std::string> uniq_abs_path;
       for (const auto& path : paths) {
-        uniq_abs_path.insert(abs_path(path).value());
+        auto absolute = abs_path(path);
+        if (!absolute.has_value())
+          continue;
+        uniq_abs_path.insert(*absolute);
       }
 
       if (uniq_abs_path.size() == 1) {

@@ -821,8 +821,9 @@ void CodegenLLVM::visit(Call &call)
       length = b_.CreateSelect(
           cmp, proposed_length, max_length, "length.select");
 
-      if (arg.is_literal)
-        fixed_buffer_length = *bpftrace_.get_int_literal(&arg);
+      auto literal_length = bpftrace_.get_int_literal(&arg);
+      if (literal_length)
+        fixed_buffer_length = *literal_length;
     } else {
       auto &arg = *call.vargs.at(0);
       fixed_buffer_length = arg.type.GetNumElements() *
@@ -1306,8 +1307,10 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "strerror") {
     auto scoped_del = accept(call.vargs.front());
   } else if (call.func == "strncmp") {
-    uint64_t size = static_cast<uint64_t>(
-        *bpftrace_.get_int_literal(call.vargs.at(2)));
+    auto size_opt = bpftrace_.get_int_literal(call.vargs.at(2));
+    if (!size_opt.has_value())
+      LOG(BUG) << "Int literal should have been checked in semantic analysis";
+    uint64_t size = static_cast<uint64_t>(*size_opt);
     const auto &left_arg = call.vargs.at(0);
     const auto &right_arg = call.vargs.at(1);
 
@@ -1416,6 +1419,8 @@ void CodegenLLVM::visit(Call &call)
     expr_ = ret;
   } else if (call.func == "nsecs") {
     if (call.type.ts_mode == TimestampMode::sw_tai) {
+      if (!bpftrace_.delta_taitime_.has_value())
+        LOG(BUG) << "Should have been checked in semantic analysis";
       uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
                        bpftrace_.delta_taitime_->tv_nsec;
       expr_ = b_.CreateGetNs(TimestampMode::boot, call.loc);

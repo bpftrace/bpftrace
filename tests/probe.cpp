@@ -42,6 +42,8 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ast::ResourceAnalyser resource_analyser(driver.ctx.root, *bpftrace);
   auto resources_optional = resource_analyser.analyse();
   ASSERT_TRUE(resources_optional.has_value());
+  // clang-tidy doesn't recognize ASSERT_*() as execution terminating
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   bpftrace->resources = resources_optional.value();
 
   ast::CodegenLLVM codegen(driver.ctx.root, *bpftrace);

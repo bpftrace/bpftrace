@@ -356,9 +356,12 @@ TEST(utils, find_in_path)
 TEST(utils, find_near_self)
 {
   auto runtime_tests = find_near_self("runtime-tests.sh");
+  // clang-tidy is not aware ASSERT_*() terminates testcase
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
   ASSERT_TRUE(runtime_tests.has_value());
   EXPECT_TRUE(runtime_tests->filename() == "runtime-tests.sh");
   EXPECT_TRUE(std_filesystem::exists(*runtime_tests));
+  // NOLINTEND(bugprone-unchecked-optional-access)
 
   EXPECT_FALSE(find_near_self("SHOULD_NOT_EXIST").has_value());
 }
