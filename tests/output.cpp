@@ -16,7 +16,7 @@ TEST(TextOutput, lhist_no_suffix)
   TextOutput output{ out, err };
 
   MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{ MapKey{},
+  bpftrace.resources.maps_info["@mymap"] = MapInfo{ CreateNone(),
                                                     SizedType{ Type::lhist, 8 },
                                                     LinearHistogramArgs{
                                                         610000, 670000, 10000 },
@@ -61,7 +61,7 @@ TEST(TextOutput, lhist_suffix)
   TextOutput output{ out, err };
 
   MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{ MapKey{},
+  bpftrace.resources.maps_info["@mymap"] = MapInfo{ CreateNone(),
                                                     SizedType{ Type::lhist, 8 },
                                                     LinearHistogramArgs{
                                                         0, 5 * 1024, 1024 },

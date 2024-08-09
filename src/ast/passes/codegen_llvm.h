@@ -89,7 +89,7 @@ public:
   void createMapDefinition(const std::string &name,
                            libbpf::bpf_map_type map_type,
                            uint64_t max_entries,
-                           const MapKey &key,
+                           const SizedType &key_type,
                            const SizedType &value_type);
   AllocaInst *createTuple(
       const SizedType &tuple_type,
@@ -102,7 +102,7 @@ public:
 
   void generate_ir(void);
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
-                                    const MapKey &key);
+                                    const SizedType &key_type);
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources);
   void optimize(void);
@@ -245,7 +245,8 @@ private:
 
   Value *createFmtString(int print_id);
 
-  bool canAggPerCpuMapElems(const SizedType &val_type, const MapKey &key);
+  bool canAggPerCpuMapElems(const SizedType &val_type,
+                            const SizedType &key_type);
 
   Node *root_ = nullptr;
 

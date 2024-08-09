@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "location.hh"
-#include "mapkey.h"
 #include "types.h"
 #include "usdt.h"
 #include "utils.h"
@@ -235,11 +234,11 @@ public:
   DEFINE_ACCEPT
 
   explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, ExpressionList &&vargs, location loc);
+  Map(const std::string &ident, Expression &expr, location loc);
 
   std::string ident;
-  MapKey key_type;
-  ExpressionList vargs;
+  Expression *key_expr = nullptr;
+  SizedType key_type;
   bool skip_key_validation = false;
 
 private:

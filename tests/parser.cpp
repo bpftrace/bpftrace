@@ -677,9 +677,10 @@ TEST(Parser, map_key)
        "   int: 1\n"
        "  =\n"
        "   map: @x\n"
-       "    int: 0\n"
-       "    int: 1\n"
-       "    int: 2\n"
+       "    tuple:\n"
+       "     int: 0\n"
+       "     int: 1\n"
+       "     int: 2\n"
        "   int: 1\n");
 
   test("kprobe:sys_open { @x[(0,\"hi\",tid)] = 1; }",
@@ -702,9 +703,10 @@ TEST(Parser, map_key)
        "   int: 1\n"
        "  =\n"
        "   map: @x\n"
-       "    map: @a\n"
-       "    map: @b\n"
-       "    map: @c\n"
+       "    tuple:\n"
+       "     map: @a\n"
+       "     map: @b\n"
+       "     map: @c\n"
        "   int: 1\n");
 
   test("kprobe:sys_open { @x[pid] = 1; @x[tid,uid,arg9] = 1; }",
@@ -716,9 +718,10 @@ TEST(Parser, map_key)
        "   int: 1\n"
        "  =\n"
        "   map: @x\n"
-       "    builtin: tid\n"
-       "    builtin: uid\n"
-       "    builtin: arg9\n"
+       "    tuple:\n"
+       "     builtin: tid\n"
+       "     builtin: uid\n"
+       "     builtin: arg9\n"
        "   int: 1\n");
 }
 

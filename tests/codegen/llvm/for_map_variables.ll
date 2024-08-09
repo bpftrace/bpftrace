@@ -9,7 +9,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
 %ctx_t = type { ptr, ptr }
-%uint64_int64__tuple_t = type { i64, i64 }
+%int64_int64__tuple_t = type { i64, i64 }
 %print_string_4_t = type <{ i64, i64, [4 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -88,14 +88,14 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noal
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !73 {
   %key1 = alloca i32, align 4
   %lookup_fmtstr_key = alloca i32, align 4
-  %"$kv" = alloca %uint64_int64__tuple_t, align 8
+  %"$kv" = alloca %int64_int64__tuple_t, align 8
   %key = load i64, ptr %1, align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %5 = getelementptr %uint64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
   store i64 %key, ptr %5, align 8
-  %6 = getelementptr %uint64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
+  %6 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
   store i64 %val, ptr %6, align 8
   %"ctx.$var1" = getelementptr %ctx_t, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8

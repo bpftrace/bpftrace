@@ -150,11 +150,11 @@ void Printer::visit(Map &map)
   std::string indent(depth_, ' ');
   out_ << indent << "map: " << map.ident << type(map.type) << std::endl;
 
-  ++depth_;
-  for (Expression *expr : map.vargs) {
-    expr->accept(*this);
+  if (map.key_expr) {
+    ++depth_;
+    map.key_expr->accept(*this);
+    --depth_;
   }
-  --depth_;
 }
 
 void Printer::visit(Variable &var)

@@ -12,6 +12,8 @@ aot.builtin.func_uprobe_elf_symtable
 aot.builtin.print args in kfunc
 # AOT shim needs to parse config and set up BPFTRACE_MAX_STRLEN
 aot.call.str_big_printf
+# Same problem as #3392
+aot.call.buf_map_multikey
 aot.call.cgroup_path
 aot.call.cgroup_path printf
 aot.call.hist_10g
@@ -33,11 +35,15 @@ aot.call.strftime_as_map_key
 aot.call.strftime_as_map_value
 aot.call.ustack_elf_symtable
 aot.dwarf.uprobe inlined function
+# Same problem as #3392
+aot.for.map delete
 aot.for.map multiple loops
 aot.for.map multiple probes
 aot.for.map nested vals
 aot.for.map one key
 aot.for.map strings
+# Same problem as #3392
+aot.for.map two key elements
 aot.for.map two keys
 aot.for.variable context multiple
 aot.json-output.complex
@@ -48,6 +54,7 @@ aot.json-output.linear histogram
 aot.json-output.linear histogram zero
 aot.json-output.map
 aot.json-output.multiple histograms
+aot.json-output.multiple histograms multiple keys
 aot.json-output.multiple linear histograms
 aot.json-output.multiple maps
 aot.json-output.multiple stats
@@ -78,14 +85,25 @@ aot.tuples.basic tuple map
 # Same problem as #3392
 aot.tuples.tuple map key
 # Same problem as #3392
+aot.tuples.tuple map key same as assoc array
+# Same problem as #3392
 aot.tuples.tuple map key variable
+# Same problem as #3392
+aot.tuples.tuple map key string resize
+# Same problem as #3392
+aot.tuples.tuple map key compatible int sizes
 aot.tuples.tuple print
 aot.tuples.tuple strftime type is packed
+# Same problem as #3392
+aot.variable.map multi-key string type resize
 aot.variable.tuple string resize
 aot.variable.map tuple string resize
+aot.variable.map key tuple string resize
 aot.variable.variable tuple string resize
 aot.variable.variable nested tuple string resize
 aot.variable.map nested tuple string resize
+aot.variable.map key nested tuple string resize
+aot.variable.map key tuple with casted ints
 aot.dwarf.uprobe inlined function - func
 aot.dwarf.uprobe inlined function - probe
 aot.dwarf.uprobe inlined function - ustack

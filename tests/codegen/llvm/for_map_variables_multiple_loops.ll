@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %ctx_t.2 = type { ptr, ptr }
 %ctx_t = type { ptr }
-%uint64_int64__tuple_t = type { i64, i64 }
+%int64_int64__tuple_t = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -59,14 +59,14 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !57 {
-  %"$_" = alloca %uint64_int64__tuple_t, align 8
+  %"$_" = alloca %int64_int64__tuple_t, align 8
   %key = load i64, ptr %1, align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$_")
   call void @llvm.memset.p0.i64(ptr align 1 %"$_", i8 0, i64 16, i1 false)
-  %5 = getelementptr %uint64_int64__tuple_t, ptr %"$_", i32 0, i32 0
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
   store i64 %key, ptr %5, align 8
-  %6 = getelementptr %uint64_int64__tuple_t, ptr %"$_", i32 0, i32 1
+  %6 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
   store i64 %val, ptr %6, align 8
   %"ctx.$var1" = getelementptr %ctx_t, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
@@ -80,14 +80,14 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
 define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !60 {
-  %"$_" = alloca %uint64_int64__tuple_t, align 8
+  %"$_" = alloca %int64_int64__tuple_t, align 8
   %key = load i64, ptr %1, align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$_")
   call void @llvm.memset.p0.i64(ptr align 1 %"$_", i8 0, i64 16, i1 false)
-  %5 = getelementptr %uint64_int64__tuple_t, ptr %"$_", i32 0, i32 0
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
   store i64 %key, ptr %5, align 8
-  %6 = getelementptr %uint64_int64__tuple_t, ptr %"$_", i32 0, i32 1
+  %6 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
   store i64 %val, ptr %6, align 8
   %"ctx.$var1" = getelementptr %ctx_t.2, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8

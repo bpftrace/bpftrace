@@ -584,7 +584,7 @@ void SemanticAnalyser::visit(Call &call)
     if (expr.is_map) {
       Map &map = static_cast<Map &>(expr);
       // If the map is indexed, don't skip key validation
-      if (map.vargs.empty() && skip_key_validation(call))
+      if (map.key_expr == nullptr && skip_key_validation(call))
         map.skip_key_validation = true;
     }
 
@@ -1075,7 +1075,7 @@ void SemanticAnalyser::visit(Call &call)
       auto &arg = *call.vargs.at(0);
       if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
-        if (!map.vargs.empty()) {
+        if (map.key_expr) {
           if (call.vargs.size() > 1)
             LOG(ERROR, call.loc, err_) << "Single-value (i.e. indexed) map "
                                           "print cannot take additional "
@@ -1127,7 +1127,7 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "clear() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (!map.vargs.empty()) {
+        if (map.key_expr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1142,7 +1142,7 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "zero() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (!map.vargs.empty()) {
+        if (map.key_expr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1156,7 +1156,7 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << "len() expects a map to be provided";
       else {
         Map &map = static_cast<Map &>(arg);
-        if (!map.vargs.empty()) {
+        if (map.key_expr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
@@ -1527,44 +1527,28 @@ Probe *SemanticAnalyser::get_probe_from_scope(Scope *scope,
   return probe;
 }
 
-void SemanticAnalyser::visit(Map &map)
+void SemanticAnalyser::validate_map_key(const SizedType &key,
+                                        const location &loc)
 {
-  MapKey key;
-
-  for (unsigned int i = 0; i < map.vargs.size(); i++) {
-    Visit(map.vargs.at(i));
-    Expression *expr = map.vargs.at(i);
-
-    // Insert a cast to 64 bits if needed by injecting
-    // a cast into the ast.
-    if (expr->type.IsIntTy() && expr->type.GetSize() < 8) {
-      Expression *cast = ctx_.make_node<Cast>(expr->type.IsSigned()
-                                                  ? CreateInt64()
-                                                  : CreateUInt64(),
-                                              expr,
-                                              map.loc);
-      Visit(cast);
-      map.vargs.at(i) = cast;
-      expr = cast;
-    } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
-      // map functions only accepts a pointer to a element in the stack
-      LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
-    }
-
-    if (is_final_pass() && expr->type.IsNoneTy())
-      LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
-
-    SizedType keytype = expr->type;
-    // Skip.IsSigned() when comparing keys to not break existing scripts
-    // which use maps as a lookup table
-    // TODO (fbs): This needs a better solution
-    if (expr->type.IsIntTy())
-      keytype = CreateUInt(keytype.GetSize() * 8);
-    key.args_.push_back(keytype);
+  if (key.IsPtrTy() && key.IsCtxAccess()) {
+    // map functions only accepts a pointer to a element in the stack
+    LOG(ERROR, loc, err_) << "context cannot be used as a map key";
   }
 
-  if (!map.skip_key_validation)
-    update_key_type(map, key);
+  if (is_final_pass() && key.IsNoneTy()) {
+    LOG(ERROR, loc, err_) << "Invalid expression for assignment: ";
+  }
+}
+
+void SemanticAnalyser::visit(Map &map)
+{
+  SizedType new_key_type = CreateNone();
+  if (map.key_expr) {
+    Visit(map.key_expr);
+    new_key_type = create_key_type(map.key_expr->type, map.key_expr->loc);
+  }
+
+  update_key_type(map, new_key_type);
 
   auto search_val = map_val_.find(map.ident);
   if (search_val != map_val_.end()) {
@@ -1576,11 +1560,12 @@ void SemanticAnalyser::visit(Map &map)
     map.type = CreateNone();
   }
 
-  // MapKey default initializes to no args so we don't need to do anything
-  // if we don't find a key here
   auto map_key_search_val = map_key_.find(map.ident);
-  if (map_key_search_val != map_key_.end())
+  if (map_key_search_val != map_key_.end()) {
     map.key_type = map_key_search_val->second;
+  } else {
+    map.key_type = CreateNone();
+  }
 }
 
 void SemanticAnalyser::visit(Variable &var)
@@ -2281,21 +2266,16 @@ void SemanticAnalyser::visit(For &f)
   auto *mapkey = get_map_key_type(map);
   auto *mapval = get_map_type(map);
 
-  if (mapkey && mapkey->args_.size() == 0) {
-    LOG(ERROR, map.loc, err_)
-        << "Maps used as for-loop expressions must have keys to iterate over";
-  }
-
-  if (!mapval || !mapkey)
+  if (!mapval)
     return;
 
-  auto keytype = CreateNone();
-  if (mapkey->args_.size() == 1) {
-    keytype = mapkey->args_[0];
-  } else {
-    keytype = CreateTuple(bpftrace_.structs.AddTuple(mapkey->args_));
+  if (!mapkey || mapkey->IsNoneTy()) {
+    LOG(ERROR, map.loc, err_)
+        << "Maps used as for-loop expressions must have keys to iterate over";
+    return;
   }
-  f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ keytype, *mapval }));
+
+  f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ *mapkey, *mapval }));
 
   variable_val_[scope_][decl_name] = f.decl->type;
 
@@ -3442,7 +3422,7 @@ SizedType *SemanticAnalyser::get_map_type(const Map &map)
   return &search->second;
 }
 
-MapKey *SemanticAnalyser::get_map_key_type(const Map &map)
+SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
 {
   if (auto it = map_key_.find(map.ident); it != map_key_.end()) {
     return &it->second;
@@ -3508,35 +3488,82 @@ void SemanticAnalyser::accept_statements(StatementList &stmts)
   }
 }
 
-void SemanticAnalyser::update_key_type(const Map &map, const MapKey &new_key)
+SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
+                                            const location &loc)
 {
+  SizedType new_key_type = expr_type;
+  if (expr_type.IsTupleTy()) {
+    std::vector<SizedType> elements;
+    for (const auto &field : expr_type.GetFields()) {
+      SizedType keytype = create_key_type(field.type, loc);
+      elements.push_back(std::move(keytype));
+    }
+    new_key_type = CreateTuple(bpftrace_.structs.AddTuple(elements));
+  } else if (expr_type.IsIntegerTy()) {
+    // Store all integer values as 64-bit in map keys, so that there will
+    // be space for any integer in the map key later
+    // This should have a better solution.
+    new_key_type = CreateInt64();
+  }
+
+  validate_map_key(new_key_type, loc);
+  return new_key_type;
+}
+
+void SemanticAnalyser::update_key_type(const Map &map,
+                                       const SizedType &new_key_type)
+{
+  if (map.skip_key_validation) {
+    return;
+  }
   if (const auto &key = map_key_.find(map.ident); key != map_key_.end()) {
-    bool valid = true;
-    if (key->second.args_.size() == new_key.args_.size()) {
-      for (size_t i = 0; i < key->second.args_.size(); i++) {
-        SizedType &key_type = key->second.args_[i];
-        const SizedType &new_key_type = new_key.args_[i];
-        if (key_type.IsStringTy() && new_key_type.IsStringTy()) {
-          key_type.SetSize(
-              std::max(key_type.GetSize(), new_key_type.GetSize()));
-        } else if (key_type != new_key_type) {
+    if (map.key_expr) {
+      bool valid = true;
+      if (key->second.IsSameType(new_key_type)) {
+        if (key->second.IsStringTy() || key->second.IsTupleTy()) {
+          update_string_size(key->second, new_key_type);
+          if (key->second.IsTupleTy() && !new_key_type.FitsInto(key->second)) {
+            valid = false;
+          }
+        } else if (key->second.IsIntegerTy()) {
+          // This should always be true as map keys default to 64 bits
+          // but keep this here just in case we add larger ints and need to
+          // update the map int logic
+          if (!new_key_type.FitsInto(key->second)) {
+            valid = false;
+          }
+        } else if (!key->second.IsEqual(new_key_type)) {
           valid = false;
-          break;
+        }
+      } else {
+        valid = false;
+      }
+
+      if (is_final_pass() && !valid) {
+        if (key->second.IsNoneTy()) {
+          LOG(ERROR, map.loc, err_)
+              << "Argument mismatch for " << map.ident << ": "
+              << "trying to access with arguments: '" << new_key_type
+              << "' when map expects no arguments";
+        } else {
+          LOG(ERROR, map.loc, err_)
+              << "Argument mismatch for " << map.ident << ": "
+              << "trying to access with arguments: '" << new_key_type
+              << "' when map expects arguments: '" << key->second << "'";
         }
       }
     } else {
-      valid = false;
-    }
-
-    if (is_final_pass() && !valid) {
-      LOG(ERROR, map.loc, err_)
-          << "Argument mismatch for " << map.ident << ": "
-          << "trying to access with arguments: " << new_key.argument_type_list()
-          << " when map expects arguments: "
-          << key->second.argument_type_list();
+      if (!key->second.IsNoneTy() && is_final_pass()) {
+        LOG(ERROR, map.loc, err_)
+            << "Argument mismatch for " << map.ident << ": "
+            << "trying to access with no arguments when map expects arguments: "
+               "'"
+            << key->second << "'";
+      }
+      return;
     }
   } else {
-    map_key_.insert({ map.ident, new_key });
+    map_key_.insert({ map.ident, new_key_type });
   }
 }
 

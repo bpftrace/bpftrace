@@ -73,6 +73,16 @@ bool SizedType::IsSameType(const SizedType &t) const
   if (IsPtrTy() && t.IsPtrTy())
     return GetPointeeTy()->IsSameType(*t.GetPointeeTy());
 
+  if (IsTupleTy() && t.IsTupleTy()) {
+    if (GetFieldCount() != t.GetFieldCount())
+      return false;
+
+    for (ssize_t i = 0; i < GetFieldCount(); i++) {
+      if (!GetField(i).type.IsSameType(t.GetField(i).type))
+        return false;
+    }
+  }
+
   return type_ == t.GetTy();
 }
 
@@ -557,6 +567,26 @@ std::weak_ptr<const Struct> SizedType::GetStruct() const
 {
   assert(IsRecordTy() || IsTupleTy());
   return inner_struct_;
+}
+
+bool SizedType::IsSameSizeRecursive(const SizedType &t) const
+{
+  if (GetSize() != t.GetSize()) {
+    return false;
+  }
+
+  if (IsTupleTy() && t.IsTupleTy()) {
+    if (GetFieldCount() != t.GetFieldCount()) {
+      return false;
+    }
+
+    for (ssize_t i = 0; i < GetFieldCount(); i++) {
+      if (!GetField(i).type.IsSameSizeRecursive(t.GetField(i).type))
+        return false;
+    }
+  }
+
+  return true;
 }
 
 bool SizedType::FitsInto(const SizedType &t) const

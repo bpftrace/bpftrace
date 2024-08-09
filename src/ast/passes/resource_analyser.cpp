@@ -186,7 +186,7 @@ void ResourceAnalyser::visit(Call &call)
           nonmap_headroom + arg.type.GetSize());
     } else {
       auto &map = static_cast<Map &>(arg);
-      if (map.vargs.size() > 0) {
+      if (map.key_expr) {
         resources_.non_map_print_args.push_back(map.type);
         resources_.max_fmtstring_args_size = std::max(
             resources_.max_fmtstring_args_size,
@@ -233,7 +233,7 @@ void ResourceAnalyser::visit(Map &map)
 
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
-  map_info.key = map.key_type;
+  map_info.key_type = map.key_type;
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

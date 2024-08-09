@@ -169,9 +169,13 @@ protected:
   // methods.
   virtual std::string value_to_str(BPFtrace &bpftrace,
                                    const SizedType &type,
-                                   std::vector<uint8_t> &value,
+                                   const std::vector<uint8_t> &value,
                                    bool is_per_cpu = false,
-                                   uint32_t div = 1) const;
+                                   uint32_t div = 1,
+                                   bool is_map_key = false) const;
+  virtual std::string map_key_str(BPFtrace &bpftrace,
+                                  const SizedType &arg,
+                                  const std::vector<uint8_t> &data) const;
   // Convert an array to string
   // Default behaviour: [elem1, elem2, ...]
   virtual std::string array_to_str(const std::vector<std::string> &elems) const;
@@ -184,8 +188,8 @@ protected:
   virtual std::string field_to_str(const std::string &name,
                                    const std::string &value) const = 0;
   // Convert tuple to string
-  virtual std::string tuple_to_str(
-      const std::vector<std::string> &elems) const = 0;
+  virtual std::string tuple_to_str(const std::vector<std::string> &elems,
+                                   bool is_map_key = false) const = 0;
   // Convert a vector of (key, value) pairs into string
   // Used for properly formatting map statistics
   virtual std::string key_value_pairs_to_str(
@@ -255,8 +259,8 @@ protected:
   void map_elem_delim(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
-  std::string tuple_to_str(
-      const std::vector<std::string> &elems) const override;
+  std::string tuple_to_str(const std::vector<std::string> &elems,
+                           bool is_map_key) const override;
   std::string key_value_pairs_to_str(
       std::vector<std::pair<std::string, std::string>> &keyvals) const override;
 };
@@ -313,9 +317,10 @@ private:
 protected:
   std::string value_to_str(BPFtrace &bpftrace,
                            const SizedType &type,
-                           std::vector<uint8_t> &value,
+                           const std::vector<uint8_t> &value,
                            bool is_per_cpu,
-                           uint32_t div) const override;
+                           uint32_t div,
+                           bool is_map_key) const override;
   std::string hist_to_str(const std::vector<uint64_t> &values,
                           uint32_t div,
                           uint32_t k) const override;
@@ -333,8 +338,8 @@ protected:
   void map_elem_delim(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
-  std::string tuple_to_str(
-      const std::vector<std::string> &elems) const override;
+  std::string tuple_to_str(const std::vector<std::string> &elems,
+                           bool is_map_key) const override;
   std::string key_value_pairs_to_str(
       std::vector<std::pair<std::string, std::string>> &keyvals) const override;
 };

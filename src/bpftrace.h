@@ -110,7 +110,7 @@ public:
                         bool ustack,
                         StackType stack_type,
                         int indent = 0);
-  std::string resolve_buf(char *buf, size_t size);
+  std::string resolve_buf(const char *buf, size_t size);
   std::string resolve_ksym(uint64_t addr, bool show_offset = false);
   std::string resolve_usym(uint64_t addr,
                            int pid,
@@ -195,7 +195,7 @@ public:
   bool need_recursion_check_ = false;
 
   static void sort_by_key(
-      std::vector<SizedType> key_args,
+      const SizedType &key,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key);
 
