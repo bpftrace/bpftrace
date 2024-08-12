@@ -74,7 +74,8 @@ Reference for eBPF syscall and data structures (e.g. maps):
 
 ## Gotchas
 
-If there's one gotcha I would like to mention, it's the use of CreateGEP() (Get Element Pointer). It's needed when dereferencing at an offset in a buffer, and it's tricky to use.
+If there's one gotcha I would like to mention, it's the use of CreateGEP() (Get Element Pointer). It's needed when dereferencing at an offset in a buffer, and it's tricky to use. Here is [a good
+video](https://www.youtube.com/watch?v=m8G_S5LwlTo&t=1753s) on how GEP works.
 
 ## Verifier
 
