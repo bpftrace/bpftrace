@@ -150,6 +150,10 @@ public:
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
+  bool has_dwarf_data() const
+  {
+    return !dwarves_.empty();
+  }
   void kfunc_recursion_check(ast::Program *prog);
 
   std::string cmd_;
