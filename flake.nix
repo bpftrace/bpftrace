@@ -1,5 +1,5 @@
 {
-  description = "High-level tracing language for Linux eBPF";
+  description = "High-level tracing language for Linux";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
