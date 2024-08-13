@@ -1,9 +1,13 @@
 Checks: |
   -*
+  bugprone-suspicious-memset-usage
+  bugprone-unchecked-optional-access
+  bugprone-undefined-memory-manipulation
+  bugprone-unused-raii
+  bugprone-use-after-move
   performance-unnecessary-copy-initialization
   modernize-loop-convert
   google-readability-casting
-  bugprone-unchecked-optional-access
 
 WarningsAsErrors: "*"
 UseColor: true
