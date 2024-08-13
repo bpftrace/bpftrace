@@ -25,9 +25,9 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
 NAME list uprobe args - class reference type
-RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:_Z15uprobeFunction3R5ChildR6Parent'
-EXPECT Child & c
-EXPECT Parent & p
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1'
+EXPECT     int x
+           struct Foo foo
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 

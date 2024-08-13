@@ -126,9 +126,9 @@ not known until test time. The following runtime variables are available for the
 
 ### Test programs
 
-You can add test programs for your runtime tests by placing a `.c` file corresponding to your test program in `tests/testprogs`.
+You can add test programs for your runtime tests by placing a `.c` or `.cpp` file corresponding to your test program in `tests/testprogs`.
 
-You can add test libraries for your runtime tests by placing a `.c` file corresponding to your test library in `tests/testlibs`.
+You can add test libraries for your runtime tests by placing a `.c` or `.cpp` file corresponding to your test library in `tests/testlibs`.
 
 The test file `tests/testprogs/my_test.c` will result in an executable that you can call and probe in your runtime test at `./testprogs/my_test`
 

@@ -10,6 +10,7 @@
 #include <lldb/API/LLDB.h>
 #include <llvm/Config/llvm-config.h>
 #include <memory>
+#include <queue>
 #include <string>
 
 namespace bpftrace {
@@ -230,31 +231,10 @@ SizedType Dwarf::get_stype(const std::string &type_name)
   return CreateNone();
 }
 
-void Dwarf::resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type)
-{
-  if (!type.IsValid())
-    return;
-
-  for (uint32_t i = 0; i < type.GetNumberOfVirtualBaseClasses(); i++) {
-    auto parent = type.GetVirtualBaseClassAtIndex(i);
-    resolve_fields(str, parent.GetType());
-  }
-
-  for (uint32_t i = 0; i < type.GetNumberOfDirectBaseClasses(); i++) {
-    auto parent = type.GetDirectBaseClassAtIndex(i);
-    resolve_fields(str, parent.GetType());
-  }
-
-  for (uint32_t i = 0; i < type.GetNumberOfFields(); i++) {
-    auto field = type.GetFieldAtIndex(i);
-    auto field_type = get_stype(field.GetType());
-    str->AddField(field.GetName() ?: "",
-                  get_stype(field.GetType()),
-                  field.GetOffsetInBytes(),
-                  resolve_bitfield(field),
-                  false);
-  }
-}
+struct Subobject {
+  lldb::SBType type;
+  size_t offset;
+};
 
 void Dwarf::resolve_fields(const SizedType &type)
 {
@@ -267,7 +247,41 @@ void Dwarf::resolve_fields(const SizedType &type)
     return;
 
   auto type_dbg = target_.FindFirstType(type_name.c_str());
-  resolve_fields(str, type_dbg);
+  if (!type_dbg.IsValid())
+    return;
+
+  std::queue<Subobject> subobjects{ std::deque{ Subobject{ type_dbg, 0 } } };
+  while (!subobjects.empty()) {
+    auto &subobject = subobjects.front();
+
+    // Collect the fields into str, duplicates will be ignored.
+    for (uint32_t i = 0; i < subobject.type.GetNumberOfFields(); i++) {
+      auto field = subobject.type.GetFieldAtIndex(i);
+      str->AddField(field.GetName() ?: "",
+                    get_stype(field.GetType()),
+                    subobject.offset + field.GetOffsetInBytes(),
+                    resolve_bitfield(field),
+                    false);
+    }
+
+    // Queue the bases for further processing.
+    for (uint32_t i = 0; i < subobject.type.GetNumberOfDirectBaseClasses();
+         i++) {
+      auto base = subobject.type.GetDirectBaseClassAtIndex(i);
+      subobjects.push(Subobject{ base.GetType(),
+                                 subobject.offset + base.GetOffsetInBytes() });
+    }
+
+    subobjects.pop();
+  }
+
+  // Order the fields for consistent output when printing record types.
+  std::sort(str->fields.begin(),
+            str->fields.end(),
+            [](const Field &a, const Field &b) {
+              return a.offset < b.offset ||
+                     (a.offset == b.offset && a.name < b.name);
+            });
 }
 
 std::optional<Bitfield> Dwarf::resolve_bitfield(lldb::SBTypeMember field)
