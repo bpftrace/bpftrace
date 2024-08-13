@@ -13,8 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 AttachPointParser::State AttachPointParser::argument_count_error(
     int expected,
@@ -765,5 +764,4 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
   return OK;
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

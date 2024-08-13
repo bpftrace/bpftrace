@@ -7,9 +7,7 @@
 #include <iostream>
 #include <llvm/Config/llvm-config.h>
 
-namespace bpftrace {
-namespace test {
-namespace clang_parser {
+namespace bpftrace::test::clang_parser {
 
 #include "btf_common.h"
 
@@ -807,6 +805,4 @@ struct _tracepoint_irq_irq_handler_entry
   EXPECT_EQ(s->GetField("name").type.GetIntBitWidth(), 64ULL);
 }
 
-} // namespace clang_parser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::clang_parser

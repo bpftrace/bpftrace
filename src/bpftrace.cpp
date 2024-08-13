@@ -17,9 +17,9 @@
 #include <sys/epoll.h>
 
 #include <bcc/bcc_elf.h>
+#include <csignal>
 #include <elf.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -307,7 +307,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     char timestr[64]; // not respecting config_.get(ConfigKeyInt::max_strlen)
     time_t t;
     struct tm tmp;
-    t = time(NULL);
+    t = time(nullptr);
     if (!localtime_r(&t, &tmp)) {
       LOG(WARNING) << "localtime_r: " << strerror(errno);
       return;
@@ -1785,7 +1785,7 @@ std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
 uint64_t BPFtrace::read_address_from_output(std::string output)
 {
   std::string first_word = output.substr(0, output.find(" "));
-  return std::stoull(first_word, 0, 16);
+  return std::stoull(first_word, nullptr, 16);
 }
 
 static std::string resolve_inetv4(const uint8_t *inet)
@@ -2074,7 +2074,7 @@ Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
   return get_dwarf(attachpoint.target);
 }
 
-int BPFtrace::create_pcaps(void)
+int BPFtrace::create_pcaps()
 {
   for (auto arg : resources.skboutput_args_) {
     auto file = std::get<0>(arg);
@@ -2094,7 +2094,7 @@ int BPFtrace::create_pcaps(void)
   return 0;
 }
 
-void BPFtrace::close_pcaps(void)
+void BPFtrace::close_pcaps()
 {
   for (auto &writer : pcap_writers) {
     writer.second->close();

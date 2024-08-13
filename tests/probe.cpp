@@ -11,9 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace probe {
+namespace bpftrace::test::probe {
 
 #include "btf_common.h"
 
@@ -86,6 +84,4 @@ TEST_F(probe_btf, short_name)
   compare_bytecode("iter:task_vma { 1 }", "it:task_vma { 1 }");
 }
 
-} // namespace probe
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::probe

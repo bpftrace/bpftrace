@@ -77,7 +77,7 @@ int func_3(Multi &m, Bottom &b __attribute__((unused)))
   return m.abc;
 }
 
-int main(void)
+int main()
 {
   Parent p{ 1, 2, 3, 4 };
   Child c{ 1, 2, 3, 4, 5, 6 };

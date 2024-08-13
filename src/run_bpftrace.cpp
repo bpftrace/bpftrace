@@ -41,12 +41,12 @@ int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
   // Signal handler that lets us know an exit signal was received.
   struct sigaction act = {};
   act.sa_handler = [](int) { BPFtrace::exitsig_recv = true; };
-  sigaction(SIGINT, &act, NULL);
-  sigaction(SIGTERM, &act, NULL);
+  sigaction(SIGINT, &act, nullptr);
+  sigaction(SIGTERM, &act, nullptr);
 
   // Signal handler that prints all maps when SIGUSR1 was received.
   act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
-  sigaction(SIGUSR1, &act, NULL);
+  sigaction(SIGUSR1, &act, nullptr);
 
   err = bpftrace.run(std::move(bytecode));
   if (err)
@@ -55,7 +55,7 @@ int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
   // We are now post-processing. If we receive another SIGINT,
   // handle it normally (exit)
   act.sa_handler = SIG_DFL;
-  sigaction(SIGINT, &act, NULL);
+  sigaction(SIGINT, &act, nullptr);
 
   std::cout << "\n\n";
 

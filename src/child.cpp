@@ -195,7 +195,7 @@ void ChildProc::terminate(bool force)
   check_child(force);
 }
 
-void ChildProc::resume(void)
+void ChildProc::resume()
 {
   assert(state_ == State::PTRACE_PAUSE);
   ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);

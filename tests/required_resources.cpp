@@ -9,8 +9,7 @@
 #include "struct.h"
 #include "types.h"
 
-namespace bpftrace {
-namespace test {
+namespace bpftrace::test {
 
 // ========================================================================
 // It's a bit overkill to completely test every field in `RequiredResources`
@@ -207,5 +206,4 @@ TEST(required_resources, round_trip_multiple_members)
   }
 }
 
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test

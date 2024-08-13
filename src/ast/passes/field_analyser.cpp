@@ -8,8 +8,7 @@
 #include "log.h"
 #include "probe_matcher.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 void FieldAnalyser::visit(Identifier &identifier)
 {
@@ -345,5 +344,4 @@ int FieldAnalyser::analyse()
   return 0;
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

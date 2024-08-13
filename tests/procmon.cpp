@@ -1,7 +1,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include <time.h>
+#include <ctime>
 
 #include "child.h"
 #include "procmon.h"
@@ -9,9 +9,7 @@
 #include "childhelper.h"
 #include "utils.h"
 
-namespace bpftrace {
-namespace test {
-namespace procmon {
+namespace bpftrace::test::procmon {
 
 using ::testing::HasSubstr;
 
@@ -38,6 +36,4 @@ TEST(procmon, child_terminates)
   EXPECT_FALSE(procmon->is_alive());
 }
 
-} // namespace procmon
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::procmon

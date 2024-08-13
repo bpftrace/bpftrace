@@ -4,9 +4,7 @@
 #include "gtest/gtest.h"
 #include <iostream>
 
-namespace bpftrace {
-namespace test {
-namespace log {
+namespace bpftrace::test::log {
 
 TEST(LogStream, basic)
 {
@@ -69,6 +67,4 @@ TEST(Log, disable_log_type)
   ss.str({});
 }
 
-} // namespace log
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::log

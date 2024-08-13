@@ -2,9 +2,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace ast {
+namespace bpftrace::test::ast {
 
 using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;
@@ -135,6 +133,4 @@ TEST(ast, attach_point_name)
   EXPECT_EQ(ap3.name(), "uprobe:/bin/sh:readline");
 }
 
-} // namespace ast
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::ast

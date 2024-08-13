@@ -233,7 +233,7 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
   return map_fd >= 0;
 }
 
-bool BPFfeature::has_loop(void)
+bool BPFfeature::has_loop()
 {
   if (has_loop_.has_value())
     return *has_loop_;
@@ -251,7 +251,7 @@ bool BPFfeature::has_loop(void)
   return has_loop();
 }
 
-bool BPFfeature::has_btf(void)
+bool BPFfeature::has_btf()
 {
   return btf_.has_data();
 }
@@ -277,7 +277,7 @@ bool BPFfeature::has_btf_func_global()
   return *has_btf_func_global_;
 }
 
-int BPFfeature::instruction_limit(void)
+int BPFfeature::instruction_limit()
 {
   if (insns_limit_.has_value())
     return *insns_limit_;
@@ -360,7 +360,7 @@ bool BPFfeature::has_map_batch()
   return *has_map_batch_;
 }
 
-bool BPFfeature::has_d_path(void)
+bool BPFfeature::has_d_path()
 {
   if (has_d_path_.has_value())
     return *has_d_path_;
@@ -515,7 +515,7 @@ bool BPFfeature::has_uprobe_multi()
   return *has_uprobe_multi_;
 }
 
-bool BPFfeature::has_skb_output(void)
+bool BPFfeature::has_skb_output()
 {
   if (!has_kfunc())
     return false;
@@ -589,7 +589,7 @@ bool BPFfeature::has_raw_tp_special()
   return *has_raw_tp_special_;
 }
 
-std::string BPFfeature::report(void)
+std::string BPFfeature::report()
 {
   std::stringstream buf;
   auto to_str = [](bool f) -> auto { return f ? "yes\n" : "no\n"; };

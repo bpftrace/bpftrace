@@ -6,8 +6,8 @@
 #include <string>
 #include <system_error>
 
+#include <csignal>
 #include <fcntl.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -16,9 +16,7 @@
 #include "filesystem.h"
 #include "utils.h"
 
-namespace bpftrace {
-namespace test {
-namespace child {
+namespace bpftrace::test::child {
 
 using ::testing::HasSubstr;
 
@@ -258,6 +256,4 @@ TEST(childproc, multi_exec_match)
   EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
 }
 
-} // namespace child
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::child

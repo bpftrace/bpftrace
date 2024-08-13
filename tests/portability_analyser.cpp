@@ -9,9 +9,7 @@
 #include "driver.h"
 #include "mocks.h"
 
-namespace bpftrace {
-namespace test {
-namespace portability_analyser {
+namespace bpftrace::test::portability_analyser {
 
 using ::testing::_;
 
@@ -100,6 +98,4 @@ TEST(portability_analyser, selective_probes_disabled)
   test(*bpftrace, "asyncwatchpoint:increment+arg1:4:w { 1 }", 1);
 }
 
-} // namespace portability_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::portability_analyser

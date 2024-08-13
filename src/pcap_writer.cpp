@@ -15,7 +15,7 @@ bool PCAPwriter::open(std::string file)
   return true;
 }
 
-void PCAPwriter::close(void)
+void PCAPwriter::close()
 {
   pcap_close(pd_);
   pcap_dump_close(pdumper_);

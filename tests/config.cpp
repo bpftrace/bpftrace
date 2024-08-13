@@ -4,8 +4,7 @@
 #include "gtest/gtest.h"
 #include <iostream>
 
-namespace bpftrace {
-namespace test {
+namespace bpftrace::test {
 
 TEST(Config, get_and_set)
 {
@@ -134,5 +133,4 @@ TEST(ConfigSetter, same_source_cannot_set_twice)
   EXPECT_FALSE(config_setter.set(ConfigKeyInt::max_map_keys, 11));
 }
 
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test

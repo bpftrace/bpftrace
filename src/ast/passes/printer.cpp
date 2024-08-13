@@ -8,8 +8,7 @@
 #include "ast/ast.h"
 #include "struct.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 void Printer::print(Node *root)
 {
@@ -474,5 +473,4 @@ void Printer::visit(Program &program)
   --depth_;
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

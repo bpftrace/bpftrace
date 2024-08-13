@@ -5,8 +5,7 @@
 #include "ast/visitors.h"
 #include "log.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 #define MAKE_ACCEPT(Ty)                                                        \
   void Ty::accept(VisitorBase &v)                                              \
@@ -498,5 +497,4 @@ SizedType ident_to_record(const std::string &ident, int pointer_level)
   return result;
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast
