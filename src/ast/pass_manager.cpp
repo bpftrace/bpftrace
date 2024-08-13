@@ -5,8 +5,7 @@
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 namespace {
 void print(Node *root, const std::string &name, std::ostream &out)
@@ -63,5 +62,4 @@ PassResult PassResult::Success(Node *root)
   return PassResult(root);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -8,9 +8,7 @@
 #include "driver.h"
 #include "mocks.h"
 
-namespace bpftrace {
-namespace test {
-namespace resource_analyser {
+namespace bpftrace::test::resource_analyser {
 
 using ::testing::_;
 
@@ -69,7 +67,7 @@ TEST(resource_analyser, multiple_lhist_bounds_in_single_map)
 
 TEST(resource_analyser, printf_in_subprog)
 {
-  test("fn greet(): void { printf(\"Hello, world\\n\"); }", true);
+  test(R"(fn greet(): void { printf("Hello, world\n"); })", true);
 }
 
 TEST(resource_analyser, fmt_string_args_size_ints)
@@ -116,6 +114,4 @@ TEST(resource_analyser, fmt_string_args_non_map_print_arr)
   EXPECT_EQ(resources.max_fmtstring_args_size, 40);
 }
 
-} // namespace resource_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::resource_analyser

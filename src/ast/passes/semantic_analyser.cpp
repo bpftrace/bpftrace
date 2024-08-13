@@ -20,8 +20,7 @@
 #include "types.h"
 #include "usdt.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
 {
@@ -3518,5 +3517,4 @@ void SemanticAnalyser::dereference_if_needed(Expression *&expr)
   }
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -11,8 +11,7 @@
 #include <stdexcept>
 #include <sys/mman.h>
 
-namespace bpftrace {
-namespace globalvars {
+namespace bpftrace::globalvars {
 
 void update_global_vars(const struct bpf_object *bpf_object,
                         struct bpf_map *global_vars_map,
@@ -91,5 +90,4 @@ void update_global_vars(const struct bpf_object *bpf_object,
   }
 }
 
-} // namespace globalvars
-} // namespace bpftrace
+} // namespace bpftrace::globalvars

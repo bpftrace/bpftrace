@@ -1,19 +1,17 @@
 #include "utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "filesystem.h"
 
-namespace bpftrace {
-namespace test {
-namespace utils {
+namespace bpftrace::test::utils {
 
 TEST(utils, split_string)
 {
@@ -411,6 +409,4 @@ TEST(utils, get_pids_for_program)
   ASSERT_EQ(pids.size(), 0);
 }
 
-} // namespace utils
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::utils

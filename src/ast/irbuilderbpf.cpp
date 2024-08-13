@@ -20,8 +20,7 @@ namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 namespace {
 std::string probeReadHelperName(libbpf::bpf_func_id id)
@@ -2642,5 +2641,4 @@ llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
   return getKernelPointerStorageTy();
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

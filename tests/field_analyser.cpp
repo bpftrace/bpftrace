@@ -3,9 +3,7 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace field_analyser {
+namespace bpftrace::test::field_analyser {
 
 #include "btf_common.h"
 
@@ -766,6 +764,4 @@ TEST(field_analyser_subprog, struct_cast)
 
 #endif // HAVE_LIBLLDB
 
-} // namespace field_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::field_analyser

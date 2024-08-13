@@ -7,9 +7,7 @@
 #include "driver.h"
 #include "mocks.h"
 
-namespace bpftrace {
-namespace test {
-namespace config_analyser {
+namespace bpftrace::test::config_analyser {
 
 using ::testing::_;
 
@@ -129,6 +127,4 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
 }
 
-} // namespace config_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::config_analyser

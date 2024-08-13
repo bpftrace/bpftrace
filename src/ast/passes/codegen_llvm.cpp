@@ -45,8 +45,7 @@
 #include "types.h"
 #include "usdt.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     : CodegenLLVM(root, bpftrace, std::make_unique<USDTHelper>())
@@ -3807,7 +3806,7 @@ void CodegenLLVM::optimize()
   state_ = State::OPT;
 }
 
-bool CodegenLLVM::verify(void)
+bool CodegenLLVM::verify()
 {
   bool ret = llvm::verifyModule(*module_, &errs());
   if (ret) {
@@ -3832,7 +3831,7 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
   PM.run(*module_.get());
 }
 
-BpfBytecode CodegenLLVM::emit(void)
+BpfBytecode CodegenLLVM::emit()
 {
   assert(state_ == State::OPT);
   SmallVector<char, 0> output;
@@ -3846,14 +3845,14 @@ BpfBytecode CodegenLLVM::emit(void)
   return BpfBytecode(output.data(), output.size(), bpftrace_);
 }
 
-BpfBytecode CodegenLLVM::compile(void)
+BpfBytecode CodegenLLVM::compile()
 {
   generate_ir();
   optimize();
   return emit();
 }
 
-void CodegenLLVM::DumpIR(void)
+void CodegenLLVM::DumpIR()
 {
   DumpIR(std::cout);
 }
@@ -4410,5 +4409,4 @@ Value *CodegenLLVM::createFmtString(int print_id)
   return res;
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -7,8 +7,7 @@
 
 #include <llvm/IR/Function.h>
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
 {
@@ -298,5 +297,4 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalInt64(
       file, name, "global", file, 0, getInt64Ty(), false);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

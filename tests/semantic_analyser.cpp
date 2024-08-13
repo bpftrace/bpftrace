@@ -9,9 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace semantic_analyser {
+namespace bpftrace::test::semantic_analyser {
 
 #include "btf_common.h"
 #include "dwarf_common.h"
@@ -310,11 +308,11 @@ uprobe:/bin/sh:f { args }
 
 TEST(semantic_analyser, builtin_cpid)
 {
-  test("i:ms:100 { printf(\"%d\\n\", cpid); }", 1, false, false);
+  test(R"(i:ms:100 { printf("%d\n", cpid); })", 1, false, false);
   test("i:ms:100 { @=cpid }", 1, false, false);
   test("i:ms:100 { $a=cpid }", 1, false, false);
 
-  test("i:ms:100 { printf(\"%d\\n\", cpid); }", 0, false, true);
+  test(R"(i:ms:100 { printf("%d\n", cpid); })", 0, false, true);
   test("i:ms:100 { @=cpid }", 0, false, true);
   test("i:ms:100 { $a=cpid }", 0, false, true);
 }
@@ -340,8 +338,8 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { exit() }");
   test("kprobe:f { str(0xffff) }");
   test("kprobe:f { buf(0xffff, 1) }");
-  test("kprobe:f { printf(\"hello\\n\") }");
-  test("kprobe:f { system(\"ls\\n\") }", 0, false /* safe_node */);
+  test(R"(kprobe:f { printf("hello\n") })");
+  test(R"(kprobe:f { system("ls\n") })", 0, false /* safe_node */);
   test("kprobe:f { join(0) }");
   test("kprobe:f { ksym(0xffff) }");
   test("kprobe:f { usym(0xffff) }");
@@ -434,7 +432,7 @@ BEGIN { @x[1] = 0; @x[2,3]; }
                    ~~~~~~~
 )");
 
-  test("BEGIN { @x[1,\"a\",kstack] = 0; @x[2,\"b\", kstack]; }");
+  test(R"(BEGIN { @x[1,"a",kstack] = 0; @x[2,"b", kstack]; })");
 
   test_error(R"(
     BEGIN {
@@ -479,9 +477,9 @@ kprobe:f / @mymap / { @mymap = "str" }
 TEST(semantic_analyser, ternary_expressions)
 {
   test("kprobe:f { @x = pid < 10000 ? 1 : 2 }");
-  test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"high\" }");
+  test(R"(kprobe:f { @x = pid < 10000 ? "lo" : "high" })");
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
-  test("kprobe:f { @x = pid < 10000 ? printf(\"lo\") : cat(\"/proc/uptime\") }",
+  test(R"(kprobe:f { @x = pid < 10000 ? printf("lo") : cat("/proc/uptime") })",
        10);
   // Error location is incorrect: #3063
   test_error("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", R"(
@@ -1003,19 +1001,19 @@ TEST(semantic_analyser, call_strftime)
 {
   test("kprobe:f { strftime(\"%M:%S\", 1); }");
   test("kprobe:f { strftime(\"%M:%S\", nsecs); }");
-  test("kprobe:f { strftime(\"%M:%S\", \"\"); }", 10);
+  test(R"(kprobe:f { strftime("%M:%S", ""); })", 10);
   test("kprobe:f { strftime(1, nsecs); }", 10);
   test("kprobe:f { $var = \"str\"; strftime($var, nsecs); }", 10);
   test("kprobe:f { strftime(); }", 1);
   test("kprobe:f { strftime(\"%M:%S\"); }", 1);
   test("kprobe:f { strftime(\"%M:%S\", 1, 1); }", 1);
   test("kprobe:f { strftime(1, 1, 1); }", 1);
-  test("kprobe:f { strftime(\"%M:%S\", \"\", 1); }", 1);
+  test(R"(kprobe:f { strftime("%M:%S", "", 1); })", 1);
   test("kprobe:f { $ts = strftime(\"%M:%S\", 1); }");
   test("kprobe:f { @ts = strftime(\"%M:%S\", nsecs); }");
   test("kprobe:f { @[strftime(\"%M:%S\", nsecs)] = 1; }");
-  test("kprobe:f { printf(\"%s\", strftime(\"%M:%S\", nsecs)); }");
-  test("kprobe:f { strncmp(\"str\", strftime(\"%M:%S\", nsecs), 10); }", 10);
+  test(R"(kprobe:f { printf("%s", strftime("%M:%S", nsecs)); })");
+  test(R"(kprobe:f { strncmp("str", strftime("%M:%S", nsecs), 10); })", 10);
 
   test("kprobe:f { strftime(\"%M:%S\", nsecs(monotonic)); }", 10);
   test("kprobe:f { strftime(\"%M:%S\", nsecs(boot)); }");
@@ -1631,10 +1629,10 @@ TEST(semantic_analyser, unroll)
   bpftrace.add_param("10");
   bpftrace.add_param("hello");
   bpftrace.add_param("101");
-  test(bpftrace, "kprobe:f { unroll($#) { printf(\"hi\\n\"); } }");
-  test(bpftrace, "kprobe:f { unroll($1) { printf(\"hi\\n\"); } }");
-  test(bpftrace, "kprobe:f { unroll($2) { printf(\"hi\\n\"); } }", 1);
-  test(bpftrace, "kprobe:f { unroll($3) { printf(\"hi\\n\"); } }", 1);
+  test(bpftrace, R"(kprobe:f { unroll($#) { printf("hi\n"); } })");
+  test(bpftrace, R"(kprobe:f { unroll($1) { printf("hi\n"); } })");
+  test(bpftrace, R"(kprobe:f { unroll($2) { printf("hi\n"); } })", 1);
+  test(bpftrace, R"(kprobe:f { unroll($3) { printf("hi\n"); } })", 1);
 }
 
 TEST(semantic_analyser, map_integer_sizes)
@@ -1762,7 +1760,7 @@ TEST(semantic_analyser, debugf)
     // Long format string should be ok
     std::stringstream prog;
     prog << "i:ms:100 { debugf(\"" << std::string(59, 'a')
-         << "%s\\n\", \"a\"); }";
+         << R"(%s\n", "a"); })";
     test(prog.str());
   }
 }
@@ -1851,16 +1849,16 @@ TEST(semantic_analyser, printf_format_int_with_length)
 
 TEST(semantic_analyser, printf_format_string)
 {
-  test("kprobe:f { printf(\"str: %s\", \"mystr\") }");
+  test(R"(kprobe:f { printf("str: %s", "mystr") })");
   test("kprobe:f { printf(\"str: %s\", comm) }");
   test("kprobe:f { printf(\"str: %s\", str(arg0)) }");
-  test("kprobe:f { @x = \"hi\"; printf(\"str: %s\", @x) }");
-  test("kprobe:f { $x = \"hi\"; printf(\"str: %s\", $x) }");
+  test(R"(kprobe:f { @x = "hi"; printf("str: %s", @x) })");
+  test(R"(kprobe:f { $x = "hi"; printf("str: %s", $x) })");
 }
 
 TEST(semantic_analyser, printf_bad_format_string)
 {
-  test("kprobe:f { printf(\"%d\", \"mystr\") }", 10);
+  test(R"(kprobe:f { printf("%d", "mystr") })", 10);
   test("kprobe:f { printf(\"%d\", str(arg0)) }", 10);
 
   test("kprobe:f { printf(\"%s\", 1234) }", 10);
@@ -1869,41 +1867,41 @@ TEST(semantic_analyser, printf_bad_format_string)
 
 TEST(semantic_analyser, printf_format_buf)
 {
-  test("kprobe:f { printf(\"%r\", buf(\"mystr\", 5)) }");
+  test(R"(kprobe:f { printf("%r", buf("mystr", 5)) })");
 }
 
 TEST(semantic_analyser, printf_bad_format_buf)
 {
-  test("kprobe:f { printf(\"%r\", \"mystr\") }", 10);
+  test(R"(kprobe:f { printf("%r", "mystr") })", 10);
   test("kprobe:f { printf(\"%r\", arg0) }", 10);
 }
 
 TEST(semantic_analyser, printf_format_buf_no_ascii)
 {
-  test("kprobe:f { printf(\"%rx\", buf(\"mystr\", 5)) }");
+  test(R"(kprobe:f { printf("%rx", buf("mystr", 5)) })");
 }
 
 TEST(semantic_analyser, printf_bad_format_buf_no_ascii)
 {
-  test("kprobe:f { printf(\"%rx\", \"mystr\") }", 10);
+  test(R"(kprobe:f { printf("%rx", "mystr") })", 10);
   test("kprobe:f { printf(\"%rx\", arg0) }", 10);
 }
 
 TEST(semantic_analyser, printf_format_buf_nonescaped_hex)
 {
-  test("kprobe:f { printf(\"%rh\", buf(\"mystr\", 5)) }");
+  test(R"(kprobe:f { printf("%rh", buf("mystr", 5)) })");
 }
 
 TEST(semantic_analyser, printf_bad_format_buf_nonescaped_hex)
 {
-  test("kprobe:f { printf(\"%rh\", \"mystr\") }", 10);
+  test(R"(kprobe:f { printf("%rh", "mystr") })", 10);
   test("kprobe:f { printf(\"%rh\", arg0) }", 10);
 }
 
 TEST(semantic_analyser, printf_format_multi)
 {
-  test("kprobe:f { printf(\"%d %d %s\", 1, 2, \"mystr\") }");
-  test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
+  test(R"(kprobe:f { printf("%d %d %s", 1, 2, "mystr") })");
+  test(R"(kprobe:f { printf("%d %s %d", 1, 2, "mystr") })", 10);
 }
 
 TEST(semantic_analyser, join)
@@ -1919,8 +1917,8 @@ TEST(semantic_analyser, join)
 TEST(semantic_analyser, join_delimiter)
 {
   test("kprobe:f { join(arg0, \",\") }");
-  test("kprobe:f { printf(\"%s\", join(arg0, \",\")) }", 10);
-  test("kprobe:f { $fmt = \"mystring\"; join($fmt, \",\") }", 10);
+  test(R"(kprobe:f { printf("%s", join(arg0, ",")) })", 10);
+  test(R"(kprobe:f { $fmt = "mystring"; join($fmt, ",") })", 10);
   test("kprobe:f { @x = join(arg0, \",\") }", 1);
   test("kprobe:f { $x = join(arg0, \",\") }", 1);
   test("kprobe:f { join(arg0, 3) }", 10);
@@ -2655,13 +2653,13 @@ TEST(semantic_analyser, signal)
 TEST(semantic_analyser, strncmp)
 {
   // Test strncmp builtin
-  test("i:s:1 { $a = \"bar\"; strncmp(\"foo\", $a, 1) }");
-  test("i:s:1 { strncmp(\"foo\", \"bar\", 1) }");
+  test(R"(i:s:1 { $a = "bar"; strncmp("foo", $a, 1) })");
+  test(R"(i:s:1 { strncmp("foo", "bar", 1) })");
   test("i:s:1 { strncmp(1) }", 1);
   test("i:s:1 { strncmp(1,1,1) }", 10);
   test("i:s:1 { strncmp(\"a\",1,1) }", 10);
-  test("i:s:1 { strncmp(\"a\",\"a\",-1) }", 1);
-  test("i:s:1 { strncmp(\"a\",\"a\",\"foo\") }", 1);
+  test(R"(i:s:1 { strncmp("a","a",-1) })", 1);
+  test(R"(i:s:1 { strncmp("a","a","foo") })", 1);
 }
 
 TEST(semantic_analyser, strncmp_posparam)
@@ -2669,15 +2667,15 @@ TEST(semantic_analyser, strncmp_posparam)
   BPFtrace bpftrace;
   bpftrace.add_param("1");
   bpftrace.add_param("hello");
-  test(bpftrace, "i:s:1 { strncmp(\"foo\", \"bar\", $1) }");
-  test(bpftrace, "i:s:1 { strncmp(\"foo\", \"bar\", $2) }", 1);
+  test(bpftrace, R"(i:s:1 { strncmp("foo", "bar", $1) })");
+  test(bpftrace, R"(i:s:1 { strncmp("foo", "bar", $2) })", 1);
 }
 
 TEST(semantic_analyser, strconrtains)
 {
   // Test strcontains builtin
-  test("i:s:1 { $a = \"bar\"; strcontains(\"foo\", $a) }");
-  test("i:s:1 { strcontains(\"foo\", \"bar\") }");
+  test(R"(i:s:1 { $a = "bar"; strcontains("foo", $a) })");
+  test(R"(i:s:1 { strcontains("foo", "bar") })");
   test("i:s:1 { strcontains(1) }", 1);
   test("i:s:1 { strcontains(1,1) }", 10);
   test("i:s:1 { strcontains(\"a\",1) }", 10);
@@ -2717,7 +2715,7 @@ TEST(semantic_analyser, unwatch)
   test("k:f { unwatch(*(int64*)arg0); }");
 
   test("i:s:1 { unwatch(\"asdf\") }", 10);
-  test("i:s:1 { @x[\"hi\"] = \"world\"; unwatch(@x[\"hi\"]) }", 10);
+  test(R"(i:s:1 { @x["hi"] = "world"; unwatch(@x["hi"]) })", 10);
   test("i:s:1 { printf(\"%d\", unwatch(2)) }", 10);
 }
 
@@ -3905,6 +3903,4 @@ kfunc:foo { $p = path((uint8 *)0) }
   test("BEGIN { $b = buf(0, 10) }");
 }
 
-} // namespace semantic_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::semantic_analyser

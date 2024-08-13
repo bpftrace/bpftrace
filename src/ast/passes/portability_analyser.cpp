@@ -5,8 +5,7 @@
 #include "log.h"
 #include "types.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 PortabilityAnalyser::PortabilityAnalyser(Node *root, std::ostream &out)
     : root_(root), out_(out)
@@ -126,5 +125,4 @@ Pass CreatePortabilityPass()
   return Pass("PortabilityAnalyser", fn);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

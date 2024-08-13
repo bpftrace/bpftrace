@@ -6,9 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace bpfbytecode {
+namespace bpftrace::test::bpfbytecode {
 
 BpfBytecode codegen(std::string_view input)
 {
@@ -41,6 +39,4 @@ TEST(bpfbytecode, create_programs)
             "s_kprobe_foo_1");
 }
 
-} // namespace bpfbytecode
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::bpfbytecode

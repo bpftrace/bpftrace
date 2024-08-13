@@ -264,7 +264,7 @@ SizedType CreateInteger(size_t bits, bool is_signed)
   return t;
 }
 
-SizedType CreateBool(void)
+SizedType CreateBool()
 {
   return CreateInteger(1, false);
 }
@@ -488,7 +488,7 @@ SizedType CreateTimestampMode()
   return SizedType(Type::timestamp_mode, 0);
 }
 
-bool SizedType::IsSigned(void) const
+bool SizedType::IsSigned() const
 {
   return is_signed_;
 }

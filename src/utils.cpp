@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <climits>
 #include <cmath>
 #include <cstring>
-#include <errno.h>
 #include <fcntl.h>
 #include <fstream>
 #include <gelf.h>
@@ -909,8 +909,8 @@ static std::optional<int> is_elf(const std::string &path)
     return result;
   }
 
-  elf = elf_begin(fd, ELF_C_READ, NULL);
-  if (elf == NULL) {
+  elf = elf_begin(fd, ELF_C_READ, nullptr);
+  if (elf == nullptr) {
     goto err_close;
   }
 
@@ -1330,7 +1330,7 @@ static uint32_t _find_version_note(unsigned long base)
   return 0;
 }
 
-static uint32_t kernel_version_from_vdso(void)
+static uint32_t kernel_version_from_vdso()
 {
   // Fetch LINUX_VERSION_CODE from the vDSO .note section, falling back on
   // the build-time constant if unavailable. This always matches the
@@ -1344,7 +1344,7 @@ static uint32_t kernel_version_from_vdso(void)
   return code;
 }
 
-static uint32_t kernel_version_from_uts(void)
+static uint32_t kernel_version_from_uts()
 {
   struct utsname utsname;
   if (uname(&utsname) < 0)
@@ -1355,14 +1355,14 @@ static uint32_t kernel_version_from_uts(void)
   return KERNEL_VERSION(x, y, z);
 }
 
-static uint32_t kernel_version_from_khdr(void)
+static uint32_t kernel_version_from_khdr()
 {
   // Try to get the definition of LINUX_VERSION_CODE at runtime.
   std::ifstream linux_version_header{ "/usr/include/linux/version.h" };
   const std::string content{ std::istreambuf_iterator<char>(
                                  linux_version_header),
                              std::istreambuf_iterator<char>() };
-  const std::regex regex{ "#define\\s+LINUX_VERSION_CODE\\s+(\\d+)" };
+  const std::regex regex{ R"(#define\s+LINUX_VERSION_CODE\s+(\d+))" };
   std::smatch match;
 
   if (std::regex_search(content.begin(), content.end(), match, regex))

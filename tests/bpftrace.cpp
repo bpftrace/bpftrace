@@ -11,9 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace {
-namespace test {
-namespace bpftrace {
+namespace bpftrace::test::bpftrace {
 
 #include "btf_common.h"
 
@@ -1254,6 +1252,4 @@ TEST(bpftrace, add_probes_rawtracepoint_wildcard_no_matches)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 }
 
-} // namespace bpftrace
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::bpftrace

@@ -1,8 +1,7 @@
 #include "return_path_analyser.h"
 #include "log.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 ReturnPathAnalyser::ReturnPathAnalyser(Node *root, std::ostream &out)
     : root_(root), out_(out)
@@ -85,5 +84,4 @@ Pass CreateReturnPathPass()
   return Pass("ReturnPath", fn);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

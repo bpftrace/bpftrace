@@ -8,9 +8,7 @@
 #include "driver.h"
 #include "mocks.h"
 
-namespace bpftrace {
-namespace test {
-namespace return_path_analyser {
+namespace bpftrace::test::return_path_analyser {
 
 using ::testing::_;
 
@@ -110,6 +108,4 @@ TEST(return_path_analyser, void_return_type)
   test("fn test() : void {}", 0);
 }
 
-} // namespace return_path_analyser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::return_path_analyser

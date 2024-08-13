@@ -2,8 +2,7 @@
 
 #include "ast/ast.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 void Visitor::visit(Integer &integer __attribute__((__unused__)))
 {
@@ -221,5 +220,4 @@ void Visitor::visit(Program &program)
     Visit(*program.config);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

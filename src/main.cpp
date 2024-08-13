@@ -2,6 +2,7 @@
 #include <bpf/libbpf.h>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -9,7 +10,6 @@
 #include <optional>
 #include <sys/resource.h>
 #include <sys/utsname.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "aot/aot.h"
@@ -144,7 +144,7 @@ void usage()
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
-  std::cerr << "bpftrace -e 'kprobe:do_nanosleep { printf(\"PID %d sleeping...\\n\", pid); }'" << std::endl;
+  std::cerr << R"(bpftrace -e 'kprobe:do_nanosleep { printf("PID %d sleeping...\n", pid); }')" << std::endl;
   std::cerr << "    trace processes calling sleep" << std::endl;
   std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   std::cerr << "    count syscalls by process name" << std::endl;
@@ -723,13 +723,13 @@ int main(int argc, char* argv[])
   switch (args.obc) {
     case OutputBufferConfig::UNSET:
     case OutputBufferConfig::LINE:
-      std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+      std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
       break;
     case OutputBufferConfig::FULL:
-      std::setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+      std::setvbuf(stdout, nullptr, _IOFBF, BUFSIZ);
       break;
     case OutputBufferConfig::NONE:
-      std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+      std::setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
       break;
   }
 

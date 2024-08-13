@@ -8,8 +8,7 @@
 #include "log.h"
 #include "types.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 template <class... Ts>
 struct overloaded : Ts... {
@@ -195,5 +194,4 @@ Pass CreateConfigPass()
   return Pass("ConfigAnalyser", fn);
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

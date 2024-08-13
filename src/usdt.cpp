@@ -2,7 +2,7 @@
 #include "log.h"
 #include "utils.h"
 
-#include <signal.h>
+#include <csignal>
 
 #include <algorithm>
 #include <iostream>

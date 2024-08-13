@@ -8,8 +8,7 @@
 #include "log.h"
 #include "struct.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 namespace {
 
@@ -270,5 +269,4 @@ Pass CreateResourcePass()
   return Pass("ResourceAnalyser", fn);
 }
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

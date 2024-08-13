@@ -46,8 +46,7 @@ struct Header {
 static_assert(sizeof(Header) == 48);
 static_assert(sizeof(std::size_t) <= sizeof(uint64_t));
 
-namespace bpftrace {
-namespace aot {
+namespace bpftrace::aot {
 namespace {
 
 uint32_t rs_hash(std::string_view str)
@@ -235,12 +234,12 @@ int load(BPFtrace &bpftrace, const std::string &in)
   }
 
   // Find .btaot section
-  Elf *elf = NULL;
-  Elf_Scn *scn = NULL;
+  Elf *elf = nullptr;
+  Elf_Scn *scn = nullptr;
   GElf_Shdr shdr;
-  char *secname = NULL;
-  Elf_Data *data = NULL;
-  uint8_t *btaot_section = NULL;
+  char *secname = nullptr;
+  Elf_Data *data = nullptr;
+  uint8_t *btaot_section = nullptr;
   const Header *hdr;
 
   if (elf_version(EV_CURRENT) == EV_NONE) {
@@ -249,7 +248,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
     goto out;
   }
 
-  elf = elf_begin(infd, ELF_C_READ, NULL);
+  elf = elf_begin(infd, ELF_C_READ, nullptr);
   if (!elf) {
     LOG(ERROR) << "Cannot read ELF file: " << elf_errmsg(-1);
     err = 1;
@@ -284,7 +283,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
     }
 
     if (std::string_view(secname) == AOT_ELF_SECTION) {
-      data = elf_getdata(scn, 0);
+      data = elf_getdata(scn, nullptr);
       if (!data) {
         LOG(ERROR) << "Failed to get BTAOT ELF section(" << i
                    << ") data: " << elf_errmsg(-1);
@@ -353,5 +352,4 @@ out:
   return err;
 }
 
-} // namespace aot
-} // namespace bpftrace
+} // namespace bpftrace::aot

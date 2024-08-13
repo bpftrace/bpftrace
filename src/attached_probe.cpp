@@ -93,7 +93,7 @@ std::string progtypeName(libbpf::bpf_prog_type t)
   }
 }
 
-void AttachedProbe::attach_kfunc(void)
+void AttachedProbe::attach_kfunc()
 {
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0) {
@@ -101,31 +101,31 @@ void AttachedProbe::attach_kfunc(void)
   }
 }
 
-int AttachedProbe::detach_kfunc(void)
+int AttachedProbe::detach_kfunc()
 {
   close(tracing_fd_);
   return 0;
 }
 
-void AttachedProbe::attach_iter(void)
+void AttachedProbe::attach_iter()
 {
   linkfd_ = bpf_link_create(progfd_,
                             0,
                             static_cast<enum ::bpf_attach_type>(
                                 libbpf::BPF_TRACE_ITER),
-                            NULL);
+                            nullptr);
   if (linkfd_ < 0) {
     throw FatalUserException("Error attaching probe: " + probe_.name);
   }
 }
 
-int AttachedProbe::detach_iter(void)
+int AttachedProbe::detach_iter()
 {
   close(linkfd_);
   return 0;
 }
 
-void AttachedProbe::attach_raw_tracepoint(void)
+void AttachedProbe::attach_raw_tracepoint()
 {
   tracing_fd_ = bpf_raw_tracepoint_open(probe_.attach_point.c_str(), progfd_);
   if (tracing_fd_ < 0) {
@@ -140,7 +140,7 @@ void AttachedProbe::attach_raw_tracepoint(void)
   }
 }
 
-int AttachedProbe::detach_raw_tracepoint(void)
+int AttachedProbe::detach_raw_tracepoint()
 {
   close(tracing_fd_);
   return 0;
@@ -598,7 +598,7 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
       path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
-void AttachedProbe::attach_multi_kprobe(void)
+void AttachedProbe::attach_multi_kprobe()
 {
   BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
   std::vector<const char *> syms;

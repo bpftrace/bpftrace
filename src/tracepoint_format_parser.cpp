@@ -42,7 +42,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
         if (has_wildcard(category) || has_wildcard(event_name)) {
           // tracepoint wildcard expansion, part 1 of 3. struct definitions.
           memset(&glob_result, 0, sizeof(glob_result));
-          int ret = glob(format_file_path.c_str(), 0, NULL, &glob_result);
+          int ret = glob(format_file_path.c_str(), 0, nullptr, &glob_result);
           if (ret != 0) {
             if (ret == GLOB_NOMATCH) {
               LOG(ERROR, ap->loc, std::cerr)

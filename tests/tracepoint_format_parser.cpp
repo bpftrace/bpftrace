@@ -5,9 +5,7 @@
 
 using namespace testing;
 
-namespace bpftrace {
-namespace test {
-namespace tracepoint_format_parser {
+namespace bpftrace::test::tracepoint_format_parser {
 
 class MockTracepointFormatParser : public TracepointFormatParser {
 public:
@@ -285,6 +283,4 @@ TEST(tracepoint_format_parser, args_field_access)
   EXPECT_EQ(driver.ctx.root->probes.at(0)->tp_args_structs_level, -1);
 }
 
-} // namespace tracepoint_format_parser
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::tracepoint_format_parser

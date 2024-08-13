@@ -5,8 +5,7 @@
 
 #include "ast/irbuilderbpf.h"
 
-namespace bpftrace {
-namespace AsyncEvent {
+namespace bpftrace::AsyncEvent {
 
 std::vector<llvm::Type*> Print::asLLVMType(ast::IRBuilderBPF& b)
 {
@@ -104,5 +103,4 @@ std::vector<llvm::Type*> SkbOutput::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
-} // namespace AsyncEvent
-} // namespace bpftrace
+} // namespace bpftrace::AsyncEvent

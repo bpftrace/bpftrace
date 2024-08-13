@@ -1,8 +1,7 @@
 #include "tracefs.h"
 #include <unistd.h>
 
-namespace bpftrace {
-namespace tracefs {
+namespace bpftrace::tracefs {
 
 #define DEBUGFS_TRACEFS "/sys/kernel/debug/tracing"
 #define TRACEFS "/sys/kernel/tracing"
@@ -24,5 +23,4 @@ std::string event_format_file(const std::string &category,
   return path("events/" + category + "/" + event + "/format");
 }
 
-} // namespace tracefs
-} // namespace bpftrace
+} // namespace bpftrace::tracefs

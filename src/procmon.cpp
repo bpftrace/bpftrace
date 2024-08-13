@@ -63,7 +63,7 @@ ProcMon::~ProcMon()
     close(pidfd_);
 }
 
-bool ProcMon::is_alive(void)
+bool ProcMon::is_alive()
 {
   // store death to avoid pid reuse issues on polling /proc
   if (died_)

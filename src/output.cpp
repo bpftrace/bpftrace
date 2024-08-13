@@ -794,7 +794,7 @@ void JsonOutput::map(
 
   const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
 
-  out_ << "{\"type\": \"" << MessageType::map << "\", \"data\": {";
+  out_ << R"({"type": ")" << MessageType::map << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
@@ -904,7 +904,7 @@ void JsonOutput::map_hist(
 
   const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
 
-  out_ << "{\"type\": \"" << MessageType::hist << "\", \"data\": {";
+  out_ << R"({"type": ")" << MessageType::hist << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
@@ -930,7 +930,7 @@ void JsonOutput::map_stats(
 
   const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
 
-  out_ << "{\"type\": \"" << MessageType::stats << "\", \"data\": {";
+  out_ << R"({"type": ")" << MessageType::stats << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
   if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
@@ -946,16 +946,15 @@ void JsonOutput::value(BPFtrace &bpftrace,
                        const SizedType &ty,
                        std::vector<uint8_t> &value) const
 {
-  out_ << "{\"type\": \"" << MessageType::value
-       << "\", \"data\": " << value_to_str(bpftrace, ty, value, false, 1) << "}"
-       << std::endl;
+  out_ << R"({"type": ")" << MessageType::value << R"(", "data": )"
+       << value_to_str(bpftrace, ty, value, false, 1) << "}" << std::endl;
 }
 
 void JsonOutput::message(MessageType type,
                          const std::string &msg,
                          bool nl __attribute__((unused))) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"data\": \"" << json_escape(msg)
+  out_ << R"({"type": ")" << type << R"(", "data": ")" << json_escape(msg)
        << "\"}" << std::endl;
 }
 
@@ -963,7 +962,7 @@ void JsonOutput::message(MessageType type,
                          const std::string &field,
                          uint64_t value) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"data\": "
+  out_ << R"({"type": ")" << type << R"(", "data": )"
        << "{\"" << field << "\": " << value << "}"
        << "}" << std::endl;
 }
@@ -982,9 +981,9 @@ void JsonOutput::helper_error(int func_id,
                               int retcode,
                               const location &loc) const
 {
-  out_ << "{\"type\": \"helper_error\", \"msg\": \""
-       << get_helper_error_msg(func_id, retcode) << "\", \"helper\": \""
-       << libbpf::bpf_func_name[func_id] << "\", \"retcode\": " << retcode
+  out_ << R"({"type": "helper_error", "msg": ")"
+       << get_helper_error_msg(func_id, retcode) << R"(", "helper": ")"
+       << libbpf::bpf_func_name[func_id] << R"(", "retcode": )" << retcode
        << ", \"line\": " << loc.begin.line << ", \"col\": " << loc.begin.column
        << "}" << std::endl;
 }
