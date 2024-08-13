@@ -379,6 +379,17 @@ TEST_F(field_analyser_dwarf, uprobe_args)
   test(bpftrace, uprobe + ":func_* { $x = args.a; }", 1);
 }
 
+static void CheckFieldsOrderedByOffset(const Fields &fields)
+{
+  // Check order of the fields for consistent output when printing record types.
+  EXPECT_TRUE(std::is_sorted(
+      fields.begin(), fields.end(), [](const Field &a, const Field &b) {
+        // We accept fields that have the same offset, but different names.
+        // Check first that the offsets are ordered, then the names.
+        return a.offset < b.offset || (a.offset == b.offset && a.name < b.name);
+      }));
+}
+
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   BPFtrace bpftrace;
@@ -391,6 +402,7 @@ TEST_F(field_analyser_dwarf, parse_struct)
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
   ASSERT_EQ(str->size, 16);
+  CheckFieldsOrderedByOffset(str->fields);
 
   ASSERT_TRUE(str->HasField("a"));
   ASSERT_TRUE(str->GetField("a").type.IsIntTy());
@@ -421,6 +433,8 @@ TEST_F(field_analyser_dwarf, parse_arrays)
 
   EXPECT_EQ(arrs->size, 64);
   ASSERT_EQ(arrs->fields.size(), 6U);
+  CheckFieldsOrderedByOffset(arrs->fields);
+
   ASSERT_TRUE(arrs->HasField("int_arr"));
   ASSERT_TRUE(arrs->HasField("char_arr"));
   ASSERT_TRUE(arrs->HasField("ptr_arr"));
@@ -607,8 +621,9 @@ TEST_F(field_analyser_dwarf, parse_inheritance_multi)
   cls = bpftrace.structs.Lookup("struct Multi").lock();
 
   ASSERT_TRUE(cls->HasFields());
-  ASSERT_EQ(cls->fields.size(), 6);
-  ASSERT_EQ(cls->size, 24);
+  ASSERT_EQ(cls->fields.size(), 7);
+  ASSERT_EQ(cls->size, 32);
+  CheckFieldsOrderedByOffset(cls->fields);
 
   CheckParentFields(cls);
 
@@ -621,6 +636,11 @@ TEST_F(field_analyser_dwarf, parse_inheritance_multi)
   EXPECT_TRUE(cls->GetField("abc").type.IsIntTy());
   EXPECT_EQ(cls->GetField("abc").type.GetSize(), 4);
   EXPECT_EQ(cls->GetField("abc").offset, 20);
+
+  EXPECT_TRUE(cls->HasField("rabc"));
+  EXPECT_TRUE(cls->GetField("rabc").type.IsRefTy());
+  EXPECT_EQ(cls->GetField("rabc").type.GetSize(), 8);
+  EXPECT_EQ(cls->GetField("rabc").offset, 24);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
@@ -637,6 +657,7 @@ TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
   ASSERT_EQ(str->size, 72);
+  CheckFieldsOrderedByOffset(str->fields);
 
   ASSERT_TRUE(str->HasField("a"));
   ASSERT_TRUE(str->GetField("a").type.IsIntTy());
@@ -664,6 +685,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
   ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  CheckFieldsOrderedByOffset(task_struct->fields);
 
   ASSERT_TRUE(task_struct->HasField("a"));
   EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());

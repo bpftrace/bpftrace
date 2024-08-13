@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <fcntl.h>
+#include <fstream>
 #include <stdexcept>
 
 #include "data/dwarf_data.h"

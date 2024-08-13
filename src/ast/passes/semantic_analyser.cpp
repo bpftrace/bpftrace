@@ -537,7 +537,7 @@ void SemanticAnalyser::visit(Call &call)
         map.skip_key_validation = true;
     }
 
-    expr.accept(*this);
+    Visit(call.vargs[i]);
   }
 
   if (auto probe = dynamic_cast<Probe *>(scope_)) {
@@ -1352,7 +1352,7 @@ void SemanticAnalyser::visit(Sizeof &szof)
 {
   szof.type = CreateUInt64();
   if (szof.expr) {
-    szof.expr->accept(*this);
+    Visit(szof.expr);
     szof.argtype = szof.expr->type;
   }
   resolve_struct_type(szof.argtype, szof.loc);
@@ -1362,7 +1362,7 @@ void SemanticAnalyser::visit(Offsetof &ofof)
 {
   ofof.type = CreateUInt64();
   if (ofof.expr) {
-    ofof.expr->accept(*this);
+    Visit(ofof.expr);
     ofof.record = ofof.expr->type;
   }
   resolve_struct_type(ofof.record, ofof.loc);
@@ -1462,8 +1462,8 @@ void SemanticAnalyser::visit(Map &map)
   MapKey key;
 
   for (unsigned int i = 0; i < map.vargs.size(); i++) {
+    Visit(map.vargs.at(i));
     Expression *expr = map.vargs.at(i);
-    expr->accept(*this);
 
     // Insert a cast to 64 bits if needed by injecting
     // a cast into the ast.
@@ -1473,7 +1473,7 @@ void SemanticAnalyser::visit(Map &map)
                                                   : CreateUInt64(),
                                               expr,
                                               map.loc);
-      cast->accept(*this);
+      Visit(cast);
       map.vargs.at(i) = cast;
       expr = cast;
     } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
@@ -1531,8 +1531,8 @@ void SemanticAnalyser::visit(Variable &var)
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
 {
-  arr.expr->accept(*this);
-  arr.indexpr->accept(*this);
+  Visit(arr.expr);
+  Visit(arr.indexpr);
 
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
@@ -1772,8 +1772,8 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
 
 void SemanticAnalyser::visit(Binop &binop)
 {
-  binop.left->accept(*this);
-  binop.right->accept(*this);
+  Visit(binop.left);
+  Visit(binop.right);
 
   auto &lht = binop.left->type;
   auto &rht = binop.right->type;
@@ -1876,7 +1876,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   }
 
-  unop.expr->accept(*this);
+  Visit(unop.expr);
 
   auto valid_ptr_op = false;
   switch (unop.op) {
@@ -1892,6 +1892,8 @@ void SemanticAnalyser::visit(Unop &unop)
   if (is_final_pass()) {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
     // and context (we allow args->field for backwards compatibility)
+    // References are not allowed, instead they get turned into pointers by
+    // the `dereference_if_needed()` function, during the `Visit()` above.
     if (!type.IsIntegerTy() &&
         !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
       LOG(ERROR, unop.loc, err_)
@@ -1944,9 +1946,10 @@ void SemanticAnalyser::visit(Unop &unop)
 
 void SemanticAnalyser::visit(Ternary &ternary)
 {
-  ternary.cond->accept(*this);
-  ternary.left->accept(*this);
-  ternary.right->accept(*this);
+  Visit(ternary.cond);
+  Visit(ternary.left);
+  Visit(ternary.right);
+
   const Type &cond = ternary.cond->type.GetTy();
   const Type &lhs = ternary.left->type.GetTy();
   const Type &rhs = ternary.right->type.GetTy();
@@ -1974,7 +1977,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 
 void SemanticAnalyser::visit(If &if_block)
 {
-  if_block.cond->accept(*this);
+  Visit(if_block.cond);
 
   if (is_final_pass()) {
     const Type &cond = if_block.cond->type.GetTy();
@@ -1988,7 +1991,7 @@ void SemanticAnalyser::visit(If &if_block)
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
-  unroll.expr->accept(*this);
+  Visit(unroll.expr);
 
   auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
   if (!unroll_value.has_value()) {
@@ -2011,8 +2014,9 @@ void SemanticAnalyser::visit(Jump &jump)
 {
   switch (jump.ident) {
     case JumpType::RETURN:
-      if (jump.return_value)
-        jump.return_value->accept(*this);
+      if (jump.return_value) {
+        Visit(jump.return_value);
+      }
       if (auto subprog = dynamic_cast<Subprog *>(scope_)) {
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
@@ -2043,7 +2047,7 @@ void SemanticAnalyser::visit(While &while_block)
            " on LLVMs loop unroll to generate loadable code.";
   }
 
-  while_block.cond->accept(*this);
+  Visit(while_block.cond);
 
   loop_depth_++;
   accept_statements(while_block.stmts);
@@ -2173,7 +2177,7 @@ void SemanticAnalyser::visit(For &f)
   }
 
   map.skip_key_validation = true;
-  map.accept(*this);
+  Visit(&map);
 
   if (has_error())
     return;
@@ -2272,7 +2276,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   // A field access must have a field XOR index
   assert((acc.field.size() > 0) != (acc.index >= 0));
 
-  acc.expr->accept(*this);
+  Visit(acc.expr);
 
   SizedType &type = acc.expr->type;
 
@@ -2303,7 +2307,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       return;
     auto arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
     if (arg) {
-      acc.type = arg->type;
+      // Only set acc.type if it's not already set. [1]
+      // Overwriting the type once set could override the conversion
+      // from Reference to Pointer done by dereference_if_needed.
+      if (acc.type.IsNoneTy())
+        acc.type = arg->type;
       acc.type.SetAS(acc.expr->type.GetAS());
 
       if (is_final_pass()) {
@@ -2404,7 +2412,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         }
       }
 
-      acc.type = field.type;
+      // Only set acc.type if it's not already set. See explanation [1].
+      if (acc.type.IsNoneTy())
+        acc.type = field.type;
+
       if (acc.expr->type.IsCtxAccess() &&
           (acc.type.IsArrayTy() || acc.type.IsRecordTy())) {
         // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
@@ -2425,7 +2436,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
 void SemanticAnalyser::visit(Cast &cast)
 {
-  cast.expr->accept(*this);
+  Visit(cast.expr);
 
   // cast type is synthesised in parser, if it is a struct, it needs resolving
   resolve_struct_type(cast.type, cast.loc);
@@ -2503,8 +2514,8 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
-  for (auto elem : tuple.elems) {
-    elem->accept(*this);
+  for (auto &elem : tuple.elems) {
+    Visit(elem);
 
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
@@ -2519,13 +2530,13 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
-  expr.expr->accept(*this);
+  Visit(expr.expr);
 }
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
-  assignment.map->accept(*this);
-  assignment.expr->accept(*this);
+  Visit(assignment.map);
+  Visit(assignment.expr);
 
   assign_map_type(*assignment.map, assignment.expr->type);
 
@@ -2601,7 +2612,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
-  assignment.expr->accept(*this);
+  Visit(assignment.expr);
 
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_[scope_].find(var_ident);
@@ -2698,12 +2709,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
 void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
 {
-  assignment.expr->accept(*this);
+  Visit(assignment.expr);
 }
 
 void SemanticAnalyser::visit(Predicate &pred)
 {
-  pred.expr->accept(*this);
+  Visit(pred.expr);
   if (is_final_pass()) {
     SizedType &ty = pred.expr->type;
     if (!ty.IsIntTy() && !ty.IsPtrTy()) {
@@ -2995,13 +3006,13 @@ void SemanticAnalyser::visit(Probe &probe)
       LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
       return;
     }
-    ap->accept(*this);
+    Visit(ap);
   }
   if (probe.pred) {
-    probe.pred->accept(*this);
+    Visit(probe.pred);
   }
   for (Statement *stmt : probe.stmts) {
-    stmt->accept(*this);
+    Visit(stmt);
   }
 }
 
@@ -3022,12 +3033,12 @@ void SemanticAnalyser::visit(Subprog &subprog)
 void SemanticAnalyser::visit(Program &program)
 {
   for (Subprog *subprog : program.functions)
-    subprog->accept(*this);
+    Visit(subprog);
   for (Probe *probe : program.probes)
-    probe->accept(*this);
+    Visit(probe);
 
   if (program.config)
-    program.config->accept(*this);
+    Visit(program.config);
 }
 
 int SemanticAnalyser::analyse()
@@ -3037,7 +3048,7 @@ int SemanticAnalyser::analyse()
 
   int num_passes = listing_ ? 1 : num_passes_;
   for (pass_ = 1; pass_ <= num_passes; pass_++) {
-    ctx_.root->accept(*this);
+    Visit(ctx_.root);
     errors = err_.str();
     if (!errors.empty()) {
       out_ << errors;
@@ -3374,8 +3385,8 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 void SemanticAnalyser::accept_statements(StatementList &stmts)
 {
   for (size_t i = 0; i < stmts.size(); i++) {
+    Visit(stmts.at(i));
     auto stmt = stmts.at(i);
-    stmt->accept(*this);
 
     if (is_final_pass()) {
       auto *jump = dynamic_cast<Jump *>(stmt);
@@ -3484,6 +3495,23 @@ Pass CreateSemanticPass()
 
   return Pass("Semantic", fn);
 };
+
+void SemanticAnalyser::dereference_if_needed(Expression *&expr)
+{
+  if (expr->type.IsRefTy()) {
+    expr->type.IntoPointer();
+    const SizedType &ptr_type = expr->type;
+    Expression *ptr_expr = expr;
+
+    Unop *deref_expr = new Unop(Operator::MUL, ptr_expr, ptr_expr->loc);
+    deref_expr->type = *ptr_type.GetPointeeTy();
+    deref_expr->type.is_internal = ptr_type.is_internal;
+    deref_expr->type.SetAS(ptr_type.GetAS());
+    if (ptr_type.IsCtxAccess())
+      deref_expr->type.MarkCtxAccess();
+    expr = deref_expr;
+  }
+}
 
 } // namespace ast
 } // namespace bpftrace

@@ -43,6 +43,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::min:
     case Type::none:
     case Type::pointer:
+    case Type::reference:
     case Type::record:
     case Type::stack_mode:
     case Type::stats:
@@ -382,7 +383,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
         reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())->cgroup_id);
   else if (type.IsStrerrorTy())
     return strerror(read_data<uint64_t>(value.data()));
-  else if (type.IsPtrTy()) {
+  else if (type.IsPtrTy() || type.IsRefTy()) {
     std::ostringstream res;
     res << "0x" << std::hex << read_data<uint64_t>(value.data());
     return res.str();

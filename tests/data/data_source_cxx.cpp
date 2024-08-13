@@ -26,11 +26,11 @@ public:
   }
 };
 
-class LittleChild : public Child {
+class GrandChild : public Child {
 public:
   int g;
 
-  LittleChild(int a, int b, int c, int d, int e, int f, int g)
+  GrandChild(int a, int b, int c, int d, int e, int f, int g)
       : Child(a, b, c, d, e, f), g(g)
   {
   }
@@ -54,9 +54,10 @@ struct Bottom : public Left, public Right {
 
 struct Multi : public Parent, public Top {
   int abc;
+  int &rabc;
 
   Multi(int a, int b, int c, int d, int e)
-      : Parent{ a, b, c, d }, Top{ e }, abc{ e + 1 }
+      : Parent{ a, b, c, d }, Top{ e }, abc{ e + 1 }, rabc{ abc }
   {
   }
 };
@@ -66,7 +67,7 @@ int func_1(Child &c, Parent &p __attribute__((unused)))
   return dynamic_cast<Parent &>(c).d;
 }
 
-int func_2(LittleChild &lc)
+int func_2(GrandChild &lc)
 {
   return dynamic_cast<Parent &>(lc).d;
 }
@@ -82,7 +83,7 @@ int main(void)
   Child c{ 1, 2, 3, 4, 5, 6 };
   func_1(c, p);
 
-  LittleChild lc{ 1, 2, 3, 4, 5, 6, 7 };
+  GrandChild lc{ 1, 2, 3, 4, 5, 6, 7 };
   func_2(lc);
 
   Multi m{ 1, 2, 3, 4, 5 };

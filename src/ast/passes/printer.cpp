@@ -207,7 +207,7 @@ void Printer::visit(Ternary &ternary)
 void Printer::visit(FieldAccess &acc)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "." << std::endl;
+  out_ << indent << "." << type(acc.type) << std::endl;
 
   ++depth_;
   acc.expr->accept(*this);

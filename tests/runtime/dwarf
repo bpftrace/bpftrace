@@ -19,15 +19,16 @@ TIMEOUT 5
 NAME list uprobe args - anonymous param type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction3'
 EXPECT enum { A, B, C } e
-EXPECT union { int a; char b; } u
+       union { int a; char b; } u
 REQUIRES bash -c "exit 1" # SKIP: anonymous parameter type not supported #3083
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
 NAME list uprobe args - class reference type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1'
-EXPECT     int x
-           struct Foo foo
+EXPECT     int & x
+           Foo & foo
+           Bar & bar
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
@@ -140,6 +141,61 @@ EXPECT_REGEX ^\n[ ]+square\+\d+\n[ ]+main\+\d+$
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 AFTER ./testprogs/inline_function
+
+NAME print uprobe arg as deref pointer - struct
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 {
+       print(*args.foo1);
+       exit();
+     }
+EXPECT { .a = 123, .b = hello, .c = [1,2,3], .d = 1311768467463790320 }
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test
+
+NAME uprobe arg as reference - int
+PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1 {
+       printf("x = %d\n", args.x);
+       exit();
+     }
+EXPECT x = 42
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test_cxx
+
+NAME print uprobe arg as reference - struct
+PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1 {
+       print(args.foo);
+       exit();
+     }
+EXPECT_REGEX ^\{ \.a = 1, \.b = 2, \.c = 3, \.x = 0x[0-9a-f]{1,16} \}$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test_cxx
+
+NAME uprobe arg as reference - struct member
+PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1 {
+       printf("foo.a = %d\nfoo.b = %d\nfoo.c = %d\nfoo.x = %d\n",
+         args.foo.a, args.foo.b, args.foo.c, args.foo.x);
+       exit();
+     }
+EXPECT foo.a = 1
+       foo.b = 2
+       foo.c = 3
+       foo.x = 42
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test_cxx
+
+NAME uprobe arg as reference - array
+PROG uprobe:./testprogs/uprobe_test_cxx:_Z11uprobeArrayRA10_i {
+       printf("arr[0] = %d, arr[1] = %d, arr[9] = %d\n",
+         args.array[0], args.array[1], args.array[9]);
+       exit();
+     }
+EXPECT arr[0] = 1, arr[1] = 2, arr[9] = 10
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test_cxx
 
 # Checking backwards compatibility
 NAME uprobe args as pointer
