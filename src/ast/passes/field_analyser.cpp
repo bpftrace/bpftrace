@@ -165,9 +165,10 @@ void FieldAnalyser::visit(Unop &unop)
 
 void FieldAnalyser::resolve_args(Probe &probe)
 {
-  // load probe arguments into a special record type "struct <probename>_args"
-  Struct probe_args;
   for (auto *ap : probe.attach_points) {
+    // load probe arguments into a special record type "struct <probename>_args"
+    Struct probe_args;
+
     auto probe_type = probetype(ap->provider);
     if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
         probe_type != ProbeType::uprobe)

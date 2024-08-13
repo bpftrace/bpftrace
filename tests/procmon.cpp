@@ -18,6 +18,7 @@ using ::testing::HasSubstr;
 TEST(procmon, no_such_proc)
 {
   try {
+    // NOLINTNEXTLINE(bugprone-unused-raii)
     ProcMon(1 << 21);
     FAIL();
   } catch (const std::runtime_error &e) {
