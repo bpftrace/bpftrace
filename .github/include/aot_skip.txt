@@ -18,6 +18,7 @@ aot.call.hist_10g
 aot.call.iter:task
 aot.call.iter:task_file
 aot.call.iter:task_vma
+aot.call.iter printf multiple values
 aot.call.path_in_unsupported_kfunc
 aot.call.print_map_item_tuple
 aot.call.print_non_map_builtin
