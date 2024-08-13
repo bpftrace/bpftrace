@@ -43,6 +43,17 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   bool start_wildcard, end_wildcard;
   auto tokens = get_wildcard_tokens(search_input, start_wildcard, end_wildcard);
 
+  // Since demangled_name contains function parameters, we need to remove
+  // them unless the user specified '(' in the search input (i.e. wants
+  // to match against the parameters explicitly).
+  // Only used for C++ when demangling is enabled.
+  auto has_parameter = [](const std::string& token) {
+    return token.find('(') != std::string::npos;
+  };
+  const bool truncate_parameters = std::none_of(tokens.begin(),
+                                                tokens.end(),
+                                                has_parameter);
+
   std::string line;
   std::set<std::string> matches;
   while (std::getline(symbol_stream, line, delim)) {
@@ -58,23 +69,15 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
             continue;
 
           // Match against the demanled name.
-          // Since demangled_name contains function arguments, we need to remove
-          // them unless the user specified '(' in the search input (i.e. wants
-          // to match against the arguments explicitly).
           std::string match_line = prefix + demangled_name;
-          if (std::all_of(tokens.begin(),
-                          tokens.end(),
-                          [&](const std::string& token) {
-                            return token.find("(") == std::string::npos;
-                          })) {
-            match_line = match_line.substr(0, match_line.find_last_of("("));
+          if (truncate_parameters) {
+            erase_parameter_list(match_line);
           }
 
-          if (!wildcard_match(
+          free(demangled_name);
+
+          if (wildcard_match(
                   match_line, tokens, start_wildcard, end_wildcard)) {
-            free(demangled_name);
-          } else {
-            free(demangled_name);
             goto out;
           }
         }

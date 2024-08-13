@@ -61,6 +61,40 @@ TEST(utils, split_addrrange_symbol_module)
             tokens_ar_sym_mod);
 }
 
+static void test_erase_parameter_list(std::string input,
+                                      std::string_view expected)
+{
+  erase_parameter_list(input);
+  EXPECT_EQ(input, expected);
+}
+
+TEST(utils, erase_parameter_list)
+{
+  // Trivial cases
+  test_erase_parameter_list("", "");
+  test_erase_parameter_list("()", "");
+  test_erase_parameter_list("void foo", "void foo");
+  test_erase_parameter_list("void foo()", "void foo");
+  test_erase_parameter_list("void foo(Bar &b)", "void foo");
+  // Qualified functions
+  //   we don't need to handle `noexcept` or trailing return type
+  //   because they don't appear in the demangled function name
+  test_erase_parameter_list("void foo() &&", "void foo");
+  test_erase_parameter_list("void foo() const", "void foo");
+  // Templated parameter/function
+  test_erase_parameter_list("void foo(Bar<Baz> &b)", "void foo");
+  test_erase_parameter_list("void foo(Bar<Baz()> &b)", "void foo");
+  test_erase_parameter_list("void foo<Bar()>()", "void foo<Bar()>");
+  test_erase_parameter_list("void foo<Bar()>::foo(Bar &b)",
+                            "void foo<Bar()>::foo");
+  // Function pointer
+  test_erase_parameter_list("void foo(void (*func)(int))", "void foo");
+  test_erase_parameter_list("void foo(void (*func)(int, Bar<Baz()>))",
+                            "void foo");
+  // Missing closing parenthesis
+  test_erase_parameter_list("void foo(Bar &b", "void foo(Bar &b");
+}
+
 TEST(utils, wildcard_match)
 {
   std::vector<std::string> tokens_not = { "not" };
