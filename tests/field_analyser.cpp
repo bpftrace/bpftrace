@@ -478,38 +478,118 @@ TEST_F(field_analyser_dwarf, parse_arrays)
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
 }
 
+static void CheckParentFields(const std::shared_ptr<Struct> &cls, bool is_d_shadowed = false)
+{
+  EXPECT_TRUE(cls->HasField("a"));
+  EXPECT_TRUE(cls->GetField("a").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("a").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("a").offset, 0);
+
+  EXPECT_TRUE(cls->HasField("b"));
+  EXPECT_TRUE(cls->GetField("b").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("b").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("b").offset, 4);
+
+  EXPECT_TRUE(cls->HasField("c"));
+  EXPECT_TRUE(cls->GetField("c").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("c").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("c").offset, 8);
+
+  // The Child class also has a field 'd', which shadows the Parent's.
+  if (is_d_shadowed == false) {
+    EXPECT_TRUE(cls->HasField("d"));
+    EXPECT_TRUE(cls->GetField("d").type.IsIntTy());
+    EXPECT_EQ(cls->GetField("d").type.GetSize(), 4);
+    EXPECT_EQ(cls->GetField("d").offset, 12);
+  }
+}
+
+static void CheckChildFields(const std::shared_ptr<Struct> &cls)
+{
+  CheckParentFields(cls, true);
+
+  // Parent's field 'd' is shadowed by Child's field 'd'
+  EXPECT_TRUE(cls->HasField("d"));
+  EXPECT_TRUE(cls->GetField("d").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("d").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("d").offset, 16);
+
+  EXPECT_TRUE(cls->HasField("e"));
+  EXPECT_TRUE(cls->GetField("e").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("e").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("e").offset, 20);
+
+  EXPECT_TRUE(cls->HasField("f"));
+  EXPECT_TRUE(cls->GetField("f").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("f").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("f").offset, 24);
+}
+
+static void CheckGrandChildFields(const std::shared_ptr<Struct> &cls)
+{
+  CheckChildFields(cls);
+
+  EXPECT_TRUE(cls->HasField("g"));
+  EXPECT_TRUE(cls->GetField("g").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("g").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("g").offset, 28);
+}
+
 TEST_F(field_analyser_dwarf, parse_class)
 {
   BPFtrace bpftrace;
   std::string uprobe = "uprobe:" + std::string(cxx_bin_);
-  test(bpftrace, uprobe + ":_Z6func_1R5ChildR6Parent { $x = args.p->a; }", 0);
+  test(bpftrace, uprobe + ":cpp:func_1 { $x = args.p->a; }", 0);
 
   ASSERT_TRUE(bpftrace.structs.Has("Parent"));
   auto cls = bpftrace.structs.Lookup("Parent").lock();
 
   ASSERT_TRUE(cls->HasFields());
-  ASSERT_EQ(cls->fields.size(), 4);
-  ASSERT_EQ(cls->size, 16);
+  EXPECT_EQ(cls->fields.size(), 4);
+  EXPECT_EQ(cls->size, 16);
+  CheckFieldsOrderedByOffset(cls->fields);
 
-  ASSERT_TRUE(cls->HasField("a"));
-  ASSERT_TRUE(cls->GetField("a").type.IsIntTy());
-  ASSERT_EQ(cls->GetField("a").type.GetSize(), 4);
-  ASSERT_EQ(cls->GetField("a").offset, 0);
+  CheckParentFields(cls);
+}
 
-  ASSERT_TRUE(cls->HasField("b"));
-  ASSERT_TRUE(cls->GetField("b").type.IsIntTy());
-  ASSERT_EQ(cls->GetField("b").type.GetSize(), 4);
-  ASSERT_EQ(cls->GetField("b").offset, 4);
+TEST_F(field_analyser_dwarf, parse_inheritance)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_1 { $x = args.c->a; }", 0);
 
-  ASSERT_TRUE(cls->HasField("c"));
-  ASSERT_TRUE(cls->GetField("c").type.IsIntTy());
-  ASSERT_EQ(cls->GetField("c").type.GetSize(), 4);
-  ASSERT_EQ(cls->GetField("c").offset, 8);
+  ASSERT_TRUE(bpftrace.structs.Has("Child"));
+  auto cls = bpftrace.structs.Lookup("Child").lock();
 
-  ASSERT_TRUE(cls->HasField("d"));
-  ASSERT_TRUE(cls->GetField("d").type.IsIntTy());
-  ASSERT_EQ(cls->GetField("d").type.GetSize(), 4);
-  ASSERT_EQ(cls->GetField("d").offset, 12);
+  ASSERT_TRUE(cls->HasFields());
+  // The child has a total of 7 fields with its parent's,
+  // but field 'd' is shadowed by Child's field 'd'
+  // so only 6 are shown in the Child's struct
+  ASSERT_EQ(cls->fields.size(), (4 - 1) + 3);
+  ASSERT_EQ(cls->size, 16 + 12);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckChildFields(cls);
+}
+
+TEST_F(field_analyser_dwarf, parse_inheritance_chain)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_2 { $x = args.lc->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("GrandChild"));
+  auto cls = bpftrace.structs.Lookup("GrandChild").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  // The child has a total of 7 fields with its parent's,
+  // but field 'd' is shadowed by Child's field 'd'
+  // so only 6 are showned in the Child's struct
+  ASSERT_EQ(cls->fields.size(), (4 - 1) + 3 + 1);
+  ASSERT_EQ(cls->size, 16 + 12 + 4);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckGrandChildFields(cls);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
