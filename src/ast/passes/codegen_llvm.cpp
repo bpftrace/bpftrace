@@ -3842,7 +3842,7 @@ BpfBytecode CodegenLLVM::emit()
   assert(!output.empty());
 
   state_ = State::DONE;
-  return BpfBytecode(output.data(), output.size(), bpftrace_);
+  return BpfBytecode(output, bpftrace_);
 }
 
 BpfBytecode CodegenLLVM::compile()

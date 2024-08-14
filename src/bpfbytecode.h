@@ -10,6 +10,7 @@
 #include <bpf/libbpf.h>
 #include <cereal/access.hpp>
 #include <map>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -23,7 +24,9 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(const void *elf, size_t elf_size, BPFtrace &bpftrace);
+  BpfBytecode(std::span<const std::byte> elf, BPFtrace &bpftrace);
+  BpfBytecode(std::span<uint8_t> elf, BPFtrace &bpftrace);
+  BpfBytecode(std::span<char> elf, BPFtrace &bpftrace);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
