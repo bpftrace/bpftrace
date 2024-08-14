@@ -12,18 +12,16 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(std::span<uint8_t> elf, size_t log_size)
-    : BpfBytecode(std::as_bytes(elf), log_size)
+BpfBytecode::BpfBytecode(std::span<uint8_t> elf)
+    : BpfBytecode(std::as_bytes(elf))
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<char> elf, size_t log_size)
-    : BpfBytecode(std::as_bytes(elf), log_size)
+BpfBytecode::BpfBytecode(std::span<char> elf) : BpfBytecode(std::as_bytes(elf))
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<const std::byte> elf, size_t log_size)
-    : log_size_(log_size)
+BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -57,9 +55,7 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf, size_t log_size)
   // Discover programs
   struct bpf_program *p;
   bpf_object__for_each_program (p, bpf_object_.get()) {
-    auto prog = programs_.emplace(bpf_program__name(p),
-                                  BpfProgram(p, log_size_));
-    bpf_program__set_log_buf(p, prog.first->second.log_buf(), log_size_);
+    programs_.emplace(bpf_program__name(p), BpfProgram(p));
   }
 }
 
@@ -172,6 +168,14 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
                              BPFfeature &feature,
                              const Config &config)
 {
+  std::unordered_map<std::string_view, std::vector<char>> log_bufs;
+  for (auto &[name, prog] : programs_) {
+    log_bufs[name] = std::vector<char>(config.get(ConfigKeyInt::log_size),
+                                       '\0');
+    auto &log_buf = log_bufs[name];
+    bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
+  }
+
   prepare_progs(resources.probes, btf, feature, config);
   prepare_progs(resources.special_probes, btf, feature, config);
   prepare_progs(resources.watchpoint_probes, btf, feature, config);
@@ -183,7 +187,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     if (bt_debug.find(DebugStage::Verifier) != bt_debug.end()) {
       std::cout << "BPF verifier log for " << name << ":\n";
       std::cout << "--------------------------------------\n";
-      std::cout << prog.log_buf() << std::endl;
+      std::cout << log_bufs[name].data() << std::endl;
     }
   }
 
@@ -201,7 +205,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     // caused the failure. It can mean that libbpf didn't even try to load it
     // b/c some other program failed to load. So, we only log program load
     // failures when the verifier log is non-empty.
-    std::string_view log(prog.log_buf());
+    std::string_view log(log_bufs[name].data());
     if (!log.empty()) {
       // This should be the only error that may occur here and does not imply
       // a bpftrace bug so throw immediately with a proper error message.
@@ -220,7 +224,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
               << "Kernel log seems to be trimmed. This may be due to buffer "
                  "not being big enough, try increasing the BPFTRACE_LOG_SIZE "
                  "environment variable beyond the current value of "
-              << log_size_ << " bytes";
+              << log_bufs[name].size() << " bytes";
         }
       } else {
         errmsg << " Use -v for full kernel error log.";

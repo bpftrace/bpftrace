@@ -12,8 +12,7 @@
 
 namespace bpftrace {
 
-BpfProgram::BpfProgram(struct bpf_program *bpf_prog, size_t log_size)
-    : bpf_prog_(bpf_prog), log_buf_(std::make_unique<char[]>(log_size))
+BpfProgram::BpfProgram(struct bpf_program *bpf_prog) : bpf_prog_(bpf_prog)
 {
 }
 
@@ -95,11 +94,6 @@ void BpfProgram::set_no_autoattach()
 struct bpf_program *BpfProgram::bpf_prog() const
 {
   return bpf_prog_;
-}
-
-char *BpfProgram::log_buf() const
-{
-  return log_buf_.get();
 }
 
 } // namespace bpftrace
