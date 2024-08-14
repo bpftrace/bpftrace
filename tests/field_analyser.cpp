@@ -511,7 +511,7 @@ static void CheckParentFields(const std::shared_ptr<Struct> &cls,
   EXPECT_EQ(cls->GetField("c").offset, 8);
 
   // The Child class also has a field 'd', which shadows the Parent's.
-  if (is_d_shadowed == false) {
+  if (!is_d_shadowed) {
     EXPECT_TRUE(cls->HasField("d"));
     EXPECT_TRUE(cls->GetField("d").type.IsIntTy());
     EXPECT_EQ(cls->GetField("d").type.GetSize(), 4);
