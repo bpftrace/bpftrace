@@ -71,6 +71,7 @@ if(${LLDB_FOUND})
       -DDWARF_DATA_HEX=${DWARF_DATA_HEX}
       -DDWARF_DATA_H_IN=${DWARF_DATA_H_IN}
       -DDWARF_DATA_H=${DWARF_DATA_H}
+      -DDWARF_DATA_CXX_PATH=${CMAKE_CURRENT_BINARY_DIR}/data_source_cxx
       -P ${CONFIGURE_DWARF_HEADERS}
     DEPENDS ${FUNC_LIST_HEX} ${DWARF_DATA_HEX} ${CONFIGURE_DWARF_HEADERS})
 
@@ -92,3 +93,8 @@ add_custom_command(
   DEPENDS ${BTF_DATA_HEX} ${FUNC_LIST_HEX} ${CONFIGURE_BTF_HEADERS})
 
 add_custom_target(debuginfo_btf_data DEPENDS ${BTF_DATA_H})
+
+# BTF doesn't support C++, so we only generate a data_source_cxx executable
+# to run the field_analyser tests on.
+add_executable(data_source_cxx data_source_cxx.cpp)
+target_compile_options(data_source_cxx PRIVATE -g)

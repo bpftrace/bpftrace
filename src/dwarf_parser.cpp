@@ -10,6 +10,7 @@
 #include <lldb/API/LLDB.h>
 #include <llvm/Config/llvm-config.h>
 #include <memory>
+#include <queue>
 #include <string>
 
 namespace bpftrace {
@@ -181,27 +182,21 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
         default:
           return CreateNone();
       }
-      break;
     }
     case lldb::eTypeClassEnumeration:
       return CreateUInt(bit_size);
     case lldb::eTypeClassPointer:
-    case lldb::eTypeClassReference: {
-      if (auto inner_type = type.GetPointeeType()) {
-        return CreatePointer(get_stype(inner_type, false));
-      }
-      // void *
-      return CreatePointer(CreateNone());
-    }
+      return CreatePointer(get_stype(type.GetPointeeType(), false));
+    case lldb::eTypeClassReference:
+      return CreateReference(get_stype(type.GetDereferencedType(), true));
     case lldb::eTypeClassClass:
     case lldb::eTypeClassStruct:
     case lldb::eTypeClassUnion: {
       auto name = get_type_name(type);
-      auto result = CreateRecord(
-          name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
+      auto str = bpftrace_->structs.LookupOrAdd(name, bit_size / 8);
       if (resolve_structs)
-        resolve_fields(result);
-      return result;
+        resolve_fields(str.lock(), type);
+      return CreateRecord(name, str);
     }
     case lldb::eTypeClassArray: {
       auto inner_type = type.GetArrayElementType();
@@ -236,6 +231,11 @@ SizedType Dwarf::get_stype(const std::string &type_name)
   return CreateNone();
 }
 
+struct Subobject {
+  lldb::SBType type;
+  size_t offset;
+};
+
 void Dwarf::resolve_fields(const SizedType &type)
 {
   if (!type.IsRecordTy())
@@ -247,18 +247,53 @@ void Dwarf::resolve_fields(const SizedType &type)
     return;
 
   auto type_dbg = target_.FindFirstType(type_name.c_str());
-  if (!type_dbg)
+  if (!type_dbg.IsValid())
     return;
 
-  for (uint32_t i = 0; i < type_dbg.GetNumberOfFields(); i++) {
-    auto field = type_dbg.GetFieldAtIndex(i);
-    auto field_type = get_stype(field.GetType());
-    str->AddField(field.GetName() ?: "",
-                  get_stype(field.GetType()),
-                  field.GetOffsetInBytes(),
-                  resolve_bitfield(field),
-                  false);
+  resolve_fields(std::move(str), std::move(type_dbg));
+}
+
+void Dwarf::resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type)
+{
+  if (!str || str->HasFields())
+    return;
+
+  if (!type.IsValid())
+    return;
+
+  std::queue<Subobject> subobjects{ std::deque{
+      Subobject{ std::move(type), 0 } } };
+  while (!subobjects.empty()) {
+    auto &subobject = subobjects.front();
+
+    // Collect the fields into str, duplicates will be ignored.
+    for (uint32_t i = 0; i < subobject.type.GetNumberOfFields(); i++) {
+      auto field = subobject.type.GetFieldAtIndex(i);
+      str->AddField(field.GetName() ?: "",
+                    get_stype(field.GetType()),
+                    subobject.offset + field.GetOffsetInBytes(),
+                    resolve_bitfield(field),
+                    false);
+    }
+
+    // Queue the bases for further processing.
+    for (uint32_t i = 0; i < subobject.type.GetNumberOfDirectBaseClasses();
+         i++) {
+      auto base = subobject.type.GetDirectBaseClassAtIndex(i);
+      subobjects.push(Subobject{ base.GetType(),
+                                 subobject.offset + base.GetOffsetInBytes() });
+    }
+
+    subobjects.pop();
   }
+
+  // Order the fields for consistent output when printing record types.
+  std::sort(str->fields.begin(),
+            str->fields.end(),
+            [](const Field &a, const Field &b) {
+              return a.offset < b.offset ||
+                     (a.offset == b.offset && a.name < b.name);
+            });
 }
 
 std::optional<Bitfield> Dwarf::resolve_bitfield(lldb::SBTypeMember field)

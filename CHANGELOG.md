@@ -17,6 +17,8 @@ and this project adheres to
   - [#3285](https://github.com/bpftrace/bpftrace/pull/3285)
 - For-loops: Allow sharing variables between the main probe and the loop's body
   - [#3014](https://github.com/bpftrace/bpftrace/pull/3014)
+- Parse C++ Class and Inheritance from Debug Info
+  - [#3094](https://github.com/bpftrace/bpftrace/pull/3094)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

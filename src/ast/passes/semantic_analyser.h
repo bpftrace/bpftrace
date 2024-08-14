@@ -42,6 +42,23 @@ public:
   {
   }
 
+  [[deprecated("Use Visit(Node *const &n) instead.")]]
+  virtual inline void Visit(Node &n) override
+  {
+    n.accept(*this);
+  }
+
+  virtual inline void Visit(Node *const &n)
+  {
+    n->accept(*this);
+  }
+
+  virtual inline void Visit(Expression *&expr)
+  {
+    expr->accept(*this);
+    dereference_if_needed(expr);
+  }
+
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
@@ -125,6 +142,7 @@ private:
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
   void binop_array(Binop &op);
+  void dereference_if_needed(Expression *&expr);
 
   bool has_error() const;
   bool in_loop(void)

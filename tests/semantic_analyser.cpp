@@ -14,6 +14,7 @@ namespace test {
 namespace semantic_analyser {
 
 #include "btf_common.h"
+#include "dwarf_common.h"
 
 using ::testing::_;
 using ::testing::HasSubstr;
@@ -191,11 +192,12 @@ void test(std::string_view input)
   test(*bpftrace, true, driver, input, 0, {}, true, false);
 }
 
-void test(std::string_view input, std::string_view expected_ast)
+void test(BPFtrace &bpftrace,
+          std::string_view input,
+          std::string_view expected_ast)
 {
-  auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace, true, driver, input, 0, {}, true, false);
+  Driver driver(bpftrace);
+  test(bpftrace, true, driver, input, 0, {}, true, false);
 
   if (expected_ast[0] == '\n')
     expected_ast.remove_prefix(1); // Remove initial '\n'
@@ -213,6 +215,12 @@ void test(std::string_view input, std::string_view expected_ast)
   }
 
   EXPECT_EQ(expected_ast, out.str());
+}
+
+void test(std::string_view input, std::string_view expected_ast)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace, input, expected_ast);
 }
 
 void test_error(BPFtrace &bpftrace,
@@ -1684,6 +1692,23 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { $x++; }", 1);
   test("kprobe:f { @x = \"a\"; @x++; }", 10);
   test("kprobe:f { $x = \"a\"; $x++; }", 10);
+}
+
+class semantic_analyser_dwarf : public test_dwarf {};
+
+TEST_F(semantic_analyser_dwarf, reference_into_deref)
+{
+  auto uprobe = "uprobe:" + std::string(cxx_bin_) + ":cpp:func_1";
+
+  BPFtrace bpftrace;
+  test(bpftrace, uprobe + " { args.c }", R"(
+Program
+ )" + uprobe + R"(
+  dereference
+   . :: [Child *, AS(user)]
+    builtin: args :: [struct )" + uprobe + R"(_args, ctx: 1, AS(user)]
+    c
+)");
 }
 
 TEST(semantic_analyser, printf)

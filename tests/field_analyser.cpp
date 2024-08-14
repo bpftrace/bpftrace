@@ -384,6 +384,17 @@ TEST_F(field_analyser_dwarf, uprobe_args)
   test(bpftrace, uprobe + ":func_* { $x = args.a; }", 1);
 }
 
+static void CheckFieldsOrderedByOffset(const Fields &fields)
+{
+  // Check order of the fields for consistent output when printing record types.
+  EXPECT_TRUE(std::is_sorted(
+      fields.begin(), fields.end(), [](const Field &a, const Field &b) {
+        // We accept fields that have the same offset, but different names.
+        // Check first that the offsets are ordered, then the names.
+        return a.offset < b.offset || (a.offset == b.offset && a.name < b.name);
+      }));
+}
+
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   BPFtrace bpftrace;
@@ -396,6 +407,7 @@ TEST_F(field_analyser_dwarf, parse_struct)
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
   ASSERT_EQ(str->size, 16);
+  CheckFieldsOrderedByOffset(str->fields);
 
   ASSERT_TRUE(str->HasField("a"));
   ASSERT_TRUE(str->GetField("a").type.IsIntTy());
@@ -426,6 +438,8 @@ TEST_F(field_analyser_dwarf, parse_arrays)
 
   EXPECT_EQ(arrs->size, 64);
   ASSERT_EQ(arrs->fields.size(), 6U);
+  CheckFieldsOrderedByOffset(arrs->fields);
+
   ASSERT_TRUE(arrs->HasField("int_arr"));
   ASSERT_TRUE(arrs->HasField("char_arr"));
   ASSERT_TRUE(arrs->HasField("ptr_arr"));
@@ -483,6 +497,157 @@ TEST_F(field_analyser_dwarf, parse_arrays)
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
 }
 
+static void CheckParentFields(const std::shared_ptr<Struct> &cls,
+                              bool is_d_shadowed = false)
+{
+  EXPECT_TRUE(cls->HasField("a"));
+  EXPECT_TRUE(cls->GetField("a").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("a").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("a").offset, 0);
+
+  EXPECT_TRUE(cls->HasField("b"));
+  EXPECT_TRUE(cls->GetField("b").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("b").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("b").offset, 4);
+
+  EXPECT_TRUE(cls->HasField("c"));
+  EXPECT_TRUE(cls->GetField("c").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("c").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("c").offset, 8);
+
+  // The Child class also has a field 'd', which shadows the Parent's.
+  if (!is_d_shadowed) {
+    EXPECT_TRUE(cls->HasField("d"));
+    EXPECT_TRUE(cls->GetField("d").type.IsIntTy());
+    EXPECT_EQ(cls->GetField("d").type.GetSize(), 4);
+    EXPECT_EQ(cls->GetField("d").offset, 12);
+  }
+}
+
+static void CheckChildFields(const std::shared_ptr<Struct> &cls)
+{
+  CheckParentFields(cls, true);
+
+  // Child::d masks Parent::d
+  EXPECT_TRUE(cls->HasField("d"));
+  EXPECT_TRUE(cls->GetField("d").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("d").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("d").offset, 16);
+
+  EXPECT_TRUE(cls->HasField("e"));
+  EXPECT_TRUE(cls->GetField("e").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("e").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("e").offset, 20);
+
+  EXPECT_TRUE(cls->HasField("f"));
+  EXPECT_TRUE(cls->GetField("f").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("f").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("f").offset, 24);
+}
+
+static void CheckGrandChildFields(const std::shared_ptr<Struct> &cls)
+{
+  CheckChildFields(cls);
+
+  EXPECT_TRUE(cls->HasField("g"));
+  EXPECT_TRUE(cls->GetField("g").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("g").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("g").offset, 28);
+}
+
+TEST_F(field_analyser_dwarf, parse_class)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_1 { $x = args.p->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("Parent"));
+  auto cls = bpftrace.structs.Lookup("Parent").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  EXPECT_EQ(cls->fields.size(), 4);
+  EXPECT_EQ(cls->size, 16);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckParentFields(cls);
+}
+
+TEST_F(field_analyser_dwarf, parse_inheritance)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_1 { $x = args.c->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("Child"));
+  auto cls = bpftrace.structs.Lookup("Child").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  // The Child class has a total of 7 fields:
+  //   Parent: a, b, c, d
+  //   Child: d, e, f
+  // Child::d masks Parent::d, so only 6 fields are listed.
+  ASSERT_EQ(cls->fields.size(), (4 - 1) + 3);
+  ASSERT_EQ(cls->size, 16 + 12);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckChildFields(cls);
+}
+
+TEST_F(field_analyser_dwarf, parse_inheritance_chain)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_2 { $x = args.lc->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("GrandChild"));
+  auto cls = bpftrace.structs.Lookup("GrandChild").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  // The GrandChild class has a total of 8 fields:
+  //   Parent: a, b, c, d
+  //   Child: d, e, f
+  //   GrandChild: g
+  // Child::d masks Parent::d, so only 7 fields are listed.
+  ASSERT_EQ(cls->fields.size(), (4 - 1) + 3 + 1);
+  ASSERT_EQ(cls->size, 16 + 12 + 4);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckGrandChildFields(cls);
+}
+
+TEST_F(field_analyser_dwarf, parse_inheritance_multi)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(cxx_bin_);
+  test(bpftrace, uprobe + ":cpp:func_3 { $x = args.m->abc; }", 0);
+
+  std::shared_ptr<Struct> cls;
+  ASSERT_TRUE(bpftrace.structs.Has("struct Multi"));
+  cls = bpftrace.structs.Lookup("struct Multi").lock();
+
+  ASSERT_TRUE(cls->HasFields());
+  ASSERT_EQ(cls->fields.size(), 7);
+  ASSERT_EQ(cls->size, 32);
+  CheckFieldsOrderedByOffset(cls->fields);
+
+  CheckParentFields(cls);
+
+  EXPECT_TRUE(cls->HasField("x"));
+  EXPECT_TRUE(cls->GetField("x").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("x").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("x").offset, 16);
+
+  EXPECT_TRUE(cls->HasField("abc"));
+  EXPECT_TRUE(cls->GetField("abc").type.IsIntTy());
+  EXPECT_EQ(cls->GetField("abc").type.GetSize(), 4);
+  EXPECT_EQ(cls->GetField("abc").offset, 20);
+
+  EXPECT_TRUE(cls->HasField("rabc"));
+  EXPECT_TRUE(cls->GetField("rabc").type.IsRefTy());
+  EXPECT_EQ(cls->GetField("rabc").type.GetSize(), 8);
+  EXPECT_EQ(cls->GetField("rabc").offset, 24);
+}
+
 TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
 {
   GTEST_SKIP() << "Anonymous fields not supported #3084";
@@ -497,6 +662,7 @@ TEST_F(field_analyser_dwarf, parse_struct_anonymous_fields)
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
   ASSERT_EQ(str->size, 72);
+  CheckFieldsOrderedByOffset(str->fields);
 
   ASSERT_TRUE(str->HasField("a"));
   ASSERT_TRUE(str->GetField("a").type.IsIntTy());
@@ -524,6 +690,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
   ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  CheckFieldsOrderedByOffset(task_struct->fields);
 
   // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
   // return from function so that these are in fact checked accesses.
