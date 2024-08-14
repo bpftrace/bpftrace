@@ -340,7 +340,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
 
   bpftrace.bytecode_ = BpfBytecode(
       std::span<uint8_t>{ btaot_section + hdr->elf_off, hdr->elf_len },
-      bpftrace);
+      bpftrace.config_.get(ConfigKeyInt::log_size));
   if (err)
     goto out;
 
