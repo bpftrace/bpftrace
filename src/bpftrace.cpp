@@ -926,6 +926,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   bytecode_ = std::move(bytecode);
   bytecode_.set_map_ids(resources);
+  bytecode_.update_global_vars(*this);
 
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, config_);

@@ -12,18 +12,18 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(std::span<uint8_t> elf, BPFtrace &bpftrace)
-    : BpfBytecode(std::as_bytes(elf), bpftrace)
+BpfBytecode::BpfBytecode(std::span<uint8_t> elf, size_t log_size)
+    : BpfBytecode(std::as_bytes(elf), log_size)
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<char> elf, BPFtrace &bpftrace)
-    : BpfBytecode(std::as_bytes(elf), bpftrace)
+BpfBytecode::BpfBytecode(std::span<char> elf, size_t log_size)
+    : BpfBytecode(std::as_bytes(elf), log_size)
 {
 }
 
-BpfBytecode::BpfBytecode(std::span<const std::byte> elf, BPFtrace &bpftrace)
-    : log_size_(bpftrace.config_.get(ConfigKeyInt::log_size))
+BpfBytecode::BpfBytecode(std::span<const std::byte> elf, size_t log_size)
+    : log_size_(log_size)
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -42,31 +42,16 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf, BPFtrace &bpftrace)
   if (!bpf_object_)
     LOG(BUG) << "The produced ELF is not a valid BPF object";
 
-  struct bpf_map *global_vars_map = nullptr;
-  bool needs_global_vars = !bpftrace.resources.needed_global_vars.empty();
-
   // Discover maps
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
-    if (needs_global_vars) {
-      std::string_view name = bpf_map__name(m);
-      // there are some random chars in the beginning of the map name
-      if (name.npos != name.find(globalvars::SECTION_NAME)) {
-        global_vars_map = m;
-        continue;
-      }
+    std::string_view name = bpf_map__name(m);
+    // there are some random chars in the beginning of the map name
+    if (name.npos != name.find(globalvars::SECTION_NAME)) {
+      global_vars_map_ = m;
+      continue;
     }
     maps_.emplace(bpftrace_map_name(bpf_map__name(m)), m);
-  }
-
-  if (needs_global_vars) {
-    if (!global_vars_map) {
-      LOG(BUG) << "No map found for " << globalvars::SECTION_NAME
-               << " which is needed to set global variables";
-    }
-    globalvars::update_global_vars(bpf_object_.get(),
-                                   global_vars_map,
-                                   bpftrace);
   }
 
   // Discover programs
@@ -110,6 +95,18 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
 {
   return const_cast<BpfProgram &>(
       const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
+}
+
+void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
+{
+  bool needs_global_vars = !bpftrace.resources.needed_global_vars.empty();
+  if (!needs_global_vars)
+    return;
+  if (!global_vars_map_) {
+    LOG(BUG) << "No map found for " << globalvars::SECTION_NAME
+             << " which is needed to set global variables";
+  }
+  globalvars::update_global_vars(bpf_object_.get(), global_vars_map_, bpftrace);
 }
 
 namespace {

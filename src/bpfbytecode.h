@@ -24,15 +24,16 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(std::span<const std::byte> elf, BPFtrace &bpftrace);
-  BpfBytecode(std::span<uint8_t> elf, BPFtrace &bpftrace);
-  BpfBytecode(std::span<char> elf, BPFtrace &bpftrace);
+  BpfBytecode(std::span<const std::byte> elf, size_t log_size);
+  BpfBytecode(std::span<uint8_t> elf, size_t log_size);
+  BpfBytecode(std::span<char> elf, size_t log_size);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
   BpfBytecode(BpfBytecode &&) = default;
   BpfBytecode &operator=(BpfBytecode &&) = default;
 
+  void update_global_vars(BPFtrace &bpftrace);
   void load_progs(const RequiredResources &resources,
                   const BTF &btf,
                   BPFfeature &feature,
@@ -72,6 +73,7 @@ private:
   std::map<std::string, BpfMap> maps_;
   std::map<int, BpfMap *> maps_by_id_;
   std::map<std::string, BpfProgram> programs_;
+  struct bpf_map *global_vars_map_ = nullptr;
 
   size_t log_size_;
 };
