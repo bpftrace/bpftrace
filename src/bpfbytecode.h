@@ -24,9 +24,9 @@ public:
   BpfBytecode()
   {
   }
-  BpfBytecode(std::span<const std::byte> elf, size_t log_size);
-  BpfBytecode(std::span<uint8_t> elf, size_t log_size);
-  BpfBytecode(std::span<char> elf, size_t log_size);
+  BpfBytecode(std::span<const std::byte> elf);
+  BpfBytecode(std::span<uint8_t> elf);
+  BpfBytecode(std::span<char> elf);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
@@ -74,8 +74,6 @@ private:
   std::map<int, BpfMap *> maps_by_id_;
   std::map<std::string, BpfProgram> programs_;
   struct bpf_map *global_vars_map_ = nullptr;
-
-  size_t log_size_;
 };
 
 } // namespace bpftrace

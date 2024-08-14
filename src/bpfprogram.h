@@ -16,7 +16,7 @@ class BPFtrace;
 // 'struct bpf_prog'.
 class BpfProgram {
 public:
-  explicit BpfProgram(struct bpf_program *bpf_prog, size_t log_size);
+  explicit BpfProgram(struct bpf_program *bpf_prog);
 
   void set_prog_type(const Probe &probe, BPFfeature &feature);
   void set_expected_attach_type(const Probe &probe, BPFfeature &feature);
@@ -27,17 +27,14 @@ public:
 
   int fd() const;
   struct bpf_program *bpf_prog() const;
-  char *log_buf() const;
 
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;
   BpfProgram(BpfProgram &&) = default;
-  BpfProgram &operator=(BpfProgram &&) = delete;
+  BpfProgram &operator=(BpfProgram &&) = default;
 
 private:
   struct bpf_program *bpf_prog_;
-
-  std::unique_ptr<char[]> log_buf_;
 };
 
 } // namespace bpftrace
