@@ -82,6 +82,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
     - uses: DeterminateSystems/magic-nix-cache-action@v6
+    - uses: ./.github/actions/configure_kvm
     - name: Load kernel modules
       # nf_tables and xfs are necessary for testing kernel modules BTF support
       run: |
