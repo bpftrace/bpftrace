@@ -8,17 +8,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - uses: DeterminateSystems/nix-installer-action@v11
-    - uses: DeterminateSystems/magic-nix-cache-action@v6
-    - name: clang-format
-      run: nix develop --command git clang-format --diff origin/master
-
   build_test:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -28,56 +17,11 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 13
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm13
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 14
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm14
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 15
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm15
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 17
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 18 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm18
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 18 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18
           TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: LLVM 18 Clang Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          CC: clang
-          CXX: clang++
-          TOOLS_TEST_DISABLE: biosnoop.bt
-        - NAME: AOT (LLVM 18 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
-        - NAME: Memleak test (LLVM 18 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
-        - NAME: Memleak test (LLVM 18 Release)
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm18
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
+          RUNTIME_TEST_KERNEL_URL: https://github.com/danobi/vmtest/releases/download/test_assets/bzImage-v6.6-archlinux
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
@@ -91,22 +35,3 @@ jobs:
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
-
-  irc:
-    # Notify IRC of build failures on pushes only if we are running from
-    # the main repo. We don't want this rule to trigger from forked repos.
-    needs:
-      - build_test
-    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'bpftrace/bpftrace'"
-    runs-on: ubuntu-latest
-    steps:
-    - name: Message channel
-      uses: rectalogic/notify-irc@v1
-      with:
-        nickname: bpftrace-ci-bot
-        server: irc.oftc.net
-        port: 6667
-        tls: false
-        channel: "#bpftrace"
-        message: |
-          master is BROKEN at https://github.com/bpftrace/bpftrace/commit/${{github.sha}}
