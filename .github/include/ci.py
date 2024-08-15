@@ -42,6 +42,7 @@ RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
 CI = os.environ.get("CI", "false")
+NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
@@ -219,6 +220,43 @@ def tests_finish(results: List[TestResult]):
         print(output.getvalue())
 
 
+def run_runtime_tests():
+    """Runs runtime tests, under a controlled kernel if requested"""
+    script = "./tests/runtime-tests.sh"
+
+    if NIX_TARGET_KERNEL:
+        # Bring kernel into nix store then grab the path
+        subprocess.run([nix(), "build", NIX_TARGET_KERNEL], check=True)
+        eval = subprocess.run(
+            [nix(), "eval", "--raw", NIX_TARGET_KERNEL],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        # nf_tables and xfs are necessary for testing kernel modules BTF support
+        modules = ["kvm", "nf_tables", "xfs"]
+        modprobe = f"modprobe -d {eval.stdout} -a {' '.join(modules)}"
+
+        c = f"{modprobe} && {script}"
+        cmd = ["vmtest", "-k", f"{eval.stdout}/bzImage", c]
+    else:
+        cmd = [script]
+
+    shell(
+        cmd,
+        # Don't need root if running tests in a VM
+        as_root=not NIX_TARGET_KERNEL,
+        cwd=Path(BUILD_DIR),
+        env={
+            "CI": CI,
+            "RUNTIME_TEST_COLOR": "yes",
+            # Disable UI to make CI and manual runs behave identically
+            "VMTEST_NO_UI": "1",
+        },
+    )
+
+
 def test():
     """
     Run all requested tests
@@ -246,15 +284,7 @@ def test():
         test_one(
             "runtime-tests.sh",
             lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                ["./tests/runtime-tests.sh"],
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "CI": CI,
-                    "RUNTIME_TEST_COLOR": "yes",
-                },
-            ),
+            run_runtime_tests,
         )
     )
     results.append(
