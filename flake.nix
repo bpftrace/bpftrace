@@ -71,6 +71,23 @@
 
           pkgs = import nixpkgs { inherit system; };
 
+          # Download statically linked vmtest binary
+          arch = pkgs.lib.strings.removeSuffix "-linux" system;
+          vmtestVersion = "0.17.0";
+          vmtest = pkgs.stdenv.mkDerivation {
+            name = "vmtest";
+            version = vmtestVersion;
+            src = builtins.fetchurl {
+              url = "https://github.com/danobi/vmtest/releases/download/v${vmtestVersion}/vmtest-${arch}";
+              sha256 = "sha256:0fdc6can73jxhif2zf80ab05p77zj50nlxwkpi6a8s1ygxfcrkg1";
+            };
+            # Remove all other phases b/c we already have a prebuilt binary
+            phases = [ "installPhase" ];
+            installPhase = ''
+              install -m755 -D $src $out/bin/vmtest
+            '';
+          };
+
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
@@ -137,9 +154,11 @@
                   procps
                   python3
                   python3Packages.looseversion
+                  qemu_kvm
                   strace
                   unixtools.ping
                   util-linux
+                  vmtest
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
 
                 # Some hardening features (like _FORTIFY_SOURCE) requires building with
