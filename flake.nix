@@ -68,6 +68,21 @@
 
           pkgs = import nixpkgs { inherit system; };
 
+          # Download statically linked vmtest binary
+          arch = pkgs.lib.strings.removeSuffix "-linux" system;
+          vmtest = pkgs.stdenv.mkDerivation {
+            name = "vmtest";
+            src = builtins.fetchurl {
+              url = "https://github.com/danobi/vmtest/releases/download/v0.14.0/vmtest-${arch}";
+              sha256 = "0czx903v09mjgl6246g5yk2ljxfn9ilnyh2ni8phrrfv8l0npm8z";
+            };
+            # Remove all other phases b/c we already have a prebuilt binary
+            phases = [ "installPhase" ];
+            installPhase = ''
+              install -m755 -D $src $out/bin/vmtest
+            '';
+          };
+
           # Define lambda that returns a derivation for bpftrace given llvm package as input
           mkBpftrace =
             llvmPackages:
@@ -132,8 +147,10 @@
                   nftables
                   procps
                   python3
+                  qemu_kvm
                   strace
                   util-linux
+                  vmtest
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
               };
         in
