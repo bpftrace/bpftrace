@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 from typing import Callable, Dict, List, Optional, Union
+import urllib.request
 
 BUILD_DIR = "build-ci"
 
@@ -44,6 +45,7 @@ CXX = os.environ.get("CXX", "c++")
 GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
 CI = os.environ.get("CI", "false")
 RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
+RUNTIME_TEST_KERNEL_URL = os.environ.get("RUNTIME_TEST_KERNEL_URL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
@@ -221,6 +223,32 @@ def tests_finish(results: List[TestResult]):
         print(output.getvalue())
 
 
+def run_runtime_tests():
+    """Runs runtime tests, downloading a kernel as necessary"""
+    vmtest_args = []
+    if RUNTIME_TEST_KERNEL_URL:
+        with urllib.request.urlopen(RUNTIME_TEST_KERNEL_URL) as resp:
+            with open(f"{BUILD_DIR}/bzImage", "wb") as f:
+                f.write(resp.read())
+        vmtest_args = [
+            "vmtest",
+            "-k",
+            "./bzImage",
+            "--",
+        ]
+
+    shell(
+        vmtest_args + ["./tests/runtime-tests.sh"],
+        # Don't need root if running tests in a VM
+        as_root=not vmtest_args,
+        cwd=Path(BUILD_DIR),
+        env={
+            "CI": CI,
+            "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
+        },
+    )
+
+
 def test():
     """
     Run all requested tests
@@ -248,15 +276,7 @@ def test():
         test_one(
             "runtime-tests.sh",
             lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                ["./tests/runtime-tests.sh"],
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "CI": CI,
-                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
-                },
-            ),
+            run_runtime_tests,
         )
     )
     results.append(
