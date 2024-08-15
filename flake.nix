@@ -71,6 +71,23 @@
 
           pkgs = import nixpkgs { inherit system; };
 
+          # Download statically linked vmtest binary
+          arch = pkgs.lib.strings.removeSuffix "-linux" system;
+          vmtestVersion = "0.18.0";
+          vmtest = pkgs.stdenv.mkDerivation {
+            name = "vmtest";
+            version = vmtestVersion;
+            src = builtins.fetchurl {
+              url = "https://github.com/danobi/vmtest/releases/download/v${vmtestVersion}/vmtest-${arch}";
+              sha256 = "sha256:1wv49fq7n820jj7zyvbvrrzg2vwvyy8kb3gfw1lg55rzfqzhl9v3";
+            };
+            # Remove all other phases b/c we already have a prebuilt binary
+            phases = [ "installPhase" ];
+            installPhase = ''
+              install -m755 -D $src $out/bin/vmtest
+            '';
+          };
+
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
@@ -124,11 +141,11 @@
                   binutils
                   bpftools
                   coreutils
-                  # Needed for the nix-aware "wrapped" clang-tidy
-                  clang-tools
+                  clang-tools  # Needed for the nix-aware "wrapped" clang-tidy
                   gawk
                   git
                   gnugrep
+                  go  # For runtime tests
                   iproute2
                   kmod
                   # For git-clang-format
@@ -137,12 +154,12 @@
                   procps
                   python3
                   python3Packages.looseversion
+                  qemu_kvm
+                  rustc  # For runtime tests
                   strace
                   unixtools.ping
                   util-linux
-                  # For runtime tests
-                  rustc
-                  go
+                  vmtest
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
 
                 # Some hardening features (like _FORTIFY_SOURCE) requires building with
