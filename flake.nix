@@ -64,7 +64,9 @@
             });
 
           # We need to use two overlays so that bcc inherits the our pinned libbpf
-          pkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay ]; };
+          overlayedPkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay ]; };
+
+          pkgs = import nixpkgs { inherit system; };
 
           # Define lambda that returns a derivation for bpftrace given llvm package as input
           mkBpftrace =
@@ -80,11 +82,9 @@
                 buildInputs = with llvmPackages;
                   [
                     asciidoctor
-                    bcc
                     cereal
                     elfutils
                     gtest
-                    libbpf
                     libbfd
                     libclang
                     libelf
@@ -94,6 +94,8 @@
                     libsystemtap
                     lldb
                     llvm
+                    overlayedPkgs.bcc
+                    overlayedPkgs.libbpf
                     pahole
                     xxd
                     zlib
