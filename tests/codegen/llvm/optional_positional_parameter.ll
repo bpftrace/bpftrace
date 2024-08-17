@@ -44,12 +44,12 @@ lookup_str_failure:                               ; preds = %entry
   ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_str_map, i32 1024, ptr null)
+  call void @llvm.memset.p0.i64(ptr align 1 %lookup_str_map, i8 0, i64 64, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
   call void @llvm.memset.p0.i64(ptr align 1 %str, i8 0, i64 1, i1 false)
   store [1 x i8] zeroinitializer, ptr %str, align 1
   %1 = ptrtoint ptr %str to i64
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 1024, i64 %1)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %lookup_str_map, i32 64, i64 %1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
@@ -102,10 +102,10 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !25 = !{!5, !11, !16, !26}
 !26 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !27, size: 64, offset: 192)
 !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 64)
-!28 = !DICompositeType(tag: DW_TAG_array_type, baseType: !29, size: 8192, elements: !30)
+!28 = !DICompositeType(tag: DW_TAG_array_type, baseType: !29, size: 512, elements: !30)
 !29 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !30 = !{!31}
-!31 = !DISubrange(count: 1024, lowerBound: 0)
+!31 = !DISubrange(count: 64, lowerBound: 0)
 !32 = !DIGlobalVariableExpression(var: !33, expr: !DIExpression())
 !33 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !34, isLocal: false, isDefinition: true)
 !34 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !35)

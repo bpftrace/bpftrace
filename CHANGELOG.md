@@ -34,8 +34,6 @@ and this project adheres to
   - [#3249](https://github.com/bpftrace/bpftrace/pull/3249)
 - Faster map access for keyless maps by using BPF_MAP_TYPE_ARRAY
   - [#3300](https://github.com/bpftrace/bpftrace/pull/3300)
-- Increase default string size from 64 to 1024
-  - [#3371](https://github.com/bpftrace/bpftrace/pull/3371)
 #### Deprecated
 #### Removed
 - Remove the `-dd` CLI option

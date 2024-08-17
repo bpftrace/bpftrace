@@ -3850,7 +3850,11 @@ uprobe:/bin/sh:f { buf(arg0) }
 
 TEST(semantic_analyser, large_scratch_variables)
 {
-  test_error("BEGIN { $s = str(0, 999) }", R"(
+  auto bpftrace = get_mock_bpftrace();
+  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  configs.set(ConfigKeyInt::max_strlen, 1024);
+
+  test_error(*bpftrace, "BEGIN { $s = str(0, 999) }", R"(
 stdin:1:9-25: ERROR: Value is too big (999 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
 
 Examples:
@@ -3862,7 +3866,7 @@ BEGIN { $s = str(0, 999) }
         ~~~~~~~~~~~~~~~~
 )");
 
-  test_error("BEGIN { $s = str(0) }", R"(
+  test_error(*bpftrace, "BEGIN { $s = str(0) }", R"(
 stdin:1:9-20: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
 
 Examples:
@@ -3874,7 +3878,7 @@ BEGIN { $s = str(0) }
         ~~~~~~~~~~~
 )");
 
-  test_error("BEGIN { $l = 1; $b = buf(0, $l) }", R"(
+  test_error(*bpftrace, "BEGIN { $l = 1; $b = buf(0, $l) }", R"(
 stdin:1:17-32: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
 
 Examples:
@@ -3886,7 +3890,7 @@ BEGIN { $l = 1; $b = buf(0, $l) }
                 ~~~~~~~~~~~~~~~
 )");
 
-  test_error("kfunc:foo { $p = path((uint8 *)0) }", R"(
+  test_error(*bpftrace, "kfunc:foo { $p = path((uint8 *)0) }", R"(
 stdin:1:13-34: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
 
 Examples:
