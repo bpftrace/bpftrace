@@ -24,6 +24,8 @@ aot.call.print_map_item_tuple
 aot.call.print_non_map_builtin
 aot.call.print_non_map_struct_kfunc
 aot.call.print_non_map_tuple
+# Same problem as #3392
+aot.call.str_big_tuple
 aot.call.str_truncated
 aot.call.str_truncated_custom
 aot.call.strftime

@@ -3443,7 +3443,7 @@ system.
 
 === max_strlen
 
-Default: 1024
+Default: 64
 
 The maximum length (in bytes) for values created by `str()`, `buf()` and `path()`.
 

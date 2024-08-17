@@ -7,7 +7,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
-%buffer_1020_t = type <{ i32, [1020 x i8] }>
+%buffer_60_t = type <{ i32, [60 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -24,8 +24,8 @@ entry:
   %lookup_str_key = alloca i32, align 4
   %1 = getelementptr i64, ptr %0, i64 13
   %arg1 = load volatile i64, ptr %1, align 8
-  %length.cmp = icmp ule i64 %arg1, 1020
-  %length.select = select i1 %length.cmp, i64 %arg1, i64 1020
+  %length.cmp = icmp ule i64 %arg1, 60
+  %length.select = select i1 %length.cmp, i64 %arg1, i64 60
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_str_key)
   store i32 0, ptr %lookup_str_key, align 4
   %lookup_str_map = call ptr inttoptr (i64 1 to ptr)(ptr @str_buffer, ptr %lookup_str_key)
@@ -37,14 +37,14 @@ lookup_str_failure:                               ; preds = %entry
   ret i64 0
 
 lookup_str_merge:                                 ; preds = %entry
-  %2 = getelementptr %buffer_1020_t, ptr %lookup_str_map, i32 0, i32 0
+  %2 = getelementptr %buffer_60_t, ptr %lookup_str_map, i32 0, i32 0
   %3 = trunc i64 %length.select to i32
   store i32 %3, ptr %2, align 4
-  %4 = getelementptr %buffer_1020_t, ptr %lookup_str_map, i32 0, i32 1
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1020, ptr null)
+  %4 = getelementptr %buffer_60_t, ptr %lookup_str_map, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %4, i8 0, i64 60, i1 false)
   %5 = getelementptr i64, ptr %0, i64 14
   %arg0 = load volatile i64, ptr %5, align 8
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 %3, i64 %arg0)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 %3, i64 %arg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %lookup_str_map, i64 0)
@@ -58,8 +58,12 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!55}
 !llvm.module.flags = !{!57}
@@ -85,10 +89,10 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !18 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 8192, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 512, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 1024, lowerBound: 0)
+!24 = !DISubrange(count: 64, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
 !27 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !28)
