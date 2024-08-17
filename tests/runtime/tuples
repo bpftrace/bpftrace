@@ -25,7 +25,7 @@ TIMEOUT 5
 
 NAME complex tuple 1
 PROG BEGIN { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555)); exit(); }
-EXPECT (-100, 100, abcdef, 3, 1, -10, 10, -555)
+EXPECT (-100, 100, "abcdef", 3, 1, -10, 10, -555)
 TIMEOUT 5
 
 NAME tuple struct sizing 1
@@ -80,8 +80,8 @@ TIMEOUT 5
 # Careful with '(' and ')', they are read by the test engine as a regex group,
 # so make sure to escape them.
 NAME tuple print
-PROG BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }
-EXPECT @: (1, 2, string, (4, 5))
+PROG BEGIN { @ = (1, 2, "string", (4, 5), strerror(22)); exit(); }
+EXPECT @: (1, 2, "string", (4, 5), "Invalid argument")
 TIMEOUT 5
 
 NAME tuple strftime type is packed
