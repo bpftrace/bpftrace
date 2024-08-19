@@ -807,6 +807,7 @@ void CodegenLLVM::visit(Call &call)
     uint64_t fixed_buffer_length = max_strlen - sizeof(AsyncEvent::Buf);
     Value *max_length = b_.getInt64(fixed_buffer_length);
     Value *length;
+    bool size_is_known = true;
 
     if (call.vargs.size() > 1) {
       auto &arg = *call.vargs.at(1);
@@ -821,8 +822,11 @@ void CodegenLLVM::visit(Call &call)
           cmp, proposed_length, max_length, "length.select");
 
       auto literal_length = bpftrace_.get_int_literal(&arg);
-      if (literal_length)
+      if (literal_length) {
         fixed_buffer_length = *literal_length;
+      } else {
+        size_is_known = false;
+      }
     } else {
       auto &arg = *call.vargs.at(0);
       fixed_buffer_length = arg.type.GetNumElements() *
@@ -854,12 +858,13 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(call.vargs.front());
     auto arg0 = call.vargs.front();
-    b_.CreateProbeRead(ctx_,
-                       buf_data_offset,
-                       length,
-                       expr_,
-                       find_addrspace_stack(arg0->type),
-                       call.loc);
+
+    if (inBpfMemory(arg0->type) && size_is_known) {
+      b_.CreateMemcpyBPF(buf_data_offset, expr_, fixed_buffer_length);
+    } else {
+      b_.CreateProbeRead(
+          ctx_, buf_data_offset, length, expr_, arg0->type.GetAS(), call.loc);
+    }
 
     expr_ = buf;
   } else if (call.func == "path") {
