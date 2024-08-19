@@ -14,7 +14,7 @@ bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as a bac
 - [Contribute](#contribute)
 - [Development](#development)
 - [Support](#support)
-- [Probtypes](#probe-types)
+- [Probe types](#probe-types)
 - [Plugins](#plugins)
 - [License](#license)
 
