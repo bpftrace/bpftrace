@@ -135,6 +135,11 @@
                   strace
                   util-linux
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
+
+                # Some hardening features (like _FORTIFY_SOURCE) requires building with
+                # optimizations on. That's fine for actual flake build, but for most of the
+                # dev builds we do in nix shell, it just causes warning spew.
+                hardeningDisable = [ "all" ];
               };
         in
         {
