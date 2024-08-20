@@ -1014,6 +1014,11 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
+  if (dry_run) {
+    request_finalize();
+    return 0;
+  }
+
   // Kick the child to execute the command.
   if (child_) {
     try {
@@ -1037,9 +1042,6 @@ int BPFtrace::run(BpfBytecode bytecode)
     LOG(WARNING) << "Failed to send readiness notification, ignoring: "
                  << strerror(-err);
 #endif
-
-  if (dry_run)
-    exitsig_recv = true;
 
   if (has_iter_) {
     int err = run_iter();
