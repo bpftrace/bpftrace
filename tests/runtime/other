@@ -316,3 +316,9 @@ NAME per_cpu_map_cast
 PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); exit();}
 EXPECT 1-10
 TIMEOUT 5
+
+NAME dry run empty output
+RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
+EXPECT_NONE hello
+EXPECT_NONE @: 0
+TIMEOUT 5
