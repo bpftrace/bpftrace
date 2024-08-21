@@ -12,7 +12,6 @@
 namespace bpftrace::test::semantic_analyser {
 
 #include "btf_common.h"
-#include "dwarf_common.h"
 
 using ::testing::_;
 using ::testing::HasSubstr;
@@ -1692,6 +1691,9 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { $x = \"a\"; $x++; }", 10);
 }
 
+#ifdef HAVE_LIBLLDB
+#include "dwarf_common.h"
+
 class semantic_analyser_dwarf : public test_dwarf {};
 
 TEST_F(semantic_analyser_dwarf, reference_into_deref)
@@ -1708,6 +1710,8 @@ Program
     c
 )");
 }
+
+#endif // HAVE_LIBLLDB
 
 TEST(semantic_analyser, printf)
 {
