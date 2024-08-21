@@ -1265,6 +1265,9 @@ void BPFtrace::handle_event_loss()
 
 int BPFtrace::print_maps()
 {
+  if (dry_run)
+    return 0;
+
   for (auto &map : bytecode_.maps()) {
     if (!map.second.is_printable())
       continue;
