@@ -611,8 +611,8 @@ offsetof_expr:
                 ;
 
 int:
-                MINUS INT    { $$ = driver.ctx.make_node<ast::Integer>((int64_t)(~(uint64_t)($2) + 1), @$); }
-        |       INT          { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
+                MINUS INT    { $$ = driver.ctx.make_node<ast::Integer>((int64_t)(~(uint64_t)($2) + 1), @$, true); }
+        |       INT          { $$ = driver.ctx.make_node<ast::Integer>($1, @$, false); }
                 ;
 
 keyword:

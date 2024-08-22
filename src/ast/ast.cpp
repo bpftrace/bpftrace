@@ -50,7 +50,8 @@ MAKE_ACCEPT(Program)
 
 #undef MAKE_ACCEPT
 
-Integer::Integer(int64_t n, location loc) : Expression(loc), n(n)
+Integer::Integer(int64_t n, location loc, bool is_negative)
+    : Expression(loc), n(n), is_negative(is_negative)
 {
   is_literal = true;
 }

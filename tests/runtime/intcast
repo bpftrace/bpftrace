@@ -14,3 +14,8 @@ NAME Casting ints
 PROG BEGIN{printf("Values: %d %d\n", (uint8) -10, (uint16) 131087); exit(); }
 EXPECT Values: 246 15
 TIMEOUT 5
+
+NAME Implicit truncation of ints
+PROG BEGIN{ $a = (int16)0; $a = 2; $b = (int8)3; $b = -100; print(($a, $b)); exit(); }
+EXPECT (2, -100)
+TIMEOUT 5

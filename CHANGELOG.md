@@ -57,6 +57,8 @@ and this project adheres to
   - [#3381](https://github.com/bpftrace/bpftrace/pull/3381)
 - Fix BTF/DWARF parsing for structs contained in arrays
   - [#3422](https://github.com/bpftrace/bpftrace/pull/3422)
+- Fix integer comparisons and auto casting for scratch variables
+  - [#3416](https://github.com/bpftrace/bpftrace/pull/3416)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

@@ -106,9 +106,10 @@ class Integer : public Expression {
 public:
   DEFINE_ACCEPT
 
-  explicit Integer(int64_t n, location loc);
+  explicit Integer(int64_t n, location loc, bool is_negative = true);
 
   int64_t n;
+  bool is_negative;
 
 private:
   Integer(const Integer &other) = default;

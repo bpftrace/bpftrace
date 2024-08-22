@@ -559,12 +559,12 @@ std::weak_ptr<const Struct> SizedType::GetStruct() const
   return inner_struct_;
 }
 
-// Checks if values of this type can be copied into values of another type
-// Currently checks if strings in the other type (at corresponding places) are
-// larger.
 bool SizedType::FitsInto(const SizedType &t) const
 {
   if (IsStringTy() && t.IsStringTy())
+    return GetSize() <= t.GetSize();
+
+  if (IsIntegerTy() && t.IsIntegerTy() && (IsSigned() == t.IsSigned()))
     return GetSize() <= t.GetSize();
 
   if (IsTupleTy() && t.IsTupleTy()) {
