@@ -18,8 +18,6 @@ class BPFtrace;
 
 class Dwarf {
 public:
-  virtual ~Dwarf();
-
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
                                               std::string file_path);
 
@@ -32,8 +30,6 @@ public:
   void resolve_fields(const SizedType &type);
 
 private:
-  static std::atomic<size_t> instance_count;
-
   Dwarf(BPFtrace *bpftrace, std::string file_path);
 
   lldb::SBValueList function_params(const std::string &function);
@@ -43,6 +39,17 @@ private:
   void resolve_fields(std::shared_ptr<Struct> str, lldb::SBType type);
   std::optional<Bitfield> resolve_bitfield(lldb::SBTypeMember field);
 
+  // Initialize/Terminate liblldb globally with RAII
+  class InstanceCounter {
+  private:
+    static std::atomic<size_t> count;
+
+  public:
+    InstanceCounter();
+    virtual ~InstanceCounter();
+  };
+
+  InstanceCounter counter_;
   BPFtrace *bpftrace_;
   std::string file_path_;
 

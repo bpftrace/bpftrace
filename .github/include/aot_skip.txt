@@ -85,3 +85,4 @@ aot.variable.map nested tuple string resize
 aot.dwarf.uprobe inlined function - func
 aot.dwarf.uprobe inlined function - probe
 aot.dwarf.uprobe inlined function - ustack
+aot.dwarf.kprobe inlined function

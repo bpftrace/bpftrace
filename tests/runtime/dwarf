@@ -205,3 +205,10 @@ PROG struct Foo { int b; } uprobe:./testprogs/uprobe_test:uprobeFunction2 { prin
 EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
 BEFORE ./testprogs/uprobe_test
+
+NAME kprobe inlined function
+PROG config = { probe_inline = 1 } BEGIN { exit() }
+     kprobe:str_has_prefix { }
+EXPECT_NONE Attaching 2 probe...
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
