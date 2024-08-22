@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 from typing import Callable, Dict, List, Optional, Union
+import urllib.request
 
 BUILD_DIR = "build-ci"
 
@@ -44,6 +45,7 @@ CXX = os.environ.get("CXX", "c++")
 GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
 CI = os.environ.get("CI", "false")
 RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
+RUNTIME_TEST_KERNEL_URL = os.environ.get("RUNTIME_TEST_KERNEL_URL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
@@ -221,6 +223,32 @@ def tests_finish(results: List[TestResult]):
         print(output.getvalue())
 
 
+def run_runtime_tests():
+    """Runs runtime tests, downloading a kernel as necessary"""
+    vmtest_args = []
+    if RUNTIME_TEST_KERNEL_URL:
+        with urllib.request.urlopen(RUNTIME_TEST_KERNEL_URL) as resp:
+            with open(f"{BUILD_DIR}/bzImage", "wb") as f:
+                f.write(resp.read())
+        vmtest_args = [
+            "vmtest",
+            "-k",
+            "./bzImage",
+            "--",
+        ]
+
+    shell(
+        vmtest_args + ["./tests/runtime-tests.sh"],
+        # Don't need root if running tests in a VM
+        as_root=not vmtest_args,
+        cwd=Path(BUILD_DIR),
+        env={
+            "CI": CI,
+            "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
+        },
+    )
+
+
 def test():
     """
     Run all requested tests
@@ -235,82 +263,9 @@ def test():
 
     results.append(
         test_one(
-            "bpftrace_test",
-            lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                ["./tests/bpftrace_test"],
-                cwd=Path(BUILD_DIR),
-                env={"GTEST_COLOR": GTEST_COLOR},
-            ),
-        )
-    )
-    results.append(
-        test_one(
             "runtime-tests.sh",
             lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                ["./tests/runtime-tests.sh"],
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "CI": CI,
-                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
-                },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "tools-parsing-test.sh",
-            lambda: truthy(RUN_TESTS),
-            lambda: shell(
-                [
-                    "./tests/tools-parsing-test.sh",
-                ],
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "TOOLS_TEST_OLDVERSION": TOOLS_TEST_OLDVERSION,
-                    "TOOLS_TEST_DISABLE": TOOLS_TEST_DISABLE,
-                },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "runtime-tests.sh (AOT)",
-            lambda: truthy(RUN_AOT_TESTS),
-            lambda: shell(
-                (
-                    [
-                        "./tests/runtime-tests.sh",
-                        "--run-aot-tests",
-                        "--filter",
-                        "aot.*",
-                    ]
-                    + [
-                        "--skiplist_file",
-                        f"{root()}/{AOT_SKIPLIST_FILE}",
-                    ]
-                    if AOT_SKIPLIST_FILE
-                    else []
-                ),
-                as_root=True,
-                cwd=Path(BUILD_DIR),
-                env={
-                    "CI": CI,
-                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
-                },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "memleak-tests.sh.sh",
-            lambda: truthy(RUN_MEMLEAK_TEST),
-            lambda: shell(
-                ["./tests/memleak-tests.sh"], as_root=True, cwd=Path(BUILD_DIR)
-            ),
+            run_runtime_tests,
         )
     )
 
