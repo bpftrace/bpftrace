@@ -82,6 +82,15 @@ jobs:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
     - uses: DeterminateSystems/magic-nix-cache-action@v6
+    - name: Install Kernel DebugInfo
+      # Install the Debug Info for the current Kernel,
+      # which is required for our runtime tests of kprobe inline functions.
+      run: |
+        # From Ubuntu's Wiki: https://wiki.ubuntu.com/DebuggingProgramCrash#Non-built-in_debug_symbol_packages_.28.2A-dbgsym.29
+        sudo apt-get install ubuntu-dbgsym-keyring
+        echo -e "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted universe multiverse\ndeb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted universe multiverse\ndeb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ddebs.list
+        sudo apt-get update
+        sudo apt-get install "linux-image-$(uname -r)-dbgsym"
     - name: Load kernel modules
       # nf_tables and xfs are necessary for testing kernel modules BTF support
       run: |
