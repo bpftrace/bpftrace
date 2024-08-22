@@ -2421,27 +2421,33 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     b_.CreateLifetimeEnd(val);
 }
 
+void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
+                                     const SizedType &var_type)
+{
+  if (variables_.find(var_ident) != variables_.end()) {
+    return;
+  }
+  SizedType alloca_type = var_type;
+  // Arrays and structs need not to be copied when assigned to local variables
+  // since they are treated as read-only - it is sufficient to assign
+  // the pointer and do the memcpy/proberead later when necessary
+  if (var_type.IsArrayTy() || var_type.IsRecordTy()) {
+    auto &pointee_type = var_type.IsArrayTy() ? *var_type.GetElementTy()
+                                              : var_type;
+    alloca_type = CreatePointer(pointee_type, var_type.GetAS());
+  }
+
+  AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var_ident);
+  variables_[var_ident] = VariableLLVM{ val, val->getAllocatedType() };
+}
+
 void CodegenLLVM::visit(AssignVarStatement &assignment)
 {
   Variable &var = *assignment.var;
 
   auto scoped_del = accept(assignment.expr);
 
-  if (variables_.find(var.ident) == variables_.end()) {
-    SizedType alloca_type = var.type;
-
-    // Arrays and structs need not to be copied when assigned to local variables
-    // since they are treated as read-only - it is sufficient to assign
-    // the pointer and do the memcpy/proberead later when necessary
-    if (var.type.IsArrayTy() || var.type.IsRecordTy()) {
-      auto &pointee_type = var.type.IsArrayTy() ? *var.type.GetElementTy()
-                                                : var.type;
-      alloca_type = CreatePointer(pointee_type, var.type.GetAS());
-    }
-
-    AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
-    variables_[var.ident] = VariableLLVM{ val, val->getAllocatedType() };
-  }
+  maybeAllocVariable(var.ident, var.type);
 
   if (var.type.IsArrayTy() || var.type.IsRecordTy()) {
     // For arrays and structs, only the pointer is stored
@@ -2465,6 +2471,16 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   } else {
     b_.CreateStore(expr_, variables_[var.ident].value);
   }
+}
+
+void CodegenLLVM::visit(VarDeclStatement &decl)
+{
+  Variable &var = *decl.var;
+  if (var.type.IsNoneTy()) {
+    // unused and has no type
+    return;
+  }
+  maybeAllocVariable(var.ident, var.type);
 }
 
 void CodegenLLVM::visit(If &if_block)

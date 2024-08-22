@@ -7,6 +7,7 @@
 // %define api.parser.class { Parser }
 %define api.token.constructor
 %define api.value.type variant
+%define define_location_comparison
 %define parse.assert
 %define parse.trace
 %expect 5
@@ -126,6 +127,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> BREAK "break"
 %token <std::string> SIZEOF "sizeof"
 %token <std::string> OFFSETOF "offsetof"
+%token <std::string> LET "let"
 
 
 %type <ast::Operator> unary_op compound_op
@@ -150,6 +152,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
 %type <ast::Config *> config
 %type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt for_stmt
+%type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
@@ -231,6 +234,9 @@ type:
                     }
                 }
         |       int_type "[" INT "]" {
+                  $$ = CreateArray($3, $1);
+                }
+        |       struct_type "[" INT "]" {
                   $$ = CreateArray($3, $1);
                 }
         |       int_type "[" "]" {
@@ -401,9 +407,10 @@ block:
                 ;
 
 stmt_list:
-                stmt_list expr_stmt ";" { $$ = std::move($1); $$.push_back($2); }
-        |       stmt_list block_stmt    { $$ = std::move($1); $$.push_back($2); }
-        |       %empty                  { $$ = ast::StatementList{}; }
+                stmt_list expr_stmt ";"     { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list block_stmt        { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list var_decl_stmt ";" { $$ = std::move($1); $$.push_back($2); }
+        |       %empty                      { $$ = ast::StatementList{}; }
                 ;
 
 block_stmt:
@@ -455,8 +462,9 @@ assign_stmt:
                   error(@1 + @3, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead.");
                   YYERROR;
                 }
-        |       map ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>($1, $3, @$); }
-        |       var ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
+        |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignMapStatement>($1, $3, @$); }
+        |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
+        |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
         |       map compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
@@ -467,6 +475,11 @@ assign_stmt:
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
                   $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, b, @$);
                 }
+        ;
+        
+var_decl_stmt:
+                 LET var {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, @$); }
+        |        LET var COLON type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
         ;
 
 primary_expr:
@@ -631,6 +644,7 @@ keyword:
         |       ELSE          { $$ = $1; }
         |       FOR           { $$ = $1; }
         |       IF            { $$ = $1; }
+        |       LET           { $$ = $1; }
         |       OFFSETOF      { $$ = $1; }
         |       RETURN        { $$ = $1; }
         |       SIZEOF        { $$ = $1; }

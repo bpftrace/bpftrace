@@ -84,6 +84,7 @@ public:
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(AssignConfigVarStatement &assignment) override;
+  void visit(VarDeclStatement &decl) override;
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(Predicate &pred) override;
@@ -166,7 +167,14 @@ private:
   // SemanticAnalyser.
   int func_arg_idx_ = -1;
 
-  std::map<Scope *, std::map<std::string, SizedType>> variable_val_;
+  struct variable {
+    SizedType type;
+    bool can_resize;
+    bool was_assigned;
+  };
+
+  std::map<Scope *, std::map<std::string, variable>> variables_;
+  std::map<Scope *, std::map<std::string, location>> variable_decls_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
 

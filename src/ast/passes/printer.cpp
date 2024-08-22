@@ -262,12 +262,20 @@ void Printer::visit(AssignMapStatement &assignment)
 void Printer::visit(AssignVarStatement &assignment)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "=" << std::endl;
 
-  ++depth_;
-  assignment.var->accept(*this);
-  assignment.expr->accept(*this);
-  --depth_;
+  if (assignment.var_decl_stmt) {
+    assignment.var_decl_stmt->accept(*this);
+    ++depth_;
+    assignment.expr->accept(*this);
+    --depth_;
+  } else {
+    out_ << indent << "=" << std::endl;
+
+    ++depth_;
+    assignment.var->accept(*this);
+    assignment.expr->accept(*this);
+    --depth_;
+  }
 }
 
 void Printer::visit(AssignConfigVarStatement &assignment)
@@ -279,6 +287,15 @@ void Printer::visit(AssignConfigVarStatement &assignment)
   std::string indentVar(depth_, ' ');
   out_ << indentVar << "config var: " << assignment.config_var << std::endl;
   assignment.expr->accept(*this);
+  --depth_;
+}
+
+void Printer::visit(VarDeclStatement &decl)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "decl" << std::endl;
+  ++depth_;
+  decl.var->accept(*this);
   --depth_;
 }
 

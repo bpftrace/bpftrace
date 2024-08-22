@@ -369,6 +369,20 @@ private:
   ExprStatement(const ExprStatement &other) = default;
 };
 
+class VarDeclStatement : public Statement {
+public:
+  DEFINE_ACCEPT
+
+  VarDeclStatement(Variable *var, SizedType type, location loc = location());
+  VarDeclStatement(Variable *var, location loc = location());
+
+  Variable *var = nullptr;
+  bool set_type = false;
+
+private:
+  VarDeclStatement(const VarDeclStatement &other) = default;
+};
+
 class AssignMapStatement : public Statement {
 public:
   DEFINE_ACCEPT
@@ -389,7 +403,11 @@ public:
   AssignVarStatement(Variable *var,
                      Expression *expr,
                      location loc = location());
+  AssignVarStatement(VarDeclStatement *var_decl_stmt,
+                     Expression *expr,
+                     location loc = location());
 
+  VarDeclStatement *var_decl_stmt = nullptr;
   Variable *var = nullptr;
   Expression *expr = nullptr;
 

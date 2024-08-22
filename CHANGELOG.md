@@ -34,6 +34,8 @@ and this project adheres to
   - [#3358](https://github.com/bpftrace/bpftrace/pull/3358)
 - Add ability to attach kprobes to inlined functions
   - [#3301](https://github.com/bpftrace/bpftrace/pull/3095)
+- Variable declarations with `let`
+  - [#3461](https://github.com/bpftrace/bpftrace/pull/3461)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
