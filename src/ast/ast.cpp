@@ -35,6 +35,7 @@ MAKE_ACCEPT(ExprStatement)
 MAKE_ACCEPT(AssignMapStatement)
 MAKE_ACCEPT(AssignVarStatement)
 MAKE_ACCEPT(AssignConfigVarStatement)
+MAKE_ACCEPT(VarDeclStatement)
 MAKE_ACCEPT(Predicate)
 MAKE_ACCEPT(AttachPoint)
 MAKE_ACCEPT(If)
@@ -201,12 +202,35 @@ AssignVarStatement::AssignVarStatement(Variable *var,
   expr->var = var;
 }
 
+AssignVarStatement::AssignVarStatement(VarDeclStatement *var_decl_stmt,
+                                       Expression *expr,
+                                       location loc)
+    : Statement(loc),
+      var_decl_stmt(var_decl_stmt),
+      var(var_decl_stmt->var),
+      expr(expr)
+{
+  expr->var = var;
+}
+
 AssignConfigVarStatement::AssignConfigVarStatement(
     const std::string &config_var,
     Expression *expr,
     location loc)
     : Statement(loc), config_var(config_var), expr(expr)
 {
+}
+
+VarDeclStatement::VarDeclStatement(Variable *var, SizedType type, location loc)
+    : Statement(loc), var(var), set_type(true)
+{
+  var->type = std::move(type);
+}
+
+VarDeclStatement::VarDeclStatement(Variable *var, location loc)
+    : Statement(loc), var(var)
+{
+  var->type = CreateNone();
 }
 
 Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)

@@ -434,9 +434,10 @@ inside a script config block.
 
 === Data Types
 
-The following fundamental integer types are provided by the language.
-Integers are internally represented as 64 bit signed.
-If you need another representation, you may cast to the following built in types:
+The following fundamental types are provided by the language.
+Note: Integers are by default represented as 64 bit signed but that can be 
+changed by either casting them or, for scratch variables, explicitly specifying 
+the type upon declaration.
 
 [cols="~,~"]
 |===
@@ -939,6 +940,21 @@ bpftrace knows two types of variables, 'scratch' and 'map'.
 
 'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of the program.
 Scratch variable names always start with a `$`, e.g. `$myvar`.
+
+'scratch' variables can also declared before or during initialization with `let` e.g.
+```
+let $x;
+let $y = 11;
+```
+
+If no assignment is specified variables will initialize to 0.
+
+You can also specify the type in the declaration e.g.
+```
+let $x: uint8;
+let $y: uint8 = 7;
+let $a: string = "hiya";
+```
 
 'map' variables use BPF 'maps'.
 These exist for the lifetime of `bpftrace` itself and can be accessed from all action blocks and user-space.

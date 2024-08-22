@@ -105,3 +105,19 @@ EXPECT @a[-4, (-5, -6)]: 12
 EXPECT @a[-1, (-2, 3)]: 10
 EXPECT @a[5, (6, 7)]: 11
 TIMEOUT 2
+
+NAME variable declaration
+PROG BEGIN { let $a; $a = 10; printf("a=%d\n", $a); exit();}
+EXPECT a=10
+
+NAME variable declaration with builtin
+PROG BEGIN { let $f: struct task_struct *; $f = curtask; print($f->pid); exit();}
+EXPECT_REGEX [0-9]+
+
+NAME variable declaration with unresolved type
+PROG BEGIN { let $x: struct Foo[1]; exit(); }
+EXPECT Attaching 1 probe...
+
+NAME variable declaration not initialized
+PROG BEGIN { let $a; if (false) { $a = 1; } @b = $a; exit();}
+EXPECT @b: 0

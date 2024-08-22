@@ -2767,4 +2767,51 @@ BEGIN { for (@kv : @map) { } }
 )");
 }
 
+TEST(Parser, variable_declarations)
+{
+  test("BEGIN { let $x; }", R"(
+Program
+ BEGIN
+  decl
+   variable: $x
+)");
+
+  test("BEGIN { let $x: int8; }", R"(
+Program
+ BEGIN
+  decl
+   variable: $x :: [int8]
+)");
+
+  test("BEGIN { let $x = 1; }", R"(
+Program
+ BEGIN
+  decl
+   variable: $x
+   int: 1
+)");
+
+  test("BEGIN { let $x: int8 = 1; }", R"(
+Program
+ BEGIN
+  decl
+   variable: $x :: [int8]
+   int: 1
+)");
+
+  // Needs the let keyword
+  test_parse_failure("BEGIN { $x: int8; }", R"(
+stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
+BEGIN { $x: int8; }
+        ~~~
+)");
+
+  // Needs the let keyword
+  test_parse_failure("BEGIN { $x: int8 = 1; }", R"(
+stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
+BEGIN { $x: int8 = 1; }
+        ~~~
+)");
+}
+
 } // namespace bpftrace::test::parser

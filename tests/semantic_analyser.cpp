@@ -2860,7 +2860,7 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
                     ~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   test_error("kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }", R"(
-stdin:1:35-56: ERROR: Tuple type mismatch: (int64,uint32) != (int64,int32).
+stdin:1:35-56: ERROR: Type mismatch for $x: trying to assign value of type '(int64,int32)' when variable already contains a value of type '(int64,uint32)'
 kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
                                   ~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -3322,7 +3322,7 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { $t = (1, (int64)2); $t = (2, (int32)3); })_");
 
   test_error(R"_(BEGIN { $t = (1, (int32)2); $t = (2, (int64)3); })_", R"(
-stdin:1:29-47: ERROR: Tuple type mismatch: (int64,int32) != (int64,int64).
+stdin:1:29-47: ERROR: Type mismatch for $t: trying to assign value of type '(int64,int64)' when variable already contains a value of type '(int64,int32)'
 BEGIN { $t = (1, (int32)2); $t = (2, (int64)3); }
                             ~~~~~~~~~~~~~~~~~~
 )");
@@ -3342,14 +3342,14 @@ BEGIN { $t = (1, (int32)2); $t = (2, (int64)3); }
 
   test_error(R"_(BEGIN { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); })_",
              R"(
-stdin:1:33-49: ERROR: Tuple type mismatch: (int64,(int8,int64)) != (int64,(int64,int64)).
+stdin:1:33-49: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int64,int64))' when variable already contains a value of type '(int64,(int8,int64))'
 BEGIN { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); }
                                 ~~~~~~~~~~~~~~~~
 )");
 
   test_error(R"_(BEGIN { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); })_",
              R"(
-stdin:1:34-56: ERROR: Tuple type mismatch: (uint8,(int64,int64)) != (int64,(int8,int64)).
+stdin:1:34-56: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int8,int64))' when variable already contains a value of type '(uint8,(int64,int64))'
 BEGIN { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); }
                                  ~~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -4221,6 +4221,89 @@ kfunc:foo { $p = path((uint8 *)0) }
   // Values clamped small enough should fit
   test("BEGIN { $s = str(0, 10) }");
   test("BEGIN { $b = buf(0, 10) }");
+}
+
+TEST(semantic_analyser, variable_declarations)
+{
+  test("BEGIN { let $a; $a = 1; }");
+  test("BEGIN { let $a: int16; $a = 1; }");
+  test("BEGIN { let $a = 1; }");
+  test("BEGIN { let $a: int16 = 1; }");
+  test(R"(BEGIN { let $a: string; $a = "hiya"; })");
+  test(R"(BEGIN { let $a: string[5] = "hiya"; })");
+  // If the type is specified it's strict in that future assignments
+  // need to fit into that type
+  test(R"(BEGIN { let $a: string[5] = "hiya"; $a = "bye"; })");
+  test(R"(BEGIN { let $a = "hiya"; $a = "longerstr"; })");
+  test("BEGIN { let $a: int16 = 1; $a = (int8)2; }");
+  // Test more types
+  test("BEGIN { let $a: struct x; }");
+  test("BEGIN { let $a: struct x *; }");
+  test("BEGIN { let $a: struct task_struct *; $a = curtask; }");
+  test("BEGIN { let $a: struct Foo[10]; }");
+
+  test_error("BEGIN { let $a; let $a; }", R"(
+stdin:1:17-23: ERROR: Variable $a was already declared.
+BEGIN { let $a; let $a; }
+                ~~~~~~
+stdin:1:9-15: ERROR: Initial declaration
+BEGIN { let $a; let $a; }
+        ~~~~~~
+)");
+
+  test_error("BEGIN { let $a: uint16; $a = -1; }", R"(
+stdin:1:26-33: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
+BEGIN { let $a: uint16; $a = -1; }
+                         ~~~~~~~
+)");
+
+  test_error("BEGIN { let $a; $a = (uint8)1; $a = -1; }", R"(
+stdin:1:32-39: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'uint8'
+BEGIN { let $a; $a = (uint8)1; $a = -1; }
+                               ~~~~~~~
+)");
+
+  test_error("BEGIN { let $a: int8; $a = 10000; }", R"(
+stdin:1:24-34: ERROR: Type mismatch for $a: trying to assign value '10000' which does not fit into the variable of type 'int8'
+BEGIN { let $a: int8; $a = 10000; }
+                       ~~~~~~~~~~
+)");
+
+  test_error("BEGIN { $a = -1; let $a; }", R"(
+stdin:1:18-24: ERROR: Variable declarations need to occur before variable usage or assignment. Variable: $a
+BEGIN { $a = -1; let $a; }
+                 ~~~~~~
+)");
+
+  test_error("BEGIN { let $a: uint16 = -1; }", R"(
+stdin:1:9-29: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
+BEGIN { let $a: uint16 = -1; }
+        ~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { let $a: string[5] = "hiya"; $a = "longerstr"; })", R"(
+stdin:1:38-54: ERROR: Type mismatch for $a: trying to assign value of type 'string[10]' when variable already contains a value of type 'string[5]'
+BEGIN { let $a: string[5] = "hiya"; $a = "longerstr"; }
+                                     ~~~~~~~~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { let $a; print(($a)); $a = 1; })", R"(
+stdin:1:17-26: ERROR: Variable used before it was assigned: $a
+BEGIN { let $a; print(($a)); $a = 1; }
+                ~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { let $a: sum_t; })", R"(
+stdin:1:9-23: ERROR: Invalid variable declaration type: sum_t
+BEGIN { let $a: sum_t; }
+        ~~~~~~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { let $a: struct bad_task; $a = *curtask; })", R"(
+stdin:1:34-47: ERROR: Type mismatch for $a: trying to assign value of type 'struct task_struct' when variable already has a type 'struct bad_task'
+BEGIN { let $a: struct bad_task; $a = *curtask; }
+                                 ~~~~~~~~~~~~~
+)");
 }
 
 } // namespace bpftrace::test::semantic_analyser

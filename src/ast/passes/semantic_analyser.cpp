@@ -83,6 +83,48 @@ static std::pair<int64_t, int64_t> getIntTypeRange(const SizedType &ty)
   }
 }
 
+// These are types which aren't valid for scratch variables
+// e.g. this is not valid `let $x: sum_t;`
+static bool IsValidVarDeclType(const SizedType &ty)
+{
+  switch (ty.GetTy()) {
+    case Type::avg_t:
+    case Type::count_t:
+    case Type::hist_t:
+    case Type::lhist_t:
+    case Type::max_t:
+    case Type::min_t:
+    case Type::stats_t:
+    case Type::sum_t:
+    case Type::stack_mode:
+    case Type::voidtype:
+    case Type::probe:
+      return false;
+    case Type::integer:
+    case Type::kstack_t:
+    case Type::ustack_t:
+    case Type::timestamp:
+    case Type::ksym_t:
+    case Type::usym_t:
+    case Type::inet:
+    case Type::username:
+    case Type::string:
+    case Type::buffer:
+    case Type::pointer:
+    case Type::array:
+    case Type::mac_address:
+    case Type::record:
+    case Type::tuple:
+    case Type::cgroup_path_t:
+    case Type::strerror_t:
+    case Type::none:
+    case Type::reference:
+    case Type::timestamp_mode:
+      return true;
+  }
+  return false; // unreachable
+}
+
 void SemanticAnalyser::visit(Integer &integer)
 {
   if (integer.is_negative) {
@@ -1665,9 +1707,15 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_[scope_].find(var.ident);
-  if (search_val != variable_val_[scope_].end()) {
-    var.type = search_val->second;
+  if (auto search_val = variables_[scope_].find(var.ident);
+      search_val != variables_[scope_].end()) {
+    if (search_val->second.was_assigned) {
+      var.type = search_val->second.type;
+    } else {
+      LOG(ERROR, var.loc, err_)
+          << "Variable used before it was assigned: " << var.ident;
+      var.type = CreateNone();
+    }
   } else {
     LOG(ERROR, var.loc, err_)
         << "Undefined or undeclared variable: " << var.ident;
@@ -2302,7 +2350,7 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate decl
   const auto &decl_name = f.decl->ident;
-  if (variable_val_[scope_].find(decl_name) != variable_val_[scope_].end()) {
+  if (variables_[scope_].find(decl_name) != variables_[scope_].end()) {
     LOG(ERROR, f.decl->loc, err_)
         << "Loop declaration shadows existing variable: " + decl_name;
   }
@@ -2343,7 +2391,7 @@ void SemanticAnalyser::visit(For &f)
   CollectNodes<Variable> vars_referenced;
   std::unordered_set<std::string> var_set;
   for (auto *stmt : f.stmts) {
-    const auto &live_vars = variable_val_[scope_];
+    const auto &live_vars = variables_[scope_];
     vars_referenced.run(*stmt, [&live_vars, &var_set](const auto &var) {
       if (live_vars.find(var.ident) == live_vars.end())
         return false;
@@ -2359,7 +2407,7 @@ void SemanticAnalyser::visit(For &f)
   // real thing (#3017).
   CollectNodes<Variable> new_vars;
   for (auto *stmt : f.stmts) {
-    const auto &live_vars = variable_val_[scope_];
+    const auto &live_vars = variables_[scope_];
     new_vars.run(*stmt, [&live_vars](const auto &var) {
       return live_vars.find(var.ident) == live_vars.end();
     });
@@ -2381,7 +2429,9 @@ void SemanticAnalyser::visit(For &f)
 
   f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ *mapkey, *mapval }));
 
-  variable_val_[scope_][decl_name] = f.decl->type;
+  variables_[scope_][decl_name] = { .type = f.decl->type,
+                                    .can_resize = true,
+                                    .was_assigned = true };
 
   loop_depth_++;
   accept_statements(f.stmts);
@@ -2402,11 +2452,11 @@ void SemanticAnalyser::visit(For &f)
   }
 
   // Decl variable is not valid beyond this for-loop
-  variable_val_[scope_].erase(decl_name);
+  variables_[scope_].erase(decl_name);
 
   // Variables declared in a for-loop are not valid beyond it
   for (const Variable &var : new_vars.nodes()) {
-    variable_val_[scope_].erase(var.ident);
+    variables_[scope_].erase(var.ident);
   }
 
   // Finally, create the context tuple now that all variables inside the loop
@@ -2763,23 +2813,27 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
   Visit(assignment.expr);
+  if (assignment.var_decl_stmt) {
+    Visit(assignment.var_decl_stmt);
+  }
 
   std::string var_ident = assignment.var->ident;
-  auto search = variable_val_[scope_].find(var_ident);
+  auto search = variables_[scope_].find(var_ident);
   auto &assignTy = assignment.expr->type;
 
-  if (search != variable_val_[scope_].end()) {
-    auto &storedTy = search->second;
+  if (search != variables_[scope_].end()) {
+    auto &storedTy = search->second.type;
+    bool type_mismatch_error = false;
     if (storedTy.IsNoneTy()) {
       storedTy = assignTy;
     } else if (!storedTy.IsSameType(assignTy)) {
-      LOG(ERROR, assignment.loc, err_)
-          << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << assignTy
-          << "' when variable already contains a value of type '" << storedTy
-          << "'";
+      type_mismatch_error = true;
     } else if (assignTy.IsStringTy()) {
-      update_string_size(storedTy, assignTy);
+      if (search->second.can_resize) {
+        update_string_size(storedTy, assignTy);
+      } else if (!assignTy.FitsInto(storedTy)) {
+        type_mismatch_error = true;
+      }
     } else if (storedTy.IsIntegerTy()) {
       if (assignment.expr->is_literal) {
         auto integer = static_cast<Integer *>(assignment.expr);
@@ -2788,12 +2842,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           bool can_fit = false;
           if (integer->is_negative) {
             if (!storedTy.IsSigned()) {
-              LOG(ERROR, assignment.loc, err_)
-                  << "Type mismatch for " << var_ident << ": "
-                  << "trying to assign value of type '" << assignTy
-                  << "' when variable already contains a value of type '"
-                  << storedTy << "'";
-              return;
+              type_mismatch_error = true;
             } else {
               auto min_max = getIntTypeRange(storedTy);
               can_fit = value >= min_max.first;
@@ -2818,7 +2867,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                 assignment.loc);
             Visit(cast);
             assignment.expr = cast;
-          } else {
+          } else if (!type_mismatch_error) {
             LOG(ERROR, assignment.loc, err_)
                 << "Type mismatch for " << var_ident << ": "
                 << "trying to assign value '"
@@ -2829,25 +2878,13 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           }
         }
       } else if (storedTy.IsSigned() != assignTy.IsSigned()) {
-        LOG(ERROR, assignment.loc, err_)
-            << "Type mismatch for " << var_ident << ": "
-            << "trying to assign value of type '" << assignTy
-            << "' when variable already contains a value of type '" << storedTy
-            << "'";
+        type_mismatch_error = true;
       } else {
         if (!assignTy.FitsInto(storedTy)) {
           LOG(ERROR, assignment.loc, err_)
               << "Integer size mismatch. Assignment type '" << assignTy
               << "' is larger than the variable type '" << storedTy << "'.";
         }
-      }
-    } else if (assignTy.IsRecordTy()) {
-      if (assignTy.GetName() != storedTy.GetName()) {
-        LOG(ERROR, assignment.loc, err_)
-            << "Type mismatch for " << var_ident << ": "
-            << "trying to assign value of type '" << assignTy.GetName()
-            << "' when variable already contains a value of type '" << storedTy
-            << "'";
       }
     } else if (assignTy.IsBufferTy()) {
       auto var_size = storedTy.GetSize();
@@ -2864,18 +2901,35 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       // elements yet. So wait until final pass.
       if (is_final_pass()) {
         if (!assignTy.FitsInto(storedTy)) {
-          LOG(ERROR, assignment.loc, err_)
-              << "Tuple type mismatch: " << storedTy << " != " << assignTy
-              << ".";
+          type_mismatch_error = true;
         }
+      }
+    }
+    if (type_mismatch_error) {
+      auto err_segment = search->second.was_assigned
+                             ? "when variable already contains a value of type"
+                             : "when variable already has a type";
+      LOG(ERROR, assignment.loc, err_)
+          << "Type mismatch for " << var_ident << ": "
+          << "trying to assign value of type '" << assignTy << "' "
+          << err_segment << " '" << storedTy << "'";
+    } else {
+      if (!search->second.was_assigned) {
+        // The assign type is possibly more complete than the stored type, which
+        // could come from a variable declaration. The assign type may resolve
+        // builtins like `curtask` which also specifies the address space.
+        search->second.type = assignTy;
+        search->second.was_assigned = true;
       }
     }
   } else {
     // This variable hasn't been seen before
-    variable_val_[scope_].insert({ var_ident, assignTy });
+    variables_[scope_].insert(
+        { var_ident,
+          { .type = assignTy, .can_resize = true, .was_assigned = true } });
   }
 
-  const auto &storedTy = variable_val_[scope_][var_ident];
+  const auto &storedTy = variables_[scope_][var_ident].type;
   assignment.var->type = storedTy;
 
   if (is_final_pass()) {
@@ -2904,6 +2958,56 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
 {
   Visit(assignment.expr);
+}
+
+void SemanticAnalyser::visit(VarDeclStatement &decl)
+{
+  const std::string &var_ident = decl.var->ident;
+
+  if (!IsValidVarDeclType(decl.var->type)) {
+    LOG(ERROR, decl.loc, err_)
+        << "Invalid variable declaration type: " << decl.var->type;
+  }
+
+  // This should be the first time we're seeing this variable
+  if (auto decl_search = variable_decls_[scope_].find(var_ident);
+      decl_search != variable_decls_[scope_].end()) {
+    if (decl_search->second != decl.loc) {
+      // Note this will change if/when proper block/lexical scoping is added
+      LOG(ERROR, decl.loc, err_)
+          << "Variable " << var_ident << " was already declared.";
+      LOG(ERROR, decl_search->second, err_) << "Initial declaration";
+    }
+  }
+
+  if (auto search = variables_[scope_].find(var_ident);
+      search != variables_[scope_].end()) {
+    if (!variable_decls_[scope_].contains(var_ident)) {
+      LOG(ERROR, decl.loc, err_)
+          << "Variable declarations need to occur before variable usage or "
+             "assignment. Variable: "
+          << var_ident;
+    } else if (is_final_pass()) {
+      // Update the declaration type if it was either not set e.g. `let $a;`
+      // or the type is ambiguous or resizable e.g. `let $a: string;`
+      decl.var->type = search->second.type;
+    }
+
+    if (is_final_pass() && !search->second.was_assigned) {
+      LOG(WARNING, decl.loc, out_)
+          << "Variable " << var_ident << " never assigned to.";
+    }
+
+    return;
+  }
+
+  bool can_resize = !decl.set_type || decl.var->type.GetSize() == 0;
+
+  variables_[scope_].insert({ var_ident,
+                              { .type = decl.var->type,
+                                .can_resize = can_resize,
+                                .was_assigned = false } });
+  variable_decls_[scope_].insert({ var_ident, decl.loc });
 }
 
 void SemanticAnalyser::visit(Predicate &pred)
@@ -3219,7 +3323,9 @@ void SemanticAnalyser::visit(Subprog &subprog)
 {
   scope_ = &subprog;
   for (SubprogArg *arg : subprog.args) {
-    variable_val_[scope_].insert({ arg->name(), arg->type });
+    variables_[scope_].insert(
+        { arg->name(),
+          { .type = arg->type, .can_resize = true, .was_assigned = true } });
   }
   Visitor::visit(subprog);
 }

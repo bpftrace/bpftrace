@@ -159,6 +159,7 @@ private:
   bool ctx_ = false;                                   // Is bpf program context
   std::unordered_set<std::string> btf_type_tags_ = {}; // Only populated for
                                                        // Type::pointer
+  size_t num_elements_ = 0; // Only populated for array types
 
   friend class cereal::access;
   template <typename Archive>
@@ -292,7 +293,11 @@ public:
   size_t GetNumElements() const
   {
     assert(IsArrayTy() || IsStringTy());
-    return IsStringTy() ? size_bits_ : size_bits_ / element_type_->size_bits_;
+    // For array's we can't just do size_bits_ / element_type.GetSize()
+    // because we might not know the size of the element type (it may be 0)
+    // if it's being resolved in a later AST pass e.g. for an imported type:
+    // `let $x: struct Foo[10];`
+    return IsStringTy() ? size_bits_ : num_elements_;
   };
 
   const std::string GetName() const
