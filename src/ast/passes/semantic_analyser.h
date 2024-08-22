@@ -84,12 +84,13 @@ public:
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(AssignConfigVarStatement &assignment) override;
-  void visit(If &if_block) override;
+  void visit(If &if_node) override;
   void visit(Unroll &unroll) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Config &config) override;
+  void visit(Block &block) override;
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
 
@@ -124,9 +125,7 @@ private:
 
   void check_stack_call(Call &call, bool kernel);
 
-  Probe *get_probe_from_scope(Scope *scope,
-                              const location &loc,
-                              std::string name = "");
+  Probe *get_probe(const location &loc, std::string name = "");
 
   SizedType *get_map_type(const Map &map);
   MapKey *get_map_key_type(const Map &map);
@@ -151,7 +150,8 @@ private:
   };
   void accept_statements(StatementList &stmts);
 
-  Scope *scope_;
+  std::vector<Node *> scope_stack_;
+  Node *top_level_node_ = nullptr;
 
   // Holds the function currently being visited by this SemanticAnalyser.
   std::string func_;
@@ -159,7 +159,7 @@ private:
   // SemanticAnalyser.
   int func_arg_idx_ = -1;
 
-  std::map<Scope *, std::map<std::string, SizedType>> variable_val_;
+  std::map<Node *, std::map<std::string, SizedType>> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
 

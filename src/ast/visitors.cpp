@@ -120,34 +120,23 @@ void Visitor::visit(AssignConfigVarStatement &assignment)
   Visit(*assignment.expr);
 }
 
-void Visitor::visit(If &if_block)
+void Visitor::visit(If &if_node)
 {
-  Visit(*if_block.cond);
-
-  for (Statement *stmt : if_block.stmts) {
-    Visit(*stmt);
-  }
-
-  for (Statement *stmt : if_block.else_stmts) {
-    Visit(*stmt);
-  }
+  Visit(*if_node.cond);
+  Visit(if_node.if_block);
+  Visit(if_node.else_block);
 }
 
 void Visitor::visit(Unroll &unroll)
 {
   Visit(*unroll.expr);
-  for (Statement *stmt : unroll.stmts) {
-    Visit(*stmt);
-  }
+  Visit(unroll.block);
 }
 
 void Visitor::visit(While &while_block)
 {
   Visit(*while_block.cond);
-
-  for (Statement *stmt : while_block.stmts) {
-    Visit(*stmt);
-  }
+  Visit(while_block.block);
 }
 
 void Visitor::visit(For &for_loop)
@@ -184,9 +173,7 @@ void Visitor::visit(Probe &probe)
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  for (Statement *stmt : probe.stmts) {
-    Visit(*stmt);
-  }
+  Visit(probe.block);
 }
 
 void Visitor::visit(Config &config)
@@ -218,6 +205,13 @@ void Visitor::visit(Program &program)
     Visit(*probe);
   if (program.config)
     Visit(*program.config);
+}
+
+void Visitor::visit(Block &block)
+{
+  for (Statement *stmt : block.stmts) {
+    Visit(*stmt);
+  }
 }
 
 } // namespace bpftrace::ast
