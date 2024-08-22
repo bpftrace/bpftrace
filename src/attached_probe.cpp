@@ -523,8 +523,9 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
 }
 
 // find vmlinux file containing the given symbol information
-static std::string find_vmlinux(const struct vmlinux_location *locs,
-                                struct symbol &sym)
+static std::optional<std::string> find_vmlinux(
+    const struct vmlinux_location *locs,
+    struct symbol &sym)
 {
   struct bcc_symbol_option option = {};
   option.use_debug_file = 0;
@@ -547,7 +548,7 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
     }
   }
 
-  return "";
+  return std::nullopt;
 }
 
 void AttachedProbe::resolve_offset_kprobe()
@@ -572,8 +573,8 @@ void AttachedProbe::resolve_offset_kprobe()
     locs = locs_env;
   }
 
-  std::string path = find_vmlinux(locs, sym);
-  if (path.empty()) {
+  auto path = find_vmlinux(locs, sym);
+  if (!path.has_value()) {
     LOG(V1) << "Could not resolve symbol " << symbol
             << ". Skipping usermode offset checking.";
     LOG(V1) << "The kernel will verify the safety of the location but "
