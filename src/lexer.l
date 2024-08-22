@@ -159,6 +159,7 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 "break"                 { return Parser::make_BREAK(yytext, loc); }
 "sizeof"                { return Parser::make_SIZEOF(yytext, loc); }
 "offsetof"              { return Parser::make_OFFSETOF(yytext, loc); }
+"let"                   { return Parser::make_LET(yytext, loc); }
 
 {int_type}              { return Parser::make_INT_TYPE(yytext, loc); }
 {builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, loc); }
@@ -208,13 +209,13 @@ struct|union|enum       {
   .                     { unput(yytext[0]); yy_pop_state(yyscanner); }
 }
 <STRUCT_AFTER_COLON>{
-  "{"|","|")"           {
+  {hspace}+             { loc.step(); }
+  {vspace}+             { loc.lines(yyleng); loc.step(); }
+  {ident}               {
+                          buffer = yytext;
                           yy_pop_state(yyscanner);
-                          unput(yytext[0]);
                           return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);
                         }
-  .                     { buffer += yytext[0]; }
-  \n                    buffer += '\n'; loc.lines(1); loc.step();
 }
 <STRUCT,BRACE>{
   "*"|")"|","           {
