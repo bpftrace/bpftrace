@@ -2610,6 +2610,70 @@ TEST(semantic_analyser, intarray_to_int_cast)
        1);
 }
 
+TEST(semantic_analyser, mixed_int_var_assignments)
+{
+  test("kprobe:f { $x = (uint64)0; $x = (uint16)1; }");
+  test("kprobe:f { $x = (int8)1; $x = 5; }");
+  test("kprobe:f { $x = 1; $x = -1; }");
+  test("kprobe:f { $x = (uint8)1; $x = 200; }");
+  test("kprobe:f { $x = (int8)1; $x = -2; }");
+  test("kprobe:f { $x = (int16)1; $x = 20000; }");
+  test_error("kprobe:f { $x = (uint8)1; $x = -1; }", R"(
+stdin:1:27-34: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'unsigned int8'
+kprobe:f { $x = (uint8)1; $x = -1; }
+                          ~~~~~~~
+)");
+  test_error("kprobe:f { $x = (int16)1; $x = 100000; }", R"(
+stdin:1:27-38: ERROR: Type mismatch for $x: trying to assign value '100000' which does not fit into the variable of type 'int16'
+kprobe:f { $x = (int16)1; $x = 100000; }
+                          ~~~~~~~~~~~
+)");
+  test_error("kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }", R"(
+stdin:1:43-50: ERROR: Integer size mismatch. Assignment type 'unsigned int16' is larger than the variable type 'unsigned int8'.
+kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }
+                                          ~~~~~~~
+)");
+  test_error("kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }", R"(
+stdin:1:42-49: ERROR: Type mismatch for $x: trying to assign value of type 'int8' when variable already contains a value of type 'unsigned int8'
+kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }
+                                         ~~~~~~~
+)");
+  test_error("kprobe:f { $x = -1; $x = 10223372036854775807; }", R"(
+stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value '10223372036854775807' which does not fit into the variable of type 'int64'
+kprobe:f { $x = -1; $x = 10223372036854775807; }
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }", R"(
+stdin:1:35-56: ERROR: Tuple type mismatch: (int64,unsigned int32) != (int64,int32).
+kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
+                                  ~~~~~~~~~~~~~~~~~~~~~
+)");
+  test("BEGIN { $x = (uint8)1; $x = 5; }", R"(
+Program
+ BEGIN
+  =
+   variable: $x :: [unsigned int8]
+   (unsigned int8)
+    int: 1 :: [int64]
+  =
+   variable: $x :: [unsigned int8]
+   (unsigned int8)
+    int: 5 :: [int64]
+)");
+  test("BEGIN { $x = (int8)1; $x = 5; }", R"(
+Program
+ BEGIN
+  =
+   variable: $x :: [int8]
+   (int8)
+    int: 1 :: [int64]
+  =
+   variable: $x :: [int8]
+   (int8)
+    int: 5 :: [int64]
+)");
+}
+
 TEST(semantic_analyser, signal)
 {
   // int literals

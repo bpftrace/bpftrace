@@ -300,3 +300,8 @@ NAME print_per_cpu_map_vals
 PROG BEGIN { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx)); exit(); }
 EXPECT (5, 1, 5, 1, -1)
 TIMEOUT 3
+
+NAME print large int
+PROG BEGIN { $a = 10223372036854775807; print(($a)); exit(); }
+EXPECT 10223372036854775807
+TIMEOUT 1

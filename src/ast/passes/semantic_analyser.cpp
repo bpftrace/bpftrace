@@ -37,9 +37,61 @@ static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
   return intcasts;
 }
 
+static std::pair<uint64_t, uint64_t> getUIntTypeRange(const SizedType &ty)
+{
+  assert(ty.IsIntegerTy());
+  auto size = ty.GetSize();
+  switch (size) {
+    case 1:
+      return { 0, std::numeric_limits<uint8_t>::max() };
+    case 2:
+      return { 0, std::numeric_limits<uint16_t>::max() };
+    case 4:
+      return { 0, std::numeric_limits<uint32_t>::max() };
+    case 8:
+      return { 0, std::numeric_limits<uint64_t>::max() };
+    default:
+      LOG(BUG) << "Unrecognized int type size: " << size;
+      return { 0, 0 };
+  }
+}
+
+static std::pair<int64_t, int64_t> getIntTypeRange(const SizedType &ty)
+{
+  assert(ty.IsIntegerTy());
+  auto size = ty.GetSize();
+  switch (size) {
+    case 1:
+      return { std::numeric_limits<int8_t>::min(),
+               std::numeric_limits<int8_t>::max() };
+    case 2:
+      return { std::numeric_limits<int16_t>::min(),
+               std::numeric_limits<int16_t>::max() };
+    case 4:
+      return { std::numeric_limits<int32_t>::min(),
+               std::numeric_limits<int32_t>::max() };
+    case 8:
+      return { std::numeric_limits<int64_t>::min(),
+               std::numeric_limits<int64_t>::max() };
+    default:
+      LOG(BUG) << "Unrecognized int type size: " << size;
+      return { 0, 0 };
+  }
+}
+
 void SemanticAnalyser::visit(Integer &integer)
 {
-  integer.type = CreateInt64();
+  if (integer.is_negative) {
+    integer.type = CreateInt64();
+  } else {
+    // Default to signed unless the original value is too large
+    uint64_t val = static_cast<uint64_t>(integer.n);
+    if (val > std::numeric_limits<int32_t>::max()) {
+      integer.type = CreateUInt64();
+    } else {
+      integer.type = CreateInt64();
+    }
+  }
 }
 
 void SemanticAnalyser::visit(PositionalParameter &param)
@@ -2639,6 +2691,69 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           << "trying to assign value of type '" << assignTy
           << "' when variable already contains a value of type '"
           << search->second << "'";
+    } else if (search->second.IsIntegerTy()) {
+      if (assignment.expr->is_literal) {
+        auto integer = static_cast<Integer *>(assignment.expr);
+        if (!search->second.IsEqual(assignTy)) {
+          int64_t value = integer->n;
+          bool can_fit = false;
+          if (integer->is_negative) {
+            if (!search->second.IsSigned()) {
+              LOG(ERROR, assignment.loc, err_)
+                  << "Type mismatch for " << var_ident << ": "
+                  << "trying to assign value of type '" << assignTy
+                  << "' when variable already contains a value of type '"
+                  << search->second << "'";
+              return;
+            } else {
+              auto min_max = getIntTypeRange(search->second);
+              can_fit = value >= min_max.first;
+            }
+          } else {
+            if (!search->second.IsSigned()) {
+              auto min_max = getUIntTypeRange(search->second);
+              can_fit = static_cast<uint64_t>(value) <= min_max.second;
+            } else {
+              // Casting to a uint64 here because the assign 'value'
+              // might be larger than the max signed int64 e.g.
+              // `$x = -1; $x = 10223372036854775807;`
+              auto min_max = getIntTypeRange(search->second);
+              can_fit = static_cast<uint64_t>(value) <=
+                        static_cast<uint64_t>(min_max.second);
+            }
+          }
+          if (can_fit) {
+            Expression *cast = ctx_.make_node<Cast>(
+                CreateInteger(search->second.GetSize() * 8,
+                              search->second.IsSigned()),
+                assignment.expr,
+                assignment.loc);
+            Visit(cast);
+            assignment.expr = cast;
+          } else {
+            LOG(ERROR, assignment.loc, err_)
+                << "Type mismatch for " << var_ident << ": "
+                << "trying to assign value '"
+                << (integer->is_negative ? integer->n
+                                         : static_cast<uint64_t>(integer->n))
+                << "' which does not fit into the variable of type '"
+                << search->second << "'";
+          }
+        }
+      } else if (search->second.IsSigned() != assignTy.IsSigned()) {
+        LOG(ERROR, assignment.loc, err_)
+            << "Type mismatch for " << var_ident << ": "
+            << "trying to assign value of type '" << assignTy
+            << "' when variable already contains a value of type '"
+            << search->second << "'";
+      } else {
+        if (!assignTy.FitsInto(search->second)) {
+          LOG(ERROR, assignment.loc, err_)
+              << "Integer size mismatch. Assignment type '" << assignTy
+              << "' is larger than the variable type '" << search->second
+              << "'.";
+        }
+      }
     }
   } else {
     // This variable hasn't been seen before
