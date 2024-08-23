@@ -1,0 +1,38 @@
+commit dee686b7a5110ed5aa3f2a084487683a843c8047
+Author: Daniel Xu <dxu@dxuuu.xyz>
+Date:   Thu Aug 22 17:32:22 2024 -0700
+
+    [lldb][NFC] Defer python init until ScriptInterpreter is created
+
+    Previously python was initialized during static registration of the
+    plugin. This causes the python interpreter to run even if python support
+    is explicitly disabled thru:
+
+        SBDebugger::SetScriptLanguage(ScriptLanguage::eScriptLanguageNone)
+
+    This commit defers python initialization until a ScriptInterpreterPython
+    instance is created.
+
+diff --git a/source/Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.cpp b/source/Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.cpp
+index ef7a2c128a22..97e5641005d6 100644
+--- a/source/Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.cpp
++++ b/source/Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.cpp
+@@ -350,7 +350,6 @@ void ScriptInterpreterPython::Initialize() {
+                                   GetPluginDescriptionStatic(),
+                                   lldb::eScriptLanguagePython,
+                                   ScriptInterpreterPythonImpl::CreateInstance);
+-    ScriptInterpreterPythonImpl::Initialize();
+   });
+ }
+
+@@ -427,6 +426,10 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
+       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
+       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
+       m_command_thread_state(nullptr) {
++  static llvm::once_flag g_once_flag;
++  llvm::call_once(g_once_flag, []() {
++    ScriptInterpreterPythonImpl::Initialize();
++  });
+
+   m_dictionary_name.append("_dict");
+   StreamString run_string;

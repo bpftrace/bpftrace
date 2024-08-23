@@ -66,8 +66,19 @@
               });
             });
 
-          # We need to use two overlays so that bcc inherits the our pinned libbpf
-          overlayedPkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay ]; };
+          # Get lldb to stop running python interpreter.
+          # Note we're only trying to patch the default package to reduce the number of unique
+          # patch files we need to carry.
+          lldbOverlay =
+            (self: super: {
+              "llvmPackages_${toString defaultLlvmVersion}".lldb =
+                super."llvmPackages_${toString defaultLlvmVersion}".lldb.overrideAttrs (old: {
+                  patches = (old.patches or [ ]) ++ [ ./src/patches/lldb_defer_python_init.patch ];
+                });
+            });
+
+          # Overlays are ordered. Here bcc inherits the modified libbpf.
+          overlayedPkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay lldbOverlay ]; };
 
           pkgs = import nixpkgs { inherit system; };
 
@@ -94,10 +105,10 @@
                   libpcap
                   libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
-                  pkgs."llvmPackages_${toString llvmVersion}".lldb
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
                   overlayedPkgs.bcc
                   overlayedPkgs.libbpf
+                  overlayedPkgs."llvmPackages_${toString llvmVersion}".lldb
                   pahole
                   xxd
                   zlib
@@ -170,8 +181,7 @@
               #
               # *.a: Static archives are not necessary at runtime
               # *.h: Header files are not necessary at runtime (some ARM headers for clang are large)
-              # *.pyc, *.whl: bpftrace does not use python at runtime (with exception
-              #               of stdlib for unfortunate lldb python bindings)
+              # *.pyc, *.py, *.whl: bpftrace does not use python at runtime
               # libLLVM-11.so: Appimage uses the latest llvm we support, so not llvm11
               #
               # The basic process to identify large and useless files is to:
@@ -186,6 +196,7 @@
                 "... *.a"
                 "... *.h"
                 "... *.pyc"
+                "... *.py"
                 "... *.whl"
                 "... libLLVM-11.so"
               ];
