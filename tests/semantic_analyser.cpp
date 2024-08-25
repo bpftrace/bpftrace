@@ -3407,6 +3407,9 @@ TEST_F(semantic_analyser_btf, call_path)
 {
   test("kfunc:func_1 { @k = path( args.foo1 ) }");
   test("kretfunc:func_1 { @k = path( retval->foo1 ) }");
+  test("kfunc:func_1 { path( args.foo1, 16);}");
+  test("kfunc:func_1 { path( args.foo1, \"Na\");}", 1);
+  test("kfunc:func_1 { path( args.foo1, -1);}", 1);
 }
 
 TEST_F(semantic_analyser_btf, call_skb_output)

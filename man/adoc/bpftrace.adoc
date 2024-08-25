@@ -1280,7 +1280,7 @@ Tracing block I/O sizes > 0 bytes
 | Override return value
 | Sync
 
-| <<functions-path, `path(struct path *path)`>>
+| <<functions-path, `path(struct path *path [, int32 size])`>>
 | Return full path
 | Sync
 
@@ -1740,13 +1740,14 @@ Error attaching probe: 'kprobe:vfs_read'
 === path
 
 .variants
-* `char * path(struct path * path)`
+* `char * path(struct path * path [, int32 size])`
 
 *Kernel* 5.10
 
 *Helper* `bpf_d_path`
 
-Return full path referenced by struct path pointer in argument.
+Return full path referenced by struct path pointer in argument. If `size` is set,
+the path will be clamped by `size` otherwise `BPFTRACE_MAX_STRLEN` is used.
 
 This function can only be used by functions that are allowed to, these functions are contained in the `btf_allowlist_d_path` set in the kernel.
 

@@ -1175,7 +1175,7 @@ void SemanticAnalyser::visit(Call &call)
           << "BPF_FUNC_d_path not available for your kernel version";
     }
 
-    if (check_varargs(call, 1, 1)) {
+    if (check_varargs(call, 1, 2)) {
       // Argument for path can be both record and pointer.
       // It's pointer when it's passed directly from the probe
       // argument, like: path(args.path))
@@ -1190,8 +1190,22 @@ void SemanticAnalyser::visit(Call &call)
             << arg.type.GetTy() << " provided)";
       }
 
-      call.type = SizedType(Type::string,
-                            bpftrace_.config_.get(ConfigKeyInt::max_strlen));
+      auto call_type_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+      if (call.vargs.size() == 2) {
+        if (check_arg(call, Type::integer, 1, true)) {
+          auto size = bpftrace_.get_int_literal(call.vargs.at(1));
+          if (size.has_value()) {
+            if (size < 0)
+              LOG(ERROR, call.loc, err_)
+                  << "Builtin path requires a non-negative size";
+          } else {
+            LOG(ERROR, call.loc, err_) << call.func << ": invalid size value";
+          }
+          call_type_size = size.value();
+        }
+      }
+
+      call.type = SizedType(Type::string, call_type_size);
     }
 
     for (auto *attach_point : probe->attach_points) {

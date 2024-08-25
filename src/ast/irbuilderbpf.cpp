@@ -2490,18 +2490,18 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
 void IRBuilderBPF::CreatePath(Value *ctx,
                               Value *buf,
                               Value *path,
+                              Value *sz,
                               const location &loc)
 {
   // int bpf_d_path(struct path *path, char *buf, u32 sz)
   // Return: 0 or error
   FunctionType *d_path_func_type = FunctionType::get(
       getInt64Ty(), { GET_PTR_TY(), buf->getType(), getInt32Ty() }, false);
-  CallInst *call = CreateHelperCall(
-      libbpf::bpf_func_id::BPF_FUNC_d_path,
-      d_path_func_type,
-      { path, buf, getInt32(bpftrace_.config_.get(ConfigKeyInt::max_strlen)) },
-      "d_path",
-      &loc);
+  CallInst *call = CreateHelperCall(libbpf::bpf_func_id::BPF_FUNC_d_path,
+                                    d_path_func_type,
+                                    { path, buf, sz },
+                                    "d_path",
+                                    &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);
 }
 

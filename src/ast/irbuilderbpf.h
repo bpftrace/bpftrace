@@ -238,7 +238,11 @@ public:
                             Value *len,
                             AllocaInst *data,
                             size_t size);
-  void CreatePath(Value *ctx, Value *buf, Value *path, const location &loc);
+  void CreatePath(Value *ctx,
+                  Value *buf,
+                  Value *path,
+                  Value *sz,
+                  const location &loc);
   void CreateSeqPrintf(Value *ctx,
                        Value *fmt,
                        Value *fmt_size,
