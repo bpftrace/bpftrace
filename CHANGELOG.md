@@ -19,6 +19,8 @@ and this project adheres to
   - [#3014](https://github.com/bpftrace/bpftrace/pull/3014)
 - Parse C++ Class and Inheritance from Debug Info
   - [#3094](https://github.com/bpftrace/bpftrace/pull/3094)
+- Add an optional `size` parameter to `path`
+  - [#3401](https://github.com/bpftrace/bpftrace/pull/3401)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
