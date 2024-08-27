@@ -90,22 +90,20 @@ void FieldAnalyser::visit(FieldAccess &acc)
       sized_type_ = arg->type;
 
     has_builtin_args_ = false;
-  } else if (!sized_type_.IsNoneTy()) {
-    // If the struct type or the field type has not been resolved, add the type
-    // to the BTF set to let ClangParser resolve it
-    if (bpftrace_.has_btf_data() && sized_type_.IsRecordTy()) {
-      SizedType field_type = CreateNone();
-      if (sized_type_.HasField(acc.field))
-        field_type = sized_type_.GetField(acc.field).type;
+  } else if (sized_type_.IsRecordTy()) {
+    SizedType field_type = CreateNone();
+    if (sized_type_.HasField(acc.field))
+      field_type = sized_type_.GetField(acc.field).type;
 
-      if (!field_type.IsNoneTy())
-        sized_type_ = field_type;
-      else {
-        bpftrace_.btf_set_.insert(sized_type_.GetName());
-        auto field_type_name = bpftrace_.btf_->type_of(sized_type_.GetName(),
-                                                       acc.field);
-        bpftrace_.btf_set_.insert(field_type_name);
-      }
+    if (!field_type.IsNoneTy()) {
+      sized_type_ = field_type;
+    } else if (bpftrace_.has_btf_data()) {
+      // If the struct type or the field type has not been resolved, add the
+      // type to the BTF set to let ClangParser resolve it
+      bpftrace_.btf_set_.insert(sized_type_.GetName());
+      auto field_type_name = bpftrace_.btf_->type_of(sized_type_.GetName(),
+                                                     acc.field);
+      bpftrace_.btf_set_.insert(field_type_name);
     }
   }
 }
@@ -116,6 +114,9 @@ void FieldAnalyser::visit(ArrayAccess &arr)
   Visit(*arr.expr);
   if (sized_type_.IsPtrTy()) {
     sized_type_ = *sized_type_.GetPointeeTy();
+    resolve_fields(sized_type_);
+  } else if (sized_type_.IsArrayTy()) {
+    sized_type_ = *sized_type_.GetElementTy();
     resolve_fields(sized_type_);
   }
 }

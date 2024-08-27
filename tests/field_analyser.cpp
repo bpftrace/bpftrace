@@ -220,6 +220,50 @@ TEST_F(field_analyser_btf, btf_arrays_multi_dim)
             4U);
 }
 
+void test_arrays_compound_data(BPFtrace &bpftrace)
+{
+  ASSERT_TRUE(bpftrace.structs.Has("struct ArrayWithCompoundData"));
+  auto arrs = bpftrace.structs.Lookup("struct ArrayWithCompoundData").lock();
+
+  EXPECT_EQ(arrs->size, 2 * sizeof(uintptr_t));
+  ASSERT_EQ(arrs->fields.size(), 1U);
+  ASSERT_TRUE(arrs->HasField("data"));
+
+  auto &data_type = arrs->GetField("data").type;
+  EXPECT_TRUE(data_type.IsArrayTy());
+  EXPECT_EQ(data_type.GetNumElements(), 2);
+  EXPECT_EQ(data_type.GetSize(), 2 * sizeof(uintptr_t));
+
+  // Check that referenced types n-levels deep are all parsed from BTF
+
+  auto &foo3_ptr_type = *data_type.GetElementTy();
+  ASSERT_TRUE(foo3_ptr_type.IsPtrTy());
+
+  auto &foo3_type = *foo3_ptr_type.GetPointeeTy();
+  ASSERT_TRUE(foo3_type.IsRecordTy());
+  ASSERT_TRUE(foo3_type.HasField("foo1"));
+
+  auto &foo1_ptr_type = foo3_type.GetField("foo1").type;
+  ASSERT_TRUE(foo1_ptr_type.IsPtrTy());
+
+  auto &foo1_type = *foo1_ptr_type.GetPointeeTy();
+  ASSERT_TRUE(foo1_type.IsRecordTy());
+  ASSERT_TRUE(foo1_type.HasField("a"));
+}
+
+TEST_F(field_analyser_btf, arrays_compound_data)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace,
+       "BEGIN {\n"
+       "  $x = (struct ArrayWithCompoundData *) 0;\n"
+       "  $x->data[0]->foo1->a\n"
+       "}",
+       0);
+  test_arrays_compound_data(bpftrace);
+}
+
 TEST_F(field_analyser_btf, btf_types_struct_ptr)
 {
   BPFtrace bpftrace;
@@ -493,6 +537,18 @@ TEST_F(field_analyser_dwarf, parse_arrays)
   EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
+}
+
+TEST_F(field_analyser_dwarf, arrays_compound_data)
+{
+  BPFtrace bpftrace;
+  test(bpftrace,
+       "uprobe:" + std::string{ bin_ } +
+           ":func_array_with_compound_data {\n"
+           "  args.arr->data[0]->foo1->a;\n"
+           "}",
+       0);
+  test_arrays_compound_data(bpftrace);
 }
 
 static void CheckParentFields(const std::shared_ptr<Struct> &cls,
