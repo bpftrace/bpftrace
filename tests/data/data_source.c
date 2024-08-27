@@ -65,6 +65,14 @@ struct Arrays *func_arrays(struct Arrays *arr)
   return 0;
 }
 
+struct ArrayWithCompoundData {
+  struct Foo3 *data[2];
+};
+
+void func_array_with_compound_data(struct ArrayWithCompoundData *arr)
+{
+}
+
 struct task_struct {
   int pid;
   int pgid;

@@ -55,6 +55,8 @@ and this project adheres to
   - [#3336](https://github.com/bpftrace/bpftrace/pull/3336)
 - Fix json formatting for `strftime` function
   - [#3381](https://github.com/bpftrace/bpftrace/pull/3381)
+- Fix BTF/DWARF parsing for structs contained in arrays
+  - [#3422](https://github.com/bpftrace/bpftrace/pull/3422)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
