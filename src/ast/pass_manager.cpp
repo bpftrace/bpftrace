@@ -29,15 +29,14 @@ PassResult PassManager::Run(Node *root, PassContext &ctx)
     print(root, "parser", std::cout);
   for (auto &pass : passes_) {
     auto result = pass.Run(*root, ctx);
-    if (!result.Ok())
-      return result;
-
-    if (result.Root()) {
+    if (result.Root())
       root = result.Root();
-    }
 
     if (bt_debug.find(DebugStage::Ast) != bt_debug.end())
       print(root, pass.name, std::cout);
+
+    if (!result.Ok())
+      return result;
   }
   return PassResult::Success(root);
 }
