@@ -408,12 +408,12 @@ TEST(semantic_analyser, consistent_map_keys)
   test("BEGIN { @x[1] = 0; @x[2]; }");
 
   test_error("BEGIN { @x = 0; @x[1]; }", R"(
-stdin:1:17-22: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64] when map expects arguments: []
+stdin:1:17-22: ERROR: Argument mismatch for @x: trying to access with arguments: [uint64] when map expects arguments: []
 BEGIN { @x = 0; @x[1]; }
                 ~~~~~
 )");
   test_error("BEGIN { @x[1] = 0; @x; }", R"(
-stdin:1:20-22: ERROR: Argument mismatch for @x: trying to access with arguments: [] when map expects arguments: [unsigned int64]
+stdin:1:20-22: ERROR: Argument mismatch for @x: trying to access with arguments: [] when map expects arguments: [uint64]
 BEGIN { @x[1] = 0; @x; }
                    ~~
 )");
@@ -421,12 +421,12 @@ BEGIN { @x[1] = 0; @x; }
   test("BEGIN { @x[1,2] = 0; @x[3,4]; }");
 
   test_error("BEGIN { @x[1,2] = 0; @x[3]; }", R"(
-stdin:1:22-27: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64] when map expects arguments: [unsigned int64, unsigned int64]
+stdin:1:22-27: ERROR: Argument mismatch for @x: trying to access with arguments: [uint64] when map expects arguments: [uint64, uint64]
 BEGIN { @x[1,2] = 0; @x[3]; }
                      ~~~~~
 )");
   test_error("BEGIN { @x[1] = 0; @x[2,3]; }", R"(
-stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: [unsigned int64, unsigned int64] when map expects arguments: [unsigned int64]
+stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: [uint64, uint64] when map expects arguments: [uint64]
 BEGIN { @x[1] = 0; @x[2,3]; }
                    ~~~~~~~
 )");
@@ -439,7 +439,7 @@ BEGIN { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
              R"(
-stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: [string[2], unsigned int64, kstack] when map expects arguments: [unsigned int64, string[2], kstack]
+stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: [string[2], uint64, kstack] when map expects arguments: [uint64, string[2], kstack]
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )");
@@ -846,7 +846,7 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", 10);
 
   test_error("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }", R"(
-stdin:1:42-44: ERROR: Argument mismatch for @y: trying to access with arguments: [] when map expects arguments: [unsigned int64]
+stdin:1:42-44: ERROR: Argument mismatch for @y: trying to access with arguments: [] when map expects arguments: [uint64]
 kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }
                                          ~~
 )");
@@ -904,7 +904,7 @@ TEST(semantic_analyser, call_print_map_item)
   test(R"_(BEGIN { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_");
 
   test_error("BEGIN { @x[1] = 1; print(@x[\"asdf\"]); }", R"(
-stdin:1:20-36: ERROR: Argument mismatch for @x: trying to access with arguments: [string[5]] when map expects arguments: [unsigned int64]
+stdin:1:20-36: ERROR: Argument mismatch for @x: trying to access with arguments: [string[5]] when map expects arguments: [uint64]
 BEGIN { @x[1] = 1; print(@x["asdf"]); }
                    ~~~~~~~~~~~~~~~~
 )");
@@ -2134,7 +2134,7 @@ TEST(semantic_analyser, map_aggregations_explicit_cast)
   test("kprobe:f { @ = avg(5); print((1, (uint16)@)); }");
 
   test_error("kprobe:f { @ = hist(5); print((1, (uint16)@)); }", R"(
-stdin:1:35-43: ERROR: Cannot cast from "hist" to "unsigned int16"
+stdin:1:35-43: ERROR: Cannot cast from "hist" to "uint16"
 kprobe:f { @ = hist(5); print((1, (uint16)@)); }
                                   ~~~~~~~~
 )");
@@ -2619,7 +2619,7 @@ TEST(semantic_analyser, mixed_int_var_assignments)
   test("kprobe:f { $x = (int8)1; $x = -2; }");
   test("kprobe:f { $x = (int16)1; $x = 20000; }");
   test_error("kprobe:f { $x = (uint8)1; $x = -1; }", R"(
-stdin:1:27-34: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'unsigned int8'
+stdin:1:27-34: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'uint8'
 kprobe:f { $x = (uint8)1; $x = -1; }
                           ~~~~~~~
 )");
@@ -2629,12 +2629,12 @@ kprobe:f { $x = (int16)1; $x = 100000; }
                           ~~~~~~~~~~~
 )");
   test_error("kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }", R"(
-stdin:1:43-50: ERROR: Integer size mismatch. Assignment type 'unsigned int16' is larger than the variable type 'unsigned int8'.
+stdin:1:43-50: ERROR: Integer size mismatch. Assignment type 'uint16' is larger than the variable type 'uint8'.
 kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }
                                           ~~~~~~~
 )");
   test_error("kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }", R"(
-stdin:1:42-49: ERROR: Type mismatch for $x: trying to assign value of type 'int8' when variable already contains a value of type 'unsigned int8'
+stdin:1:42-49: ERROR: Type mismatch for $x: trying to assign value of type 'int8' when variable already contains a value of type 'uint8'
 kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }
                                          ~~~~~~~
 )");
@@ -2644,7 +2644,7 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
                     ~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   test_error("kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }", R"(
-stdin:1:35-56: ERROR: Tuple type mismatch: (int64,unsigned int32) != (int64,int32).
+stdin:1:35-56: ERROR: Tuple type mismatch: (int64,uint32) != (int64,int32).
 kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
                                   ~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -2652,12 +2652,12 @@ kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
 Program
  BEGIN
   =
-   variable: $x :: [unsigned int8]
-   (unsigned int8)
+   variable: $x :: [uint8]
+   (uint8)
     int: 1 :: [int64]
   =
-   variable: $x :: [unsigned int8]
-   (unsigned int8)
+   variable: $x :: [uint8]
+   (uint8)
     int: 5 :: [int64]
 )");
   test("BEGIN { $x = (int8)1; $x = 5; }", R"(
@@ -3592,12 +3592,12 @@ Program
    int: 1 :: [int64]
   for
    decl
-    variable: $kv :: [(unsigned int64,int64)]
+    variable: $kv :: [(uint64,int64)]
    expr
     map: @map :: [int64]
    stmts
     call: print
-     variable: $kv :: [(unsigned int64,int64)]
+     variable: $kv :: [(uint64,int64)]
 )");
 }
 
@@ -3613,12 +3613,12 @@ Program
    int: 1 :: [int64]
   for
    decl
-    variable: $kv :: [((unsigned int64,unsigned int64),int64)]
+    variable: $kv :: [((uint64,uint64),int64)]
    expr
     map: @map :: [int64]
    stmts
     call: print
-     variable: $kv :: [((unsigned int64,unsigned int64),int64)]
+     variable: $kv :: [((uint64,uint64),int64)]
 )");
 }
 

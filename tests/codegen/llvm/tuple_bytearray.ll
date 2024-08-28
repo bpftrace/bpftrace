@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%"unsigned int8_usym_int64__tuple_t" = type { i8, [24 x i8], i64 }
+%uint8_usym_int64__tuple_t = type { i8, [24 x i8], i64 }
 %usym_t = type { i64, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -20,7 +20,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !54 {
 entry:
   %"@t_key" = alloca i64, align 8
-  %tuple = alloca %"unsigned int8_usym_int64__tuple_t", align 8
+  %tuple = alloca %uint8_usym_int64__tuple_t, align 8
   %usym = alloca %usym_t, align 8
   %1 = getelementptr i64, ptr %0, i64 16
   %reg_ip = load volatile i64, ptr %1, align 8
@@ -35,11 +35,11 @@ entry:
   store i64 0, ptr %5, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 40, i1 false)
-  %6 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 0
+  %6 = getelementptr %uint8_usym_int64__tuple_t, ptr %tuple, i32 0, i32 0
   store i8 1, ptr %6, align 1
-  %7 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 1
+  %7 = getelementptr %uint8_usym_int64__tuple_t, ptr %tuple, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %usym, i64 24, i1 false)
-  %8 = getelementptr %"unsigned int8_usym_int64__tuple_t", ptr %tuple, i32 0, i32 2
+  %8 = getelementptr %uint8_usym_int64__tuple_t, ptr %tuple, i32 0, i32 2
   store i64 10, ptr %8, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8

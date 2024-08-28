@@ -2626,14 +2626,14 @@ TEST(Parser, subprog_one_arg)
 {
   test("fn f($a : uint8): void {}",
        "Program\n"
-       " f: void($a : unsigned int8)\n");
+       " f: void($a : uint8)\n");
 }
 
 TEST(Parser, subprog_two_args)
 {
   test("fn f($a : uint8, $b : uint8): void {}",
        "Program\n"
-       " f: void($a : unsigned int8, $b : unsigned int8)\n");
+       " f: void($a : uint8, $b : uint8)\n");
 }
 
 TEST(Parser, subprog_string_arg)
