@@ -41,7 +41,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   } else if (type.IsRefTy()) {
     os << *type.GetDereferencedTy() << " &";
   } else if (type.IsIntTy()) {
-    os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.GetSize();
+    os << (type.is_signed_ ? "" : "u") << "int" << 8 * type.GetSize();
   } else if (type.IsArrayTy()) {
     os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
   } else if (type.IsStringTy() || type.IsBufferTy()) {

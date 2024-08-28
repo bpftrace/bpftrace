@@ -7,8 +7,8 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
-%"(unsigned int64,unsigned int64)_int64__tuple_t" = type { %"unsigned int64_unsigned int64__tuple_t", i64 }
-%"unsigned int64_unsigned int64__tuple_t" = type { i64, i64 }
+%"(uint64,uint64)_int64__tuple_t" = type { %uint64_uint64__tuple_t, i64 }
+%uint64_uint64__tuple_t = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_map = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -45,13 +45,13 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !75 {
   %"@x_key" = alloca i64, align 8
-  %"$kv" = alloca %"(unsigned int64,unsigned int64)_int64__tuple_t", align 8
+  %"$kv" = alloca %"(uint64,uint64)_int64__tuple_t", align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 24, i1 false)
-  %5 = getelementptr %"(unsigned int64,unsigned int64)_int64__tuple_t", ptr %"$kv", i32 0, i32 0
+  %5 = getelementptr %"(uint64,uint64)_int64__tuple_t", ptr %"$kv", i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %5, ptr align 1 %1, i64 16, i1 false)
-  %6 = getelementptr %"(unsigned int64,unsigned int64)_int64__tuple_t", ptr %"$kv", i32 0, i32 1
+  %6 = getelementptr %"(uint64,uint64)_int64__tuple_t", ptr %"$kv", i32 0, i32 1
   store i64 %val, ptr %6, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8

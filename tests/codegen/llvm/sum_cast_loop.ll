@@ -7,7 +7,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
-%"unsigned int64_sum__tuple_t" = type { i64, i64 }
+%uint64_sum__tuple_t = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -61,8 +61,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !77 {
   %key1 = alloca i32, align 4
   %lookup_fmtstr_key = alloca i32, align 4
-  %tuple = alloca %"unsigned int64_sum__tuple_t", align 8
-  %"$kv" = alloca %"unsigned int64_sum__tuple_t", align 8
+  %tuple = alloca %uint64_sum__tuple_t, align 8
+  %"$kv" = alloca %uint64_sum__tuple_t, align 8
   %val_2 = alloca i64, align 8
   %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
@@ -97,19 +97,19 @@ while_end:                                        ; preds = %error_failure, %err
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %9 = getelementptr %"unsigned int64_sum__tuple_t", ptr %"$kv", i32 0, i32 0
+  %9 = getelementptr %uint64_sum__tuple_t, ptr %"$kv", i32 0, i32 0
   store i64 %key, ptr %9, align 8
-  %10 = getelementptr %"unsigned int64_sum__tuple_t", ptr %"$kv", i32 0, i32 1
+  %10 = getelementptr %uint64_sum__tuple_t, ptr %"$kv", i32 0, i32 1
   store i64 %8, ptr %10, align 8
-  %11 = getelementptr %"unsigned int64_sum__tuple_t", ptr %"$kv", i32 0, i32 0
+  %11 = getelementptr %uint64_sum__tuple_t, ptr %"$kv", i32 0, i32 0
   %12 = load i64, ptr %11, align 8
-  %13 = getelementptr %"unsigned int64_sum__tuple_t", ptr %"$kv", i32 0, i32 1
+  %13 = getelementptr %uint64_sum__tuple_t, ptr %"$kv", i32 0, i32 1
   %14 = load i64, ptr %13, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %15 = getelementptr %"unsigned int64_sum__tuple_t", ptr %tuple, i32 0, i32 0
+  %15 = getelementptr %uint64_sum__tuple_t, ptr %tuple, i32 0, i32 0
   store i64 %12, ptr %15, align 8
-  %16 = getelementptr %"unsigned int64_sum__tuple_t", ptr %tuple, i32 0, i32 1
+  %16 = getelementptr %uint64_sum__tuple_t, ptr %tuple, i32 0, i32 1
   store i64 %14, ptr %16, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_fmtstr_key)
   store i32 0, ptr %lookup_fmtstr_key, align 4
