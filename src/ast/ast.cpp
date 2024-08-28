@@ -354,9 +354,13 @@ std::string opstr(const Unop &unop)
     case Operator::MUL:
       return "dereference";
     case Operator::INCREMENT:
-      return "++";
+      if (unop.is_post_op)
+        return "++ (post)";
+      return "++ (pre)";
     case Operator::DECREMENT:
-      return "--";
+      if (unop.is_post_op)
+        return "-- (post)";
+      return "-- (pre)";
     default:
       return {};
   }

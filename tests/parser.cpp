@@ -769,22 +769,22 @@ TEST(Parser, variable_post_increment_decrement)
   test("kprobe:sys_open { $x++; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  variable: $x\n"
-       "   ++\n");
+       "  ++ (post)\n"
+       "   variable: $x\n");
   test("kprobe:sys_open { ++$x; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  ++\n"
+       "  ++ (pre)\n"
        "   variable: $x\n");
   test("kprobe:sys_open { $x--; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  variable: $x\n"
-       "   --\n");
+       "  -- (post)\n"
+       "   variable: $x\n");
   test("kprobe:sys_open { --$x; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  --\n"
+       "  -- (pre)\n"
        "   variable: $x\n");
 }
 
@@ -793,22 +793,22 @@ TEST(Parser, map_increment_decrement)
   test("kprobe:sys_open { @x++; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  map: @x\n"
-       "   ++\n");
+       "  ++ (post)\n"
+       "   map: @x\n");
   test("kprobe:sys_open { ++@x; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  ++\n"
+       "  ++ (pre)\n"
        "   map: @x\n");
   test("kprobe:sys_open { @x--; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  map: @x\n"
-       "   --\n");
+       "  -- (post)\n"
+       "   map: @x\n");
   test("kprobe:sys_open { --@x; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  --\n"
+       "  -- (pre)\n"
        "   map: @x\n");
 }
 
@@ -2368,8 +2368,8 @@ TEST(Parser, while_loop)
     variable: $a
     int: 10
    )
-    variable: $a
-     ++
+    ++ (post)
+     variable: $a
 )PROG");
 }
 
