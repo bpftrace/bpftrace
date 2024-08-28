@@ -176,25 +176,18 @@ void Printer::visit(Binop &binop)
 
 void Printer::visit(Unop &unop)
 {
-  if (unop.is_post_op) {
-    std::string indent(depth_ + 1, ' ');
+  std::string indent(depth_, ' ');
+  out_ << indent << opstr(unop) << type(unop.type) << std::endl;
 
-    unop.expr->accept(*this);
-    out_ << indent << opstr(unop) << std::endl;
-  } else {
-    std::string indent(depth_, ' ');
-    out_ << indent << opstr(unop) << std::endl;
-
-    ++depth_;
-    unop.expr->accept(*this);
-    --depth_;
-  }
+  ++depth_;
+  unop.expr->accept(*this);
+  --depth_;
 }
 
 void Printer::visit(Ternary &ternary)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "?:" << std::endl;
+  out_ << indent << "?:" << type(ternary.type) << std::endl;
 
   ++depth_;
   ternary.cond->accept(*this);
@@ -221,7 +214,7 @@ void Printer::visit(FieldAccess &acc)
 void Printer::visit(ArrayAccess &arr)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "[]" << std::endl;
+  out_ << indent << "[]" << type(arr.type) << std::endl;
 
   ++depth_;
   arr.expr->accept(*this);
@@ -242,7 +235,7 @@ void Printer::visit(Cast &cast)
 void Printer::visit(Tuple &tuple)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "tuple:" << std::endl;
+  out_ << indent << "tuple:" << type(tuple.type) << std::endl;
 
   ++depth_;
   for (Expression *expr : tuple.elems)

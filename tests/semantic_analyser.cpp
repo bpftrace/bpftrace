@@ -1704,7 +1704,7 @@ TEST_F(semantic_analyser_dwarf, reference_into_deref)
   test(bpftrace, uprobe + " { args.c }", R"(
 Program
  )" + uprobe + R"(
-  dereference
+  dereference :: [Child, AS(user)]
    . :: [Child *, AS(user)]
     builtin: args :: [struct )" + uprobe + R"(_args, ctx: 1, AS(user)]
     c
