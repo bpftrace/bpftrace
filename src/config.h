@@ -37,6 +37,7 @@ enum class ConfigKeyInt {
   max_strlen,
   max_type_res_iterations,
   perf_rb_pages,
+  stack_size,
 };
 
 enum class ConfigKeyString {

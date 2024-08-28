@@ -3480,6 +3480,16 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 
+=== stack_size
+
+Default: 4096
+
+Amount of bpftrace stack (in bytes) to allocate per CPU.
+
+Constructs like scratch values and compiler generated temporaries will be placed on the bpftrace stack. This bypasses
+the verifier's 512 byte limit on the built-in stack. Note that LLVM may still spill registers onto the built-in stack.
+But the larger (and more problematic) stack allocations will go onto the bpftrace stack.
+
 === stack_mode
 
 Default: bpftrace

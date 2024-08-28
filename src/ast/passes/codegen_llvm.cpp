@@ -3704,6 +3704,13 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                       MapKey({ CreateInt(loss_cnt_key_size) }),
                       CreateInt(loss_cnt_val_size));
 
+  auto stack_size = bpftrace_.config_.get(ConfigKeyInt::stack_size);
+  createMapDefinition(to_string(MapType::Stack),
+                      libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                      1,
+                      MapKey({ CreateInt32() }),
+                      CreateArray(stack_size, CreateInt8()));
+
   if (resources.max_fmtstring_args_size > 0) {
     createMapDefinition(to_string(MapType::FmtStringArgs),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,

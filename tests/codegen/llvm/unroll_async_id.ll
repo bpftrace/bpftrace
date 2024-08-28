@@ -7,22 +7,24 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.3" = type { ptr, ptr, ptr, ptr }
 %printf_t = type { i64 }
-%printf_t.3 = type { i64 }
 %printf_t.4 = type { i64 }
 %printf_t.5 = type { i64 }
 %printf_t.6 = type { i64 }
+%printf_t.7 = type { i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_i = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
-@fmt_string_args = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !38
+@stack = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !38
+@fmt_string_args = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !53
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !56 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !65 {
 entry:
   %key55 = alloca i32, align 4
   %lookup_fmtstr_key46 = alloca i32, align 4
@@ -92,7 +94,7 @@ lookup_fmtstr_failure3:                           ; preds = %counter_merge
 
 lookup_fmtstr_merge4:                             ; preds = %counter_merge
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_fmtstr_map2, i8 0, i64 8, i1 false)
-  %3 = getelementptr %printf_t.3, ptr %lookup_fmtstr_map2, i32 0, i32 0
+  %3 = getelementptr %printf_t.4, ptr %lookup_fmtstr_map2, i32 0, i32 0
   store i64 0, ptr %3, align 8
   %ringbuf_output6 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %lookup_fmtstr_map2, i64 8, i64 0)
   %ringbuf_loss9 = icmp slt i64 %ringbuf_output6, 0
@@ -129,7 +131,7 @@ lookup_fmtstr_failure18:                          ; preds = %counter_merge8
 
 lookup_fmtstr_merge19:                            ; preds = %counter_merge8
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_fmtstr_map17, i8 0, i64 8, i1 false)
-  %5 = getelementptr %printf_t.4, ptr %lookup_fmtstr_map17, i32 0, i32 0
+  %5 = getelementptr %printf_t.5, ptr %lookup_fmtstr_map17, i32 0, i32 0
   store i64 0, ptr %5, align 8
   %ringbuf_output21 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %lookup_fmtstr_map17, i64 8, i64 0)
   %ringbuf_loss24 = icmp slt i64 %ringbuf_output21, 0
@@ -166,7 +168,7 @@ lookup_fmtstr_failure33:                          ; preds = %counter_merge23
 
 lookup_fmtstr_merge34:                            ; preds = %counter_merge23
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_fmtstr_map32, i8 0, i64 8, i1 false)
-  %7 = getelementptr %printf_t.5, ptr %lookup_fmtstr_map32, i32 0, i32 0
+  %7 = getelementptr %printf_t.6, ptr %lookup_fmtstr_map32, i32 0, i32 0
   store i64 0, ptr %7, align 8
   %ringbuf_output36 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %lookup_fmtstr_map32, i64 8, i64 0)
   %ringbuf_loss39 = icmp slt i64 %ringbuf_output36, 0
@@ -203,7 +205,7 @@ lookup_fmtstr_failure48:                          ; preds = %counter_merge38
 
 lookup_fmtstr_merge49:                            ; preds = %counter_merge38
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_fmtstr_map47, i8 0, i64 8, i1 false)
-  %9 = getelementptr %printf_t.6, ptr %lookup_fmtstr_map47, i32 0, i32 0
+  %9 = getelementptr %printf_t.7, ptr %lookup_fmtstr_map47, i32 0, i32 0
   store i64 0, ptr %9, align 8
   %ringbuf_output51 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %lookup_fmtstr_map47, i64 8, i64 0)
   %ringbuf_loss54 = icmp slt i64 %ringbuf_output51, 0
@@ -244,8 +246,8 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
-!llvm.dbg.cu = !{!53}
-!llvm.module.flags = !{!55}
+!llvm.dbg.cu = !{!62}
+!llvm.module.flags = !{!64}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_i", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -286,7 +288,7 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
 !37 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
-!39 = distinct !DIGlobalVariable(name: "fmt_string_args", linkageName: "global", scope: !2, file: !2, type: !40, isLocal: false, isDefinition: true)
+!39 = distinct !DIGlobalVariable(name: "stack", linkageName: "global", scope: !2, file: !2, type: !40, isLocal: false, isDefinition: true)
 !40 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !41)
 !41 = !{!42, !11, !16, !47}
 !42 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !43, size: 64)
@@ -296,16 +298,25 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !46 = !DISubrange(count: 6, lowerBound: 0)
 !47 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !48, size: 64, offset: 192)
 !48 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !49, size: 64)
-!49 = !DICompositeType(tag: DW_TAG_array_type, baseType: !50, size: 64, elements: !51)
+!49 = !DICompositeType(tag: DW_TAG_array_type, baseType: !50, size: 32768, elements: !51)
 !50 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !51 = !{!52}
-!52 = !DISubrange(count: 8, lowerBound: 0)
-!53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
-!54 = !{!0, !22, !36, !38}
-!55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
-!57 = !DISubroutineType(types: !58)
-!58 = !{!21, !59}
-!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
+!52 = !DISubrange(count: 4096, lowerBound: 0)
+!53 = !DIGlobalVariableExpression(var: !54, expr: !DIExpression())
+!54 = distinct !DIGlobalVariable(name: "fmt_string_args", linkageName: "global", scope: !2, file: !2, type: !55, isLocal: false, isDefinition: true)
+!55 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !56)
+!56 = !{!42, !11, !16, !57}
+!57 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !58, size: 64, offset: 192)
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !59, size: 64)
+!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !50, size: 64, elements: !60)
 !60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !59)
+!61 = !DISubrange(count: 8, lowerBound: 0)
+!62 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !63)
+!63 = !{!0, !22, !36, !38, !53}
+!64 = !{i32 2, !"Debug Info Version", i32 3}
+!65 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !66, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !62, retainedNodes: !69)
+!66 = !DISubroutineType(types: !67)
+!67 = !{!21, !68}
+!68 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
+!69 = !{!70}
+!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !65, file: !2, type: !68)

@@ -78,6 +78,8 @@ std::string to_string(MapType t)
       return "event_loss_counter";
     case MapType::RecursionPrevention:
       return "recursion_prevention";
+    case MapType::Stack:
+      return "stack";
   }
   return {}; // unreached
 }

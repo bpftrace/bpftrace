@@ -6,16 +6,18 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_map = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !39
+@stack = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !46
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !61 {
 entry:
   %"@map_key" = alloca i64, align 8
   %str1 = alloca [2 x i8], align 1
@@ -56,8 +58,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!46}
-!llvm.module.flags = !{!48}
+!llvm.dbg.cu = !{!58}
+!llvm.module.flags = !{!60}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_map", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -105,12 +107,24 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !43 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !44, size: 64, offset: 192)
 !44 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)
 !45 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!46 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !47)
-!47 = !{!0, !25, !39}
-!48 = !{i32 2, !"Debug Info Version", i32 3}
-!49 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !53)
-!50 = !DISubroutineType(types: !51)
-!51 = !{!45, !52}
-!52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
-!53 = !{!54}
-!54 = !DILocalVariable(name: "ctx", arg: 1, scope: !49, file: !2, type: !52)
+!46 = !DIGlobalVariableExpression(var: !47, expr: !DIExpression())
+!47 = distinct !DIGlobalVariable(name: "stack", linkageName: "global", scope: !2, file: !2, type: !48, isLocal: false, isDefinition: true)
+!48 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !49)
+!49 = !{!50, !11, !16, !53}
+!50 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !51, size: 64)
+!51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)
+!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 192, elements: !23)
+!53 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !54, size: 64, offset: 192)
+!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
+!55 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 32768, elements: !56)
+!56 = !{!57}
+!57 = !DISubrange(count: 4096, lowerBound: 0)
+!58 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !59)
+!59 = !{!0, !25, !39, !46}
+!60 = !{i32 2, !"Debug Info Version", i32 3}
+!61 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !58, retainedNodes: !65)
+!62 = !DISubroutineType(types: !63)
+!63 = !{!45, !64}
+!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+!65 = !{!66}
+!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)

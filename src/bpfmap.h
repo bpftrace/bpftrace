@@ -75,6 +75,7 @@ enum class MapType {
   StrBuffer,
   EventLossCounter,
   RecursionPrevention,
+  Stack,
 };
 
 std::string to_string(MapType t);

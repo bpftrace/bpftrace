@@ -137,6 +137,7 @@ void usage()
   std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
   std::cerr << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
+  std::cerr << "    BPFTRACE_STACK_SIZE               [default: 4096] stack size to allocate (per CPU)" << std::endl;
   std::cerr << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
   std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER        [default: '..'] string truncation trailer" << std::endl;
   std::cerr << "    BPFTRACE_VMLINUX                  [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
@@ -296,6 +297,10 @@ static void parse_env(BPFtrace& bpftrace)
 
   get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::perf_rb_pages, x);
+  });
+
+  get_uint64_env_var("BPFTRACE_STACK_SIZE", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::stack_size, x);
   });
 
   get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {

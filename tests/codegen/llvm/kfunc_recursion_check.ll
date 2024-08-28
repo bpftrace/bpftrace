@@ -7,18 +7,20 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
+%"struct map_t.3" = type { ptr, ptr, ptr, ptr }
 %print_integer_8_t = type <{ i64, i64, [8 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @recursion_prevention = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
-@fmt_string_args = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !45
+@stack = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !45
+@fmt_string_args = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !55
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kfunc_queued_spin_lock_slowpath_1(ptr %0) section "s_kfunc_queued_spin_lock_slowpath_1" !dbg !58 {
+define i64 @kfunc_queued_spin_lock_slowpath_1(ptr %0) section "s_kfunc_queued_spin_lock_slowpath_1" !dbg !67 {
 entry:
   %lookup_key12 = alloca i32, align 4
   %key6 = alloca i32, align 4
@@ -129,7 +131,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
-define i64 @tracepoint_exceptions_page_fault_user_2(ptr %0) section "s_tracepoint_exceptions_page_fault_user_2" !dbg !64 {
+define i64 @tracepoint_exceptions_page_fault_user_2(ptr %0) section "s_tracepoint_exceptions_page_fault_user_2" !dbg !73 {
 entry:
   %lookup_key12 = alloca i32, align 4
   %key6 = alloca i32, align 4
@@ -235,8 +237,8 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
-!llvm.dbg.cu = !{!55}
-!llvm.module.flags = !{!57}
+!llvm.dbg.cu = !{!64}
+!llvm.module.flags = !{!66}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "recursion_prevention", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -284,24 +286,33 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !43 = !{!44}
 !44 = !DISubrange(count: 2, lowerBound: 0)
 !45 = !DIGlobalVariableExpression(var: !46, expr: !DIExpression())
-!46 = distinct !DIGlobalVariable(name: "fmt_string_args", linkageName: "global", scope: !2, file: !2, type: !47, isLocal: false, isDefinition: true)
+!46 = distinct !DIGlobalVariable(name: "stack", linkageName: "global", scope: !2, file: !2, type: !47, isLocal: false, isDefinition: true)
 !47 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !48)
 !48 = !{!5, !11, !16, !49}
 !49 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !50, size: 64, offset: 192)
 !50 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !51, size: 64)
-!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 192, elements: !53)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 32768, elements: !53)
 !52 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !53 = !{!54}
-!54 = !DISubrange(count: 24, lowerBound: 0)
-!55 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !56)
-!56 = !{!0, !22, !36, !45}
-!57 = !{i32 2, !"Debug Info Version", i32 3}
-!58 = distinct !DISubprogram(name: "kfunc_queued_spin_lock_slowpath_1", linkageName: "kfunc_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !59, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !62)
-!59 = !DISubroutineType(types: !60)
-!60 = !{!21, !61}
-!61 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)
+!54 = !DISubrange(count: 4096, lowerBound: 0)
+!55 = !DIGlobalVariableExpression(var: !56, expr: !DIExpression())
+!56 = distinct !DIGlobalVariable(name: "fmt_string_args", linkageName: "global", scope: !2, file: !2, type: !57, isLocal: false, isDefinition: true)
+!57 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !58)
+!58 = !{!5, !11, !16, !59}
+!59 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !60, size: 64, offset: 192)
+!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !61, size: 64)
+!61 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 192, elements: !62)
 !62 = !{!63}
-!63 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !61)
-!64 = distinct !DISubprogram(name: "tracepoint_exceptions_page_fault_user_2", linkageName: "tracepoint_exceptions_page_fault_user_2", scope: !2, file: !2, type: !59, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !65)
-!65 = !{!66}
-!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !64, file: !2, type: !61)
+!63 = !DISubrange(count: 24, lowerBound: 0)
+!64 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !65)
+!65 = !{!0, !22, !36, !45, !55}
+!66 = !{i32 2, !"Debug Info Version", i32 3}
+!67 = distinct !DISubprogram(name: "kfunc_queued_spin_lock_slowpath_1", linkageName: "kfunc_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !68, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !64, retainedNodes: !71)
+!68 = !DISubroutineType(types: !69)
+!69 = !{!21, !70}
+!70 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)
+!71 = !{!72}
+!72 = !DILocalVariable(name: "ctx", arg: 1, scope: !67, file: !2, type: !70)
+!73 = distinct !DISubprogram(name: "tracepoint_exceptions_page_fault_user_2", linkageName: "tracepoint_exceptions_page_fault_user_2", scope: !2, file: !2, type: !68, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !64, retainedNodes: !74)
+!74 = !{!75}
+!75 = !DILocalVariable(name: "ctx", arg: 1, scope: !73, file: !2, type: !70)
