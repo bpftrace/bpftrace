@@ -1009,8 +1009,7 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(inet);
     if (inet->type.IsArrayTy() || inet->type.IsStringTy()) {
-      b_.CreateProbeRead(
-          ctx_, static_cast<Value *>(inet_offset), inet->type, expr_, call.loc);
+      b_.CreateProbeRead(ctx_, inet_offset, inet->type, expr_, call.loc);
     } else {
       b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt32Ty(), false),
                      b_.CreatePointerCast(inet_offset,
@@ -1344,8 +1343,7 @@ void CodegenLLVM::visit(Call &call)
     if (inBpfMemory(macaddr->type))
       b_.CreateMemcpyBPF(buf, expr_, macaddr->type.GetSize());
     else
-      b_.CreateProbeRead(
-          ctx_, static_cast<Value *>(buf), macaddr->type, expr_, call.loc);
+      b_.CreateProbeRead(ctx_, buf, macaddr->type, expr_, call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
