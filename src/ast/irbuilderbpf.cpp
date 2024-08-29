@@ -73,21 +73,54 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
   return fn;
 }
 
-Value *IRBuilderBPF::CreateGetPid(const location &loc)
+// This constant is defined in the Linux kernel's proc_ns.h
+// It represents the inode of the initial (global) PID namespace
+constexpr uint32_t PROC_PID_INIT_INO = 0xeffffffc;
+
+Value *IRBuilderBPF::CreateGetPid(Value *ctx, const location &loc)
 {
+  const auto &pidns = bpftrace_.get_pidns_self_stat();
+  if (pidns.st_ino != PROC_PID_INIT_INO) {
+    // Get namespaced target PID when we're running in a namespace
+    AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
+    CreateGetNsPidTgid(
+        ctx, getInt64(pidns.st_dev), getInt64(pidns.st_ino), res, loc);
+    Value *pid = CreateLoad(
+        getInt32Ty(),
+        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(0) }));
+    CreateLifetimeEnd(res);
+    return pid;
+  }
+
+  // Get global target PID when we're in the initial namespace
   Value *pidtgid = CreateGetPidTgid(loc);
   Value *pid = CreateTrunc(CreateLShr(pidtgid, 32), getInt32Ty(), "pid");
   return pid;
 }
 
-Value *IRBuilderBPF::CreateGetTid(const location &loc)
+Value *IRBuilderBPF::CreateGetTid(Value *ctx, const location &loc)
 {
+  const auto &pidns = bpftrace_.get_pidns_self_stat();
+  if (pidns.st_ino != PROC_PID_INIT_INO) {
+    // Get namespaced target TID when we're running in a namespace
+    AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
+    CreateGetNsPidTgid(
+        ctx, getInt64(pidns.st_dev), getInt64(pidns.st_ino), res, loc);
+    Value *tid = CreateLoad(
+        getInt32Ty(),
+        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(1) }));
+    CreateLifetimeEnd(res);
+    return tid;
+  }
+
+  // Get global target TID when we're in the initial namespace
   Value *pidtgid = CreateGetPidTgid(loc);
   Value *tid = CreateTrunc(pidtgid, getInt32Ty(), "tid");
   return tid;
 }
 
-AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val,
+AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
+                                     Value *val,
                                      int probe_id,
                                      const location &loc)
 {
@@ -99,7 +132,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val,
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
-  Value *pid = CreateGetPid(loc);
+  Value *pid = CreateGetPid(ctx, loc);
   Value *probe_id_val = Constant::getIntegerValue(getInt32Ty(),
                                                   APInt(32, probe_id));
 
@@ -2020,6 +2053,46 @@ CallInst *IRBuilderBPF::CreateGetPidTgid(const location &loc)
                           {},
                           "get_pid_tgid",
                           &loc);
+}
+
+void IRBuilderBPF::CreateGetNsPidTgid(Value *ctx,
+                                      Value *dev,
+                                      Value *ino,
+                                      AllocaInst *ret,
+                                      const location &loc)
+{
+  // long bpf_get_ns_current_pid_tgid(
+  //   u64 dev, u64 ino, struct bpf_pidns_info *nsdata, u32 size)
+  // Return: 0 on success
+  auto &layout = module_.getDataLayout();
+  auto struct_size = layout.getTypeAllocSize(BpfPidnsInfoType());
+
+  FunctionType *getnspidtgid_func_type = FunctionType::get(
+      getInt64Ty(),
+      {
+          getInt64Ty(),
+          getInt64Ty(),
+          BpfPidnsInfoType()->getPointerTo(),
+          getInt32Ty(),
+      },
+      false);
+  CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_ns_current_pid_tgid,
+                                    getnspidtgid_func_type,
+                                    { dev, ino, ret, getInt32(struct_size) },
+                                    "get_ns_pid_tgid",
+                                    &loc);
+  CreateHelperErrorCond(
+      ctx, call, libbpf::BPF_FUNC_get_ns_current_pid_tgid, loc);
+}
+
+llvm::Type *IRBuilderBPF::BpfPidnsInfoType()
+{
+  return GetStructType("bpf_pidns_info",
+                       {
+                           getInt32Ty(),
+                           getInt32Ty(),
+                       },
+                       false);
 }
 
 CallInst *IRBuilderBPF::CreateGetCurrentCgroupId(const location &loc)

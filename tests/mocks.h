@@ -75,6 +75,24 @@ public:
     return { "mock_vmlinux" };
   }
 
+  const struct stat &get_pidns_self_stat() const override
+  {
+    static const struct stat init_pid_namespace = []() {
+      struct stat s {};
+      s.st_ino = 0xeffffffc; // PROC_PID_INIT_INO
+      return s;
+    }();
+    static const struct stat child_pid_namespace = []() {
+      struct stat s {};
+      s.st_ino = 0xf0000011; // Arbitrary user namespace
+      return s;
+    }();
+
+    if (mock_in_init_pid_ns)
+      return init_pid_namespace;
+    return child_pid_namespace;
+  }
+
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
   {
     probe_matcher_ = std::move(probe_matcher);
@@ -82,6 +100,7 @@ public:
   }
 
   MockProbeMatcher *mock_probe_matcher;
+  bool mock_in_init_pid_ns = true;
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
@@ -108,6 +127,7 @@ public:
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_jiffies64_ = std::make_optional<bool>(has_features);
     has_for_each_map_elem_ = std::make_optional<bool>(has_features);
+    has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
   };
 
   void has_loop(bool has)

@@ -24,6 +24,8 @@ and this project adheres to
   - [#3692](https://github.com/bpftrace/bpftrace/pull/3692)
 - Fix bug where strftime() %f specifier could be off by up to 1s
   - [#3704](https://github.com/bpftrace/bpftrace/pull/3704)
+- Fix `pid`, `tid` and `ustack` when running bpftrace in containers with PID namespacing
+  - [#3428](https://github.com/bpftrace/bpftrace/pull/3428)
 #### Security
 #### Docs
 #### Tools

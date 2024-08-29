@@ -1,0 +1,30 @@
+# Run bpftrace inside a PID namespace and get its own PID/TID
+# They should both be "1" as bpftrace is the first and only process in this
+# temporary namespace.
+NAME pid_tid_inside
+RUN unshare --fork --pid --mount-proc {{BPFTRACE}} -e 'BEGIN { printf("pid: %d, tid: %d\n", pid, tid); exit() }'
+EXPECT pid: 1, tid: 1
+
+# Run target program inside a PID namespace and bpftrace outside
+# We should see PID/TID != 1 as we want to view them from the init-namespace,
+# where bpftrace is, not from inside the target's namespace.
+NAME pid_tid_outside
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_loop:uprobeFunction1 { printf("pid: %d, tid: %d\n", pid, tid); exit(); }'
+AFTER unshare --fork --pid --mount-proc ./testprogs/uprobe_loop
+EXPECT_REGEX ^pid: \d+, tid: \d+$
+EXPECT_REGEX_NONE ^pid: 1, tid: 1$
+
+# Both bpftrace and target running inside a PID namespace
+NAME ustack_inside
+RUN unshare --fork --pid --mount-proc bash -c "(./testprogs/uprobe_loop &) && {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'"
+EXPECT_REGEX         uprobeFunction1\+\d+$
+                     spin\+\d+$
+                     main\+\d+$
+
+# Target inside a PID namespace, bpftrace outside
+NAME ustack_outside
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'
+AFTER unshare --fork --pid --mount-proc bash -c ./testprogs/uprobe_loop
+EXPECT_REGEX         uprobeFunction1\+\d+$
+                     spin\+\d+$
+                     main\+\d+$
