@@ -134,7 +134,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
       } else {
         Constant *const_str = ConstantDataArray::getString(
             module_->getContext(), pstr, true);
-        AllocaInst *buf = b_.CreateAllocaBPF(
+        Value *buf = b_.CreateAllocaBPF(
             ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
         b_.CreateMemsetBPF(buf, b_.getInt8(0), pstr.length() + 1);
         b_.CreateStore(const_str, buf);
@@ -154,7 +154,7 @@ void CodegenLLVM::visit(String &string)
   Constant *const_str = ConstantDataArray::getString(module_->getContext(),
                                                      string.str,
                                                      true);
-  AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
+  Value *buf = b_.CreateAllocaBPF(string.type, "str");
   b_.CreateStore(const_str, buf);
   expr_ = buf;
   expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -188,7 +188,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   StructType *stack_key_struct = b_.GetStructType("stack_key",
                                                   stack_key_elements,
                                                   false);
-  AllocaInst *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
+  Value *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
   b_.CreateStore(b_.getInt64(0),
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
@@ -287,7 +287,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
       b_.getInt32Ty(), // probe id
     };
     StructType *stack_struct = b_.GetStructType("stack_t", elements, false);
-    AllocaInst *buf = b_.CreateAllocaBPF(stack_struct, "stack_args");
+    Value *buf = b_.CreateAllocaBPF(stack_struct, "stack_args");
 
     // store stack id
     Value *stackid = b_.CreateGEP(stack_key_struct,
@@ -335,7 +335,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   if (builtin.ident == "nsecs") {
     expr_ = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
   } else if (builtin.ident == "elapsed") {
-    AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
+    Value *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
     b_.CreateStore(b_.getInt64(0), key);
 
     auto type = CreateUInt64();
@@ -375,7 +375,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *random = b_.CreateGetRandom(builtin.loc);
     expr_ = b_.CreateZExt(random, b_.getInt64Ty());
   } else if (builtin.ident == "comm") {
-    AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
+    Value *buf = b_.CreateAllocaBPF(builtin.type, "comm");
     // initializing memory needed for older kernels:
     b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.type.GetSize());
     b_.CreateGetCurrentComm(ctx_, buf, builtin.type.GetSize(), builtin.loc);
@@ -450,7 +450,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
     Value *sp = b_.CreateRegisterRead(ctx_, sp_offset, "reg_sp");
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
+    Value *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
 
     // Pointer width is used when calculating the SP offset and the number of
     // bytes to read from stack for each argument. We pass a pointer SizedType
@@ -598,7 +598,7 @@ void CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(lookup_failure_block);
 
-    AllocaInst *mm_struct = b_.CreateAllocaBPF(mm_struct_ty, "mm_struct");
+    Value *mm_struct = b_.CreateAllocaBPF(mm_struct_ty, "mm_struct");
 
     b_.CreateStore(expr_,
                    b_.CreateGEP(mm_struct_ty,
@@ -676,7 +676,7 @@ void CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(lookup_failure_block);
 
-    AllocaInst *avg_struct = b_.CreateAllocaBPF(avg_struct_ty, "avg_struct");
+    Value *avg_struct = b_.CreateAllocaBPF(avg_struct_ty, "avg_struct");
 
     b_.CreateStore(expr_,
                    b_.CreateGEP(avg_struct_ty,
@@ -713,7 +713,7 @@ void CodegenLLVM::visit(Call &call)
                              b_.getInt64Ty(),
                              call.vargs.front()->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr_, k }, "log2");
-    AllocaInst *key = getHistMapKey(map, log2);
+    Value *key = getHistMapKey(map, log2);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
@@ -751,7 +751,7 @@ void CodegenLLVM::visit(Call &call)
                                   { value, min, max, step },
                                   "linear");
 
-    AllocaInst *key = getHistMapKey(map, linear);
+    Value *key = getHistMapKey(map, linear);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
 
     b_.CreateLifetimeEnd(key);
@@ -762,7 +762,7 @@ void CodegenLLVM::visit(Call &call)
       auto [key, scoped_key_deleter] = getMapKey(map);
       if (!is_bpf_map_clearable(map_types_[map.ident])) {
         // store zero instead of calling bpf_map_delete_elem()
-        AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+        Value *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
         b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
         b_.CreateMapUpdateElem(ctx_, map.ident, key, val, call.loc);
         b_.CreateLifetimeEnd(val);
@@ -924,7 +924,7 @@ void CodegenLLVM::visit(Call &call)
     assert(b_.GetType(elem_type) == b_.getInt64Ty());
 
     // temporary that stores the value of arg[i]
-    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
+    Value *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
     b_.CreateProbeRead(ctx_, arr, elem_type, expr_, call.loc);
     b_.CreateProbeReadStr(
         ctx_,
@@ -981,7 +981,7 @@ void CodegenLLVM::visit(Call &call)
                                            ArrayType::get(b_.getInt8Ty(), 16) };
     StructType *inet_struct = b_.GetStructType("inet_t", elements, false);
 
-    AllocaInst *buf = b_.CreateAllocaBPF(inet_struct, "inet");
+    Value *buf = b_.CreateAllocaBPF(inet_struct, "inet");
 
     Value *af_offset = b_.CreateGEP(inet_struct,
                                     buf,
@@ -1009,11 +1009,8 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(inet);
     if (inet->type.IsArrayTy() || inet->type.IsStringTy()) {
-      b_.CreateProbeRead(ctx_,
-                         static_cast<AllocaInst *>(inet_offset),
-                         inet->type,
-                         expr_,
-                         call.loc);
+      b_.CreateProbeRead(
+          ctx_, static_cast<Value *>(inet_offset), inet->type, expr_, call.loc);
     } else {
       b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt32Ty(), false),
                      b_.CreatePointerCast(inet_offset,
@@ -1032,7 +1029,7 @@ void CodegenLLVM::visit(Call &call)
     }
 
     llvm::Type *array_t = ArrayType::get(b_.getInt8Ty(), addr_size);
-    AllocaInst *buf;
+    Value *buf;
     if (af_type == AF_INET6) {
       buf = b_.CreateAllocaBPF(array_t, "addr6");
     } else {
@@ -1074,7 +1071,7 @@ void CodegenLLVM::visit(Call &call)
 
       // create buffer to store the argument expression values
       SizedType data_type = CreateArray(nargs, CreateUInt64());
-      AllocaInst *data = b_.CreateAllocaBPFInit(data_type, "data");
+      Value *data = b_.CreateAllocaBPFInit(data_type, "data");
 
       for (size_t i = 1; i < call.vargs.size(); i++) {
         // process argument expression
@@ -1147,7 +1144,7 @@ void CodegenLLVM::visit(Call &call)
      * The asyncaction_id informs user-space that this is not a printf(), but is
      * a special asynchronous action. The ID maps to exit().
      */
-    AllocaInst *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
+    Value *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
     b_.CreateOutput(ctx_, perfdata, sizeof(uint64_t), &call.loc);
     b_.CreateLifetimeEnd(perfdata);
@@ -1176,8 +1173,7 @@ void CodegenLLVM::visit(Call &call)
     StructType *cgroup_path_struct = b_.GetStructType(call.func + "_t",
                                                       elements,
                                                       true);
-    AllocaInst *buf = b_.CreateAllocaBPF(cgroup_path_struct,
-                                         call.func + "_args");
+    Value *buf = b_.CreateAllocaBPF(cgroup_path_struct, call.func + "_args");
 
     // Store cgroup path event id
     b_.CreateStore(b_.GetIntSameSize(async_ids_.cgroup_path(), elements.at(0)),
@@ -1203,8 +1199,7 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    AllocaInst *buf = b_.CreateAllocaBPF(event_struct,
-                                         call.func + "_" + map.ident);
+    Value *buf = b_.CreateAllocaBPF(event_struct, call.func + "_" + map.ident);
 
     auto aa_ptr = b_.CreateGEP(event_struct,
                                buf,
@@ -1234,7 +1229,7 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
+    Value *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
     b_.CreateStore(b_.getInt64(0), len);
 
     if (!map_len_func_)
@@ -1250,7 +1245,7 @@ void CodegenLLVM::visit(Call &call)
                                                elements,
                                                true);
 
-    AllocaInst *buf = b_.CreateAllocaBPF(time_struct, call.func + "_t");
+    Value *buf = b_.CreateAllocaBPF(time_struct, call.func + "_t");
 
     b_.CreateStore(
         b_.GetIntSameSize(asyncactionint(AsyncAction::time), elements.at(0)),
@@ -1269,7 +1264,7 @@ void CodegenLLVM::visit(Call &call)
                                                    elements,
                                                    true);
 
-    AllocaInst *buf = b_.CreateAllocaBPF(strftime_struct, call.func + "_args");
+    Value *buf = b_.CreateAllocaBPF(strftime_struct, call.func + "_args");
     b_.CreateStore(
         b_.GetIntSameSize(async_ids_.strftime(), elements.at(0)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
@@ -1342,7 +1337,7 @@ void CodegenLLVM::visit(Call &call)
     auto scoped_del = accept(arg);
   } else if (call.func == "macaddr") {
     // MAC addresses are presented as char[6]
-    AllocaInst *buf = b_.CreateAllocaBPFInit(call.type, "macaddr");
+    Value *buf = b_.CreateAllocaBPFInit(call.type, "macaddr");
     auto macaddr = call.vargs.front();
     auto scoped_del = accept(macaddr);
 
@@ -1350,7 +1345,7 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateMemcpyBPF(buf, expr_, macaddr->type.GetSize());
     else
       b_.CreateProbeRead(
-          ctx_, static_cast<AllocaInst *>(buf), macaddr->type, expr_, call.loc);
+          ctx_, static_cast<Value *>(buf), macaddr->type, expr_, call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -1360,7 +1355,7 @@ void CodegenLLVM::visit(Call &call)
 
     auto elements = AsyncEvent::WatchpointUnwatch().asLLVMType(b_);
     StructType *unwatch_struct = b_.GetStructType("unwatch_t", elements, true);
-    AllocaInst *buf = b_.CreateAllocaBPF(unwatch_struct, "unwatch");
+    Value *buf = b_.CreateAllocaBPF(unwatch_struct, "unwatch");
     size_t struct_size = datalayout().getTypeAllocSize(unwatch_struct);
 
     b_.CreateStore(
@@ -1388,7 +1383,7 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "skboutput") {
     auto elements = AsyncEvent::SkbOutput().asLLVMType(b_);
     StructType *hdr_t = b_.GetStructType("hdr_t", elements, false);
-    AllocaInst *data = b_.CreateAllocaBPF(hdr_t, "hdr");
+    Value *data = b_.CreateAllocaBPF(hdr_t, "hdr");
 
     // The extra 0 here ensures the type of addr_offset will be int64
     Value *aid_addr = b_.CreateGEP(hdr_t,
@@ -1817,7 +1812,7 @@ void CodegenLLVM::unop_int(Unop &unop)
     case Operator::MUL: {
       // When dereferencing a 32-bit integer, only read in 32-bits, etc.
       auto dst_type = SizedType(type.GetTy(), type.GetSize());
-      AllocaInst *dst = b_.CreateAllocaBPF(dst_type, "deref");
+      Value *dst = b_.CreateAllocaBPF(dst_type, "deref");
       b_.CreateProbeRead(ctx_, dst, type, expr_, unop.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(b_.GetType(dst_type), dst),
                                b_.getInt64Ty(),
@@ -1837,7 +1832,7 @@ void CodegenLLVM::unop_ptr(Unop &unop)
     case Operator::MUL: {
       if (unop.type.IsIntegerTy() || unop.type.IsPtrTy()) {
         auto *et = type.GetPointeeTy();
-        AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
+        Value *dst = b_.CreateAllocaBPF(*et, "deref");
         b_.CreateProbeRead(ctx_, dst, *et, expr_, unop.loc, type.GetAS());
         expr_ = b_.CreateLoad(b_.GetType(*et), dst);
         b_.CreateLifetimeEnd(dst);
@@ -1885,9 +1880,9 @@ void CodegenLLVM::visit(Ternary &ternary)
   Value *result = ternary.type.IsNoneTy()
                       ? nullptr
                       : b_.CreateAllocaBPF(ternary.type, "result");
-  AllocaInst *buf = ternary.type.IsNoneTy()
-                        ? nullptr
-                        : b_.CreateAllocaBPF(ternary.type, "buf");
+  Value *buf = ternary.type.IsNoneTy()
+                   ? nullptr
+                   : b_.CreateAllocaBPF(ternary.type, "buf");
   Value *cond;
   auto scoped_del = accept(ternary.cond);
   cond = expr_;
@@ -2035,9 +2030,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                                 field_type->getPointerTo()),
                               true);
         else {
-          AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                               type.GetName() + "." +
-                                                   acc.field);
+          Value *dst = b_.CreateAllocaBPF(field.type,
+                                          type.GetName() + "." + acc.field);
           // memset so verifier doesn't complain about reading uninitialized
           // stack
           b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
@@ -2202,14 +2196,14 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
  *
  * Constructs a tuple on the stack from the provided values.
  */
-AllocaInst *CodegenLLVM::createTuple(
+Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
     const std::vector<std::pair<llvm::Value *, const location *>> &vals,
     const std::string &name)
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
-  AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, name);
+  Value *buf = b_.CreateAllocaBPF(tuple_ty, name);
   b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
@@ -2245,7 +2239,7 @@ void CodegenLLVM::visit(Tuple &tuple)
     scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
-  AllocaInst *buf = createTuple(tuple.type, vals, "tuple");
+  Value *buf = createTuple(tuple.type, vals, "tuple");
 
   expr_ = buf;
   expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -2284,7 +2278,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     } else {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
-      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+      Value *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateProbeRead(ctx_,
                          dst,
                          map.type,
@@ -2297,7 +2291,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   } else if (map.type.IsPtrTy()) {
     // expr currently contains a pointer to the struct
     // and that's what we are saving
-    AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
+    Value *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
     b_.CreateStore(expr, dst);
     val = dst;
     self_alloca = true;
@@ -2333,7 +2327,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
       alloca_type = CreatePointer(pointee_type, var.type.GetAS());
     }
 
-    AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
+    Value *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
     variables_[var.ident] = VariableLLVM{ val, b_.GetType(alloca_type) };
   }
 
@@ -2891,8 +2885,8 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
   return std::make_tuple(key, ScopedExprDeleter(std::move(key_deleter)));
 }
 
-AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
-                                        const std::vector<Value *> &extra_keys)
+Value *CodegenLLVM::getMultiMapKey(Map &map,
+                                   const std::vector<Value *> &extra_keys)
 {
   size_t size = 0;
   for (auto &key_type : map.key_type.args_) {
@@ -2904,7 +2898,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
   // If key ever changes to not be allocated here, be sure to update getMapKey()
   // as well to take the new lifetime semantics into account.
-  AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
+  Value *key = b_.CreateAllocaBPF(size, map.ident + "_key");
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
 
   int offset = 0;
@@ -2963,12 +2957,12 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   return key;
 }
 
-AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
+Value *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
   if (map.vargs.size() > 0)
     return getMultiMapKey(map, { log2 });
 
-  AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
+  Value *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
   b_.CreateStore(log2, key);
   return key;
 }
@@ -3412,7 +3406,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   StructType *watchpoint_struct = b_.GetStructType("watchpoint_t",
                                                    elements,
                                                    true);
-  AllocaInst *buf = b_.CreateAllocaBPF(watchpoint_struct, "watchpoint");
+  Value *buf = b_.CreateAllocaBPF(watchpoint_struct, "watchpoint");
   size_t struct_size = datalayout().getTypeAllocSize(watchpoint_struct);
 
   // Fill in perf event struct
@@ -3439,8 +3433,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   auto &arg = *call.vargs.at(0);
   auto &map = static_cast<Map &>(arg);
 
-  AllocaInst *buf = b_.CreateAllocaBPF(print_struct,
-                                       call.func + "_" + map.ident);
+  Value *buf = b_.CreateAllocaBPF(print_struct, call.func + "_" + map.ident);
 
   // store asyncactionid:
   b_.CreateStore(
@@ -3960,7 +3953,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
     expr_deleter_ = scoped_del.disarm();
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     // Read data onto stack
-    AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
+    Value *dst = b_.CreateAllocaBPF(elem_type, temp_name);
     if (elem_type.IsStringTy() && data_type.is_btftype) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
@@ -4000,7 +3993,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
         b_.SetInsertPoint(pred_true_block);
       }
     } else {
-      AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
+      Value *dst = b_.CreateAllocaBPF(elem_type, temp_name);
       b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
       expr_ = b_.CreateLoad(b_.GetType(elem_type), dst);
       b_.CreateLifetimeEnd(dst);
@@ -4018,7 +4011,7 @@ void CodegenLLVM::createIncDec(Unop &unop)
     Map &map = static_cast<Map &>(*unop.expr);
     auto [key, scoped_key_deleter] = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, unop.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
+    Value *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
     if (is_increment)
       b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
@@ -4093,13 +4086,13 @@ Function *CodegenLLVM::createMurmurHash2Func()
   auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);
   b_.SetInsertPoint(bb);
 
-  AllocaInst *nr_stack_frames = b_.CreateAllocaBPF(b_.getInt8Ty(),
-                                                   "nr_stack_frames_addr");
-  AllocaInst *seed_addr = b_.CreateAllocaBPF(b_.getInt64Ty(), "seed_addr");
+  Value *nr_stack_frames = b_.CreateAllocaBPF(b_.getInt8Ty(),
+                                              "nr_stack_frames_addr");
+  Value *seed_addr = b_.CreateAllocaBPF(b_.getInt64Ty(), "seed_addr");
 
-  AllocaInst *id = b_.CreateAllocaBPF(b_.getInt64Ty(), "id");
-  AllocaInst *i = b_.CreateAllocaBPF(b_.getInt8Ty(), "i");
-  AllocaInst *k = b_.CreateAllocaBPF(b_.getInt64Ty(), "k");
+  Value *id = b_.CreateAllocaBPF(b_.getInt64Ty(), "id");
+  Value *i = b_.CreateAllocaBPF(b_.getInt8Ty(), "i");
+  Value *k = b_.CreateAllocaBPF(b_.getInt64Ty(), "k");
 
   Value *m = b_.getInt64(0xc6a4a7935bd1e995LLU);
   Value *r = b_.getInt64(47);
@@ -4310,8 +4303,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key)) {
-    AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
-                                             "lookup_key");
+    Value *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type), "lookup_key");
     b_.CreateStore(key, key_ptr);
 
     val = b_.CreatePerCpuMapAggElems(ctx_, map, key_ptr, map_val_type, map.loc);
@@ -4330,10 +4322,9 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   }
 
   // Create decl variable for use in this iteration of the loop
-  AllocaInst *tuple = createTuple(f.decl->type,
-                                  { { key, &f.decl->loc },
-                                    { val, &f.decl->loc } },
-                                  f.decl->ident);
+  Value *tuple = createTuple(f.decl->type,
+                             { { key, &f.decl->loc }, { val, &f.decl->loc } },
+                             f.decl->ident);
   variables_[f.decl->ident] = VariableLLVM{ tuple, b_.GetType(f.decl->type) };
 
   // 1. Save original locations of variables which will form part of the

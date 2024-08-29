@@ -67,7 +67,7 @@ public:
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
 
-  AllocaInst *getHistMapKey(Map &map, Value *log2);
+  Value *getHistMapKey(Map &map, Value *log2);
   int getNextIndexForProbe();
   Value *createLogicalAnd(Binop &binop);
   Value *createLogicalOr(Binop &binop);
@@ -90,7 +90,7 @@ public:
                            uint64_t max_entries,
                            const MapKey &key,
                            const SizedType &value_type);
-  AllocaInst *createTuple(
+  Value *createTuple(
       const SizedType &tuple_type,
       const std::vector<std::pair<llvm::Value *, const location *>> &vals,
       const std::string &name);
@@ -168,7 +168,7 @@ private:
 
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
-  AllocaInst *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
+  Value *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 

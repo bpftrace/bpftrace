@@ -73,9 +73,9 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
   return fn;
 }
 
-AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val,
-                                     int probe_id,
-                                     const location &loc)
+Value *IRBuilderBPF::CreateUSym(llvm::Value *val,
+                                int probe_id,
+                                const location &loc)
 {
   std::vector<llvm::Type *> elements = {
     getInt64Ty(), // addr
@@ -83,7 +83,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val,
     getInt64Ty(), // probe id
   };
   StructType *usym_t = GetStructType("usym_t", elements, false);
-  AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
+  Value *buf = CreateAllocaBPF(usym_t, "usym");
 
   Value *pid = CreateLShr(CreateGetPidTgid(loc), 32);
   Value *probe_id_val = Constant::getIntegerValue(getInt64Ty(),
@@ -147,11 +147,11 @@ void IRBuilderBPF::hoist(const std::function<void()> &functor)
   restoreIP(ip);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
-                                          llvm::Value *arraysize,
-                                          const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
+                                     llvm::Value *arraysize,
+                                     const std::string &name)
 {
-  AllocaInst *alloca;
+  Value *alloca;
   hoist([this, ty, arraysize, &name, &alloca]() {
     alloca = CreateAlloca(ty, arraysize, name);
   });
@@ -160,23 +160,22 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
   return alloca;
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
-                                          const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name)
 {
   return CreateAllocaBPF(ty, nullptr, name);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
-                                          const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
+                                     const std::string &name)
 {
   llvm::Type *ty = GetType(stype);
   return CreateAllocaBPF(ty, nullptr, name);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
-                                              const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
+                                         const std::string &name)
 {
-  AllocaInst *alloca;
+  Value *alloca;
   hoist([this, &stype, &name, &alloca]() {
     llvm::Type *ty = GetType(stype);
     alloca = CreateAlloca(ty, nullptr, name);
@@ -190,15 +189,15 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
   return alloca;
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
-                                          llvm::Value *arraysize,
-                                          const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
+                                     llvm::Value *arraysize,
+                                     const std::string &name)
 {
   llvm::Type *ty = GetType(stype);
   return CreateAllocaBPF(ty, arraysize, name);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
+Value *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
 {
   llvm::Type *ty = ArrayType::get(getInt8Ty(), bytes);
   return CreateAllocaBPF(ty, name);
@@ -508,9 +507,9 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             BasicBlock *failure_callback,
                                             int key)
 {
-  AllocaInst *keyAlloc = CreateAllocaBPF(getInt32Ty(),
-                                         nullptr,
-                                         "lookup_" + name + "_key");
+  Value *keyAlloc = CreateAllocaBPF(getInt32Ty(),
+                                    nullptr,
+                                    "lookup_" + name + "_key");
   CreateStore(getInt32(key), keyAlloc);
 
   CallInst *call = createMapLookup(
@@ -581,7 +580,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *value = CreateAllocaBPF(type, "lookup_elem_val");
   Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
                                   GetNull(),
                                   "map_lookup_cond");
@@ -643,10 +642,10 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
 
   const std::string &map_name = map.ident;
 
-  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
-  AllocaInst *val_1 = CreateAllocaBPF(getInt64Ty(), "val_1");
+  Value *i = CreateAllocaBPF(getInt32Ty(), "i");
+  Value *val_1 = CreateAllocaBPF(getInt64Ty(), "val_1");
   // used for min/max/avg
-  AllocaInst *val_2 = CreateAllocaBPF(getInt64Ty(), "val_2");
+  Value *val_2 = CreateAllocaBPF(getInt64Ty(), "val_2");
 
   CreateStore(getInt32(0), i);
   CreateStore(getInt64(0), val_1);
@@ -745,7 +744,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   Value *ret_reg;
 
   if (type.IsAvgTy()) {
-    AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
+    Value *ret = CreateAllocaBPF(getInt64Ty(), "ret");
     // BPF doesn't yet support a signed division so we have to check if
     // the value is negative, flip it, do an unsigned division, and then
     // flip it back
@@ -798,7 +797,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   return ret_reg;
 }
 
-void IRBuilderBPF::createPerCpuSum(AllocaInst *ret,
+void IRBuilderBPF::createPerCpuSum(Value *ret,
                                    CallInst *call,
                                    const SizedType &type)
 {
@@ -808,8 +807,8 @@ void IRBuilderBPF::createPerCpuSum(AllocaInst *ret,
               ret);
 }
 
-void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
-                                      AllocaInst *is_ret_set,
+void IRBuilderBPF::createPerCpuMinMax(Value *ret,
+                                      Value *is_ret_set,
                                       CallInst *call,
                                       const SizedType &type)
 {
@@ -900,8 +899,8 @@ void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
   SetInsertPoint(merge_block);
 }
 
-void IRBuilderBPF::createPerCpuAvg(AllocaInst *total,
-                                   AllocaInst *count,
+void IRBuilderBPF::createPerCpuAvg(Value *total,
+                                   Value *count,
                                    CallInst *call,
                                    const SizedType &type)
 {
@@ -1016,7 +1015,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
 {
   const std::string map_ident = to_string(MapType::RecursionPrevention);
 
-  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
+  Value *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
   CreateStore(getInt32(0), key);
 
   CallInst *call = createMapLookup(map_ident, key);
@@ -1088,7 +1087,7 @@ void IRBuilderBPF::CreateUnSetRecursion(const location &loc)
 {
   const std::string map_ident = to_string(MapType::RecursionPrevention);
 
-  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
+  Value *key = CreateAllocaBPF(getInt32Ty(), "lookup_key");
   CreateStore(getInt32(0), key);
 
   CallInst *call = createMapLookup(map_ident, key);
@@ -1263,7 +1262,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                            ctx,
                            getInt64(offset * sizeof(uintptr_t)),
                            "load_register");
-    AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
+    Value *dst = CreateAllocaBPF(builtin.type, builtin.ident);
     Value *index_offset = nullptr;
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
       int ioffset = arch::offset(argument->index_register_name);
@@ -1391,7 +1390,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   std::optional<std::string> literal2 = ValToString(str2);
 
   Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
+  Value *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
                                           "strcmp.false",
                                           parent);
@@ -1509,7 +1508,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   }
 
   Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
+  Value *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
                                              "strcontains.true",
                                              parent);
@@ -1661,11 +1660,11 @@ Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
   const size_t num = val1_type.GetNumElements();
 
   Value *val1_elem_i, *val2_elem_i, *cmp;
-  AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
-  AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
+  Value *v1 = CreateAllocaBPF(elem_type, "v1");
+  Value *v2 = CreateAllocaBPF(elem_type, "v2");
 
   Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
+  Value *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
   CreateStore(getInt1(inverse), store);
   BasicBlock *arr_ne = BasicBlock::Create(module_.getContext(),
                                           "arraycmp.false",
@@ -1758,9 +1757,9 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
   const size_t num = val1_type.GetNumElements();
 
   Value *val1_elem_i, *val2_elem_i, *cmp;
-  AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
-  AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
+  Value *v1 = CreateAllocaBPF(elem_type, "v1");
+  Value *v2 = CreateAllocaBPF(elem_type, "v2");
+  Value *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
   CreateStore(getInt1(inverse), store);
 
   Function *parent = GetInsertBlock()->getParent();
@@ -1779,8 +1778,8 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
 
   Value *ptr_val1 = CreateIntToPtr(val1, GetType(val1_type)->getPointerTo());
   Value *ptr_val2 = CreateIntToPtr(val2, GetType(val2_type)->getPointerTo());
-  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
-  AllocaInst *n = CreateAllocaBPF(getInt32Ty(), "n");
+  Value *i = CreateAllocaBPF(getInt32Ty(), "i");
+  Value *n = CreateAllocaBPF(getInt32Ty(), "n");
   CreateStore(getInt32(0), i);
   CreateStore(getInt32(num), n);
   CreateBr(while_cond);
@@ -1980,7 +1979,7 @@ CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const location &loc)
 }
 
 void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
-                                        AllocaInst *buf,
+                                        Value *buf,
                                         size_t size,
                                         const location &loc)
 {
@@ -2052,7 +2051,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
 void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
                                           uint32_t idx)
 {
-  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  Value *key = CreateAllocaBPF(getInt32Ty(), "key");
   CreateStore(getInt32(idx), key);
 
   CallInst *call = createMapLookup(map_name, key);
@@ -2095,7 +2094,7 @@ void IRBuilderBPF::CreateMapElemInit(Value *ctx,
                                      Value *val,
                                      const location &loc)
 {
-  AllocaInst *initValue = CreateAllocaBPF(val->getType(), "initial_value");
+  Value *initValue = CreateAllocaBPF(val->getType(), "initial_value");
   CreateStore(val, initValue);
   CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
   CreateLifetimeEnd(initValue);
@@ -2122,7 +2121,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *value = CreateAllocaBPF(type, "lookup_elem_val");
   Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
                                   GetNull(),
                                   "map_lookup_cond");
@@ -2182,7 +2181,7 @@ void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,
   Constant *const_str = ConstantDataArray::getString(module_.getContext(),
                                                      fmt_str,
                                                      true);
-  AllocaInst *fmt = CreateAllocaBPF(
+  Value *fmt = CreateAllocaBPF(
       ArrayType::get(getInt8Ty(), fmt_str.length() + 1), "fmt_str");
   CreateMemsetBPF(fmt, getInt8(0), fmt_str.length() + 1);
   CreateStore(const_str, fmt);
@@ -2245,7 +2244,7 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
 
 CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
                                         Value *len,
-                                        AllocaInst *data,
+                                        Value *data,
                                         size_t size)
 {
   Value *flags, *map_ptr, *size_val;
@@ -2319,7 +2318,7 @@ Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
   assert(args_type.IsRecordTy());
 
   auto *args_t = UprobeArgsType(args_type);
-  AllocaInst *result = CreateAllocaBPF(args_t, "args");
+  Value *result = CreateAllocaBPF(args_t, "args");
 
   for (auto &arg : args_type.GetFields()) {
     assert(arg.type.is_funcarg);
@@ -2426,7 +2425,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
   StructType *helper_error_struct = GetStructType("helper_error_t",
                                                   elements,
                                                   true);
-  AllocaInst *buf = CreateAllocaBPF(helper_error_struct, "helper_error_t");
+  Value *buf = CreateAllocaBPF(helper_error_struct, "helper_error_t");
   CreateStore(
       GetIntSameSize(asyncactionint(AsyncAction::helper_error), elements.at(0)),
       CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(0) }));

@@ -33,18 +33,16 @@ public:
                BPFtrace &bpftrace,
                AsyncIds &async_ids);
 
-  AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name = "");
-  AllocaInst *CreateAllocaBPF(const SizedType &stype,
-                              const std::string &name = "");
-  AllocaInst *CreateAllocaBPFInit(const SizedType &stype,
-                                  const std::string &name);
-  AllocaInst *CreateAllocaBPF(llvm::Type *ty,
-                              llvm::Value *arraysize,
-                              const std::string &name = "");
-  AllocaInst *CreateAllocaBPF(const SizedType &stype,
-                              llvm::Value *arraysize,
-                              const std::string &name = "");
-  AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
+  Value *CreateAllocaBPF(llvm::Type *ty, const std::string &name = "");
+  Value *CreateAllocaBPF(const SizedType &stype, const std::string &name = "");
+  Value *CreateAllocaBPFInit(const SizedType &stype, const std::string &name);
+  Value *CreateAllocaBPF(llvm::Type *ty,
+                         llvm::Value *arraysize,
+                         const std::string &name = "");
+  Value *CreateAllocaBPF(const SizedType &stype,
+                         llvm::Value *arraysize,
+                         const std::string &name = "");
+  Value *CreateAllocaBPF(int bytes, const std::string &name = "");
   void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
   void CreateMemcpyBPF(Value *dst, Value *src, uint32_t size);
   llvm::Type *GetType(const SizedType &stype);
@@ -188,7 +186,7 @@ public:
                        ArrayRef<Value *> args,
                        const Twine &Name);
   void CreateGetCurrentComm(Value *ctx,
-                            AllocaInst *buf,
+                            Value *buf,
                             size_t size,
                             const location &loc);
   void CreateOutput(Value *ctx,
@@ -227,17 +225,14 @@ public:
   StructType *GetStructType(std::string name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
-  AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
+  Value *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value *CreatKFuncArg(Value *ctx, SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
   llvm::Type *UprobeArgsType(const SizedType &args_type);
-  CallInst *CreateSkbOutput(Value *skb,
-                            Value *len,
-                            AllocaInst *data,
-                            size_t size);
+  CallInst *CreateSkbOutput(Value *skb, Value *len, Value *data, size_t size);
   void CreatePath(Value *ctx, Value *buf, Value *path, const location &loc);
   void CreateSeqPrintf(Value *ctx,
                        Value *fmt,
@@ -312,13 +307,13 @@ private:
                              size_t size,
                              const location *loc = nullptr);
 
-  void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
-  void createPerCpuMinMax(AllocaInst *ret,
-                          AllocaInst *is_ret_set,
+  void createPerCpuSum(Value *ret, CallInst *call, const SizedType &type);
+  void createPerCpuMinMax(Value *ret,
+                          Value *is_ret_set,
                           CallInst *call,
                           const SizedType &type);
-  void createPerCpuAvg(AllocaInst *total,
-                       AllocaInst *count,
+  void createPerCpuAvg(Value *total,
+                       Value *count,
                        CallInst *call,
                        const SizedType &type);
 
