@@ -140,7 +140,7 @@ class TestParser(object):
                 if prev_item_name == 'PROG':
                     prog += '\n' + line
                     continue
-                elif prev_item_name == 'EXPECT':
+                elif prev_item_name in ('EXPECT', 'EXPECT_REGEX'):
                     expects[-1].expect += '\n' + line
                     continue
 

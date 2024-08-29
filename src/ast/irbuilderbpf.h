@@ -148,7 +148,6 @@ public:
                                MDNode *metadata);
   CallInst *CreateGetNs(TimestampMode ts, const location &loc);
   CallInst *CreateJiffies64(const location &loc);
-  CallInst *CreateGetPidTgid(const location &loc);
   CallInst *CreateGetCurrentCgroupId(const location &loc);
   CallInst *CreateGetUidGid(const location &loc);
   CallInst *CreateGetNumaId(const location &loc);
@@ -236,7 +235,12 @@ public:
                             bool packed = false);
   Value *CreateGetPid(const location &loc);
   Value *CreateGetTid(const location &loc);
-  AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
+  Value *CreateGetPid(Value *ctx, const location &loc);
+  Value *CreateGetTid(Value *ctx, const location &loc);
+  AllocaInst *CreateUSym(Value *ctx,
+                         Value *val,
+                         int probe_id,
+                         const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
@@ -298,6 +302,13 @@ private:
   BPFtrace &bpftrace_;
   AsyncIds &async_ids_;
 
+  CallInst *CreateGetPidTgid(const location &loc);
+  void CreateGetNsPidTgid(Value *ctx,
+                          Value *dev,
+                          Value *ino,
+                          AllocaInst *ret,
+                          const location &loc);
+  llvm::Type *BpfPidnsInfoType();
   Value *CreateUSDTReadArgument(Value *ctx,
                                 struct bcc_usdt_argument *argument,
                                 Builtin &builtin,
