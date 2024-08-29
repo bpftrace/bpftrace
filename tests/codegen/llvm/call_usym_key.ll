@@ -22,13 +22,13 @@ entry:
   %usym = alloca %usym_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
-  %2 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
-  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
-  %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
-  store i64 0, ptr %2, align 8
-  store i64 %1, ptr %3, align 8
-  store i64 0, ptr %4, align 8
+  %pid = lshr i64 %get_pid_tgid, 32
+  %1 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
+  %2 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
+  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
+  store i64 0, ptr %1, align 8
+  store i64 %pid, ptr %2, align 8
+  store i64 0, ptr %3, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 1, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %usym, ptr %"@x_val", i64 0)

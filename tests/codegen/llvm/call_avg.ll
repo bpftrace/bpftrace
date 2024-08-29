@@ -25,29 +25,29 @@ entry:
   store i64 0, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = lshr i64 %get_pid_tgid, 32
   %lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %2 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
-  %3 = load i64, ptr %2, align 8
-  %4 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
-  %5 = load i64, ptr %4, align 8
-  %6 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
-  %7 = add i64 %3, %1
-  store i64 %7, ptr %6, align 8
-  %8 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
-  %9 = add i64 1, %5
-  store i64 %9, ptr %8, align 8
+  %1 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
+  %2 = load i64, ptr %1, align 8
+  %3 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
+  %4 = load i64, ptr %3, align 8
+  %5 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
+  %6 = add i64 %2, %pid
+  store i64 %6, ptr %5, align 8
+  %7 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
+  %8 = add i64 1, %4
+  store i64 %8, ptr %7, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %avg_struct)
-  %10 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 0
-  store i64 %1, ptr %10, align 8
-  %11 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 1
-  store i64 1, ptr %11, align 8
+  %9 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 0
+  store i64 %pid, ptr %9, align 8
+  %10 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 1
+  store i64 1, ptr %10, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %avg_struct, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %avg_struct)
   br label %lookup_merge

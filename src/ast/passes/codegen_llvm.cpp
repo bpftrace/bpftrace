@@ -273,7 +273,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(merge_block);
 
-  // Kernel stacks should not be differentiated by tid, since the kernel
+  // Kernel stacks should not be differentiated by pid, since the kernel
   // address space is the same between pids (and when aggregating you *want*
   // to be able to correlate between pids in most cases). User-space stacks
   // are special because of ASLR, hence we also store the pid; probe id is
@@ -305,7 +305,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store pid
     b_.CreateStore(
-        b_.CreateTrunc(b_.CreateGetPidTgid(loc), b_.getInt32Ty()),
+        b_.CreateGetPid(loc),
         b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     // store probe id
     b_.CreateStore(
@@ -347,13 +347,10 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateLifetimeEnd(key);
   } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
     kstack_ustack(builtin.ident, builtin.type.stack_type, builtin.loc);
-  } else if (builtin.ident == "pid" || builtin.ident == "tid") {
-    Value *pidtgid = b_.CreateGetPidTgid(builtin.loc);
-    if (builtin.ident == "pid") {
-      expr_ = b_.CreateLShr(pidtgid, 32);
-    } else if (builtin.ident == "tid") {
-      expr_ = b_.CreateAnd(pidtgid, 0xffffffff);
-    }
+  } else if (builtin.ident == "pid") {
+    expr_ = b_.CreateGetPid(builtin.loc);
+  } else if (builtin.ident == "tid") {
+    expr_ = b_.CreateGetTid(builtin.loc);
   } else if (builtin.ident == "cgroup") {
     expr_ = b_.CreateGetCurrentCgroupId(builtin.loc);
   } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
