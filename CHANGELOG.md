@@ -78,6 +78,8 @@ and this project adheres to
   - [#3453](https://github.com/bpftrace/bpftrace/pull/3453)
 - Fix json formatting for hex values
   - [#3475](https://github.com/bpftrace/bpftrace/pull/3475)
+- Fix `pid`, `tid` and `ustack` when running bpftrace in containers with PID namespacing
+  - [#3428](https://github.com/bpftrace/bpftrace/pull/3428)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
