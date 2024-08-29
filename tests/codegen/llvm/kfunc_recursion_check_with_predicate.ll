@@ -43,10 +43,10 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_success
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %2 = lshr i64 %get_pid_tgid, 32
-  %3 = icmp eq i64 %2, 1234
-  %4 = zext i1 %3 to i64
-  %predcond = icmp eq i64 %4, 0
+  %pid = lshr i64 %get_pid_tgid, 32
+  %2 = icmp eq i64 %pid, 1234
+  %3 = zext i1 %2 to i64
+  %predcond = icmp eq i64 %3, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
 value_is_set:                                     ; preds = %lookup_success
@@ -57,7 +57,7 @@ value_is_set:                                     ; preds = %lookup_success
   br i1 %map_lookup_cond5, label %lookup_success2, label %lookup_failure3
 
 lookup_success2:                                  ; preds = %value_is_set
-  %5 = atomicrmw add ptr %lookup_elem1, i64 1 seq_cst, align 8
+  %4 = atomicrmw add ptr %lookup_elem1, i64 1 seq_cst, align 8
   br label %lookup_merge4
 
 lookup_failure3:                                  ; preds = %value_is_set
@@ -76,18 +76,18 @@ pred_false:                                       ; preds = %lookup_merge
 
 pred_true:                                        ; preds = %lookup_merge
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %6 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %6
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %6
-  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  %8 = getelementptr %print_int_8_t, ptr %7, i64 0, i32 0
-  store i64 30007, ptr %8, align 8
-  %9 = getelementptr %print_int_8_t, ptr %7, i64 0, i32 1
-  store i64 0, ptr %9, align 8
-  %10 = getelementptr %print_int_8_t, ptr %7, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 8, i1 false)
-  store i64 2, ptr %10, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %7, i64 24, i64 0)
+  %5 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
+  %6 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %7 = getelementptr %print_int_8_t, ptr %6, i64 0, i32 0
+  store i64 30007, ptr %7, align 8
+  %8 = getelementptr %print_int_8_t, ptr %6, i64 0, i32 1
+  store i64 0, ptr %8, align 8
+  %9 = getelementptr %print_int_8_t, ptr %6, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 8, i1 false)
+  store i64 2, ptr %9, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %6, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -118,7 +118,7 @@ counter_merge:                                    ; preds = %lookup_merge17, %pr
   br i1 %map_lookup_cond24, label %lookup_success21, label %lookup_failure22
 
 lookup_success15:                                 ; preds = %event_loss_counter
-  %11 = atomicrmw add ptr %lookup_elem14, i64 1 seq_cst, align 8
+  %10 = atomicrmw add ptr %lookup_elem14, i64 1 seq_cst, align 8
   br label %lookup_merge17
 
 lookup_failure16:                                 ; preds = %event_loss_counter

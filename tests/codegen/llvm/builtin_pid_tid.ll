@@ -24,20 +24,20 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = lshr i64 %get_pid_tgid, 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %1, ptr %"@x_val", align 8
+  store i64 %pid, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)()
-  %2 = and i64 %get_pid_tgid1, 4294967295
+  %tid = and i64 %get_pid_tgid1, 4294967295
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
-  store i64 %2, ptr %"@y_val", align 8
+  store i64 %tid, ptr %"@y_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")

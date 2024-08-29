@@ -57,10 +57,10 @@ lookup_str_failure:                               ; preds = %entry
 lookup_str_merge:                                 ; preds = %entry
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_str_map, i8 0, i64 64, i1 false)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
-  %2 = icmp ult i64 %1, 10000
-  %3 = zext i1 %2 to i64
-  %true_cond = icmp ne i64 %3, 0
+  %pid = lshr i64 %get_pid_tgid, 32
+  %1 = icmp ult i64 %pid, 10000
+  %2 = zext i1 %1 to i64
+  %true_cond = icmp ne i64 %2, 0
   br i1 %true_cond, label %left, label %right
 }
 

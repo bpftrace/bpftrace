@@ -23,10 +23,10 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
   store i64 0, ptr %"$s", align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
-  %2 = icmp ugt i64 %1, 10000
-  %3 = zext i1 %2 to i64
-  %true_cond = icmp ne i64 %3, 0
+  %pid = lshr i64 %get_pid_tgid, 32
+  %1 = icmp ugt i64 %pid, 10000
+  %2 = zext i1 %1 to i64
+  %true_cond = icmp ne i64 %2, 0
   br i1 %true_cond, label %if_body, label %else_body
 
 if_body:                                          ; preds = %entry
@@ -35,17 +35,17 @@ if_body:                                          ; preds = %entry
 
 if_end:                                           ; preds = %else_body, %if_body
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %4 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %4
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %4
-  %5 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 16, i1 false)
-  %6 = getelementptr %printf_t, ptr %5, i32 0, i32 0
-  store i64 0, ptr %6, align 8
-  %7 = load i64, ptr %"$s", align 8
-  %8 = getelementptr %printf_t, ptr %5, i32 0, i32 1
-  store i64 %7, ptr %8, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %5, i64 16, i64 0)
+  %3 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
+  %4 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %4, i8 0, i64 16, i1 false)
+  %5 = getelementptr %printf_t, ptr %4, i32 0, i32 0
+  store i64 0, ptr %5, align 8
+  %6 = load i64, ptr %"$s", align 8
+  %7 = getelementptr %printf_t, ptr %4, i32 0, i32 1
+  store i64 %6, ptr %7, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %4, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -64,7 +64,7 @@ counter_merge:                                    ; preds = %lookup_merge, %if_e
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %9 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %8 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter
