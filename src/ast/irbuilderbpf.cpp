@@ -148,34 +148,33 @@ void IRBuilderBPF::hoist(const std::function<void()> &functor)
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
-                                          llvm::Value *arraysize,
                                           const std::string &name)
 {
+  // Anything this large should be allocated in a scratch map instead
+  assert(module_.getDataLayout().getTypeAllocSize(ty) <= 256);
+
   AllocaInst *alloca;
-  hoist([this, ty, arraysize, &name, &alloca]() {
-    alloca = CreateAlloca(ty, arraysize, name);
+  hoist([this, ty, &name, &alloca]() {
+    alloca = CreateAlloca(ty, nullptr, name);
   });
 
   CreateLifetimeStart(alloca);
   return alloca;
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
-                                          const std::string &name)
-{
-  return CreateAllocaBPF(ty, nullptr, name);
-}
-
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
                                           const std::string &name)
 {
   llvm::Type *ty = GetType(stype);
-  return CreateAllocaBPF(ty, nullptr, name);
+  return CreateAllocaBPF(ty, name);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
                                               const std::string &name)
 {
+  // Anything this large should be allocated in a scratch map instead
+  assert(stype.GetSize() <= 256);
+
   AllocaInst *alloca;
   hoist([this, &stype, &name, &alloca]() {
     llvm::Type *ty = GetType(stype);
@@ -188,14 +187,6 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
     }
   });
   return alloca;
-}
-
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
-                                          llvm::Value *arraysize,
-                                          const std::string &name)
-{
-  llvm::Type *ty = GetType(stype);
-  return CreateAllocaBPF(ty, arraysize, name);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
@@ -509,7 +500,6 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             int key)
 {
   AllocaInst *keyAlloc = CreateAllocaBPF(getInt32Ty(),
-                                         nullptr,
                                          "lookup_" + name + "_key");
   CreateStore(getInt32(key), keyAlloc);
 
