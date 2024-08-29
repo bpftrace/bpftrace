@@ -21,10 +21,13 @@ entry:
   %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %pid = lshr i64 %get_pid_tgid, 32
+  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)()
-  %pid2 = lshr i64 %get_pid_tgid1, 32
-  %linear = call i64 @linear(i64 %pid2, i64 0, i64 100, i64 1)
+  %2 = lshr i64 %get_pid_tgid1, 32
+  %pid2 = trunc i64 %2 to i32
+  %3 = zext i32 %pid2 to i64
+  %linear = call i64 @linear(i64 %3, i64 0, i64 100, i64 1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 %linear, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
@@ -33,9 +36,9 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  %2 = add i64 %1, 1
-  store i64 %2, ptr %lookup_elem, align 8
+  %4 = load i64, ptr %lookup_elem, align 8
+  %5 = add i64 %4, 1
+  store i64 %5, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry

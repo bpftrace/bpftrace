@@ -23,10 +23,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
   %1 = alloca i64, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %pid = lshr i64 %get_pid_tgid, 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
-  store i64 %pid, ptr %1, align 8
+  store i64 0, ptr %1, align 8
   %2 = ptrtoint ptr %1 to i64
   store i64 %2, ptr %"$a", align 8
   %3 = load i64, ptr %"$a", align 8

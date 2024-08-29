@@ -8,6 +8,9 @@ and this project adheres to
 
 ## Unreleased
 
+#### Breaking Changes
+- Return `uint32` instead of `uint64` for `pid` and `tid` builtins
+  - [#3441](https://github.com/bpftrace/bpftrace/pull/3441)
 #### Added
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
