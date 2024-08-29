@@ -22,18 +22,22 @@ entry:
   %"||_result" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %pid = lshr i64 %get_pid_tgid, 32
-  %1 = icmp eq i64 %pid, 1234
-  %2 = zext i1 %1 to i64
-  %lhs_true_cond = icmp ne i64 %2, 0
+  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
+  %3 = icmp eq i64 %2, 1234
+  %4 = zext i1 %3 to i64
+  %lhs_true_cond = icmp ne i64 %4, 0
   br i1 %lhs_true_cond, label %"||_true", label %"||_lhs_false"
 
 "||_lhs_false":                                   ; preds = %entry
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)()
-  %pid2 = lshr i64 %get_pid_tgid1, 32
-  %3 = icmp eq i64 %pid2, 1235
-  %4 = zext i1 %3 to i64
-  %rhs_true_cond = icmp ne i64 %4, 0
+  %5 = lshr i64 %get_pid_tgid1, 32
+  %pid2 = trunc i64 %5 to i32
+  %6 = zext i32 %pid2 to i64
+  %7 = icmp eq i64 %6, 1235
+  %8 = zext i1 %7 to i64
+  %rhs_true_cond = icmp ne i64 %8, 0
   br i1 %rhs_true_cond, label %"||_true", label %"||_false"
 
 "||_false":                                       ; preds = %"||_lhs_false"
@@ -45,11 +49,11 @@ entry:
   br label %"||_merge"
 
 "||_merge":                                       ; preds = %"||_true", %"||_false"
-  %5 = load i64, ptr %"||_result", align 8
+  %9 = load i64, ptr %"||_result", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %5, ptr %"@x_val", align 8
+  store i64 %9, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

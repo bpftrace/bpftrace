@@ -262,12 +262,12 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                 8);
     }
     case Type::ksym_t: {
-      return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
+      return bpftrace.resolve_ksym(read_data<uint64_t>(value.data()));
     }
     case Type::usym_t: {
-      return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
-                                   read_data<uintptr_t>(value.data() + 8),
-                                   read_data<uint64_t>(value.data() + 16));
+      return bpftrace.resolve_usym(read_data<uint64_t>(value.data()),
+                                   read_data<uint32_t>(value.data() + 8),
+                                   read_data<uint32_t>(value.data() + 12));
     }
     case Type::inet: {
       return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),

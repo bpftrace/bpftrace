@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%usym_t = type { i64, i64, i64 }
+%usym_t = type { i64, i32, i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -22,13 +22,14 @@ entry:
   %usym = alloca %usym_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %pid = lshr i64 %get_pid_tgid, 32
-  %1 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
-  %2 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
-  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
-  store i64 0, ptr %1, align 8
-  store i64 %pid, ptr %2, align 8
-  store i64 0, ptr %3, align 8
+  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
+  %2 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
+  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
+  %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
+  store i64 0, ptr %2, align 8
+  store i32 %pid, ptr %3, align 4
+  store i32 0, ptr %4, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 1, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %usym, ptr %"@x_val", i64 0)
@@ -66,10 +67,10 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !15 = !DISubrange(count: 4096, lowerBound: 0)
 !16 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !17, size: 64, offset: 128)
 !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
-!18 = !DICompositeType(tag: DW_TAG_array_type, baseType: !19, size: 192, elements: !20)
+!18 = !DICompositeType(tag: DW_TAG_array_type, baseType: !19, size: 128, elements: !20)
 !19 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !20 = !{!21}
-!21 = !DISubrange(count: 24, lowerBound: 0)
+!21 = !DISubrange(count: 16, lowerBound: 0)
 !22 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !23, size: 64, offset: 192)
 !23 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !24, size: 64)
 !24 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)

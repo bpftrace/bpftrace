@@ -1104,7 +1104,7 @@ For string arguments use the `str()` call to retrieve the value.
 | ID of the NUMA node executing the BPF program
 
 | pid
-| uint64
+| uint32
 | 4.2
 | get_current_pid_tgid
 | Process ID of the current thread (aka thread group ID), as seen from the init namespace
@@ -1134,7 +1134,7 @@ For string arguments use the `str()` call to retrieve the value.
 | Value returned by the function being traced (kretprobe, uretprobe, kretfunc)
 
 | tid
-| uint64
+| uint32
 | 4.2
 | get_current_pid_tgid
 | Thread ID of the current thread, as seen from the init namespace
