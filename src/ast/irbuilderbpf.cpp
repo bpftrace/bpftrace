@@ -591,7 +591,6 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    assert(value->getAllocatedType() == getInt64Ty());
     // createMapLookup  returns an u8*
     auto *cast = CreatePointerCast(call, value->getType(), "cast");
     CreateStore(CreateLoad(getInt64Ty(), cast), value);
@@ -1184,11 +1183,7 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
 {
   assert(ctx && ctx->getType() == GET_PTR_TY());
   assert(size && size->getType()->isIntegerTy());
-  if ([[maybe_unused]] auto *dst_alloca = dyn_cast<AllocaInst>(dst)) {
-    assert(dst_alloca->getAllocatedType()->isArrayTy() &&
-           dst_alloca->getAllocatedType()->getArrayElementType() ==
-               getInt8Ty());
-  }
+  assert(dst->getType()->isPointerTy());
 
   auto *size_i32 = size;
   if (size_i32->getType()->getScalarSizeInBits() != 32)
@@ -1989,9 +1984,7 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
                                         size_t size,
                                         const location &loc)
 {
-  assert(buf->getAllocatedType()->isArrayTy() &&
-         buf->getAllocatedType()->getArrayNumElements() >= size &&
-         buf->getAllocatedType()->getArrayElementType() == getInt8Ty());
+  assert(buf->getType()->isPointerTy());
 
   // long bpf_get_current_comm(char *buf, int size_of_buf)
   // Return: 0 on success or negative error
@@ -2139,8 +2132,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, value->getType(), "cast");
-  CreateStore(CreateAdd(CreateLoad(value->getAllocatedType(), cast), val),
-              cast);
+  CreateStore(CreateAdd(CreateLoad(GetType(type), cast), val), cast);
 
   CreateBr(lookup_merge_block);
 

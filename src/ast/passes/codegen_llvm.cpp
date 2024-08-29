@@ -2334,7 +2334,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     }
 
     AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
-    variables_[var.ident] = VariableLLVM{ val, val->getAllocatedType() };
+    variables_[var.ident] = VariableLLVM{ val, b_.GetType(alloca_type) };
   }
 
   if (var.type.IsArrayTy() || var.type.IsRecordTy()) {
@@ -2693,10 +2693,10 @@ void CodegenLLVM::visit(Subprog &subprog)
 
   int arg_index = 0;
   for (SubprogArg *arg : subprog.args) {
-    auto alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name());
+    auto ty = b_.GetType(arg->type);
+    auto alloca = b_.CreateAllocaBPF(ty, arg->name());
     b_.CreateStore(func->getArg(arg_index + 1), alloca);
-    variables_[arg->name()] = VariableLLVM{ alloca,
-                                            alloca->getAllocatedType() };
+    variables_[arg->name()] = VariableLLVM{ alloca, ty };
     ++arg_index;
   }
 
@@ -4334,7 +4334,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
                                   { { key, &f.decl->loc },
                                     { val, &f.decl->loc } },
                                   f.decl->ident);
-  variables_[f.decl->ident] = VariableLLVM{ tuple, tuple->getAllocatedType() };
+  variables_[f.decl->ident] = VariableLLVM{ tuple, b_.GetType(f.decl->type) };
 
   // 1. Save original locations of variables which will form part of the
   //    callback context
