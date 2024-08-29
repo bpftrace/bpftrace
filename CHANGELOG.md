@@ -21,6 +21,8 @@ and this project adheres to
   - [#3094](https://github.com/bpftrace/bpftrace/pull/3094)
 - Add an optional `size` parameter to `path`
   - [#3401](https://github.com/bpftrace/bpftrace/pull/3401)
+- Allow tuples to be used as map keys
+  - [#3390](https://github.com/bpftrace/bpftrace/pull/3390/)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

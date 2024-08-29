@@ -682,6 +682,17 @@ TEST(Parser, map_key)
        "    int: 2\n"
        "   int: 1\n");
 
+  test("kprobe:sys_open { @x[(0,\"hi\",tid)] = 1; }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "    tuple:\n"
+       "     int: 0\n"
+       "     string: hi\n"
+       "     builtin: tid\n"
+       "   int: 1\n");
+
   test("kprobe:sys_open { @x[@a] = 1; @x[@a,@b,@c] = 1; }",
        "Program\n"
        " kprobe:sys_open\n"

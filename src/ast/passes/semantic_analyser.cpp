@@ -1549,10 +1549,6 @@ void SemanticAnalyser::visit(Map &map)
     } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
       // map functions only accepts a pointer to a element in the stack
       LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
-    } else if (expr->type.IsTupleTy()) {
-      LOG(ERROR, map.loc, err_)
-          << "tuple cannot be used as a map key. Try a multi-key associative"
-             " array instead (eg `@map[$1, $2] = ...)`.";
     }
 
     if (is_final_pass() && expr->type.IsNoneTy())

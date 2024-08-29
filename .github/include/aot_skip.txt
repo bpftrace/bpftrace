@@ -75,6 +75,10 @@ aot.probe.uprobe_ignore_missing_probes
 aot.regression.kfunc double pointer array access
 aot.regression.kfunc double pointer dereference
 aot.tuples.basic tuple map
+# Same problem as #3392
+aot.tuples.tuple map key
+# Same problem as #3392
+aot.tuples.tuple map key variable
 aot.tuples.tuple print
 aot.tuples.tuple strftime type is packed
 aot.variable.tuple string resize
