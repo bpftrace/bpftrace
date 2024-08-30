@@ -636,7 +636,9 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots()
   for (std::string line; std::getline(mounts_file, line);) {
     std::smatch match;
     if (std::regex_match(line, match, cgroup_mount_regex)) {
-      result.push_back({ match[1].str(), match[2].str() });
+      if (std_filesystem::is_directory(match[2].str())) {
+        result.push_back({ match[1].str(), match[2].str() });
+      }
     }
   }
 
