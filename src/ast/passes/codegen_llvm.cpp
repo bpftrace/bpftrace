@@ -1897,9 +1897,6 @@ void CodegenLLVM::visit(Ternary &ternary)
                                                parent);
   BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
   // ordering of all the following statements is important
-  Value *result = ternary.type.IsNoneTy()
-                      ? nullptr
-                      : b_.CreateAllocaBPF(ternary.type, "result");
   AllocaInst *buf = ternary.type.IsNoneTy()
                         ? nullptr
                         : b_.CreateAllocaBPF(ternary.type, "buf");
@@ -1915,22 +1912,23 @@ void CodegenLLVM::visit(Ternary &ternary)
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
     auto scoped_del_left = accept(ternary.left);
-    expr_ = b_.CreateIntCast(expr_,
-                             b_.GetType(ternary.type),
-                             ternary.type.IsSigned());
-    b_.CreateStore(expr_, result);
+    auto left_expr = b_.CreateIntCast(expr_,
+                                      b_.GetType(ternary.type),
+                                      ternary.type.IsSigned());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     auto scoped_del_right = accept(ternary.right);
-    expr_ = b_.CreateIntCast(expr_,
-                             b_.GetType(ternary.type),
-                             ternary.type.IsSigned());
-    b_.CreateStore(expr_, result);
+    auto right_expr = b_.CreateIntCast(expr_,
+                                       b_.GetType(ternary.type),
+                                       ternary.type.IsSigned());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
-    expr_ = b_.CreateLoad(b_.GetType(ternary.type), result);
+    auto phi = b_.CreatePHI(b_.GetType(ternary.type), 2, "result");
+    phi->addIncoming(left_expr, left_block);
+    phi->addIncoming(right_expr, right_block);
+    expr_ = phi;
   } else if (ternary.type.IsStringTy()) {
     // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
