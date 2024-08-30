@@ -1896,13 +1896,17 @@ void CodegenLLVM::visit(Ternary &ternary)
                                                "right",
                                                parent);
   BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+
   // ordering of all the following statements is important
-  AllocaInst *buf = ternary.type.IsNoneTy()
-                        ? nullptr
-                        : b_.CreateAllocaBPF(ternary.type, "buf");
-  Value *cond;
+  Value *buf = nullptr;
+  if (ternary.type.IsStringTy()) {
+    buf = b_.CreateGetStrScratchMap(async_ids_.str(), nullptr, ternary.loc);
+    uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
+  }
+
   auto scoped_del = accept(ternary.cond);
-  cond = expr_;
+  Value *cond = expr_;
   Value *zero_value = Constant::getNullValue(cond->getType());
   b_.CreateCondBr(b_.CreateICmpNE(cond, zero_value, "true_cond"),
                   left_block,
@@ -1930,7 +1934,6 @@ void CodegenLLVM::visit(Ternary &ternary)
     phi->addIncoming(right_expr, right_block);
     expr_ = phi;
   } else if (ternary.type.IsStringTy()) {
-    // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
     auto scoped_del_left = accept(ternary.left);
     b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
@@ -1943,7 +1946,6 @@ void CodegenLLVM::visit(Ternary &ternary)
 
     b_.SetInsertPoint(done);
     expr_ = buf;
-    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else {
     // Type::none
     b_.SetInsertPoint(left_block);

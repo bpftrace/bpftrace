@@ -248,6 +248,18 @@ void ResourceAnalyser::visit(Map &map)
   map_info.key = map.key_type;
 }
 
+void ResourceAnalyser::visit(Ternary &ternary)
+{
+  Visitor::visit(ternary);
+
+  // Codegen cannot use a phi node for ternary string b/c strings can be of
+  // differing lengths and phi node wants identical types. So we have to
+  // allocate a result temporary, but not on the stack b/c a big string would
+  // blow it up. So we need a scratch buffer for it.
+  if (ternary.type.IsStringTy())
+    resources_.str_buffers++;
+}
+
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
   return fun == "usym" || fun == "func" || fun == "ustack";

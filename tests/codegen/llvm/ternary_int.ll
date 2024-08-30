@@ -19,8 +19,6 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !41 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %buf = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
   %2 = icmp ult i64 %1, 10000
