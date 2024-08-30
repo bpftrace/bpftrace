@@ -20,8 +20,6 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %buf = alloca i64, align 8
-  %result = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %result)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %buf)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
@@ -31,19 +29,17 @@ entry:
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  store i64 1, ptr %result, align 8
   br label %done
 
 right:                                            ; preds = %entry
-  store i64 2, ptr %result, align 8
   br label %done
 
 done:                                             ; preds = %right, %left
-  %4 = load i64, ptr %result, align 8
+  %result = phi i64 [ 1, %left ], [ 2, %right ]
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %4, ptr %"@x_val", align 8
+  store i64 %result, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

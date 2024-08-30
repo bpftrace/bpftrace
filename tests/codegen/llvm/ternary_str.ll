@@ -21,8 +21,6 @@ entry:
   %str1 = alloca [3 x i8], align 1
   %str = alloca [3 x i8], align 1
   %buf = alloca [3 x i8], align 1
-  %result = alloca [3 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %result)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %buf)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
