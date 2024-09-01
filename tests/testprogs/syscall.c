@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/version.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,7 +117,11 @@ int gen_read()
   }
   char buf[10];
   int r = syscall(SYS_read, fd, (void *)buf, 0);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
   close(fd);
+#else
+  close_range(fd, fd, 0);
+#endif
   remove(file_path);
   free(file_path);
   if (r < 0) {
