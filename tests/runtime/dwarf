@@ -2,19 +2,16 @@ NAME list uprobe args - basic type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:main'
 EXPECT int argc
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME list uprobe args - pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction1'
 EXPECT int * n
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME list uprobe args - struct pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction2'
 EXPECT struct Foo * foo1
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME list uprobe args - anonymous param type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction3'
@@ -22,7 +19,6 @@ EXPECT enum { A, B, C } e
        union { int a; char b; } u
 REQUIRES bash -c "exit 1" # SKIP: anonymous parameter type not supported #3083
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME list uprobe args - class reference type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1'
@@ -30,33 +26,28 @@ EXPECT     int & x
            Foo & foo
            Bar & bar
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME list uprobe args - array reference type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeArray'
 EXPECT int (&)[10] array
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 
 NAME uprobe arg by name - char
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args.c); exit(); }
 EXPECT c = x
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobe arg by name - pointer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("n = %d\n", *(args.n)); exit(); }
 EXPECT n = 13
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobe arg by name - struct
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->a = %d\n", args.foo1->a); exit(); }
 EXPECT foo1->a = 123
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 # NAME uprobe arg by index - 128-bits integer
@@ -66,7 +57,6 @@ BEFORE ./testprogs/uprobe_test
 #        z = cdcdcdcd
 #        w = abababab
 # REQUIRES_FEATURE dwarf
-# TIMEOUT 5
 # BEFORE ./testprogs/uprobe_test
 
 # NAME uprobe arg by name - 128-bits integer
@@ -76,14 +66,12 @@ BEFORE ./testprogs/uprobe_test
 #        z = cdcdcdcd
 #        w = abababab
 # REQUIRES_FEATURE dwarf
-# TIMEOUT 5
 # BEFORE ./testprogs/uprobe_test
 
 NAME uprobe arg by name - struct with 128-bits integer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->d = %x\n", args.foo1->d); exit(); }
 EXPECT foo1->d = 9abcdef0
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobe skip inlined function
@@ -92,7 +80,6 @@ PROG config = { probe_inline = 0 }
      uretprobe:./testprogs/inline_function:main { exit() }
 EXPECT @count: 1
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/inline_function
 
 NAME uprobe inlined function
@@ -101,7 +88,6 @@ PROG config = { probe_inline = 1 }
      uretprobe:./testprogs/inline_function:main { exit() }
 EXPECT @count: 3
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/inline_function
 
 NAME uprobe inlined function - probe
@@ -114,7 +100,6 @@ EXPECT uprobe:./testprogs/inline_function:square
        uprobe:./testprogs/inline_function:square
        uprobe:./testprogs/inline_function:square
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/inline_function
 
 NAME uprobe inlined function - func
@@ -127,7 +112,6 @@ EXPECT main
        main
        square
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/inline_function
 
 NAME uprobe inlined function - ustack
@@ -139,7 +123,6 @@ PROG config = { probe_inline = 1; cache_user_symbols = "PER_PROGRAM"; }
 EXPECT_REGEX ^\n[ ]+main\+\d+$
 EXPECT_REGEX ^\n[ ]+square\+\d+\n[ ]+main\+\d+$
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/inline_function
 
 NAME print uprobe arg as deref pointer - struct
@@ -149,7 +132,6 @@ PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 {
      }
 EXPECT { .a = 123, .b = hello, .c = [1,2,3], .d = 1311768467463790320 }
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe arg as reference - int
@@ -159,7 +141,6 @@ PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1 {
      }
 EXPECT x = 42
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test_cxx
 
 NAME print uprobe arg as reference - struct
@@ -169,7 +150,6 @@ PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeFunction1 {
      }
 EXPECT_REGEX ^\{ \.a = 1, \.b = 2, \.c = 3, \.x = 0x[0-9a-f]{1,16} \}$
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test_cxx
 
 NAME uprobe arg as reference - struct member
@@ -183,7 +163,6 @@ EXPECT foo.a = 1
        foo.c = 3
        foo.x = 42
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test_cxx
 
 NAME uprobe arg as reference - array
@@ -194,7 +173,6 @@ PROG uprobe:./testprogs/uprobe_test_cxx:cpp:uprobeArray {
      }
 EXPECT arr[0] = 1, arr[1] = 2, arr[9] = 10
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test_cxx
 
 # Checking backwards compatibility
@@ -202,33 +180,28 @@ NAME uprobe args as pointer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args->c); exit(); }
 EXPECT c = x
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME struct field string
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->b = %s\n", args.foo1->b); exit(); }
 EXPECT foo1->b = hello
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME struct field array
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { print(args.foo1->c); exit(); }
 EXPECT [1,2,3]
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME cast to struct
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->a = %d\n", ((struct Foo *)arg0)->a); exit(); }
 EXPECT foo1->a = 123
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME struct override
 PROG struct Foo { int b; } uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->b = %d\n", ((struct Foo *)arg0)->b); exit(); }
 EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test

@@ -1,17 +1,14 @@
 NAME stats with negative values
 PROG BEGIN { @=stats(-10); @=stats(-5); @=stats(5); exit() }
 EXPECT @: count 3, average -3, total -10
-TIMEOUT 5
 
 NAME avg with negative values
 PROG BEGIN { @=avg(-30); @=avg(-10); exit(); }
 EXPECT @: -20
-TIMEOUT 5
 
 NAME avg cast negative values
 PROG BEGIN { @ = avg(-1); @ = avg(-1); @ = avg(-10); if (@ == -4) { printf("done\n"); exit(); }}
 EXPECT done
-TIMEOUT 5
 
 NAME negative map value
 PROG BEGIN { @ = -11; exit(); }
@@ -36,4 +33,3 @@ TIMEOUT 1
 NAME mixed values
 PROG BEGIN { printf("%d %d %d %d\n", (int8) -10, -5555, (int16)-123, 100); exit(); }
 EXPECT -10 -5555 -123 100
-TIMEOUT 5

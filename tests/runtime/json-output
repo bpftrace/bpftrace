@@ -1,131 +1,106 @@
 NAME invalid_format
 RUN {{BPFTRACE}} -q -f jsonx -e 'BEGIN { @scalar = 5; exit(); }'
 EXPECT ERROR: Invalid output format "jsonx"
-TIMEOUT 5
 WILL_FAIL
 
 NAME scalar
 PROG BEGIN { @scalar = 5; exit(); }
 EXPECT_JSON runtime/outputs/scalar.json
-TIMEOUT 5
 
 NAME scalar_str
 PROG BEGIN { @scalar_str = "a b \n d e"; exit(); }
 EXPECT_JSON runtime/outputs/scalar_str.json
-TIMEOUT 5
 
 NAME complex
 PROG BEGIN { @complex[comm,2] = 5; exit(); }
 EXPECT_JSON runtime/outputs/complex.json
-TIMEOUT 5
 
 NAME map
 PROG BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }
 EXPECT_JSON runtime/outputs/map.json
-TIMEOUT 5
 
 NAME multiple maps
 PROG BEGIN { @map1["key1"] = 2; @map2["key2"] = 3; exit(); }
 EXPECT_JSON runtime/outputs/multiple_maps.ndjson
-TIMEOUT 5
 
 NAME histogram
 PROG BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }
 EXPECT_JSON runtime/outputs/hist.json
-TIMEOUT 5
 
 NAME histogram zero
 PROG BEGIN { @hist = hist(2); zero(@hist); exit(); }
 EXPECT_JSON runtime/outputs/hist_zero.json
-TIMEOUT 5
 
 NAME multiple histograms
 PROG BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }
 EXPECT_JSON runtime/outputs/hist_multiple.json
-TIMEOUT 5
 
 NAME histogram-finegrain
 PROG BEGIN { $i = 0; while ($i < 1024) { @ = hist($i, 3); $i++; } exit(); }
 EXPECT_JSON runtime/outputs/hist_2args.json
-TIMEOUT 5
 
 NAME linear histogram
 PROG BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }
 EXPECT_JSON runtime/outputs/lhist.json
-TIMEOUT 5
 
 NAME linear histogram zero
 PROG BEGIN { @h = lhist(2, 0, 100, 10); zero(@h); exit(); }
 EXPECT_JSON runtime/outputs/lhist_zero.json
-TIMEOUT 5
 
 NAME multiple linear histograms
 PROG BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10); exit(); }
 EXPECT_JSON runtime/outputs/lhist_multiple.json
-TIMEOUT 5
 
 NAME stats
 PROG BEGIN { @stats = stats(2); @stats = stats(10); exit(); }
 EXPECT_JSON runtime/outputs/stats.json
-TIMEOUT 5
 
 NAME multiple stats
 PROG BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10); exit(); }
 EXPECT_JSON runtime/outputs/stats_multiple.json
-TIMEOUT 5
 
 NAME printf
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test %d", 5); exit(); }'
 EXPECT {"type": "printf", "data": "test 5"}
-TIMEOUT 5
 
 NAME printf_escaping
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
 EXPECT {"type": "printf", "data": "test \r \n \t \\ \" bar"}
-TIMEOUT 5
 
 NAME time
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { time(); exit(); }'
 EXPECT_REGEX ^{"type": "time", "data": "[0-9]*:[0-9]*:[0-9]*\\n"}$
-TIMEOUT 5
 
 NAME syscall
 RUN {{BPFTRACE}} --unsafe -f json -e 'BEGIN { system("echo a b c"); exit(); }'
 EXPECT {"type": "syscall", "data": "a b c\n"}
-TIMEOUT 5
 
 NAME join_delim
 RUN {{BPFTRACE}} --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args.argv, ","); }' -c "./testprogs/syscall execve /bin/echo 'A'"
 EXPECT {"type": "join", "data": "/bin/echo,'A'"}
-TIMEOUT 5
 
 NAME cat
 RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
 EXPECT_REGEX ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
-TIMEOUT 5
 
 NAME strerror
 RUN {{BPFTRACE}} -f json -e 'BEGIN { print((strerror(7))); exit(); }'
 EXPECT {"type": "value", "data": "Argument list too long"}
-TIMEOUT 5
 
 # Careful with '[' and ']', they are read by the test engine as a regex
 # character class, so make sure to escape them.
 NAME tuple
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
 EXPECT {"type": "map", "data": {"@": [1,2,"string",[4,5]]}}
-TIMEOUT 5
 
 NAME tuple_with_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); @ = (0, $f); exit(); }'
 EXPECT {"type": "map", "data": {"@": [0,{ "m": 2, "n": 3 }]}}
-TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME tuple_with_escaped_string
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string with \"quotes\""); exit(); }'
 EXPECT {"type": "map", "data": {"@": [1,2,"string with \"quotes\""]}}
-TIMEOUT 5
 
 NAME print_non_map
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $x = 5; print($x); exit() }'
@@ -145,13 +120,11 @@ TIMEOUT 1
 NAME print_non_map_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
 EXPECT {"type": "value", "data": { "m": 2, "n": 3 }}
-TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME print_non_map_nested_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
 EXPECT {"type": "value", "data": { "y": { "m": [2] }, "a": { "n": 3 } }}
-TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME print_avg_map_args
@@ -182,7 +155,6 @@ TIMEOUT 1
 NAME cgroup_path
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': '.*'}$
-TIMEOUT 5
 
 NAME strftime
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $t = (1, strftime("%m/%d/%y", nsecs)); print($t); exit() }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'

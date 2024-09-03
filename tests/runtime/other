@@ -1,69 +1,56 @@
 NAME if_gt
 PROG i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}
 EXPECT a=20
-TIMEOUT 5
 
 NAME if_lt
 PROG i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}
 EXPECT a=10
-TIMEOUT 5
 
 NAME ifelse_go_else
 PROG i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hello
-TIMEOUT 5
 
 NAME ifelse_go_if
 PROG i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hi
-TIMEOUT 5
 
 NAME ifelseif_go_elseif
 PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}
 EXPECT a=hello
-TIMEOUT 5
 
 NAME ifelseifelse_go_else
 PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}
 EXPECT a=asdf
-TIMEOUT 5
 
 NAME if_cast
 PROG i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}
 EXPECT done
-TIMEOUT 5
 
 NAME ternary
 PROG i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}
 EXPECT yes
-TIMEOUT 5
 
 NAME ternary_lnot
 PROG i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit() }
 EXPECT 1
-TIMEOUT 5
 
 NAME ternary_int8
 PROG i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}
 EXPECT 1
-TIMEOUT 5
 
 NAME ternary_none_type
 PROG i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }
 EXPECT  yes
-TIMEOUT 5
 
 NAME unroll
 PROG i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}
 EXPECT a=11
-TIMEOUT 5
 
 NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT stdin:1:17-29: ERROR: unroll maximum value is 100
        i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
                        ~~~~~~~~~~~~
-TIMEOUT 5
 WILL_FAIL
 
 NAME unroll_min_value
@@ -71,48 +58,39 @@ PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT stdin:1:17-27: ERROR: unroll minimum value is 1
        i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
                        ~~~~~~~~~~
-TIMEOUT 5
 WILL_FAIL
 
 NAME unroll_param
 RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n", $a); exit();}' 10
 EXPECT a=11
-TIMEOUT 5
 
 NAME unroll_printf
 PROG BEGIN { unroll (1) { printf("a"); } printf("b\n"); exit(); }
 EXPECT ab
-TIMEOUT 5
 
 NAME if_compare_and_print_string
 PROG BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}
 EXPECT comm: bpftrace
-TIMEOUT 5
 
 NAME struct positional string compare - equal returns true
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
 EXPECT I got hello
-TIMEOUT 5
 
 NAME struct positional string compare - equal returns false
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hi" "hello"
 EXPECT not equal
-TIMEOUT 5
 
 NAME struct positional string compare - not equal
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
 EXPECT not equal
-TIMEOUT 5
 
 NAME positional string compare via variable - equal
 RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1, 6); if ($x == "hello") { printf("I got %s\n", "hello");} else { printf("not equal\n");} exit();}' "hello"
 EXPECT I got hello
-TIMEOUT 5
 
 NAME positional string compare via variable - not equal
 RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1, 5); if ($x == "hello") { printf("I got hello\n");} else { printf("not %s\n", "equal");} exit();}' "hell"
 EXPECT not equal
-TIMEOUT 5
 
 NAME positional attachpoint
 RUN {{BPFTRACE}} -e 'i:ms:$1 { printf("hello world\n"); exit(); }' 1
@@ -137,27 +115,22 @@ TIMEOUT 1
 NAME string compare map lookup
 RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
 EXPECT @[syscall]: 1
-TIMEOUT 5
 
 NAME struct partial string compare - pass
 RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
 EXPECT I got hhvm
-TIMEOUT 5
 
 NAME struct partial string compare - pass reverse
 RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
 EXPECT I got hhvm-proc
-TIMEOUT 5
 
 NAME strncmp function argument
 RUN {{BPFTRACE}} -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
 EXPECT @: 0
-TIMEOUT 5
 
 NAME short non null-terminated string print
 RUN {{BPFTRACE}} -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a = ((struct F*)arg0)->s; printf("%s %s\n", $a, $a); }' -c ./testprogs/string_args
 EXPECT hello hello
-TIMEOUT 5
 
 NAME optional_positional_int
 PROG BEGIN { printf("-%d-\n", $1); exit() }
@@ -177,17 +150,14 @@ TIMEOUT 1
 NAME positional as string literal
 RUN {{BPFTRACE}} -e 'BEGIN { @ = kaddr(str($1)); exit() }' vfs_read
 EXPECT Attaching 1 probe...
-TIMEOUT 5
 
 NAME positional arg count
 RUN {{BPFTRACE}} -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exit();}' "one" 2
 EXPECT got 2 args: one 2
-TIMEOUT 5
 
 NAME positional multiple bases
 RUN {{BPFTRACE}} -e 'BEGIN { printf("got: %d %o 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
 EXPECT got: 123 775 0x123
-TIMEOUT 5
 
 NAME positional pointer arithmetic
 RUN {{BPFTRACE}} -e 'BEGIN { printf("%s", str($1 + 1)); exit(); }' hello
@@ -202,7 +172,6 @@ TIMEOUT 1
 NAME positional lhist
 RUN {{BPFTRACE}} -e 'BEGIN { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
 EXPECT_REGEX @: *\n[\[(].*
-TIMEOUT 5
 
 NAME positional buf
 RUN {{BPFTRACE}} -e 'BEGIN { @ = buf("hello", $1); exit(); }' 5
@@ -212,13 +181,11 @@ TIMEOUT 1
 NAME positional kstack
 RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", kstack(), kstack($1)); exit(); }' 1
 EXPECT SUCCESS
-TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME positional ustack
 RUN {{BPFTRACE}} -e 'u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n%s\n", ustack(), ustack($1)); exit(); }' 1
 EXPECT_REGEX .*uprobeFunction1\+[0-9]+\n\s+spin\+[0-9]+\n\s+main\+[0-9]+\n(?s:.*)\n\n\n\s+uprobeFunction1\+[0-9]+
-TIMEOUT 5
 # Required to skip function prologue
 REQUIRES_FEATURE dwarf
 AFTER ./testprogs/uprobe_loop
@@ -246,19 +213,16 @@ TIMEOUT 1
 NAME sigint under heavy load
 RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
 EXPECT end
-TIMEOUT 5
 AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
 NAME bitfield access
 PROG struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}
 EXPECT 1 2 5 0 65535
-TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
 NAME bitfield_access_2
 PROG struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}
 EXPECT 1 217 5 1 500 31117 1 2 27
-TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
 NAME exit exits immediately
@@ -290,35 +254,28 @@ TIMEOUT 1
 NAME per_cpu_map_count_if
 PROG i:ms:1 { @ = count(); if (@ > 5) { printf("done\n"); exit(); }}
 EXPECT done
-TIMEOUT 5
 
 NAME per_cpu_map_min_if
 PROG BEGIN { @ = 10; } i:ms:1 { @--; @mn = min(@); if (@mn < 5) { printf("done\n"); exit(); }}
 EXPECT done
-TIMEOUT 5
 
 NAME per_cpu_map_max_if
 PROG BEGIN { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n"); exit(); }}
 EXPECT done
-TIMEOUT 5
 
 NAME per_cpu_map_avg_if
 PROG BEGIN { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n"); exit(); }}
 EXPECT done
-TIMEOUT 5
 
 NAME per_cpu_map_arithmetic
 PROG BEGIN { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } exit();}
 EXPECT done
-TIMEOUT 5
 
 NAME per_cpu_map_cast
 PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); exit();}
 EXPECT 1-10
-TIMEOUT 5
 
 NAME dry run empty output
 RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
 EXPECT_NONE hello
 EXPECT_NONE @: 0
-TIMEOUT 5

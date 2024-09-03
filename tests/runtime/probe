@@ -2,35 +2,30 @@ NAME kfunc
 PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretfunc
 PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc_wildcard
 PROG kfunc:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc_module
 PROG kfunc:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc_module_wildcard
 PROG kfunc:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 # https://github.com/bpftrace/bpftrace/issues/2447
@@ -39,7 +34,6 @@ PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } kfunc:vfs_read, kfunc:vfs
 EXPECT @a: 0
        @b: 0
        @c: 0
-TIMEOUT 5
 REQUIRES_FEATURE kfunc
 # Note: this calls both vfs_read and vfs_open
 AFTER ./testprogs/syscall read
@@ -49,7 +43,6 @@ PROG kfunc:vfs_read { printf("%d\n", args.count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
 REQUIRES_FEATURE kfunc
 REQUIRES_FEATURE btf
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 # Checking backwards compatibility
@@ -58,7 +51,6 @@ PROG kfunc:vfs_read { printf("%d\n", args->count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
 REQUIRES_FEATURE kfunc
 REQUIRES_FEATURE btf
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc func builtin
@@ -67,7 +59,6 @@ EXPECT func: vfs_read
 REQUIRES_FEATURE kfunc
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE get_func_ip
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretfunc large args
@@ -75,7 +66,6 @@ PROG kretfunc:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)re
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
 REQUIRES_FEATURE btf
-TIMEOUT 5
 AFTER ./testprogs/kfunc_args 1111 2222
 
 # Sanity check for fentry/fexit alias
@@ -83,106 +73,89 @@ NAME fentry
 PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME fexit
 PROG fexit:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE kfunc
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe
 PROG kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_short_name
 PROG k:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kprobe_order.bt
 EXPECT first second
-TIMEOUT 5
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME kprobe_offset
 PROG kprobe:vfs_read+0 { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_wildcard
 PROG kprobe:vmlinux:vfs_rea* { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_wildcard_multi
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT progs: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME kprobe_module
 PROG kprobe:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_module_wildcard
 PROG kprobe:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT ERROR: Error attaching probe: kprobe:nonsense:vfs_read: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
-TIMEOUT 5
 WILL_FAIL
 
 NAME kprobe_wildcard_all_leading_underscore
 PROG kprobe:_* { } interval:s:1{ printf("SUCCESS"); exit(); }
 EXPECT_REGEX SUCCESS
 ENV BPFTRACE_MAX_PROBES=20000
-TIMEOUT 5
 REQUIRES_FEATURE kprobe_multi
 
 NAME kprobe_disallow_rcu_functions
 PROG kprobe:rcu_* { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT No probes to attach
-TIMEOUT 5
 WILL_FAIL
 
 NAME kprobe_hide_ftrace_invalid_address
 RUN {{BPFTRACE}} -l | grep -c __ftrace_invalid_address__ || true
 EXPECT 0
-TIMEOUT 5
 
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT ERROR: Error attaching probe: kprobe:vmlinux:nonsense
-TIMEOUT 5
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME uprobe_multi_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
 EXPECT link: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
@@ -190,7 +163,6 @@ AFTER ./testprogs/uprobe_test
 NAME kprobe_wildcard probe builtin
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @ = probe; printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT_REGEX progs: [1-9][0-9]+
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 
 # Note: this test may fail if you've installed a new kernel but not rebooted
@@ -199,7 +171,6 @@ REQUIRES /usr/sbin/bpftool
 NAME kprobe_offset_fail_size
 PROG kprobe:vfs_read+1000000 { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX Offset outside the function bounds \('vfs_read' size is*
-TIMEOUT 5
 WILL_FAIL
 # See https://github.com/bpftrace/bpftrace/pull/956
 SKIP_IF_ENV_HAS CI=true
@@ -209,7 +180,6 @@ RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
 ARCH x86_64
-TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP /usr/sbin/nft delete table bpftrace
@@ -220,7 +190,6 @@ RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x8 { printf("hit\n"); exit(); }
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
 ARCH ppc64|ppc64le|aarch64
-TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP /usr/sbin/nft delete table bpftrace
@@ -229,7 +198,6 @@ NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT ERROR: Possible attachment attempt in the middle of an instruction, try a different offset.
 ARCH x86_64
-TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
@@ -237,68 +205,57 @@ NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT cannot attach kprobe, Invalid argument
 ARCH aarch64
-TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
 NAME kprobe_warn_missing_probes
 PROG kprobe:vfs_read,kprobe:nonsense { exit(); }
 EXPECT WARNING: could not attach probe kprobe:nonsense, skipping.
-TIMEOUT 5
 
 NAME kprobe_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } kprobe:vfs_read,kprobe:nonsense { exit(); }
 EXPECT_NONE WARNING: could not attach probe kprobe:nonsense, skipping.
-TIMEOUT 5
 
 NAME kprobe_error_missing_probes
 PROG config = { missing_probes = "error" } kprobe:vfs_read,kprobe:nonsense { exit(); }
 EXPECT ERROR: Error attaching probe: kprobe:nonsense
-TIMEOUT 5
 WILL_FAIL
 
 NAME kretprobe
 PROG kretprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_short_name
 PROG kr:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt
 EXPECT first second
-TIMEOUT 5
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME kretprobe_wildcard
 PROG kretprobe:vmlinux:vfs_rea* { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_wildcard_multi
 RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME kretprobe_wildcard_multi_link
 RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME uretprobe_multi_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'uretprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
 EXPECT link: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
@@ -306,7 +263,6 @@ AFTER ./testprogs/uprobe_test
 NAME uprobe_multi_wildcard_target_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' -p {{BEFORE_PID}}
 EXPECT link: 1
-TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE uprobe_multi
 BEFORE ./testprogs/uprobe_test
@@ -314,224 +270,186 @@ BEFORE ./testprogs/uprobe_test
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
 
 NAME uprobe_offset
 PROG uprobe:/bin/bash:echo_builtin+0 { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
 
 NAME uprobe_offset
 PROG uprobe:/bin/bash:"echo_builtin"+0 { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
 
 NAME uprobe_offset_fail_size
 PROG uprobe:/bin/bash:echo_builtin+1000000 { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX Offset outside the function bounds \('echo_builtin' size is*
-TIMEOUT 5
 WILL_FAIL
 
 NAME uprobe_address_fail_resolve
 PROG uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}
 EXPECT ERROR: Could not resolve address: /bin/bash:0xa
-TIMEOUT 5
 WILL_FAIL
 
 NAME uprobe_library
 PROG uprobe:libc:fread { printf("size: %d\n", arg1); exit(); }
 EXPECT_REGEX size: [0-9]+
-TIMEOUT 5
 AFTER ./testprogs/uprobe_library
 REQUIRES_FEATURE libpath_resolv
 
 NAME uprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uprobe_order.bt
 EXPECT first second
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME uprobe_zero_size
 PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
 EXPECT ERROR: Could not determine boundary for _init (symbol has size 0). Use --unsafe to force attachment.
-TIMEOUT 5
 WILL_FAIL
 
 NAME uprobe_zero_size_unsafe
 RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}'
 EXPECT_REGEX arg0: [0-9]*
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_warn_missing_probes
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
 EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
 EXPECT_NONE WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_error_missing_probes
 PROG config = { missing_probes = "error" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
 EXPECT ERROR: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, cannot attach probe.
-TIMEOUT 5
 AFTER ./testprogs/uprobe_test
 WILL_FAIL
 
 NAME uretprobe
 PROG uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}
 EXPECT_REGEX readline: [0-9]*
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
 
 NAME uretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uretprobe_order.bt
 EXPECT first second
-TIMEOUT 5
 AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME tracepoint
 PROG tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
-TIMEOUT 5
 
 NAME tracepoint_short_name
 PROG t:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
-TIMEOUT 5
 
 NAME tracepoint_order
 RUN {{BPFTRACE}} runtime/scripts/tracepoint_order.bt
 EXPECT first second
-TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8; ./testprogs/syscall nanosleep 1e8
 
 NAME tracepoint_expansion
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit\n"); }' -c "./testprogs/syscall nanosleep 1e8"
 EXPECT hit
-TIMEOUT 5
 
 NAME tracepoint_missing
 PROG t:syscalls:nonsense { printf("hit"); exit(); }
 EXPECT stdin:1:1-20: ERROR: tracepoint not found: syscalls:nonsense
-TIMEOUT 5
 WILL_FAIL
 
 NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { printf("hit"); exit(); }
 EXPECT hit
 AFTER ./testprogs/syscall nanosleep 1e8
-TIMEOUT 5
 WILL_FAIL
 
 NAME tracepoint args
 PROG tracepoint:syscalls:sys_enter_read { printf("%d\n", args.count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
 AFTER ./testprogs/syscall read
-TIMEOUT 5
 
 # Checking backwards compatibility
 NAME tracepoint args as pointer
 PROG tracepoint:syscalls:sys_enter_read { printf("%d\n", args->count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
 AFTER ./testprogs/syscall read
-TIMEOUT 5
 
 # Test that we get at least two characters out
 NAME tracepoint_data_loc
 PROG tracepoint:irq:irq_handler_entry { print(str(args.name)); exit(); }
 EXPECT_REGEX ..+
-TIMEOUT 5
 
 NAME rawtracepoint
 PROG rawtracepoint:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
-TIMEOUT 5
 
 NAME rawtracepoint_short_name
 PROG rt:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
-TIMEOUT 5
 
 NAME rawtracepoint_missing
 PROG rawtracepoint:nonsense { printf("hit"); exit(); }
 EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
-TIMEOUT 5
 WILL_FAIL
 
 NAME rawtracepoint_wildcard
 PROG rawtracepoint:sys_* { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep
-TIMEOUT 5
 
 NAME profile
 PROG profile:hz:599 { print("hit"); exit(); }
 EXPECT hit
-TIMEOUT 5
 
 NAME profile_short_name
 PROG p:hz:599 { print("hit"); exit(); }
 EXPECT hit
-TIMEOUT 5
 
 NAME profile_probe_builtin
 PROG profile:hz:599 { print(probe); exit();}
 EXPECT profile:hz:599
-TIMEOUT 5
 
 NAME interval
 PROG interval:ms:1 { print("hit"); exit(); }
 EXPECT hit
-TIMEOUT 5
 
 NAME interval_short_name
 PROG i:ms:1{ print("hit"); exit();}
 EXPECT hit
-TIMEOUT 5
 
 NAME interval_probe_builtin
 PROG interval:ms:1 { print(probe); exit();}
 EXPECT interval:ms:1
-TIMEOUT 5
 
 NAME software
 PROG software:cpu-clock:1 { print("hit"); exit();}
 EXPECT hit
-TIMEOUT 5
 
 NAME software_probe_builtin
 PROG software:cpu-clock:1 { print(probe); exit();}
 EXPECT software:cpu-clock:1
-TIMEOUT 5
 
 NAME software_alias_probe_builtin
 PROG software:cpu:1 { print(probe); exit();}
 EXPECT software:cpu:1
-TIMEOUT 5
 
 NAME hardware
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { print("hit"); exit(); }
 EXPECT hit
-TIMEOUT 5
 
 NAME hardware_probe_builtin
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { print(probe); exit();}
 EXPECT hardware:cache-misses:10
-TIMEOUT 5
 
 NAME BEGIN
 PROG BEGIN { printf("Hello\n"); exit();}
@@ -561,4 +479,3 @@ NAME sanitise probe name
 PROG uprobe:./testprogs/uprobe_namesan:fn* { printf("ok\n"); exit(); }
 EXPECT ok
 AFTER ./testprogs/uprobe_namesan
-TIMEOUT 5

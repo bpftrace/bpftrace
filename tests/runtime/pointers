@@ -1,106 +1,85 @@
 NAME u8 pointer increment
 PROG BEGIN { @=(int8*) 0x32; @+=1; exit(); }
 EXPECT @: 0x33
-TIMEOUT 5
 
 NAME u16 pointer increment
 PROG BEGIN { @=(int16*) 0x32; @+=1; exit(); }
 EXPECT @: 0x34
-TIMEOUT 5
 
 NAME u32 pointer increment
 PROG BEGIN { @=(int32*) 0x32; @+=1; exit(); }
 EXPECT @: 0x36
-TIMEOUT 5
 
 NAME u64 pointer increment
 PROG BEGIN { @=(int64*) 0x32; @+=1; exit(); }
 EXPECT @: 0x3a
-TIMEOUT 5
 
 NAME u8 pointer unop post increment
 PROG BEGIN { @=(int8*) 0x32; @++; exit(); }
 EXPECT @: 0x33
-TIMEOUT 5
 
 NAME u16 pointer unop post increment
 PROG BEGIN { @=(int16*) 0x32; @++; exit(); }
 EXPECT @: 0x34
-TIMEOUT 5
 
 NAME u32 pointer unop post increment
 PROG BEGIN { @=(int32*) 0x32; @++; exit(); }
 EXPECT @: 0x36
-TIMEOUT 5
 
 NAME u64 pointer unop post increment
 PROG BEGIN { @=(int64*) 0x32; @++; exit(); }
 EXPECT @: 0x3a
-TIMEOUT 5
 
 NAME u8 pointer unop pre increment
 PROG BEGIN { @=(int8*) 0x32; @++; exit(); }
 EXPECT @: 0x33
-TIMEOUT 5
 
 NAME u16 pointer unop pre increment
 PROG BEGIN { @=(int16*) 0x32; @++; exit(); }
 EXPECT @: 0x34
-TIMEOUT 5
 
 NAME u32 pointer unop pre increment
 PROG BEGIN { @=(int32*) 0x32; @++; exit(); }
 EXPECT @: 0x36
-TIMEOUT 5
 
 NAME u64 pointer unop pre increment
 PROG BEGIN { @=(int64*) 0x32; @++; exit(); }
 EXPECT @: 0x3a
-TIMEOUT 5
 
 NAME Pointer decrement 1
 PROG BEGIN { @=(int32*) 0x32; @-=1; exit(); }
 EXPECT @: 0x2e
-TIMEOUT 5
 
 NAME Pointer decrement
 PROG BEGIN { @=(int32*) 0x32; @--; exit(); }
 EXPECT @: 0x2e
-TIMEOUT 5
 
 NAME Pointer increment 6
 PROG BEGIN { @=(int32*) 0x32; @+=6; exit(); }
 EXPECT @: 0x4a
-TIMEOUT 5
 
 NAME Pointer decrement 6
 PROG BEGIN { @=(int32*) 0x32; @-=6; exit(); }
 EXPECT @: 0x1a
-TIMEOUT 5
 
 NAME Struct pointer math
 PROG struct A {int32_t a; int32_t b; char c[28] }; BEGIN { $a=(struct A*) 1024; printf("%lu - 5 x %lu = %lu\n", $a, sizeof(struct A), $a-5); exit(); }
 EXPECT 1024 - 5 x 36 = 844
-TIMEOUT 5
 
 NAME Pointer decrement with map
 PROG BEGIN { @dec = 4; @=(int32*) 0x32; @-=@dec; exit(); }
 EXPECT @: 0x22
-TIMEOUT 5
 
 NAME Pointer walk through struct
 RUN {{BPFTRACE}} runtime/scripts/struct_walk.bt -c ./testprogs/struct_walk
 EXPECT a: 45 b: 1000
-TIMEOUT 5
 
 NAME Pointer arith with int32
 PROG struct C { uint32_t a; }; uprobe:./testprogs/struct_walk:clear { $c = (struct C *)arg0; printf("ptr: %p\n", $c + $c->a); exit() }
 AFTER ./testprogs/struct_walk
 EXPECT_REGEX ^ptr: 0x[0-9a-z]+
-TIMEOUT 5
 
 NAME Pointer to pointer arithmetic and dereference
 PROG uprobe:./testprogs/array_access:test_ptr_array { $p = (int32 **)arg0; @x = **($p + 1); exit(); }
 EXPECT @x: 2
 AFTER ./testprogs/array_access
-TIMEOUT 5
