@@ -30,16 +30,18 @@ static void parse(const std::string &input,
 TEST(clang_parser, integers)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { int x; int y, z; }", bpftrace);
+  parse("#include <stdbool.h>\nstruct Foo { int x; int y, z; bool b; }",
+        bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
   auto foo = bpftrace.structs.Lookup("struct Foo").lock();
 
-  EXPECT_EQ(foo->size, 12);
-  ASSERT_EQ(foo->fields.size(), 3U);
+  EXPECT_EQ(foo->size, 16);
+  ASSERT_EQ(foo->fields.size(), 4U);
   ASSERT_EQ(foo->HasField("x"), true);
   ASSERT_EQ(foo->HasField("y"), true);
   ASSERT_EQ(foo->HasField("z"), true);
+  ASSERT_EQ(foo->HasField("b"), true);
 
   EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 4U);
@@ -52,6 +54,10 @@ TEST(clang_parser, integers)
   EXPECT_TRUE(foo->GetField("z").type.IsIntTy());
   EXPECT_EQ(foo->GetField("z").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("z").offset, 8);
+
+  EXPECT_TRUE(foo->GetField("b").type.IsBoolTy());
+  EXPECT_EQ(foo->GetField("b").type.GetSize(), 1U);
+  EXPECT_EQ(foo->GetField("b").offset, 12);
 }
 
 TEST(clang_parser, c_union)
@@ -553,11 +559,12 @@ TEST_F(clang_parser_btf, btf)
   auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
 
-  EXPECT_EQ(foo1->size, 16);
-  ASSERT_EQ(foo1->fields.size(), 3U);
+  EXPECT_EQ(foo1->size, 24);
+  ASSERT_EQ(foo1->fields.size(), 4U);
   ASSERT_TRUE(foo1->HasField("a"));
   ASSERT_TRUE(foo1->HasField("b"));
   ASSERT_TRUE(foo1->HasField("c"));
+  ASSERT_TRUE(foo1->HasField("d"));
 
   EXPECT_TRUE(foo1->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("a").type.GetSize(), 4U);
@@ -571,7 +578,11 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo1->GetField("c").type.GetSize(), 8U);
   EXPECT_EQ(foo1->GetField("c").offset, 8);
 
-  EXPECT_EQ(foo2->size, 24);
+  EXPECT_TRUE(foo1->GetField("d").type.IsBoolTy());
+  EXPECT_EQ(foo1->GetField("d").type.GetSize(), 1U);
+  EXPECT_EQ(foo1->GetField("d").offset, 16);
+
+  EXPECT_EQ(foo2->size, 32);
   ASSERT_EQ(foo2->fields.size(), 3U);
   ASSERT_TRUE(foo2->HasField("a"));
   ASSERT_TRUE(foo2->HasField("f"));
@@ -582,7 +593,7 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
   EXPECT_TRUE(foo2->GetField("f").type.IsRecordTy());
-  EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
+  EXPECT_EQ(foo2->GetField("f").type.GetSize(), 24U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
   EXPECT_TRUE(foo2->GetField("g").type.IsIntTy());

@@ -156,6 +156,7 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
     case lldb::eTypeClassBuiltin: {
       switch (type.GetBasicType()) {
         case lldb::eBasicTypeBool:
+          return CreateBool();
         case lldb::eBasicTypeChar:
         case lldb::eBasicTypeSignedChar:
         case lldb::eBasicTypeWChar:

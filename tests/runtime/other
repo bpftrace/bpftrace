@@ -279,3 +279,13 @@ NAME dry run empty output
 RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
 EXPECT_NONE hello
 EXPECT_NONE @: 0
+
+NAME bool type proberead
+PROG struct Foo { int a; bool b; } uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("value: %d\n", ((struct Foo *)arg1)->b); exit() }
+AFTER ./testprogs/uprobe_test
+EXPECT value: 1
+
+NAME bool type print
+PROG struct Foo { int a; bool b; } uprobe:./testprogs/uprobe_test:uprobeFunction2 { print(((struct Foo *)arg1)->b); exit() }
+AFTER ./testprogs/uprobe_test
+EXPECT 1

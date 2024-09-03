@@ -2,6 +2,7 @@ struct Foo1 {
   int a;
   char b;
   long c;
+  _Bool d;
 };
 
 struct Foo2 {

@@ -254,7 +254,8 @@ public:
 
   size_t GetSize() const
   {
-    return size_bits_ / 8;
+    // Round up to return the least amount of bytes necessary to hold the value
+    return (size_bits_ + 7) / 8;
   }
 
   void SetSize(size_t byte_size)

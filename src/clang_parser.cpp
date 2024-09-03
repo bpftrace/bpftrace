@@ -165,6 +165,7 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
 
   switch (clang_type.kind) {
     case CXType_Bool:
+      return CreateBool();
     case CXType_Char_U:
     case CXType_UChar:
     case CXType_UShort:

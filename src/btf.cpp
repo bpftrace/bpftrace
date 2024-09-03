@@ -376,8 +376,11 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   auto stype = CreateNone();
 
   if (btf_is_int(t)) {
-    stype = CreateInteger(btf_int_bits(t),
-                          btf_int_encoding(t) & BTF_INT_SIGNED);
+    if (btf_int_encoding(t) & BTF_INT_BOOL)
+      stype = CreateBool();
+    else
+      stype = CreateInteger(btf_int_bits(t),
+                            btf_int_encoding(t) & BTF_INT_SIGNED);
   } else if (btf_is_enum(t)) {
     stype = CreateInteger(t->size * 8, false);
   } else if (btf_is_composite(t)) {

@@ -71,11 +71,12 @@ TEST_F(field_analyser_btf, btf_types)
   auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
   auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
 
-  EXPECT_EQ(foo1->size, 16);
-  ASSERT_EQ(foo1->fields.size(), 3U);
+  EXPECT_EQ(foo1->size, 24);
+  ASSERT_EQ(foo1->fields.size(), 4U);
   ASSERT_TRUE(foo1->HasField("a"));
   ASSERT_TRUE(foo1->HasField("b"));
   ASSERT_TRUE(foo1->HasField("c"));
+  ASSERT_TRUE(foo1->HasField("d"));
 
   EXPECT_TRUE(foo1->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("a").type.GetSize(), 4U);
@@ -89,7 +90,11 @@ TEST_F(field_analyser_btf, btf_types)
   EXPECT_EQ(foo1->GetField("c").type.GetSize(), 8U);
   EXPECT_EQ(foo1->GetField("c").offset, 8);
 
-  EXPECT_EQ(foo2->size, 24);
+  EXPECT_TRUE(foo1->GetField("d").type.IsBoolTy());
+  EXPECT_EQ(foo1->GetField("d").type.GetSize(), 1U);
+  EXPECT_EQ(foo1->GetField("d").offset, 16);
+
+  EXPECT_EQ(foo2->size, 32);
   ASSERT_EQ(foo2->fields.size(), 3U);
   ASSERT_TRUE(foo2->HasField("a"));
   ASSERT_TRUE(foo2->HasField("f"));
@@ -100,7 +105,7 @@ TEST_F(field_analyser_btf, btf_types)
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
   EXPECT_TRUE(foo2->GetField("f").type.IsRecordTy());
-  EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
+  EXPECT_EQ(foo2->GetField("f").type.GetSize(), 24U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
   EXPECT_TRUE(foo2->GetField("g").type.IsIntTy());
@@ -284,7 +289,7 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
   auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
   auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
 
-  EXPECT_EQ(foo2->size, 24);
+  EXPECT_EQ(foo2->size, 32);
   ASSERT_EQ(foo2->fields.size(), 0U); // fields are not resolved
   EXPECT_EQ(foo3->size, 16);
   ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
@@ -309,7 +314,7 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
   auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
   auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
 
-  EXPECT_EQ(foo2->size, 24);
+  EXPECT_EQ(foo2->size, 32);
   ASSERT_EQ(foo2->fields.size(), 0U); // fields are not resolved
   EXPECT_EQ(foo3->size, 16);
   ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
@@ -447,8 +452,8 @@ TEST_F(field_analyser_dwarf, parse_struct)
   auto str = bpftrace.structs.Lookup("struct Foo1").lock();
 
   ASSERT_TRUE(str->HasFields());
-  ASSERT_EQ(str->fields.size(), 3);
-  ASSERT_EQ(str->size, 16);
+  ASSERT_EQ(str->fields.size(), 4);
+  ASSERT_EQ(str->size, 24);
   CheckFieldsOrderedByOffset(str->fields);
 
   ASSERT_TRUE(str->HasField("a"));
@@ -464,6 +469,11 @@ TEST_F(field_analyser_dwarf, parse_struct)
   ASSERT_TRUE(str->HasField("c"));
   ASSERT_TRUE(str->GetField("c").type.IsIntTy());
   ASSERT_EQ(str->GetField("c").type.GetSize(), 8);
+
+  ASSERT_TRUE(str->HasField("d"));
+  ASSERT_TRUE(str->GetField("d").type.IsBoolTy());
+  ASSERT_EQ(str->GetField("d").type.GetSize(), 1);
+  ASSERT_EQ(str->GetField("d").offset, 16);
 }
 
 TEST_F(field_analyser_dwarf, parse_arrays)

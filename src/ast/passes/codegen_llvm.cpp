@@ -4015,9 +4015,17 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
         b_.SetInsertPoint(pred_true_block);
       }
     } else {
-      AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-      b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
-      expr_ = b_.CreateLoad(b_.GetType(elem_type), dst);
+      // ProbeRead always reads at least one byte so for bool, we need to load
+      // the entire byte and apply mask afterwards to get the correct value.
+      auto read_type = elem_type.IsBoolTy() ? CreateInt8() : elem_type;
+
+      AllocaInst *dst = b_.CreateAllocaBPF(read_type, temp_name);
+      b_.CreateProbeRead(ctx_, dst, read_type, src, loc, data_type.GetAS());
+      expr_ = b_.CreateLoad(b_.GetType(read_type), dst);
+
+      if (elem_type.IsBoolTy())
+        expr_ = b_.CreateAnd(expr_, 0x1);
+
       b_.CreateLifetimeEnd(dst);
     }
   }
