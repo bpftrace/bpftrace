@@ -148,6 +148,11 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       auto p = static_cast<const uint8_t *>(data);
       return bpftrace.resolve_mac_address(p);
     }
+    case Type::cgroup_path: {
+      return bpftrace.resolve_cgroup_path(
+          read_data<uint64_t>(data),
+          read_data<uint64_t>(static_cast<const uint8_t *>(data) + 8));
+    }
     default:
       LOG(BUG) << "invalid mapkey argument type";
   }

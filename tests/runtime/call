@@ -498,6 +498,12 @@ EXPECT_REGEX path: ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
 MIN_KERNEL 4.18
 
+NAME cgroup_path map_key
+PROG BEGIN { @[cgroup_path(cgroup & ((1 << 32) - 1))] = 1; exit(); }
+EXPECT_REGEX @\[.*\]\: 1
+REQUIRES grep -q '^cgroup2' /proc/mounts
+MIN_KERNEL 4.18
+
 NAME strerror
 RUN {{BPFTRACE}} --include "errno.h" -e 'BEGIN { print(strerror(EPERM)); exit(); }'
 EXPECT Operation not permitted
