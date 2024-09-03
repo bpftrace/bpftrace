@@ -144,19 +144,16 @@ NAME it only lists probes in the program
 RUN {{BPFTRACE}} -l -e 'kfunc:vmlinux:vfs_read { exit(); }'
 EXPECT kfunc:vmlinux:vfs_read
 EXPECT_NONE kfunc:vmlinux:vfs_write
-TIMEOUT 5
 
 NAME it lists uprobes in the program
 RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' -p {{BEFORE_PID}}
 EXPECT_REGEX uretprobe:[\S]+uprobe_test:uprobeFunction1
-TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME it lists multiple probes in the program
 RUN {{BPFTRACE}} -l -e 'hardware:cache-misses:10 { exit(); } tracepoint:xdp:mem_connect { exit(); }'
 EXPECT hardware:cache-misses:
 EXPECT tracepoint:xdp:mem_connect
-TIMEOUT 5
 
 NAME it lists struct definitions
 RUN {{BPFTRACE}} -lv 'struct task_struct'
@@ -168,7 +165,6 @@ RUN {{BPFTRACE}} -l runtime/scripts/interval_order.bt
 EXPECT interval:ms:
 EXPECT interval:ms:
 EXPECT interval:ms:
-TIMEOUT 5
 
 NAME warning on non existent file
 RUN {{BPFTRACE}} -l non_existent_file.bt
@@ -271,7 +267,6 @@ TIMEOUT 1
 NAME basic while loop
 PROG BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) } exit(); }
 EXPECT @: 50
-TIMEOUT 5
 REQUIRES_FEATURE loop
 
 NAME disable warnings

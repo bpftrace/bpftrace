@@ -1,11 +1,9 @@
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*((uint16*)arg0 + 1)); exit();}
 EXPECT @: 1110
-TIMEOUT 5
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
 PROG uprobe:./testprogs/intptrcast:fn { $a=*((uint16*)arg0 + 1); printf("%d\n", $a); exit();}
 EXPECT 1110
-TIMEOUT 5
 AFTER ./testprogs/intptrcast

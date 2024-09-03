@@ -13,4 +13,3 @@ NAME print all maps on sigusr1
 RUN {{BPFTRACE}} -e 'BEGIN { @scalar = 5; } interval:s:2 { delete(@scalar); exit(); }'
 AFTER kill -s USR1 $(pidof bpftrace)
 EXPECT @scalar: 5
-TIMEOUT 5
