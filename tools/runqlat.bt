@@ -44,7 +44,7 @@ tracepoint:sched:sched_switch
 	if ($ns) {
 		@usecs = hist((nsecs - $ns) / 1000);
 	}
-	delete(@qtime[args.next_pid]);
+	delete(@qtime, args.next_pid);
 }
 
 END

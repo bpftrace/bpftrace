@@ -45,7 +45,7 @@ tracepoint:writeback:writeback_written
 {
 	$sb_dev = args.sb_dev;
 	$s = @start[$sb_dev];
-	delete(@start[$sb_dev]);
+	delete(@start, $sb_dev);
 	$lat = $s ? (nsecs - $s) / 1000 : 0;
 
 	time("%H:%M:%S  ");

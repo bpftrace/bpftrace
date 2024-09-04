@@ -131,7 +131,7 @@ read() のバイト数を線形スケールのヒストグラムとして集計�
 # レッスン 7. read() の実行時間の測定
 
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
 Attaching 2 probes...
 
 [...]
@@ -165,7 +165,7 @@ read() の実行時間をナノ秒単位で計測し，プロセスごとにヒ�
 - nsecs: マシン起動からのナノ秒を意味します．これは高精度のタイムスタンプカウンターの値で，イベント時刻の測定に利用できます．
 - /@start[tid]/: このフィルタは開始時間が記録されているかをチェックします．このフィルタが無い場合，このプログラムはある read の開始後に実行され，その read の終了のイベントのみを捕捉する可能性があります．この場合，結果として 現在時刻 - 開始時間ではなく，現在時刻 - 0 を計算することになります．（訳注：存在しないキーに対するマップアクセスは0を返します）
 
-- delete(@start[tid]]): 変数を解放します．（訳注：delete をしたマップの値は，プログラム終了時に表示されません．）
+- delete(@start, tid): 変数を解放します．（訳注：delete をしたマップの値は，プログラム終了時に表示されません．）
 
 # レッスン 8. プロセスレベルのイベントの計数
 

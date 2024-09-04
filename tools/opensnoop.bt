@@ -37,7 +37,7 @@ tracepoint:syscalls:sys_exit_openat
 
 	printf("%-6d %-16s %4d %3d %s\n", pid, comm, $fd, $errno,
 	    str(@filename[tid]));
-	delete(@filename[tid]);
+	delete(@filename, tid);
 }
 
 END

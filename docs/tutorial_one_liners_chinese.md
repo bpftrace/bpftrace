@@ -126,7 +126,7 @@ Attaching 1 probe...
 # 7. read()调用的时间
 
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
 Attaching 2 probes...
 
 [...]
@@ -159,7 +159,7 @@ Attaching 2 probes...
 - @start[tid]: 使用线程ID作为key。某一时刻，可能有许许多多的read调用正在进行，我们希望为每个调用记录一个起始时间戳。这要如何做到呢？我们可以为每个read调用建立一个唯一的标识符，并用它作为key进行统计。由于内核线程一次只能执行一个系统调用，我们可以使用线程ID作为上述标识符。
 - nsecs: 自系统启动到现在的纳秒数。这是一个高精度时间戳，可以用来对事件计时。
 - /@start[tid]/: 该过滤条件检查起始时间戳是否被记录。程序可能在某次read调用中途被启动，如果没有这个过滤条件，这个调用的时间会被统计为now-zero，而不是now-start。
-- delete(@start[tid]): 释放变量。
+- delete(@start, tid): 释放变量。
 
 # 8. 统计进程级别的事件
 

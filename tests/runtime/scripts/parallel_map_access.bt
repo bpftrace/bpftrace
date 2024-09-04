@@ -8,7 +8,7 @@
 i:us:1 {
     @data[rand % 100] = count();
     if (rand % 5 == 0) {
-        delete(@data[rand % 10]);
+        delete(@data, rand % 10);
     }
 }
 

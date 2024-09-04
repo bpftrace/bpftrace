@@ -32,8 +32,8 @@ kprobe:blk_mq_start_request
 /@reqts[arg0]/
 {
 	@usecs[@reqstack[arg0]] = hist(nsecs - @reqts[arg0]);
-	delete(@reqstack[arg0]);
-	delete(@reqts[arg0]);
+	delete(@reqstack, arg0);
+	delete(@reqts, arg0);
 }
 
 END

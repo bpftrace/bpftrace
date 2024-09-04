@@ -51,7 +51,7 @@ PROG BEGIN { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; @
 EXPECT ABBBABBB
 
 NAME map delete
-PROG BEGIN { @[0,0,0] = 1; @[0,0,1] = 1; @[0,1,0] = 1; @[1,0,0] = 1; for ($kv : @) { if ($kv.0.1 == 1) { delete(@[$kv.0.0, $kv.0.1, $kv.0.2]); } } exit(); }
+PROG BEGIN { @[0,0,0] = 1; @[0,0,1] = 1; @[0,1,0] = 1; @[1,0,0] = 1; for ($kv : @) { if ($kv.0.1 == 1) { delete(@, $kv.0); } } exit(); }
 EXPECT @[0, 0, 0]: 1
 EXPECT @[0, 0, 1]: 1
 EXPECT @[1, 0, 0]: 1

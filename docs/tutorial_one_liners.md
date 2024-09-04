@@ -134,7 +134,7 @@ Summarize read() bytes as a linear histogram, and traced using kernel dynamic tr
 # Lesson 7. Timing read()s
 
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
 Attaching 2 probes...
 
 [...]
@@ -168,7 +168,7 @@ Summarize the time spent in read(), in nanoseconds, as a histogram, by process n
 - nsecs: Nanoseconds since boot. This is a high resolution timestamp counter than can be used to time events.
 - /@start[tid]/: This filter checks that the start time was seen and recorded. Without this filter, this program may be launched during a read and only catch the end, resulting in a time calculation of now - zero, instead of now - start.
 
-- delete(@start[tid]): this frees the variable.
+- delete(@start, tid): this frees the variable.
 
 # Lesson 8. Count Process-Level Events
 

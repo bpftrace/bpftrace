@@ -29,7 +29,7 @@ kprobe:__blk_account_io_done
 /@start[arg0]/
 {
 	@usecs = hist((nsecs - @start[arg0]) / 1000);
-	delete(@start[arg0]);
+	delete(@start, arg0);
 }
 
 END
