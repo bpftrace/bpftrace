@@ -31,7 +31,7 @@ PROG BEGIN { @["abcd", 2] = (3, 4, 5); exit();}
 EXPECT @[abcd, 2]: (3, 4, 5)
 
 NAME tuple map key same as assoc array
-PROG BEGIN { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@[1, "hello"]); exit();}
+PROG BEGIN { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@, (1, "hello")); exit();}
 EXPECT @[2, hello]: 2
 
 NAME tuple map key variable

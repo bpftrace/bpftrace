@@ -96,9 +96,9 @@ kprobe:tcp_set_state
 		printf("%5d %5d %d\n", $tp->bytes_acked / 1024,
 		    $tp->bytes_received / 1024, $delta_ms);
 
-		delete(@birth[$sk]);
-		delete(@skpid[$sk]);
-		delete(@skcomm[$sk]);
+		delete(@birth, $sk);
+		delete(@skpid, $sk);
+		delete(@skcomm, $sk);
 	}
 }
 

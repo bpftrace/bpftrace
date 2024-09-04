@@ -940,6 +940,15 @@ All valid identifiers can be used as `name`.
 
 The data type of a variable is automatically determined during first assignment and cannot be changed afterwards.
 
+==== Maps without Explicit Keys
+
+Values can be assigned directly to maps without a key (sometimes refered to as scalar maps).
+Note: you can't iterate over these maps as they don't have an accessible key.
+
+----
+@name = expression
+----
+
 ==== Map Keys
 
 Setting single value map keys.
@@ -982,7 +991,7 @@ kprobe:do_nanosleep {
 
 kretprobe:do_nanosleep /@start[tid] != 0/ {
   printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000);
-  delete(@start[tid]);
+  delete(@start, tid);
 }
 
 /*
@@ -2356,8 +2365,8 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 | Count how often this function is called.
 | Sync
 
-| <<map-functions-delete, `delete(mapkey k, ...)`>>
-| Delete a single key from a map. For a single value map this deletes the only element. For a map with multiple keys, the map and the key are combined in the same argument. Multiple arguments can be passed to delete many keys at once.
+| <<map-functions-delete, `delete(map m, mapkey k)`>>
+| Delete a single key from a map.
 | Sync
 
 | <<map-functions-hist, `hist(int64 n[, int k])`>>
@@ -2474,23 +2483,22 @@ interval:s:10 {
 === delete
 
 .variants
-* `delete(mapkey k, ...)`
+* `delete(map m, mapkey k)`
 
 Delete a single key from a map.
-For a single value map this deletes the only element.
-For a map with multiple keys, the map and the key are combined in the same argument.
-Multiple arguments can be passed to delete many keys at once.
+For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
+For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
 
 ```
 kprobe:dummy {
   @scalar = 1;
+  delete(@scalar); // ok
+  @single["hello"] = 1;
+  delete(@single, "hello"); // ok
   @associative[1,2] = 1;
-  delete(@scalar);
-  delete(@associative[1,2]);
-  // alternatively, you can delete both at once
-  delete(@scalar, @associative[1,2]);
-
+  delete(@associative, (1,2)); // ok
   delete(@associative); // error
+  delete(@associative, 1); // error
 }
 ```
 

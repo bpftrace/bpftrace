@@ -26,7 +26,7 @@ tracepoint:block:block_bio_complete
 /@start[args.sector]/
 {
 	@usecs = hist((nsecs - @start[args.sector]) / 1000);
-	delete(@start[args.sector]);
+	delete(@start, args.sector);
 }
 
 END

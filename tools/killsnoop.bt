@@ -34,6 +34,6 @@ tracepoint:syscalls:sys_exit_kill
 	printf("%-15s %7d %-16s %4d %6d %6d\n",
 		strftime("%H:%M:%S.%f", nsecs),
 		pid, comm, @tsig[tid], @tpid[tid], args.ret);
-	delete(@tpid[tid]);
-	delete(@tsig[tid]);
+	delete(@tpid, tid);
+	delete(@tsig, tid);
 }

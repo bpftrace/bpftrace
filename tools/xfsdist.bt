@@ -39,8 +39,8 @@ kretprobe:xfs_file_fsync
 /@start[tid]/
 {
 	@us[@name[tid]] = hist((nsecs - @start[tid]) / 1000);
-	delete(@start[tid]);
-	delete(@name[tid]);
+	delete(@start, tid);
+	delete(@name, tid);
 }
 
 END
