@@ -3581,8 +3581,9 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
         updated = true;
       new_elems.push_back(type.GetField(i).type);
     }
-    if (updated)
+    if (updated) {
       type = CreateTuple(bpftrace_.structs.AddTuple(new_elems));
+    }
     return updated;
   }
 

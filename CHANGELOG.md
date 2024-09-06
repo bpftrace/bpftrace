@@ -61,6 +61,8 @@ and this project adheres to
   - [#3422](https://github.com/bpftrace/bpftrace/pull/3422)
 - Fix integer comparisons and auto casting for scratch variables
   - [#3416](https://github.com/bpftrace/bpftrace/pull/3416)
+- Fix tuple resizing
+  - [#3443](https://github.com/bpftrace/bpftrace/pull/3443)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

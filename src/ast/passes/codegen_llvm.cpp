@@ -2245,6 +2245,33 @@ AllocaInst *CodegenLLVM::createTuple(
   return buf;
 }
 
+void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
+                                  const SizedType &var_type,
+                                  Value *dst_val,
+                                  Value *src_val)
+{
+  assert(expr_type.IsTupleTy() && var_type.IsTupleTy());
+  auto *array_ty = ArrayType::get(b_.getInt8Ty(), expr_type.GetSize());
+  auto *tuple_ty = b_.GetType(var_type);
+  for (size_t i = 0; i < expr_type.GetFields().size(); ++i) {
+    SizedType &t_type = expr_type.GetField(i).type;
+    Value *offset_val = b_.CreateGEP(
+        array_ty,
+        b_.CreatePointerCast(src_val, array_ty->getPointerTo()),
+        { b_.getInt64(0), b_.getInt64(expr_type.GetField(i).offset) });
+    Value *dst = b_.CreateGEP(tuple_ty,
+                              b_.CreatePointerCast(dst_val,
+                                                   tuple_ty->getPointerTo()),
+                              { b_.getInt32(0), b_.getInt32(i) });
+    if (t_type.IsTupleTy() &&
+        t_type.GetSize() != var_type.GetField(i).type.GetSize()) {
+      createTupleCopy(t_type, var_type.GetField(i).type, dst, offset_val);
+    } else {
+      b_.CreateMemcpyBPF(dst, offset_val, t_type.GetSize());
+    }
+  }
+}
+
 void CodegenLLVM::visit(Tuple &tuple)
 {
   // Store elements on stack
@@ -2283,29 +2310,33 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   auto [key, scoped_key_deleter] = getMapKey(map);
-  if (shouldBeInBpfMemoryAlready(assignment.expr->type)) {
-    if ((assignment.expr->type.IsStringTy() ||
-         assignment.expr->type.IsTupleTy()) &&
-        assignment.expr->type.GetSize() != map.type.GetSize()) {
+  auto &expr_type = assignment.expr->type;
+  if (shouldBeInBpfMemoryAlready(expr_type)) {
+    if (expr_type.GetSize() != map.type.GetSize()) {
       val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateMemsetBPF(val, b_.getInt8(0), map.type.GetSize());
-      b_.CreateMemcpyBPF(val, expr, assignment.expr->type.GetSize());
-      self_alloca = true;
-    } else
+      if (expr_type.IsTupleTy()) {
+        createTupleCopy(expr_type, map.type, val, expr);
+        self_alloca = true;
+      } else if (expr_type.IsStringTy()) {
+        b_.CreateMemcpyBPF(val, expr, expr_type.GetSize());
+        self_alloca = true;
+      } else {
+        LOG(BUG) << "Type size mismatch. Map Type Size: " << map.type.GetSize()
+                 << " Expression Type Size: " << expr_type.GetSize();
+      }
+    } else {
       val = expr;
+    }
   } else if (map.type.IsRecordTy() || map.type.IsArrayTy()) {
-    if (assignment.expr->type.is_internal) {
+    if (expr_type.is_internal) {
       val = expr;
     } else {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CreateProbeRead(ctx_,
-                         dst,
-                         map.type,
-                         expr,
-                         assignment.loc,
-                         assignment.expr->type.GetAS());
+      b_.CreateProbeRead(
+          ctx_, dst, map.type, expr, assignment.loc, expr_type.GetAS());
       val = dst;
       self_alloca = true;
     }
@@ -2360,9 +2391,17 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     scoped_del.disarm();
   } else if (needMemcpy(var.type)) {
     auto *val = variables_[var.ident].value;
-    if (assignment.expr->type.GetSize() != var.type.GetSize())
+    auto &expr_type = assignment.expr->type;
+    if (expr_type.GetSize() != var.type.GetSize()) {
       b_.CreateMemsetBPF(val, b_.getInt8(0), var.type.GetSize());
-    b_.CreateMemcpyBPF(val, expr_, assignment.expr->type.GetSize());
+      if (var.type.IsTupleTy()) {
+        createTupleCopy(expr_type, var.type, val, expr_);
+      } else {
+        b_.CreateMemcpyBPF(val, expr_, expr_type.GetSize());
+      }
+    } else {
+      b_.CreateMemcpyBPF(val, expr_, expr_type.GetSize());
+    }
   } else {
     b_.CreateStore(expr_, variables_[var.ident].value);
   }
