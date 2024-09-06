@@ -78,6 +78,10 @@ aot.tuples.basic tuple map
 aot.tuples.tuple print
 aot.tuples.tuple strftime type is packed
 aot.variable.tuple string resize
+aot.variable.map tuple string resize
+aot.variable.variable tuple string resize
+aot.variable.variable nested tuple string resize
+aot.variable.map nested tuple string resize
 aot.dwarf.uprobe inlined function - func
 aot.dwarf.uprobe inlined function - probe
 aot.dwarf.uprobe inlined function - ustack

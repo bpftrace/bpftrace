@@ -63,7 +63,25 @@ PROG BEGIN { @["hello", 0] = 0; } i:ms:1 { @["hi", 1] = 1; exit(); }
 EXPECT @[hi, 1]: 1
 TIMEOUT 2
 
-NAME tuple string resize
-PROG BEGIN { @ = ("hello", 0); } i:ms:1 { @ = ("hi", 1); exit(); }
-EXPECT @: (hi, 1)
+NAME map tuple string resize
+PROG BEGIN { @[1] = ("hi", 1); @[1] = ("hellolongstr", 2); @[1] = ("by", 3); exit(); }
+EXPECT @[1]: (by, 3)
+TIMEOUT 2
+
+NAME variable tuple string resize
+PROG BEGIN { $a = ("hi", 1); print(($a)); $a = ("hellolongstr", 2); print(($a)); $a = ("by", 3); print(($a)); exit(); }
+EXPECT (hi, 1)
+EXPECT (hellolongstr, 2)
+EXPECT (by, 3)
+TIMEOUT 2
+
+NAME variable nested tuple string resize
+PROG BEGIN { $a = ("hi", ("hellolongstr", 2)); print(($a)); $a = ("hellolongstr", ("hi", 5)); print(($a)); exit(); }
+EXPECT (hi, (hellolongstr, 2))
+EXPECT (hellolongstr, (hi, 5))
+TIMEOUT 2
+
+NAME map nested tuple string resize
+PROG BEGIN { @[1] = ("hi", ("hellolongstr", 2)); @[1] = ("hellolongstr", ("hi", 5)); exit(); }
+EXPECT @[1]: (hellolongstr, (hi, 5))
 TIMEOUT 2
