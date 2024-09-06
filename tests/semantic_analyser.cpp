@@ -390,6 +390,7 @@ kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }
 TEST(semantic_analyser, consistent_map_values)
 {
   test("kprobe:f { @x = 0; @x = 1; }");
+  test(R"(BEGIN { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test_error("kprobe:f { @x = 0; @x = \"a\"; }", R"(
 stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
 kprobe:f { @x = 0; @x = "a"; }
@@ -3103,6 +3104,13 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, 2, "string"); @t = (3, 4, "other"); })_");
   test(R"_(BEGIN { @t = (1, kstack()) })_");
   test(R"_(BEGIN { @t = (1, (2,3)) })_");
+  test(R"_(BEGIN { $t = (1, (int64)2); $t = (2, (int32)3); })_");
+
+  test_error(R"_(BEGIN { $t = (1, (int32)2); $t = (2, (int64)3); })_", R"(
+stdin:1:29-47: ERROR: Tuple type mismatch: (int64,int32) != (int64,int64).
+BEGIN { $t = (1, (int32)2); $t = (2, (int64)3); }
+                            ~~~~~~~~~~~~~~~~~~
+)");
 
   test(R"_(struct task_struct { int x; } BEGIN { $t = (1, curtask); })_");
   test(R"_(struct task_struct { int x[4]; } BEGIN { $t = (1, curtask->x); })_");
@@ -3110,12 +3118,36 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { $t = (1, 2); $t = (4, "other"); })_", 10);
   test(R"_(BEGIN { $t = (1, 2); $t = 5; })_", 1);
   test(R"_(BEGIN { $t = (1, count()) })_", 1);
-  test(R"_(BEGIN { $t = ((int32)1, (int64)2); $t = ((int64)1, (int32)2); })_",
-       10);
 
   test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 10);
   test(R"_(BEGIN { @t = (1, 2); @t = 5; })_", 1);
   test(R"_(BEGIN { @t = (1, count()) })_", 1);
+
+  test(R"_(BEGIN { $t = (1, (2, 3)); $t = (4, ((int8)5, 6)); })_");
+
+  test_error(R"_(BEGIN { $t = (1, ((int8)2, 3)); $t = (4, (5, (int8)6)); })_",
+             R"(
+stdin:1:33-55: ERROR: Tuple type mismatch: (int64,(int8,int64)) != (int64,(int64,int8)).
+BEGIN { $t = (1, ((int8)2, 3)); $t = (4, (5, (int8)6)); }
+                                ~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_error(R"_(BEGIN { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); })_",
+             R"(
+stdin:1:34-56: ERROR: Tuple type mismatch: (unsigned int8,(int64,int64)) != (int64,(int8,int64)).
+BEGIN { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); }
+                                 ~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test(R"_(BEGIN { @t = (1, 2, "hi"); @t = (3, 4, "hellolongstr"); })_");
+  // This should not be an error when nested tuple resizing is fixed
+  // https://github.com/bpftrace/bpftrace/issues/3444
+  test_error(
+      R"_(BEGIN { $t = (1, ("hi", 2)); $t = (3, ("hellolongstr", 4)); })_", R"(
+stdin:1:30-59: ERROR: Tuple type mismatch: (int64,(string[3],int64)) != (int64,(string[13],int64)).
+BEGIN { $t = (1, ("hi", 2)); $t = (3, ("hellolongstr", 4)); }
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, tuple_indexing)

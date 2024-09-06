@@ -561,13 +561,17 @@ std::weak_ptr<const Struct> SizedType::GetStruct() const
 
 bool SizedType::FitsInto(const SizedType &t) const
 {
+  if (!IsSameType(t))
+    return false;
+
   if (IsStringTy() && t.IsStringTy())
     return GetSize() <= t.GetSize();
 
-  if (IsIntegerTy() && t.IsIntegerTy() && (IsSigned() == t.IsSigned()))
-    return GetSize() <= t.GetSize();
+  if (IsIntegerTy()) {
+    return (IsSigned() == t.IsSigned()) && (GetSize() <= t.GetSize());
+  }
 
-  if (IsTupleTy() && t.IsTupleTy()) {
+  if (IsTupleTy()) {
     if (GetFieldCount() != t.GetFieldCount())
       return false;
 
