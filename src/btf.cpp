@@ -51,6 +51,10 @@ BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
     btf_objects.push_back(
         BTFObj{ .btf = btf__parse_raw(path), .id = 0, .name = "" });
     vmlinux_btf = btf_objects.back().btf;
+    if (!vmlinux_btf) {
+      LOG(WARNING) << "BTF: failed to parse BTF from " << path;
+      return;
+    }
   } else
     load_kernel_btfs(modules);
 
