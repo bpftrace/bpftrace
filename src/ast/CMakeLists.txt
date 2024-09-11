@@ -1,6 +1,6 @@
-add_library(ast_defs ast.cpp)
+add_library(ast_defs STATIC ast.cpp)
 
-add_library(ast
+add_library(ast STATIC
   async_event_types.cpp
   attachpoint_parser.cpp
   dibuilderbpf.cpp

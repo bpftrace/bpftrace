@@ -1,2 +1,2 @@
-add_library(cxxdemangler_stdlib cxxdemangler_stdlib.cpp)
-add_library(cxxdemangler_llvm cxxdemangler_llvm.cpp)
+add_library(cxxdemangler_stdlib STATIC cxxdemangler_stdlib.cpp)
+add_library(cxxdemangler_llvm STATIC cxxdemangler_llvm.cpp)
