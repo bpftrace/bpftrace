@@ -16,7 +16,7 @@ endif()
 add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
 
-add_library(runtime
+add_library(runtime STATIC
   attached_probe.cpp
   bpffeature.cpp
   bpftrace.cpp
@@ -50,7 +50,7 @@ add_library(runtime
 # Ensure flex+bison outputs are built first
 add_dependencies(runtime parser)
 
-add_library(libbpftrace
+add_library(libbpftrace STATIC
   build_info.cpp
   clang_parser.cpp
   driver.cpp
