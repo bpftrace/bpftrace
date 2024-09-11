@@ -84,31 +84,14 @@ if(BUILD_ASAN)
   target_link_options(bpftrace_test PUBLIC "-fsanitize=address")
 endif()
 
-# Still need to support vendored gtest/gmock b/c old ubuntu versions (< focal)
-# only provide gtest/gmock sources -- no precompiled binaries
-if(VENDOR_GTEST)
-  include(FetchContent)
-  set(FETCHCONTENT_QUIET FALSE)
-  FetchContent_Declare(
-    gtest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.11.0
-  )
-  FetchContent_MakeAvailable(gtest)
+# bpftrace tests require (at minimum) version 1.11.
+# There's no great way to enforce a minimum version from cmake -- the cmake
+# modules don't respect minimum requested version.
+find_package(GTest REQUIRED)
+find_package(GMock REQUIRED)
+include_directories(SYSTEM ${GTEST_INCLUDE_DIRS} ${GMOCK_INCLUDE_DIRS})
+target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
 
-  target_include_directories(bpftrace_test PUBLIC ${gtest_SOURCE_DIR}/googletest/include)
-  target_include_directories(bpftrace_test PUBLIC ${gtest_SOURCE_DIR}/googlemock/include)
-  target_link_libraries(bpftrace_test gtest)
-  target_link_libraries(bpftrace_test gmock)
-else()
-  # bpftrace tests require (at minimum) the vendored version (see above).
-  # There's no great way to enforce a minimum version from cmake -- the cmake
-  # modules don't respect minimum requested version.
-  find_package(GTest REQUIRED)
-  find_package(GMock REQUIRED)
-  include_directories(SYSTEM ${GTEST_INCLUDE_DIRS} ${GMOCK_INCLUDE_DIRS})
-  target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
-endif(VENDOR_GTEST)
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 if(NOT STATIC_LINKING)
   find_package(Threads REQUIRED)
