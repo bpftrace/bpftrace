@@ -14,12 +14,16 @@ DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
   file = createFile("bpftrace.bpf.o", ".");
 }
 
-void DIBuilderBPF::createFunctionDebugInfo(Function &func)
+void DIBuilderBPF::createFunctionDebugInfo(Function &func,
+                                           const SizedType &ret_type,
+                                           const Struct &args)
 {
-  // BPF probe function has:
-  // - int return type
-  // - single parameter (ctx) of a pointer type
-  SmallVector<Metadata *, 2> types = { getInt64Ty(), getInt8PtrTy() };
+  // Return type should be at index 0
+  SmallVector<Metadata *> types;
+  types.reserve(args.fields.size() + 1);
+  types.push_back(GetType(ret_type, false));
+  for (auto &arg : args.fields)
+    types.push_back(GetType(arg.type, false));
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
@@ -39,10 +43,27 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
-  createParameterVariable(
-      subprog, "ctx", 1, file, 0, static_cast<DIType *>(types[1]), true);
+  for (size_t i = 0; i < args.fields.size(); i++) {
+    createParameterVariable(subprog,
+                            args.fields.at(i).name,
+                            i + 1,
+                            file,
+                            0,
+                            static_cast<DIType *>(types[i + 1]),
+                            true);
+  }
 
   func.setSubprogram(subprog);
+}
+
+void DIBuilderBPF::createProbeDebugInfo(Function &probe_func)
+{
+  // BPF probe function has:
+  // - int return type
+  // - single parameter (ctx) of a pointer type
+  Struct args;
+  args.AddField("ctx", CreatePointer(CreateInt8()));
+  createFunctionDebugInfo(probe_func, CreateInt64(), args);
 }
 
 DIType *DIBuilderBPF::getInt8Ty()
@@ -170,8 +191,35 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
       num_bytes * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
 }
 
-DIType *DIBuilderBPF::GetType(const SizedType &stype)
+/// Convert internal SizedType to a corresponding DIType type.
+///
+/// In codegen, some types are not converted into a directly corresponding
+/// LLVM type but instead into a type which is easy to work with in BPF
+/// programs (see IRBuilderBPF::GetType for details).
+///
+/// We do the same here for debug types and, similarly to IRBuilderBPF::GetType,
+/// allow to emit directly corresponding types by setting `emit_codegen_types`
+/// to false. This is necessary when emitting info for types whose BTF must
+/// exactly match the kernel BTF (e.g. kernel functions ("kfunc") prototypes).
+///
+/// Note: IRBuilderBPF::GetType doesn't implement creating actual struct types
+/// as it is not necessary for the current use-cases. For debug info types, this
+/// is not the case and we need to emit a struct type with at least the correct
+/// name and size (fields are not necessary).
+DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
+  if (!emit_codegen_types && stype.IsRecordTy()) {
+    return createStructType(file,
+                            stype.GetName(),
+                            file,
+                            0,
+                            stype.GetSize() * 8,
+                            0,
+                            DINode::FlagZero,
+                            nullptr,
+                            getOrCreateArray({}));
+  }
+
   if (stype.IsByteArray() || stype.IsRecordTy()) {
     auto subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
@@ -194,7 +242,10 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
     return CreateMapStructType(stype);
 
   if (stype.IsPtrTy())
-    return getInt64Ty();
+    return emit_codegen_types ? getInt64Ty()
+                              : createPointerType(GetType(*stype.GetPointeeTy(),
+                                                          emit_codegen_types),
+                                                  64);
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {

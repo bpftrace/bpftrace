@@ -41,7 +41,7 @@ public:
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
   void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
   void CreateMemcpyBPF(Value *dst, Value *src, uint32_t size);
-  llvm::Type *GetType(const SizedType &stype);
+  llvm::Type *GetType(const SizedType &stype, bool emit_codegen_types = true);
   llvm::Type *GetMapValueType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
