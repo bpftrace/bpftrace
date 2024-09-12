@@ -2732,7 +2732,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
-  debug_.createFunctionDebugInfo(*func);
+  debug_.createProbeDebugInfo(*func);
+
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3551,7 +3552,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
-  debug_.createFunctionDebugInfo(*func);
+  debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
@@ -4423,7 +4424,13 @@ Function *CodegenLLVM::createMapLenCallback()
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
-  debug_.createFunctionDebugInfo(*callback);
+
+  Struct debug_args;
+  debug_args.AddField("map", CreatePointer(CreateInt8()));
+  debug_args.AddField("key", CreatePointer(CreateInt8()));
+  debug_args.AddField("value", CreatePointer(CreateInt8()));
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
@@ -4467,7 +4474,13 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
-  debug_.createFunctionDebugInfo(*callback);
+
+  Struct debug_args;
+  debug_args.AddField("map", CreatePointer(CreateInt8()));
+  debug_args.AddField("key", CreatePointer(CreateInt8()));
+  debug_args.AddField("value", CreatePointer(CreateInt8()));
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
