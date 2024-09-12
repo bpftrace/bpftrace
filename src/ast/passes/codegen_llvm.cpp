@@ -3588,7 +3588,11 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
-  generate_maps(bpftrace_.resources);
+
+  auto analyser = CodegenResourceAnalyser(root_, bpftrace_.config_);
+  auto codegen_resources = analyser.analyse();
+
+  generate_maps(bpftrace_.resources, codegen_resources);
   generate_global_vars(bpftrace_.resources);
 
   auto scoped_del = accept(root_);
@@ -3665,10 +3669,11 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
 // normally set by libbpf's linker but since we load BTF directly, we must do
 // the fixing ourselves, until we start loading BPF programs via bpf_object.
 // See BpfBytecode::fixupBTF for details.
-void CodegenLLVM::generate_maps(const RequiredResources &resources)
+void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
+                                const CodegenResources &codegen_resources)
 {
   // User-defined maps
-  for (const auto &[name, info] : resources.maps_info) {
+  for (const auto &[name, info] : required_resources.maps_info) {
     const auto &val_type = info.value_type;
     const auto &key = info.key;
 
@@ -3689,7 +3694,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
   // bpftrace internal maps
 
   uint16_t max_stack_limit = 0;
-  for (const StackType &stack_type : resources.stackid_maps) {
+  for (const StackType &stack_type : codegen_resources.stackid_maps) {
     createMapDefinition(stack_type.name(),
                         libbpf::BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
@@ -3706,7 +3711,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         CreateArray(max_stack_limit, CreateUInt64()));
   }
 
-  if (resources.needs_join_map) {
+  if (codegen_resources.needs_join_map) {
     auto value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
     SizedType value_type = CreateArray(value_size, CreateInt8());
     createMapDefinition(to_string(MapType::Join),
@@ -3716,7 +3721,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         value_type);
   }
 
-  if (resources.needs_elapsed_map) {
+  if (codegen_resources.needs_elapsed_map) {
     createMapDefinition(to_string(MapType::Elapsed),
                         libbpf::BPF_MAP_TYPE_HASH,
                         1,
@@ -3733,7 +3738,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
   }
 
   if (!bpftrace_.feature_->has_map_ringbuf() ||
-      resources.needs_perf_event_map) {
+      required_resources.needs_perf_event_map) {
     createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         get_online_cpus().size(),
@@ -3750,11 +3755,11 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                         CreateNone());
   }
 
-  if (resources.str_buffers > 0) {
+  if (codegen_resources.str_buffers > 0) {
     auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     createMapDefinition(to_string(MapType::StrBuffer),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
-                        resources.str_buffers,
+                        codegen_resources.str_buffers,
                         MapKey({ CreateInt32() }),
                         CreateArray(max_strlen, CreateInt8()));
   }
@@ -3767,12 +3772,12 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
                       MapKey({ CreateInt(loss_cnt_key_size) }),
                       CreateInt(loss_cnt_val_size));
 
-  if (resources.max_fmtstring_args_size > 0) {
+  if (required_resources.max_fmtstring_args_size > 0) {
     createMapDefinition(to_string(MapType::FmtStringArgs),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
                         MapKey({ CreateInt32() }),
-                        CreateArray(resources.max_fmtstring_args_size,
+                        CreateArray(required_resources.max_fmtstring_args_size,
                                     CreateInt8()));
   }
 }

@@ -123,31 +123,6 @@ TEST(required_resources, round_trip_map_info)
   }
 }
 
-TEST(required_resources, round_trip_set_stack_type)
-{
-  std::ostringstream serialized(std::ios::binary);
-  {
-    RequiredResources r;
-    r.stackid_maps.insert(StackType{
-        .limit = 33,
-        .mode = StackMode::perf,
-    });
-    r.save_state(serialized);
-  }
-
-  std::istringstream input(serialized.str());
-  {
-    RequiredResources r;
-    r.load_state(input);
-
-    ASSERT_EQ(r.stackid_maps.size(), 1ul);
-    for (const auto &st : r.stackid_maps) {
-      EXPECT_EQ(st.limit, 33ul);
-      EXPECT_EQ(st.mode, StackMode::perf);
-    }
-  }
-}
-
 TEST(required_resources, round_trip_probes)
 {
   std::ostringstream serialized(std::ios::binary);
@@ -182,11 +157,7 @@ TEST(required_resources, round_trip_multiple_members)
   {
     RequiredResources r;
     r.join_args.emplace_back("joinarg0");
-    r.stackid_maps.insert(StackType{
-        .limit = 33,
-        .mode = StackMode::perf,
-    });
-    r.needs_elapsed_map = true;
+    r.time_args.emplace_back("timearg0");
     r.save_state(serialized);
   }
 
@@ -197,12 +168,8 @@ TEST(required_resources, round_trip_multiple_members)
 
     ASSERT_EQ(r.join_args.size(), 1ul);
     EXPECT_EQ(r.join_args[0], "joinarg0");
-    ASSERT_EQ(r.stackid_maps.size(), 1ul);
-    for (const auto &st : r.stackid_maps) {
-      EXPECT_EQ(st.limit, 33ul);
-      EXPECT_EQ(st.mode, StackMode::perf);
-    }
-    EXPECT_TRUE(r.needs_elapsed_map);
+    ASSERT_EQ(r.time_args.size(), 1ul);
+    EXPECT_EQ(r.time_args[0], "timearg0");
   }
 }
 

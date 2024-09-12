@@ -17,6 +17,7 @@
 #include "ast/irbuilderbpf.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
+#include "codegen_resources.h"
 #include "format_string.h"
 #include "location.hh"
 #include "required_resources.h"
@@ -102,7 +103,7 @@ public:
   void generate_ir(void);
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const MapKey &key);
-  void generate_maps(const RequiredResources &resources);
+  void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources);
   void optimize(void);
   bool verify(void);

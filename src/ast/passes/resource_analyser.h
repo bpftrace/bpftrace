@@ -33,7 +33,6 @@ private:
   void visit(Builtin &map) override;
   void visit(Call &call) override;
   void visit(Map &map) override;
-  void visit(Ternary &ternary) override;
 
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.

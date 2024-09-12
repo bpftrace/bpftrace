@@ -65,13 +65,6 @@ void ResourceAnalyser::visit(Subprog &subprog)
 
 void ResourceAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "elapsed") {
-    resources_.needs_elapsed_map = true;
-  } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
-    resources_.stackid_maps.insert(StackType{
-        .mode = bpftrace_.config_.get(ConfigKeyStackMode::default_) });
-  }
-
   if (uses_usym_table(builtin.ident)) {
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
@@ -140,7 +133,6 @@ void ResourceAnalyser::visit(Call &call)
     auto delim = call.vargs.size() > 1 ? get_literal_string(*call.vargs.at(1))
                                        : " ";
     resources_.join_args.push_back(delim);
-    resources_.needs_join_map = true;
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
     resources_.needed_global_vars.insert(
@@ -182,8 +174,6 @@ void ResourceAnalyser::visit(Call &call)
       resources_.time_args.push_back(get_literal_string(*call.vargs.at(0)));
     else
       resources_.time_args.push_back("%H:%M:%S\n");
-  } else if (call.func == "str" || call.func == "buf" || call.func == "path") {
-    resources_.str_buffers++;
   } else if (call.func == "strftime") {
     resources_.strftime_args.push_back(get_literal_string(*call.vargs.at(0)));
   } else if (call.func == "print") {
@@ -203,8 +193,6 @@ void ResourceAnalyser::visit(Call &call)
             nonmap_headroom + map.type.GetSize());
       }
     }
-  } else if (call.func == "kstack" || call.func == "ustack") {
-    resources_.stackid_maps.insert(call.type.stack_type);
   } else if (call.func == "cgroup_path") {
     if (call.vargs.size() > 1)
       resources_.cgroup_path_args.push_back(
@@ -246,18 +234,6 @@ void ResourceAnalyser::visit(Map &map)
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
   map_info.key = map.key_type;
-}
-
-void ResourceAnalyser::visit(Ternary &ternary)
-{
-  Visitor::visit(ternary);
-
-  // Codegen cannot use a phi node for ternary string b/c strings can be of
-  // differing lengths and phi node wants identical types. So we have to
-  // allocate a result temporary, but not on the stack b/c a big string would
-  // blow it up. So we need a scratch buffer for it.
-  if (ternary.type.IsStringTy())
-    resources_.str_buffers++;
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
