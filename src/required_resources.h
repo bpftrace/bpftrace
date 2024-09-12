@@ -86,7 +86,6 @@ public:
   void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
-  uint64_t max_fmtstring_args_size = 0;
   std::vector<std::tuple<FormatString, std::vector<Field>>> printf_args;
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
   // fmt strings for BPF helpers (bpf_seq_printf, bpf_trace_printk)
@@ -98,6 +97,12 @@ public:
   std::vector<std::string> cgroup_path_args;
   std::vector<SizedType> non_map_print_args;
   std::vector<std::tuple<std::string, long>> skboutput_args_;
+  // While max fmtstring args size is not used at runtime, the size
+  // calculation requires taking into account struct alignment semantics,
+  // and that is tricky enough that we want to minimize repetition of
+  // such logic in the codebase. So keep it in resource analysis
+  // rather than duplicating it in CodegenResources.
+  uint64_t max_fmtstring_args_size = 0;
 
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.
@@ -108,12 +113,8 @@ public:
 
   // Map metadata
   std::map<std::string, MapInfo> maps_info;
-  std::unordered_set<StackType> stackid_maps;
   std::unordered_set<std::string> needed_global_vars;
-  bool needs_join_map = false;
-  bool needs_elapsed_map = false;
   bool needs_perf_event_map = false;
-  uint32_t str_buffers = 0;
 
   // Probe metadata
   //
@@ -140,14 +141,10 @@ private:
             non_map_print_args,
             // Hard to annotate flex types, so skip
             // helper_error_info,
-            max_fmtstring_args_size,
             printf_args,
             probe_ids,
             maps_info,
-            stackid_maps,
             needed_global_vars,
-            needs_join_map,
-            needs_elapsed_map,
             needs_perf_event_map,
             probes,
             special_probes);
