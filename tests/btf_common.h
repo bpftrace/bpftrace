@@ -2,31 +2,33 @@
 
 #include "data/btf_data.h"
 
-class test_btf : public ::testing::Test {
-protected:
-  static bool create_tmp_with_data(char *path,
-                                   const unsigned char *data,
-                                   unsigned int data_len)
-  {
-    if (!path)
-      return false;
+namespace {
+bool create_tmp_with_data(char *path,
+                          const unsigned char *data,
+                          unsigned int data_len)
+{
+  if (!path)
+    return false;
 
-    int fd = mkstemp(path);
-    if (fd < 0) {
-      std::remove(path);
-      return false;
-    }
-
-    if (write(fd, data, data_len) != data_len) {
-      close(fd);
-      std::remove(path);
-      return false;
-    }
-
-    close(fd);
-    return true;
+  int fd = mkstemp(path);
+  if (fd < 0) {
+    std::remove(path);
+    return false;
   }
 
+  if (write(fd, data, data_len) != data_len) {
+    close(fd);
+    std::remove(path);
+    return false;
+  }
+
+  close(fd);
+  return true;
+}
+} // namespace
+
+class test_btf : public ::testing::Test {
+protected:
   void SetUp() override
   {
     // BTF data file
