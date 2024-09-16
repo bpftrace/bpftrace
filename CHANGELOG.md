@@ -63,6 +63,8 @@ and this project adheres to
   - [#3416](https://github.com/bpftrace/bpftrace/pull/3416)
 - Fix tuple resizing
   - [#3443](https://github.com/bpftrace/bpftrace/pull/3443)
+- Handle invalid BTF without crashing
+  - [#3453](https://github.com/bpftrace/bpftrace/pull/3453)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
