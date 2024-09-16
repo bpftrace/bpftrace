@@ -1212,6 +1212,16 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
   check_probe(bpftrace->get_probes().at(0), ProbeType::iter, "iter:task_vma");
 }
 
+class bpftrace_bad_btf : public test_bad_btf {};
+
+// Test that we can handle bad data and don't just crash
+TEST_F(bpftrace_bad_btf, parse_invalid_btf)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  EXPECT_FALSE(bpftrace.has_btf_data());
+}
+
 TEST(bpftrace, add_probes_rawtracepoint)
 {
   StrictMock<MockBPFtrace> bpftrace;
