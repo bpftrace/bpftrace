@@ -1,8 +1,13 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 #include "data/btf_data.h"
 
 namespace {
+constexpr std::array<uint8_t, 4> INVALID_BTF_DATA = { 0xDE, 0xAD, 0xBE, 0xEF };
+
 bool create_tmp_with_data(char *path,
                           const unsigned char *data,
                           unsigned int data_len)
@@ -59,4 +64,29 @@ protected:
 
   char *btf_path_ = nullptr;
   char *funcs_path_ = nullptr;
+};
+
+class test_bad_btf : public ::testing::Test {
+protected:
+  void SetUp() override
+  {
+    // BTF data file
+    char *btf_path = strdup("/tmp/btf_dataXXXXXX");
+    if (create_tmp_with_data(btf_path,
+                             INVALID_BTF_DATA.data(),
+                             INVALID_BTF_DATA.size())) {
+      setenv("BPFTRACE_BTF", btf_path, true);
+      btf_path_ = btf_path;
+    }
+  }
+
+  void TearDown() override
+  {
+    // clear the environment and remove the temp files
+    unsetenv("BPFTRACE_BTF");
+    if (btf_path_)
+      std::remove(btf_path_);
+  }
+
+  char *btf_path_ = nullptr;
 };
