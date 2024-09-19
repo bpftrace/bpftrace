@@ -151,7 +151,15 @@ else()
 endif()
 
 set(MIN_LLVM_MAJOR 13)
-set(MAX_LLVM_MAJOR 18)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # We assume bpftrace is not being packaged when CMAKE_BUILD_TYPE=Debug.
+  # So allow building with any LLVM version. This is purely for developers.
+  # Packagers are highly discouraged from shipping bpftrace with untested LLVM
+  # releases.
+  set(MAX_LLVM_MAJOR 999)
+else()
+  set(MAX_LLVM_MAJOR 18)
+endif()
 
 if((${LLVM_VERSION_MAJOR} VERSION_LESS ${MIN_LLVM_MAJOR}) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER ${MAX_LLVM_MAJOR}))
   message(SEND_ERROR "Unsupported LLVM version found via ${LLVM_INCLUDE_DIRS}: ${LLVM_VERSION_MAJOR}")
