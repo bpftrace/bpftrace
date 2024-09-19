@@ -27,7 +27,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /src
 WORKDIR /src
-RUN cmake -B /build -DBUILD_TESTING=OFF
+
+# Use CMAKE_BUILD_TYPE=Release if you don't plan on developing bpftrace
+RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug
 RUN make -C /build -j$(nproc)
 
 ENTRYPOINT ["/build/src/bpftrace"]
