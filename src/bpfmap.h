@@ -68,7 +68,6 @@ private:
 enum class MapType {
   // Also update to_string
   PerfEvent,
-  FmtStringArgs,
   Join,
   Elapsed,
   Ringbuf,

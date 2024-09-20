@@ -21,6 +21,18 @@ BpfBytecode::BpfBytecode(std::span<char> elf) : BpfBytecode(std::as_bytes(elf))
 {
 }
 
+static std::optional<std::string> get_global_var_section_name(
+    std::string_view map_name,
+    const std::unordered_set<std::string> &section_names)
+{
+  for (const auto &section_name : section_names) {
+    // there are some random chars in the beginning of the map name
+    if (map_name.npos != map_name.find(section_name))
+      return section_name;
+  }
+  return std::nullopt;
+}
+
 BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
 {
   int log_level = 0;
@@ -40,13 +52,16 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   if (!bpf_object_)
     LOG(BUG) << "The produced ELF is not a valid BPF object";
 
+  const auto section_names = globalvars::get_section_names();
+
   // Discover maps
   struct bpf_map *m;
   bpf_map__for_each (m, bpf_object_.get()) {
     std::string_view name = bpf_map__name(m);
-    // there are some random chars in the beginning of the map name
-    if (name.npos != name.find(globalvars::SECTION_NAME)) {
-      global_vars_map_ = m;
+    if (auto global_var_section_name_opt = get_global_var_section_name(
+            name, section_names)) {
+      section_names_to_global_vars_map_[std::move(
+          *global_var_section_name_opt)] = m;
       continue;
     }
     maps_.emplace(bpftrace_map_name(bpf_map__name(m)), m);
@@ -95,14 +110,9 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
 
 void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
 {
-  bool needs_global_vars = !bpftrace.resources.needed_global_vars.empty();
-  if (!needs_global_vars)
-    return;
-  if (!global_vars_map_) {
-    LOG(BUG) << "No map found for " << globalvars::SECTION_NAME
-             << " which is needed to set global variables";
-  }
-  globalvars::update_global_vars(bpf_object_.get(), global_vars_map_, bpftrace);
+  globalvars::update_global_vars(bpf_object_.get(),
+                                 section_names_to_global_vars_map_,
+                                 bpftrace);
 }
 
 namespace {

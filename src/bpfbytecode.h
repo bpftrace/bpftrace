@@ -73,7 +73,8 @@ private:
   std::map<std::string, BpfMap> maps_;
   std::map<int, BpfMap *> maps_by_id_;
   std::map<std::string, BpfProgram> programs_;
-  struct bpf_map *global_vars_map_ = nullptr;
+  std::unordered_map<std::string, struct bpf_map *>
+      section_names_to_global_vars_map_;
 };
 
 } // namespace bpftrace

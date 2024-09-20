@@ -507,6 +507,14 @@ std::vector<int> get_possible_cpus()
   return read_cpu_range("/sys/devices/system/cpu/possible");
 }
 
+int get_max_cpu_id()
+{
+  const auto cpus = get_possible_cpus();
+  auto it = std::max_element(cpus.begin(), cpus.end());
+  assert(it != cpus.end());
+  return *it;
+}
+
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &ksrc,
                                            const std::string &kobj,

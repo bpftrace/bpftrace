@@ -48,6 +48,13 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
     return std::nullopt;
   }
 
+  if (resources_.max_fmtstring_args_size > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -136,7 +143,7 @@ void ResourceAnalyser::visit(Call &call)
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
     resources_.needed_global_vars.insert(
-        std::string(bpftrace::globalvars::NUM_CPUS));
+        bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
     auto &map_info = resources_.maps_info[call.map->ident];
     int bits = static_cast<Integer *>(call.vargs.at(1))->n;

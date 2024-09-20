@@ -83,6 +83,7 @@ public:
         feature_(std::make_unique<BPFfeature>(no_feature)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size()),
+        max_cpu_id_(get_max_cpu_id()),
         config_(config)
   {
   }
@@ -211,6 +212,7 @@ public:
   }
   int ncpus_;
   int online_cpus_;
+  int max_cpu_id_;
   Config config_;
 
 private:
