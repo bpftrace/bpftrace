@@ -4,7 +4,7 @@
 #include <string>
 
 #include "bpftrace.h"
-#include "required_resources.h"
+#include "types.h"
 
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
@@ -12,17 +12,35 @@
 namespace bpftrace {
 namespace globalvars {
 
-static constexpr std::string_view SECTION_NAME = ".rodata";
+std::string to_string(GlobalVar global_var);
+GlobalVar from_string(std::string_view name);
 
-static constexpr std::string_view NUM_CPUS = "num_cpus";
+constexpr std::string_view RO_SECTION_NAME = ".rodata";
+constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
+    ".data.fmt_str_buf";
 
-const std::unordered_set<std::string> GLOBAL_VAR_NAMES = {
-  std::string(NUM_CPUS),
+struct GlobalVarConfig {
+  std::string name;
+  std::string section;
+  bool read_only;
 };
 
-void update_global_vars(const struct bpf_object *obj,
-                        struct bpf_map *global_vars_map,
-                        BPFtrace &bpftrace);
+const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
+  { GlobalVar::NUM_CPUS, { "num_cpus", std::string(RO_SECTION_NAME), true } },
+  { GlobalVar::MAX_CPU_ID,
+    { "max_cpu_id", std::string(RO_SECTION_NAME), true } },
+  { GlobalVar::FMT_STRINGS_BUFFER,
+    { "fmt_str_buf", std::string(FMT_STRINGS_BUFFER_SECTION_NAME), false } },
+};
+
+void update_global_vars(
+    const struct bpf_object *obj,
+    const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
+    const BPFtrace &bpftrace);
+
+const GlobalVarConfig &get_config(GlobalVar global_var);
+SizedType get_type(GlobalVar global_var, const RequiredResources &resources);
+std::unordered_set<std::string> get_section_names();
 
 } // namespace globalvars
 } // namespace bpftrace

@@ -64,8 +64,6 @@ std::string to_string(MapType t)
   switch (t) {
     case MapType::PerfEvent:
       return "perf_event";
-    case MapType::FmtStringArgs:
-      return "fmt_string_args";
     case MapType::Join:
       return "join";
     case MapType::Elapsed:
