@@ -1,6 +1,6 @@
 #include "codegen_resources.h"
 
-#include "async_event_types.h"
+#include "ast/async_event_types.h"
 #include "struct.h"
 #include "types.h"
 
