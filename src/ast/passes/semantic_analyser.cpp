@@ -2686,60 +2686,54 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_[scope_].find(var_ident);
-
   auto &assignTy = assignment.expr->type;
 
   if (search != variable_val_[scope_].end()) {
-    if (search->second.IsNoneTy()) {
-      if (is_final_pass()) {
-        LOG(ERROR, assignment.loc, err_) << "Undefined variable: " + var_ident;
-      } else {
-        search->second = assignTy;
-      }
-    } else if ((search->second.IsStringTy() && assignTy.IsStringTy()) ||
-               (search->second.IsTupleTy() && assignTy.IsTupleTy())) {
-      update_string_size(search->second, assignTy);
-    } else if (!search->second.IsSameType(assignTy)) {
+    auto &storedTy = search->second;
+    if (storedTy.IsNoneTy()) {
+      storedTy = assignTy;
+    } else if (!storedTy.IsSameType(assignTy)) {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignTy
-          << "' when variable already contains a value of type '"
-          << search->second << "'";
-    } else if (search->second.IsIntegerTy()) {
+          << "' when variable already contains a value of type '" << storedTy
+          << "'";
+    } else if (assignTy.IsStringTy()) {
+      update_string_size(storedTy, assignTy);
+    } else if (storedTy.IsIntegerTy()) {
       if (assignment.expr->is_literal) {
         auto integer = static_cast<Integer *>(assignment.expr);
-        if (!search->second.IsEqual(assignTy)) {
+        if (!storedTy.IsEqual(assignTy)) {
           int64_t value = integer->n;
           bool can_fit = false;
           if (integer->is_negative) {
-            if (!search->second.IsSigned()) {
+            if (!storedTy.IsSigned()) {
               LOG(ERROR, assignment.loc, err_)
                   << "Type mismatch for " << var_ident << ": "
                   << "trying to assign value of type '" << assignTy
                   << "' when variable already contains a value of type '"
-                  << search->second << "'";
+                  << storedTy << "'";
               return;
             } else {
-              auto min_max = getIntTypeRange(search->second);
+              auto min_max = getIntTypeRange(storedTy);
               can_fit = value >= min_max.first;
             }
           } else {
-            if (!search->second.IsSigned()) {
-              auto min_max = getUIntTypeRange(search->second);
+            if (!storedTy.IsSigned()) {
+              auto min_max = getUIntTypeRange(storedTy);
               can_fit = static_cast<uint64_t>(value) <= min_max.second;
             } else {
               // Casting to a uint64 here because the assign 'value'
               // might be larger than the max signed int64 e.g.
               // `$x = -1; $x = 10223372036854775807;`
-              auto min_max = getIntTypeRange(search->second);
+              auto min_max = getIntTypeRange(storedTy);
               can_fit = static_cast<uint64_t>(value) <=
                         static_cast<uint64_t>(min_max.second);
             }
           }
           if (can_fit) {
             Expression *cast = ctx_.make_node<Cast>(
-                CreateInteger(search->second.GetSize() * 8,
-                              search->second.IsSigned()),
+                CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
                 assignment.expr,
                 assignment.loc);
             Visit(cast);
@@ -2751,81 +2745,68 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                 << (integer->is_negative ? integer->n
                                          : static_cast<uint64_t>(integer->n))
                 << "' which does not fit into the variable of type '"
-                << search->second << "'";
+                << storedTy << "'";
           }
         }
-      } else if (search->second.IsSigned() != assignTy.IsSigned()) {
+      } else if (storedTy.IsSigned() != assignTy.IsSigned()) {
         LOG(ERROR, assignment.loc, err_)
             << "Type mismatch for " << var_ident << ": "
             << "trying to assign value of type '" << assignTy
-            << "' when variable already contains a value of type '"
-            << search->second << "'";
+            << "' when variable already contains a value of type '" << storedTy
+            << "'";
       } else {
-        if (!assignTy.FitsInto(search->second)) {
+        if (!assignTy.FitsInto(storedTy)) {
           LOG(ERROR, assignment.loc, err_)
               << "Integer size mismatch. Assignment type '" << assignTy
-              << "' is larger than the variable type '" << search->second
-              << "'.";
+              << "' is larger than the variable type '" << storedTy << "'.";
+        }
+      }
+    } else if (assignTy.IsRecordTy()) {
+      if (assignTy.GetName() != storedTy.GetName()) {
+        LOG(ERROR, assignment.loc, err_)
+            << "Type mismatch for " << var_ident << ": "
+            << "trying to assign value of type '" << assignTy.GetName()
+            << "' when variable already contains a value of type '" << storedTy
+            << "'";
+      }
+    } else if (assignTy.IsBufferTy()) {
+      auto var_size = storedTy.GetSize();
+      auto expr_size = assignTy.GetSize();
+      if (var_size != expr_size) {
+        LOG(WARNING, assignment.loc, out_)
+            << "Buffer size mismatch: " << var_size << " != " << expr_size
+            << (var_size < expr_size ? ". The value may be truncated."
+                                     : ". The value may contain garbage.");
+      }
+    } else if (assignTy.IsTupleTy()) {
+      update_string_size(storedTy, assignTy);
+      // Early passes may not have been able to deduce the full types of tuple
+      // elements yet. So wait until final pass.
+      if (is_final_pass()) {
+        if (!assignTy.FitsInto(storedTy)) {
+          LOG(ERROR, assignment.loc, err_)
+              << "Tuple type mismatch: " << storedTy << " != " << assignTy
+              << ".";
         }
       }
     }
   } else {
     // This variable hasn't been seen before
-    variable_val_[scope_].insert({ var_ident, assignment.expr->type });
+    variable_val_[scope_].insert({ var_ident, assignTy });
   }
 
-  auto &storedTy = variable_val_[scope_][var_ident];
-
+  const auto &storedTy = variable_val_[scope_][var_ident];
   assignment.var->type = storedTy;
 
-  if (assignTy.IsRecordTy()) {
-    if (assignTy.GetName() != storedTy.GetName()) {
-      LOG(ERROR, assignment.loc, err_)
-          << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << assignTy.GetName()
-          << "' when variable already contains a value of type '" << storedTy
-          << "'";
-    }
-  } else if (assignTy.IsStringTy()) {
-    auto var_size = storedTy.GetSize();
-    auto expr_size = assignTy.GetSize();
-    if (var_size < expr_size) {
-      LOG(WARNING, assignment.loc, out_)
-          << "String size mismatch: " << var_size << " != " << expr_size
-          << ". The value may be truncated.";
-    }
-  } else if (assignTy.IsBufferTy()) {
-    auto var_size = storedTy.GetSize();
-    auto expr_size = assignTy.GetSize();
-    if (var_size != expr_size) {
-      LOG(WARNING, assignment.loc, out_)
-          << "Buffer size mismatch: " << var_size << " != " << expr_size
-          << (var_size < expr_size ? ". The value may be truncated."
-                                   : ". The value may contain garbage.");
-    }
-  } else if (assignTy.IsTupleTy()) {
-    // Early passes may not have been able to deduce the full types of tuple
-    // elements yet. So wait until final pass.
-    if (is_final_pass()) {
-      auto var_type = storedTy;
-      auto expr_type = assignTy;
-      if (!expr_type.FitsInto(var_type)) {
-        LOG(ERROR, assignment.loc, err_) << "Tuple type mismatch: " << var_type
-                                         << " != " << expr_type << ".";
-      }
-    }
-  }
-
   if (is_final_pass()) {
-    const auto &ty = assignTy.GetTy();
-    if (ty == Type::none)
+    if (storedTy.IsNoneTy())
       LOG(ERROR, assignment.expr->loc, err_)
-          << "Invalid expression for assignment: " << ty;
+          << "Invalid expression for assignment: " << storedTy;
 
     // Scratch variables are on the BPF stack, which is only 512 bytes at time
     // of writing, so large values do not fit on there. 200 is a ballpark of
     // what probably won't work.
-    auto expr_size = assignTy.GetSize();
+    auto expr_size = storedTy.GetSize();
     if (expr_size > 200) {
       LOG(ERROR, assignment.loc, err_)
           << "Value is too big "
