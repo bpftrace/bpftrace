@@ -97,6 +97,13 @@ REQUIRES_FEATURE kfunc
 EXPECT Attaching 1 probe...
 TIMEOUT 1
 
+NAME kfunc array access via pointer
+PROG kfunc:__module_get { print(args.module->version[0]); exit(); }
+AFTER lsmod
+REQUIRES_FEATURE kfunc
+EXPECT Attaching 1 probe...
+TIMEOUT 1
+
 NAME unaligned key with aligned value
 PROG BEGIN { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
 EXPECT Attaching 1 probe...

@@ -72,6 +72,7 @@ aot.probe.kprobe_ignore_missing_probes
 aot.probe.kretfunc
 aot.probe.uprobe_error_missing_probes
 aot.probe.uprobe_ignore_missing_probes
+aot.regression.kfunc array access via pointer
 aot.regression.kfunc double pointer array access
 aot.regression.kfunc double pointer dereference
 aot.tuples.basic tuple map
