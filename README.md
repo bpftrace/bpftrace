@@ -59,7 +59,7 @@ More powerful scripts can easily be constructed. See [Tools](tools/README.md) fo
 
 ## Videos
 
-Note: some of the content in these videos may be out of date, the current [reference guide]((man/adoc/bpftrace.adoc)) is the source of truth.
+Note: some of the content in these videos may be out of date, the current [reference guide](man/adoc/bpftrace.adoc) is the source of truth.
 
 - [Making bpftrace more powerful - 2023](https://www.youtube.com/watch?v=19RZ7b6AZJ0)
 - [Bpftrace Recipes: 5 Real Problems Solved - 2023](https://www.youtube.com/watch?v=wMtArNjRYXU)
