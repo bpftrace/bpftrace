@@ -43,6 +43,8 @@ and this project adheres to
 - Drop support for LLVM 12 and below
   - [#3325](https://github.com/bpftrace/bpftrace/pull/3325)
 #### Fixed
+- Fix verifier error when array indexing through pointer
+  - [#3465](https://github.com/bpftrace/bpftrace/pull/3465)
 - Fix segfault for multi-tracepoint probes
   - [#3274](https://github.com/bpftrace/bpftrace/pull/3274)
 - Fix verifier error from misaligned stack access when using strings as map keys

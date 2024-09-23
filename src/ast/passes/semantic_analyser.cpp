@@ -1649,8 +1649,9 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
 
   // BPF verifier cannot track BTF information for double pointers so we cannot
   // propagate is_btftype for arrays of pointers and we need to reset it on the
-  // array type as well.
-  if (arr.type.IsPtrTy())
+  // array type as well. Indexing a pointer as an array also can't be verified,
+  // so the same applies there.
+  if (arr.type.IsPtrTy() || type.IsPtrTy())
     type.is_btftype = false;
   arr.type.is_btftype = type.is_btftype;
 }
