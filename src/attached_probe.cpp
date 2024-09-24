@@ -161,10 +161,10 @@ AttachedProbe::AttachedProbe(Probe &probe,
         attach_uprobe(getpid(), safe_mode);
       break;
     case ProbeType::kprobe:
-      attach_kprobe(safe_mode);
+      attach_kprobe();
       break;
     case ProbeType::kretprobe:
-      attach_kprobe(safe_mode);
+      attach_kprobe();
       break;
     case ProbeType::tracepoint:
       attach_tracepoint();
@@ -381,54 +381,38 @@ static uint64_t resolve_offset(const std::string &path,
   return bcc_sym.offset;
 }
 
-static void check_alignment(std::string &path,
-                            std::string &symbol,
-                            uint64_t sym_offset,
-                            uint64_t func_offset,
-                            bool safe_mode,
-                            ProbeType type)
+static bool is_alignment_valid(std::string &path,
+                               std::string &symbol,
+                               uint64_t sym_offset,
+                               uint64_t func_offset,
+                               ProbeType type,
+                               std::string &alignment_err)
 {
   Disasm dasm(path);
   AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
 
   std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
 
-  // If we did not allow unaligned uprobes in the
-  // compile time, force the safe mode now.
-#ifndef HAVE_UNSAFE_PROBE
-  safe_mode = true;
-#endif
-
   switch (aligned) {
     case AlignState::Ok:
-      return;
+      return true;
     case AlignState::NotAlign:
-      if (safe_mode)
-        LOG(BUG) << "Could not add " << type
-                 << " into middle of instruction: " << tmp;
-      else
-        LOG(WARNING) << "Unsafe " << type
-                     << " in the middle of the instruction: " << tmp;
-      break;
-
+      alignment_err = "Could not add " + probetypeName(type) +
+                      " into middle of instruction: " + tmp;
+      return false;
     case AlignState::Fail:
-      if (safe_mode)
-        LOG(BUG) << "Failed to check if " << type
-                 << " is in proper place: " << tmp;
-      else
-        LOG(WARNING) << "Unchecked " << type << ": " << tmp;
-      break;
-
+      alignment_err = "Failed to check if " + probetypeName(type) +
+                      " is in proper place: " + tmp;
+      return false;
     case AlignState::NotSupp:
-      if (safe_mode)
-        LOG(BUG) << "Can't check if " << type
-                 << " is in proper place (compiled without "
-                    "(k|u)probe offset support): "
-                 << tmp;
-      else
-        LOG(WARNING) << "Unchecked " << type << " : " << tmp;
-      break;
+      alignment_err = "Can't check if " + probetypeName(type) +
+                      " is in proper place (compiled without "
+                      "(k|u)probe offset support): " +
+                      tmp;
+      return false;
   }
+
+  return false;
 }
 
 bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
@@ -441,6 +425,8 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   sym.name = "";
   option.use_debug_file = 1;
   option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+
+  auto missing_probes = bpftrace_.config_.get(ConfigKeyMissingProbes::default_);
 
   if (symbol.empty()) {
     sym.address = probe_.address;
@@ -471,8 +457,6 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
     if (!sym.start) {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
-      auto missing_probes = bpftrace_.config_.get(
-          ConfigKeyMissingProbes::default_);
       if (!has_multiple_aps || missing_probes == ConfigMissingProbes::error) {
         throw FatalUserException(msg + ", cannot attach probe.");
       } else {
@@ -519,8 +503,19 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   if (func_offset == 0)
     return true;
 
-  check_alignment(
-      probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+  std::string alignment_err;
+  bool alignment_valid = is_alignment_valid(
+      probe_.path, symbol, sym_offset, func_offset, probe_.type, alignment_err);
+
+  if (!alignment_valid) {
+    if (missing_probes == ConfigMissingProbes::error) {
+      throw FatalUserException(alignment_err);
+    } else if (missing_probes == ConfigMissingProbes::warn) {
+      LOG(WARNING) << alignment_err << ". Skipping probe.";
+    }
+    return false;
+  }
+
   return true;
 }
 
@@ -552,19 +547,15 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
   return "";
 }
 
-void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
+bool AttachedProbe::resolve_offset_kprobe()
 {
   struct symbol sym = {};
   std::string &symbol = probe_.attach_point;
   uint64_t func_offset = probe_.func_offset;
   offset_ = func_offset;
 
-#ifndef HAVE_UNSAFE_PROBE
-  safe_mode = true;
-#endif
-
   if (func_offset == 0)
-    return;
+    return true;
 
   sym.name = symbol;
   const struct vmlinux_location *locs = vmlinux_locs;
@@ -585,17 +576,38 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
     LOG(V1) << "The kernel will verify the safety of the location but "
                "will also allow the offset to be in a different symbol.";
 
-    return;
+    return true;
   }
 
-  if (func_offset >= sym.size)
-    throw FatalUserException("Offset outside the function bounds ('" + symbol +
-                             "' size is " + std::to_string(sym.size) + ")");
+  auto missing_probes = bpftrace_.config_.get(ConfigKeyMissingProbes::default_);
+
+  if (func_offset >= sym.size) {
+    std::string offset_err = "Offset outside the function bounds ('" + symbol +
+                             "' size is " + std::to_string(sym.size) + ")";
+    if (missing_probes == ConfigMissingProbes::error) {
+      throw FatalUserException(offset_err);
+    } else if (missing_probes == ConfigMissingProbes::warn) {
+      LOG(WARNING) << offset_err << ". Skipping probe.";
+    }
+    return false;
+  }
 
   uint64_t sym_offset = resolve_offset(path, probe_.attach_point, probe_.loc);
 
-  check_alignment(
-      path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+  std::string alignment_err;
+  bool alignment_valid = is_alignment_valid(
+      path, symbol, sym_offset, func_offset, probe_.type, alignment_err);
+
+  if (!alignment_valid) {
+    if (missing_probes == ConfigMissingProbes::error) {
+      throw FatalUserException(alignment_err);
+    } else if (missing_probes == ConfigMissingProbes::warn) {
+      LOG(WARNING) << alignment_err << ". Skipping probe.";
+    }
+    return false;
+  }
+
+  return true;
 }
 
 void AttachedProbe::attach_multi_kprobe()
@@ -631,7 +643,7 @@ void AttachedProbe::attach_multi_kprobe()
   }
 }
 
-void AttachedProbe::attach_kprobe(bool safe_mode)
+void AttachedProbe::attach_kprobe()
 {
   if (!probe_.funcs.empty()) {
     attach_multi_kprobe();
@@ -669,7 +681,9 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
       !bpftrace_.is_traceable_func(funcname))
     return;
 
-  resolve_offset_kprobe(safe_mode);
+  if (!resolve_offset_kprobe()) {
+    return;
+  }
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),

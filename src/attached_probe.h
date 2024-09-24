@@ -42,11 +42,11 @@ public:
 private:
   std::string eventprefix() const;
   std::string eventname() const;
-  void resolve_offset_kprobe(bool safe_mode);
+  bool resolve_offset_kprobe();
   bool resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
-  void attach_kprobe(bool safe_mode);
+  void attach_kprobe();
   void attach_uprobe(int pid, bool safe_mode);
 
   // Note: the following usdt attachment functions will only activate a

@@ -560,6 +560,7 @@ enum class ProbeType {
   rawtracepoint,
 };
 
+std::string probetypeName(ProbeType t);
 std::ostream &operator<<(std::ostream &os, ProbeType type);
 
 struct ProbeItem {
