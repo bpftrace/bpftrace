@@ -529,9 +529,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     } else if (type != ProbeType::tracepoint) // no special action for
                                               // tracepoint
     {
-      LOG(ERROR, builtin.loc, err_)
-          << "The args builtin can only be used with tracepoint/kfunc/uprobe"
-          << "probes (" << type << " used here)";
+      LOG(ERROR, builtin.loc, err_) << "The args builtin can only be used with "
+                                       "tracepoint/kfunc/uprobe probes ("
+                                    << type << " used here)";
     }
   } else {
     builtin.type = CreateNone();
