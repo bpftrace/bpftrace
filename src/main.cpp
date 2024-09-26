@@ -86,9 +86,9 @@ enum Options {
 void usage()
 {
   // clang-format off
-  std::cerr << "USAGE:" << std::endl;
-  std::cerr << "    bpftrace [options] filename" << std::endl;
-  std::cerr << "    bpftrace [options] - <stdin input>" << std::endl;
+  std::cout << "USAGE:" << std::endl;
+  std::cout << "    bpftrace [options] filename" << std::endl;
+  std::cout << "    bpftrace [options] - <stdin input>" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl;
   std::cerr << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
