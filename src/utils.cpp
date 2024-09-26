@@ -1442,6 +1442,44 @@ std::optional<std::string> abs_path(const std::string &rel_path)
   }
 }
 
+
+/*
+Look up symbol information in 'path' based on a name.
+*/
+std::optional<struct symbol> find_symbol(const std::string &path,
+                                         const std::string &name,
+                                         bool debug_syms)
+{
+  bcc_elf_symcb sym_resolve_callback = [](const char *name,
+                                          uint64_t addr,
+                                          uint64_t size,
+                                          void *payload) {
+    struct symbol *sym = static_cast<struct symbol *>(payload);
+    if (!strcmp(name, sym->name.c_str())) {
+      sym->address = addr;
+      sym->size = size;
+      return -1;
+    }
+    return 0;
+  };
+
+  struct symbol sym;
+  memset(&sym, 0, sizeof(sym));
+  sym.name = name;
+
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_debug_file = debug_syms;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+
+  bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, &sym);
+  if (sym.start) {
+    return sym;
+  } else {
+    return std::nullopt;
+  }
+}
+
 bool symbol_has_module(const std::string &symbol)
 {
   return !symbol.empty() && symbol[symbol.size() - 1] == ']';

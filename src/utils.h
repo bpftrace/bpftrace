@@ -236,6 +236,9 @@ std::string hex_format_buffer(const char *buf,
                               bool keep_ascii = true,
                               bool escape_hex = true);
 std::optional<std::string> abs_path(const std::string &rel_path);
+std::optional<struct symbol> find_symbol(const std::string &path,
+                                         const std::string &name,
+                                         bool debug_syms = false);
 bool symbol_has_module(const std::string &symbol);
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol);

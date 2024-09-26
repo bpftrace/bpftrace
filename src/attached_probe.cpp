@@ -326,22 +326,6 @@ std::string AttachedProbe::eventname() const
   }
 }
 
-static int sym_name_cb(const char *symname,
-                       uint64_t start,
-                       uint64_t size,
-                       void *p)
-{
-  struct symbol *sym = static_cast<struct symbol *>(p);
-
-  if (sym->name == symname) {
-    sym->start = start;
-    sym->size = size;
-    return -1;
-  }
-
-  return 0;
-}
-
 static int sym_address_cb(const char *symname,
                           uint64_t start,
                           uint64_t size,
@@ -465,10 +449,9 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
     symbol = sym.name;
     func_offset = probe_.address - sym.start;
   } else {
-    sym.name = symbol;
-    bcc_elf_foreach_sym(probe_.path.c_str(), sym_name_cb, &option, &sym);
-
-    if (!sym.start) {
+    if (auto result = find_symbol(probe_.path, symbol, true)) {
+      sym = result.value();
+    } else {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
       auto missing_probes = bpftrace_.config_.get(
@@ -527,9 +510,6 @@ static std::optional<std::string> find_vmlinux(
     const struct vmlinux_location *locs,
     struct symbol &sym)
 {
-  struct bcc_symbol_option option = {};
-  option.use_debug_file = 0;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
   struct utsname buf;
 
   uname(&buf);
@@ -541,8 +521,9 @@ static std::optional<std::string> find_vmlinux(
     snprintf(path, PATH_MAX, locs[i].path, buf.release);
     if (access(path, R_OK))
       continue;
-    bcc_elf_foreach_sym(path, sym_name_cb, &option, &sym);
-    if (sym.start) {
+
+    if (auto found = find_symbol(path, sym.name)) {
+      sym = found.value();
       LOG(V1) << "vmlinux: using " << path;
       return path;
     }
