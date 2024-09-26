@@ -3545,7 +3545,7 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task_vma { $x = ctx->vma->vm_start }");
   test("iter:task { printf(\"%d\", ctx->task->pid); }");
   test_error("iter:task { $x = args.foo; }", R"(
-stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/kfunc/uprobeprobes (iter used here)
+stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/kfunc/uprobe probes (iter used here)
 iter:task { $x = args.foo; }
                  ~~~~
 )");
