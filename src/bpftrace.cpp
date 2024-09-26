@@ -1756,8 +1756,7 @@ int BPFtrace::resolve_uname(const std::string &name,
   sym->name = name;
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
-  option.use_symbol_type = (1 << STT_OBJECT | 1 << STT_FUNC |
-                            1 << STT_GNU_IFUNC);
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
 
   return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
 }
