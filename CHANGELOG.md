@@ -44,6 +44,8 @@ and this project adheres to
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 - Drop support for LLVM 12 and below
   - [#3325](https://github.com/bpftrace/bpftrace/pull/3325)
+- Remove `ALLOW_UNSAFE_PROBE` compiler flag
+  - [#3476](https://github.com/bpftrace/bpftrace/pull/3476)
 #### Fixed
 - Fix verifier error when array indexing through pointer
   - [#3465](https://github.com/bpftrace/bpftrace/pull/3465)

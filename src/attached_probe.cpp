@@ -161,10 +161,10 @@ AttachedProbe::AttachedProbe(Probe &probe,
         attach_uprobe(getpid(), safe_mode);
       break;
     case ProbeType::kprobe:
-      attach_kprobe(safe_mode);
+      attach_kprobe();
       break;
     case ProbeType::kretprobe:
-      attach_kprobe(safe_mode);
+      attach_kprobe();
       break;
     case ProbeType::tracepoint:
       attach_tracepoint();
@@ -393,19 +393,14 @@ static void check_alignment(std::string &path,
 
   std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
 
-  // If we did not allow unaligned uprobes in the
-  // compile time, force the safe mode now.
-#ifndef HAVE_UNSAFE_PROBE
-  safe_mode = true;
-#endif
-
   switch (aligned) {
     case AlignState::Ok:
       return;
     case AlignState::NotAlign:
       if (safe_mode)
         LOG(BUG) << "Could not add " << type
-                 << " into middle of instruction: " << tmp;
+                 << " into middle of instruction: " << tmp
+                 << " (use --unsafe to force attachment)";
       else
         LOG(WARNING) << "Unsafe " << type
                      << " in the middle of the instruction: " << tmp;
@@ -414,7 +409,8 @@ static void check_alignment(std::string &path,
     case AlignState::Fail:
       if (safe_mode)
         LOG(BUG) << "Failed to check if " << type
-                 << " is in proper place: " << tmp;
+                 << " is in proper place: " << tmp
+                 << " (use --unsafe to force attachment)";
       else
         LOG(WARNING) << "Unchecked " << type << ": " << tmp;
       break;
@@ -424,7 +420,7 @@ static void check_alignment(std::string &path,
         LOG(BUG) << "Can't check if " << type
                  << " is in proper place (compiled without "
                     "(k|u)probe offset support): "
-                 << tmp;
+                 << tmp << " (use --unsafe to force attachment)";
       else
         LOG(WARNING) << "Unchecked " << type << " : " << tmp;
       break;
@@ -552,16 +548,12 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
   return "";
 }
 
-void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
+void AttachedProbe::resolve_offset_kprobe()
 {
   struct symbol sym = {};
   std::string &symbol = probe_.attach_point;
   uint64_t func_offset = probe_.func_offset;
   offset_ = func_offset;
-
-#ifndef HAVE_UNSAFE_PROBE
-  safe_mode = true;
-#endif
 
   if (func_offset == 0)
     return;
@@ -591,11 +583,6 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
   if (func_offset >= sym.size)
     throw FatalUserException("Offset outside the function bounds ('" + symbol +
                              "' size is " + std::to_string(sym.size) + ")");
-
-  uint64_t sym_offset = resolve_offset(path, probe_.attach_point, probe_.loc);
-
-  check_alignment(
-      path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
 void AttachedProbe::attach_multi_kprobe()
@@ -631,7 +618,7 @@ void AttachedProbe::attach_multi_kprobe()
   }
 }
 
-void AttachedProbe::attach_kprobe(bool safe_mode)
+void AttachedProbe::attach_kprobe()
 {
   if (!probe_.funcs.empty()) {
     attach_multi_kprobe();
@@ -669,7 +656,7 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
       !bpftrace_.is_traceable_func(funcname))
     return;
 
-  resolve_offset_kprobe(safe_mode);
+  resolve_offset_kprobe();
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),
