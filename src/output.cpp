@@ -414,12 +414,6 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     case Type::strerror: {
       return strerror(read_data<uint64_t>(value.data()));
     }
-    case Type::pointer:
-    case Type::reference: {
-      std::ostringstream res;
-      res << "0x" << std::hex << read_data<uint64_t>(value.data());
-      return res.str();
-    }
     case Type::none: {
       return "";
     }
@@ -428,6 +422,8 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     case Type::lhist:
     case Type::stack_mode:
     case Type::stats:
+    case Type::pointer:
+    case Type::reference:
     case Type::timestamp_mode: {
       LOG(BUG) << "Invalid value type: " << type;
     }
@@ -758,6 +754,27 @@ void TextOutput::value(BPFtrace &bpftrace,
                        std::vector<uint8_t> &value) const
 {
   out_ << value_to_str(bpftrace, ty, value, false, 1) << std::endl;
+}
+
+std::string TextOutput::value_to_str(BPFtrace &bpftrace,
+                                     const SizedType &type,
+                                     const std::vector<uint8_t> &value,
+                                     bool is_per_cpu,
+                                     uint32_t div,
+                                     bool is_map_key) const
+{
+  switch (type.GetTy()) {
+    case Type::pointer:
+    case Type::reference: {
+      std::ostringstream res;
+      res << "0x" << std::hex << read_data<uint64_t>(value.data());
+      return res.str();
+    }
+    default: {
+      return Output::value_to_str(
+          bpftrace, type, value, is_per_cpu, div, is_map_key);
+    }
+  };
 }
 
 void TextOutput::message(MessageType type __attribute__((unused)),
@@ -1112,8 +1129,18 @@ std::string JsonOutput::value_to_str(BPFtrace &bpftrace,
                                      uint32_t div,
                                      bool is_map_key) const
 {
-  auto str = Output::value_to_str(
-      bpftrace, type, value, is_per_cpu, div, is_map_key);
+  std::string str;
+
+  switch (type.GetTy()) {
+    case Type::pointer:
+    case Type::reference:
+      str = std::to_string(read_data<uint64_t>(value.data()));
+      break;
+    default:
+      str = Output::value_to_str(
+          bpftrace, type, value, is_per_cpu, div, is_map_key);
+  };
+
   if (is_quoted_type(type)) {
     if (is_map_key) {
       return json_escape(str);
