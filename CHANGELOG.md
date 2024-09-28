@@ -69,6 +69,8 @@ and this project adheres to
   - [#3443](https://github.com/bpftrace/bpftrace/pull/3443)
 - Handle invalid BTF without crashing
   - [#3453](https://github.com/bpftrace/bpftrace/pull/3453)
+- Fix json formatting for hex values
+  - [#3475](https://github.com/bpftrace/bpftrace/pull/3475)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

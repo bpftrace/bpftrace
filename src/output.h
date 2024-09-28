@@ -240,6 +240,12 @@ public:
                     const location &loc) const override;
 
 protected:
+  std::string value_to_str(BPFtrace &bpftrace,
+                           const SizedType &type,
+                           const std::vector<uint8_t> &value,
+                           bool is_per_cpu,
+                           uint32_t div,
+                           bool is_map_key = false) const override;
   static std::string hist_index_label(uint32_t index, uint32_t bits);
   static std::string lhist_index_label(int number, int step);
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
