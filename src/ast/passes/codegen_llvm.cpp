@@ -3422,7 +3422,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                << " does not match LLVM offset=" << expected_offset;
   }
 
-  Value *fmt_args = b_.CreateGetFmtStringArgsScratchMap(nullptr, call.loc);
+  Value *fmt_args = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
   // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
@@ -3566,7 +3566,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   StructType *print_struct = b_.GetStructType(struct_name.str(),
                                               elements,
                                               true);
-  Value *buf = b_.CreateGetFmtStringArgsScratchMap(nullptr, call.loc);
+  Value *buf = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
   size_t struct_size = datalayout().getTypeAllocSize(print_struct);
 
   // Store asyncactionid:
@@ -3791,28 +3791,21 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                       1,
                       CreateInt(loss_cnt_key_size),
                       CreateInt(loss_cnt_val_size));
-
-  if (required_resources.max_fmtstring_args_size > 0) {
-    createMapDefinition(to_string(MapType::FmtStringArgs),
-                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
-                        1,
-                        CreateInt32(),
-                        CreateArray(required_resources.max_fmtstring_args_size,
-                                    CreateInt8()));
-  }
 }
 
 void CodegenLLVM::generate_global_vars(const RequiredResources &resources)
 {
-  for (const auto &name : resources.needed_global_vars) {
+  for (const auto global_var : resources.needed_global_vars) {
+    auto config = bpftrace::globalvars::get_config(global_var);
+    auto type = bpftrace::globalvars::get_type(global_var, resources);
     auto var = llvm::dyn_cast<GlobalVariable>(
-        module_->getOrInsertGlobal(name, b_.getInt64Ty()));
-    var->setInitializer(b_.getInt64(1));
-    var->setConstant(true);
-    var->setSection(bpftrace::globalvars::SECTION_NAME);
+        module_->getOrInsertGlobal(config.name, b_.GetType(type)));
+    var->setInitializer(ConstantAggregateZero::get(b_.GetType(type)));
+    var->setConstant(config.read_only);
+    var->setSection(config.section);
     var->setExternallyInitialized(true);
     var->setDSOLocal(true);
-    var->addDebugInfo(debug_.createGlobalInt64(name));
+    var->addDebugInfo(debug_.createGlobalVariable(config.name, type));
   }
 }
 

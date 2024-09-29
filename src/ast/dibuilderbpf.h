@@ -47,7 +47,8 @@ public:
                                              uint64_t max_entries,
                                              DIType *key_type,
                                              const SizedType &value_type);
-  DIGlobalVariableExpression *createGlobalInt64(std::string_view name);
+  DIGlobalVariableExpression *createGlobalVariable(std::string_view name,
+                                                   const SizedType &stype);
 
   DIFile *file = nullptr;
 

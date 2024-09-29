@@ -473,15 +473,35 @@ CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
                              idx);
 }
 
-CallInst *IRBuilderBPF::CreateGetFmtStringArgsScratchMap(
-    BasicBlock *failure_callback,
-    const location &loc)
+Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(const location &loc)
 {
-  return createGetScratchMap(to_string(MapType::FmtStringArgs),
-                             "fmtstr",
-                             GET_PTR_TY(),
-                             loc,
-                             failure_callback);
+  return createScratchBuffer(
+      bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER, loc);
+}
+
+Value *IRBuilderBPF::createScratchBuffer(
+    bpftrace::globalvars::GlobalVar globalvar,
+    const location &loc,
+    size_t key)
+{
+  auto config = globalvars::get_config(globalvar);
+  // ValueType var[MAX_CPU_ID + 1][num_elements]
+  auto type = globalvars::get_type(globalvar, bpftrace_.resources);
+
+  // Get CPU ID
+  auto cpu_id = CreateGetCpuId(loc);
+  auto max = CreateLoad(getInt64Ty(),
+                        module_.getGlobalVariable(to_string(
+                            bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
+  // Verify CPU ID is between 0 and MAX_CPU_ID to ensure we pass BPF
+  // verifer on older 5.2 kernels
+  auto cmp = CreateICmp(CmpInst::ICMP_ULE, cpu_id, max, "cpuid.min.cmp");
+  auto select = CreateSelect(cmp, cpu_id, max, "cpuid.min.select");
+
+  return CreateGEP(GetType(type),
+                   CreatePointerCast(module_.getGlobalVariable(config.name),
+                                     GetType(type)->getPointerTo()),
+                   { select, getInt64(key), getInt64(0) });
 }
 
 /*
@@ -656,12 +676,13 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   CreateBr(while_cond);
   SetInsertPoint(while_cond);
 
-  auto *cond = CreateICmp(CmpInst::ICMP_ULT,
-                          CreateLoad(getInt32Ty(), i),
-                          CreateLoad(getInt32Ty(),
-                                     module_.getGlobalVariable(
-                                         bpftrace::globalvars::NUM_CPUS)),
-                          "num_cpu.cmp");
+  auto *cond = CreateICmp(
+      CmpInst::ICMP_ULT,
+      CreateLoad(getInt32Ty(), i),
+      CreateLoad(getInt32Ty(),
+                 module_.getGlobalVariable(
+                     to_string(bpftrace::globalvars::GlobalVar::NUM_CPUS))),
+      "num_cpu.cmp");
   CreateCondBr(cond, while_body, while_end);
 
   SetInsertPoint(while_body);

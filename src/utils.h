@@ -193,6 +193,7 @@ std::vector<std::string> get_wildcard_tokens(const std::string &input,
                                              bool &end_wildcard);
 std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
+int get_max_cpu_id();
 bool is_dir(const std::string &path);
 bool file_exists_and_ownedby_root(const char *f);
 bool get_kernel_dirs(const struct utsname &utsname,

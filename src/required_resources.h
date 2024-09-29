@@ -112,7 +112,7 @@ public:
 
   // Map metadata
   std::map<std::string, MapInfo> maps_info;
-  std::unordered_set<std::string> needed_global_vars;
+  std::unordered_set<bpftrace::globalvars::GlobalVar> needed_global_vars;
   bool needs_perf_event_map = false;
 
   // Probe metadata
