@@ -510,19 +510,19 @@ TEST(semantic_analyser, ternary_expressions)
        10);
   // Error location is incorrect: #3063
   test_error("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", R"(
-stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'integer' and 'none'
+stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'int' and 'none'
 kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", R"(
-stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'integer' and 'string'
+stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'int' and 'string'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", R"(
-stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'integer'
+stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'int'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -531,17 +531,17 @@ kprobe:f { @x = pid < 10000 ? "lo" : 2 }
 TEST(semantic_analyser, mismatched_call_types)
 {
   test_error("kprobe:f { @x = 1; @x = count(); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count' when map already contains a value of type 'int64'
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = count(); }
                    ~~
 )");
   test_error("kprobe:f { @x = count(); @x = sum(pid); }", R"(
-stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'sum' when map already contains a value of type 'count'
+stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'usum_t' when map already contains a value of type 'count_t'
 kprobe:f { @x = count(); @x = sum(pid); }
                          ~~
 )");
   test_error("kprobe:f { @x = 1; @x = hist(0); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist' when map already contains a value of type 'int64'
+stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = hist(0); }
                    ~~
 )");
@@ -668,7 +668,7 @@ kprobe:f { @x = hist(1, 10); }
                 ~~~~~~~~~~~
 )");
   test_error("kprobe:f { $n = 3; @x = hist(1, $n); }", R"(
-stdin:1:25-36: ERROR: hist() expects a integer literal (integer provided)
+stdin:1:25-36: ERROR: hist() expects a int literal (int provided)
 kprobe:f { $n = 3; @x = hist(1, $n); }
                         ~~~~~~~~~~~
 )");
@@ -2199,12 +2199,12 @@ TEST(semantic_analyser, map_aggregations_implicit_cast)
   test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
   test_error("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", R"(
-stdin:1:28-34: ERROR: Type mismatch for '>': comparing 'hist' with 'int64'
+stdin:1:28-34: ERROR: Type mismatch for '>': comparing 'hist_t' with 'int64'
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                            ~~~~~~
 )");
   test_error("kprobe:f { @ = count(); @ += 5 }", R"(
-stdin:1:25-26: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count'
+stdin:1:25-26: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count_t'
 kprobe:f { @ = count(); @ += 5 }
                         ~
 )");
@@ -2219,7 +2219,7 @@ TEST(semantic_analyser, map_aggregations_explicit_cast)
   test("kprobe:f { @ = avg(5); print((1, (uint16)@)); }");
 
   test_error("kprobe:f { @ = hist(5); print((1, (uint16)@)); }", R"(
-stdin:1:35-43: ERROR: Cannot cast from "hist" to "uint16"
+stdin:1:35-43: ERROR: Cannot cast from "hist_t" to "uint16"
 kprobe:f { @ = hist(5); print((1, (uint16)@)); }
                                   ~~~~~~~~
 )");
@@ -3503,10 +3503,10 @@ TEST(semantic_analyser, subprog_arguments)
 {
   test("fn f($a : int64): int64 { return $a; }");
   // Error location is incorrect: #3063
-  test_error("fn f($a : int64): str_t[16] { return $a; }", R"(
-stdin:1:33-42: ERROR: Function f is of type string[16], cannot return int64
-fn f($a : int64): str_t[16] { return $a; }
-                                ~~~~~~~~~
+  test_error("fn f($a : int64): string[16] { return $a; }", R"(
+stdin:1:34-43: ERROR: Function f is of type string[16], cannot return int64
+fn f($a : int64): string[16] { return $a; }
+                                 ~~~~~~~~~
 )");
 }
 
@@ -3783,18 +3783,18 @@ BEGIN { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }
 TEST(semantic_analyser, for_loop_map_restricted_types)
 {
   test_error("BEGIN { @map[0] = hist(10); for ($kv : @map) { } }", R"(
-stdin:1:40-45: ERROR: Loop expression does not support type: hist
+stdin:1:40-45: ERROR: Loop expression does not support type: hist_t
 BEGIN { @map[0] = hist(10); for ($kv : @map) { } }
                                        ~~~~~
 )");
   test_error("BEGIN { @map[0] = lhist(10, 0, 10, 1); for ($kv : @map) { } }",
              R"(
-stdin:1:51-56: ERROR: Loop expression does not support type: lhist
+stdin:1:51-56: ERROR: Loop expression does not support type: lhist_t
 BEGIN { @map[0] = lhist(10, 0, 10, 1); for ($kv : @map) { } }
                                                   ~~~~~
 )");
   test_error("BEGIN { @map[0] = stats(10); for ($kv : @map) { } }", R"(
-stdin:1:41-46: ERROR: Loop expression does not support type: stats
+stdin:1:41-46: ERROR: Loop expression does not support type: stats_t
 BEGIN { @map[0] = stats(10); for ($kv : @map) { } }
                                         ~~~~~
 )");

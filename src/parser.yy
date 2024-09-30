@@ -205,7 +205,7 @@ type:
                         {"ucount_t", CreateCount(false)},
                         {"uavg_t", CreateAvg(false)},
                         {"ustats_t", CreateStats(false)},
-                        {"timestamp_t", CreateTimestamp()},
+                        {"timestamp", CreateTimestamp()},
                         {"macaddr_t", CreateMacAddress()},
                         {"cgroup_path_t", CreateCgroupPath()},
                         {"strerror_t", CreateStrerror()},
@@ -213,11 +213,11 @@ type:
                     $$ = type_map[$1];
                 }
         |       SIZED_TYPE "[" INT "]" {
-                    if ($1 == "str_t") {
+                    if ($1 == "string") {
                         $$ = CreateString($3);
-                    } else if ($1 == "inet_t") {
+                    } else if ($1 == "inet") {
                         $$ = CreateInet($3);
-                    } else if ($1 == "buf_t") {
+                    } else if ($1 == "buffer") {
                         $$ = CreateBuffer($3);
                     }
                 }

@@ -1808,7 +1808,7 @@ TEST(Parser, cast_simple_type_pointer)
 
 TEST(Parser, cast_sized_type)
 {
-  test("kprobe:sys_read { (str_t[1])arg0; }",
+  test("kprobe:sys_read { (string[1])arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
        "  (string[1])\n"
@@ -1817,7 +1817,7 @@ TEST(Parser, cast_sized_type)
 
 TEST(Parser, cast_sized_type_pointer)
 {
-  test("kprobe:sys_read { (str_t[1] *)arg0; }",
+  test("kprobe:sys_read { (string[1] *)arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
        "  (string[1] *)\n"
@@ -2652,7 +2652,7 @@ TEST(Parser, subprog_two_args)
 
 TEST(Parser, subprog_string_arg)
 {
-  test("fn f($a : str_t[16]): void {}",
+  test("fn f($a : string[16]): void {}",
        "Program\n"
        " f: void($a : string[16])\n");
 }
@@ -2701,7 +2701,7 @@ TEST(Parser, subprog_return)
 
 TEST(Parser, subprog_string)
 {
-  test("fn f(): str_t[16] {}",
+  test("fn f(): string[16] {}",
        "Program\n"
        " f: string[16]()\n");
 }

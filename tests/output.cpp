@@ -16,12 +16,13 @@ TEST(TextOutput, lhist_no_suffix)
   TextOutput output{ out, err };
 
   MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{ CreateNone(),
-                                                    SizedType{ Type::lhist, 8 },
-                                                    LinearHistogramArgs{
-                                                        610000, 670000, 10000 },
-                                                    {},
-                                                    {} };
+  bpftrace.resources.maps_info["@mymap"] = MapInfo{
+    CreateNone(),
+    SizedType{ Type::lhist_t, 8 },
+    LinearHistogramArgs{ 610000, 670000, 10000 },
+    {},
+    {}
+  };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key = {
@@ -61,12 +62,13 @@ TEST(TextOutput, lhist_suffix)
   TextOutput output{ out, err };
 
   MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{ CreateNone(),
-                                                    SizedType{ Type::lhist, 8 },
-                                                    LinearHistogramArgs{
-                                                        0, 5 * 1024, 1024 },
-                                                    {},
-                                                    {} };
+  bpftrace.resources.maps_info["@mymap"] = MapInfo{
+    CreateNone(),
+    SizedType{ Type::lhist_t, 8 },
+    LinearHistogramArgs{ 0, 5 * 1024, 1024 },
+    {},
+    {}
+  };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key = {

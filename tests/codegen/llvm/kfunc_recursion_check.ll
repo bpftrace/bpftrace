@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%print_integer_8_t = type <{ i64, i64, [8 x i8] }>
+%print_int_8_t = type <{ i64, i64, [8 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @recursion_prevention = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -46,11 +46,11 @@ lookup_merge:                                     ; preds = %lookup_success
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %2
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %2
   %3 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  %4 = getelementptr %print_integer_8_t, ptr %3, i64 0, i32 0
+  %4 = getelementptr %print_int_8_t, ptr %3, i64 0, i32 0
   store i64 30007, ptr %4, align 8
-  %5 = getelementptr %print_integer_8_t, ptr %3, i64 0, i32 1
+  %5 = getelementptr %print_int_8_t, ptr %3, i64 0, i32 1
   store i64 0, ptr %5, align 8
-  %6 = getelementptr %print_integer_8_t, ptr %3, i32 0, i32 2
+  %6 = getelementptr %print_int_8_t, ptr %3, i32 0, i32 2
   call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 8, i1 false)
   store i64 2, ptr %6, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %3, i64 24, i64 0)
@@ -150,11 +150,11 @@ lookup_merge:                                     ; preds = %lookup_success
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %2
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %2
   %3 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  %4 = getelementptr %print_integer_8_t, ptr %3, i64 0, i32 0
+  %4 = getelementptr %print_int_8_t, ptr %3, i64 0, i32 0
   store i64 30007, ptr %4, align 8
-  %5 = getelementptr %print_integer_8_t, ptr %3, i64 0, i32 1
+  %5 = getelementptr %print_int_8_t, ptr %3, i64 0, i32 1
   store i64 1, ptr %5, align 8
-  %6 = getelementptr %print_integer_8_t, ptr %3, i32 0, i32 2
+  %6 = getelementptr %print_int_8_t, ptr %3, i32 0, i32 2
   call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 8, i1 false)
   store i64 1, ptr %6, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %3, i64 24, i64 0)

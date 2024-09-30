@@ -20,34 +20,34 @@ bool is_quoted_type(const SizedType &ty)
 {
   switch (ty.GetTy()) {
     case Type::buffer:
-    case Type::cgroup_path:
+    case Type::cgroup_path_t:
     case Type::inet:
-    case Type::kstack:
-    case Type::ksym:
+    case Type::kstack_t:
+    case Type::ksym_t:
     case Type::probe:
-    case Type::strerror:
+    case Type::strerror_t:
     case Type::string:
     case Type::timestamp:
     case Type::username:
-    case Type::ustack:
-    case Type::usym:
+    case Type::ustack_t:
+    case Type::usym_t:
       return true;
     case Type::array:
-    case Type::avg:
-    case Type::count:
-    case Type::hist:
+    case Type::avg_t:
+    case Type::count_t:
+    case Type::hist_t:
     case Type::integer:
-    case Type::lhist:
+    case Type::lhist_t:
     case Type::mac_address:
-    case Type::max:
-    case Type::min:
+    case Type::max_t:
+    case Type::min_t:
     case Type::none:
     case Type::pointer:
     case Type::reference:
     case Type::record:
     case Type::stack_mode:
-    case Type::stats:
-    case Type::sum:
+    case Type::stats_t:
+    case Type::sum_t:
     case Type::timestamp_mode:
     case Type::tuple:
     case Type::voidtype:
@@ -243,7 +243,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
 {
   uint32_t nvalues = is_per_cpu ? bpftrace.ncpus_ : 1;
   switch (type.GetTy()) {
-    case Type::kstack: {
+    case Type::kstack_t: {
       return bpftrace.get_stack(read_data<uint64_t>(value.data()),
                                 read_data<uint32_t>(value.data() + 8),
                                 -1,
@@ -252,7 +252,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                 type.stack_type,
                                 8);
     }
-    case Type::ustack: {
+    case Type::ustack_t: {
       return bpftrace.get_stack(read_data<int64_t>(value.data()),
                                 read_data<uint32_t>(value.data() + 8),
                                 read_data<int32_t>(value.data() + 12),
@@ -261,10 +261,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                 type.stack_type,
                                 8);
     }
-    case Type::ksym: {
+    case Type::ksym_t: {
       return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
     }
-    case Type::usym: {
+    case Type::usym_t: {
       return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
                                    read_data<uintptr_t>(value.data() + 8),
                                    read_data<uint64_t>(value.data() + 16));
@@ -325,10 +325,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       }
       return tuple_to_str(elems, false);
     }
-    case Type::count: {
+    case Type::count_t: {
       return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
     }
-    case Type::avg: {
+    case Type::avg_t: {
       /*
        * on this code path, avg is calculated in the kernel while
        * printing the entire map is handled in a different function
@@ -370,14 +370,14 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
           return {};
       }
     }
-    case Type::sum: {
+    case Type::sum_t: {
       if (type.IsSigned())
         return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
       return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
     }
-    case Type::max:
-    case Type::min: {
+    case Type::max_t:
+    case Type::min_t: {
       if (is_per_cpu) {
         if (type.IsSigned()) {
           return std::to_string(
@@ -404,26 +404,26 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     case Type::mac_address: {
       return bpftrace.resolve_mac_address(value.data());
     }
-    case Type::cgroup_path: {
+    case Type::cgroup_path_t: {
       return bpftrace.resolve_cgroup_path(
           reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
               ->cgroup_path_id,
           reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
               ->cgroup_id);
     }
-    case Type::strerror: {
+    case Type::strerror_t: {
       return strerror(read_data<uint64_t>(value.data()));
     }
     case Type::none: {
       return "";
     }
     case Type::voidtype:
-    case Type::hist:
-    case Type::lhist:
+    case Type::hist_t:
+    case Type::lhist_t:
     case Type::stack_mode:
-    case Type::stats:
     case Type::pointer:
     case Type::reference:
+    case Type::stats_t:
     case Type::timestamp_mode: {
       LOG(BUG) << "Invalid value type: " << type;
     }
@@ -438,11 +438,11 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
   std::ostringstream ptr;
   switch (arg.GetTy()) {
     case Type::integer:
-    case Type::kstack:
-    case Type::ustack:
+    case Type::kstack_t:
+    case Type::ustack_t:
     case Type::timestamp:
-    case Type::ksym:
-    case Type::usym:
+    case Type::ksym_t:
+    case Type::usym_t:
     case Type::inet:
     case Type::username:
     case Type::probe:
@@ -464,19 +464,19 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
       }
       return tuple_to_str(elems, true);
     }
-    case Type::cgroup_path:
-    case Type::strerror:
-    case Type::avg:
-    case Type::count:
-    case Type::hist:
-    case Type::lhist:
-    case Type::max:
-    case Type::min:
+    case Type::cgroup_path_t:
+    case Type::strerror_t:
+    case Type::avg_t:
+    case Type::count_t:
+    case Type::hist_t:
+    case Type::lhist_t:
+    case Type::max_t:
+    case Type::min_t:
     case Type::none:
     case Type::reference:
     case Type::stack_mode:
-    case Type::stats:
-    case Type::sum:
+    case Type::stats_t:
+    case Type::sum_t:
     case Type::timestamp_mode:
     case Type::voidtype:
       LOG(BUG) << "Invalid mapkey argument type: " << arg;

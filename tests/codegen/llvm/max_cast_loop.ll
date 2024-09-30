@@ -7,7 +7,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %min_max_val = type { i64, i64 }
-%int64_max__tuple_t = type { i64, i64 }
+%int64_max_t__tuple_t = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -113,13 +113,13 @@ while_end:                                        ; preds = %error_failure, %err
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %9
   %10 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 16, i1 false)
-  %11 = getelementptr %int64_max__tuple_t, ptr %10, i32 0, i32 0
+  %11 = getelementptr %int64_max_t__tuple_t, ptr %10, i32 0, i32 0
   store i64 %key, ptr %11, align 8
-  %12 = getelementptr %int64_max__tuple_t, ptr %10, i32 0, i32 1
+  %12 = getelementptr %int64_max_t__tuple_t, ptr %10, i32 0, i32 1
   store i64 %8, ptr %12, align 8
-  %13 = getelementptr %int64_max__tuple_t, ptr %10, i32 0, i32 0
+  %13 = getelementptr %int64_max_t__tuple_t, ptr %10, i32 0, i32 0
   %14 = load i64, ptr %13, align 8
-  %15 = getelementptr %int64_max__tuple_t, ptr %10, i32 0, i32 1
+  %15 = getelementptr %int64_max_t__tuple_t, ptr %10, i32 0, i32 1
   %16 = load i64, ptr %15, align 8
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
   %17 = load i64, ptr @max_cpu_id, align 8
@@ -127,9 +127,9 @@ while_end:                                        ; preds = %error_failure, %err
   %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %17
   %18 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select3, i64 1, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %18, i8 0, i64 16, i1 false)
-  %19 = getelementptr %int64_max__tuple_t, ptr %18, i32 0, i32 0
+  %19 = getelementptr %int64_max_t__tuple_t, ptr %18, i32 0, i32 0
   store i64 %14, ptr %19, align 8
-  %20 = getelementptr %int64_max__tuple_t, ptr %18, i32 0, i32 1
+  %20 = getelementptr %int64_max_t__tuple_t, ptr %18, i32 0, i32 1
   store i64 %16, ptr %20, align 8
   %get_cpu_id4 = call i64 inttoptr (i64 8 to ptr)()
   %21 = load i64, ptr @max_cpu_id, align 8

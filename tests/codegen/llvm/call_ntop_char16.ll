@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%inet_t = type { i64, [16 x i8] }
+%inet = type { i64, [16 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -19,11 +19,11 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
 entry:
   %"@x_key" = alloca i64, align 8
-  %inet = alloca %inet_t, align 8
+  %inet = alloca %inet, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %inet)
-  %1 = getelementptr %inet_t, ptr %inet, i64 0, i32 0
+  %1 = getelementptr %inet, ptr %inet, i64 0, i32 0
   store i64 10, ptr %1, align 8
-  %2 = getelementptr %inet_t, ptr %inet, i32 0, i32 1
+  %2 = getelementptr %inet, ptr %inet, i32 0, i32 1
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 16, i64 0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")

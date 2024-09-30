@@ -1401,7 +1401,7 @@ The return type is an unsigned integer of the same width as `n`.
 === buf
 
 .variants
-* `buf_t buf(void * data, [int64 length])`
+* `buffer buf(void * data, [int64 length])`
 
 `buf` reads `length` amount of bytes from address `data`.
 The maximum value of `length` is limited to the `BPFTRACE_MAX_STRLEN` variable.
@@ -1409,7 +1409,7 @@ For arrays the `length` is optional, it is automatically inferred from the signa
 
 `buf` is address space aware and will call the correct helper based on the address space associated with `data`.
 
-The `buf_t` object returned by `buf` can safely be printed as a hex encoded string with the `%r` format specifier.
+The `buffer` object returned by `buf` can safely be printed as a hex encoded string with the `%r` format specifier.
 
 Bytes with values >=32 and \<=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters. The similar `%rh` format specifier prints everything in hex form without `\x` and with spaces between bytes (e.g. `0a fe`).
 
@@ -1470,7 +1470,7 @@ BEGIN {
 === cgroup_path
 
 .variants
-* `cgroup_path cgroup_path(int cgroupid, string filter)`
+* `cgroup_path_t cgroup_path(int cgroupid, string filter)`
 
 Convert cgroup id to cgroup path.
 This is done asynchronously in userspace when the cgroup_path value is printed,
@@ -1697,9 +1697,9 @@ interval:s:1 {
 === ntop
 
 .variants
-* `inet_t ntop([int64 af, ] int addr)`
-* `inet_t ntop([int64 af, ] char addr[4])`
-* `inet_t ntop([int64 af, ] char addr[16])`
+* `inet ntop([int64 af, ] int addr)`
+* `inet ntop([int64 af, ] char addr[4])`
+* `inet ntop([int64 af, ] char addr[16])`
 
 `ntop` returns the string representation of an IPv4 or IPv6 address.
 `ntop` will infer the address type (IPv4 or IPv6) based on the `addr` type and size.
@@ -2060,7 +2060,7 @@ bpftrace doesn't read past the length of the shortest string.
 === strerror
 
 .variants
-* `strerror strerror(int error)`
+* `strerror_t strerror(int error)`
 
 Convert errno code to string.
 This is done asynchronously in userspace when the strerror value is printed, hence the returned value can only be used for printing.
@@ -2076,12 +2076,12 @@ BEGIN {
 === strftime
 
 .variants
-* `strtime_t strftime(const string fmt, int64 timestamp_ns)`
+* `timestamp strftime(const string fmt, int64 timestamp_ns)`
 
 *async*
 
 Format the nanoseconds since boot timestamp `timestamp_ns` according to the format specified by `fmt`.
-The time conversion and formatting happens in user space, therefore  the `timestr_t` value returned can only be used for printing using the `%s` format specifier.
+The time conversion and formatting happens in user space, therefore  the `timestamp` value returned can only be used for printing using the `%s` format specifier.
 
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 
