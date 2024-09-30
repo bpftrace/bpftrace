@@ -994,7 +994,7 @@ void CodegenLLVM::visit(Call &call)
     //}
     std::vector<llvm::Type *> elements = { b_.getInt64Ty(),
                                            ArrayType::get(b_.getInt8Ty(), 16) };
-    StructType *inet_struct = b_.GetStructType("inet_t", elements, false);
+    StructType *inet_struct = b_.GetStructType("inet", elements, false);
 
     AllocaInst *buf = b_.CreateAllocaBPF(inet_struct, "inet");
 

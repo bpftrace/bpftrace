@@ -7,7 +7,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %avg_stas_val = type { i64, i64 }
-%int64_avg__tuple_t = type { i64, i64 }
+%int64_avg_t__tuple_t = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -160,13 +160,13 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %31
   %32 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %32, i8 0, i64 16, i1 false)
-  %33 = getelementptr %int64_avg__tuple_t, ptr %32, i32 0, i32 0
+  %33 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 0
   store i64 %key, ptr %33, align 8
-  %34 = getelementptr %int64_avg__tuple_t, ptr %32, i32 0, i32 1
+  %34 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
   store i64 %30, ptr %34, align 8
-  %35 = getelementptr %int64_avg__tuple_t, ptr %32, i32 0, i32 0
+  %35 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 0
   %36 = load i64, ptr %35, align 8
-  %37 = getelementptr %int64_avg__tuple_t, ptr %32, i32 0, i32 1
+  %37 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
   %38 = load i64, ptr %37, align 8
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
   %39 = load i64, ptr @max_cpu_id, align 8
@@ -174,9 +174,9 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %39
   %40 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select3, i64 1, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %40, i8 0, i64 16, i1 false)
-  %41 = getelementptr %int64_avg__tuple_t, ptr %40, i32 0, i32 0
+  %41 = getelementptr %int64_avg_t__tuple_t, ptr %40, i32 0, i32 0
   store i64 %36, ptr %41, align 8
-  %42 = getelementptr %int64_avg__tuple_t, ptr %40, i32 0, i32 1
+  %42 = getelementptr %int64_avg_t__tuple_t, ptr %40, i32 0, i32 1
   store i64 %38, ptr %42, align 8
   %get_cpu_id4 = call i64 inttoptr (i64 8 to ptr)()
   %43 = load i64, ptr @max_cpu_id, align 8

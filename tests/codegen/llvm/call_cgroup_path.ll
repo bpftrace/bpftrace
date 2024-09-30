@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 %cgroup_path_t = type <{ i64, i64 }>
-%print_cgroup_path_16_t = type <{ i64, i64, [16 x i8] }>
+%print_cgroup_path_t_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -32,11 +32,11 @@ entry:
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
   %4 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  %5 = getelementptr %print_cgroup_path_16_t, ptr %4, i64 0, i32 0
+  %5 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 0
   store i64 30007, ptr %5, align 8
-  %6 = getelementptr %print_cgroup_path_16_t, ptr %4, i64 0, i32 1
+  %6 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 1
   store i64 0, ptr %6, align 8
-  %7 = getelementptr %print_cgroup_path_16_t, ptr %4, i32 0, i32 2
+  %7 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i32 0, i32 2
   call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 16, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %cgroup_path_args, i64 16, i1 false)
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %4, i64 32, i64 0)

@@ -88,7 +88,7 @@ config = { BAD_CONFIG=1 } BEGIN { }
        false);
   test(
       "config = { BPFTRACE_MAX_PROBES=\"hello\" } BEGIN { }",
-      R"(stdin:1:12-32: ERROR: Invalid type for BPFTRACE_MAX_PROBES. Type: string. Expected Type: integer
+      R"(stdin:1:12-32: ERROR: Invalid type for BPFTRACE_MAX_PROBES. Type: string. Expected Type: int
 config = { BPFTRACE_MAX_PROBES="hello" } BEGIN { }
            ~~~~~~~~~~~~~~~~~~~~
 )",
