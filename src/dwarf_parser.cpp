@@ -76,8 +76,9 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   }
 }
 
-std::vector<uint64_t> Dwarf::get_function_locations(const std::string &function,
-                                                    bool include_inlined)
+std::vector<TrapLocation> Dwarf::get_function_locations(
+    const std::string &function,
+    bool include_inlined)
 {
   // Locating every inlined instances of a function is expensive,
   // so we only do it if the user explicitly requests it.
@@ -88,14 +89,52 @@ std::vector<uint64_t> Dwarf::get_function_locations(const std::string &function,
     if (syms.GetSize() != 1)
       return {};
     auto sym = syms.GetContextAtIndex(0).GetSymbol();
-    return { sym.GetStartAddress().GetFileAddress() +
-             sym.GetPrologueByteSize() };
+
+    uint64_t symbol_size = 0;
+#if LLVM_VERSION_MAJOR <= 15
+    if (__builtin_sub_overflow(sym.GetEndAddress().GetFileAddress(),
+                               sym.GetStartAddress().GetFileAddress(),
+                               &symbol_size))
+      return {};
+#else
+    symbol_size = sym.GetSize();
+#endif
+
+    return { TrapLocation{
+        .symbol_name = function,
+        .symbol_address = sym.GetStartAddress().GetFileAddress(),
+        .symbol_size = symbol_size,
+        .trap_offset = sym.GetPrologueByteSize(),
+    } };
   } else {
     auto bps = target_.BreakpointCreateByName(function.c_str());
-    std::vector<uint64_t> result(bps.GetNumLocations());
+    std::vector<TrapLocation> result(bps.GetNumLocations());
     for (uint32_t i = 0; i < bps.GetNumLocations(); i++) {
       auto loc = bps.GetLocationAtIndex(i);
-      result[i] = loc.GetAddress().GetFileAddress();
+      auto sym = loc.GetAddress().GetSymbol();
+
+      uint64_t trap_offset = 0;
+      if (__builtin_sub_overflow(loc.GetAddress().GetFileAddress(),
+                                 sym.GetStartAddress().GetFileAddress(),
+                                 &trap_offset))
+        continue;
+
+      uint64_t symbol_size = 0;
+#if LLVM_VERSION_MAJOR <= 15
+      if (__builtin_sub_overflow(sym.GetEndAddress().GetFileAddress(),
+                                 sym.GetStartAddress().GetFileAddress(),
+                                 &symbol_size))
+        continue;
+#else
+      symbol_size = sym.GetSize();
+#endif
+
+      result[i] = TrapLocation{
+        .symbol_name = sym.GetName(),
+        .symbol_address = sym.GetStartAddress().GetFileAddress(),
+        .symbol_size = symbol_size,
+        .trap_offset = trap_offset,
+      };
     }
     return result;
   }

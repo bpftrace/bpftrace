@@ -21,8 +21,8 @@ public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
                                               std::string file_path);
 
-  std::vector<uint64_t> get_function_locations(const std::string &function,
-                                               bool include_inlined);
+  std::vector<TrapLocation> get_function_locations(const std::string &function,
+                                                   bool include_inlined);
   std::vector<std::string> get_function_params(const std::string &function);
   Struct resolve_args(const std::string &function);
 

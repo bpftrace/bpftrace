@@ -559,7 +559,7 @@ void AttachedProbe::attach_multi_kprobe()
   unsigned int i = 0;
 
   for (i = 0; i < probe_.funcs.size(); i++) {
-    syms.push_back(probe_.funcs[i].c_str());
+    syms.push_back({ probe_.funcs[i].symbol_name.c_str() });
   }
 
   opts.kprobe_multi.syms = syms.data();
@@ -701,7 +701,7 @@ static int bcc_load_cb(uint64_t v_addr,
 
 static void resolve_offset_uprobe_multi(const std::string &path,
                                         const std::string &probe_name,
-                                        const std::vector<std::string> &funcs,
+                                        const std::vector<TrapLocation> &funcs,
                                         std::vector<std::string> &syms,
                                         std::vector<unsigned long> &offsets)
 {
@@ -709,14 +709,14 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   int err;
 
   // Parse symbols names into syms vector
-  for (const std::string &func : funcs) {
-    auto pos = func.find(':');
+  for (const auto &func : funcs) {
+    auto pos = func.symbol_name.find(':');
 
     if (pos == std::string::npos) {
       throw FatalUserException("Error resolving probe: " + probe_name);
     }
 
-    syms.push_back(func.substr(pos + 1));
+    syms.push_back(func.symbol_name.substr(pos + 1));
   }
 
   std::sort(std::begin(syms), std::end(syms));

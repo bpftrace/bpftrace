@@ -146,64 +146,51 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
         match_ap.func = ap.func;
         auto found = target_map.find(match_ap.target);
         if (found != target_map.end()) {
-          found->second.funcs.push_back(func);
+          found->second.funcs.push_back(
+              TrapLocation{ .symbol_name = std::move(func) });
         } else {
           auto probe = generate_probe(match_ap, p);
-          probe.funcs.push_back(func);
+          probe.funcs.push_back(TrapLocation{ .symbol_name = std::move(func) });
           target_map.insert({ { match_ap.target, probe } });
         }
       }
+      matches.clear(); // The matches have been moved into the target_map
       for (auto &pair : target_map) {
         resources.probes.push_back(std::move(pair.second));
       }
     } else {
-      probe.funcs = std::vector<std::string>(matches.begin(), matches.end());
-      resources.probes.push_back(std::move(probe));
-    }
-  } else if (probetype(ap.provider) == ProbeType::uprobe) {
-    bool locations_from_dwarf = false;
-
-    // If the user specified an address/offset, do not overwrite
-    // their choice with locations from the DebugInfo.
-    if (probe.address == 0 && probe.func_offset == 0) {
-      // Get function locations from the DebugInfo, as it skips the
-      // prologue and also returns locations of inlined function calls.
-      if (auto *dwarf = get_dwarf(probe.path)) {
-        const auto locations = dwarf->get_function_locations(
-            probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
-        for (const auto loc : locations) {
-          // Clear the attach point, so the address will be used instead
-          Probe probe_copy = probe;
-          probe_copy.attach_point.clear();
-          probe_copy.address = loc;
-          resources.probes.push_back(std::move(probe_copy));
-
-          locations_from_dwarf = true;
-        }
+      for (auto &func : matches) {
+        probe.funcs.push_back(TrapLocation{ .symbol_name = std::move(func) });
       }
-    }
-
-    // Otherwise, use the location from the symbol table.
-    if (!locations_from_dwarf)
+      matches.clear(); // The matches have been moved into probe.funcs
       resources.probes.push_back(std::move(probe));
-  } else if (probetype(ap.provider) == ProbeType::kprobe) {
+    }
+  } else if (probetype(ap.provider) == ProbeType::uprobe ||
+             probetype(ap.provider) == ProbeType::kprobe) {
     bool locations_from_dwarf = false;
+
+    std::optional<std::string> target;
+    if (probetype(ap.provider) == ProbeType::uprobe) {
+      target = probe.path;
+    } else if (probetype(ap.provider) == ProbeType::kprobe) {
+      target = find_vmlinux();
+    }
 
     // If the user specified an address/offset, do not overwrite
     // their choice with locations from the DebugInfo.
-    // Moreover, we need a path to the kernel image to load in lldb.
-    auto kpath = find_vmlinux();
-    if (probe.address == 0 && probe.func_offset == 0 && kpath) {
+    if (probe.address == 0 && probe.func_offset == 0 && target.has_value()) {
       // Get function locations from the DebugInfo, as it skips the
       // prologue and also returns locations of inlined function calls.
-      if (auto *dwarf = get_dwarf(kpath.value())) {
-        const auto locations = dwarf->get_function_locations(
+      if (auto *dwarf = get_dwarf(target.value())) {
+        auto locations = dwarf->get_function_locations(
             probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
-        for (const auto loc : locations) {
-          // Clear the attach point, so the address will be used instead
+        for (auto &loc : locations) {
           Probe probe_copy = probe;
-          probe_copy.attach_point.clear();
-          probe_copy.address = loc;
+          probe_copy.attach_point = std::move(loc.symbol_name);
+          probe_copy.func_offset = loc.trap_offset;
+          probe_copy.name = probe_copy.attach_point + '+' +
+                            std::to_string(probe_copy.func_offset);
+          probe_copy.address = loc.symbol_address + loc.trap_offset;
           resources.probes.push_back(std::move(probe_copy));
 
           locations_from_dwarf = true;
@@ -215,7 +202,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
     if (!locations_from_dwarf)
       resources.probes.push_back(std::move(probe));
   } else {
-    resources.probes.emplace_back(std::move(probe));
+    resources.probes.push_back(std::move(probe));
   }
 
   if (type == ProbeType::iter)

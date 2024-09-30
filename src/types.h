@@ -629,6 +629,23 @@ std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);
 
+struct TrapLocation {
+  std::string symbol_name;
+  uint64_t symbol_address{ 0 };
+  uint64_t symbol_size{ 0 };
+  uint64_t trap_offset{ 0 };
+
+  friend bool operator==(const TrapLocation &, const TrapLocation &) = default;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(symbol_name, symbol_address, symbol_size, trap_offset);
+  }
+};
+
 struct Probe {
   ProbeType type;
   std::string path;         // file path if used
@@ -649,7 +666,7 @@ struct Probe {
   bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
-  std::vector<std::string> funcs;
+  std::vector<TrapLocation> funcs;
 
 private:
   friend class cereal::access;
