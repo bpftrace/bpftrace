@@ -1217,7 +1217,7 @@ std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
   return ret;
 }
 
-bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
+bool symbol_has_cpp_mangled_signature(const std::string_view &sym_name)
 {
   if (!sym_name.rfind("_Z", 0) || !sym_name.rfind("____Z", 0))
     return true;

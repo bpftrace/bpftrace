@@ -230,7 +230,7 @@ std::string str_join(const std::vector<std::string> &list,
                      const std::string &delim);
 std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
     const std::string &s);
-bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
+bool symbol_has_cpp_mangled_signature(const std::string_view &sym_name);
 std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
 std::string hex_format_buffer(const char *buf,
                               size_t size,

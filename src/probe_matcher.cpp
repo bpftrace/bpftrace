@@ -58,33 +58,37 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   std::set<std::string> matches;
   while (std::getline(symbol_stream, line, delim)) {
     if (!wildcard_match(line, tokens, start_wildcard, end_wildcard)) {
-      if (demangle_symbols) {
-        auto fun_line = line;
-        auto prefix = fun_line.find(':') != std::string::npos
-                          ? erase_prefix(fun_line) + ":"
-                          : "";
-        if (symbol_has_cpp_mangled_signature(fun_line)) {
-          char* demangled_name = cxxdemangle(fun_line.c_str());
-          if (!demangled_name)
-            continue;
+      // Only demangle symbols if the probe language is C++.
+      if (!demangle_symbols)
+        continue;
 
-          // Match against the demanled name.
-          std::string match_line = prefix + demangled_name;
-          if (truncate_parameters) {
-            erase_parameter_list(match_line);
-          }
-
-          free(demangled_name);
-
-          if (wildcard_match(
-                  match_line, tokens, start_wildcard, end_wildcard)) {
-            goto out;
-          }
-        }
+      // Split the line between the program path and the symbol name.
+      std::string_view prefix;
+      std::string_view mangled_name = line;
+      if (auto it = line.find(':'); it != std::string::npos) {
+        prefix = std::string_view(line).substr(0, it + 1);
+        mangled_name = std::string_view(line).substr(it + 1);
       }
-      continue;
+
+      // Demangle the symbol name.
+      if (!symbol_has_cpp_mangled_signature(mangled_name))
+        continue;
+
+      char* demangled_name = cxxdemangle(mangled_name.data());
+      if (!demangled_name)
+        continue;
+
+      auto match_line = std::string(prefix) + demangled_name;
+      if (truncate_parameters)
+        erase_parameter_list(match_line);
+
+      free(demangled_name);
+
+      // Match against the demangled name.
+      if (!wildcard_match(match_line, tokens, start_wildcard, end_wildcard))
+        continue;
     }
-  out:
+
     // skip the ".part.N" kprobe variants, as they can't be traced:
     if (line.find(".part.") != std::string::npos)
       continue;
