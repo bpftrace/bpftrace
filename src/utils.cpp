@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#ifdef USE_BLAZESYM
+#include <blazesym.h>
+#endif
 #include <climits>
 #include <cmath>
 #include <cstring>
@@ -1430,6 +1433,89 @@ std::optional<std::string> abs_path(const std::string &rel_path)
     return rel_path;
   }
 }
+
+
+#ifndef USE_BLAZESYM
+/*
+Look up symbol information in 'path' based on a name.
+*/
+std::optional<struct symbol> find_symbol(const std::string &path,
+                                         const std::string &name,
+                                         bool debug_syms)
+{
+  bcc_elf_symcb sym_resolve_callback = [](const char *name,
+                                          uint64_t addr,
+                                          uint64_t size,
+                                          void *payload) {
+    struct symbol *sym = static_cast<struct symbol *>(payload);
+    if (!strcmp(name, sym->name.c_str())) {
+      sym->address = addr;
+      sym->size = size;
+      return -1;
+    }
+    return 0;
+  };
+
+  struct symbol sym;
+  memset(&sym, 0, sizeof(sym));
+  sym.name = name;
+
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_debug_file = debug_syms;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+
+  bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, &sym);
+  if (sym.start) {
+    return sym;
+  } else {
+    return std::nullopt;
+  }
+}
+
+#else
+
+std::optional<struct symbol> find_symbol(const std::string &path,
+                                         const std::string &name,
+                                         bool debug_syms)
+{
+  std::optional<struct symbol> sym;
+  struct blaze_inspector *inspector;
+  struct blaze_sym_info const *const *syms;
+
+  inspector = blaze_inspector_new();
+  if (!inspector) {
+    return std::nullopt;
+  }
+
+  struct blaze_inspect_elf_src src {
+    .type_size = sizeof(src),
+    .path = path.c_str(),
+    .debug_syms = debug_syms,
+    .reserved = 0,
+  };
+  const char *names[] = {
+    name.c_str(),
+  };
+  syms = blaze_inspect_syms_elf(inspector, &src, names, ARRAY_SIZE(names));
+  if (!syms) {
+    sym = std::nullopt;
+    goto err_free;
+  }
+
+  sym.emplace(symbol {
+    .name = std::string(syms[0]->name),
+    .start = syms[0]->addr,
+    .size = syms[0]->size,
+    .address = syms[0]->addr,
+  });
+  blaze_inspect_syms_free(syms);
+
+err_free:
+  blaze_inspector_free(inspector);
+  return sym;
+}
+#endif
 
 bool symbol_has_module(const std::string &symbol)
 {

@@ -326,22 +326,6 @@ std::string AttachedProbe::eventname() const
   }
 }
 
-static int sym_name_cb(const char *symname,
-                       uint64_t start,
-                       uint64_t size,
-                       void *p)
-{
-  struct symbol *sym = static_cast<struct symbol *>(p);
-
-  if (sym->name == symname) {
-    sym->start = start;
-    sym->size = size;
-    return -1;
-  }
-
-  return 0;
-}
-
 static int sym_address_cb(const char *symname,
                           uint64_t start,
                           uint64_t size,
@@ -465,10 +449,9 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
     symbol = sym.name;
     func_offset = probe_.address - sym.start;
   } else {
-    sym.name = symbol;
-    bcc_elf_foreach_sym(probe_.path.c_str(), sym_name_cb, &option, &sym);
-
-    if (!sym.start) {
+    if (auto result = find_symbol(probe_.path, symbol, true)) {
+      sym = result.value();
+    } else {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
       auto missing_probes = bpftrace_.config_.get(
@@ -525,12 +508,10 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
 }
 
 // find vmlinux file containing the given symbol information
-static std::string find_vmlinux(const struct vmlinux_location *locs,
-                                struct symbol &sym)
+static std::optional<std::string> find_vmlinux(
+    const struct vmlinux_location *locs,
+    struct symbol &sym)
 {
-  struct bcc_symbol_option option = {};
-  option.use_debug_file = 0;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
   struct utsname buf;
 
   uname(&buf);
@@ -542,14 +523,15 @@ static std::string find_vmlinux(const struct vmlinux_location *locs,
     snprintf(path, PATH_MAX, locs[i].path, buf.release);
     if (access(path, R_OK))
       continue;
-    bcc_elf_foreach_sym(path, sym_name_cb, &option, &sym);
-    if (sym.start) {
+
+    if (auto found = find_symbol(path, sym.name)) {
+      sym = found.value();
       LOG(V1) << "vmlinux: using " << path;
       return path;
     }
   }
 
-  return "";
+  return std::nullopt;
 }
 
 void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
@@ -578,8 +560,8 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
     locs = locs_env;
   }
 
-  std::string path = find_vmlinux(locs, sym);
-  if (path.empty()) {
+  auto path = find_vmlinux(locs, sym);
+  if (!path.has_value()) {
     LOG(V1) << "Could not resolve symbol " << symbol
             << ". Skipping usermode offset checking.";
     LOG(V1) << "The kernel will verify the safety of the location but "
@@ -592,10 +574,10 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
     throw FatalUserException("Offset outside the function bounds ('" + symbol +
                              "' size is " + std::to_string(sym.size) + ")");
 
-  uint64_t sym_offset = resolve_offset(path, probe_.attach_point, probe_.loc);
+  uint64_t sym_offset = resolve_offset(*path, probe_.attach_point, probe_.loc);
 
   check_alignment(
-      path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+      *path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
 void AttachedProbe::attach_multi_kprobe()

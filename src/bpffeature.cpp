@@ -20,8 +20,6 @@
 
 namespace bpftrace {
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-
 int BPFnofeature::parse(const char* str)
 {
   for (auto feat : split_string(str, ',')) {
