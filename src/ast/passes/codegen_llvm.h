@@ -91,10 +91,10 @@ public:
                            uint64_t max_entries,
                            const SizedType &key_type,
                            const SizedType &value_type);
-  AllocaInst *createTuple(
+  Value *createTuple(
       const SizedType &tuple_type,
       const std::vector<std::pair<llvm::Value *, const location *>> &vals,
-      const std::string &name);
+      const location &loc);
   void createTupleCopy(const SizedType &expr_type,
                        const SizedType &var_type,
                        Value *dst_val,

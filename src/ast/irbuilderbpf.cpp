@@ -479,6 +479,13 @@ Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(const location &loc)
       bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER, loc);
 }
 
+Value *IRBuilderBPF::CreateTupleScratchBuffer(const location &loc, int key)
+{
+  return createScratchBuffer(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
+                             loc,
+                             key);
+}
+
 Value *IRBuilderBPF::createScratchBuffer(
     bpftrace::globalvars::GlobalVar globalvar,
     const location &loc,

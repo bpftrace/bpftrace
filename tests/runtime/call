@@ -101,10 +101,19 @@ EXPECT success!
 REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
-# See str_big_read test above
 NAME str_big_tuple
-PROG BEGIN { print((str(0), str(0))); print("success!"); exit() }
-EXPECT success!
+PROG t:syscalls:sys_enter_execve { print((1, (2, str(args.filename)))) }
+ENV BPFTRACE_MAX_STRLEN=9999
+EXPECT_REGEX \(1, \(2, /X{5555}\)\)
+AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
+REQUIRES_FEATURE probe_read_kernel
+TIMEOUT 1
+
+NAME str_big_for
+PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
+ENV BPFTRACE_MAX_STRLEN=9999
+EXPECT_REGEX \(/X{5555}, /X{5555}\)
+AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 

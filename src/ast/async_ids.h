@@ -17,6 +17,7 @@ namespace ast {
   DO(str)                                                                      \
   DO(system)                                                                   \
   DO(time)                                                                     \
+  DO(tuple)                                                                    \
   DO(watchpoint)
 
 #define DEFINE_MEMBER_VAR(id, ...) int _##id = 0;

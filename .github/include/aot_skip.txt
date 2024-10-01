@@ -27,6 +27,8 @@ aot.call.print_non_map_builtin
 aot.call.print_non_map_struct_kfunc
 aot.call.print_non_map_tuple
 # Same problem as #3392
+aot.call.str_big_for
+# Same problem as #3392
 aot.call.str_big_tuple
 aot.call.str_truncated
 aot.call.str_truncated_custom
@@ -85,6 +87,10 @@ aot.regression.kfunc double pointer dereference
 aot.tuples.basic tuple map
 # Same problem as #3392
 aot.tuples.tuple map key
+# Same problem as #3392
+aot.tuples.tuple map key and value
+# Same problem as #3392
+aot.tuples.implicit conversion of multi map key to tuple
 # Same problem as #3392
 aot.tuples.tuple map key same as assoc array
 # Same problem as #3392

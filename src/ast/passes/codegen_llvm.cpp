@@ -2215,20 +2215,22 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
 /*
  * createTuple
  *
- * Constructs a tuple on the stack from the provided values.
+ * Constructs a tuple on the scratch buffer from the provided values.
  */
-AllocaInst *CodegenLLVM::createTuple(
+Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
     const std::vector<std::pair<llvm::Value *, const location *>> &vals,
-    const std::string &name)
+    const location &loc)
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
-  AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, name);
+  auto buf = b_.CreatePointerCast(
+      b_.CreateTupleScratchBuffer(loc, async_ids_.tuple()),
+      tuple_ty->getPointerTo());
   b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
-    auto [val, loc] = vals[i];
+    auto [val, vloc] = vals[i];
     SizedType &type = tuple_type.GetField(i).type;
 
     Value *dst = b_.CreateGEP(tuple_ty,
@@ -2238,7 +2240,7 @@ AllocaInst *CodegenLLVM::createTuple(
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
-      b_.CreateProbeRead(ctx_, dst, type, val, *loc);
+      b_.CreateProbeRead(ctx_, dst, type, val, *vloc);
     else
       b_.CreateStore(val, dst);
   }
@@ -2280,7 +2282,6 @@ void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
 
 void CodegenLLVM::visit(Tuple &tuple)
 {
-  // Store elements on stack
   llvm::Type *tuple_ty = b_.GetType(tuple.type);
 
   compareStructure(tuple.type, tuple_ty);
@@ -2293,10 +2294,11 @@ void CodegenLLVM::visit(Tuple &tuple)
     scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
-  AllocaInst *buf = createTuple(tuple.type, vals, "tuple");
+  auto buf = createTuple(tuple.type, vals, tuple.loc);
 
+  // No need to end buf lifetime since tuple allocation is done via scratch maps
+  // and not on stack
   expr_ = buf;
-  expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
@@ -4402,11 +4404,10 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   }
 
   // Create decl variable for use in this iteration of the loop
-  AllocaInst *tuple = createTuple(f.decl->type,
-                                  { { key, &f.decl->loc },
-                                    { val, &f.decl->loc } },
-                                  f.decl->ident);
-  variables_[f.decl->ident] = VariableLLVM{ tuple, tuple->getAllocatedType() };
+  auto tuple = createTuple(f.decl->type,
+                           { { key, &f.decl->loc }, { val, &f.decl->loc } },
+                           f.decl->loc);
+  variables_[f.decl->ident] = VariableLLVM{ tuple, b_.GetType(f.decl->type) };
 
   // 1. Save original locations of variables which will form part of the
   //    callback context
