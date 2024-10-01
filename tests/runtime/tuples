@@ -22,6 +22,14 @@ NAME tuple map key
 PROG BEGIN { @[(1, "hello")] = 1; exit();}
 EXPECT @[1, hello]: 1
 
+NAME tuple map key and value
+PROG BEGIN { @[(1, 2)] = (3, 4); exit();}
+EXPECT @[1, 2]: (3, 4)
+
+NAME implicit conversion of multi map key to tuple
+PROG BEGIN { @["abcd", 2] = (3, 4, 5); exit();}
+EXPECT @[abcd, 2]: (3, 4, 5)
+
 NAME tuple map key same as assoc array
 PROG BEGIN { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@[1, "hello"]); exit();}
 EXPECT @[2, hello]: 2

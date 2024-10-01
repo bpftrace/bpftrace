@@ -55,6 +55,14 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
+  if (resources_.max_tuple_size > 0) {
+    assert(resources_.tuple_buffers > 0);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::TUPLE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -241,6 +249,25 @@ void ResourceAnalyser::visit(Map &map)
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
   map_info.key_type = map.key_type;
+}
+
+void ResourceAnalyser::visit(Tuple &tuple)
+{
+  Visitor::visit(tuple);
+
+  resources_.tuple_buffers++;
+  resources_.max_tuple_size = std::max(resources_.max_tuple_size,
+                                       tuple.type.GetSize());
+}
+
+void ResourceAnalyser::visit(For &f)
+{
+  Visitor::visit(f);
+
+  // Need tuple per for loop to store key and value
+  resources_.tuple_buffers++;
+  resources_.max_tuple_size = std::max(resources_.max_tuple_size,
+                                       f.decl->type.GetSize());
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

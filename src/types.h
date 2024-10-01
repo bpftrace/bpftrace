@@ -716,8 +716,9 @@ enum class GlobalVar {
   // Max CPU ID returned by bpf_get_smp_processor_id, used for simulating
   // per-CPU maps in read-write global variables
   MAX_CPU_ID,
-  // Scratch buffer used for format strings to avoid BPF stack allocation limits
+  // Scratch buffers used to avoid BPF stack allocation limits
   FMT_STRINGS_BUFFER,
+  TUPLE_BUFFER,
 };
 
 } // namespace globalvars

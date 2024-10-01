@@ -169,6 +169,7 @@ public:
                                    BasicBlock *failure_callback,
                                    const location &loc);
   Value *CreateGetFmtStringArgsScratchBuffer(const location &loc);
+  Value *CreateTupleScratchBuffer(const location &loc, int key);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,

@@ -18,6 +18,7 @@ GlobalVar from_string(std::string_view name);
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
+constexpr std::string_view TUPLE_BUFFER_SECTION_NAME = ".data.tuple_buf";
 
 struct GlobalVarConfig {
   std::string name;
@@ -31,6 +32,8 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
     { "max_cpu_id", std::string(RO_SECTION_NAME), true } },
   { GlobalVar::FMT_STRINGS_BUFFER,
     { "fmt_str_buf", std::string(FMT_STRINGS_BUFFER_SECTION_NAME), false } },
+  { GlobalVar::TUPLE_BUFFER,
+    { "tuple_buf", std::string(TUPLE_BUFFER_SECTION_NAME), false } },
 };
 
 void update_global_vars(

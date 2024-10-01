@@ -103,6 +103,10 @@ public:
   // rather than duplicating it in CodegenResources.
   uint64_t max_fmtstring_args_size = 0;
 
+  // Required for sizing of tuple scratch buffer
+  size_t tuple_buffers = 0;
+  size_t max_tuple_size = 0;
+
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.
   //
