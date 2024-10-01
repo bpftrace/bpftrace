@@ -175,7 +175,7 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   %39 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %39
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %39
-  %40 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %40 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %41 = getelementptr %print_tuple_16_t, ptr %40, i64 0, i32 0
   store i64 30007, ptr %41, align 8
   %42 = getelementptr %print_tuple_16_t, ptr %40, i64 0, i32 1

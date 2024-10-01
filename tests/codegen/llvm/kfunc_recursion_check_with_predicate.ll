@@ -79,7 +79,7 @@ pred_true:                                        ; preds = %lookup_merge
   %6 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %6
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %6
-  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %8 = getelementptr %print_integer_8_t, ptr %7, i64 0, i32 0
   store i64 30007, ptr %8, align 8
   %9 = getelementptr %print_integer_8_t, ptr %7, i64 0, i32 1
