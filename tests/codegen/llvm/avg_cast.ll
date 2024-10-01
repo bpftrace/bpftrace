@@ -76,7 +76,7 @@ if_body:                                          ; preds = %is_negative_merge_b
   %11 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %11
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %11
-  %12 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %12 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %13 = getelementptr %print_integer_8_t, ptr %12, i64 0, i32 0
   store i64 30007, ptr %13, align 8
   %14 = getelementptr %print_integer_8_t, ptr %12, i64 0, i32 1

@@ -498,10 +498,14 @@ Value *IRBuilderBPF::createScratchBuffer(
   auto cmp = CreateICmp(CmpInst::ICMP_ULE, cpu_id, max, "cpuid.min.cmp");
   auto select = CreateSelect(cmp, cpu_id, max, "cpuid.min.select");
 
+  // Note the 1st index is 0 because we're pointing to
+  // ValueType var[MAX_CPU_ID + 1][num_elements]
+  // 2nd/3rd/4th indexes actually index into the array
+  // See https://llvm.org/docs/LangRef.html#id236
   return CreateGEP(GetType(type),
                    CreatePointerCast(module_.getGlobalVariable(config.name),
                                      GetType(type)->getPointerTo()),
-                   { select, getInt64(key), getInt64(0) });
+                   { getInt64(0), select, getInt64(key), getInt64(0) });
 }
 
 /*

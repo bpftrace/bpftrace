@@ -114,7 +114,7 @@ while_end:                                        ; preds = %error_failure, %err
   %17 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %17
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %17
-  %18 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %18 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %19 = getelementptr %print_tuple_16_t, ptr %18, i64 0, i32 0
   store i64 30007, ptr %19, align 8
   %20 = getelementptr %print_tuple_16_t, ptr %18, i64 0, i32 1

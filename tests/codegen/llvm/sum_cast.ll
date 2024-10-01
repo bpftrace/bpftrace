@@ -67,7 +67,7 @@ if_body:                                          ; preds = %while_end
   %3 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
-  %4 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %4 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %5 = getelementptr %print_integer_8_t, ptr %4, i64 0, i32 0
   store i64 30007, ptr %5, align 8
   %6 = getelementptr %print_integer_8_t, ptr %4, i64 0, i32 1

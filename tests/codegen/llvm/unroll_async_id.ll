@@ -42,7 +42,7 @@ entry:
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %1
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %1
-  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 8, i1 false)
   %3 = getelementptr %printf_t, ptr %2, i32 0, i32 0
   store i64 0, ptr %3, align 8
@@ -62,7 +62,7 @@ counter_merge:                                    ; preds = %lookup_merge, %entr
   %4 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %4
   %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %4
-  %5 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select3, i64 0, i64 0
+  %5 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select3, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 8, i1 false)
   %6 = getelementptr %printf_t.2, ptr %5, i32 0, i32 0
   store i64 0, ptr %6, align 8
@@ -93,7 +93,7 @@ counter_merge6:                                   ; preds = %lookup_merge12, %co
   %8 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp15 = icmp ule i64 %get_cpu_id14, %8
   %cpuid.min.select16 = select i1 %cpuid.min.cmp15, i64 %get_cpu_id14, i64 %8
-  %9 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select16, i64 0, i64 0
+  %9 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select16, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 8, i1 false)
   %10 = getelementptr %printf_t.3, ptr %9, i32 0, i32 0
   store i64 0, ptr %10, align 8
@@ -124,7 +124,7 @@ counter_merge19:                                  ; preds = %lookup_merge25, %co
   %12 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp28 = icmp ule i64 %get_cpu_id27, %12
   %cpuid.min.select29 = select i1 %cpuid.min.cmp28, i64 %get_cpu_id27, i64 %12
-  %13 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select29, i64 0, i64 0
+  %13 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select29, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %13, i8 0, i64 8, i1 false)
   %14 = getelementptr %printf_t.4, ptr %13, i32 0, i32 0
   store i64 0, ptr %14, align 8
@@ -155,7 +155,7 @@ counter_merge32:                                  ; preds = %lookup_merge38, %co
   %16 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp41 = icmp ule i64 %get_cpu_id40, %16
   %cpuid.min.select42 = select i1 %cpuid.min.cmp41, i64 %get_cpu_id40, i64 %16
-  %17 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select42, i64 0, i64 0
+  %17 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select42, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %17, i8 0, i64 8, i1 false)
   %18 = getelementptr %printf_t.5, ptr %17, i32 0, i32 0
   store i64 0, ptr %18, align 8

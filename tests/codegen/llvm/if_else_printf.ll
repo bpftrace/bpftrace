@@ -33,7 +33,7 @@ if_body:                                          ; preds = %entry
   %4 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %4
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %4
-  %5 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %5 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 8, i1 false)
   %6 = getelementptr %printf_t, ptr %5, i32 0, i32 0
   store i64 0, ptr %6, align 8
@@ -49,7 +49,7 @@ else_body:                                        ; preds = %entry
   %7 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %7
   %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %7
-  %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select3, i64 0, i64 0
+  %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select3, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 8, i1 false)
   %9 = getelementptr %printf_t.1, ptr %8, i32 0, i32 0
   store i64 1, ptr %9, align 8

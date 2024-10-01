@@ -38,7 +38,7 @@ if_end:                                           ; preds = %else_body, %if_body
   %4 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %4
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %4
-  %5 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %5 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 16, i1 false)
   %6 = getelementptr %printf_t, ptr %5, i32 0, i32 0
   store i64 0, ptr %6, align 8

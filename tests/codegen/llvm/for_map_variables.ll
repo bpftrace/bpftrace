@@ -107,7 +107,7 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %9 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %9
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %9
-  %10 = getelementptr [1 x [1 x [20 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
+  %10 = getelementptr [1 x [1 x [20 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
   %11 = getelementptr %print_string_4_t, ptr %10, i64 0, i32 0
   store i64 30007, ptr %11, align 8
   %12 = getelementptr %print_string_4_t, ptr %10, i64 0, i32 1
