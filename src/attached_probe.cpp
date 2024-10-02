@@ -398,9 +398,9 @@ static void check_alignment(std::string &path,
       return;
     case AlignState::NotAlign:
       if (safe_mode)
-        LOG(BUG) << "Could not add " << type
-                 << " into middle of instruction: " << tmp
-                 << " (use --unsafe to force attachment)";
+        throw FatalUserException("Could not add " + probetypeName(type) +
+                                 " into middle of instruction: " + tmp +
+                                 " (use --unsafe to force attachment)");
       else
         LOG(WARNING) << "Unsafe " << type
                      << " in the middle of the instruction: " << tmp;
@@ -408,19 +408,19 @@ static void check_alignment(std::string &path,
 
     case AlignState::Fail:
       if (safe_mode)
-        LOG(BUG) << "Failed to check if " << type
-                 << " is in proper place: " << tmp
-                 << " (use --unsafe to force attachment)";
+        throw FatalUserException("Failed to check if " + probetypeName(type) +
+                                 " is in proper place: " + tmp +
+                                 " (use --unsafe to force attachment)");
       else
         LOG(WARNING) << "Unchecked " << type << ": " << tmp;
       break;
 
     case AlignState::NotSupp:
       if (safe_mode)
-        LOG(BUG) << "Can't check if " << type
-                 << " is in proper place (compiled without "
-                    "(k|u)probe offset support): "
-                 << tmp << " (use --unsafe to force attachment)";
+        throw FatalUserException("Can't check if " + probetypeName(type) +
+                                 " is in proper place (compiled without "
+                                 "(k|u)probe offset support): " +
+                                 tmp + " (use --unsafe to force attachment)");
       else
         LOG(WARNING) << "Unchecked " << type << " : " << tmp;
       break;
