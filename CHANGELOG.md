@@ -46,6 +46,8 @@ and this project adheres to
   - [#3325](https://github.com/bpftrace/bpftrace/pull/3325)
 - Remove `ALLOW_UNSAFE_PROBE` compiler flag
   - [#3476](https://github.com/bpftrace/bpftrace/pull/3476)
+- Remove the ability to force attachment on misaligned uprobes
+  - [#3481](https://github.com/bpftrace/bpftrace/pull/3481)
 #### Fixed
 - Fix verifier error when array indexing through pointer
   - [#3465](https://github.com/bpftrace/bpftrace/pull/3465)

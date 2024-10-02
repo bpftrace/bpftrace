@@ -381,12 +381,12 @@ static uint64_t resolve_offset(const std::string &path,
   return bcc_sym.offset;
 }
 
-static void check_alignment(std::string &path,
+static bool check_alignment(std::string &path,
                             std::string &symbol,
                             uint64_t sym_offset,
                             uint64_t func_offset,
-                            bool safe_mode,
-                            ProbeType type)
+                            ProbeType type,
+                            std::string &err_msg)
 {
   Disasm dasm(path);
   AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
@@ -395,36 +395,23 @@ static void check_alignment(std::string &path,
 
   switch (aligned) {
     case AlignState::Ok:
-      return;
+      return true;
     case AlignState::NotAlign:
-      if (safe_mode)
-        throw FatalUserException("Could not add " + probetypeName(type) +
-                                 " into middle of instruction: " + tmp +
-                                 " (use --unsafe to force attachment)");
-      else
-        LOG(WARNING) << "Unsafe " << type
-                     << " in the middle of the instruction: " << tmp;
-      break;
-
+      err_msg = "Could not add " + probetypeName(type) +
+                " into middle of instruction: " + tmp;
+      return false;
     case AlignState::Fail:
-      if (safe_mode)
-        throw FatalUserException("Failed to check if " + probetypeName(type) +
-                                 " is in proper place: " + tmp +
-                                 " (use --unsafe to force attachment)");
-      else
-        LOG(WARNING) << "Unchecked " << type << ": " << tmp;
-      break;
-
+      err_msg = "Failed to check if " + probetypeName(type) +
+                " is in proper place: " + tmp;
+      return false;
     case AlignState::NotSupp:
-      if (safe_mode)
-        throw FatalUserException("Can't check if " + probetypeName(type) +
-                                 " is in proper place (compiled without "
-                                 "(k|u)probe offset support): " +
-                                 tmp + " (use --unsafe to force attachment)");
-      else
-        LOG(WARNING) << "Unchecked " << type << " : " << tmp;
-      break;
+      err_msg = "Can't check if " + probetypeName(type) +
+                " is in proper place (compiled without "
+                "(k|u)probe offset support): " +
+                tmp;
+      return false;
   }
+  return false;
 }
 
 bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
@@ -433,6 +420,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   struct symbol sym = {};
   std::string &symbol = probe_.attach_point;
   uint64_t func_offset = probe_.func_offset;
+  auto missing_probes = bpftrace_.config_.get(ConfigKeyMissingProbes::default_);
 
   sym.name = "";
   option.use_debug_file = 1;
@@ -467,8 +455,6 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
     if (!sym.start) {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
-      auto missing_probes = bpftrace_.config_.get(
-          ConfigKeyMissingProbes::default_);
       if (!has_multiple_aps || missing_probes == ConfigMissingProbes::error) {
         throw FatalUserException(msg + ", cannot attach probe.");
       } else {
@@ -515,8 +501,24 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   if (func_offset == 0)
     return true;
 
-  check_alignment(
-      probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+  std::string alignment_err_msg;
+  if (!check_alignment(probe_.path,
+                       symbol,
+                       sym_offset,
+                       func_offset,
+                       probe_.type,
+                       alignment_err_msg)) {
+    switch (missing_probes) {
+      case ConfigMissingProbes::error:
+        throw FatalUserException(alignment_err_msg + ", cannot attach probe.");
+      case ConfigMissingProbes::warn:
+        LOG(WARNING) << alignment_err_msg << ", skipping probe.";
+        break;
+      case ConfigMissingProbes::ignore:
+        break;
+    }
+    return false;
+  }
   return true;
 }
 
