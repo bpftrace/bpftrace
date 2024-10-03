@@ -1808,14 +1808,23 @@ TEST(Parser, cast_simple_type_pointer)
 
 TEST(Parser, cast_sized_type)
 {
-  test("kprobe:sys_read { (string[1])arg0; }",
+  test("kprobe:sys_read { (string)arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
-       "  (string[1])\n"
+       "  (string[0])\n"
        "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_sized_type_pointer)
+{
+  test("kprobe:sys_read { (string *)arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (string[0] *)\n"
+       "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_sized_type_pointer_with_size)
 {
   test("kprobe:sys_read { (string[1] *)arg0; }",
        "Program\n"
