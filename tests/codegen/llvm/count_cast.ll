@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%print_integer_8_t = type <{ i64, i64, [8 x i8] }>
+%print_int_8_t = type <{ i64, i64, [8 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -67,12 +67,12 @@ if_body:                                          ; preds = %while_end
   %3 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
-  %4 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
-  %5 = getelementptr %print_integer_8_t, ptr %4, i64 0, i32 0
+  %4 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %5 = getelementptr %print_int_8_t, ptr %4, i64 0, i32 0
   store i64 30007, ptr %5, align 8
-  %6 = getelementptr %print_integer_8_t, ptr %4, i64 0, i32 1
+  %6 = getelementptr %print_int_8_t, ptr %4, i64 0, i32 1
   store i64 0, ptr %6, align 8
-  %7 = getelementptr %print_integer_8_t, ptr %4, i32 0, i32 2
+  %7 = getelementptr %print_int_8_t, ptr %4, i32 0, i32 2
   call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 8, i1 false)
   store i64 6, ptr %7, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %4, i64 24, i64 0)

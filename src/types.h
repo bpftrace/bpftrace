@@ -24,23 +24,23 @@ enum class Type : uint8_t {
   // clang-format off
   none,
   voidtype,
-  integer,
+  integer, // int is a protected keyword
   pointer,
   reference,
   record, // struct/union, as struct is a protected keyword
-  hist,
-  lhist,
-  count,
-  sum,
-  min,
-  max,
-  avg,
-  stats,
-  kstack,
-  ustack,
+  hist_t,
+  lhist_t,
+  count_t,
+  sum_t,
+  min_t,
+  max_t,
+  avg_t,
+  stats_t,
+  kstack_t,
+  ustack_t,
   string,
-  ksym,
-  usym,
+  ksym_t,
+  usym_t,
   probe,
   username,
   inet,
@@ -50,8 +50,8 @@ enum class Type : uint8_t {
   tuple,
   timestamp,
   mac_address,
-  cgroup_path,
-  strerror,
+  cgroup_path_t,
+  strerror_t,
   timestamp_mode,
   // clang-format on
 };
@@ -354,43 +354,43 @@ public:
   };
   bool IsHistTy(void) const
   {
-    return type_ == Type::hist;
+    return type_ == Type::hist_t;
   };
   bool IsLhistTy(void) const
   {
-    return type_ == Type::lhist;
+    return type_ == Type::lhist_t;
   };
   bool IsCountTy(void) const
   {
-    return type_ == Type::count;
+    return type_ == Type::count_t;
   };
   bool IsSumTy(void) const
   {
-    return type_ == Type::sum;
+    return type_ == Type::sum_t;
   };
   bool IsMinTy(void) const
   {
-    return type_ == Type::min;
+    return type_ == Type::min_t;
   };
   bool IsMaxTy(void) const
   {
-    return type_ == Type::max;
+    return type_ == Type::max_t;
   };
   bool IsAvgTy(void) const
   {
-    return type_ == Type::avg;
+    return type_ == Type::avg_t;
   };
   bool IsStatsTy(void) const
   {
-    return type_ == Type::stats;
+    return type_ == Type::stats_t;
   };
   bool IsKstackTy(void) const
   {
-    return type_ == Type::kstack;
+    return type_ == Type::kstack_t;
   };
   bool IsUstackTy(void) const
   {
-    return type_ == Type::ustack;
+    return type_ == Type::ustack_t;
   };
   bool IsStringTy(void) const
   {
@@ -398,11 +398,11 @@ public:
   };
   bool IsKsymTy(void) const
   {
-    return type_ == Type::ksym;
+    return type_ == Type::ksym_t;
   };
   bool IsUsymTy(void) const
   {
-    return type_ == Type::usym;
+    return type_ == Type::usym_t;
   };
   bool IsProbeTy(void) const
   {
@@ -446,11 +446,11 @@ public:
   };
   bool IsCgroupPathTy(void) const
   {
-    return type_ == Type::cgroup_path;
+    return type_ == Type::cgroup_path_t;
   };
   bool IsStrerrorTy(void) const
   {
-    return type_ == Type::strerror;
+    return type_ == Type::strerror_t;
   };
   bool IsTimestampModeTy(void) const
   {
@@ -458,13 +458,13 @@ public:
   }
   bool IsCastableMapTy() const
   {
-    return type_ == Type::count || type_ == Type::sum || type_ == Type::max ||
-           type_ == Type::min || type_ == Type::avg;
+    return type_ == Type::count_t || type_ == Type::sum_t ||
+           type_ == Type::max_t || type_ == Type::min_t || type_ == Type::avg_t;
   }
   bool IsMapIterableTy() const
   {
-    return !(type_ == Type::hist || type_ == Type::lhist ||
-             type_ == Type::stats);
+    return !(type_ == Type::hist_t || type_ == Type::lhist_t ||
+             type_ == Type::stats_t);
   }
 
   bool NeedsPercpuMap() const;
@@ -716,8 +716,9 @@ enum class GlobalVar {
   // Max CPU ID returned by bpf_get_smp_processor_id, used for simulating
   // per-CPU maps in read-write global variables
   MAX_CPU_ID,
-  // Scratch buffer used for format strings to avoid BPF stack allocation limits
+  // Scratch buffers used to avoid BPF stack allocation limits
   FMT_STRINGS_BUFFER,
+  TUPLE_BUFFER,
 };
 
 } // namespace globalvars

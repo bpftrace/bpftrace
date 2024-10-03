@@ -36,7 +36,7 @@ uretprobe:libssl:SSL_do_handshake
 {
 	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
 	       (nsecs - @start_ssl[tid])/1000, retval, @func_ssl[tid]);
-	delete(@start_ssl[tid]); delete(@func_ssl[tid]);
+	delete(@start_ssl, tid); delete(@func_ssl, tid);
 }
 
 // need debug symbol for ossl local functions
@@ -67,5 +67,5 @@ uretprobe:libcrypto:ossl_ecdh_compute_key
 {
 	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
 	       (nsecs - @start_crypto[tid])/1000, retval, @func_crypto[tid]);
-	delete(@start_crypto[tid]); delete(@func_crypto[tid]);
+	delete(@start_crypto, tid); delete(@func_crypto, tid);
 }

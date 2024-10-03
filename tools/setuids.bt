@@ -43,7 +43,7 @@ tracepoint:syscalls:sys_exit_setuid
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %-6d setuid    uid=%d (%d)\n", pid, comm,
 	    @uid[tid], @setuid[tid], args.ret);
-	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
+	delete(@seen, tid); delete(@uid, tid); delete(@setuid, tid);
 }
 
 tracepoint:syscalls:sys_exit_setfsuid
@@ -52,7 +52,7 @@ tracepoint:syscalls:sys_exit_setfsuid
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %-6d setfsuid  uid=%d (prevuid=%d)\n", pid, comm,
 	    @uid[tid], @setuid[tid], args.ret);
-	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
+	delete(@seen, tid); delete(@uid, tid); delete(@setuid, tid);
 }
 
 tracepoint:syscalls:sys_exit_setresuid
@@ -62,6 +62,6 @@ tracepoint:syscalls:sys_exit_setresuid
 	printf("%-6d %-16s %-6d setresuid ", pid, comm, @uid[tid]);
 	printf("ruid=%d euid=%d suid=%d (%d)\n", @ruid[tid], @euid[tid],
 	    @suid[tid], args.ret);
-	delete(@seen[tid]); delete(@uid[tid]); delete(@ruid[tid]);
-	delete(@euid[tid]); delete(@suid[tid]);
+	delete(@seen, tid); delete(@uid, tid); delete(@ruid, tid);
+	delete(@euid, tid); delete(@suid, tid);
 }

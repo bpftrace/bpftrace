@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%print_integer_8_t = type <{ i64, i64, [8 x i8] }>
+%print_int_8_t = type <{ i64, i64, [8 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @recursion_prevention = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -79,12 +79,12 @@ pred_true:                                        ; preds = %lookup_merge
   %6 = load i64, ptr @max_cpu_id, align 8
   %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %6
   %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %6
-  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
-  %8 = getelementptr %print_integer_8_t, ptr %7, i64 0, i32 0
+  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %8 = getelementptr %print_int_8_t, ptr %7, i64 0, i32 0
   store i64 30007, ptr %8, align 8
-  %9 = getelementptr %print_integer_8_t, ptr %7, i64 0, i32 1
+  %9 = getelementptr %print_int_8_t, ptr %7, i64 0, i32 1
   store i64 0, ptr %9, align 8
-  %10 = getelementptr %print_integer_8_t, ptr %7, i32 0, i32 2
+  %10 = getelementptr %print_int_8_t, ptr %7, i32 0, i32 2
   call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 8, i1 false)
   store i64 2, ptr %10, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %7, i64 24, i64 0)

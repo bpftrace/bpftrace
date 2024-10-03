@@ -563,11 +563,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
             length));
         break;
       }
-      case Type::ksym:
+      case Type::ksym_t:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_ksym(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
         break;
-      case Type::usym:
+      case Type::usym_t:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_usym(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset),
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset + 8),
@@ -586,7 +586,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         arg_values.push_back(std::make_unique<PrintableString>(resolve_probe(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
         break;
-      case Type::kstack:
+      case Type::kstack_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
                       *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
@@ -596,7 +596,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
                       arg.type.stack_type,
                       8)));
         break;
-      case Type::ustack:
+      case Type::ustack_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
                       *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
@@ -625,7 +625,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
             std::make_unique<PrintableString>(resolve_mac_address(
                 reinterpret_cast<uint8_t *>(arg_data + arg.offset))));
         break;
-      case Type::cgroup_path:
+      case Type::cgroup_path_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             resolve_cgroup_path(reinterpret_cast<AsyncEvent::CgroupPath *>(
                                     arg_data + arg.offset)
@@ -634,7 +634,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
                                     arg_data + arg.offset)
                                     ->cgroup_id)));
         break;
-      case Type::strerror:
+      case Type::strerror_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             strerror(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
         break;

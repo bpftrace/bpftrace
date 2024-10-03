@@ -7,21 +7,22 @@ target triple = "bpf-pc-linux"
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %avg_stas_val = type { i64, i64 }
-%int64_avg__tuple_t = type { i64, i64 }
+%int64_avg_t__tuple_t = type { i64, i64 }
 %print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !40
-@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !57
-@fmt_str_buf = dso_local externally_initialized global [1 x [1 x [32 x i8]]] zeroinitializer, section ".data.fmt_str_buf", !dbg !59
-@num_cpus = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !67
+@tuple_buf = dso_local externally_initialized global [1 x [2 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !57
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !65
+@fmt_str_buf = dso_local externally_initialized global [1 x [1 x [32 x i8]]] zeroinitializer, section ".data.fmt_str_buf", !dbg !67
+@num_cpus = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !74
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !72 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !79 {
 entry:
   %avg_struct = alloca %avg_stas_val, align 8
   %"@x_key" = alloca i64, align 8
@@ -66,10 +67,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !78 {
-  %key1 = alloca i32, align 4
-  %tuple = alloca %int64_avg__tuple_t, align 8
-  %"$kv" = alloca %int64_avg__tuple_t, align 8
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !85 {
+  %key7 = alloca i32, align 4
   %ret = alloca i64, align 8
   %val_2 = alloca i64, align 8
   %val_1 = alloca i64, align 8
@@ -155,58 +154,65 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %31 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
-  store i64 %key, ptr %31, align 8
-  %32 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
-  store i64 %30, ptr %32, align 8
-  %33 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 0
-  %34 = load i64, ptr %33, align 8
-  %35 = getelementptr %int64_avg__tuple_t, ptr %"$kv", i32 0, i32 1
-  %36 = load i64, ptr %35, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %37 = getelementptr %int64_avg__tuple_t, ptr %tuple, i32 0, i32 0
-  store i64 %34, ptr %37, align 8
-  %38 = getelementptr %int64_avg__tuple_t, ptr %tuple, i32 0, i32 1
-  store i64 %36, ptr %38, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %31 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %31
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %31
+  %32 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %32, i8 0, i64 16, i1 false)
+  %33 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 0
+  store i64 %key, ptr %33, align 8
+  %34 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
+  store i64 %30, ptr %34, align 8
+  %35 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 0
+  %36 = load i64, ptr %35, align 8
+  %37 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
+  %38 = load i64, ptr %37, align 8
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
   %39 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %39
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %39
-  %40 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 %cpuid.min.select, i64 0, i64 0
-  %41 = getelementptr %print_tuple_16_t, ptr %40, i64 0, i32 0
-  store i64 30007, ptr %41, align 8
-  %42 = getelementptr %print_tuple_16_t, ptr %40, i64 0, i32 1
-  store i64 0, ptr %42, align 8
-  %43 = getelementptr %print_tuple_16_t, ptr %40, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %43, i8 0, i64 16, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %43, ptr align 1 %tuple, i64 16, i1 false)
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %40, i64 32, i64 0)
+  %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %39
+  %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %39
+  %40 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select3, i64 1, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %40, i8 0, i64 16, i1 false)
+  %41 = getelementptr %int64_avg_t__tuple_t, ptr %40, i32 0, i32 0
+  store i64 %36, ptr %41, align 8
+  %42 = getelementptr %int64_avg_t__tuple_t, ptr %40, i32 0, i32 1
+  store i64 %38, ptr %42, align 8
+  %get_cpu_id4 = call i64 inttoptr (i64 8 to ptr)()
+  %43 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp5 = icmp ule i64 %get_cpu_id4, %43
+  %cpuid.min.select6 = select i1 %cpuid.min.cmp5, i64 %get_cpu_id4, i64 %43
+  %44 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select6, i64 0, i64 0
+  %45 = getelementptr %print_tuple_16_t, ptr %44, i64 0, i32 0
+  store i64 30007, ptr %45, align 8
+  %46 = getelementptr %print_tuple_16_t, ptr %44, i64 0, i32 1
+  store i64 0, ptr %46, align 8
+  %47 = getelementptr %print_tuple_16_t, ptr %44, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %47, i8 0, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %47, ptr align 1 %40, i64 16, i1 false)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %44, i64 32, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %is_negative_merge_block
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %key1)
-  store i32 0, ptr %key1, align 4
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key1)
-  %map_lookup_cond4 = icmp ne ptr %lookup_elem, null
-  br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %key7)
+  store i32 0, ptr %key7, align 4
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key7)
+  %map_lookup_cond10 = icmp ne ptr %lookup_elem, null
+  br i1 %map_lookup_cond10, label %lookup_success8, label %lookup_failure9
 
 counter_merge:                                    ; preds = %lookup_merge, %is_negative_merge_block
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
 
-lookup_success2:                                  ; preds = %event_loss_counter
-  %44 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+lookup_success8:                                  ; preds = %event_loss_counter
+  %48 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
-lookup_failure3:                                  ; preds = %event_loss_counter
+lookup_failure9:                                  ; preds = %event_loss_counter
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %lookup_failure3, %lookup_success2
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %key1)
+lookup_merge:                                     ; preds = %lookup_failure9, %lookup_success8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %key7)
   br label %counter_merge
 }
 
@@ -221,8 +227,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!69}
-!llvm.module.flags = !{!71}
+!llvm.dbg.cu = !{!76}
+!llvm.module.flags = !{!78}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -282,26 +288,33 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !25, size: 64)
 !56 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !17, size: 64, offset: 192)
 !57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
-!58 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
-!59 = !DIGlobalVariableExpression(var: !60, expr: !DIExpression())
-!60 = distinct !DIGlobalVariable(name: "fmt_str_buf", linkageName: "global", scope: !2, file: !2, type: !61, isLocal: false, isDefinition: true)
-!61 = !DICompositeType(tag: DW_TAG_array_type, baseType: !62, size: 256, elements: !52)
-!62 = !DICompositeType(tag: DW_TAG_array_type, baseType: !63, size: 256, elements: !52)
-!63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !64, size: 256, elements: !65)
-!64 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!65 = !{!66}
-!66 = !DISubrange(count: 32, lowerBound: 0)
+!58 = distinct !DIGlobalVariable(name: "tuple_buf", linkageName: "global", scope: !2, file: !2, type: !59, isLocal: false, isDefinition: true)
+!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 256, elements: !52)
+!60 = !DICompositeType(tag: DW_TAG_array_type, baseType: !61, size: 256, elements: !47)
+!61 = !DICompositeType(tag: DW_TAG_array_type, baseType: !62, size: 128, elements: !63)
+!62 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!63 = !{!64}
+!64 = !DISubrange(count: 16, lowerBound: 0)
+!65 = !DIGlobalVariableExpression(var: !66, expr: !DIExpression())
+!66 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
 !67 = !DIGlobalVariableExpression(var: !68, expr: !DIExpression())
-!68 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
-!69 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !70)
-!70 = !{!0, !26, !40, !57, !59, !67}
-!71 = !{i32 2, !"Debug Info Version", i32 3}
-!72 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !73, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !69, retainedNodes: !76)
-!73 = !DISubroutineType(types: !74)
-!74 = !{!18, !75}
-!75 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !64, size: 64)
-!76 = !{!77}
-!77 = !DILocalVariable(name: "ctx", arg: 1, scope: !72, file: !2, type: !75)
-!78 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !73, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !69, retainedNodes: !79)
-!79 = !{!80}
-!80 = !DILocalVariable(name: "ctx", arg: 1, scope: !78, file: !2, type: !75)
+!68 = distinct !DIGlobalVariable(name: "fmt_str_buf", linkageName: "global", scope: !2, file: !2, type: !69, isLocal: false, isDefinition: true)
+!69 = !DICompositeType(tag: DW_TAG_array_type, baseType: !70, size: 256, elements: !52)
+!70 = !DICompositeType(tag: DW_TAG_array_type, baseType: !71, size: 256, elements: !52)
+!71 = !DICompositeType(tag: DW_TAG_array_type, baseType: !62, size: 256, elements: !72)
+!72 = !{!73}
+!73 = !DISubrange(count: 32, lowerBound: 0)
+!74 = !DIGlobalVariableExpression(var: !75, expr: !DIExpression())
+!75 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
+!76 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !77)
+!77 = !{!0, !26, !40, !57, !65, !67, !74}
+!78 = !{i32 2, !"Debug Info Version", i32 3}
+!79 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !80, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !76, retainedNodes: !83)
+!80 = !DISubroutineType(types: !81)
+!81 = !{!18, !82}
+!82 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !62, size: 64)
+!83 = !{!84}
+!84 = !DILocalVariable(name: "ctx", arg: 1, scope: !79, file: !2, type: !82)
+!85 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !80, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !76, retainedNodes: !86)
+!86 = !{!87}
+!87 = !DILocalVariable(name: "ctx", arg: 1, scope: !85, file: !2, type: !82)

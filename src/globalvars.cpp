@@ -137,6 +137,7 @@ static void update_global_vars_rodata(
         *var = bpftrace.max_cpu_id_;
         break;
       case GlobalVar::FMT_STRINGS_BUFFER:
+      case GlobalVar::TUPLE_BUFFER:
         break;
     }
   }
@@ -260,6 +261,11 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
       assert(resources.max_fmtstring_args_size > 0);
       return make_rw_type(
           1, CreateArray(resources.max_fmtstring_args_size, CreateInt8()));
+    case bpftrace::globalvars::GlobalVar::TUPLE_BUFFER:
+      assert(resources.max_tuple_size > 0);
+      assert(resources.tuple_buffers > 0);
+      return make_rw_type(resources.tuple_buffers,
+                          CreateArray(resources.max_tuple_size, CreateInt8()));
   }
   return {}; // unreachable
 }

@@ -53,5 +53,5 @@ kretprobe:d_lookup
 {
 	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
 	    str(@fname[tid]));
-	delete(@fname[tid]);
+	delete(@fname, tid);
 }

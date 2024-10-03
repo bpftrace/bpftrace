@@ -22,6 +22,10 @@
 
 namespace bpftrace::ast {
 
+static constexpr std::string_view DELETE_ERROR =
+    "delete() expects a map for the first argument and a key for the second "
+    "argument e.g. `delete(@my_map, 1);`";
+
 static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
 {
   static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
@@ -720,10 +724,47 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, std::numeric_limits<size_t>::max())) {
-      for (const auto *arg : call.vargs) {
-        if (!arg->is_map)
-          LOG(ERROR, arg->loc, err_)
-              << "delete() only expects maps to be provided";
+      if (call.vargs.size() == 2) {
+        if (!call.vargs.at(0)->is_map)
+          LOG(ERROR, call.vargs.at(0)->loc, err_) << DELETE_ERROR;
+
+        auto *key_arg = call.vargs.at(1);
+        if (!key_arg->is_map) {
+          Map &map = static_cast<Map &>(*call.vargs.at(0));
+          if (map.key_expr) {
+            LOG(ERROR, call.vargs.at(0)->loc, err_)
+                << "delete() expects a map with no keys for the first argument";
+          } else {
+            auto *mapkey = get_map_key_type(map);
+            if (mapkey) {
+              auto key_type = create_key_type(call.vargs.at(1)->type,
+                                              call.vargs.at(1)->loc);
+              if (!mapkey->IsSameType(key_type) ||
+                  !key_type.FitsInto(*mapkey)) {
+                LOG(ERROR, call.vargs.at(1)->loc, err_)
+                    << "Argument mismatch for " << map.ident << ": "
+                    << "trying to delete with key of type: '"
+                    << call.vargs.at(1)->type << "' when map has key of type: '"
+                    << *mapkey << "'";
+              }
+            }
+          }
+
+          // We're modifying the AST here to support the deprecated delete
+          // API so subsequent passes will fall through to the else statement
+          // below. Once we remove the old API, we can handle this properly.
+          map.key_expr = call.vargs.at(1);
+          call.vargs.pop_back();
+        }
+      } else {
+        // This supports the deprecated delete API of passing multiple maps as
+        // args
+        for (const auto *arg : call.vargs) {
+          if (!arg->is_map) {
+            LOG(ERROR, arg->loc, err_) << DELETE_ERROR;
+            break;
+          }
+        }
       }
     }
     call.type = CreateNone();
