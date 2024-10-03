@@ -212,6 +212,15 @@ type:
                     };
                     $$ = type_map[$1];
                 }
+        |       SIZED_TYPE {
+                    if ($1 == "string") {
+                        $$ = CreateString(0);
+                    } else if ($1 == "inet") {
+                        $$ = CreateInet(0);
+                    } else if ($1 == "buffer") {
+                        $$ = CreateBuffer(0);
+                    }
+                }
         |       SIZED_TYPE "[" INT "]" {
                     if ($1 == "string") {
                         $$ = CreateString($3);
