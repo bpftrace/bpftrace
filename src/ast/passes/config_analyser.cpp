@@ -148,7 +148,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 
   if (!assignment.expr->is_literal) {
     LOG(ERROR, assignment.loc, err_)
-        << "Assignemnt for " << assignment.config_var << " must be literal.";
+        << "Assignment for " << assignment.config_var << " must be literal.";
     return;
   }
 
