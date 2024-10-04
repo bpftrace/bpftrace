@@ -13,7 +13,7 @@ TEST(codegen, for_map_variables)
       $var3 = "def";
       for ($kv : @map) {
         $var1++;
-        print($var3);
+        $can_read = $var3;
       }
       @len = $var1;
     })",
