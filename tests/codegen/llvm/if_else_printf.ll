@@ -19,45 +19,41 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
 entry:
-  %key8 = alloca i32, align 4
+  %key5 = alloca i32, align 4
   %key = alloca i32, align 4
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %2 = icmp ule i64 %get_cpu_id, %1
+  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %1 to i32
-  %2 = zext i32 %pid to i64
-  %3 = icmp ugt i64 %2, 10
-  %4 = zext i1 %3 to i64
-  %true_cond = icmp ne i64 %4, 0
+  %4 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %4 to i32
+  %5 = zext i32 %pid to i64
+  %6 = icmp ugt i64 %5, 10
+  %7 = zext i1 %6 to i64
+  %true_cond = icmp ne i64 %7, 0
   br i1 %true_cond, label %if_body, label %else_body
 
 if_body:                                          ; preds = %entry
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %5 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
-  %6 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 8, i1 false)
-  %7 = getelementptr %printf_t, ptr %6, i32 0, i32 0
-  store i64 0, ptr %7, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %6, i64 8, i64 0)
+  %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 8, i1 false)
+  %9 = getelementptr %printf_t, ptr %8, i32 0, i32 0
+  store i64 0, ptr %9, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %8, i64 8, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %counter_merge6, %counter_merge
+if_end:                                           ; preds = %counter_merge3, %counter_merge
   ret i64 0
 
 else_body:                                        ; preds = %entry
-  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
-  %8 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %8
-  %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %8
-  %9 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select3, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 8, i1 false)
-  %10 = getelementptr %printf_t.1, ptr %9, i32 0, i32 0
-  store i64 1, ptr %10, align 8
-  %ringbuf_output4 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %9, i64 8, i64 0)
-  %ringbuf_loss7 = icmp slt i64 %ringbuf_output4, 0
-  br i1 %ringbuf_loss7, label %event_loss_counter5, label %counter_merge6
+  %10 = getelementptr [1 x [1 x [8 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 8, i1 false)
+  %11 = getelementptr %printf_t.1, ptr %10, i32 0, i32 0
+  store i64 1, ptr %11, align 8
+  %ringbuf_output1 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %10, i64 8, i64 0)
+  %ringbuf_loss4 = icmp slt i64 %ringbuf_output1, 0
+  br i1 %ringbuf_loss4, label %event_loss_counter2, label %counter_merge3
 
 event_loss_counter:                               ; preds = %if_body
   call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
@@ -70,7 +66,7 @@ counter_merge:                                    ; preds = %lookup_merge, %if_b
   br label %if_end
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %11 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %12 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter
@@ -80,26 +76,26 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
   br label %counter_merge
 
-event_loss_counter5:                              ; preds = %else_body
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %key8)
-  store i32 0, ptr %key8, align 4
-  %lookup_elem9 = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key8)
-  %map_lookup_cond13 = icmp ne ptr %lookup_elem9, null
-  br i1 %map_lookup_cond13, label %lookup_success10, label %lookup_failure11
+event_loss_counter2:                              ; preds = %else_body
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %key5)
+  store i32 0, ptr %key5, align 4
+  %lookup_elem6 = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key5)
+  %map_lookup_cond10 = icmp ne ptr %lookup_elem6, null
+  br i1 %map_lookup_cond10, label %lookup_success7, label %lookup_failure8
 
-counter_merge6:                                   ; preds = %lookup_merge12, %else_body
+counter_merge3:                                   ; preds = %lookup_merge9, %else_body
   br label %if_end
 
-lookup_success10:                                 ; preds = %event_loss_counter5
-  %12 = atomicrmw add ptr %lookup_elem9, i64 1 seq_cst, align 8
-  br label %lookup_merge12
+lookup_success7:                                  ; preds = %event_loss_counter2
+  %13 = atomicrmw add ptr %lookup_elem6, i64 1 seq_cst, align 8
+  br label %lookup_merge9
 
-lookup_failure11:                                 ; preds = %event_loss_counter5
-  br label %lookup_merge12
+lookup_failure8:                                  ; preds = %event_loss_counter2
+  br label %lookup_merge9
 
-lookup_merge12:                                   ; preds = %lookup_failure11, %lookup_success10
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %key8)
-  br label %counter_merge6
+lookup_merge9:                                    ; preds = %lookup_failure8, %lookup_success7
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %key5)
+  br label %counter_merge3
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

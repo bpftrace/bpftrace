@@ -21,25 +21,25 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
 entry:
   %key = alloca i32, align 4
   %cgroup_path_args = alloca %cgroup_path_t, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %cgroup_path_args)
-  %1 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 0
-  store i64 0, ptr %1, align 8
-  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)()
-  %2 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 1
-  store i64 %get_cgroup_id, ptr %2, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %3 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
-  %4 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  %5 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 0
-  store i64 30007, ptr %5, align 8
-  %6 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 1
-  store i64 0, ptr %6, align 8
-  %7 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 16, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %cgroup_path_args, i64 16, i1 false)
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %4, i64 32, i64 0)
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %2 = icmp ule i64 %get_cpu_id, %1
+  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %cgroup_path_args)
+  %4 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 0
+  store i64 0, ptr %4, align 8
+  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)()
+  %5 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 1
+  store i64 %get_cgroup_id, ptr %5, align 8
+  %6 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
+  %7 = getelementptr %print_cgroup_path_t_16_t, ptr %6, i64 0, i32 0
+  store i64 30007, ptr %7, align 8
+  %8 = getelementptr %print_cgroup_path_t_16_t, ptr %6, i64 0, i32 1
+  store i64 0, ptr %8, align 8
+  %9 = getelementptr %print_cgroup_path_t_16_t, ptr %6, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %9, ptr align 1 %cgroup_path_args, i64 16, i1 false)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %6, i64 32, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -54,7 +54,7 @@ counter_merge:                                    ; preds = %lookup_merge, %entr
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %8 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %10 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter

@@ -24,6 +24,10 @@ entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %2 = icmp ule i64 %get_cpu_id, %1
+  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 1, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
@@ -32,9 +36,9 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  %2 = add i64 %1, 2
-  store i64 %2, ptr %lookup_elem, align 8
+  %4 = load i64, ptr %lookup_elem, align 8
+  %5 = add i64 %4, 2
+  store i64 %5, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
@@ -95,39 +99,39 @@ while_end:                                        ; preds = %error_failure, %err
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %9 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %9
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %9
-  %10 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 16, i1 false)
-  %11 = getelementptr %int64_sum_t__tuple_t, ptr %10, i32 0, i32 0
-  store i64 %key, ptr %11, align 8
-  %12 = getelementptr %int64_sum_t__tuple_t, ptr %10, i32 0, i32 1
-  store i64 %8, ptr %12, align 8
-  %13 = getelementptr %int64_sum_t__tuple_t, ptr %10, i32 0, i32 1
-  %14 = load i64, ptr %13, align 8
-  store i64 %14, ptr %"$res", align 8
+  %10 = icmp ule i64 %get_cpu_id, %9
+  %11 = select i1 %10, i64 %get_cpu_id, i64 %9
+  %12 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %11, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %12, i8 0, i64 16, i1 false)
+  %13 = getelementptr %int64_sum_t__tuple_t, ptr %12, i32 0, i32 0
+  store i64 %key, ptr %13, align 8
+  %14 = getelementptr %int64_sum_t__tuple_t, ptr %12, i32 0, i32 1
+  store i64 %8, ptr %14, align 8
+  %15 = getelementptr %int64_sum_t__tuple_t, ptr %12, i32 0, i32 1
+  %16 = load i64, ptr %15, align 8
+  store i64 %16, ptr %"$res", align 8
   ret i64 0
 
 lookup_success:                                   ; preds = %while_body
-  %15 = load i64, ptr %val_1, align 8
-  %16 = load i64, ptr %lookup_percpu_elem, align 8
-  %17 = add i64 %16, %15
-  store i64 %17, ptr %val_1, align 8
-  %18 = load i32, ptr %i, align 4
-  %19 = add i32 %18, 1
-  store i32 %19, ptr %i, align 4
+  %17 = load i64, ptr %val_1, align 8
+  %18 = load i64, ptr %lookup_percpu_elem, align 8
+  %19 = add i64 %18, %17
+  store i64 %19, ptr %val_1, align 8
+  %20 = load i32, ptr %i, align 4
+  %21 = add i32 %20, 1
+  store i32 %21, ptr %i, align 4
   br label %while_cond
 
 lookup_failure:                                   ; preds = %while_body
-  %20 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %20, 0
+  %22 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %22, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %21 = load i32, ptr %i, align 4
+  %23 = load i32, ptr %i, align 4
   br label %while_end
 }
 
