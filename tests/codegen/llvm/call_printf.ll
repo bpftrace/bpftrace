@@ -24,35 +24,35 @@ entry:
   %"$foo" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i64 0, ptr %"$foo", align 8
-  %1 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %1, align 8
-  store i64 %arg0, ptr %"$foo", align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %2 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %2
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %2
-  %3 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %3, i8 0, i64 24, i1 false)
-  %4 = getelementptr %printf_t, ptr %3, i32 0, i32 0
-  store i64 0, ptr %4, align 8
-  %5 = load i64, ptr %"$foo", align 8
-  %6 = add i64 %5, 0
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %2 = icmp ule i64 %get_cpu_id, %1
+  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
+  %4 = getelementptr i64, ptr %0, i64 14
+  %arg0 = load volatile i64, ptr %4, align 8
+  store i64 %arg0, ptr %"$foo", align 8
+  %5 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 24, i1 false)
+  %6 = getelementptr %printf_t, ptr %5, i32 0, i32 0
+  store i64 0, ptr %6, align 8
+  %7 = load i64, ptr %"$foo", align 8
+  %8 = add i64 %7, 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.c")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.c", i32 1, i64 %6)
-  %7 = load i8, ptr %"struct Foo.c", align 1
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.c", i32 1, i64 %8)
+  %9 = load i8, ptr %"struct Foo.c", align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.c")
-  %8 = getelementptr %printf_t, ptr %3, i32 0, i32 1
-  %9 = sext i8 %7 to i64
-  store i64 %9, ptr %8, align 8
-  %10 = load i64, ptr %"$foo", align 8
-  %11 = add i64 %10, 8
+  %10 = getelementptr %printf_t, ptr %5, i32 0, i32 1
+  %11 = sext i8 %9 to i64
+  store i64 %11, ptr %10, align 8
+  %12 = load i64, ptr %"$foo", align 8
+  %13 = add i64 %12, 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.l")
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.l", i32 8, i64 %11)
-  %12 = load i64, ptr %"struct Foo.l", align 8
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.l", i32 8, i64 %13)
+  %14 = load i64, ptr %"struct Foo.l", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.l")
-  %13 = getelementptr %printf_t, ptr %3, i32 0, i32 2
-  store i64 %12, ptr %13, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %3, i64 24, i64 0)
+  %15 = getelementptr %printf_t, ptr %5, i32 0, i32 2
+  store i64 %14, ptr %15, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %5, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -67,7 +67,7 @@ counter_merge:                                    ; preds = %lookup_merge, %entr
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %14 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %16 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter

@@ -23,33 +23,33 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !63 {
 entry:
   %"@t_key" = alloca i64, align 8
   %usym = alloca %usym_t, align 8
-  %1 = getelementptr i64, ptr %0, i64 16
-  %reg_ip = load volatile i64, ptr %1, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %2 = icmp ule i64 %get_cpu_id, %1
+  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
+  %4 = getelementptr i64, ptr %0, i64 16
+  %reg_ip = load volatile i64, ptr %4, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %2 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %2 to i32
-  %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
-  %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
-  %5 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
-  store i64 %reg_ip, ptr %3, align 8
-  store i32 %pid, ptr %4, align 4
-  store i32 0, ptr %5, align 4
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %6 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %6
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %6
-  %7 = getelementptr [1 x [1 x [32 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 32, i1 false)
-  %8 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %7, i32 0, i32 0
-  store i8 1, ptr %8, align 1
-  %9 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %7, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %9, ptr align 1 %usym, i64 16, i1 false)
-  %10 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %7, i32 0, i32 2
-  store i64 10, ptr %10, align 8
+  %5 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %5 to i32
+  %6 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
+  %7 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
+  %8 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
+  store i64 %reg_ip, ptr %6, align 8
+  store i32 %pid, ptr %7, align 4
+  store i32 0, ptr %8, align 4
+  %9 = getelementptr [1 x [1 x [32 x i8]]], ptr @tuple_buf, i64 0, i64 %3, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 32, i1 false)
+  %10 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %9, i32 0, i32 0
+  store i8 1, ptr %10, align 1
+  %11 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %9, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %11, ptr align 1 %usym, i64 16, i1 false)
+  %12 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %9, i32 0, i32 2
+  store i64 10, ptr %12, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %7, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %9, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@t_key")
   ret i64 0
 }

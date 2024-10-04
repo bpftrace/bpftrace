@@ -487,37 +487,29 @@ CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
                              idx);
 }
 
-Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(const location &loc)
+Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(Value *cpu_id)
 {
   return createScratchBuffer(
-      bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER, loc);
+      bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER, cpu_id);
 }
 
-Value *IRBuilderBPF::CreateTupleScratchBuffer(const location &loc, int key)
+Value *IRBuilderBPF::CreateTupleScratchBuffer(Value *cpu_id, int key)
 {
   return createScratchBuffer(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
-                             loc,
+                             cpu_id,
                              key);
 }
 
 Value *IRBuilderBPF::createScratchBuffer(
     bpftrace::globalvars::GlobalVar globalvar,
-    const location &loc,
+    Value *cpu_id,
     size_t key)
 {
+  assert(cpu_id);
+
   auto config = globalvars::get_config(globalvar);
   // ValueType var[MAX_CPU_ID + 1][num_elements]
   auto type = globalvars::get_type(globalvar, bpftrace_.resources);
-
-  // Get CPU ID
-  auto cpu_id = CreateGetCpuId(loc);
-  auto max = CreateLoad(getInt64Ty(),
-                        module_.getGlobalVariable(to_string(
-                            bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
-  // Verify CPU ID is between 0 and MAX_CPU_ID to ensure we pass BPF
-  // verifer on older 5.2 kernels
-  auto cmp = CreateICmp(CmpInst::ICMP_ULE, cpu_id, max, "cpuid.min.cmp");
-  auto select = CreateSelect(cmp, cpu_id, max, "cpuid.min.select");
 
   // Note the 1st index is 0 because we're pointing to
   // ValueType var[MAX_CPU_ID + 1][num_elements]
@@ -526,7 +518,7 @@ Value *IRBuilderBPF::createScratchBuffer(
   return CreateGEP(GetType(type),
                    CreatePointerCast(module_.getGlobalVariable(config.name),
                                      GetType(type)->getPointerTo()),
-                   { getInt64(0), select, getInt64(key), getInt64(0) });
+                   { getInt64(0), cpu_id, getInt64(key), getInt64(0) });
 }
 
 /*
