@@ -54,8 +54,9 @@ merge_block:                                      ; preds = %stack_scratch_failu
   store i32 %8, ptr %7, align 4
   %9 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 2
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %10 = trunc i64 %get_pid_tgid to i32
-  store i32 %10, ptr %9, align 4
+  %10 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %10 to i32
+  store i32 %pid, ptr %9, align 4
   %11 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 3
   store i32 0, ptr %11, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %stack_key)

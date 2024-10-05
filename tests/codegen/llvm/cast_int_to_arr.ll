@@ -23,21 +23,19 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
   %1 = alloca i64, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %2 = lshr i64 %get_pid_tgid, 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
-  store i64 %2, ptr %1, align 8
-  %3 = ptrtoint ptr %1 to i64
-  store i64 %3, ptr %"$a", align 8
-  %4 = load i64, ptr %"$a", align 8
-  %5 = inttoptr i64 %4 to ptr
-  %6 = getelementptr [8 x i8], ptr %5, i32 0, i64 0
-  %7 = load volatile i8, ptr %6, align 1
+  store i64 0, ptr %1, align 8
+  %2 = ptrtoint ptr %1 to i64
+  store i64 %2, ptr %"$a", align 8
+  %3 = load i64, ptr %"$a", align 8
+  %4 = inttoptr i64 %3 to ptr
+  %5 = getelementptr [8 x i8], ptr %4, i32 0, i64 0
+  %6 = load volatile i8, ptr %5, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
-  %8 = zext i8 %7 to i64
+  %7 = zext i8 %6 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  store i64 %8, ptr %"@_val", align 8
+  store i64 %7, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")

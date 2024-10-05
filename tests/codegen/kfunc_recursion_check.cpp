@@ -11,8 +11,8 @@ TEST(codegen, kfunc_recursion_check)
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
 
   test(bpftrace,
-       "kfunc:queued_spin_lock_slowpath { print((2)); }"
-       "tracepoint:exceptions:page_fault_user { print((1)); }",
+       "kfunc:queued_spin_lock_slowpath { }"
+       "tracepoint:exceptions:page_fault_user { }",
        NAME);
 }
 
@@ -22,9 +22,7 @@ TEST(codegen, kfunc_recursion_check_with_predicate)
   bpftrace.need_recursion_check_ = true;
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
 
-  test(bpftrace,
-       "kfunc:queued_spin_lock_slowpath / pid == 1234 / { print((2)); }",
-       NAME);
+  test(bpftrace, "kfunc:queued_spin_lock_slowpath / pid == 1234 / { }", NAME);
 }
 
 } // namespace codegen

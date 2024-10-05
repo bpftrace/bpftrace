@@ -21,9 +21,11 @@ entry:
   %"@x_key" = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
-  %2 = icmp eq i64 %1, 1234
-  %3 = zext i1 %2 to i64
-  %predcond = icmp eq i64 %3, 0
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
+  %3 = icmp eq i64 %2, 1234
+  %4 = zext i1 %3 to i64
+  %predcond = icmp eq i64 %4, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
 pred_false:                                       ; preds = %entry

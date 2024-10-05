@@ -327,8 +327,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
         LOG(ERROR, builtin.loc, err_) << "invalid program type";
         break;
     }
+  } else if (builtin.ident == "pid" || builtin.ident == "tid") {
+    builtin.type = CreateUInt32();
   } else if (builtin.ident == "nsecs" || builtin.ident == "elapsed" ||
-             builtin.ident == "pid" || builtin.ident == "tid" ||
              builtin.ident == "cgroup" || builtin.ident == "uid" ||
              builtin.ident == "gid" || builtin.ident == "cpu" ||
              builtin.ident == "rand" || builtin.ident == "numaid" ||

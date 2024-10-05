@@ -25,20 +25,22 @@ entry:
   store i64 0, ptr %"@x_key", align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %2 = load i64, ptr %lookup_elem, align 8
-  %3 = add i64 %2, %1
-  store i64 %3, ptr %lookup_elem, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  %4 = add i64 %3, %2
+  store i64 %4, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
-  store i64 %1, ptr %initial_value, align 8
+  store i64 %2, ptr %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %initial_value, i64 1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
   br label %lookup_merge

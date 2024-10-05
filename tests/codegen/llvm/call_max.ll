@@ -26,23 +26,25 @@ entry:
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
   %lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %2 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
-  %3 = load i64, ptr %2, align 8
-  %4 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
-  %5 = load i64, ptr %4, align 8
-  %is_set_cond = icmp eq i64 %5, 1
+  %3 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
+  %4 = load i64, ptr %3, align 8
+  %5 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
+  %6 = load i64, ptr %5, align 8
+  %is_set_cond = icmp eq i64 %6, 1
   br i1 %is_set_cond, label %is_set, label %min_max
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %mm_struct)
-  %6 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 0
-  store i64 %1, ptr %6, align 8
-  %7 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 1
-  store i64 1, ptr %7, align 8
+  %7 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 0
+  store i64 %2, ptr %7, align 8
+  %8 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 1
+  store i64 1, ptr %8, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %mm_struct, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %mm_struct)
   br label %lookup_merge
@@ -52,14 +54,14 @@ lookup_merge:                                     ; preds = %lookup_failure, %mi
   ret i64 0
 
 is_set:                                           ; preds = %lookup_success
-  %8 = icmp uge i64 %1, %3
-  br i1 %8, label %min_max, label %lookup_merge
+  %9 = icmp uge i64 %2, %4
+  br i1 %9, label %min_max, label %lookup_merge
 
 min_max:                                          ; preds = %is_set, %lookup_success
-  %9 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
-  store i64 %1, ptr %9, align 8
-  %10 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
-  store i64 1, ptr %10, align 8
+  %10 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
+  store i64 %2, ptr %10, align 8
+  %11 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
+  store i64 1, ptr %11, align 8
   br label %lookup_merge
 }
 

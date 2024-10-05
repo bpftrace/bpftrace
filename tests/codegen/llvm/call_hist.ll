@@ -22,7 +22,9 @@ entry:
   %"@x_key" = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
-  %log2 = call i64 @log2(i64 %1, i64 0)
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
+  %log2 = call i64 @log2(i64 %2, i64 0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 %log2, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
@@ -31,9 +33,9 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %2 = load i64, ptr %lookup_elem, align 8
-  %3 = add i64 %2, 1
-  store i64 %3, ptr %lookup_elem, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  %4 = add i64 %3, 1
+  store i64 %4, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry

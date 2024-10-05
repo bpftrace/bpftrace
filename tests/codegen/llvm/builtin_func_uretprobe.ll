@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%usym_t = type { i64, i64, i64 }
+%usym_t = type { i64, i32, i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -24,12 +24,13 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
   %2 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
   %3 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
   %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
   store i64 %get_func_ip, ptr %2, align 8
-  store i64 %1, ptr %3, align 8
-  store i64 0, ptr %4, align 8
+  store i32 %pid, ptr %3, align 4
+  store i32 0, ptr %4, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %usym, i64 0)
@@ -71,10 +72,10 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !18 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 192, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 128, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 24, lowerBound: 0)
+!24 = !DISubrange(count: 16, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
 !26 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
 !27 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !28)

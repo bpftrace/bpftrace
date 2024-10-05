@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_strftime)
 {
-  test("kprobe:f { printf(\"%s\", strftime(\"%M:%S\", nsecs)); }", NAME);
+  test("kprobe:f { strftime(\"%M:%S\", nsecs); }", NAME);
 }
 
 } // namespace codegen

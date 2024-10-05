@@ -13,35 +13,24 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !39 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !39 {
 entry:
-  %"$res" = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
-  store i32 0, ptr %"$res", align 4
-  %deref1 = alloca i32, align 4
-  %deref = alloca i64, align 8
-  %"$pp" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$pp")
-  store i64 0, ptr %"$pp", align 8
-  store i64 0, ptr %"$pp", align 8
-  %1 = load i64, ptr %"$pp", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 8, i64 %1)
-  %2 = load i64, ptr %deref, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %deref1)
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %deref1, i32 4, i64 %2)
-  %3 = load i32, ptr %deref1, align 4
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %deref1)
-  store i32 %3, ptr %"$res", align 4
+  %"$y" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$y")
+  store i64 0, ptr %"$y", align 8
+  %"$x" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
+  store i64 0, ptr %"$x", align 8
+  store i64 10, ptr %"$x", align 8
+  %1 = load i64, ptr %"$x", align 8
+  %2 = sub i64 %1, 1
+  store i64 %2, ptr %"$x", align 8
+  store i64 %2, ptr %"$y", align 8
   ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -88,7 +77,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !36 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !37)
 !37 = !{!0, !16}
 !38 = !{i32 2, !"Debug Info Version", i32 3}
-!39 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !40, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !44)
+!39 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !40, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !36, retainedNodes: !44)
 !40 = !DISubroutineType(types: !41)
 !41 = !{!35, !42}
 !42 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !43, size: 64)

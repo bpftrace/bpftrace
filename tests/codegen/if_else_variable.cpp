@@ -6,8 +6,7 @@ namespace codegen {
 
 TEST(codegen, if_else_variable)
 {
-  test("kprobe:f { if (pid > 10000) { $s = 10 } else { $s = 20 } printf(\"s = "
-       "%d\", $s) }",
+  test("kprobe:f { if (1) { $s = 10 } else { $s = 20 } }",
 
        NAME);
 }
