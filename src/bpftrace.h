@@ -58,12 +58,22 @@ extern bool bt_quiet;
 extern bool bt_verbose;
 extern bool dry_run;
 
-enum class DebugStage { Ast, Codegen, CodegenOpt, Libbpf, Verifier };
+enum class DebugStage {
+  Ast,
+  Codegen,
+  CodegenOpt,
+  Disassemble,
+  Libbpf,
+  Verifier
+};
 
 const std::unordered_map<std::string_view, DebugStage> debug_stages = {
   { "ast", DebugStage::Ast },
   { "codegen", DebugStage::Codegen },
   { "codegen-opt", DebugStage::CodegenOpt },
+#ifndef NDEBUG
+  { "dis", DebugStage::Disassemble },
+#endif
   { "libbpf", DebugStage::Libbpf },
   { "verifier", DebugStage::Verifier },
 };
