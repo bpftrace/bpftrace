@@ -34,6 +34,7 @@ static std::optional<std::string> get_global_var_section_name(
 }
 
 BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
+    : elf_(elf.begin(), elf.end())
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -48,7 +49,7 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
                        .kernel_log_level = static_cast<__u32>(log_level));
 
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
-      bpf_object__open_mem(elf.data(), elf.size(), &opts));
+      bpf_object__open_mem(elf_.data(), elf_.size(), &opts));
   if (!bpf_object_)
     LOG(BUG) << "The produced ELF is not a valid BPF object";
 
