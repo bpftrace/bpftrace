@@ -28,10 +28,5 @@ inline bool inBpfMemory(const SizedType &type)
   return type.is_internal || shouldBeInBpfMemoryAlready(type);
 }
 
-inline AddrSpace find_addrspace_stack(const SizedType &ty)
-{
-  return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
-}
-
 } // namespace ast
 } // namespace bpftrace
