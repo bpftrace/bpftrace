@@ -117,7 +117,7 @@ void usage()
   std::cerr << "    -v                      verbose messages" << std::endl;
   std::cerr << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
+  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   std::cerr << std::endl;
@@ -946,7 +946,9 @@ int main(int argc, char* argv[])
       return aot::generate(
           bpftrace.resources, args.aot, aot_output.data(), aot_output.size());
     }
-    bytecode = llvm.emit();
+
+    bool disassemble = bt_debug.find(DebugStage::Disassemble) != bt_debug.end();
+    bytecode = llvm.emit(disassemble);
   } catch (const std::system_error& ex) {
     LOG(ERROR) << "failed to write elf: " << ex.what();
     return 1;

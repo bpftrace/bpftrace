@@ -168,7 +168,7 @@ int fuzz_main(const char* data, size_t sz)
   try {
     llvm.generate_ir();
     llvm.optimize();
-    bytecode = llvm.emit();
+    bytecode = llvm.emit(false);
   } catch (const std::system_error& ex) {
     return 1;
   } catch (const std::exception& ex) {

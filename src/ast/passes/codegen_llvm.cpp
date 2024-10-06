@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <cerrno>
 #include <csignal>
+#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <limits>
@@ -39,6 +40,7 @@
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
 #include "collect_nodes.h"
+#include "filesystem.h"
 #include "globalvars.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
@@ -3907,6 +3909,32 @@ bool CodegenLLVM::verify()
   return !ret;
 }
 
+// Technically we could use LLVM APIs to do a proper disassemble on
+// the in-memory ELF file. But that is quite complex, as LLVM only
+// provides fairly low level APIs to do this.
+//
+// Since disassembly is a debugging tool, just shell out to llvm-objdump
+// to keep things simple.
+static void disassemble(const SmallVector<char, 0> &elf)
+{
+  std::cout << "\nDisassembled bytecode\n";
+  std::cout << "---------------------------\n";
+
+  FILE *objdump = ::popen("llvm-objdump -d -", "w");
+  if (!objdump) {
+    LOG(ERROR) << "Failed to spawn llvm-objdump: " << strerror(errno);
+    return;
+  }
+
+  if (::fwrite(elf.data(), sizeof(char), elf.size(), objdump) != elf.size()) {
+    LOG(ERROR) << "Failed to write ELF to llvm-objdump";
+    return;
+  }
+
+  if (auto rc = ::pclose(objdump))
+    LOG(WARNING) << "llvm-objdump did not exit cleanly: status " << rc;
+}
+
 void CodegenLLVM::emit(raw_pwrite_stream &stream)
 {
   legacy::PassManager PM;
@@ -3922,15 +3950,17 @@ void CodegenLLVM::emit(raw_pwrite_stream &stream)
   PM.run(*module_.get());
 }
 
-BpfBytecode CodegenLLVM::emit()
+BpfBytecode CodegenLLVM::emit(bool dis)
 {
   assert(state_ == State::OPT);
   SmallVector<char, 0> output;
   raw_svector_ostream os(output);
 
   emit(os);
-
   assert(!output.empty());
+
+  if (dis)
+    disassemble(output);
 
   state_ = State::DONE;
   return BpfBytecode{ output };
@@ -3940,7 +3970,7 @@ BpfBytecode CodegenLLVM::compile()
 {
   generate_ir();
   optimize();
-  return emit();
+  return emit(false);
 }
 
 void CodegenLLVM::DumpIR()

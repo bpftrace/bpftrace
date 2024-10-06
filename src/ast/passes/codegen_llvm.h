@@ -107,7 +107,7 @@ public:
   void generate_global_vars(const RequiredResources &resources);
   void optimize(void);
   bool verify(void);
-  BpfBytecode emit(void);
+  BpfBytecode emit(bool disassemble);
   void emit_elf(const std::string &filename);
   void emit(raw_pwrite_stream &stream);
   // Combine generate_ir, optimize and emit into one call

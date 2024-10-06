@@ -71,7 +71,7 @@ static void test(BPFtrace &bpftrace,
   codegen.DumpIR(out);
   // Test that generated code compiles cleanly
   codegen.optimize();
-  codegen.emit();
+  codegen.emit(false);
 
   uint64_t update_tests = 0;
   get_uint64_env_var("BPFTRACE_UPDATE_TESTS",
