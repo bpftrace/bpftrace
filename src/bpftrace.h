@@ -57,7 +57,14 @@ extern bool bt_quiet;
 extern bool bt_verbose;
 extern bool dry_run;
 
-enum class DebugStage { Ast, Codegen, CodegenOpt, Libbpf, Verifier };
+enum class DebugStage {
+  Ast,
+  Codegen,
+  CodegenOpt,
+  Disassemble,
+  Libbpf,
+  Verifier
+};
 
 class WildcardException : public std::exception {
 public:

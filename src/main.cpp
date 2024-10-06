@@ -117,7 +117,7 @@ void usage()
   std::cerr << "    -v                      verbose messages" << std::endl;
   std::cerr << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
+  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   std::cerr << std::endl;
@@ -545,6 +545,8 @@ Args parse_args(int argc, char* argv[])
           bt_debug.insert(DebugStage::Codegen);
         else if (std::strcmp(optarg, "codegen-opt") == 0)
           bt_debug.insert(DebugStage::CodegenOpt);
+        else if (std::strcmp(optarg, "dis") == 0)
+          bt_debug.insert(DebugStage::Disassemble);
         else if (std::strcmp(optarg, "libbpf") == 0)
           bt_debug.insert(DebugStage::Libbpf);
         else if (std::strcmp(optarg, "verifier") == 0)
@@ -553,6 +555,7 @@ Args parse_args(int argc, char* argv[])
           bt_debug.insert({ DebugStage::Ast,
                             DebugStage::Codegen,
                             DebugStage::CodegenOpt,
+                            DebugStage::Disassemble,
                             DebugStage::Libbpf,
                             DebugStage::Verifier });
         } else {
@@ -964,6 +967,12 @@ int main(int argc, char* argv[])
   } catch (const std::exception& ex) {
     LOG(ERROR) << "Failed to compile: " << ex.what();
     return 1;
+  }
+
+  if (bt_debug.find(DebugStage::Disassemble) != bt_debug.end()) {
+    std::cout << "\nDisassembled bytecode\n";
+    std::cout << "---------------------------\n";
+    llvm.disassemble(bytecode.elf());
   }
 
   if (args.test_mode == TestMode::CODEGEN)

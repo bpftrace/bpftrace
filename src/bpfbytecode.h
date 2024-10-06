@@ -52,6 +52,8 @@ public:
   const std::map<std::string, BpfMap> &maps() const;
   int countStackMaps() const;
 
+  std::span<const std::byte> elf() const;
+
 private:
   void prepare_progs(const std::vector<Probe> &probes,
                      const BTF &btf,

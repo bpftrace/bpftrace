@@ -319,6 +319,11 @@ const std::map<std::string, BpfMap> &BpfBytecode::maps() const
   return maps_;
 }
 
+std::span<const std::byte> BpfBytecode::elf() const
+{
+  return elf_;
+}
+
 int BpfBytecode::countStackMaps() const
 {
   int n = 0;

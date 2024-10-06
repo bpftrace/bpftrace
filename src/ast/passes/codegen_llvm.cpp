@@ -45,6 +45,10 @@
 #include "types.h"
 #include "usdt.h"
 
+#define _BT_DISASM_TMPFILE ".temp_bt_disassemble"
+static constexpr auto BT_DISASM_TMPFILE = _BT_DISASM_TMPFILE;
+static constexpr auto BT_DISASM_CMD = "llvm-objdump -d " _BT_DISASM_TMPFILE;
+
 namespace bpftrace::ast {
 
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
@@ -3963,6 +3967,26 @@ BpfBytecode CodegenLLVM::compile()
   generate_ir();
   optimize();
   return emit();
+}
+
+// Technically we could use LLVM APIs to do a proper disassemble on
+// the in-memory ELF file. But that is quite complex, as LLVM only
+// provides fairly low level APIs to do this.
+//
+// Since disassembly is a debugging tool, just shell out to llvm-objdump
+// to keep things simple.
+void CodegenLLVM::disassemble(std::span<const std::byte> elf)
+{
+  // Write contents out to disk temporarily
+  std::ofstream file(BT_DISASM_TMPFILE, std::ios_base::binary);
+  file.write(reinterpret_cast<const char *>(elf.data()), elf.size());
+  file.close();
+
+  std::system(BT_DISASM_CMD);
+
+  std::error_code ec;
+  if (!std_filesystem::remove(BT_DISASM_TMPFILE, ec) || ec)
+    LOG(WARNING) << "Failed to remove " << BT_DISASM_TMPFILE << ": " << ec;
 }
 
 void CodegenLLVM::DumpIR()
