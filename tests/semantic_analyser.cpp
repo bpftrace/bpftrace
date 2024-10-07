@@ -865,8 +865,13 @@ TEST(semantic_analyser, call_delete)
 {
   test("kprobe:f { @x = 1; delete(@x); }");
   test("kprobe:f { @y[5] = 5; delete(@y, 5); }");
+  test("kprobe:f { @a[1] = 1; delete(@a, @a[1]); }");
+  test("kprobe:f { @a = 1; @b[2] = 2; delete(@b, @a); }");
+  test("kprobe:f { @a[1] = 1; $x = 1; delete(@a, $x); }");
+  test(R"(kprobe:f { @y["hi"] = 5; delete(@y, "longerstr"); })");
   test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("hi", 5)); })");
   test(R"(kprobe:f { @y["longerstr", 5] = 5; delete(@y, ("hi", 5)); })");
+  test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("longerstr", 5)); })");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[((int8)3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, ((int8)1, 2, 3)); }");
@@ -917,32 +922,51 @@ kprobe:f { @y[5] = 5; delete(@y[5], 5); }
 )");
 
   test_error("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }", R"(
-stdin:1:42-48: ERROR: Argument mismatch for @y: trying to delete with key of type: '(int64,int64)' when map has key of type: '(int64,int64,int64)'
+stdin:1:42-48: ERROR: Argument mismatch for @y: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,int64,int64)'
 kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }
                                          ~~~~~~
 )");
 
-  test_error(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("hiandbye", 5)); })",
-             R"(
-stdin:1:40-55: ERROR: Argument mismatch for @y: trying to delete with key of type: '(string[9],int64)' when map has key of type: '(string[3],int64)'
-kprobe:f { @y["hi", 5] = 5; delete(@y, ("hiandbye", 5)); }
-                                       ~~~~~~~~~~~~~~~
+  test_error("kprobe:f { @y[1] = 2; delete(@y); }", R"(
+stdin:1:23-32: ERROR: delete() expects a map for the first argument and a key for the second argument e.g. `delete(@my_map, 1);`
+kprobe:f { @y[1] = 2; delete(@y); }
+                      ~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @a[1] = 1; delete(@a, @a); }", R"(
+stdin:1:34-36: ERROR: Argument mismatch for @a: trying to access with no arguments when map expects arguments: 'int64'
+kprobe:f { @a[1] = 1; delete(@a, @a); }
+                                 ~~
 )");
 
   // Deprecated API
   test("kprobe:f { @x = 1; delete(@x); }");
-  test("kprobe:f { @x = 1; @y = 2; delete(@x, @y); }");
-  test("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5]); }");
+  test("kprobe:f { @y[5] = 5; delete(@y[5]); }");
+  test(R"(kprobe:f { @y[1, "hi"] = 5; delete(@y[1, "longerstr"]); })");
+  test(R"(kprobe:f { @y[1, "longerstr"] = 5; delete(@y[1, "hi"]); })");
 
-  test_error("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }", R"(
-stdin:1:42-44: ERROR: Argument mismatch for @y: trying to access with no arguments when map expects arguments: 'int64'
-kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y); }
-                                         ~~
+  test_error("kprobe:f { @x = 1; @y = 5; delete(@x, @y); }", R"(
+stdin:1:39-41: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects no arguments
+kprobe:f { @x = 1; @y = 5; delete(@x, @y); }
+                                      ~~
 )");
-  test_error("kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }", R"(
-stdin:1:47-49: ERROR: delete() expects a map for the first argument and a key for the second argument e.g. `delete(@my_map, 1);`
-kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }
-                                              ~~
+
+  test_error(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })", R"(
+stdin:1:29-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],int64)' when map expects arguments: '(int64,string[3])'
+kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
+                            ~~~~~~~~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }", R"(
+stdin:1:31-55: ERROR: delete() takes up to 2 arguments (3 provided)
+kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }
+                              ~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @x = 1; delete(@x[1]); }", R"(
+stdin:1:20-31: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects no arguments
+kprobe:f { @x = 1; delete(@x[1]); }
+                   ~~~~~~~~~~~
 )");
 }
 
