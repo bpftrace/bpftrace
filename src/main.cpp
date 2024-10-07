@@ -469,6 +469,25 @@ struct Args {
   std::vector<std::string> debug_stages;
 };
 
+static bool parse_debug_stages(const std::string& arg)
+{
+  auto stages = split_string(arg, ',', /* remove_empty= */ true);
+
+  for (const auto& stage : stages) {
+    if (debug_stages.contains(stage)) {
+      bt_debug.insert(debug_stages.at(stage));
+    } else if (stage == "all") {
+      for (const auto& [_, s] : debug_stages)
+        bt_debug.insert(s);
+    } else {
+      LOG(ERROR) << "USAGE: invalid option for -d: " << stage;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Args parse_args(int argc, char* argv[])
 {
   Args args;
@@ -539,15 +558,8 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'd':
       case Options::DEBUG:
-        if (debug_stages.contains(optarg)) {
-          bt_debug.insert(debug_stages.at(optarg));
-        } else if (std::strcmp(optarg, "all") == 0) {
-          for (const auto& [_, stage] : debug_stages)
-            bt_debug.insert(stage);
-        } else {
-          LOG(ERROR) << "USAGE: invalid option for -d: " << optarg;
+        if (!parse_debug_stages(optarg))
           exit(1);
-        }
         break;
       case 'q':
         bt_quiet = true;
