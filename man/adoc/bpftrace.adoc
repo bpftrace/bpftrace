@@ -3623,7 +3623,8 @@ See src/attached_probe.cpp:find_vmlinux() for details.
 The `-d STAGE` option produces debug output. It prints the output of the
 bpftrace execution stage given by the _STAGE_ argument. The option can be used
 multiple times (with different stage names) and the special value `all` prints
-the output of all the supported stages.
+the output of all the supported stages. The option also takes multiple stages
+in one invocation as comma separated values.
 
 Note: This is primarily used for bpftrace developers.
 
