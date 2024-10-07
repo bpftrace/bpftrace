@@ -588,9 +588,16 @@ void SemanticAnalyser::visit(Call &call)
 
     if (expr.is_map) {
       Map &map = static_cast<Map &>(expr);
+
       // If the map is indexed, don't skip key validation
-      if (map.key_expr == nullptr && skip_key_validation(call))
-        map.skip_key_validation = true;
+      if (map.key_expr == nullptr) {
+        // Delete expects just a map reference for the first argument
+        if (call.func == "delete" && i == 0) {
+          map.skip_key_validation = true;
+        } else if (skip_key_validation(call)) {
+          map.skip_key_validation = true;
+        }
+      }
     }
 
     Visit(call.vargs[i]);
@@ -724,46 +731,34 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, std::numeric_limits<size_t>::max())) {
-      if (call.vargs.size() == 2) {
-        if (!call.vargs.at(0)->is_map)
-          LOG(ERROR, call.vargs.at(0)->loc, err_) << DELETE_ERROR;
-
-        auto *key_arg = call.vargs.at(1);
-        if (!key_arg->is_map) {
-          Map &map = static_cast<Map &>(*call.vargs.at(0));
+    if (check_varargs(call, 1, 2)) {
+      if (!call.vargs.at(0)->is_map) {
+        LOG(ERROR, call.vargs.at(0)->loc, err_) << DELETE_ERROR;
+      } else {
+        Map &map = static_cast<Map &>(*call.vargs.at(0));
+        if (call.vargs.size() == 1) {
+          if (map.key_expr) {
+            // We're modifying the AST here to support the deprecated delete
+            // API. Once we remove the old API, we can delete this.
+            call.vargs.push_back(map.key_expr);
+            map.key_expr = nullptr;
+          } else if (is_final_pass()) {
+            auto *map_key_type = get_map_key_type(map);
+            if (map_key_type && !map_key_type->IsNoneTy()) {
+              LOG(ERROR, call.vargs.at(0)->loc, err_) << DELETE_ERROR;
+            }
+          }
+        } else {
           if (map.key_expr) {
             LOG(ERROR, call.vargs.at(0)->loc, err_)
                 << "delete() expects a map with no keys for the first argument";
-          } else {
-            auto *mapkey = get_map_key_type(map);
-            if (mapkey) {
-              auto key_type = create_key_type(call.vargs.at(1)->type,
-                                              call.vargs.at(1)->loc);
-              if (!mapkey->IsSameType(key_type) ||
-                  !key_type.FitsInto(*mapkey)) {
-                LOG(ERROR, call.vargs.at(1)->loc, err_)
-                    << "Argument mismatch for " << map.ident << ": "
-                    << "trying to delete with key of type: '"
-                    << call.vargs.at(1)->type << "' when map has key of type: '"
-                    << *mapkey << "'";
-              }
-            }
           }
-
-          // We're modifying the AST here to support the deprecated delete
-          // API so subsequent passes will fall through to the else statement
-          // below. Once we remove the old API, we can handle this properly.
-          map.key_expr = call.vargs.at(1);
-          call.vargs.pop_back();
-        }
-      } else {
-        // This supports the deprecated delete API of passing multiple maps as
-        // args
-        for (const auto *arg : call.vargs) {
-          if (!arg->is_map) {
-            LOG(ERROR, arg->loc, err_) << DELETE_ERROR;
-            break;
+          auto *map_key_type = get_map_key_type(map);
+          if (map_key_type) {
+            auto &arg1 = *call.vargs.at(1);
+            SizedType new_key_type = create_key_type(arg1.type, arg1.loc);
+            update_current_key(*map_key_type, new_key_type);
+            validate_new_key(*map_key_type, new_key_type, map.ident, arg1.loc);
           }
         }
       }

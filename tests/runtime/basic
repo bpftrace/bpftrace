@@ -233,10 +233,10 @@ PROG BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); exit(); }
 EXPECT @: 0
 TIMEOUT 1
 
-NAME delete multiple-map deprecated
-PROG BEGIN { @ = 1; @a[1] = 1; delete(@, @a[1]); exit(); }
-EXPECT_NONE @: 1
+NAME delete deprecated
+PROG BEGIN { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); exit(); }
 EXPECT_NONE @a[1]: 1
+EXPECT_NONE @b[2, hi]: 2
 TIMEOUT 1
 
 NAME increment/decrement map

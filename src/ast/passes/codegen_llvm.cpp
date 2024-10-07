@@ -756,18 +756,25 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   } else if (call.func == "delete") {
-    for (const auto &arg : call.vargs) {
-      auto &map = static_cast<Map &>(*arg);
-      auto [key, scoped_key_deleter] = getMapKey(map);
-      if (!is_bpf_map_clearable(map_types_[map.ident])) {
-        // store zero instead of calling bpf_map_delete_elem()
-        AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
-        b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
-        b_.CreateMapUpdateElem(ctx_, map.ident, key, val, call.loc);
-        b_.CreateLifetimeEnd(val);
-      } else {
-        b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
-      }
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
+    // Current API: delete accepts two arguments except in the case of scalar
+    // maps (maps with no keys) in which case it you can just pass it the map
+    // and it will act similar to `clear` e.g. `delete(@scalar);`
+    // Legacy API: delete accepts a single argument that is the map with a
+    // key expression e.g. `delete(@mymap[1, 2]);` or no key if the map
+    // is a scalar
+    auto [key, scoped_key_deleter] = call.vargs.size() > 1
+                                         ? getMapKey(map, call.vargs.at(1))
+                                         : getMapKey(map);
+    if (!is_bpf_map_clearable(map_types_[map.ident])) {
+      // store zero instead of calling bpf_map_delete_elem()
+      AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+      b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
+      b_.CreateMapUpdateElem(ctx_, map.ident, key, val, call.loc);
+      b_.CreateLifetimeEnd(val);
+    } else {
+      b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
     }
     expr_ = nullptr;
   } else if (call.func == "has_key") {
