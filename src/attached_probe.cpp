@@ -381,6 +381,10 @@ static uint64_t resolve_offset(const std::string &path,
   return bcc_sym.offset;
 }
 
+static constexpr std::string_view hint_unsafe =
+    "\nUse --unsafe to force attachment. WARNING: This option could lead to "
+    "data corruption in the target process.";
+
 static void check_alignment(std::string &path,
                             std::string &symbol,
                             uint64_t sym_offset,
@@ -400,7 +404,7 @@ static void check_alignment(std::string &path,
       if (safe_mode)
         throw FatalUserException("Could not add " + probetypeName(type) +
                                  " into middle of instruction: " + tmp +
-                                 " (use --unsafe to force attachment)");
+                                 std::string{ hint_unsafe });
       else
         LOG(WARNING) << "Unsafe " << type
                      << " in the middle of the instruction: " << tmp;
@@ -410,7 +414,7 @@ static void check_alignment(std::string &path,
       if (safe_mode)
         throw FatalUserException("Failed to check if " + probetypeName(type) +
                                  " is in proper place: " + tmp +
-                                 " (use --unsafe to force attachment)");
+                                 std::string{ hint_unsafe });
       else
         LOG(WARNING) << "Unchecked " << type << ": " << tmp;
       break;
@@ -420,7 +424,7 @@ static void check_alignment(std::string &path,
         throw FatalUserException("Can't check if " + probetypeName(type) +
                                  " is in proper place (compiled without "
                                  "(k|u)probe offset support): " +
-                                 tmp + " (use --unsafe to force attachment)");
+                                 tmp + std::string{ hint_unsafe });
       else
         LOG(WARNING) << "Unchecked " << type << " : " << tmp;
       break;
@@ -491,12 +495,10 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
       msg << "Could not determine boundary for " << sym.name
           << " (symbol has size 0).";
       if (probe_.orig_name == probe_.name) {
-        msg << " Use --unsafe to force attachment.";
+        msg << hint_unsafe;
         throw FatalUserException(msg.str());
       } else {
-        LOG(WARNING)
-            << msg.str()
-            << " Skipping attachment (use --unsafe to force attachment).";
+        LOG(WARNING) << msg.str() << " Skipping attachment." << hint_unsafe;
       }
       return false;
     }

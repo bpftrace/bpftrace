@@ -105,7 +105,7 @@ void usage()
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    --usdt-file-activation" << std::endl;
   std::cerr << "                   activate usdt semaphores based on file path" << std::endl;
-  std::cerr << "    --unsafe       allow unsafe builtin functions" << std::endl;
+  std::cerr << "    --unsafe       allow unsafe/destructive functionality" << std::endl;
   std::cerr << "    -q             keep messages quiet" << std::endl;
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
