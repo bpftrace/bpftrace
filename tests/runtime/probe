@@ -305,7 +305,8 @@ AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME uprobe_zero_size
 PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
-EXPECT ERROR: Could not determine boundary for _init (symbol has size 0). Use --unsafe to force attachment.
+EXPECT ERROR: Could not determine boundary for _init (symbol has size 0).
+       Use --unsafe to force attachment. WARNING: This option could lead to data corruption in the target process.
 WILL_FAIL
 
 NAME uprobe_zero_size_unsafe
