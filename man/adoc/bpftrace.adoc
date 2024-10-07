@@ -2484,10 +2484,14 @@ interval:s:10 {
 
 .variants
 * `delete(map m, mapkey k)`
+* deprecated `delete(mapkey k, ...)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
+
+The, now deprecated, API (supported in version <= 0.21.x) of passing map arguments with the key is still supported:
+e.g. `delete(@mymap[3, "hello"]);`.
 
 ```
 kprobe:dummy {
@@ -2499,6 +2503,10 @@ kprobe:dummy {
   delete(@associative, (1,2)); // ok
   delete(@associative); // error
   delete(@associative, 1); // error
+
+  // deprecated but ok
+  delete(@single["hello"]);
+  delete(@associative[1, 2]);
 }
 ```
 
