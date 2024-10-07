@@ -9,6 +9,46 @@ compatibility in some way. Each entry should contain:
 
 ## Versions 0.21.x (or earlier) to 0.22.x (or later)
 
+### multi-key `delete` removed
+
+https://github.com/bpftrace/bpftrace/pull/3506
+
+This map `delete` syntax is no longer valid:
+```
+delete(@b[1], @b[2], @b[3]);
+```
+And will yield this error:
+```
+# bpftrace -e 'BEGIN { @b[1] = 1; delete(@b[1], @b[2], @b[3]); }'
+stdin:1:20-47: ERROR: delete() takes up to 2 arguments (3 provided)
+BEGIN { @b[1] = 1; delete(@b[1], @b[2], @b[3]); }
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```
+
+You might also see this error:
+```
+# bpftrace -e 'BEGIN { @b[1] = 1; delete(@b[1], @b[2]); }'
+stdin:1:20-32: ERROR: delete() expects a map with no keys for the first argument
+BEGIN { @b[1] = 1; delete(@b[1], @b[2]); }
+                   ~~~~~~~~~~~~
+```
+
+`delete` now expects only two arguments: a map and a key. For example, the above
+delete statement should be rewritten as this:
+```
+delete(@b, 1);
+delete(@b, 2);
+delete(@b, 3);
+```
+
+And for maps with multiple values as keys, which are represented as a tuple,
+the delete call looks like this:
+```
+@c[1, "hello"] = 1;
+
+delete(@c, (1, "hello"));
+```
+
 ### `pid` and `tid` builtins return `uint32`
 
 https://github.com/bpftrace/bpftrace/pull/3441
