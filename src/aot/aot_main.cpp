@@ -12,21 +12,21 @@
 
 using namespace bpftrace;
 
-void usage(std::string_view filename)
+void usage(std::ostream &out, std::string_view filename)
 {
   // clang-format off
-  std::cerr << "USAGE: " << filename << " [options]" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
-  std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
-  std::cerr << "    -q,            keep messages quiet" << std::endl;
-  std::cerr << "    -v,            verbose messages" << std::endl;
-  std::cerr << "    -d STAGE       debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                   ('all', 'libbpf', 'verifier')" << std::endl;
-  std::cerr << "    -h, --help     show this help message" << std::endl;
-  std::cerr << "    -V, --version  bpftrace version" << std::endl;
-  std::cerr << std::endl;
+  std::out << "USAGE: " << filename << " [options]" << std::endl;
+  std::out << std::endl;
+  std::out << "OPTIONS:" << std::endl;
+  std::out << "    -f FORMAT      output format ('text', 'json')" << std::endl;
+  std::out << "    -o file        redirect bpftrace output to file" << std::endl;
+  std::out << "    -q,            keep messages quiet" << std::endl;
+  std::out << "    -v,            verbose messages" << std::endl;
+  std::out << "    -d STAGE       debug info for various stages of bpftrace execution" << std::endl;
+  std::out << "                   ('all', 'libbpf', 'verifier')" << std::endl;
+  std::out << "    -h, --help     show this help message" << std::endl;
+  std::out << "    -V, --version  bpftrace version" << std::endl;
+  std::out << std::endl;
   // clang-format on
   return;
 }
