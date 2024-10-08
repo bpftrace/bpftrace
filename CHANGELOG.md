@@ -113,6 +113,8 @@ and this project adheres to
   - [#3246](https://github.com/bpftrace/bpftrace/pull/3246)
 - Support large arguments for printf() and print()
   - [#3368](https://github.com/bpftrace/bpftrace/pull/3368)
+- Add ability to call exit() with an exit code
+  - [#3501](https://github.com/bpftrace/bpftrace/pull/3501)
 #### Changed
 - Better error message for args in mixed probes
   - [#3047](https://github.com/bpftrace/bpftrace/pull/3047)

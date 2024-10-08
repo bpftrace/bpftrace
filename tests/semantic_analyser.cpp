@@ -949,13 +949,25 @@ kprobe:f { @x = 1; $y = 2; $c = 3; delete(@x, $y, $c); }
 TEST(semantic_analyser, call_exit)
 {
   test("kprobe:f { exit(); }");
-  test("kprobe:f { exit(1); }", 1);
+  test("kprobe:f { exit(1); }");
+  test("kprobe:f { $a = 1; exit($a); }");
   test("kprobe:f { @a = exit(); }", 1);
   test("kprobe:f { @a = exit(1); }", 1);
   test("kprobe:f { $a = exit(1); }", 1);
   test("kprobe:f { @[exit(1)] = 1; }", 1);
   test("kprobe:f { if(exit()) { 123 } }", 10);
   test("kprobe:f { exit() ? 0 : 1; }", 10);
+
+  test_error("kprobe:f { exit(1, 2); }", R"(
+stdin:1:12-22: ERROR: exit() takes up to one argument (2 provided)
+kprobe:f { exit(1, 2); }
+           ~~~~~~~~~~
+)");
+  test_error("kprobe:f { $a = \"1\"; exit($a); }", R"(
+stdin:1:22-30: ERROR: exit() only supports int arguments (string provided)
+kprobe:f { $a = "1"; exit($a); }
+                     ~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_print)
