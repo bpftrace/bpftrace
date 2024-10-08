@@ -117,7 +117,7 @@ void usage()
   std::cerr << "    -v                      verbose messages" << std::endl;
   std::cerr << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
+  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   std::cerr << std::endl;
@@ -469,6 +469,41 @@ struct Args {
   std::vector<std::string> debug_stages;
 };
 
+static bool parse_debug_stages(const std::string& arg)
+{
+  auto stages = split_string(arg, ',', /* remove_empty= */ true);
+  bool ok = true;
+
+  for (const auto& stage : stages) {
+    if (stage == "ast")
+      bt_debug.insert(DebugStage::Ast);
+    else if (stage == "codegen")
+      bt_debug.insert(DebugStage::Codegen);
+    else if (stage == "codegen-opt")
+      bt_debug.insert(DebugStage::CodegenOpt);
+    else if (stage == "dis")
+      bt_debug.insert(DebugStage::Disassemble);
+    else if (stage == "libbpf")
+      bt_debug.insert(DebugStage::Libbpf);
+    else if (stage == "verifier")
+      bt_debug.insert(DebugStage::Verifier);
+    else if (stage == "all") {
+      bt_debug.insert({ DebugStage::Ast,
+                        DebugStage::Codegen,
+                        DebugStage::CodegenOpt,
+                        DebugStage::Disassemble,
+                        DebugStage::Libbpf,
+                        DebugStage::Verifier });
+    } else {
+      LOG(ERROR) << "USAGE: invalid option for -d: " << stage;
+      ok = false;
+      break;
+    }
+  }
+
+  return ok;
+}
+
 Args parse_args(int argc, char* argv[])
 {
   Args args;
@@ -539,26 +574,8 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'd':
       case Options::DEBUG:
-        if (std::strcmp(optarg, "ast") == 0)
-          bt_debug.insert(DebugStage::Ast);
-        else if (std::strcmp(optarg, "codegen") == 0)
-          bt_debug.insert(DebugStage::Codegen);
-        else if (std::strcmp(optarg, "codegen-opt") == 0)
-          bt_debug.insert(DebugStage::CodegenOpt);
-        else if (std::strcmp(optarg, "libbpf") == 0)
-          bt_debug.insert(DebugStage::Libbpf);
-        else if (std::strcmp(optarg, "verifier") == 0)
-          bt_debug.insert(DebugStage::Verifier);
-        else if (std::strcmp(optarg, "all") == 0) {
-          bt_debug.insert({ DebugStage::Ast,
-                            DebugStage::Codegen,
-                            DebugStage::CodegenOpt,
-                            DebugStage::Libbpf,
-                            DebugStage::Verifier });
-        } else {
-          LOG(ERROR) << "USAGE: invalid option for -d: " << optarg;
+        if (!parse_debug_stages(optarg))
           exit(1);
-        }
         break;
       case 'q':
         bt_quiet = true;
@@ -964,6 +981,12 @@ int main(int argc, char* argv[])
   } catch (const std::exception& ex) {
     LOG(ERROR) << "Failed to compile: " << ex.what();
     return 1;
+  }
+
+  if (bt_debug.find(DebugStage::Disassemble) != bt_debug.end()) {
+    std::cout << "\nDisassembled bytecode\n";
+    std::cout << "---------------------------\n";
+    llvm.disassemble(bytecode.elf());
   }
 
   if (args.test_mode == TestMode::CODEGEN)

@@ -52,6 +52,8 @@ public:
   const std::map<std::string, BpfMap> &maps() const;
   int countStackMaps() const;
 
+  std::span<const std::byte> elf() const;
+
 private:
   void prepare_progs(const std::vector<Probe> &probes,
                      const BTF &btf,
@@ -70,6 +72,7 @@ private:
   };
   std::unique_ptr<struct bpf_object, bpf_object_deleter> bpf_object_;
 
+  std::vector<std::byte> elf_;
   std::map<std::string, BpfMap> maps_;
   std::map<int, BpfMap *> maps_by_id_;
   std::map<std::string, BpfProgram> programs_;

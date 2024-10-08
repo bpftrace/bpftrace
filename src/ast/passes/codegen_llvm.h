@@ -4,6 +4,7 @@
 #include <iostream>
 #include <optional>
 #include <ostream>
+#include <span>
 #include <stack>
 #include <tuple>
 
@@ -112,6 +113,8 @@ public:
   void emit(raw_pwrite_stream &stream);
   // Combine generate_ir, optimize and emit into one call
   BpfBytecode compile(void);
+  // Print object file disassembly to stdout
+  void disassemble(std::span<const std::byte> elf);
 
 private:
   static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
