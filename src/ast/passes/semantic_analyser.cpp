@@ -1139,7 +1139,12 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateNone();
   } else if (call.func == "exit") {
     check_assignment(call, false, false, false);
-    (void)check_nargs(call, 0);
+
+    if (!check_varargs(call, 0, 1))
+      return;
+
+    if (call.vargs.size() == 1)
+      check_arg(call, Type::integer, 0);
   } else if (call.func == "print") {
     check_assignment(call, false, false, false);
     if (in_loop() && is_final_pass() && call.vargs.at(0)->is_map) {

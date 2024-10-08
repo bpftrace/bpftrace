@@ -1257,8 +1257,8 @@ Tracing block I/O sizes > 0 bytes
 | Convert cgroup id to cgroup path
 | Sync
 
-| <<functions-exit, `exit()`>>
-| Quit bpftrace
+| <<functions-exit, `exit([int code])`>>
+| Quit bpftrace with an optional exit code
 | Async
 
 | <<functions-join, `join(char *arr[] [, char *delim])`>>
@@ -1499,12 +1499,27 @@ BEGIN {
 === exit
 
 .variants
-* `void exit()`
+* `void exit([int code])`
 
 *async*
 
 Terminate bpftrace, as if a `SIGTERM` was received.
 The `END` probe will still trigger (if specified) and maps will be printed.
+An optional exit code can be provided.
+
+----
+BEGIN {
+  exit();
+}
+----
+
+Or
+
+----
+BEGIN {
+  exit(1);
+}
+----
 
 [#functions-join]
 === join

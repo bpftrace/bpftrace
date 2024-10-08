@@ -324,3 +324,8 @@ EXPECT @b[1]: 0
 NAME has_key as a variable
 PROG BEGIN { @a[1] = 1; $b = has_key(@a, 1); $c = has_key(@a, 2); print(($b, $c)); exit(); }
 EXPECT (1, 0)
+
+NAME exit code
+PROG BEGIN { exit(69); }
+RETURN_CODE 69
+TIMEOUT 1

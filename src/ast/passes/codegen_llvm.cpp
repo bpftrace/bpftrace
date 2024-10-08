@@ -1167,15 +1167,31 @@ void CodegenLLVM::visit(Call &call)
                            "cat",
                            AsyncAction::cat);
   } else if (call.func == "exit") {
-    /*
-     * perf event output has: uint64_t asyncaction_id
-     * The asyncaction_id informs user-space that this is not a printf(), but is
-     * a special asynchronous action. The ID maps to exit().
-     */
-    AllocaInst *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
-    b_.CreateOutput(ctx_, perfdata, sizeof(uint64_t), &call.loc);
-    b_.CreateLifetimeEnd(perfdata);
+    auto elements = AsyncEvent::Exit().asLLVMType(b_);
+    StructType *exit_struct = b_.GetStructType("exit_t", elements, true);
+    AllocaInst *buf = b_.CreateAllocaBPF(exit_struct, "exit");
+    size_t struct_size = datalayout().getTypeAllocSize(exit_struct);
+
+    // Fill in exit struct.
+    b_.CreateStore(
+        b_.getInt64(asyncactionint(AsyncAction::exit)),
+        b_.CreateGEP(exit_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
+
+    Value *code = b_.getInt8(0);
+    if (call.vargs.size() == 1) {
+      auto scoped_del = accept(call.vargs.at(0));
+#if LLVM_VERSION_MAJOR <= 14
+      expr_ = b_.CreateIntCast(expr_, b_.getInt8Ty(), false);
+#endif
+      code = expr_;
+    }
+    b_.CreateStore(
+        code,
+        b_.CreateGEP(exit_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
+    b_.CreateLifetimeEnd(buf);
+
     expr_ = nullptr;
     createRet();
 

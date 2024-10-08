@@ -108,7 +108,7 @@ class Runner(object):
 
             return nsenter_prefix + ret
         else:  # PROG
-            use_json = "-q -f json" if test.expects[0].mode == "json" else ""
+            use_json = "-q -f json" if (len(test.expects) > 0 and test.expects[0].mode == "json") else ""
             escaped_prog = test.prog.replace("'", "'\\''")
             cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, escaped_prog)
             # We're only reusing PROG-directive tests for AOT tests
@@ -474,7 +474,7 @@ class Runner(object):
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_AOT_NOT_SUPPORTED
 
-        if p and p.returncode != 0 and not test.will_fail and not timeout:
+        if p and p.returncode != test.return_code and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
