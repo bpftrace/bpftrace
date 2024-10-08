@@ -5,6 +5,7 @@ target triple = "bpf-pc-linux"
 
 %"struct map_t" = type { ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr, ptr, ptr }
+%exit_t = type <{ i64, i8 }>
 %printf_t = type { i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -19,7 +20,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
 entry:
   %key5 = alloca i32, align 4
-  %perfdata = alloca i64, align 8
+  %exit = alloca %exit_t, align 8
   %key = alloca i32, align 4
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
   %1 = lshr i64 %get_pid_tgid, 32
@@ -43,9 +44,12 @@ left:                                             ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 right:                                            ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %perfdata)
-  store i64 30000, ptr %perfdata, align 8
-  %ringbuf_output1 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %perfdata, i64 8, i64 0)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
+  %8 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
+  store i64 30000, ptr %8, align 8
+  %9 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
+  store i8 0, ptr %9, align 1
+  %ringbuf_output1 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
   %ringbuf_loss4 = icmp slt i64 %ringbuf_output1, 0
   br i1 %ringbuf_loss4, label %event_loss_counter2, label %counter_merge3
 
@@ -63,7 +67,7 @@ counter_merge:                                    ; preds = %lookup_merge, %left
   br label %done
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %8 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %10 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter
@@ -81,11 +85,11 @@ event_loss_counter2:                              ; preds = %right
   br i1 %map_lookup_cond10, label %lookup_success7, label %lookup_failure8
 
 counter_merge3:                                   ; preds = %lookup_merge9, %right
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %perfdata)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
 
 lookup_success7:                                  ; preds = %event_loss_counter2
-  %9 = atomicrmw add ptr %lookup_elem6, i64 1 seq_cst, align 8
+  %11 = atomicrmw add ptr %lookup_elem6, i64 1 seq_cst, align 8
   br label %lookup_merge9
 
 lookup_failure8:                                  ; preds = %event_loss_counter2

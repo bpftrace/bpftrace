@@ -71,5 +71,8 @@ int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
 
   bpftrace.close_pcaps();
 
-  return err;
+  if (err)
+    return err;
+
+  return BPFtrace::exit_code;
 }

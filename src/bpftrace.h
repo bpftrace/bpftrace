@@ -180,6 +180,7 @@ public:
 
   std::string cmd_;
   bool finalize_ = false;
+  static int exit_code;
   // Global variables checking if an exit/usr1 signal was received
   static volatile sig_atomic_t exitsig_recv;
   static volatile sig_atomic_t sigusr1_recv;
