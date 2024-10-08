@@ -539,22 +539,11 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'd':
       case Options::DEBUG:
-        if (std::strcmp(optarg, "ast") == 0)
-          bt_debug.insert(DebugStage::Ast);
-        else if (std::strcmp(optarg, "codegen") == 0)
-          bt_debug.insert(DebugStage::Codegen);
-        else if (std::strcmp(optarg, "codegen-opt") == 0)
-          bt_debug.insert(DebugStage::CodegenOpt);
-        else if (std::strcmp(optarg, "libbpf") == 0)
-          bt_debug.insert(DebugStage::Libbpf);
-        else if (std::strcmp(optarg, "verifier") == 0)
-          bt_debug.insert(DebugStage::Verifier);
-        else if (std::strcmp(optarg, "all") == 0) {
-          bt_debug.insert({ DebugStage::Ast,
-                            DebugStage::Codegen,
-                            DebugStage::CodegenOpt,
-                            DebugStage::Libbpf,
-                            DebugStage::Verifier });
+        if (debug_stages.contains(optarg)) {
+          bt_debug.insert(debug_stages.at(optarg));
+        } else if (std::strcmp(optarg, "all") == 0) {
+          for (const auto& [_, stage] : debug_stages)
+            bt_debug.insert(stage);
         } else {
           LOG(ERROR) << "USAGE: invalid option for -d: " << optarg;
           exit(1);

@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -58,6 +59,14 @@ extern bool bt_verbose;
 extern bool dry_run;
 
 enum class DebugStage { Ast, Codegen, CodegenOpt, Libbpf, Verifier };
+
+const std::unordered_map<std::string_view, DebugStage> debug_stages = {
+  { "ast", DebugStage::Ast },
+  { "codegen", DebugStage::Codegen },
+  { "codegen-opt", DebugStage::CodegenOpt },
+  { "libbpf", DebugStage::Libbpf },
+  { "verifier", DebugStage::Verifier },
+};
 
 class WildcardException : public std::exception {
 public:
