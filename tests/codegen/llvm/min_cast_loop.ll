@@ -24,10 +24,6 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !72 {
 entry:
   %mm_struct = alloca %min_max_val, align 8
   %"@x_key" = alloca i64, align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 1, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
@@ -35,19 +31,19 @@ entry:
   br i1 %lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %4 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
-  %5 = load i64, ptr %4, align 8
-  %6 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
-  %7 = load i64, ptr %6, align 8
-  %is_set_cond = icmp eq i64 %7, 1
+  %1 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
+  %2 = load i64, ptr %1, align 8
+  %3 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
+  %4 = load i64, ptr %3, align 8
+  %is_set_cond = icmp eq i64 %4, 1
   br i1 %is_set_cond, label %is_set, label %min_max
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %mm_struct)
-  %8 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 0
-  store i64 2, ptr %8, align 8
-  %9 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 1
-  store i64 1, ptr %9, align 8
+  %5 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 0
+  store i64 2, ptr %5, align 8
+  %6 = getelementptr %min_max_val, ptr %mm_struct, i64 0, i32 1
+  store i64 1, ptr %6, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %mm_struct, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %mm_struct)
   br label %lookup_merge
@@ -58,14 +54,14 @@ lookup_merge:                                     ; preds = %lookup_failure, %mi
   ret i64 0
 
 is_set:                                           ; preds = %lookup_success
-  %10 = icmp sge i64 %5, 2
-  br i1 %10, label %min_max, label %lookup_merge
+  %7 = icmp sge i64 %2, 2
+  br i1 %7, label %min_max, label %lookup_merge
 
 min_max:                                          ; preds = %is_set, %lookup_success
-  %11 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
-  store i64 2, ptr %11, align 8
-  %12 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
-  store i64 1, ptr %12, align 8
+  %8 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 0
+  store i64 2, ptr %8, align 8
+  %9 = getelementptr %min_max_val, ptr %lookup_elem, i64 0, i32 1
+  store i64 1, ptr %9, align 8
   br label %lookup_merge
 }
 
@@ -113,41 +109,41 @@ while_end:                                        ; preds = %error_failure, %err
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %9 = load i64, ptr @max_cpu_id, align 8
-  %10 = icmp ule i64 %get_cpu_id, %9
-  %11 = select i1 %10, i64 %get_cpu_id, i64 %9
-  %12 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %11, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %12, i8 0, i64 16, i1 false)
-  %13 = getelementptr %int64_min_t__tuple_t, ptr %12, i32 0, i32 0
-  store i64 %key, ptr %13, align 8
-  %14 = getelementptr %int64_min_t__tuple_t, ptr %12, i32 0, i32 1
-  store i64 %8, ptr %14, align 8
-  %15 = getelementptr %int64_min_t__tuple_t, ptr %12, i32 0, i32 1
-  %16 = load i64, ptr %15, align 8
-  store i64 %16, ptr %"$res", align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %9
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %9
+  %10 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 16, i1 false)
+  %11 = getelementptr %int64_min_t__tuple_t, ptr %10, i32 0, i32 0
+  store i64 %key, ptr %11, align 8
+  %12 = getelementptr %int64_min_t__tuple_t, ptr %10, i32 0, i32 1
+  store i64 %8, ptr %12, align 8
+  %13 = getelementptr %int64_min_t__tuple_t, ptr %10, i32 0, i32 1
+  %14 = load i64, ptr %13, align 8
+  store i64 %14, ptr %"$res", align 8
   ret i64 0
 
 lookup_success:                                   ; preds = %while_body
-  %17 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 0
+  %15 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 0
+  %16 = load i64, ptr %15, align 8
+  %17 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 1
   %18 = load i64, ptr %17, align 8
-  %19 = getelementptr %min_max_val, ptr %lookup_percpu_elem, i64 0, i32 1
-  %20 = load i64, ptr %19, align 8
-  %val_set_cond = icmp eq i64 %20, 1
-  %21 = load i64, ptr %val_2, align 8
-  %ret_set_cond = icmp eq i64 %21, 1
-  %22 = load i64, ptr %val_1, align 8
-  %min_cond = icmp slt i64 %18, %22
+  %val_set_cond = icmp eq i64 %18, 1
+  %19 = load i64, ptr %val_2, align 8
+  %ret_set_cond = icmp eq i64 %19, 1
+  %20 = load i64, ptr %val_1, align 8
+  %min_cond = icmp slt i64 %16, %20
   br i1 %val_set_cond, label %val_set_success, label %min_max_merge
 
 lookup_failure:                                   ; preds = %while_body
-  %23 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %23, 0
+  %21 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %21, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 val_set_success:                                  ; preds = %lookup_success
   br i1 %ret_set_cond, label %ret_set_success, label %min_max_success
 
 min_max_success:                                  ; preds = %ret_set_success, %val_set_success
-  store i64 %18, ptr %val_1, align 8
+  store i64 %16, ptr %val_1, align 8
   store i64 1, ptr %val_2, align 8
   br label %min_max_merge
 
@@ -155,16 +151,16 @@ ret_set_success:                                  ; preds = %val_set_success
   br i1 %min_cond, label %min_max_success, label %min_max_merge
 
 min_max_merge:                                    ; preds = %min_max_success, %ret_set_success, %lookup_success
-  %24 = load i32, ptr %i, align 4
-  %25 = add i32 %24, 1
-  store i32 %25, ptr %i, align 4
+  %22 = load i32, ptr %i, align 4
+  %23 = add i32 %22, 1
+  store i32 %23, ptr %i, align 4
   br label %while_cond
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %26 = load i32, ptr %i, align 4
+  %24 = load i32, ptr %i, align 4
   br label %while_end
 }
 

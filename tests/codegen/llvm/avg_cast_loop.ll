@@ -24,10 +24,6 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !72 {
 entry:
   %avg_struct = alloca %avg_stas_val, align 8
   %"@x_key" = alloca i64, align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 1, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
@@ -35,24 +31,24 @@ entry:
   br i1 %lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %4 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
-  %5 = load i64, ptr %4, align 8
-  %6 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
-  %7 = load i64, ptr %6, align 8
-  %8 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
-  %9 = add i64 %5, 2
-  store i64 %9, ptr %8, align 8
-  %10 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
-  %11 = add i64 1, %7
-  store i64 %11, ptr %10, align 8
+  %1 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
+  %2 = load i64, ptr %1, align 8
+  %3 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
+  %4 = load i64, ptr %3, align 8
+  %5 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 0
+  %6 = add i64 %2, 2
+  store i64 %6, ptr %5, align 8
+  %7 = getelementptr %avg_stas_val, ptr %lookup_elem, i64 0, i32 1
+  %8 = add i64 1, %4
+  store i64 %8, ptr %7, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %avg_struct)
-  %12 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 0
-  store i64 2, ptr %12, align 8
-  %13 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 1
-  store i64 1, ptr %13, align 8
+  %9 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 0
+  store i64 2, ptr %9, align 8
+  %10 = getelementptr %avg_stas_val, ptr %avg_struct, i64 0, i32 1
+  store i64 1, ptr %10, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %avg_struct, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %avg_struct)
   br label %lookup_merge
@@ -160,17 +156,17 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %31 = load i64, ptr @max_cpu_id, align 8
-  %32 = icmp ule i64 %get_cpu_id, %31
-  %33 = select i1 %32, i64 %get_cpu_id, i64 %31
-  %34 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %33, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %34, i8 0, i64 16, i1 false)
-  %35 = getelementptr %int64_avg_t__tuple_t, ptr %34, i32 0, i32 0
-  store i64 %key, ptr %35, align 8
-  %36 = getelementptr %int64_avg_t__tuple_t, ptr %34, i32 0, i32 1
-  store i64 %30, ptr %36, align 8
-  %37 = getelementptr %int64_avg_t__tuple_t, ptr %34, i32 0, i32 1
-  %38 = load i64, ptr %37, align 8
-  store i64 %38, ptr %"$res", align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %31
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %31
+  %32 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %32, i8 0, i64 16, i1 false)
+  %33 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 0
+  store i64 %key, ptr %33, align 8
+  %34 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
+  store i64 %30, ptr %34, align 8
+  %35 = getelementptr %int64_avg_t__tuple_t, ptr %32, i32 0, i32 1
+  %36 = load i64, ptr %35, align 8
+  store i64 %36, ptr %"$res", align 8
   ret i64 0
 }
 

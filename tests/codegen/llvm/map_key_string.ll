@@ -23,25 +23,25 @@ entry:
   %"@x_val" = alloca i64, align 8
   %str1 = alloca [2 x i8], align 1
   %str = alloca [2 x i8], align 1
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
   store [2 x i8] c"a\00", ptr %str, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
   store [2 x i8] c"b\00", ptr %str1, align 1
-  %4 = getelementptr [1 x [1 x [4 x i8]]], ptr @tuple_buf, i64 0, i64 %3, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %4, i8 0, i64 4, i1 false)
-  %5 = getelementptr %"string[2]_string[2]__tuple_t", ptr %4, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %5, ptr align 1 %str, i64 2, i1 false)
-  %6 = getelementptr %"string[2]_string[2]__tuple_t", ptr %4, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 %str1, i64 2, i1 false)
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %1
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %1
+  %2 = getelementptr [1 x [1 x [4 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 4, i1 false)
+  %3 = getelementptr %"string[2]_string[2]__tuple_t", ptr %2, i32 0, i32 0
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 %str, i64 2, i1 false)
+  %4 = getelementptr %"string[2]_string[2]__tuple_t", ptr %2, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 %str1, i64 2, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 44, ptr %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %4, ptr %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %2, ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   ret i64 0
 }

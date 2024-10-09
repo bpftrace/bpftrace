@@ -19,31 +19,31 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
 entry:
   %key = alloca i32, align 4
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %4 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %4 to i32
-  %5 = zext i32 %pid to i64
-  %6 = icmp ugt i64 %5, 10000
-  %7 = zext i1 %6 to i64
-  %true_cond = icmp ne i64 %7, 0
+  %1 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %1 to i32
+  %2 = zext i32 %pid to i64
+  %3 = icmp ugt i64 %2, 10000
+  %4 = zext i1 %3 to i64
+  %true_cond = icmp ne i64 %4, 0
   br i1 %true_cond, label %if_body, label %if_end
 
 if_body:                                          ; preds = %entry
-  %8 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 16, i1 false)
-  %9 = getelementptr %printf_t, ptr %8, i32 0, i32 0
-  store i64 0, ptr %9, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %5 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
+  %6 = getelementptr [1 x [1 x [16 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 16, i1 false)
+  %7 = getelementptr %printf_t, ptr %6, i32 0, i32 0
+  store i64 0, ptr %7, align 8
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)()
-  %10 = lshr i64 %get_pid_tgid1, 32
-  %pid2 = trunc i64 %10 to i32
-  %11 = getelementptr %printf_t, ptr %8, i32 0, i32 1
-  %12 = zext i32 %pid2 to i64
-  store i64 %12, ptr %11, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %8, i64 16, i64 0)
+  %8 = lshr i64 %get_pid_tgid1, 32
+  %pid2 = trunc i64 %8 to i32
+  %9 = getelementptr %printf_t, ptr %6, i32 0, i32 1
+  %10 = zext i32 %pid2 to i64
+  store i64 %10, ptr %9, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %6, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -61,7 +61,7 @@ counter_merge:                                    ; preds = %lookup_merge, %if_b
   br label %if_end
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %13 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %11 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter

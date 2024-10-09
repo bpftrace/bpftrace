@@ -168,8 +168,8 @@ public:
   CallInst *CreateGetStrScratchMap(int idx,
                                    BasicBlock *failure_callback,
                                    const location &loc);
-  Value *CreateGetFmtStringArgsScratchBuffer(Value *cpu_id);
-  Value *CreateTupleScratchBuffer(Value *cpu_id, int key);
+  Value *CreateGetFmtStringArgsScratchBuffer(const location &loc);
+  Value *CreateTupleScratchBuffer(const location &loc, int key);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -301,7 +301,7 @@ private:
                                 BasicBlock *failure_callback,
                                 int key = 0);
   Value *createScratchBuffer(globalvars::GlobalVar globalvar,
-                             Value *cpu_id,
+                             const location &loc,
                              size_t key = 0);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 

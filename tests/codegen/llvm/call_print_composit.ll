@@ -22,28 +22,32 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !56 {
 entry:
   %key = alloca i32, align 4
   %str = alloca [4 x i8], align 1
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
   store [4 x i8] c"abc\00", ptr %str, align 1
-  %4 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %3, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %4, i8 0, i64 16, i1 false)
-  %5 = getelementptr %"int64_string[4]__tuple_t", ptr %4, i32 0, i32 0
-  store i64 1, ptr %5, align 8
-  %6 = getelementptr %"int64_string[4]__tuple_t", ptr %4, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 %str, i64 4, i1 false)
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %1
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %1
+  %2 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
+  %3 = getelementptr %"int64_string[4]__tuple_t", ptr %2, i32 0, i32 0
+  store i64 1, ptr %3, align 8
+  %4 = getelementptr %"int64_string[4]__tuple_t", ptr %2, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 %str, i64 4, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
-  %7 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %3, i64 0, i64 0
-  %8 = getelementptr %print_tuple_16_t, ptr %7, i64 0, i32 0
-  store i64 30007, ptr %8, align 8
-  %9 = getelementptr %print_tuple_16_t, ptr %7, i64 0, i32 1
-  store i64 0, ptr %9, align 8
-  %10 = getelementptr %print_tuple_16_t, ptr %7, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 16, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %10, ptr align 1 %4, i64 16, i1 false)
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %7, i64 32, i64 0)
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %5 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %5
+  %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %5
+  %6 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select3, i64 0, i64 0
+  %7 = getelementptr %print_tuple_16_t, ptr %6, i64 0, i32 0
+  store i64 30007, ptr %7, align 8
+  %8 = getelementptr %print_tuple_16_t, ptr %6, i64 0, i32 1
+  store i64 0, ptr %8, align 8
+  %9 = getelementptr %print_tuple_16_t, ptr %6, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %9, i8 0, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %9, ptr align 1 %2, i64 16, i1 false)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %6, i64 32, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -58,7 +62,7 @@ counter_merge:                                    ; preds = %lookup_merge, %entr
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %11 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %10 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter

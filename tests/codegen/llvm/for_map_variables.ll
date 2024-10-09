@@ -39,10 +39,6 @@ entry:
   store i64 0, ptr %"$var1", align 8
   %"@map_val" = alloca i64, align 8
   %"@map_key" = alloca i64, align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_key")
   store i64 16, ptr %"@map_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_val")
@@ -65,11 +61,11 @@ entry:
   %"ctx.$var3" = getelementptr %ctx_t, ptr %ctx, i64 0, i32 1
   store ptr %"$var3", ptr %"ctx.$var3", align 8
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr %ctx, i64 0)
-  %4 = load i64, ptr %"$var1", align 8
+  %1 = load i64, ptr %"$var1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_key")
   store i64 0, ptr %"@len_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_val")
-  store i64 %4, ptr %"@len_val", align 8
+  store i64 %1, ptr %"@len_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %"@len_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_key")
@@ -96,21 +92,21 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %val = load i64, ptr %2, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
-  %6 = icmp ule i64 %get_cpu_id, %5
-  %7 = select i1 %6, i64 %get_cpu_id, i64 %5
-  %8 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %7, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 16, i1 false)
-  %9 = getelementptr %int64_int64__tuple_t, ptr %8, i32 0, i32 0
-  store i64 %key, ptr %9, align 8
-  %10 = getelementptr %int64_int64__tuple_t, ptr %8, i32 0, i32 1
-  store i64 %val, ptr %10, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
+  %6 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 16, i1 false)
+  %7 = getelementptr %int64_int64__tuple_t, ptr %6, i32 0, i32 0
+  store i64 %key, ptr %7, align 8
+  %8 = getelementptr %int64_int64__tuple_t, ptr %6, i32 0, i32 1
+  store i64 %val, ptr %8, align 8
   %"ctx.$var1" = getelementptr %ctx_t, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
   %"ctx.$var3" = getelementptr %ctx_t, ptr %3, i64 0, i32 1
   %"$var3" = load ptr, ptr %"ctx.$var3", align 8
-  %11 = load i64, ptr %"$var1", align 8
-  %12 = add i64 %11, 1
-  store i64 %12, ptr %"$var1", align 8
+  %9 = load i64, ptr %"$var1", align 8
+  %10 = add i64 %9, 1
+  store i64 %10, ptr %"$var1", align 8
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$can_read", ptr align 1 %"$var3", i64 4, i1 false)
   ret i64 0
 }
