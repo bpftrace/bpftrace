@@ -21,24 +21,24 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !65 {
 entry:
   %"@t_key" = alloca i64, align 8
+  %1 = getelementptr i64, ptr %0, i64 14
+  %arg0 = load volatile i64, ptr %1, align 8
+  %2 = getelementptr i64, ptr %0, i64 13
+  %arg1 = load volatile i64, ptr %2, align 8
+  %3 = add i64 %arg1, 0
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
-  %2 = icmp ule i64 %get_cpu_id, %1
-  %3 = select i1 %2, i64 %get_cpu_id, i64 %1
-  %4 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %4, align 8
-  %5 = getelementptr i64, ptr %0, i64 13
-  %arg1 = load volatile i64, ptr %5, align 8
-  %6 = add i64 %arg1, 0
-  %7 = getelementptr [1 x [1 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %3, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 24, i1 false)
-  %8 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %7, i32 0, i32 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %8, i32 8, i64 %arg0)
-  %9 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %7, i32 0, i32 1
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %9, i32 16, i64 %6)
+  %4 = load i64, ptr @max_cpu_id, align 8
+  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %4
+  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %4
+  %5 = getelementptr [1 x [1 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 24, i1 false)
+  %6 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %5, i32 0, i32 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 8, i64 %arg0)
+  %7 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %5, i32 0, i32 1
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %7, i32 16, i64 %3)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %7, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %5, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@t_key")
   ret i64 0
 }

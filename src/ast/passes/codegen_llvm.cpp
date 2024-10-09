@@ -2229,17 +2229,18 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
  */
 Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
-    const std::vector<std::pair<llvm::Value *, const location *>> &vals)
+    const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+    const location &loc)
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
   auto buf = b_.CreatePointerCast(
-      b_.CreateTupleScratchBuffer(cpu_id_stack_.top(), async_ids_.tuple()),
+      b_.CreateTupleScratchBuffer(loc, async_ids_.tuple()),
       tuple_ty->getPointerTo());
   b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
-    auto [val, loc] = vals[i];
+    auto [val, vloc] = vals[i];
     SizedType &type = tuple_type.GetField(i).type;
 
     Value *dst = b_.CreateGEP(tuple_ty,
@@ -2249,7 +2250,7 @@ Value *CodegenLLVM::createTuple(
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
-      b_.CreateProbeRead(ctx_, dst, type, val, *loc);
+      b_.CreateProbeRead(ctx_, dst, type, val, *vloc);
     else
       b_.CreateStore(val, dst);
   }
@@ -2303,7 +2304,7 @@ void CodegenLLVM::visit(Tuple &tuple)
     scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
-  auto buf = createTuple(tuple.type, vals);
+  auto buf = createTuple(tuple.type, vals, tuple.loc);
 
   // No need to end buf lifetime since tuple allocation is done via scratch maps
   // and not on stack
@@ -2647,37 +2648,6 @@ void CodegenLLVM::visit(AttachPoint &)
   // Empty
 }
 
-// For older 5.2 kernels, we need to bound CPU ID by MAX_CPU_ID to pass
-// BPF verifier on older kernels.
-//
-// However, for programs that do many scratch buffer lookups, this causes
-// many jumps which means a complex program may be rejected by the BPF
-// verifier for >= 8192 jumps (current limit).
-//
-// To minimize jumps, we bound the CPU ID at the beginning of each function
-// and cache the value in a register. This ensures we only add one
-// additional jump per function. Note we cannot cache this value in a global
-// variable since memory is shared between all CPUs or a per-CPU array since
-// that would be recursive.
-//
-// Note the only functions in scope are the ones where scratch buffer is used
-// which is currently subprograms, probes and map_for_each_cb. To account for
-// nesting, we use a stack to ensure we're referencing the correct instance.
-Value *CodegenLLVM::generateCachedCpuId(const location &loc)
-{
-  if (!bpftrace_.resources.needed_global_vars.count(
-          globalvars::GlobalVar::MAX_CPU_ID)) {
-    return nullptr;
-  }
-
-  auto cpu_id = b_.CreateGetCpuId(loc);
-  auto max = b_.CreateLoad(b_.getInt64Ty(),
-                           module_->getGlobalVariable(to_string(
-                               bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
-  auto cmp = b_.CreateICmp(CmpInst::ICMP_ULE, cpu_id, max);
-  return b_.CreateSelect(cmp, cpu_id, max);
-}
-
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
                                 const std::string &name,
@@ -2710,9 +2680,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                getReturnValueForProbe(probe_type));
   }
 
-  assert(cpu_id_stack_.empty());
-  cpu_id_stack_.push(generateCachedCpuId(probe.loc));
-
   if (probe.pred) {
     auto scoped_del = accept(probe.pred);
   }
@@ -2722,9 +2689,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
   }
 
   createRet();
-
-  cpu_id_stack_.pop();
-  assert(cpu_id_stack_.empty());
 
   if (dummy) {
     func->eraseFromParent();
@@ -2808,17 +2772,11 @@ void CodegenLLVM::visit(Subprog &subprog)
     ++arg_index;
   }
 
-  assert(cpu_id_stack_.empty());
-  cpu_id_stack_.push(generateCachedCpuId(subprog.loc));
-
   for (Statement *stmt : subprog.stmts) {
     auto scoped_del = accept(stmt);
   }
   if (subprog.return_type.IsVoidTy())
     createRet();
-
-  cpu_id_stack_.pop();
-  assert(cpu_id_stack_.empty());
 
   FunctionPassManager fpm;
   FunctionAnalysisManager fam;
@@ -3483,7 +3441,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                << " does not match LLVM offset=" << expected_offset;
   }
 
-  Value *fmt_args = b_.CreateGetFmtStringArgsScratchBuffer(cpu_id_stack_.top());
+  Value *fmt_args = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
   // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
@@ -3627,7 +3585,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   StructType *print_struct = b_.GetStructType(struct_name.str(),
                                               elements,
                                               true);
-  Value *buf = b_.CreateGetFmtStringArgsScratchBuffer(cpu_id_stack_.top());
+  Value *buf = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
   size_t struct_size = datalayout().getTypeAllocSize(print_struct);
 
   // Store asyncactionid:
@@ -4462,11 +4420,10 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
     });
   }
 
-  cpu_id_stack_.push(generateCachedCpuId(f.decl->loc));
-
   // Create decl variable for use in this iteration of the loop
   auto tuple = createTuple(f.decl->type,
-                           { { key, &f.decl->loc }, { val, &f.decl->loc } });
+                           { { key, &f.decl->loc }, { val, &f.decl->loc } },
+                           f.decl->loc);
   variables_[f.decl->ident] = VariableLLVM{ tuple, b_.GetType(f.decl->type) };
 
   // 1. Save original locations of variables which will form part of the
@@ -4496,9 +4453,6 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
     auto scoped_del = accept(stmt);
   }
   b_.CreateRet(b_.getInt64(0));
-
-  // Resore original cached CPU ID
-  cpu_id_stack_.pop();
 
   // Restore original non-context variables
   for (const auto &[ident, expr] : orig_ctx_vars) {

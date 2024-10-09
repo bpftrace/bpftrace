@@ -4,7 +4,6 @@
 #include <iostream>
 #include <optional>
 #include <ostream>
-#include <stack>
 #include <tuple>
 
 #include <llvm/IR/IRBuilder.h>
@@ -94,7 +93,8 @@ public:
                            const SizedType &value_type);
   Value *createTuple(
       const SizedType &tuple_type,
-      const std::vector<std::pair<llvm::Value *, const location *>> &vals);
+      const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+      const location &loc);
   void createTupleCopy(const SizedType &expr_type,
                        const SizedType &var_type,
                        Value *dst_val,
@@ -251,8 +251,6 @@ private:
   bool canAggPerCpuMapElems(const SizedType &val_type,
                             const SizedType &key_type);
 
-  Value *generateCachedCpuId(const location &loc);
-
   Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;
@@ -297,10 +295,6 @@ private:
   Function *murmur_hash_2_func_ = nullptr;
   Function *map_len_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
-
-  // Used for caching bounded CPU ID in register to avoid jumps every time
-  // we use global scratch buffer
-  std::stack<Value *> cpu_id_stack_;
 
   size_t getStructSize(StructType *s)
   {
