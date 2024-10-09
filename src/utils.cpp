@@ -109,6 +109,72 @@ const struct vmlinux_location vmlinux_locs[] = {
   { nullptr, false },
 };
 
+// find vmlinux file.
+// if sym is not null, check vmlinux contains the given symbol information
+std::optional<std::string> find_vmlinux(struct symbol *sym)
+{
+  struct vmlinux_location locs_env[] = {
+    { std::getenv("BPFTRACE_VMLINUX"), false },
+    { nullptr, false },
+  };
+  return find_vmlinux(locs_env[0].path ? locs_env : vmlinux_locs, sym);
+}
+
+std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
+                                        struct symbol *sym)
+{
+  struct utsname uts;
+  if (uname(&uts) != 0)
+    return std::nullopt;
+
+  for (size_t i = 0; locs[i].path; ++i) {
+    auto &loc = locs[i];
+    if (loc.raw)
+      continue; // This file is for BTF. skip
+
+    // Format the loc.path with the current release.
+    char path[PATH_MAX] = {};
+    int bytes_written = std::snprintf(
+        path, sizeof(path), loc.path, uts.release);
+    if (bytes_written < 0) {
+      LOG(ERROR) << "Failed to format vmlinux path '" << loc.path << "' using "
+                 << uts.release;
+      continue;
+    } else if (static_cast<size_t>(bytes_written) > sizeof(path)) {
+      LOG(WARNING) << "Truncated format for vmlinux path '" << loc.path
+                   << "' using " << uts.release;
+      continue;
+    }
+
+    if (access(path, R_OK))
+      continue;
+
+    if (sym == nullptr) {
+      return path;
+    } else {
+      bcc_elf_symcb callback = !sym->name.empty() ? sym_name_cb
+                                                  : sym_address_cb;
+      struct bcc_symbol_option options = {
+        .use_debug_file = 0,
+        .check_debug_file_crc = 0,
+        .lazy_symbolize = 0,
+        .use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE),
+      };
+      if (bcc_elf_foreach_sym(path, callback, &options, sym) == -1) {
+        LOG(ERROR) << "Failed to iterate over symbols in " << path;
+        continue;
+      }
+
+      if (sym->start) {
+        LOG(V1) << "vmlinux: using " << path;
+        return path;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
 static bool pid_in_different_mountns(int pid);
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
