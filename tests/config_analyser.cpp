@@ -125,6 +125,12 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_.get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
+
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::dwarf);
+  test(*bpftrace, "config = { symbol_source = \"symbol_table\" } BEGIN { }");
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::symbol_table);
 }
 
 } // namespace bpftrace::test::config_analyser
