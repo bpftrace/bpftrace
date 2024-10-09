@@ -2347,6 +2347,8 @@ The data type associated with these functions are only for internal use and are 
 
 Functions that are marked *async* are asynchronous which can lead to unexpected behavior, see the <<Invocation Mode>> section for more information.
 
+See <<Advanced Topics>> for more information on <<Map Printing>>.
+
 [%header,cols="~,~,~"]
 |===
 | Function Name
@@ -3872,6 +3874,36 @@ Maps are printed by reference not by value and as the value gets updated right a
 ----
 
 Therefore, when you need precise event statistics, it is recommended to use synchronous functions (e.g. count() and hist()) to ensure more reliable and accurate results.
+
+=== Map Printing
+
+By default when a bpftrace program exits it will print all maps to stdout.
+If you don't want this to happen you can specify an `END` probe and `clear` the maps you don't want printed (unfortunately this doesn't work on scalar maps) e.g. this script:
+
+```
+BEGIN {
+  @a = 1;
+  @b[1] = 1;
+}
+
+END {
+  clear(@a);
+  clear(@b);
+}
+```
+
+will print this on exit:
+```
+@a: 0
+```
+
+Additionally, if you want to get a snapshot of your maps before script exit, you can send the running bpftrace process a `SIGUSR1` signal. bpftrace will then print all maps to stdout. Example:
+
+```
+# bpftrace -e 'BEGIN { @b[1] = 2; }' & kill -s USR1 $(pidof bpftrace)
+...
+@b[1]: 2
+```
 
 === Systemd support
 
