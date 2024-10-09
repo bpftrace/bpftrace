@@ -74,6 +74,22 @@ EXPECT foo1->d = 9abcdef0
 REQUIRES_FEATURE dwarf
 BEFORE ./testprogs/uprobe_test
 
+NAME uprobe without dwarf
+PROG config = { symbol_source = "symbol_table"; cache_user_symbols = "PER_PROGRAM"; }
+     uprobe:./testprogs/uprobe_test:uprobeFunction1 { print(ustack); exit(); }
+EXPECT uprobeFunction1+0
+EXPECT_REGEX_NONE ^\s*main\+\d+$
+REQUIRES_FEATURE dwarf
+AFTER ./testprogs/uprobe_test
+
+NAME uprobe inline without dwarf
+PROG config = { symbol_source = "symbol_table"; probe_inline = 1; }
+     uprobe:./testprogs/inline_function:square { @count++ }
+     uretprobe:./testprogs/inline_function:main { exit() }
+EXPECT @count: 1
+REQUIRES_FEATURE dwarf
+AFTER ./testprogs/inline_function
+
 NAME uprobe skip inlined function
 PROG config = { probe_inline = 0 }
      uprobe:./testprogs/inline_function:square { @count++ }
