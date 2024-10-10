@@ -65,9 +65,8 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %val = load i64, ptr %2, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
-  %6 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 16, i1 false)
   %7 = getelementptr %int64_int64__tuple_t, ptr %6, i32 0, i32 0
   store i64 %key, ptr %7, align 8
@@ -89,9 +88,8 @@ define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section "
   %val = load i64, ptr %2, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
-  %6 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 1, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 1, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 16, i1 false)
   %7 = getelementptr %int64_int64__tuple_t, ptr %6, i32 0, i32 0
   store i64 %key, ptr %7, align 8

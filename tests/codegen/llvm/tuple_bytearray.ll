@@ -37,9 +37,8 @@ entry:
   store i32 0, ptr %5, align 4
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %6 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %6
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %6
-  %7 = getelementptr [1 x [1 x [32 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %6
+  %7 = getelementptr [1 x [1 x [32 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 32, i1 false)
   %8 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %7, i32 0, i32 0
   store i8 1, ptr %8, align 1

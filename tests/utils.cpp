@@ -409,4 +409,18 @@ TEST(utils, get_pids_for_program)
   ASSERT_EQ(pids.size(), 0);
 }
 
+TEST(utils, round_up_to_next_power_of_two)
+{
+  // 2^31 = 2147483648 which is max power of 2 within uint32_t
+  constexpr uint32_t max_power_of_two = 2147483648;
+  ASSERT_EQ(round_up_to_next_power_of_two(0), 0);
+  ASSERT_EQ(round_up_to_next_power_of_two(1), 1);
+  ASSERT_EQ(round_up_to_next_power_of_two(7), 8);
+  ASSERT_EQ(round_up_to_next_power_of_two(55), 64);
+  ASSERT_EQ(round_up_to_next_power_of_two(128), 128);
+  ASSERT_EQ(round_up_to_next_power_of_two(max_power_of_two - 1),
+            max_power_of_two);
+  ASSERT_EQ(round_up_to_next_power_of_two(max_power_of_two), max_power_of_two);
+}
+
 } // namespace bpftrace::test::utils

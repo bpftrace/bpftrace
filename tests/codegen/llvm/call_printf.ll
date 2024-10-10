@@ -29,9 +29,8 @@ entry:
   store i64 %arg0, ptr %"$foo", align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %2 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %2
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %2
-  %3 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %2
+  %3 = getelementptr [1 x [1 x [24 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %3, i8 0, i64 24, i1 false)
   %4 = getelementptr %printf_t, ptr %3, i32 0, i32 0
   store i64 0, ptr %4, align 8

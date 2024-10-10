@@ -29,9 +29,8 @@ entry:
   store i64 %get_cgroup_id, ptr %2, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %3 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %3
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %3
-  %4 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %3
+  %4 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %5 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 0
   store i64 30007, ptr %5, align 8
   %6 = getelementptr %print_cgroup_path_t_16_t, ptr %4, i64 0, i32 1

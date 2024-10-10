@@ -509,10 +509,21 @@ std::vector<int> get_possible_cpus()
 
 int get_max_cpu_id()
 {
-  const auto cpus = get_possible_cpus();
-  auto it = std::max_element(cpus.begin(), cpus.end());
-  assert(it != cpus.end());
-  return *it;
+  // When booting, the kernel ensures CPUs are ordered from 0 -> N so there
+  // are no gaps in possible CPUs. CPU ID is also u32 so this cast is safe
+  const auto num_possible_cpus = static_cast<uint32_t>(
+      get_possible_cpus().size());
+  assert(num_possible_cpus > 0);
+  // Using global scratch variables for big string usage looks like:
+  //   bounded_cpu_id = bpf_get_smp_processor_id() & MAX_CPU_ID
+  //   buf = global_var[bounded_cpu_id][slot_id]
+  // We bound CPU ID to satisfy the BPF verifier on older kernels. We use an AND
+  // instruction vs. LLVM umin function to reduce the number of jumps in BPF to
+  // ensure we don't hit the complexity limit of 8192 jumps
+  //
+  // To bound using AND, we need to ensure NUM_POSSIBLE_CPUS is rounded up to
+  // next nearest power of 2.
+  return round_up_to_next_power_of_two(num_possible_cpus) - 1;
 }
 
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
@@ -1566,6 +1577,25 @@ std::string sanitise_bpf_program_name(const std::string &name)
     sanitised_name = os.str();
   }
   return sanitised_name;
+}
+
+uint32_t round_up_to_next_power_of_two(uint32_t n)
+{
+  // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+  if (n == 0) {
+    return 0;
+  }
+  // Note this function doesn't work if n > 2^31 since there are not enough
+  // bits in unsigned 32 bit integers. This should be fine since its unlikely
+  // anyone has > 2^31 CPUs.
+  assert(n <= 2147483648);
+  n--;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n + 1;
 }
 
 } // namespace bpftrace
