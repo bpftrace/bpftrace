@@ -37,13 +37,6 @@ namespace bpftrace {
 
 const int timeout_ms = 100;
 
-struct symbol {
-  std::string name;
-  uint64_t start;
-  uint64_t size;
-  uint64_t address;
-};
-
 struct stack_key {
   int64_t stackid;
   uint32_t nr_stack_frames;
