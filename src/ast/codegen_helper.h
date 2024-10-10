@@ -1,9 +1,16 @@
 #pragma once
 
+#include "bpffeature.h"
 #include "bpftrace.h"
 
 namespace bpftrace {
 namespace ast {
+
+enum class StorageLocation {
+  SCRATCH_BUFFER,
+  STACK,
+  ALREADY_IN_MEMORY,
+};
 
 inline bool needMemcpy(const SizedType &stype)
 {
@@ -32,6 +39,15 @@ inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
   return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
 }
+
+StorageLocation getAssignMapStatementStorageLocation(
+    const AssignMapStatement &assignment);
+
+bool exceedsMapValueScratchBufferThreshold(const Map &map);
+
+libbpf::bpf_map_type getUserDefinedMapType(const SizedType &val_type,
+                                           const SizedType &key_type,
+                                           BPFfeature &feature);
 
 } // namespace ast
 } // namespace bpftrace

@@ -101,8 +101,6 @@ public:
                        Value *src_val);
 
   void generate_ir(void);
-  libbpf::bpf_map_type get_map_type(const SizedType &val_type,
-                                    const SizedType &key_type);
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources);
   void optimize(void);

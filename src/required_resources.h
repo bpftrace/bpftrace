@@ -107,6 +107,13 @@ public:
   size_t tuple_buffers = 0;
   size_t max_tuple_size = 0;
 
+  // Required for sizing map scratch buffers - variable length for lookup
+  // since we don't know lifetime of map values a priori and only single
+  // element for mutation - update or deletion
+  size_t read_map_value_buffers = 0;
+  size_t max_read_map_value_size = 0;
+  size_t max_write_map_value_size = 0;
+
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.
   //

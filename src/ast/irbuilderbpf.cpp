@@ -500,6 +500,19 @@ Value *IRBuilderBPF::CreateTupleScratchBuffer(const location &loc, int key)
                              key);
 }
 
+Value *IRBuilderBPF::CreateReadMapValueScratchBuffer(const location &loc,
+                                                     int key)
+{
+  return createScratchBuffer(
+      bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER, loc, key);
+}
+
+Value *IRBuilderBPF::CreateWriteMapValueScratchBuffer(const location &loc)
+{
+  return createScratchBuffer(
+      bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER, loc);
+}
+
 Value *IRBuilderBPF::createScratchBuffer(
     bpftrace::globalvars::GlobalVar globalvar,
     const location &loc,
@@ -589,17 +602,19 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
 Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          Map &map,
                                          Value *key,
-                                         const location &loc)
+                                         const location &loc,
+                                         std::optional<int> scratch_key)
 {
   assert(ctx && ctx->getType() == GET_PTR_TY());
-  return CreateMapLookupElem(ctx, map.ident, key, map.type, loc);
+  return CreateMapLookupElem(ctx, map.ident, key, map.type, loc, scratch_key);
 }
 
 Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          const std::string &map_name,
                                          Value *key,
                                          SizedType &type,
-                                         const location &loc)
+                                         const location &loc,
+                                         std::optional<int> scratch_key)
 {
   assert(ctx && ctx->getType() == GET_PTR_TY());
   CallInst *call = createMapLookup(map_name, key);
@@ -616,7 +631,11 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *value = scratch_key
+                     ? CreatePointerCast(
+                           CreateReadMapValueScratchBuffer(loc, *scratch_key),
+                           GetType(type)->getPointerTo())
+                     : CreateAllocaBPF(type, "lookup_elem_val");
   Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
                                   GetNull(),
                                   "map_lookup_cond");
@@ -626,7 +645,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    assert(value->getAllocatedType() == getInt64Ty());
+    assert(GetType(type) == getInt64Ty());
     // createMapLookup  returns an u8*
     auto *cast = CreatePointerCast(call, value->getType(), "cast");
     CreateStore(CreateLoad(getInt64Ty(), cast), value);
@@ -647,7 +666,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   // value is a pointer to i64
   Value *ret = CreateLoad(getInt64Ty(), value);
-  CreateLifetimeEnd(value);
+  if (!scratch_key) {
+    CreateLifetimeEnd(value);
+  }
   return ret;
 }
 

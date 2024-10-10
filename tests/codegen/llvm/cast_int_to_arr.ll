@@ -33,8 +33,8 @@ entry:
   %6 = load volatile i8, ptr %5, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
-  %7 = zext i8 %6 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
+  %7 = zext i8 %6 to i64
   store i64 %7, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
