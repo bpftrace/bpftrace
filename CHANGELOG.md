@@ -12,6 +12,9 @@ and this project adheres to
 - Return `uint32` instead of `uint64` for `pid` and `tid` builtins
   - [#3441](https://github.com/bpftrace/bpftrace/pull/3441)
   - [Migration guide](docs/migration_guide.md#pid-and-tid-builtins-return-uint32)
+- Remove multi-map `delete` functionality
+  - [#3506](https://github.com/bpftrace/bpftrace/pull/3506)
+  - [Migration guide](docs/migration_guide.md#multi-key-delete-removed)
 #### Added
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
