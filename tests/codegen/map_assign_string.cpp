@@ -18,6 +18,13 @@ TEST(codegen, map_assign_string_shorter)
        NAME);
 }
 
+TEST(codegen, map_assign_large_string)
+{
+  test("kprobe:f { @x = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"; @y = @x }",
+
+       NAME);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

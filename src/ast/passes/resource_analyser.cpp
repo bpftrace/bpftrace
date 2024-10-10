@@ -4,6 +4,7 @@
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
+#include "codegen_helper.h"
 #include "globalvars.h"
 #include "log.h"
 #include "struct.h"
@@ -59,6 +60,21 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
     assert(resources_.tuple_buffers > 0);
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::TUPLE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
+  if (resources_.max_read_map_value_size > 0) {
+    assert(resources_.read_map_value_buffers > 0);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
+  if (resources_.max_write_map_value_size > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER);
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
@@ -223,6 +239,20 @@ void ResourceAnalyser::visit(Call &call)
 
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
+  } else if (call.func == "delete") {
+    for (const auto &arg : call.vargs) {
+      const auto &map = static_cast<Map &>(*arg);
+      const auto map_type = getUserDefinedMapType(map.type,
+                                                  map.key_type,
+                                                  *bpftrace_.feature_);
+      // Maps that are not clearable must be zeroed. To do so, we need
+      // to allocate zeros on the stack
+      if (!is_bpf_map_clearable(map_type) &&
+          exceedsMapValueScratchBufferThreshold(map)) {
+        resources_.max_write_map_value_size = std::max(
+            resources_.max_write_map_value_size, map.type.GetSize());
+      }
+    }
   }
 
   if (call.func == "print" || call.func == "clear" || call.func == "zero") {
@@ -246,9 +276,26 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor::visit(map);
 
-  auto &map_info = resources_.maps_info[map.ident];
-  map_info.value_type = map.type;
-  map_info.key_type = map.key_type;
+  update_map_info(map);
+
+  // Unlike other scratch buffers, we use a 16 byte threshold to determine if we
+  // should store map values on the stack or in the scratch buffer. We do this
+  // because there are many edge cases (e.g. aggregate functions) in CodegenLLVM
+  // where the function actually does the map assignment themselves and set
+  // expr_ = nullptr. Thus, without this size check, we may overallocate memory
+  // for read buffers significantly. Instead of trying to replicate CodegenLLVM
+  // and make the code brittle, we choose a 16 byte threshold since it is
+  // greater than almost all of the aggregate types, most of which are 8 and 16
+  // bytes.
+  //
+  // Note this isn't foolproof as there may be other ways in which CodegenLLVM
+  // can recurse into this function. But it limits the blast radius until we can
+  // do a full refactor of Visitor logic in CodegenLLVM
+  if (exceedsMapValueScratchBufferThreshold(map)) {
+    resources_.read_map_value_buffers++;
+    resources_.max_read_map_value_size = std::max(
+        resources_.max_read_map_value_size, map.type.GetSize());
+  }
 }
 
 void ResourceAnalyser::visit(Tuple &tuple)
@@ -270,9 +317,40 @@ void ResourceAnalyser::visit(For &f)
                                        f.decl->type.GetSize());
 }
 
+void ResourceAnalyser::visit(AssignMapStatement &assignment)
+{
+  // Unfortunately, CodegenLLVM doesn't recurse into assignment.map
+  // for AssignMapStatement, so we need to do this hack.
+  //
+  // We don't call Visitor::Visit(assignment) since this will
+  // recurse into ResourceAnalyser::visit(assignment.map). This
+  // will then trigger the read map value scratch buffer check and
+  // we significantly over-allocate read buffer.
+  //
+  // To mitigate this, we do the recursion ourselves and update map
+  // info here as well as ResourceAnalyser::visit(map)
+  assignment.expr->accept(*this);
+  Visitor::visit(*assignment.map);
+
+  update_map_info(*assignment.map);
+
+  if (getAssignMapStatementStorageLocation(assignment) ==
+      StorageLocation::SCRATCH_BUFFER) {
+    resources_.max_write_map_value_size = std::max(
+        resources_.max_write_map_value_size, assignment.map->type.GetSize());
+  }
+}
+
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
   return fun == "usym" || fun == "func" || fun == "ustack";
+}
+
+void ResourceAnalyser::update_map_info(Map &map)
+{
+  auto &map_info = resources_.maps_info[map.ident];
+  map_info.value_type = map.type;
+  map_info.key_type = map.key_type;
 }
 
 Pass CreateResourcePass()
