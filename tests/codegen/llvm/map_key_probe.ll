@@ -11,43 +11,48 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !47
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !55
+@read_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !57
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @tracepoint_sched_sched_one_1(ptr %0) section "s_tracepoint_sched_sched_one_1" !dbg !50 {
+define i64 @tracepoint_sched_sched_one_1(ptr %0) section "s_tracepoint_sched_sched_one_1" !dbg !62 {
 entry:
-  %"@x_val" = alloca i64, align 8
   %"@x_key1" = alloca i64, align 8
-  %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  store i64 %1, ptr %lookup_elem_val, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  store i64 %3, ptr %2, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  store i64 0, ptr %lookup_elem_val, align 8
+  store i64 0, ptr %2, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %2 = load i64, ptr %lookup_elem_val, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
+  %4 = load i64, ptr %2, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  %3 = add i64 %2, 1
+  %5 = add i64 %4, 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 0, ptr %"@x_key1", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %3, ptr %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key1", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
+  %get_cpu_id2 = call i64 inttoptr (i64 8 to ptr)()
+  %6 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded3 = and i64 %get_cpu_id2, %6
+  %7 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded3, i64 0, i64 0
+  store i64 %5, ptr %7, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key1", ptr %7, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   ret i64 1
 }
@@ -58,39 +63,41 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define i64 @tracepoint_sched_sched_two_2(ptr %0) section "s_tracepoint_sched_sched_two_2" !dbg !57 {
+define i64 @tracepoint_sched_sched_two_2(ptr %0) section "s_tracepoint_sched_sched_two_2" !dbg !68 {
 entry:
-  %"@x_val" = alloca i64, align 8
   %"@x_key1" = alloca i64, align 8
-  %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 1, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  store i64 %1, ptr %lookup_elem_val, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  store i64 %3, ptr %2, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  store i64 0, ptr %lookup_elem_val, align 8
+  store i64 0, ptr %2, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %2 = load i64, ptr %lookup_elem_val, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
+  %4 = load i64, ptr %2, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  %3 = add i64 %2, 1
+  %5 = add i64 %4, 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 1, ptr %"@x_key1", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %3, ptr %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key1", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
+  %get_cpu_id2 = call i64 inttoptr (i64 8 to ptr)()
+  %6 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded3 = and i64 %get_cpu_id2, %6
+  %7 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded3, i64 0, i64 0
+  store i64 %5, ptr %7, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key1", ptr %7, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   ret i64 1
 }
@@ -98,8 +105,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!47}
-!llvm.module.flags = !{!49}
+!llvm.dbg.cu = !{!59}
+!llvm.module.flags = !{!61}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -148,16 +155,27 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !44 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !45, size: 64, offset: 128)
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !46, size: 64)
 !46 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
-!48 = !{!0, !20, !34}
-!49 = !{i32 2, !"Debug Info Version", i32 3}
-!50 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
-!51 = !DISubroutineType(types: !52)
-!52 = !{!18, !53}
-!53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
-!54 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!55 = !{!56}
-!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !50, file: !2, type: !53)
-!57 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !58)
-!58 = !{!59}
-!59 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !53)
+!47 = !DIGlobalVariableExpression(var: !48, expr: !DIExpression())
+!48 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !49, isLocal: false, isDefinition: true)
+!49 = !DICompositeType(tag: DW_TAG_array_type, baseType: !50, size: 64, elements: !9)
+!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !51, size: 64, elements: !9)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 64, elements: !53)
+!52 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!53 = !{!54}
+!54 = !DISubrange(count: 8, lowerBound: 0)
+!55 = !DIGlobalVariableExpression(var: !56, expr: !DIExpression())
+!56 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
+!57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
+!58 = distinct !DIGlobalVariable(name: "read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !49, isLocal: false, isDefinition: true)
+!59 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !60)
+!60 = !{!0, !20, !34, !47, !55, !57}
+!61 = !{i32 2, !"Debug Info Version", i32 3}
+!62 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !59, retainedNodes: !66)
+!63 = !DISubroutineType(types: !64)
+!64 = !{!18, !65}
+!65 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)
+!66 = !{!67}
+!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !65)
+!68 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !59, retainedNodes: !69)
+!69 = !{!70}
+!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !68, file: !2, type: !65)

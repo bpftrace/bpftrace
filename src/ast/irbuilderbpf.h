@@ -53,12 +53,14 @@ public:
   Value *CreateMapLookupElem(Value *ctx,
                              Map &map,
                              Value *key,
-                             const location &loc);
+                             const location &loc,
+                             std::optional<int> scratch_key = std::nullopt);
   Value *CreateMapLookupElem(Value *ctx,
                              const std::string &map_name,
                              Value *key,
                              SizedType &type,
-                             const location &loc);
+                             const location &loc,
+                             std::optional<int> scratch_key = std::nullopt);
   Value *CreatePerCpuMapAggElems(Value *ctx,
                                  Map &map,
                                  Value *key,
@@ -170,6 +172,7 @@ public:
                                    const location &loc);
   Value *CreateGetFmtStringArgsScratchBuffer(const location &loc);
   Value *CreateTupleScratchBuffer(const location &loc, int key);
+  Value *CreateWriteMapValueScratchBuffer(const location &loc);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -303,6 +306,7 @@ private:
   Value *createScratchBuffer(globalvars::GlobalVar globalvar,
                              const location &loc,
                              size_t key = 0);
+  Value *CreateReadMapValueScratchBuffer(const location &loc, int key);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   llvm::Type *getKernelPointerStorageTy();

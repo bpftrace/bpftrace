@@ -4,6 +4,7 @@
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
+#include "codegen_helper.h"
 #include "globalvars.h"
 #include "log.h"
 #include "struct.h"
@@ -63,6 +64,21 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
+  if (resources_.max_read_map_value_size > 0) {
+    assert(resources_.read_map_value_buffers > 0);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
+  if (resources_.max_write_map_value_size > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -87,9 +103,38 @@ void ResourceAnalyser::visit(Builtin &builtin)
   }
 }
 
+static bool canSkipMapLookupForFirstArgument(Call &call)
+{
+  if (call.func == "has_key" || call.func == "clear" || call.func == "zero" ||
+      call.func == "len")
+    return true;
+  if (call.func == "print" && call.vargs.at(0)->is_map) {
+    auto &arg = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg);
+    return !map.key_expr;
+  }
+  return false;
+}
+
+static bool canSkipMapLookupForAllArguments(Call &call)
+{
+  return call.func == "delete";
+}
+
 void ResourceAnalyser::visit(Call &call)
 {
-  Visitor::visit(call);
+  if (canSkipMapLookupForFirstArgument(call)) {
+    auto &arg = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg);
+    update_map_info(map);
+  } else if (canSkipMapLookupForAllArguments(call)) {
+    for (const auto &arg : call.vargs) {
+      auto &map = static_cast<Map &>(*arg);
+      update_map_info(map);
+    }
+  } else {
+    Visitor::visit(call);
+  }
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
@@ -223,6 +268,19 @@ void ResourceAnalyser::visit(Call &call)
 
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
+  } else if (call.func == "delete") {
+    for (const auto &arg : call.vargs) {
+      const auto &map = static_cast<Map &>(*arg);
+      const auto map_type = getUserDefinedMapType(map.type,
+                                                  map.key_type,
+                                                  *bpftrace_.feature_);
+      // Maps that are not clearable must be zeroed. To do so, we need
+      // to allocate zeros on the stack
+      if (!is_bpf_map_clearable(map_type)) {
+        resources_.max_write_map_value_size = std::max(
+            resources_.max_write_map_value_size, map.type.GetSize());
+      }
+    }
   }
 
   if (call.func == "print" || call.func == "clear" || call.func == "zero") {
@@ -246,9 +304,13 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor::visit(map);
 
-  auto &map_info = resources_.maps_info[map.ident];
-  map_info.value_type = map.type;
-  map_info.key_type = map.key_type;
+  update_map_info(map);
+
+  if (!canAggPerCpuMapElems(map.type, map.key_type, *bpftrace_.feature_)) {
+    resources_.read_map_value_buffers++;
+    resources_.max_read_map_value_size = std::max(
+        resources_.max_read_map_value_size, map.type.GetSize());
+  }
 }
 
 void ResourceAnalyser::visit(Tuple &tuple)
@@ -262,7 +324,16 @@ void ResourceAnalyser::visit(Tuple &tuple)
 
 void ResourceAnalyser::visit(For &f)
 {
-  Visitor::visit(f);
+  // Don't recurse into f.expr since this is a map and will
+  // increment read buffer size even though we use a per-element
+  // callback to extract the value
+  f.decl->accept(*this);
+  for (Statement *stmt : f.stmts) {
+    stmt->accept(*this);
+  }
+
+  auto &map = static_cast<Map &>(*f.expr);
+  update_map_info(map);
 
   // Need tuple per for loop to store key and value
   resources_.tuple_buffers++;
@@ -270,9 +341,56 @@ void ResourceAnalyser::visit(For &f)
                                        f.decl->type.GetSize());
 }
 
+void ResourceAnalyser::visit(AssignMapStatement &assignment)
+{
+  // Unfortunately, CodegenLLVM doesn't recurse into assignment.map
+  // for AssignMapStatement, so we need to do this hack.
+  //
+  // We don't call Visitor::Visit(assignment) since this will
+  // recurse into ResourceAnalyser::visit(assignment.map). This
+  // will then trigger the read map value scratch buffer check and
+  // we significantly over-allocate read buffer.
+  //
+  // To mitigate this, we do the recursion ourselves and update map
+  // info here as well as ResourceAnalyser::visit(map)
+  assignment.expr->accept(*this);
+  Visitor::visit(*assignment.map);
+
+  update_map_info(*assignment.map);
+
+  auto call = dynamic_cast<Call *>(assignment.expr);
+  if (call &&
+      (call->func == "count" || call->func == "avg" || call->func == "hist" ||
+       call->func == "lhist" || call->func == "max" || call->func == "min" ||
+       call->func == "stats" || call->func == "sum"))
+    return;
+
+  if (useAssignMapStatementScratchBuffer(assignment)) {
+    resources_.max_write_map_value_size = std::max(
+        resources_.max_write_map_value_size, assignment.map->type.GetSize());
+  }
+}
+
+void ResourceAnalyser::visit(Unop &unop)
+{
+  if (unopSkipAccept(unop) && unop.expr->is_map) {
+    auto &map = static_cast<Map &>(*unop.expr);
+    update_map_info(map);
+  } else {
+    Visitor::visit(unop);
+  }
+}
+
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
   return fun == "usym" || fun == "func" || fun == "ustack";
+}
+
+void ResourceAnalyser::update_map_info(Map &map)
+{
+  auto &map_info = resources_.maps_info[map.ident];
+  map_info.value_type = map.type;
+  map_info.key_type = map.key_type;
 }
 
 Pass CreateResourcePass()

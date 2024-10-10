@@ -9,58 +9,53 @@ target triple = "bpf-pc-linux"
 %"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
-@AT_foo = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
-@AT_str = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
+@AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
+@AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !27
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !41
-@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [32 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !48
-@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !52
-@read_map_val_buf = dso_local externally_initialized global [1 x [1 x [32 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !54
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !48
+@read_map_val_buf = dso_local externally_initialized global [1 x [1 x [30 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !50
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !59 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
-  %"@str_key" = alloca i64, align 8
-  %"@foo_key1" = alloca i64, align 8
-  %"@foo_key" = alloca i64, align 8
-  %1 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %1, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@foo_key")
-  store i64 0, ptr %"@foo_key", align 8
+  %"@y_key" = alloca i64, align 8
+  %"@x_key1" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %str = alloca [30 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
+  store [30 x i8] c"xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\00", ptr %str, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
+  store i64 0, ptr %"@x_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %str, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
+  store i64 0, ptr %"@x_key1", align 8
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key1")
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %2 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %2
-  %3 = getelementptr [1 x [1 x [32 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %3, i32 32, i64 %arg0)
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_foo, ptr %"@foo_key", ptr %3, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@foo_key")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@foo_key1")
-  store i64 0, ptr %"@foo_key1", align 8
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_foo, ptr %"@foo_key1")
-  %get_cpu_id2 = call i64 inttoptr (i64 8 to ptr)()
-  %4 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded3 = and i64 %get_cpu_id2, %4
-  %5 = getelementptr [1 x [1 x [32 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded3, i64 0, i64 0
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [30 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %5, ptr align 1 %lookup_elem, i64 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 %lookup_elem, i64 30, i1 false)
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 30, i1 false)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@foo_key1")
-  %6 = getelementptr [32 x i8], ptr %5, i32 0, i64 0
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@str_key")
-  store i64 0, ptr %"@str_key", align 8
-  %update_elem4 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_str, ptr %"@str_key", ptr %6, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@str_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
+  store i64 0, ptr %"@y_key", align 8
+  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %2, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
   ret i64 0
 }
 
@@ -81,11 +76,11 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
-!llvm.dbg.cu = !{!56}
-!llvm.module.flags = !{!58}
+!llvm.dbg.cu = !{!54}
+!llvm.module.flags = !{!56}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "AT_foo", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
+!1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !2 = !DIFile(filename: "bpftrace.bpf.o", directory: ".")
 !3 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !4)
 !4 = !{!5, !11, !16, !19}
@@ -105,12 +100,12 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !18 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
-!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 256, elements: !23)
+!21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !22, size: 240, elements: !23)
 !22 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !23 = !{!24}
-!24 = !DISubrange(count: 32, lowerBound: 0)
+!24 = !DISubrange(count: 30, lowerBound: 0)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
-!26 = distinct !DIGlobalVariable(name: "AT_str", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
+!26 = distinct !DIGlobalVariable(name: "AT_y", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !27 = !DIGlobalVariableExpression(var: !28, expr: !DIExpression())
 !28 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
 !29 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !30)
@@ -133,19 +128,17 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !46 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !47, size: 64)
 !47 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !48 = !DIGlobalVariableExpression(var: !49, expr: !DIExpression())
-!49 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !50, isLocal: false, isDefinition: true)
-!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !51, size: 256, elements: !14)
-!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !21, size: 256, elements: !14)
-!52 = !DIGlobalVariableExpression(var: !53, expr: !DIExpression())
-!53 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !47, isLocal: false, isDefinition: true)
-!54 = !DIGlobalVariableExpression(var: !55, expr: !DIExpression())
-!55 = distinct !DIGlobalVariable(name: "read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !50, isLocal: false, isDefinition: true)
-!56 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !57)
-!57 = !{!0, !25, !27, !41, !48, !52, !54}
-!58 = !{i32 2, !"Debug Info Version", i32 3}
-!59 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !56, retainedNodes: !63)
-!60 = !DISubroutineType(types: !61)
-!61 = !{!47, !62}
-!62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
-!63 = !{!64}
-!64 = !DILocalVariable(name: "ctx", arg: 1, scope: !59, file: !2, type: !62)
+!49 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !47, isLocal: false, isDefinition: true)
+!50 = !DIGlobalVariableExpression(var: !51, expr: !DIExpression())
+!51 = distinct !DIGlobalVariable(name: "read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !52, isLocal: false, isDefinition: true)
+!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !53, size: 240, elements: !14)
+!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !21, size: 240, elements: !14)
+!54 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !55)
+!55 = !{!0, !25, !27, !41, !48, !50}
+!56 = !{i32 2, !"Debug Info Version", i32 3}
+!57 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !54, retainedNodes: !61)
+!58 = !DISubroutineType(types: !59)
+!59 = !{!47, !60}
+!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+!61 = !{!62}
+!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)

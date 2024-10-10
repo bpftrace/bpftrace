@@ -19,22 +19,20 @@ target triple = "bpf-pc-linux"
 @AT_e = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !28
 @ringbuf = dso_local global %"struct map_t.4" zeroinitializer, section ".maps", !dbg !38
 @event_loss_counter = dso_local global %"struct map_t.5" zeroinitializer, section ".maps", !dbg !52
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !54
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !56
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !57 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !66 {
 entry:
   %"@e_key" = alloca i64, align 8
   %"struct x.e" = alloca [4 x i8], align 1
-  %"@d_val" = alloca i64, align 8
   %"@d_key" = alloca i64, align 8
   %"struct c.c" = alloca i8, align 1
-  %"@c_val" = alloca i64, align 8
   %"@c_key" = alloca i64, align 8
-  %"@b_val" = alloca i64, align 8
   %"@b_key" = alloca i64, align 8
-  %"@a_val" = alloca i64, align 8
   %"@a_key" = alloca i64, align 8
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
@@ -47,61 +45,69 @@ entry:
   %5 = load volatile i64, ptr %4, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key")
   store i64 0, ptr %"@a_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_val")
-  store i64 %5, ptr %"@a_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %"@a_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %6 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %6
+  %7 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  store i64 %5, ptr %7, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %7, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key")
-  %6 = load i64, ptr %"$x", align 8
-  %7 = add i64 %6, 8
-  %8 = add i64 %7, 0
-  %9 = inttoptr i64 %8 to ptr
-  %10 = load volatile i16, ptr %9, align 2
+  %8 = load i64, ptr %"$x", align 8
+  %9 = add i64 %8, 8
+  %10 = add i64 %9, 0
+  %11 = inttoptr i64 %10 to ptr
+  %12 = load volatile i16, ptr %11, align 2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_key")
   store i64 0, ptr %"@b_key", align 8
-  %11 = sext i16 %10 to i64
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_val")
-  store i64 %11, ptr %"@b_val", align 8
-  %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %"@b_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %13 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded2 = and i64 %get_cpu_id1, %13
+  %14 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
+  %15 = sext i16 %12 to i64
+  store i64 %15, ptr %14, align 8
+  %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %14, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_key")
-  %12 = load i64, ptr %"$x", align 8
-  %13 = add i64 %12, 16
-  %14 = add i64 %13, 0
-  %15 = inttoptr i64 %14 to ptr
-  %16 = load volatile i8, ptr %15, align 1
+  %16 = load i64, ptr %"$x", align 8
+  %17 = add i64 %16, 16
+  %18 = add i64 %17, 0
+  %19 = inttoptr i64 %18 to ptr
+  %20 = load volatile i8, ptr %19, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_key")
   store i64 0, ptr %"@c_key", align 8
-  %17 = sext i8 %16 to i64
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_val")
-  store i64 %17, ptr %"@c_val", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_c, ptr %"@c_key", ptr %"@c_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_val")
+  %get_cpu_id4 = call i64 inttoptr (i64 8 to ptr)()
+  %21 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded5 = and i64 %get_cpu_id4, %21
+  %22 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded5, i64 0, i64 0
+  %23 = sext i8 %20 to i64
+  store i64 %23, ptr %22, align 8
+  %update_elem6 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_c, ptr %"@c_key", ptr %22, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_key")
-  %18 = load i64, ptr %"$x", align 8
-  %19 = add i64 %18, 24
-  %20 = inttoptr i64 %19 to ptr
-  %21 = load volatile i64, ptr %20, align 8
-  %22 = add i64 %21, 0
+  %24 = load i64, ptr %"$x", align 8
+  %25 = add i64 %24, 24
+  %26 = inttoptr i64 %25 to ptr
+  %27 = load volatile i64, ptr %26, align 8
+  %28 = add i64 %27, 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct c.c")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct c.c", i32 1, i64 %22)
-  %23 = load i8, ptr %"struct c.c", align 1
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct c.c", i32 1, i64 %28)
+  %29 = load i8, ptr %"struct c.c", align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct c.c")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_key")
   store i64 0, ptr %"@d_key", align 8
-  %24 = sext i8 %23 to i64
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_val")
-  store i64 %24, ptr %"@d_val", align 8
-  %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_d, ptr %"@d_key", ptr %"@d_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_val")
+  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
+  %30 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded8 = and i64 %get_cpu_id7, %30
+  %31 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded8, i64 0, i64 0
+  %32 = sext i8 %29 to i64
+  store i64 %32, ptr %31, align 8
+  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_d, ptr %"@d_key", ptr %31, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_key")
-  %25 = load i64, ptr %"$x", align 8
-  %26 = add i64 %25, 32
+  %33 = load i64, ptr %"$x", align 8
+  %34 = add i64 %33, 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct x.e")
-  %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct x.e", i32 4, i64 %26)
+  %probe_read_kernel10 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct x.e", i32 4, i64 %34)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@e_key")
   store i64 0, ptr %"@e_key", align 8
-  %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_e, ptr %"@e_key", ptr %"struct x.e", i64 0)
+  %update_elem11 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_e, ptr %"@e_key", ptr %"struct x.e", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@e_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct x.e")
   ret i64 0
@@ -116,8 +122,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!54}
-!llvm.module.flags = !{!56}
+!llvm.dbg.cu = !{!63}
+!llvm.module.flags = !{!65}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_a", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -173,12 +179,21 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !51 = !DISubrange(count: 262144, lowerBound: 0)
 !52 = !DIGlobalVariableExpression(var: !53, expr: !DIExpression())
 !53 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
-!54 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !55)
-!55 = !{!0, !22, !24, !26, !28, !38, !52}
-!56 = !{i32 2, !"Debug Info Version", i32 3}
-!57 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !54, retainedNodes: !61)
-!58 = !DISubroutineType(types: !59)
-!59 = !{!21, !60}
-!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 64)
+!54 = !DIGlobalVariableExpression(var: !55, expr: !DIExpression())
+!55 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !21, isLocal: false, isDefinition: true)
+!56 = !DIGlobalVariableExpression(var: !57, expr: !DIExpression())
+!57 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !58, isLocal: false, isDefinition: true)
+!58 = !DICompositeType(tag: DW_TAG_array_type, baseType: !59, size: 64, elements: !14)
+!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 64, elements: !14)
+!60 = !DICompositeType(tag: DW_TAG_array_type, baseType: !35, size: 64, elements: !61)
 !61 = !{!62}
-!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)
+!62 = !DISubrange(count: 8, lowerBound: 0)
+!63 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !64)
+!64 = !{!0, !22, !24, !26, !28, !38, !52, !54, !56}
+!65 = !{i32 2, !"Debug Info Version", i32 3}
+!66 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !63, retainedNodes: !70)
+!67 = !DISubroutineType(types: !68)
+!68 = !{!21, !69}
+!69 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 64)
+!70 = !{!71}
+!71 = !DILocalVariable(name: "ctx", arg: 1, scope: !66, file: !2, type: !69)

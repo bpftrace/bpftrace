@@ -11,11 +11,13 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !38
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !40
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !41 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !51 {
 entry:
   %"@x_newval28" = alloca i64, align 8
   %lookup_elem_val26 = alloca i64, align 8
@@ -29,14 +31,15 @@ entry:
   %"@x_newval" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@x_key1" = alloca i64, align 8
-  %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 10, ptr %"@x_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  store i64 10, ptr %2, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %2, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 0, ptr %"@x_key1", align 8
@@ -46,8 +49,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  store i64 %1, ptr %lookup_elem_val, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  store i64 %3, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
@@ -55,11 +58,11 @@ lookup_failure:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %2 = load i64, ptr %lookup_elem_val, align 8
+  %4 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_newval")
-  %3 = add i64 %2, 1
-  store i64 %3, ptr %"@x_newval", align 8
+  %5 = add i64 %4, 1
+  store i64 %5, ptr %"@x_newval", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key1", ptr %"@x_newval", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_newval")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
@@ -71,8 +74,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br i1 %map_lookup_cond9, label %lookup_success5, label %lookup_failure6
 
 lookup_success5:                                  ; preds = %lookup_merge
-  %4 = load i64, ptr %lookup_elem4, align 8
-  store i64 %4, ptr %lookup_elem_val8, align 8
+  %6 = load i64, ptr %lookup_elem4, align 8
+  store i64 %6, ptr %lookup_elem_val8, align 8
   br label %lookup_merge7
 
 lookup_failure6:                                  ; preds = %lookup_merge
@@ -80,13 +83,13 @@ lookup_failure6:                                  ; preds = %lookup_merge
   br label %lookup_merge7
 
 lookup_merge7:                                    ; preds = %lookup_failure6, %lookup_success5
-  %5 = load i64, ptr %lookup_elem_val8, align 8
+  %7 = load i64, ptr %lookup_elem_val8, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val8)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_newval10")
-  %6 = add i64 %5, 1
-  store i64 %6, ptr %"@x_newval10", align 8
+  %8 = add i64 %7, 1
+  store i64 %8, ptr %"@x_newval10", align 8
   %update_elem11 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key3", ptr %"@x_newval10", i64 0)
-  %7 = load i64, ptr %"@x_newval10", align 8
+  %9 = load i64, ptr %"@x_newval10", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_newval10")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key3")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key12")
@@ -97,8 +100,8 @@ lookup_merge7:                                    ; preds = %lookup_failure6, %l
   br i1 %map_lookup_cond18, label %lookup_success14, label %lookup_failure15
 
 lookup_success14:                                 ; preds = %lookup_merge7
-  %8 = load i64, ptr %lookup_elem13, align 8
-  store i64 %8, ptr %lookup_elem_val17, align 8
+  %10 = load i64, ptr %lookup_elem13, align 8
+  store i64 %10, ptr %lookup_elem_val17, align 8
   br label %lookup_merge16
 
 lookup_failure15:                                 ; preds = %lookup_merge7
@@ -106,11 +109,11 @@ lookup_failure15:                                 ; preds = %lookup_merge7
   br label %lookup_merge16
 
 lookup_merge16:                                   ; preds = %lookup_failure15, %lookup_success14
-  %9 = load i64, ptr %lookup_elem_val17, align 8
+  %11 = load i64, ptr %lookup_elem_val17, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val17)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_newval19")
-  %10 = sub i64 %9, 1
-  store i64 %10, ptr %"@x_newval19", align 8
+  %12 = sub i64 %11, 1
+  store i64 %12, ptr %"@x_newval19", align 8
   %update_elem20 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key12", ptr %"@x_newval19", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_newval19")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key12")
@@ -122,8 +125,8 @@ lookup_merge16:                                   ; preds = %lookup_failure15, %
   br i1 %map_lookup_cond27, label %lookup_success23, label %lookup_failure24
 
 lookup_success23:                                 ; preds = %lookup_merge16
-  %11 = load i64, ptr %lookup_elem22, align 8
-  store i64 %11, ptr %lookup_elem_val26, align 8
+  %13 = load i64, ptr %lookup_elem22, align 8
+  store i64 %13, ptr %lookup_elem_val26, align 8
   br label %lookup_merge25
 
 lookup_failure24:                                 ; preds = %lookup_merge16
@@ -131,13 +134,13 @@ lookup_failure24:                                 ; preds = %lookup_merge16
   br label %lookup_merge25
 
 lookup_merge25:                                   ; preds = %lookup_failure24, %lookup_success23
-  %12 = load i64, ptr %lookup_elem_val26, align 8
+  %14 = load i64, ptr %lookup_elem_val26, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val26)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_newval28")
-  %13 = sub i64 %12, 1
-  store i64 %13, ptr %"@x_newval28", align 8
+  %15 = sub i64 %14, 1
+  store i64 %15, ptr %"@x_newval28", align 8
   %update_elem29 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key21", ptr %"@x_newval28", i64 0)
-  %14 = load i64, ptr %"@x_newval28", align 8
+  %16 = load i64, ptr %"@x_newval28", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_newval28")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key21")
   ret i64 0
@@ -152,8 +155,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!38}
-!llvm.module.flags = !{!40}
+!llvm.dbg.cu = !{!48}
+!llvm.module.flags = !{!50}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -193,13 +196,22 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !35 = !DISubrange(count: 262144, lowerBound: 0)
 !36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
 !37 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
-!38 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !39)
-!39 = !{!0, !22, !36}
-!40 = !{i32 2, !"Debug Info Version", i32 3}
-!41 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !42, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
-!42 = !DISubroutineType(types: !43)
-!43 = !{!21, !44}
-!44 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)
+!38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
+!39 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !21, isLocal: false, isDefinition: true)
+!40 = !DIGlobalVariableExpression(var: !41, expr: !DIExpression())
+!41 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !42, isLocal: false, isDefinition: true)
+!42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !43, size: 64, elements: !14)
+!43 = !DICompositeType(tag: DW_TAG_array_type, baseType: !44, size: 64, elements: !14)
+!44 = !DICompositeType(tag: DW_TAG_array_type, baseType: !45, size: 64, elements: !46)
 !45 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !46 = !{!47}
-!47 = !DILocalVariable(name: "ctx", arg: 1, scope: !41, file: !2, type: !44)
+!47 = !DISubrange(count: 8, lowerBound: 0)
+!48 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !49)
+!49 = !{!0, !22, !36, !38, !40}
+!50 = !{i32 2, !"Debug Info Version", i32 3}
+!51 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !55)
+!52 = !DISubroutineType(types: !53)
+!53 = !{!21, !54}
+!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)
+!55 = !{!56}
+!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)

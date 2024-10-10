@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bpffeature.h"
 #include "bpftrace.h"
 
 namespace bpftrace {
@@ -32,6 +33,18 @@ inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
   return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
 }
+
+bool useAssignMapStatementScratchBuffer(const AssignMapStatement &assignment);
+
+bool canAggPerCpuMapElems(const SizedType &val_type,
+                          const SizedType &key_type,
+                          BPFfeature &feature);
+
+libbpf::bpf_map_type getUserDefinedMapType(const SizedType &val_type,
+                                           const SizedType &key_type,
+                                           BPFfeature &feature);
+
+bool unopSkipAccept(Unop &unop);
 
 } // namespace ast
 } // namespace bpftrace
