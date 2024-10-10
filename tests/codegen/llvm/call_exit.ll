@@ -6,6 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
+%exit_t = type <{ i64, i8 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -20,10 +21,13 @@ entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %key = alloca i32, align 4
-  %perfdata = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %perfdata)
-  store i64 30000, ptr %perfdata, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %perfdata, i64 8, i64 0)
+  %exit = alloca %exit_t, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
+  %1 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
+  store i64 30000, ptr %1, align 8
+  %2 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
+  store i8 0, ptr %2, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -35,11 +39,11 @@ event_loss_counter:                               ; preds = %entry
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 counter_merge:                                    ; preds = %lookup_merge, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %perfdata)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %1 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %3 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter

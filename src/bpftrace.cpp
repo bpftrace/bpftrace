@@ -51,6 +51,7 @@ std::set<DebugStage> bt_debug = {};
 bool bt_quiet = false;
 bool bt_verbose = false;
 bool dry_run = false;
+int exit_code = 0;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
@@ -261,6 +262,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit)) {
+    auto exit = static_cast<AsyncEvent::Exit *>(data);
+    exit_code = exit->exit_code;
     bpftrace->request_finalize();
     return;
   } else if (printf_id == asyncactionint(AsyncAction::print)) {
@@ -1016,7 +1019,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   if (dry_run) {
     request_finalize();
-    return 0;
+    return exit_code;
   }
 
   // Kick the child to execute the command.
@@ -1073,7 +1076,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   teardown_output();
 
-  return 0;
+  return exit_code;
 }
 
 int BPFtrace::setup_output()

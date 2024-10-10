@@ -45,6 +45,8 @@ TestStruct = namedtuple(
         'will_fail',
         'new_pidns',
         'skip_if_env_has',
+        'return_code',
+        'has_return_code',
     ],
 )
 
@@ -124,6 +126,8 @@ class TestParser(object):
         will_fail = False
         new_pidns = False
         skip_if_env_has = None
+        return_code = 0
+        has_return_code = False
         prev_item_name = ''
 
         for item in test:
@@ -223,6 +227,9 @@ class TestParser(object):
             elif item_name == "SKIP_IF_ENV_HAS":
                 parts = line.split("=")
                 skip_if_env_has = (parts[0], parts[1])
+            elif item_name == "RETURN_CODE":
+                return_code = int(line.strip(' '))
+                has_return_code = True
             else:
                 raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
@@ -232,7 +239,7 @@ class TestParser(object):
             raise RequiredFieldError('Test RUN or PROG is required. Suite: ' + test_suite)
         elif run != '' and prog != '':
             raise InvalidFieldError('Test RUN and PROG both specified. Suit: ' + test_suite)
-        elif len(expects) == 0:
+        elif len(expects) == 0 and not has_return_code:
             raise RequiredFieldError('At leat one test EXPECT (or variation) is required. Suite: ' + test_suite)
         elif len(expects) > 1 and has_exact_expect:
             raise InvalidFieldError('EXPECT_JSON or EXPECT_FILE can not be used with other EXPECTs. Suite: ' + test_suite)
@@ -260,4 +267,6 @@ class TestParser(object):
             will_fail,
             new_pidns,
             skip_if_env_has,
+            return_code,
+            has_return_code,
         )
