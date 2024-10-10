@@ -165,7 +165,9 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
 
     // If the user specified an address/offset, do not overwrite
     // their choice with locations from the DebugInfo.
-    if (probe.address == 0 && probe.func_offset == 0) {
+    if (config_.get(ConfigKeySymbolSource::default_) ==
+            ConfigSymbolSource::dwarf &&
+        probe.address == 0 && probe.func_offset == 0) {
       // Get function locations from the DebugInfo, as it skips the
       // prologue and also returns locations of inlined function calls.
       if (auto *dwarf = get_dwarf(probe.path)) {
