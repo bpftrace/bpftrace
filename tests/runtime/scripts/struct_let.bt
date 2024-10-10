@@ -1,0 +1,29 @@
+struct T {
+  uint32_t a;
+  uint32_t b[2];
+};
+
+struct W {
+  uint32_t a;
+  struct T t;
+};
+
+struct C {
+  uint32_t a;
+  void * b;
+  struct W w[10];
+};
+
+uprobe:./testprogs/struct_array:clear {
+  let $c: struct C *;
+  let $w: struct W[10];
+  
+  $c = (struct C *) arg0;
+  $w = $c->w;
+
+  printf("%d ", $w[0].a);
+  printf("%d ", $w[2].a);
+  printf("%d ", $w[4].a);
+  printf("%d ", $w[6].a);
+  printf("%d ", $w[8].a);
+}

@@ -396,6 +396,7 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type)
   size_t size = num_elements * element_type.GetSize();
   auto ty = SizedType(Type::array, size);
   ty.element_type_ = std::make_shared<SizedType>(element_type);
+  ty.num_elements_ = num_elements;
   return ty;
 }
 

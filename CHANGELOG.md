@@ -29,6 +29,8 @@ and this project adheres to
   - [#3390](https://github.com/bpftrace/bpftrace/pull/3390/)
 - Add `has_key` function for maps
   - [#3358](https://github.com/bpftrace/bpftrace/pull/3358)
+- Variable declarations with `let`
+  - [#3461](https://github.com/bpftrace/bpftrace/pull/3461)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

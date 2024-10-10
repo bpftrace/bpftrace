@@ -57,6 +57,7 @@ public:
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(VarDeclStatement &decl) override;
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
@@ -250,6 +251,9 @@ private:
 
   bool canAggPerCpuMapElems(const SizedType &val_type,
                             const SizedType &key_type);
+
+  void maybeAllocVariable(const std::string &var_ident,
+                          const SizedType &var_type);
 
   Node *root_ = nullptr;
 

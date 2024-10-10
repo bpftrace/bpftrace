@@ -36,6 +36,7 @@ public:
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(AssignConfigVarStatement &assignment) = 0;
+  virtual void visit(VarDeclStatement &decl) = 0;
   virtual void visit(If &if_block) = 0;
   virtual void visit(Jump &jump) = 0;
   virtual void visit(Unroll &unroll) = 0;
@@ -104,6 +105,7 @@ public:
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(AssignConfigVarStatement &assignment) override;
+  void visit(VarDeclStatement &decl) override;
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
@@ -171,6 +173,7 @@ public:
   virtual R visit(AssignMapStatement &node) DEFAULT_FN;
   virtual R visit(AssignVarStatement &node) DEFAULT_FN;
   virtual R visit(AssignConfigVarStatement &node) DEFAULT_FN;
+  virtual R visit(VarDeclStatement &node) DEFAULT_FN;
   virtual R visit(If &node) DEFAULT_FN;
   virtual R visit(Jump &node) DEFAULT_FN;
   virtual R visit(Unroll &node) DEFAULT_FN;
@@ -222,6 +225,7 @@ private:
     DEFINE_DISPATCH(AssignMapStatement);
     DEFINE_DISPATCH(AssignVarStatement);
     DEFINE_DISPATCH(AssignConfigVarStatement);
+    DEFINE_DISPATCH(VarDeclStatement);
     DEFINE_DISPATCH(If);
     DEFINE_DISPATCH(Unroll);
     DEFINE_DISPATCH(Jump);
