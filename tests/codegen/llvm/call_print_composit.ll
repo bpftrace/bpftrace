@@ -26,9 +26,8 @@ entry:
   store [4 x i8] c"abc\00", ptr %str, align 1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %1
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %1
-  %2 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
   %3 = getelementptr %"int64_string[4]__tuple_t", ptr %2, i32 0, i32 0
   store i64 1, ptr %3, align 8
@@ -37,9 +36,8 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp2 = icmp ule i64 %get_cpu_id1, %5
-  %cpuid.min.select3 = select i1 %cpuid.min.cmp2, i64 %get_cpu_id1, i64 %5
-  %6 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpuid.min.select3, i64 0, i64 0
+  %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
+  %6 = getelementptr [1 x [1 x [32 x i8]]], ptr @fmt_str_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
   %7 = getelementptr %print_tuple_16_t, ptr %6, i64 0, i32 0
   store i64 30007, ptr %7, align 8
   %8 = getelementptr %print_tuple_16_t, ptr %6, i64 0, i32 1

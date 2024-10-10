@@ -514,10 +514,10 @@ Value *IRBuilderBPF::createScratchBuffer(
   auto max = CreateLoad(getInt64Ty(),
                         module_.getGlobalVariable(to_string(
                             bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
-  // Verify CPU ID is between 0 and MAX_CPU_ID to ensure we pass BPF
-  // verifer on older 5.2 kernels
-  auto cmp = CreateICmp(CmpInst::ICMP_ULE, cpu_id, max, "cpuid.min.cmp");
-  auto select = CreateSelect(cmp, cpu_id, max, "cpuid.min.select");
+  // Mask CPU ID by MAX_CPU_ID to ensure BPF verifier knows CPU ID is bounded
+  // on older kernels. Note this means MAX_CPU_ID must be 2^N - 1 for some N.
+  // See get_max_cpu_id() for more details.
+  auto bounded_cpu_id = CreateAnd(cpu_id, max, "cpu.id.bounded");
 
   // Note the 1st index is 0 because we're pointing to
   // ValueType var[MAX_CPU_ID + 1][num_elements]
@@ -526,7 +526,7 @@ Value *IRBuilderBPF::createScratchBuffer(
   return CreateGEP(GetType(type),
                    CreatePointerCast(module_.getGlobalVariable(config.name),
                                      GetType(type)->getPointerTo()),
-                   { getInt64(0), select, getInt64(key), getInt64(0) });
+                   { getInt64(0), bounded_cpu_id, getInt64(key), getInt64(0) });
 }
 
 /*

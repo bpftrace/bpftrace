@@ -21,7 +21,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !62 {
 entry:
-  %"@a_key5" = alloca i64, align 8
+  %"@a_key4" = alloca i64, align 8
   %str1 = alloca [13 x i8], align 1
   %"@a_val" = alloca %"int64_string[13]__tuple_t", align 8
   %"@a_key" = alloca i64, align 8
@@ -30,9 +30,8 @@ entry:
   store [3 x i8] c"hi\00", ptr %str, align 1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %1
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %1
-  %2 = getelementptr [1 x [2 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [2 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
   %3 = getelementptr %"int64_string[3]__tuple_t", ptr %2, i32 0, i32 0
   store i64 1, ptr %3, align 8
@@ -56,19 +55,18 @@ entry:
   store [13 x i8] c"hellolongstr\00", ptr %str1, align 1
   %get_cpu_id2 = call i64 inttoptr (i64 8 to ptr)()
   %9 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp3 = icmp ule i64 %get_cpu_id2, %9
-  %cpuid.min.select4 = select i1 %cpuid.min.cmp3, i64 %get_cpu_id2, i64 %9
-  %10 = getelementptr [1 x [2 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select4, i64 1, i64 0
+  %cpu.id.bounded3 = and i64 %get_cpu_id2, %9
+  %10 = getelementptr [1 x [2 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded3, i64 1, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 24, i1 false)
   %11 = getelementptr %"int64_string[13]__tuple_t", ptr %10, i32 0, i32 0
   store i64 1, ptr %11, align 8
   %12 = getelementptr %"int64_string[13]__tuple_t", ptr %10, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %12, ptr align 1 %str1, i64 13, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key5")
-  store i64 0, ptr %"@a_key5", align 8
-  %update_elem6 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key5", ptr %10, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key5")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key4")
+  store i64 0, ptr %"@a_key4", align 8
+  %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key4", ptr %10, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key4")
   ret i64 0
 }
 

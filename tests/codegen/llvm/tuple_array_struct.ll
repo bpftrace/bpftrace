@@ -28,9 +28,8 @@ entry:
   %3 = add i64 %arg1, 0
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %4 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %4
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %4
-  %5 = getelementptr [1 x [1 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %4
+  %5 = getelementptr [1 x [1 x [24 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 24, i1 false)
   %6 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %5, i32 0, i32 0
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 8, i64 %arg0)

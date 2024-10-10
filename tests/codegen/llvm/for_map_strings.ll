@@ -44,9 +44,8 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %"@x_key" = alloca i64, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
-  %cpuid.min.cmp = icmp ule i64 %get_cpu_id, %5
-  %cpuid.min.select = select i1 %cpuid.min.cmp, i64 %get_cpu_id, i64 %5
-  %6 = getelementptr [1 x [1 x [8 x i8]]], ptr @tuple_buf, i64 0, i64 %cpuid.min.select, i64 0, i64 0
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [1 x [8 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 8, i1 false)
   %7 = getelementptr %"string[4]_string[4]__tuple_t", ptr %6, i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %1, i64 4, i1 false)

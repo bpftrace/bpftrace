@@ -256,6 +256,8 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 std::vector<int> get_pids_for_program(const std::string &program);
 std::vector<int> get_all_running_pids();
 
+uint32_t round_up_to_next_power_of_two(uint32_t n);
+
 std::string sanitise_bpf_program_name(const std::string &name);
 // Generate object file function name for a given probe
 inline std::string get_function_name_for_probe(
