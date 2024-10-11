@@ -199,6 +199,7 @@ class TestParser(object):
                     "iter",
                     "libpath_resolv",
                     "dwarf",
+                    "kernel_dwarf",
                     "aot",
                     "kprobe_multi",
                     "uprobe_multi",

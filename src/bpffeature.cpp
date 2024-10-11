@@ -14,6 +14,7 @@
 #include "bpf_assembler.h"
 #include "btf.h"
 #include "debugfs.h"
+#include "dwarf_parser.h"
 #include "probe_matcher.h"
 #include "tracefs.h"
 #include "utils.h"
@@ -621,6 +622,7 @@ std::string BPFfeature::report()
       << "  Loop support: " << to_str(has_loop())
       << "  btf: " << to_str(has_btf())
       << "  module btf: " << to_str(has_module_btf())
+      << "  Kernel DWARF: " << to_str(has_kernel_dwarf())
       << "  map batch: " << to_str(has_map_batch())
       << "  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): "
       << to_str(has_uprobe_refcnt()) << std::endl;
@@ -713,6 +715,28 @@ bool BPFfeature::has_iter(std::string name)
   return detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
                           tracing_name.c_str(),
                           libbpf::BPF_TRACE_ITER);
+}
+
+bool BPFfeature::has_kernel_dwarf()
+{
+#ifndef HAVE_LIBLLDB
+  return false;
+#endif
+
+  auto vmlinux = find_vmlinux();
+  if (!vmlinux.has_value())
+    return false;
+
+  // WARNING: we are not passing a pointer to BPFtrace, so we can only use:
+  // * Dwarf::has_debug_info
+  // * Dwarf::get_function_locations
+  // * Dwarf::get_function_params
+  // Otherwise, Dwarf will try to use the BPFtrace pointer and will segfault.
+  auto dwarf = Dwarf::GetFromBinary(nullptr, vmlinux.value());
+  if (!dwarf)
+    return false;
+
+  return dwarf->has_debug_info();
 }
 
 } // namespace bpftrace

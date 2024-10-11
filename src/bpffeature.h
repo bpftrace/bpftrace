@@ -102,6 +102,7 @@ public:
   bool has_prog_kfunc();
   bool has_module_btf();
   bool has_iter(std::string name);
+  bool has_kernel_dwarf();
 
   std::string report(void);
 
@@ -143,6 +144,7 @@ protected:
   std::optional<bool> has_prog_kfunc_;
   std::optional<bool> has_module_btf_;
   std::optional<bool> has_btf_func_global_;
+  std::optional<bool> has_kernel_dwarf_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);

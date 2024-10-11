@@ -15,14 +15,23 @@
 
 namespace bpftrace {
 
-std::atomic<size_t> Dwarf::instance_count = 0;
+std::atomic<size_t> Dwarf::InstanceCounter::count = 0;
+
+Dwarf::InstanceCounter::InstanceCounter()
+{
+  if (count++ == 0)
+    lldb::SBDebugger::Initialize();
+}
+
+Dwarf::InstanceCounter::~InstanceCounter()
+{
+  if (--count == 0)
+    lldb::SBDebugger::Terminate();
+}
 
 Dwarf::Dwarf(BPFtrace *bpftrace, std::string file_path)
-    : bpftrace_(bpftrace), file_path_(std::move(file_path))
+    : counter_(), bpftrace_(bpftrace), file_path_(std::move(file_path))
 {
-  if (instance_count++ == 0)
-    lldb::SBDebugger::Initialize();
-
   // Create a "hardened" debugger instance with no scripting, nor .lldbinit.
   // We don't want a Python extension or .lldbinit to influence the byte-code
   // that will get executed by the Kernel. It would be a security risk!
@@ -37,10 +46,23 @@ Dwarf::Dwarf(BPFtrace *bpftrace, std::string file_path)
   }
 }
 
-Dwarf::~Dwarf()
+bool Dwarf::has_debug_info()
 {
-  if (--instance_count == 0)
-    lldb::SBDebugger::Terminate();
+#if LLVM_VERSION_MAJOR <= 13
+  // LLVM 13 statistics does not contain a field for the DebugInfo size.
+  // So we can't verify the presence of DebugInfo and we assume it is present.
+  return true;
+#else
+  // Verify that the target contains DebugInfo.
+  if (auto stats = target_.GetStatistics())
+    if (auto modules = stats.GetValueForKey("modules"))
+      if (auto module = modules.GetItemAtIndex(0))
+        if (auto hasDebugInfo = module.GetValueForKey("debugInfoByteSize"))
+          if (hasDebugInfo.GetIntegerValue() > 0)
+            return true;
+#endif
+
+  return false;
 }
 
 std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
