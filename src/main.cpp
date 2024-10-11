@@ -136,6 +136,7 @@ void usage()
   std::cerr << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
   std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
+  std::cerr << "    BPFTRACE_ON_STACK_LIMIT           [default: 32] max bytes of individual objects to store them on the BPF stack vs. pre-allocated memory" << std::endl;
   std::cerr << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
   std::cerr << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
   std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER        [default: '..'] string truncation trailer" << std::endl;
@@ -256,6 +257,10 @@ static void parse_env(BPFtrace& bpftrace)
   ConfigSetter config_setter(bpftrace.config_, ConfigSource::env_var);
   get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_strlen, x);
+  });
+
+  get_uint64_env_var("BPFTRACE_ON_STACK_LIMIT", [&](uint64_t x) {
+    config_setter.set(ConfigKeyInt::on_stack_limit, x);
   });
 
   get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {

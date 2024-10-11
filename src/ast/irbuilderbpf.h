@@ -165,9 +165,16 @@ public:
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,
                                      const location &loc);
-  Value *CreateGetStrScratchBuffer(const location &loc, int key);
-  Value *CreateGetFmtStringArgsScratchBuffer(const location &loc);
-  Value *CreateTupleScratchBuffer(const location &loc, int key);
+  Value *CreateGetStrAllocation(const std::string &name,
+                                const location &loc,
+                                AsyncIds &async_ids);
+  Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
+                                          const std::string &name,
+                                          const location &loc);
+  Value *CreateTupleAllocation(const SizedType &tuple_type,
+                               const std::string &name,
+                               const location &loc,
+                               AsyncIds &async_ids);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -298,9 +305,15 @@ private:
                                 const location &loc,
                                 BasicBlock *failure_callback,
                                 int key = 0);
+  Value *createAllocation(
+      globalvars::GlobalVar globalvar,
+      llvm::Type *obj_type,
+      const std::string &name,
+      const location &loc,
+      std::optional<std::function<size_t()>> gen_async_id_cb = std::nullopt);
   Value *createScratchBuffer(globalvars::GlobalVar globalvar,
                              const location &loc,
-                             size_t key = 0);
+                             size_t key);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   llvm::Type *getKernelPointerStorageTy();
