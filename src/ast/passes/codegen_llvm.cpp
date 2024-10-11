@@ -812,7 +812,7 @@ void CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    Value *buf = b_.CreateGetStrScratchBuffer(call.loc, async_ids_.str());
+    Value *buf = b_.CreateGetStrAllocation("str", call.loc, async_ids_);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
     auto arg0 = call.vargs.front();
     auto scoped_del = accept(call.vargs.front());
@@ -820,6 +820,8 @@ void CodegenLLVM::visit(Call &call)
         ctx_, buf, strlen, expr_, arg0->type.GetAS(), call.loc);
 
     expr_ = buf;
+    if (dyn_cast<AllocaInst>(buf))
+      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "buf") {
     const uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     // Subtract out metadata headroom
@@ -849,15 +851,17 @@ void CodegenLLVM::visit(Call &call)
       length = b_.getInt32(fixed_buffer_length);
     }
 
-    Value *scratch_buf = b_.CreateGetStrScratchBuffer(call.loc,
-                                                      async_ids_.str());
+    Value *stack_or_scratch_buf = b_.CreateGetStrAllocation("buf",
+                                                            call.loc,
+                                                            async_ids_);
     auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
     std::ostringstream dynamic_sized_struct_name;
     dynamic_sized_struct_name << "buffer_" << fixed_buffer_length << "_t";
     StructType *buf_struct = b_.GetStructType(dynamic_sized_struct_name.str(),
                                               elements,
                                               true);
-    Value *buf = b_.CreatePointerCast(scratch_buf, buf_struct->getPointerTo());
+    Value *buf = b_.CreatePointerCast(stack_or_scratch_buf,
+                                      buf_struct->getPointerTo());
 
     Value *buf_len_offset = b_.CreateGEP(buf_struct,
                                          buf,
@@ -880,8 +884,10 @@ void CodegenLLVM::visit(Call &call)
                        call.loc);
 
     expr_ = buf;
+    if (dyn_cast<AllocaInst>(buf))
+      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "path") {
-    Value *buf = b_.CreateGetStrScratchBuffer(call.loc, async_ids_.str());
+    Value *buf = b_.CreateGetStrAllocation("path", call.loc, async_ids_);
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
                        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
@@ -910,6 +916,8 @@ void CodegenLLVM::visit(Call &call)
                   sz,
                   call.loc);
     expr_ = buf;
+    if (dyn_cast<AllocaInst>(buf))
+      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "kaddr") {
     uint64_t addr;
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
@@ -1952,7 +1960,7 @@ void CodegenLLVM::visit(Ternary &ternary)
   // ordering of all the following statements is important
   Value *buf = nullptr;
   if (ternary.type.IsStringTy()) {
-    buf = b_.CreateGetStrScratchBuffer(ternary.loc, async_ids_.str());
+    buf = b_.CreateGetStrAllocation("buf", ternary.loc, async_ids_);
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   }
@@ -1998,6 +2006,8 @@ void CodegenLLVM::visit(Ternary &ternary)
 
     b_.SetInsertPoint(done);
     expr_ = buf;
+    if (dyn_cast<AllocaInst>(buf))
+      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else {
     // Type::none
     b_.SetInsertPoint(left_block);
@@ -2267,17 +2277,18 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
 /*
  * createTuple
  *
- * Constructs a tuple on the scratch buffer from the provided values.
+ * Constructs a tuple on the scratch buffer or stack from the provided values.
  */
 Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
     const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+    const std::string &name,
     const location &loc)
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
   auto buf = b_.CreatePointerCast(
-      b_.CreateTupleScratchBuffer(loc, async_ids_.tuple()),
+      b_.CreateTupleAllocation(tuple_type, name, loc, async_ids_),
       tuple_ty->getPointerTo());
   b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
@@ -2346,11 +2357,11 @@ void CodegenLLVM::visit(Tuple &tuple)
     scoped_dels.emplace_back(accept(elem));
     vals.push_back({ expr_, &elem->loc });
   }
-  auto buf = createTuple(tuple.type, vals, tuple.loc);
+  auto buf = createTuple(tuple.type, vals, "tuple", tuple.loc);
 
-  // No need to end buf lifetime since tuple allocation is done via scratch maps
-  // and not on stack
   expr_ = buf;
+  if (dyn_cast<AllocaInst>(buf))
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
@@ -3499,7 +3510,9 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                << " does not match LLVM offset=" << expected_offset;
   }
 
-  Value *fmt_args = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
+  Value *fmt_args = b_.CreateGetFmtStringArgsAllocation(fmt_struct,
+                                                        call_name + "_args",
+                                                        call.loc);
   // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
@@ -3527,6 +3540,8 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   }
 
   b_.CreateOutput(ctx_, fmt_args, struct_size, &call.loc);
+  if (dyn_cast<AllocaInst>(fmt_args))
+    b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
 }
 
@@ -3643,7 +3658,9 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   StructType *print_struct = b_.GetStructType(struct_name.str(),
                                               elements,
                                               true);
-  Value *buf = b_.CreateGetFmtStringArgsScratchBuffer(call.loc);
+  Value *buf = b_.CreateGetFmtStringArgsAllocation(print_struct,
+                                                   struct_name.str(),
+                                                   call.loc);
   size_t struct_size = datalayout().getTypeAllocSize(print_struct);
 
   // Store asyncactionid:
@@ -3678,6 +3695,8 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   }
 
   b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
+  if (dyn_cast<AllocaInst>(buf))
+    b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
 
@@ -4504,6 +4523,7 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   // Create decl variable for use in this iteration of the loop
   auto tuple = createTuple(f.decl->type,
                            { { key, &f.decl->loc }, { val, &f.decl->loc } },
+                           f.decl->ident,
                            f.decl->loc);
   variables_[f.decl->ident] = VariableLLVM{ tuple, b_.GetType(f.decl->type) };
 

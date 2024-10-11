@@ -3572,6 +3572,14 @@ The possible options are:
 - `warn` - print a warning but continue execution
 - `ignore` - silently ignore missing probes
 
+=== on_stack_limit
+
+Default: 32
+
+The maximum size (in bytes) of individual objects that will be stored on the BPF stack. If they are larger than this limit they will be stored in pre-allocated memory.
+
+This exists because the BPF stack is limited to 512 bytes and large objects make it more likely that we'll run out of space. bpftrace can store objects that are larger than the `on_stack_limit` in pre-allocated memory to prevent this stack error. However, storing in pre-allocated memory may be less memory efficient. Lower this default number if you are still seeing a stack memory error or increase it if you're worried about memory consumption.
+
 === perf_rb_pages
 
 Default: 64
