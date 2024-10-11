@@ -2,6 +2,7 @@
 
 #include "bpftrace.h"
 #include "log.h"
+#include "types.h"
 #include "utils.h"
 
 #include <bpf/bpf.h>
@@ -138,6 +139,7 @@ static void update_global_vars_rodata(
         break;
       case GlobalVar::FMT_STRINGS_BUFFER:
       case GlobalVar::TUPLE_BUFFER:
+      case GlobalVar::GET_STR_BUFFER:
         break;
     }
   }
@@ -251,7 +253,8 @@ static SizedType make_rw_type(size_t num_elements,
 }
 
 SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
-                   const RequiredResources &resources)
+                   const RequiredResources &resources,
+                   const Config &bpftrace_config)
 {
   switch (global_var) {
     case bpftrace::globalvars::GlobalVar::NUM_CPUS:
@@ -266,6 +269,11 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
       assert(resources.tuple_buffers > 0);
       return make_rw_type(resources.tuple_buffers,
                           CreateArray(resources.max_tuple_size, CreateInt8()));
+    case bpftrace::globalvars::GlobalVar::GET_STR_BUFFER:
+      assert(resources.str_buffers > 0);
+      const auto max_strlen = bpftrace_config.get(ConfigKeyInt::max_strlen);
+      return make_rw_type(resources.str_buffers,
+                          CreateArray(max_strlen, CreateInt8()));
   }
   return {}; // unreachable
 }

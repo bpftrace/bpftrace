@@ -165,9 +165,7 @@ public:
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,
                                      const location &loc);
-  CallInst *CreateGetStrScratchMap(int idx,
-                                   BasicBlock *failure_callback,
-                                   const location &loc);
+  Value *CreateGetStrScratchBuffer(const location &loc, int key);
   Value *CreateGetFmtStringArgsScratchBuffer(const location &loc);
   Value *CreateTupleScratchBuffer(const location &loc, int key);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);

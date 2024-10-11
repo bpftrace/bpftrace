@@ -107,6 +107,9 @@ public:
   size_t tuple_buffers = 0;
   size_t max_tuple_size = 0;
 
+  // Required for sizing of string scratch buffer
+  size_t str_buffers = 0;
+
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.
   //

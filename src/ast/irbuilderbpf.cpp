@@ -475,16 +475,11 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
                              failure_callback);
 }
 
-CallInst *IRBuilderBPF::CreateGetStrScratchMap(int idx,
-                                               BasicBlock *failure_callback,
-                                               const location &loc)
+Value *IRBuilderBPF::CreateGetStrScratchBuffer(const location &loc, int key)
 {
-  return createGetScratchMap(to_string(MapType::StrBuffer),
-                             "str",
-                             GET_PTR_TY(),
+  return createScratchBuffer(bpftrace::globalvars::GlobalVar::GET_STR_BUFFER,
                              loc,
-                             failure_callback,
-                             idx);
+                             key);
 }
 
 Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(const location &loc)
@@ -507,7 +502,9 @@ Value *IRBuilderBPF::createScratchBuffer(
 {
   auto config = globalvars::get_config(globalvar);
   // ValueType var[MAX_CPU_ID + 1][num_elements]
-  auto type = globalvars::get_type(globalvar, bpftrace_.resources);
+  auto type = globalvars::get_type(globalvar,
+                                   bpftrace_.resources,
+                                   bpftrace_.config_);
 
   // Get CPU ID
   auto cpu_id = CreateGetCpuId(loc);
