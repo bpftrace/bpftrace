@@ -36,6 +36,7 @@ enum class ConfigKeyInt {
   max_probes,
   max_strlen,
   max_type_res_iterations,
+  on_stack_limit,
   perf_rb_pages,
 };
 
@@ -82,6 +83,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "max_probes", ConfigKeyInt::max_probes },
   { "max_strlen", ConfigKeyInt::max_strlen },
   { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
+  { "on_stack_limit", ConfigKeyInt::on_stack_limit },
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
   { "probe_inline", ConfigKeyBool::probe_inline },
   { "stack_mode", ConfigKeyStackMode::default_ },

@@ -46,10 +46,13 @@ void test(BPFtrace &bpftrace,
 
 void test(const std::string &input,
           bool expected_result = true,
-          RequiredResources *out = nullptr)
+          RequiredResources *out = nullptr,
+          std::optional<uint64_t> on_stack_limit = std::nullopt)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  auto configs = ConfigSetter(bpftrace->config_, ConfigSource::script);
+  configs.set(ConfigKeyInt::on_stack_limit, on_stack_limit.value_or(0));
   return test(*bpftrace, input, expected_result, out);
 }
 
@@ -75,6 +78,13 @@ TEST(resource_analyser, fmt_string_args_size_ints)
   RequiredResources resources;
   test(R"(BEGIN { printf("%d %d", 3, 4) })", true, &resources);
   EXPECT_EQ(resources.max_fmtstring_args_size, 24);
+}
+
+TEST(resource_analyser, fmt_string_args_below_on_stack_limit)
+{
+  RequiredResources resources;
+  test(R"(BEGIN { printf("%d %d", 3, 4) })", true, &resources, 32);
+  EXPECT_EQ(resources.max_fmtstring_args_size, 0);
 }
 
 TEST(resource_analyser, fmt_string_args_size_arrays)

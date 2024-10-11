@@ -31,6 +31,8 @@ aot.call.print_non_map_tuple
 aot.call.str_big_for
 # Same problem as #3392
 aot.call.str_big_tuple
+# Same problem as #3392
+aot.call.tuple_scratch_buf
 aot.call.str_truncated
 aot.call.str_truncated_custom
 aot.call.strftime

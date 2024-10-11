@@ -109,6 +109,21 @@ AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
+NAME tuple_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { print((1, (2, "XXXX"))) }
+EXPECT (1, (2, XXXX))
+
+NAME str_scratch_buf
+PROG config = { on_stack_limit = 0 } t:syscalls:sys_enter_execve { print(str(args.filename)) }
+EXPECT /XXXX
+AFTER ./testprogs/syscall execve /XXXX
+REQUIRES_FEATURE probe_read_kernel
+TIMEOUT 1
+
+NAME fmt_str_args_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { printf("%s %d\n", "XXXX", 1) }
+EXPECT XXXX 1
+
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
 ENV BPFTRACE_MAX_STRLEN=9999
