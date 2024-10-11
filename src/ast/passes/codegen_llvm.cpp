@@ -812,7 +812,7 @@ void CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    Value *buf = b_.CreateGetStrScratchMap(async_ids_.str(), nullptr, call.loc);
+    Value *buf = b_.CreateGetStrScratchBuffer(call.loc, async_ids_.str());
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
     auto arg0 = call.vargs.front();
     auto scoped_del = accept(call.vargs.front());
@@ -849,9 +849,8 @@ void CodegenLLVM::visit(Call &call)
       length = b_.getInt32(fixed_buffer_length);
     }
 
-    Value *scratch_buf = b_.CreateGetStrScratchMap(async_ids_.str(),
-                                                   nullptr,
-                                                   call.loc);
+    Value *scratch_buf = b_.CreateGetStrScratchBuffer(call.loc,
+                                                      async_ids_.str());
     auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
     std::ostringstream dynamic_sized_struct_name;
     dynamic_sized_struct_name << "buffer_" << fixed_buffer_length << "_t";
@@ -882,7 +881,7 @@ void CodegenLLVM::visit(Call &call)
 
     expr_ = buf;
   } else if (call.func == "path") {
-    Value *buf = b_.CreateGetStrScratchMap(async_ids_.str(), nullptr, call.loc);
+    Value *buf = b_.CreateGetStrScratchBuffer(call.loc, async_ids_.str());
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
                        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
@@ -1953,7 +1952,7 @@ void CodegenLLVM::visit(Ternary &ternary)
   // ordering of all the following statements is important
   Value *buf = nullptr;
   if (ternary.type.IsStringTy()) {
-    buf = b_.CreateGetStrScratchMap(async_ids_.str(), nullptr, ternary.loc);
+    buf = b_.CreateGetStrScratchBuffer(ternary.loc, async_ids_.str());
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   }
@@ -3674,7 +3673,7 @@ void CodegenLLVM::generate_ir()
   auto codegen_resources = analyser.analyse();
 
   generate_maps(bpftrace_.resources, codegen_resources);
-  generate_global_vars(bpftrace_.resources);
+  generate_global_vars(bpftrace_.resources, bpftrace_.config_);
 
   auto scoped_del = accept(root_);
   debug_.finalize();
@@ -3837,15 +3836,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateNone());
   }
 
-  if (codegen_resources.str_buffers > 0) {
-    auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
-    createMapDefinition(to_string(MapType::StrBuffer),
-                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
-                        codegen_resources.str_buffers,
-                        CreateInt32(),
-                        CreateArray(max_strlen, CreateInt8()));
-  }
-
   int loss_cnt_key_size = sizeof(bpftrace_.event_loss_cnt_key_) * 8;
   int loss_cnt_val_size = sizeof(bpftrace_.event_loss_cnt_val_) * 8;
   createMapDefinition(to_string(MapType::EventLossCounter),
@@ -3855,11 +3845,15 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                       CreateInt(loss_cnt_val_size));
 }
 
-void CodegenLLVM::generate_global_vars(const RequiredResources &resources)
+void CodegenLLVM::generate_global_vars(
+    const RequiredResources &resources,
+    const ::bpftrace::Config &bpftrace_config)
 {
   for (const auto global_var : resources.needed_global_vars) {
     auto config = bpftrace::globalvars::get_config(global_var);
-    auto type = bpftrace::globalvars::get_type(global_var, resources);
+    auto type = bpftrace::globalvars::get_type(global_var,
+                                               resources,
+                                               bpftrace_config);
     auto var = llvm::dyn_cast<GlobalVariable>(
         module_->getOrInsertGlobal(config.name, b_.GetType(type)));
     var->setInitializer(ConstantAggregateZero::get(b_.GetType(type)));

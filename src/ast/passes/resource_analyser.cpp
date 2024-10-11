@@ -63,6 +63,13 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
+  if (resources_.str_buffers > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::GET_STR_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -235,6 +242,10 @@ void ResourceAnalyser::visit(Call &call)
     }
   }
 
+  if (call.func == "str" || call.func == "buf" || call.func == "path") {
+    resources_.str_buffers++;
+  }
+
   if (uses_usym_table(call.func)) {
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
@@ -268,6 +279,18 @@ void ResourceAnalyser::visit(For &f)
   resources_.tuple_buffers++;
   resources_.max_tuple_size = std::max(resources_.max_tuple_size,
                                        f.decl->type.GetSize());
+}
+
+void ResourceAnalyser::visit(Ternary &ternary)
+{
+  Visitor::visit(ternary);
+
+  // Codegen cannot use a phi node for ternary string b/c strings can be of
+  // differing lengths and phi node wants identical types. So we have to
+  // allocate a result temporary, but not on the stack b/c a big string would
+  // blow it up. So we need a scratch buffer for it.
+  if (ternary.type.IsStringTy())
+    resources_.str_buffers++;
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

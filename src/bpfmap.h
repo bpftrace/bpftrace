@@ -71,7 +71,6 @@ enum class MapType {
   Join,
   Elapsed,
   Ringbuf,
-  StrBuffer,
   EventLossCounter,
   RecursionPrevention,
 };

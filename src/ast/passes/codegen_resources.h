@@ -12,7 +12,6 @@ namespace ast {
 struct CodegenResources {
   bool needs_elapsed_map = false;
   bool needs_join_map = false;
-  uint32_t str_buffers = 0;
   std::unordered_set<StackType> stackid_maps;
 };
 
@@ -29,7 +28,6 @@ public:
 private:
   void visit(Builtin &map) override;
   void visit(Call &call) override;
-  void visit(Ternary &ternary) override;
 
   const ::bpftrace::Config &config_;
   CodegenResources resources_;

@@ -19,6 +19,7 @@ constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
 constexpr std::string_view TUPLE_BUFFER_SECTION_NAME = ".data.tuple_buf";
+constexpr std::string_view GET_STR_BUFFER_SECTION_NAME = ".data.get_str_buf";
 
 struct GlobalVarConfig {
   std::string name;
@@ -34,6 +35,8 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
     { "fmt_str_buf", std::string(FMT_STRINGS_BUFFER_SECTION_NAME), false } },
   { GlobalVar::TUPLE_BUFFER,
     { "tuple_buf", std::string(TUPLE_BUFFER_SECTION_NAME), false } },
+  { GlobalVar::GET_STR_BUFFER,
+    { "get_str_buf", std::string(GET_STR_BUFFER_SECTION_NAME), false } },
 };
 
 void update_global_vars(
@@ -42,7 +45,9 @@ void update_global_vars(
     const BPFtrace &bpftrace);
 
 const GlobalVarConfig &get_config(GlobalVar global_var);
-SizedType get_type(GlobalVar global_var, const RequiredResources &resources);
+SizedType get_type(GlobalVar global_var,
+                   const RequiredResources &resources,
+                   const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
 
 } // namespace globalvars

@@ -104,7 +104,8 @@ public:
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const SizedType &key_type);
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
-  void generate_global_vars(const RequiredResources &resources);
+  void generate_global_vars(const RequiredResources &resources,
+                            const ::bpftrace::Config &bpftrace_config);
   void optimize(void);
   bool verify(void);
   BpfBytecode emit(bool disassemble);

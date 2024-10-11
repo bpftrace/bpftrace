@@ -719,6 +719,7 @@ enum class GlobalVar {
   // Scratch buffers used to avoid BPF stack allocation limits
   FMT_STRINGS_BUFFER,
   TUPLE_BUFFER,
+  GET_STR_BUFFER,
 };
 
 } // namespace globalvars

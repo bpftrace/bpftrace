@@ -35,6 +35,7 @@ private:
   void visit(Map &map) override;
   void visit(Tuple &tuple) override;
   void visit(For &f) override;
+  void visit(Ternary &ternary) override;
 
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.

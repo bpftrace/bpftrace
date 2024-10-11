@@ -70,8 +70,6 @@ std::string to_string(MapType t)
       return "elapsed";
     case MapType::Ringbuf:
       return "ringbuf";
-    case MapType::StrBuffer:
-      return "str_buffer";
     case MapType::EventLossCounter:
       return "event_loss_counter";
     case MapType::RecursionPrevention:
