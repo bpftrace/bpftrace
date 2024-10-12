@@ -371,6 +371,13 @@ SizedType CreateUInt64()
   return CreateUInt(64);
 }
 
+SizedType CreateEnum(size_t bits, const std::string &name)
+{
+  auto ty = CreateUInt(bits);
+  ty.name_ = name;
+  return ty;
+}
+
 SizedType CreateString(size_t size)
 {
   return SizedType(Type::string, size);

@@ -150,7 +150,7 @@ private:
   size_t size_bits_ = 0;                    // size in bits
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
-  std::string name_; // name of this type, for named types like struct
+  std::string name_; // name of this type, for named types like struct and enum
   std::weak_ptr<Struct> inner_struct_; // inner struct for records and tuples
                                        // the actual Struct object is owned by
                                        // StructManager
@@ -302,7 +302,7 @@ public:
 
   const std::string GetName() const
   {
-    assert(IsRecordTy());
+    assert(IsRecordTy() || IsEnumTy());
     return name_;
   }
 
@@ -345,6 +345,10 @@ public:
   {
     return type_ == Type::integer;
   };
+  bool IsEnumTy() const
+  {
+    return IsIntTy() && name_.size();
+  }
   bool IsNoneTy(void) const
   {
     return type_ == Type::none;
@@ -485,6 +489,7 @@ public:
 
   // Factories
 
+  friend SizedType CreateEnum(size_t bits, const std::string &name);
   friend SizedType CreateArray(size_t num_elements,
                                const SizedType &element_type);
 
@@ -511,6 +516,7 @@ SizedType CreateUInt8();
 SizedType CreateUInt16();
 SizedType CreateUInt32();
 SizedType CreateUInt64();
+SizedType CreateEnum(size_t bits, const std::string &name);
 
 SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
