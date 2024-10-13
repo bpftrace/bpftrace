@@ -559,7 +559,20 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
                                        std::to_string(arg.type.GetSize()) +
                                        "provided");
           }
-          arg_values.push_back(std::make_unique<PrintableInt>(val));
+
+          // bpftrace represents enums as unsigned integers
+          if (arg.type.IsEnumTy()) {
+            auto enum_name = arg.type.GetName();
+            std::string symbolized = "<unknown enum>";
+            if (enum_defs_.contains(enum_name) &&
+                enum_defs_[enum_name].contains(val)) {
+              symbolized = enum_defs_[enum_name][val];
+            }
+            arg_values.push_back(
+                std::make_unique<PrintableEnum>(val, std::move(symbolized)));
+          } else {
+            arg_values.push_back(std::make_unique<PrintableInt>(val));
+          }
         }
         break;
       case Type::string: {

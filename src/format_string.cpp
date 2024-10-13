@@ -4,6 +4,7 @@
 #include "utils.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace bpftrace {
@@ -105,16 +106,26 @@ std::string validate_format_string(const std::string &fmt,
   }
 
   for (int i = 0; i < num_args; i++) {
+    std::unordered_set<Type> arg_types;
     Type arg_type = args.at(i).type.GetTy();
     if (arg_type == Type::ksym_t || arg_type == Type::usym_t ||
         arg_type == Type::probe || arg_type == Type::username ||
         arg_type == Type::kstack_t || arg_type == Type::ustack_t ||
         arg_type == Type::inet || arg_type == Type::timestamp ||
         arg_type == Type::mac_address || arg_type == Type::cgroup_path_t ||
-        arg_type == Type::strerror_t)
-      arg_type = Type::string; // Symbols should be printed as strings
-    if (arg_type == Type::pointer)
-      arg_type = Type::integer; // Casts (pointers) can be printed as integers
+        arg_type == Type::strerror_t) {
+      arg_types.insert(Type::string); // Symbols should be printed as
+                                      // strings
+    } else if (arg_type == Type::pointer) {
+      arg_types.insert(Type::integer); // Casts (pointers) can be
+                                       // printed as integers
+    } else if (args.at(i).type.IsEnumTy()) {
+      // Symbolizing enum
+      arg_types.insert(Type::string);
+      arg_types.insert(Type::integer);
+    } else {
+      arg_types.insert(arg_type);
+    }
 
     auto token = std::get<0>(token_types[i]);
     auto token_type = std::get<1>(token_types[i]);
@@ -124,10 +135,14 @@ std::string validate_format_string(const std::string &fmt,
       return message.str();
     }
 
-    if (arg_type != token_type) {
+    if (!arg_types.contains(token_type)) {
+      std::vector<std::string> arg_types_vec;
+      for (const auto &ty : arg_types)
+        arg_types_vec.push_back(to_string(ty));
+
       message << call_func << ": %" << token
               << " specifier expects a value of type " << token_type << " ("
-              << arg_type << " supplied)" << std::endl;
+              << str_join(arg_types_vec, ",") << " supplied)" << std::endl;
       return message.str();
     }
   }

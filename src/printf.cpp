@@ -1,4 +1,6 @@
 #include "printf.h"
+
+#include "log.h"
 #include "printf_format_types.h"
 #include "struct.h"
 
@@ -132,4 +134,22 @@ int PrintableSInt::print(char *buf,
 
   __builtin_unreachable();
 }
+
+int PrintableEnum::print(char *buf,
+                         size_t size,
+                         const char *fmt,
+                         Type token,
+                         ArgumentType expected_type)
+{
+  switch (token) {
+    case Type::integer:
+      return PrintableInt(value_).print(buf, size, fmt, token, expected_type);
+    case Type::string:
+      return snprintf(buf, size, fmt, name_.c_str());
+    default:
+      LOG(BUG) << "Invalid token type for enum";
+      __builtin_unreachable();
+  }
+}
+
 } // namespace bpftrace
