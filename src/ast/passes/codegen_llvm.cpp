@@ -167,7 +167,7 @@ void CodegenLLVM::visit(String &string)
 void CodegenLLVM::visit(Identifier &identifier)
 {
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
-    expr_ = b_.getInt64(bpftrace_.enums_[identifier.ident]);
+    expr_ = b_.getInt64(std::get<0>(bpftrace_.enums_[identifier.ident]));
   } else {
     LOG(BUG) << "unknown identifier \"" << identifier.ident << "\"";
   }
