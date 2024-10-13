@@ -44,6 +44,7 @@ public:
   virtual int print(char* buf,
                     size_t size,
                     const char* fmt,
+                    Type token,
                     ArgumentType expected_type = ArgumentType::UNKNOWN) = 0;
 };
 
@@ -52,7 +53,11 @@ public:
   PrintableString(std::string value,
                   std::optional<size_t> buffer_size = std::nullopt,
                   const char* trunc_trailer = nullptr);
-  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            Type,
+            ArgumentType) override;
 
 private:
   std::string value_;
@@ -64,7 +69,11 @@ public:
       : value_(std::vector<char>(buffer, buffer + size))
   {
   }
-  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            Type,
+            ArgumentType) override;
   void keep_ascii(bool value);
   void escape_hex(bool value);
 
@@ -79,7 +88,11 @@ public:
   PrintableCString(char* value) : value_(value)
   {
   }
-  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            Type,
+            ArgumentType) override;
 
 private:
   char* value_;
@@ -93,6 +106,7 @@ public:
   int print(char* buf,
             size_t size,
             const char* fmt,
+            Type token,
             ArgumentType expected_type) override;
 
 private:
@@ -107,6 +121,7 @@ public:
   int print(char* buf,
             size_t size,
             const char* fmt,
+            Type token,
             ArgumentType expected_type) override;
 
 private:
