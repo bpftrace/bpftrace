@@ -128,4 +128,20 @@ private:
   int64_t value_;
 };
 
+class PrintableEnum : public virtual IPrintable {
+public:
+  PrintableEnum(uint64_t value, std::string name) : name_(name), value_(value)
+  {
+  }
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            Type token,
+            ArgumentType expected_type) override;
+
+private:
+  std::string name_;
+  uint64_t value_;
+};
+
 } // namespace bpftrace
