@@ -142,9 +142,9 @@ class TestParser(object):
                     expects[-1].expect += '\n' + line
                     continue
 
-            item_split = item.split()
+            item_split = item.strip().split(maxsplit=1)
             item_name = item_split[0]
-            line = ' '.join(item_split[1:])
+            line = item_split[1] if len(item_split) > 1 else ""
             prev_item_name = item_name
 
             if item_name == 'NAME':
