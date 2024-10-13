@@ -30,6 +30,28 @@ NAME printf_char
 PROG BEGIN { printf("%c%c%c%c\n", 0x41, 0x42, 0x43, 0x44); exit(); }
 EXPECT ABCD
 
+NAME printf_enum_symbolize
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s %d %s %d %s\n", ONE, ONE, TWO, TWO, OTHER, OTHER); exit() }
+EXPECT 1 ONE 2 TWO 99999 OTHER
+
+NAME printf_enum_symbolize_var
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { $one = ONE; $two = TWO; $other = OTHER; printf("%d %s %d %s %d %s\n", $one, $one, $two, $two, $other, $other); exit() }
+EXPECT 1 ONE 2 TWO 99999 OTHER
+
+NAME printf_enum_symbolize_map
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { @one = ONE; @two = TWO; @other = OTHER; printf("%d %s %d %s %d %s\n", @one, @one, @two, @two, @other, @other); exit() }
+EXPECT 1 ONE 2 TWO 99999 OTHER
+
+NAME printf_enum_symbolize_width
+PROG enum Foo { A, B, C, }; BEGIN { printf("%-5s %5s %s\n", A, B, C); exit() }
+EXPECT A         B C
+
+NAME printf_enum_symbolize_tracepoint
+PROG tracepoint:skb:kfree_skb { $r = args->reason; printf("%d %s\n", args->reason, $r); exit() }
+EXPECT_REGEX ^\d+ [A-Z_]+$
+AFTER ping localhost -c 5
+TIMEOUT 5
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*:[0-9]*:[0-9]*
