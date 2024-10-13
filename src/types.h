@@ -65,6 +65,7 @@ enum class AddrSpace : uint8_t {
 
 std::ostream &operator<<(std::ostream &os, Type type);
 std::ostream &operator<<(std::ostream &os, AddrSpace as);
+std::string to_string(Type ty);
 
 enum class UserSymbolCacheType {
   per_pid,
