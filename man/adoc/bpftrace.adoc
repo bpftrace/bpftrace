@@ -675,7 +675,15 @@ The following operators are available for integer arithmetic:
 
 |===
 
-// TODO: Words about integer conversion when types mismatch
+Operations between a signed and an unsigned integer are allowed providing
+bpftrace can statically prove a safe conversion is possible. If safe conversion
+is not guaranteed, the operation is undefined behavior and a corresponding
+warning will be emitted.
+
+If the two operands are different size, the smaller integer is implicitly
+promoted to the size of the larger one. Sign is preserved in the promotion.
+For example, `(uint32)5 + (uint8)3` is converted to `(uint32)5 + (uint32)3`
+which results in `(uint32)8`.
 
 ==== Logical Operators
 
@@ -2553,7 +2561,7 @@ kprobe:dummy {
   if (has_key(@scalar)) { // error
     print(("hello"));
   }
-  
+
   $a = has_key(@associative, (1,2)); // ok
   @b[has_key(@associative, (1,2))] = has_key(@associative, (1,2)); // ok
 }

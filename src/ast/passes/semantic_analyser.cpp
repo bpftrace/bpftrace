@@ -1926,6 +1926,8 @@ void SemanticAnalyser::visit(Binop &binop)
   auto &rht = binop.right->type;
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
+  bool is_int_binop = (lht.IsCastableMapTy() || lht.IsIntTy()) &&
+                      (rht.IsCastableMapTy() || rht.IsIntTy());
 
   if (lht.IsPtrTy() || rht.IsPtrTy()) {
     binop_ptr(binop);
@@ -1942,7 +1944,14 @@ void SemanticAnalyser::visit(Binop &binop)
       break;
   }
 
-  binop.type = CreateInteger(64, is_signed);
+  if (is_int_binop) {
+    // Implicit size promotion to larger of the two
+    auto size = std::max(lht.GetSize(), rht.GetSize());
+    binop.type = CreateInteger(size * 8, is_signed);
+  } else {
+    // Default type - will be overriden below as necessary
+    binop.type = CreateInteger(64, is_signed);
+  }
 
   auto addr_lhs = binop.left->type.GetAS();
   auto addr_rhs = binop.right->type.GetAS();
@@ -1967,8 +1976,7 @@ void SemanticAnalyser::visit(Binop &binop)
     return;
   }
 
-  if ((lht.IsCastableMapTy() || lht.IsIntTy()) &&
-      (rht.IsCastableMapTy() || rht.IsIntTy())) {
+  if (is_int_binop) {
     binop_int(binop);
   } else if (lht.IsArrayTy() && rht.IsArrayTy()) {
     binop_array(binop);

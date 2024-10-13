@@ -1829,6 +1829,28 @@ TEST(semantic_analyser, map_integer_sizes)
   EXPECT_EQ(CreateInt64(), map_assignment->map->type);
 }
 
+TEST(semantic_analyser, binop_integer_promotion)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, "kprobe:f { $x = (int32)5 + (int16)6 }");
+
+  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+      driver.ctx.root->probes.at(0)->stmts.at(0));
+  EXPECT_EQ(CreateInt32(), var_assignment->var->type);
+}
+
+TEST(semantic_analyser, binop_integer_no_promotion)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, "kprobe:f { $x = (int8)5 + (int8)6 }");
+
+  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+      driver.ctx.root->probes.at(0)->stmts.at(0));
+  EXPECT_EQ(CreateInt8(), var_assignment->var->type);
+}
+
 TEST(semantic_analyser, unop_dereference)
 {
   test("kprobe:f { *0; }");
@@ -2799,6 +2821,12 @@ TEST(semantic_analyser, mixed_int_var_assignments)
   test("kprobe:f { $x = (uint8)1; $x = 200; }");
   test("kprobe:f { $x = (int8)1; $x = -2; }");
   test("kprobe:f { $x = (int16)1; $x = 20000; }");
+  // We'd like the below to work, but blocked on #3518.
+  // TLDR: It looks like a literal and thus amenable to static "fits into"
+  // checks. But it's not, the parser has actually desugared it to:
+  //    AssignVarStatement(Variable, Binop(Variable, Integer(1)))
+  // test("kprobe:f { $x = (uint32)5; $x += 1; }");
+
   test_error("kprobe:f { $x = (uint8)1; $x = -1; }", R"(
 stdin:1:27-34: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'uint8'
 kprobe:f { $x = (uint8)1; $x = -1; }
