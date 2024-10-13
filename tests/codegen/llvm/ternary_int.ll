@@ -24,8 +24,7 @@ entry:
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
   %3 = icmp ult i64 %2, 10000
-  %4 = zext i1 %3 to i64
-  %true_cond = icmp ne i64 %4, 0
+  %true_cond = icmp ne i1 %3, false
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
