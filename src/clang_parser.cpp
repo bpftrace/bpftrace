@@ -186,8 +186,13 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_LongLong:
     case CXType_Int:
       return CreateInt(size);
-    case CXType_Enum:
-      return CreateUInt(size);
+    case CXType_Enum: {
+      // The pretty printed type name contains `enum` prefix. That's not
+      // helpful for us, so remove it. We have our own metadata.
+      static std::regex re("enum ");
+      auto enum_name = std::regex_replace(typestr, re, "");
+      return CreateEnum(size, enum_name);
+    }
     case CXType_Pointer: {
       auto pointee_type = clang_getPointeeType(clang_type);
       return CreatePointer(get_sized_type(pointee_type, structs));
