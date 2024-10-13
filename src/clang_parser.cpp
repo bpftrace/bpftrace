@@ -3,6 +3,7 @@
 #include <limits>
 #include <regex>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "llvm/Config/llvm-config.h"
@@ -385,12 +386,6 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
         if (clang_getCursorKind(parent) == CXCursor_EnumDecl) {
           // Store variant name to variant value
           auto &enums = static_cast<BPFtrace *>(client_data)->enums_;
-          auto variant_name = get_clang_string(clang_getCursorSpelling(c));
-          auto variant_value = clang_getEnumConstantDeclValue(c);
-          enums[variant_name] = variant_value;
-
-          // Store enum name to variant value to variant name
-          auto &enum_defs = static_cast<BPFtrace *>(client_data)->enum_defs_;
           auto enum_name = get_clang_string(clang_getCursorSpelling(parent));
           // Anonymous enums have empty string names in libclang <= 15
           if (enum_name.empty()) {
@@ -398,6 +393,12 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
             name << "enum <anon_" << anon_enum_count << ">";
             enum_name = std::move(name.str());
           }
+          auto variant_name = get_clang_string(clang_getCursorSpelling(c));
+          auto variant_value = clang_getEnumConstantDeclValue(c);
+          enums[variant_name] = std::make_pair(variant_value, enum_name);
+
+          // Store enum name to variant value to variant name
+          auto &enum_defs = static_cast<BPFtrace *>(client_data)->enum_defs_;
           enum_defs[enum_name][variant_value] = variant_name;
 
           return CXChildVisit_Recurse;
