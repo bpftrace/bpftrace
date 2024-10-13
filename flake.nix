@@ -135,6 +135,7 @@
                   procps
                   python3
                   strace
+                  unixtools.ping
                   util-linux
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
 
