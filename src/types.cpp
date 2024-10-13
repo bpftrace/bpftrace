@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <sstream>
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
@@ -102,6 +103,13 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
 
   return os;
+}
+
+std::string to_string(Type ty)
+{
+  std::ostringstream ss;
+  ss << ty;
+  return ss.str();
 }
 
 bool SizedType::IsSameType(const SizedType &t) const
