@@ -1922,7 +1922,26 @@ The non-standard ones can be found in the table below:
 
 |===
 
-Supported escape sequences
+`printf()` can also symbolize enums as strings. For example:
+
+----
+enum custom {
+  CUSTOM_ENUM = 3,
+};
+
+tracepoint:skb:kfree_skb {
+  $r = args->reason;
+  printf("%d, %s, %s\n", $r, $r, CUSTOM_ENUM);
+}
+----
+
+may yield:
+
+----
+50, SKB_DROP_REASON_NEIGH_FAILED, CUSTOM_ENUM
+6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
+6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
+----
 
 Colors are supported too, using standard terminal escape sequences:
 
@@ -2553,7 +2572,7 @@ kprobe:dummy {
   if (has_key(@scalar)) { // error
     print(("hello"));
   }
-  
+
   $a = has_key(@associative, (1,2)); // ok
   @b[has_key(@associative, (1,2))] = has_key(@associative, (1,2)); // ok
 }
