@@ -3,7 +3,6 @@
 #include "struct.h"
 #include "utils.h"
 
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 
@@ -164,6 +163,11 @@ void FormatString::format(std::ostream &out,
     expected_types_.resize(parts_.size());
     for (size_t i = 0; i < parts_.size(); i++)
       expected_types_[i] = get_expected_argument_type(parts_[i]);
+
+    // Note we're passing in the superset `printf_format_types` regardless
+    // of what the calling context was. This is ok b/c the format string
+    // was already validated for correctness during compilation.
+    tokens_ = get_token_types(fmt_, printf_format_types);
   }
   auto buffer = std::vector<char>(FMT_BUF_SZ);
   auto check_snprintf_ret = [](int r) {
@@ -202,6 +206,7 @@ void FormatString::format(std::ostream &out,
       int r = args.at(i)->print(buffer.data(),
                                 buffer.capacity(),
                                 printf_fmt.c_str(),
+                                std::get<1>(tokens_[i]),
                                 expected_types_[i]);
       check_snprintf_ret(r);
       if (static_cast<size_t>(r) < buffer.capacity())
