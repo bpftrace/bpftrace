@@ -1656,9 +1656,11 @@ void CodegenLLVM::binop_int(Binop &binop)
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
   bool do_signed = lsign && rsign;
-  // promote int to 64-bit
-  lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
-  rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
+
+  // Promote operands if necessary
+  auto size = binop.type.GetSize();
+  lhs = b_.CreateIntCast(lhs, b_.getIntNTy(size * 8), lsign);
+  rhs = b_.CreateIntCast(rhs, b_.getIntNTy(size * 8), rsign);
 
   switch (binop.op) {
     case Operator::EQ:
