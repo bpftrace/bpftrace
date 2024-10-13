@@ -1624,6 +1624,18 @@ void CodegenLLVM::binop_buf(Binop &binop)
   expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
 }
 
+// Looks like LLVM <= 14 IR verifier doesn't like when you assign an i1 into an
+// i64. So zero extend there but don't penalize newer LLVM releases.
+//
+// Just LSB needs to be set for bools. If we do a sign extend then all bits
+// will be set (which performs correctly) but printing out the value will be -1
+// which is confusing. So zero extend instead.
+#if LLVM_VERSION_MAJOR <= 14
+#define MAYBE_ZERO_EXTEND(e) b_.CreateIntCast(e, b_.getInt64Ty(), false)
+#else
+#define MAYBE_ZERO_EXTEND(e) e
+#endif
+
 void CodegenLLVM::binop_int(Binop &binop)
 {
   Value *lhs, *rhs;
@@ -1651,28 +1663,34 @@ void CodegenLLVM::binop_int(Binop &binop)
   switch (binop.op) {
     case Operator::EQ:
       expr_ = b_.CreateICmpEQ(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     case Operator::NE:
       expr_ = b_.CreateICmpNE(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     case Operator::LE: {
       expr_ = do_signed ? b_.CreateICmpSLE(lhs, rhs)
                         : b_.CreateICmpULE(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     }
     case Operator::GE: {
       expr_ = do_signed ? b_.CreateICmpSGE(lhs, rhs)
                         : b_.CreateICmpUGE(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     }
     case Operator::LT: {
       expr_ = do_signed ? b_.CreateICmpSLT(lhs, rhs)
                         : b_.CreateICmpULT(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     }
     case Operator::GT: {
       expr_ = do_signed ? b_.CreateICmpSGT(lhs, rhs)
                         : b_.CreateICmpUGT(lhs, rhs);
+      expr_ = MAYBE_ZERO_EXTEND(expr_);
       break;
     }
     case Operator::LEFT:
@@ -1713,8 +1731,6 @@ void CodegenLLVM::binop_int(Binop &binop)
     default:
       LOG(BUG) << "\"" << opstr(binop) << "\" was handled earlier";
   }
-  // Using signed extension will result in -1 which will likely confuse users
-  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
 void CodegenLLVM::binop_ptr(Binop &binop)

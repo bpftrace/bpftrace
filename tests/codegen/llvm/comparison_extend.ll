@@ -22,9 +22,9 @@ entry:
   %1 = getelementptr i64, ptr %0, i64 14
   %arg0 = load volatile i64, ptr %1, align 8
   %2 = icmp ult i64 1, %arg0
-  %3 = zext i1 %2 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
+  %3 = zext i1 %2 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 %3, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)

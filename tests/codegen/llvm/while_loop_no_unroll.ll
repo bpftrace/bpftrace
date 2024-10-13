@@ -28,18 +28,17 @@ entry:
 while_cond:                                       ; preds = %while_body, %entry
   %1 = load i64, ptr %"$a", align 8
   %2 = icmp sle i64 %1, 10
-  %3 = zext i1 %2 to i64
-  %true_cond = icmp ne i64 %3, 0
+  %true_cond = icmp ne i1 %2, false
   br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !48
 
 while_body:                                       ; preds = %while_cond
-  %4 = load i64, ptr %"$a", align 8
-  %5 = add i64 %4, 1
-  store i64 %5, ptr %"$a", align 8
+  %3 = load i64, ptr %"$a", align 8
+  %4 = add i64 %3, 1
+  store i64 %4, ptr %"$a", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  store i64 %4, ptr %"@_val", align 8
+  store i64 %3, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")

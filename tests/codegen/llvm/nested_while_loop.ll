@@ -32,25 +32,23 @@ entry:
 while_cond:                                       ; preds = %while_end3, %entry
   %1 = load i64, ptr %"$i", align 8
   %2 = icmp sle i64 %1, 100
-  %3 = zext i1 %2 to i64
-  %true_cond = icmp ne i64 %3, 0
+  %true_cond = icmp ne i1 %2, false
   br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !48
 
 while_body:                                       ; preds = %while_cond
   store i64 0, ptr %"$j", align 8
-  %4 = load i64, ptr %"$i", align 8
-  %5 = add i64 %4, 1
-  store i64 %5, ptr %"$i", align 8
+  %3 = load i64, ptr %"$i", align 8
+  %4 = add i64 %3, 1
+  store i64 %4, ptr %"$i", align 8
   br label %while_cond1
 
 while_end:                                        ; preds = %while_cond
   ret i64 0
 
 while_cond1:                                      ; preds = %lookup_merge, %while_body
-  %6 = load i64, ptr %"$j", align 8
-  %7 = icmp sle i64 %6, 100
-  %8 = zext i1 %7 to i64
-  %true_cond4 = icmp ne i64 %8, 0
+  %5 = load i64, ptr %"$j", align 8
+  %6 = icmp sle i64 %5, 100
+  %true_cond4 = icmp ne i1 %6, false
   br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !48
 
 while_body2:                                      ; preds = %while_cond1
@@ -65,8 +63,8 @@ while_end3:                                       ; preds = %while_cond1
   br label %while_cond
 
 lookup_success:                                   ; preds = %while_body2
-  %9 = load i64, ptr %lookup_elem, align 8
-  store i64 %9, ptr %lookup_elem_val, align 8
+  %7 = load i64, ptr %lookup_elem, align 8
+  store i64 %7, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %while_body2
@@ -74,17 +72,17 @@ lookup_failure:                                   ; preds = %while_body2
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %10 = load i64, ptr %lookup_elem_val, align 8
+  %8 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_newval")
-  %11 = add i64 %10, 1
-  store i64 %11, ptr %"@_newval", align 8
+  %9 = add i64 %8, 1
+  store i64 %9, ptr %"@_newval", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_newval", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_newval")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
-  %12 = load i64, ptr %"$j", align 8
-  %13 = add i64 %12, 1
-  store i64 %13, ptr %"$j", align 8
+  %10 = load i64, ptr %"$j", align 8
+  %11 = add i64 %10, 1
+  store i64 %11, ptr %"$j", align 8
   br label %while_cond1
 }
 
