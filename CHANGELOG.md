@@ -84,6 +84,8 @@ and this project adheres to
   - [#3453](https://github.com/bpftrace/bpftrace/pull/3453)
 - Fix json formatting for hex values
   - [#3475](https://github.com/bpftrace/bpftrace/pull/3475)
+- Fix binary operations on integers always returning 64 bit values
+  - [#3517](https://github.com/bpftrace/bpftrace/pull/3517)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
