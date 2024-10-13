@@ -15,15 +15,15 @@ target triple = "bpf-pc-linux"
 @AT_map = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !33
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !47
-@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !49
-@tuple_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !51
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !49
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !57
+@tuple_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !59
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !62 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !69 {
 entry:
-  %"@len_val" = alloca i64, align 8
   %"@len_key" = alloca i64, align 8
   %ctx = alloca %ctx_t, align 8
   %"$var3" = alloca [4 x i8], align 1
@@ -37,14 +37,15 @@ entry:
   %"$var1" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var1")
   store i64 0, ptr %"$var1", align 8
-  %"@map_val" = alloca i64, align 8
   %"@map_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_key")
   store i64 16, ptr %"@map_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_val")
-  store i64 32, ptr %"@map_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %"@map_key", ptr %"@map_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  store i64 32, ptr %2, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %"@map_key", ptr %2, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_key")
   store i64 123, ptr %"$var1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
@@ -61,13 +62,15 @@ entry:
   %"ctx.$var3" = getelementptr %ctx_t, ptr %ctx, i64 0, i32 1
   store ptr %"$var3", ptr %"ctx.$var3", align 8
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr %ctx, i64 0)
-  %1 = load i64, ptr %"$var1", align 8
+  %3 = load i64, ptr %"$var1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_key")
   store i64 0, ptr %"@len_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_val")
-  store i64 %1, ptr %"@len_val", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %"@len_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_val")
+  %get_cpu_id2 = call i64 inttoptr (i64 8 to ptr)()
+  %4 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded3 = and i64 %get_cpu_id2, %4
+  %5 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded3, i64 0, i64 0
+  store i64 %3, ptr %5, align 8
+  %update_elem4 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %5, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_key")
   ret i64 0
 }
@@ -84,7 +87,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 i
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #3
 
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !68 {
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !75 {
   %"$can_read" = alloca [4 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$can_read")
   call void @llvm.memset.p0.i64(ptr align 1 %"$can_read", i8 0, i64 4, i1 false)
@@ -115,8 +118,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!59}
-!llvm.module.flags = !{!61}
+!llvm.dbg.cu = !{!66}
+!llvm.module.flags = !{!68}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_len", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -168,24 +171,31 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !47 = !DIGlobalVariableExpression(var: !48, expr: !DIExpression())
 !48 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
 !49 = !DIGlobalVariableExpression(var: !50, expr: !DIExpression())
-!50 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !21, isLocal: false, isDefinition: true)
-!51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
-!52 = distinct !DIGlobalVariable(name: "tuple_buf", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
-!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 128, elements: !14)
-!54 = !DICompositeType(tag: DW_TAG_array_type, baseType: !55, size: 128, elements: !14)
-!55 = !DICompositeType(tag: DW_TAG_array_type, baseType: !56, size: 128, elements: !57)
-!56 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!57 = !{!58}
-!58 = !DISubrange(count: 16, lowerBound: 0)
-!59 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !60)
-!60 = !{!0, !22, !33, !47, !49, !51}
-!61 = !{i32 2, !"Debug Info Version", i32 3}
-!62 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !59, retainedNodes: !66)
-!63 = !DISubroutineType(types: !64)
-!64 = !{!21, !65}
-!65 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !56, size: 64)
-!66 = !{!67}
-!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !65)
-!68 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !59, retainedNodes: !69)
-!69 = !{!70}
-!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !68, file: !2, type: !65)
+!50 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !51, isLocal: false, isDefinition: true)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 64, elements: !14)
+!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !53, size: 64, elements: !14)
+!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 64, elements: !55)
+!54 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!55 = !{!56}
+!56 = !DISubrange(count: 8, lowerBound: 0)
+!57 = !DIGlobalVariableExpression(var: !58, expr: !DIExpression())
+!58 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !21, isLocal: false, isDefinition: true)
+!59 = !DIGlobalVariableExpression(var: !60, expr: !DIExpression())
+!60 = distinct !DIGlobalVariable(name: "tuple_buf", linkageName: "global", scope: !2, file: !2, type: !61, isLocal: false, isDefinition: true)
+!61 = !DICompositeType(tag: DW_TAG_array_type, baseType: !62, size: 128, elements: !14)
+!62 = !DICompositeType(tag: DW_TAG_array_type, baseType: !63, size: 128, elements: !14)
+!63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 128, elements: !64)
+!64 = !{!65}
+!65 = !DISubrange(count: 16, lowerBound: 0)
+!66 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !67)
+!67 = !{!0, !22, !33, !47, !49, !57, !59}
+!68 = !{i32 2, !"Debug Info Version", i32 3}
+!69 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !70, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !66, retainedNodes: !73)
+!70 = !DISubroutineType(types: !71)
+!71 = !{!21, !72}
+!72 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
+!73 = !{!74}
+!74 = !DILocalVariable(name: "ctx", arg: 1, scope: !69, file: !2, type: !72)
+!75 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !70, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !66, retainedNodes: !76)
+!76 = !{!77}
+!77 = !DILocalVariable(name: "ctx", arg: 1, scope: !75, file: !2, type: !72)

@@ -11,13 +11,14 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !39
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !46
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [6 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !48
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !49 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !55 {
 entry:
-  %"@x_val" = alloca [6 x i8], align 1
   %"@x_key2" = alloca i64, align 8
   %str1 = alloca [2 x i8], align 1
   %"@x_key" = alloca i64, align 8
@@ -33,11 +34,13 @@ entry:
   store [2 x i8] c"a\00", ptr %str1, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key2")
   store i64 0, ptr %"@x_key2", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  call void @llvm.memset.p0.i64(ptr align 1 %"@x_val", i8 0, i64 6, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"@x_val", ptr align 1 %str1, i64 2, i1 false)
-  %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key2", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %1 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %1
+  %2 = getelementptr [1 x [1 x [6 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 6, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 %str1, i64 2, i1 false)
+  %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key2", ptr %2, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key2")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
   ret i64 0
@@ -60,8 +63,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!46}
-!llvm.module.flags = !{!48}
+!llvm.dbg.cu = !{!52}
+!llvm.module.flags = !{!54}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -109,12 +112,18 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !43 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !44, size: 64, offset: 192)
 !44 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)
 !45 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!46 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !47)
-!47 = !{!0, !25, !39}
-!48 = !{i32 2, !"Debug Info Version", i32 3}
-!49 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !53)
-!50 = !DISubroutineType(types: !51)
-!51 = !{!45, !52}
-!52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
-!53 = !{!54}
-!54 = !DILocalVariable(name: "ctx", arg: 1, scope: !49, file: !2, type: !52)
+!46 = !DIGlobalVariableExpression(var: !47, expr: !DIExpression())
+!47 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !45, isLocal: false, isDefinition: true)
+!48 = !DIGlobalVariableExpression(var: !49, expr: !DIExpression())
+!49 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !50, isLocal: false, isDefinition: true)
+!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !51, size: 48, elements: !14)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !21, size: 48, elements: !14)
+!52 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !53)
+!53 = !{!0, !25, !39, !46, !48}
+!54 = !{i32 2, !"Debug Info Version", i32 3}
+!55 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !52, retainedNodes: !59)
+!56 = !DISubroutineType(types: !57)
+!57 = !{!45, !58}
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)

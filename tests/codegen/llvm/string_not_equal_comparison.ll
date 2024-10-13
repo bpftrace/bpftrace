@@ -11,13 +11,14 @@ target triple = "bpf-pc-linux"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
+@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !47
+@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !49
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !50 {
+define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !60 {
 entry:
-  %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %strcmp.result = alloca i1, align 1
   %comm = alloca [16 x i8], align 1
@@ -38,10 +39,12 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 %4, ptr %"@_key", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  store i64 1, ptr %"@_val", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %5 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  store i64 1, ptr %6, align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %6, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   ret i64 0
 
@@ -50,9 +53,9 @@ strcmp.done:                                      ; preds = %strcmp.loop13, %str
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %5 = getelementptr i8, ptr %comm, i32 1
-  %6 = load i8, ptr %5, align 1
-  %strcmp.cmp3 = icmp ne i8 %6, 115
+  %7 = getelementptr i8, ptr %comm, i32 1
+  %8 = load i8, ptr %7, align 1
+  %strcmp.cmp3 = icmp ne i8 %8, 115
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
 strcmp.loop_null_cmp:                             ; preds = %entry
@@ -60,40 +63,40 @@ strcmp.loop_null_cmp:                             ; preds = %entry
   br i1 %strcmp.cmp_null, label %strcmp.done, label %strcmp.loop
 
 strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
-  %7 = getelementptr i8, ptr %comm, i32 2
-  %8 = load i8, ptr %7, align 1
-  %strcmp.cmp7 = icmp ne i8 %8, 104
+  %9 = getelementptr i8, ptr %comm, i32 2
+  %10 = load i8, ptr %9, align 1
+  %strcmp.cmp7 = icmp ne i8 %10, 104
   br i1 %strcmp.cmp7, label %strcmp.false, label %strcmp.loop_null_cmp6
 
 strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
-  %strcmp.cmp_null4 = icmp eq i8 %6, 0
+  %strcmp.cmp_null4 = icmp eq i8 %8, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 
 strcmp.loop5:                                     ; preds = %strcmp.loop_null_cmp6
-  %9 = getelementptr i8, ptr %comm, i32 3
-  %10 = load i8, ptr %9, align 1
-  %strcmp.cmp11 = icmp ne i8 %10, 100
+  %11 = getelementptr i8, ptr %comm, i32 3
+  %12 = load i8, ptr %11, align 1
+  %strcmp.cmp11 = icmp ne i8 %12, 100
   br i1 %strcmp.cmp11, label %strcmp.false, label %strcmp.loop_null_cmp10
 
 strcmp.loop_null_cmp6:                            ; preds = %strcmp.loop1
-  %strcmp.cmp_null8 = icmp eq i8 %8, 0
+  %strcmp.cmp_null8 = icmp eq i8 %10, 0
   br i1 %strcmp.cmp_null8, label %strcmp.done, label %strcmp.loop5
 
 strcmp.loop9:                                     ; preds = %strcmp.loop_null_cmp10
-  %11 = getelementptr i8, ptr %comm, i32 4
-  %12 = load i8, ptr %11, align 1
-  %strcmp.cmp15 = icmp ne i8 %12, 0
+  %13 = getelementptr i8, ptr %comm, i32 4
+  %14 = load i8, ptr %13, align 1
+  %strcmp.cmp15 = icmp ne i8 %14, 0
   br i1 %strcmp.cmp15, label %strcmp.false, label %strcmp.loop_null_cmp14
 
 strcmp.loop_null_cmp10:                           ; preds = %strcmp.loop5
-  %strcmp.cmp_null12 = icmp eq i8 %10, 0
+  %strcmp.cmp_null12 = icmp eq i8 %12, 0
   br i1 %strcmp.cmp_null12, label %strcmp.done, label %strcmp.loop9
 
 strcmp.loop13:                                    ; preds = %strcmp.loop_null_cmp14
   br label %strcmp.done
 
 strcmp.loop_null_cmp14:                           ; preds = %strcmp.loop9
-  %strcmp.cmp_null16 = icmp eq i8 %12, 0
+  %strcmp.cmp_null16 = icmp eq i8 %14, 0
   br i1 %strcmp.cmp_null16, label %strcmp.done, label %strcmp.loop13
 }
 
@@ -110,8 +113,8 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
-!llvm.dbg.cu = !{!47}
-!llvm.module.flags = !{!49}
+!llvm.dbg.cu = !{!57}
+!llvm.module.flags = !{!59}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -160,13 +163,22 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !44 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !45, size: 64, offset: 128)
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !46, size: 64)
 !46 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
-!48 = !{!0, !20, !34}
-!49 = !{i32 2, !"Debug Info Version", i32 3}
-!50 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
-!51 = !DISubroutineType(types: !52)
-!52 = !{!18, !53}
-!53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
+!47 = !DIGlobalVariableExpression(var: !48, expr: !DIExpression())
+!48 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !18, isLocal: false, isDefinition: true)
+!49 = !DIGlobalVariableExpression(var: !50, expr: !DIExpression())
+!50 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !51, isLocal: false, isDefinition: true)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !52, size: 64, elements: !9)
+!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !53, size: 64, elements: !9)
+!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 64, elements: !55)
 !54 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !55 = !{!56}
-!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !50, file: !2, type: !53)
+!56 = !DISubrange(count: 8, lowerBound: 0)
+!57 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !58)
+!58 = !{!0, !20, !34, !47, !49}
+!59 = !{i32 2, !"Debug Info Version", i32 3}
+!60 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !64)
+!61 = !DISubroutineType(types: !62)
+!62 = !{!18, !63}
+!63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
+!64 = !{!65}
+!65 = !DILocalVariable(name: "ctx", arg: 1, scope: !60, file: !2, type: !63)
