@@ -3,7 +3,9 @@
 #include "struct.h"
 #include "utils.h"
 
+#include <tuple>
 #include <unordered_map>
+#include <utility>
 
 namespace bpftrace {
 
@@ -39,6 +41,37 @@ ArgumentType get_expected_argument_type(const std::string &fmt)
   return ArgumentType::UNKNOWN;
 }
 
+// Returns a vector of (token, type) tuples given a format string
+std::vector<std::tuple<std::string, Type>> get_token_types(
+    const std::string &fmt,
+    const std::unordered_map<std::string, Type> &format_types)
+{
+  std::vector<std::tuple<std::string, Type>> types;
+  auto tokens_begin = std::sregex_iterator(fmt.begin(),
+                                           fmt.end(),
+                                           format_specifier_re);
+  auto tokens_end = std::sregex_iterator();
+  for (auto iter = tokens_begin; iter != tokens_end; iter++) {
+    int offset = 1;
+    // skip over format widths during verification
+    if (iter->str()[offset] == '-')
+      offset++;
+    while ((iter->str()[offset] >= '0' && iter->str()[offset] <= '9') ||
+           iter->str()[offset] == '.')
+      offset++;
+
+    std::string token = iter->str().substr(offset);
+
+    auto token_type = Type::none;
+    if (format_types.contains(token))
+      token_type = format_types.at(token);
+
+    types.push_back(std::make_tuple(token, token_type));
+  }
+
+  return types;
+}
+
 } // anonymous namespace
 
 std::string validate_format_string(const std::string &fmt,
@@ -47,12 +80,12 @@ std::string validate_format_string(const std::string &fmt,
 {
   std::stringstream message;
 
-  auto tokens_begin = std::sregex_iterator(fmt.begin(),
-                                           fmt.end(),
-                                           format_specifier_re);
-  auto tokens_end = std::sregex_iterator();
+  const auto &format_types = call_func == "debugf"
+                                 ? bpf_trace_printk_format_types
+                                 : printf_format_types;
+  auto token_types = get_token_types(fmt, format_types);
 
-  auto num_tokens = std::distance(tokens_begin, tokens_end);
+  int num_tokens = token_types.size();
   int num_args = args.size();
   if (num_args < num_tokens) {
     message << call_func << ": Not enough arguments for format string ("
@@ -72,8 +105,7 @@ std::string validate_format_string(const std::string &fmt,
     return message.str();
   }
 
-  auto token_iter = tokens_begin;
-  for (int i = 0; i < num_args; i++, token_iter++) {
+  for (int i = 0; i < num_args; i++) {
     Type arg_type = args.at(i).type.GetTy();
     if (arg_type == Type::ksym_t || arg_type == Type::usym_t ||
         arg_type == Type::probe || arg_type == Type::username ||
@@ -84,27 +116,14 @@ std::string validate_format_string(const std::string &fmt,
       arg_type = Type::string; // Symbols should be printed as strings
     if (arg_type == Type::pointer)
       arg_type = Type::integer; // Casts (pointers) can be printed as integers
-    int offset = 1;
 
-    // skip over format widths during verification
-    if (token_iter->str()[offset] == '-')
-      offset++;
-    while ((token_iter->str()[offset] >= '0' &&
-            token_iter->str()[offset] <= '9') ||
-           token_iter->str()[offset] == '.')
-      offset++;
-
-    const std::string token = token_iter->str().substr(offset);
-    const auto format_types = call_func == "debugf"
-                                  ? bpf_trace_printk_format_types
-                                  : printf_format_types;
-    const auto token_type_iter = format_types.find(token);
-    if (token_type_iter == format_types.end()) {
+    auto token = std::get<0>(token_types[i]);
+    auto token_type = std::get<1>(token_types[i]);
+    if (token_type == Type::none) {
       message << call_func << ": Unknown format string token: %" << token
               << std::endl;
       return message.str();
     }
-    const Type &token_type = token_type_iter->second;
 
     if (arg_type != token_type) {
       message << call_func << ": %" << token
