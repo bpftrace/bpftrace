@@ -237,7 +237,7 @@ class TestParser(object):
         elif run != '' and prog != '':
             raise InvalidFieldError('Test RUN and PROG both specified. Suit: ' + test_suite)
         elif len(expects) == 0 and return_code is None:
-            raise RequiredFieldError('At leat one test EXPECT (or variation) is required. Suite: ' + test_suite)
+            raise RequiredFieldError('At least one test EXPECT (or variation) is required. Suite: ' + test_suite)
         elif len(expects) > 1 and has_exact_expect:
             raise InvalidFieldError('EXPECT_JSON or EXPECT_FILE can not be used with other EXPECTs. Suite: ' + test_suite)
         elif timeout == '':
