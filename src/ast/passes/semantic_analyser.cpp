@@ -549,7 +549,7 @@ namespace {
 bool skip_key_validation(const Call &call)
 {
   return call.func == "print" || call.func == "clear" || call.func == "zero" ||
-         call.func == "len" || call.func == "has_key";
+         call.func == "len";
 }
 } // namespace
 
@@ -591,8 +591,8 @@ void SemanticAnalyser::visit(Call &call)
 
       // If the map is indexed, don't skip key validation
       if (map.key_expr == nullptr) {
-        // Delete expects just a map reference for the first argument
-        if (call.func == "delete" && i == 0) {
+        // These calls expect just a map reference for the first argument
+        if ((call.func == "delete" || call.func == "has_key") && i == 0) {
           map.skip_key_validation = true;
         } else if (skip_key_validation(call)) {
           map.skip_key_validation = true;

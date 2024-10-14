@@ -1116,6 +1116,7 @@ TEST(semantic_analyser, call_has_key)
       R"(kprobe:f { @x[1, "longerstr"] = 0; if (has_key(@x, (2, "hi"))) {} })");
   test("kprobe:f { @x[1, 2] = 0; $a = (3, 4); if (has_key(@x, $a)) {} }");
   test("kprobe:f { @x[1, 2] = 0; @a = (3, 4); if (has_key(@x, @a)) {} }");
+  test("kprobe:f { @x[1, 2] = 0; @a[1] = (3, 4); if (has_key(@x, @a[1])) {} }");
   test("kprobe:f { @x[1] = 0; @a = has_key(@x, 1); }");
   test("kprobe:f { @x[1] = 0; $a = has_key(@x, 1); }");
   test("kprobe:f { @x[1] = 0; @a[has_key(@x, 1)] = 1; }");
@@ -1160,6 +1161,12 @@ kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
 stdin:1:34-45: ERROR: has_key() expects the first argument to be a map
 kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }
                                  ~~~~~~~~~~~
+)");
+
+  test_error("kprobe:f { @a[1] = 1; has_key(@a, @a); }", R"(
+stdin:1:35-37: ERROR: Argument mismatch for @a: trying to access with no arguments when map expects arguments: 'int64'
+kprobe:f { @a[1] = 1; has_key(@a, @a); }
+                                  ~~
 )");
 }
 
