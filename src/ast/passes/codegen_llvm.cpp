@@ -1292,11 +1292,27 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    if (!map_len_func_)
-      map_len_func_ = createMapLenCallback();
+    // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
+    // implement per-cpu counters and bpf_map_sum_elem_count would always return
+    // 0 for them. In our case, those maps typically have a single element so we
+    // can return 1 straight away.
+    // For the rest, use bpf_map_sum_elem_count if available and map supports
+    // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
+    if (map_has_single_elem(map.type, map.key_type)) {
+      expr_ = b_.getInt64(1);
+    } else if (bpftrace_.feature_->has_kernel_func(
+                   Kfunc::bpf_map_sum_elem_count) &&
+               !is_array_map(map.type, map.key_type)) {
+      expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
+                                   { b_.GetMapVar(map.ident) },
+                                   "len");
+    } else {
+      if (!map_len_func_)
+        map_len_func_ = createMapLenCallback();
 
-    expr_ = b_.CreateForEachMapElem(
-        ctx_, map, map_len_func_, nullptr, call.loc);
+      expr_ = b_.CreateForEachMapElem(
+          ctx_, map, map_len_func_, nullptr, call.loc);
+    }
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -3732,6 +3748,22 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
   }
 }
 
+bool CodegenLLVM::is_array_map(const SizedType &val_type,
+                               const SizedType &key_type)
+{
+  auto map_type = get_map_type(val_type, key_type);
+  return map_type == libbpf::BPF_MAP_TYPE_ARRAY ||
+         map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+}
+
+// Check if we can special-case the map to have a single element. This is done
+// for keyless maps (e.g. @x = 1 or @++) of BPF_MAP_TYPE_(PERCPU_)ARRAY type.
+bool CodegenLLVM::map_has_single_elem(const SizedType &val_type,
+                                      const SizedType &key_type)
+{
+  return is_array_map(val_type, key_type) && key_type.IsNoneTy();
+}
+
 // Emit maps in libbpf format so that Clang can create BTF info for them which
 // can be read and used by libbpf.
 //
@@ -3767,12 +3799,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
     auto map_type = get_map_type(val_type, key_type);
-    // This is special casing for keyless maps eg: @x or @++. For a subset of
-    // keyless maps we can special case them to BPF_MAP_TYPE_ARRAY instead of
-    // HASH for efficiency
-    if ((map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
-         map_type == libbpf::BPF_MAP_TYPE_ARRAY) &&
-        key_type.IsNoneTy()) {
+    if (map_has_single_elem(val_type, key_type)) {
       max_entries = 1;
     }
 
