@@ -20,4 +20,8 @@ void __attribute__((noinline)) __target_attr END_trigger()
 {
   asm("");
 }
+void __attribute__((noinline)) __target_attr signal_trigger()
+{
+  asm("");
+}
 }
