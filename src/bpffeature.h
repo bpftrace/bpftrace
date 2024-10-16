@@ -1,6 +1,7 @@
 #pragma once
 
 #include "btf.h"
+#include "kfuncs.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -104,6 +105,8 @@ public:
   bool has_iter(std::string name);
   bool has_kernel_dwarf();
 
+  bool has_kernel_func(Kfunc kfunc);
+
   std::string report(void);
 
   DEFINE_MAP_TEST(array, libbpf::BPF_MAP_TYPE_ARRAY);
@@ -145,6 +148,8 @@ protected:
   std::optional<bool> has_module_btf_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;
+
+  std::unordered_map<Kfunc, bool> available_kernel_funcs_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);

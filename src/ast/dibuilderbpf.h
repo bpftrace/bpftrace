@@ -21,7 +21,8 @@ public:
 
   void createFunctionDebugInfo(Function &func,
                                const SizedType &ret_type,
-                               const Struct &args);
+                               const Struct &args,
+                               bool is_declaration = false);
   void createProbeDebugInfo(Function &probe_func);
 
   DIType *getInt8Ty();

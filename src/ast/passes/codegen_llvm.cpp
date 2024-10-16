@@ -4577,4 +4577,65 @@ Value *CodegenLLVM::createFmtString(int print_id)
   return res;
 }
 
+/// This should emit
+///
+///    declare !dbg !... extern_weak ... @func_name(...) section ".ksyms"
+///
+/// with proper debug info entry.
+///
+/// The function type is retrieved from kernel BTF.
+///
+/// If the function declaration is already in the module, just return it.
+///
+Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
+{
+  const std::string &func_name = kfunc_name(kfunc);
+  if (auto *fun = module_->getFunction(func_name))
+    return fun;
+
+  std::string err;
+  auto maybe_func_type = bpftrace_.btf_->resolve_args(func_name, true, err);
+  if (!maybe_func_type.has_value()) {
+    throw FatalUserException(err);
+  }
+
+  std::vector<llvm::Type *> args;
+  for (auto &field : maybe_func_type->fields) {
+    if (field.name != RETVAL_FIELD_NAME)
+      args.push_back(b_.GetType(field.type, false));
+  }
+
+  FunctionType *func_type = FunctionType::get(
+      b_.GetType(maybe_func_type->GetField(RETVAL_FIELD_NAME).type, false),
+      args,
+      false);
+
+  Function *fun = Function::Create(func_type,
+                                   llvm::GlobalValue::ExternalWeakLinkage,
+                                   func_name,
+                                   module_.get());
+  fun->setSection(".ksyms");
+  fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+
+  // Copy args and remove the last field (retval) as we pass it to
+  // createFunctionDebugInfo separately
+  Struct debug_args = *maybe_func_type; // copy here
+  debug_args.fields.pop_back();
+  debug_.createFunctionDebugInfo(
+      *fun,
+      maybe_func_type->GetField(RETVAL_FIELD_NAME).type,
+      debug_args,
+      true);
+
+  return fun;
+}
+
+CallInst *CodegenLLVM::CreateKernelFuncCall(Kfunc kfunc,
+                                            ArrayRef<Value *> args,
+                                            const Twine &name)
+{
+  auto func = DeclareKernelFunc(kfunc);
+  return b_.createCall(func->getFunctionType(), func, args, name);
+}
+
 } // namespace bpftrace::ast

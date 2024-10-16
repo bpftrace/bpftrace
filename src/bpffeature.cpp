@@ -739,4 +739,18 @@ bool BPFfeature::has_kernel_dwarf()
   return dwarf->has_debug_info();
 }
 
+bool BPFfeature::has_kernel_func(Kfunc kfunc)
+{
+  if (!has_btf())
+    return false;
+
+  auto find_kfunc = available_kernel_funcs_.find(kfunc);
+  if (find_kfunc != available_kernel_funcs_.end())
+    return find_kfunc->second;
+
+  bool result = btf_.get_btf_id(kfunc_name(kfunc), "") >= 0;
+  available_kernel_funcs_.emplace(kfunc, result);
+  return result;
+}
+
 } // namespace bpftrace
