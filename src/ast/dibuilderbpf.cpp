@@ -16,7 +16,8 @@ DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
 
 void DIBuilderBPF::createFunctionDebugInfo(Function &func,
                                            const SizedType &ret_type,
-                                           const Struct &args)
+                                           const Struct &args,
+                                           bool is_declaration)
 {
   // Return type should be at index 0
   SmallVector<Metadata *> types;
@@ -29,7 +30,9 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func,
 
   std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
 
-  DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  DISubprogram::DISPFlags flags = DISubprogram::SPFlagZero;
+  if (!is_declaration)
+    flags |= DISubprogram::SPFlagDefinition;
   if (func.isLocalLinkage(func.getLinkage()))
     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
 

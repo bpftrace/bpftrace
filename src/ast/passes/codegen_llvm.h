@@ -257,6 +257,12 @@ private:
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type);
 
+  Function *DeclareKernelFunc(const std::string &func_name);
+
+  CallInst *CreateKernelFuncCall(const std::string &func_name,
+                                 ArrayRef<Value *> args,
+                                 const Twine &name);
+
   Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;
