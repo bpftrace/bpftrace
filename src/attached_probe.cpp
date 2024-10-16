@@ -326,42 +326,6 @@ std::string AttachedProbe::eventname() const
   }
 }
 
-static int sym_name_cb(const char *symname,
-                       uint64_t start,
-                       uint64_t size,
-                       void *p)
-{
-  struct symbol *sym = static_cast<struct symbol *>(p);
-
-  if (sym->name == symname) {
-    sym->start = start;
-    sym->size = size;
-    return -1;
-  }
-
-  return 0;
-}
-
-static int sym_address_cb(const char *symname,
-                          uint64_t start,
-                          uint64_t size,
-                          void *p)
-{
-  struct symbol *sym = static_cast<struct symbol *>(p);
-
-  // When size is 0, then [start, start + size) = [start, start) = ø.
-  // So we need a special case when size=0, but address matches the symbol's
-  if (sym->address == start ||
-      (sym->address > start && sym->address < (start + size))) {
-    sym->start = start;
-    sym->size = size;
-    sym->name = symname;
-    return -1;
-  }
-
-  return 0;
-}
-
 static uint64_t resolve_offset(const std::string &path,
                                const std::string &symbol,
                                uint64_t loc)
@@ -522,69 +486,54 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   return true;
 }
 
-// find vmlinux file containing the given symbol information
-static std::string find_vmlinux(const struct vmlinux_location *locs,
-                                struct symbol &sym)
-{
-  struct bcc_symbol_option option = {};
-  option.use_debug_file = 0;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
-  struct utsname buf;
-
-  uname(&buf);
-
-  for (int i = 0; locs[i].path; i++) {
-    if (locs[i].raw)
-      continue; // This file is for BTF. skip
-    char path[PATH_MAX + 1];
-    snprintf(path, PATH_MAX, locs[i].path, buf.release);
-    if (access(path, R_OK))
-      continue;
-    bcc_elf_foreach_sym(path, sym_name_cb, &option, &sym);
-    if (sym.start) {
-      LOG(V1) << "vmlinux: using " << path;
-      return path;
-    }
-  }
-
-  return "";
-}
-
 void AttachedProbe::resolve_offset_kprobe()
 {
-  struct symbol sym = {};
-  std::string &symbol = probe_.attach_point;
-  uint64_t func_offset = probe_.func_offset;
-  offset_ = func_offset;
+  offset_ = probe_.func_offset;
 
-  if (func_offset == 0)
+  // If we are using only the symbol, we don't need to check the offset.
+  bool is_symbol_kprobe = !probe_.attach_point.empty();
+  if (is_symbol_kprobe && probe_.func_offset == 0)
     return;
 
-  sym.name = symbol;
-  const struct vmlinux_location *locs = vmlinux_locs;
-  struct vmlinux_location locs_env[] = {
-    { nullptr, false },
-    { nullptr, false },
-  };
-  char *env_path = std::getenv("BPFTRACE_VMLINUX");
-  if (env_path) {
-    locs_env[0].path = env_path;
-    locs = locs_env;
-  }
+  // Setup the symbol to resolve, either using the address or the name.
+  struct symbol sym = {};
+  if (is_symbol_kprobe)
+    sym.name = probe_.attach_point;
+  else
+    sym.address = probe_.address;
 
-  std::string path = find_vmlinux(locs, sym);
-  if (path.empty()) {
-    LOG(V1) << "Could not resolve symbol " << symbol
+  auto path = find_vmlinux(&sym);
+  if (!path.has_value()) {
+    if (!is_symbol_kprobe)
+      throw FatalUserException("Could not resolve address: " +
+                               std::to_string(probe_.address));
+
+    LOG(V1) << "Could not resolve symbol " << probe_.attach_point
             << ". Skipping usermode offset checking.";
     LOG(V1) << "The kernel will verify the safety of the location but "
                "will also allow the offset to be in a different symbol.";
-
     return;
   }
 
-  if (func_offset >= sym.size)
-    throw FatalUserException("Offset outside the function bounds ('" + symbol +
-                             "' size is " + std::to_string(sym.size) + ")");
+  // Populate probe_ fields according to the resolved symbol.
+  if (is_symbol_kprobe) {
+    probe_.address = sym.start + probe_.func_offset;
+  } else {
+    probe_.attach_point = std::move(sym.name);
+    if (__builtin_sub_overflow(probe_.address, sym.start, &probe_.func_offset))
+      LOG(BUG) << "Offset before the function bounds ('" << probe_.attach_point
+               << "' address is " << std::to_string(sym.start) << ")";
+    offset_ = probe_.func_offset;
+    // Set the name of the probe to the resolved symbol+offset, so that failure
+    // to attach can be ignored if the user set ConfigMissingProbes::warn.
+    probe_.name = "kprobe:" + probe_.attach_point + "+" +
+                  std::to_string(probe_.func_offset);
+  }
+
+  if (probe_.func_offset >= sym.size)
+    throw FatalUserException("Offset outside the function bounds ('" +
+                             probe_.attach_point + "' size is " +
+                             std::to_string(sym.size) + ")");
 }
 
 void AttachedProbe::attach_multi_kprobe()
@@ -654,11 +603,20 @@ void AttachedProbe::attach_kprobe()
   // warnings from BCC which we don't want to see.
   if (bpftrace_.config_.get(ConfigKeyMissingProbes::default_) ==
           ConfigMissingProbes::ignore &&
-      probe_.name != probe_.orig_name && funcname != "" &&
+      probe_.name != probe_.orig_name &&
+      (funcname != "" || probe_.address != 0) &&
       !bpftrace_.is_traceable_func(funcname))
     return;
 
+  // The kprobe can either be defined by a symbol+offset or an address:
+  // For symbol+offset kprobe, we need to check the validity of the offset.
+  // For address kprobe, we need to resolve into the symbol+offset and
+  // populate `funcname` with the results stored back in the probe_.
+  bool is_symbol_kprobe = !probe_.attach_point.empty();
   resolve_offset_kprobe();
+  if (!is_symbol_kprobe)
+    funcname += probe_.attach_point;
+
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),

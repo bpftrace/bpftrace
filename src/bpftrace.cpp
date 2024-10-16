@@ -161,15 +161,27 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
       probe.funcs = std::vector<std::string>(matches.begin(), matches.end());
       resources.probes.push_back(std::move(probe));
     }
-  } else if (probetype(ap.provider) == ProbeType::uprobe) {
+  } else if (probetype(ap.provider) == ProbeType::uprobe ||
+             probetype(ap.provider) == ProbeType::kprobe) {
     bool locations_from_dwarf = false;
+
+    std::optional<std::string> target;
+    if (probetype(ap.provider) == ProbeType::uprobe) {
+      target = probe.path;
+    } else {
+      // Only use the DWARF information of the Kernel,
+      // if the user wants to to probe inlined kprobes.
+      // Otherwise, fall back to using the symbol table.
+      if (config_.get(ConfigKeyBool::probe_inline))
+        target = find_vmlinux();
+    }
 
     // If the user specified an address/offset, do not overwrite
     // their choice with locations from the DebugInfo.
-    if (probe.address == 0 && probe.func_offset == 0) {
+    if (probe.address == 0 && probe.func_offset == 0 && target.has_value()) {
       // Get function locations from the DebugInfo, as it skips the
       // prologue and also returns locations of inlined function calls.
-      if (auto *dwarf = get_dwarf(probe.path)) {
+      if (auto *dwarf = get_dwarf(target.value())) {
         const auto locations = dwarf->get_function_locations(
             probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
         for (const auto loc : locations) {
