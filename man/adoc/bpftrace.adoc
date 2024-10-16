@@ -2874,6 +2874,11 @@ Most providers also support a short name which can be used instead of the full n
 | Built-in events
 | Kernel/User
 
+| <<probes-self, `self`>>
+| -
+| Built-in events
+| Kernel/User
+
 | <<probes-hardware, `hardware`>>
 | `h`
 | Processor-level events
@@ -2949,6 +2954,22 @@ To prevent printing all used maps need be cleared in the `END` probe:
 END {
     clear(@map1);
     clear(@map2);
+}
+----
+
+[#probes-self]
+=== self
+
+.variants
+* `self:signal:SIGUSR1`
+
+These are special built-in events provided by the bpftrace runtime.
+The trigger function is called by the bpftrace runtime when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
+When multiple signal handlers are attached to the same signal, only the first one is used.
+
+----
+self:signal:SIGUSR1 {
+  print("abc");
 }
 ----
 
@@ -4085,13 +4106,6 @@ END {
 will print this on exit:
 ```
 @a: 0
-```
-
-If you want to get a snapshot of your maps while the script is running, you can send the running bpftrace process a `SIGUSR1` signal. bpftrace will then print all maps to stdout. Example:
-```
-# bpftrace -e 'BEGIN { @b[1] = 2; }' & kill -s USR1 $(pidof bpftrace)
-...
-@b[1]: 2
 ```
 
 === Systemd support

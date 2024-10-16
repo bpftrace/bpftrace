@@ -39,7 +39,7 @@ public:
   {
     return resources.probes;
   }
-  std::vector<Probe> get_special_probes()
+  std::unordered_map<std::string, Probe> get_special_probes()
   {
     return resources.special_probes;
   }

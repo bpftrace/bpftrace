@@ -564,32 +564,6 @@ bool BPFfeature::has_skb_output()
   return *has_skb_output_;
 }
 
-bool BPFfeature::has_raw_tp_special()
-{
-  if (has_raw_tp_special_.has_value())
-    return *has_raw_tp_special_;
-
-  struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
-  int fd;
-
-  // Check that we can both load BPF_PROG_TYPE_RAW_TRACEPOINT and that
-  // BPF_PROG_RUN is supported by the kernel
-  if (try_load(libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT,
-               insns,
-               ARRAY_SIZE(insns),
-               nullptr,
-               std::nullopt,
-               &fd)) {
-    struct bpf_test_run_opts opts = {};
-    opts.sz = sizeof(opts);
-    has_raw_tp_special_ = !::bpf_prog_test_run_opts(fd, &opts);
-    close(fd);
-  } else
-    has_raw_tp_special_ = false;
-
-  return *has_raw_tp_special_;
-}
-
 std::string BPFfeature::report()
 {
   std::stringstream buf;
@@ -643,7 +617,6 @@ std::string BPFfeature::report()
       << "  fentry: " << to_str(has_fentry())
       << "  kprobe_multi: " << to_str(has_kprobe_multi())
       << "  uprobe_multi: " << to_str(has_uprobe_multi())
-      << "  raw_tp_special: " << to_str(has_raw_tp_special())
       << "  iter: " << to_str(has_iter("task")) << std::endl;
 
   return buf.str();

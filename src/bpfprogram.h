@@ -18,7 +18,7 @@ class BpfProgram {
 public:
   explicit BpfProgram(struct bpf_program *bpf_prog);
 
-  void set_prog_type(const Probe &probe, BPFfeature &feature);
+  void set_prog_type(const Probe &probe);
   void set_expected_attach_type(const Probe &probe, BPFfeature &feature);
   void set_attach_target(const Probe &probe,
                          const BTF &btf,

@@ -186,8 +186,11 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
   }
 
+  std::vector<Probe> special_probes;
+  for (auto probe : resources.special_probes)
+    special_probes.push_back(probe.second);
+  prepare_progs(special_probes, btf, feature, config);
   prepare_progs(resources.probes, btf, feature, config);
-  prepare_progs(resources.special_probes, btf, feature, config);
   prepare_progs(resources.watchpoint_probes, btf, feature, config);
 
   int res = bpf_object__load(bpf_object_.get());
@@ -264,7 +267,7 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
 {
   for (auto &probe : probes) {
     auto &program = getProgramForProbe(probe);
-    program.set_prog_type(probe, feature);
+    program.set_prog_type(probe);
     program.set_expected_attach_type(probe, feature);
     program.set_attach_target(probe, btf, config);
     program.set_no_autoattach();

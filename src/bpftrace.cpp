@@ -42,7 +42,6 @@
 #include "log.h"
 #include "printf.h"
 #include "resolve_cgroupid.h"
-#include "triggers.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -119,11 +118,11 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
   auto probe = generate_probe(ap, p, usdt_location_idx);
 
   // Add the new probe(s) to resources
-  if (ap.provider == "BEGIN" || ap.provider == "END") {
+  if (ap.provider == "BEGIN" || ap.provider == "END" || ap.provider == "self") {
     // special probes
-    probe.path = "/proc/self/exe";
-    probe.attach_point = ap.provider + "_trigger";
-    resources.special_probes.push_back(std::move(probe));
+    auto target = ap.target.empty() ? "" : "_" + ap.target;
+    auto name = ap.provider + target;
+    resources.special_probes[name] = std::move(probe);
   } else if ((type == ProbeType::watchpoint ||
               type == ProbeType::asyncwatchpoint) &&
              ap.func.size()) {
@@ -802,8 +801,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
           std::make_unique<AttachedProbe>(probe, program, pid, *this));
       return ret;
     } else {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, safe_mode_, *this));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe, program, *this));
       return ret;
     }
   } catch (const EnospcException &e) {
@@ -843,32 +841,6 @@ bool attach_reverse(const Probe &p)
   }
 
   return {}; // unreached
-}
-
-int BPFtrace::run_special_probe(std::string name,
-                                BpfBytecode &bytecode,
-                                trigger_fn_t trigger)
-{
-  for (auto &special_probe :
-       std::ranges::reverse_view(resources.special_probes)) {
-    if (special_probe.attach_point == name) {
-      auto aps = attach_probe(special_probe, bytecode);
-      if (aps.size() != 1)
-        return -1;
-
-      if (feature_->has_raw_tp_special()) {
-        struct bpf_test_run_opts opts = {};
-        opts.sz = sizeof(opts);
-
-        return ::bpf_prog_test_run_opts(aps[0]->progfd(), &opts);
-      } else {
-        trigger();
-        return 0;
-      }
-    }
-  }
-
-  return 0;
 }
 
 int BPFtrace::run_iter()
@@ -987,13 +959,18 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
-  // XXX: cast is a workaround for a gcc bug that causes an "invalid conversion"
-  // error here in case the trigger function has the `target` attribute set (see
-  // triggers.h): https://gcc.godbolt.org/z/44b5MjdbT
-  if (run_special_probe("BEGIN_trigger",
-                        bytecode_,
-                        reinterpret_cast<trigger_fn_t>(BEGIN_trigger)))
-    return -1;
+  auto begin_probe = resources.special_probes.find("BEGIN");
+  if (begin_probe != resources.special_probes.end()) {
+    auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
+    if (::bpf_prog_test_run_opts(begin_prog.fd(), nullptr))
+      return -1;
+  }
+
+  auto signal_probe = resources.special_probes.find("self_signal");
+  if (signal_probe != resources.special_probes.end()) {
+    auto &sig_prog = bytecode_.getProgramForProbe((*signal_probe).second);
+    sigusr1_prog_fd_ = sig_prog.fd();
+  }
 
   if (child_ && has_usdt_) {
     try {
@@ -1088,14 +1065,16 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   attached_probes_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise
-  // perf_event_printer() can ignore the END_trigger() events.
+  // perf_event_printer() can ignore the `END` events.
   finalize_ = false;
   exitsig_recv = false;
 
-  if (run_special_probe("END_trigger",
-                        bytecode_,
-                        reinterpret_cast<trigger_fn_t>(END_trigger)))
-    return -1;
+  auto end_probe = resources.special_probes.find("END");
+  if (end_probe != resources.special_probes.end()) {
+    auto &end_prog = bytecode_.getProgramForProbe((*end_probe).second);
+    if (::bpf_prog_test_run_opts(end_prog.fd(), nullptr))
+      return -1;
+  }
 
   poll_output(/* drain */ true);
 
@@ -1250,10 +1229,15 @@ void BPFtrace::poll_output(bool drain)
       return;
     }
 
-    // Print all maps if we received a SIGUSR1 signal
     if (BPFtrace::sigusr1_recv) {
       BPFtrace::sigusr1_recv = false;
-      print_maps();
+
+      if (sigusr1_prog_fd_.has_value()) {
+        if (::bpf_prog_test_run_opts(*sigusr1_prog_fd_, nullptr)) {
+          LOG(ERROR) << "Failed to run signal probe";
+          return;
+        }
+      }
     }
   }
   return;

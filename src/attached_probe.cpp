@@ -148,18 +148,11 @@ int AttachedProbe::detach_raw_tracepoint()
 
 AttachedProbe::AttachedProbe(Probe &probe,
                              const BpfProgram &prog,
-                             bool safe_mode,
                              BPFtrace &bpftrace)
     : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
 {
   LOG(V1) << "Attaching " << probe_.orig_name;
   switch (probe_.type) {
-    case ProbeType::special:
-      // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
-      // to anything -- we will simply BPF_PROG_RUN it
-      if (!bpftrace_.feature_->has_raw_tp_special())
-        attach_uprobe(getpid(), safe_mode);
-      break;
     case ProbeType::kprobe:
       attach_kprobe();
       break;
@@ -312,7 +305,6 @@ std::string AttachedProbe::eventname() const
       offset_str << std::hex << offset_;
       return eventprefix() + sanitise_bpf_program_name(probe_.attach_point) +
              "_" + offset_str.str() + index_str;
-    case ProbeType::special:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
