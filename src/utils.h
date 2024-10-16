@@ -196,6 +196,7 @@ std::vector<int> get_possible_cpus();
 int get_max_cpu_id();
 bool is_dir(const std::string &path);
 bool file_exists_and_ownedby_root(const char *f);
+std::optional<std::string> find_vmlinux(struct symbol *sym = nullptr);
 bool get_kernel_dirs(const struct utsname &utsname,
                      std::string &ksrc,
                      std::string &kobj);
@@ -393,6 +394,49 @@ inline void hash_combine(std::size_t &seed, const T &value)
 {
   std::hash<T> hasher;
   seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+struct symbol {
+  std::string name;
+  uint64_t start;
+  uint64_t size;
+  uint64_t address;
+};
+
+inline int sym_name_cb(const char *symname,
+                       uint64_t start,
+                       uint64_t size,
+                       void *p)
+{
+  struct symbol *sym = static_cast<struct symbol *>(p);
+
+  if (sym->name == symname) {
+    sym->start = start;
+    sym->size = size;
+    return -1;
+  }
+
+  return 0;
+}
+
+inline int sym_address_cb(const char *symname,
+                          uint64_t start,
+                          uint64_t size,
+                          void *p)
+{
+  struct symbol *sym = static_cast<struct symbol *>(p);
+
+  // When size is 0, then [start, start + size) = [start, start) = ø.
+  // So we need a special case when size=0, but address matches the symbol's
+  if (sym->address == start ||
+      (sym->address > start && sym->address < (start + size))) {
+    sym->start = start;
+    sym->size = size;
+    sym->name = symname;
+    return -1;
+  }
+
+  return 0;
 }
 
 } // namespace bpftrace

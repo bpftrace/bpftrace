@@ -32,6 +32,8 @@ and this project adheres to
   - [#3390](https://github.com/bpftrace/bpftrace/pull/3390/)
 - Add `has_key` function for maps
   - [#3358](https://github.com/bpftrace/bpftrace/pull/3358)
+- Add ability to attach kprobes to inlined functions
+  - [#3301](https://github.com/bpftrace/bpftrace/pull/3095)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
