@@ -3155,6 +3155,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         has_end_probe_ = true;
       }
     }
+  } else if (ap.provider == "signal") {
+    if (ap.target == "")
+      LOG(ERROR, ap.loc, err_) << ap.provider << " should have a target";
+    if (ap.func != "")
+      LOG(ERROR, ap.loc, err_) << ap.provider << " should only have a target";
+    if (SIGNALS.find(ap.target) == SIGNALS.end())
+      LOG(ERROR, ap.loc, err_) << ap.target << " is not a supported signal";
   } else if (ap.provider == "kfunc" || ap.provider == "kretfunc") {
     if (!bpftrace_.feature_->has_kfunc()) {
       LOG(ERROR, ap.loc, err_)
