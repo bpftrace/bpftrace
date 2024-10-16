@@ -617,6 +617,8 @@ void AttachedProbe::attach_kprobe()
   if (!is_symbol_kprobe)
     funcname += probe_.attach_point;
 
+  LOG(V1) << "bpf_attach_kprobe(" << progfd_ << ", " << probe_.type << ", "
+          << eventname() << ", " << funcname << ", " << offset_ << ", 0)";
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),
