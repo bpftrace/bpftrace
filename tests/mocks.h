@@ -116,6 +116,11 @@ public:
     has_loop_ = std::make_optional<bool>(has);
   }
 
+  void mock_missing_kernel_func(Kfunc kfunc)
+  {
+    available_kernel_funcs_.emplace(kfunc, false);
+  }
+
   bool has_features_;
 };
 

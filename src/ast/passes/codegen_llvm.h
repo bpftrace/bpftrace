@@ -19,6 +19,7 @@
 #include "bpftrace.h"
 #include "codegen_resources.h"
 #include "format_string.h"
+#include "kfuncs.h"
 #include "location.hh"
 #include "required_resources.h"
 
@@ -256,6 +257,12 @@ private:
 
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type);
+
+  Function *DeclareKernelFunc(Kfunc kfunc);
+
+  CallInst *CreateKernelFuncCall(Kfunc kfunc,
+                                 ArrayRef<Value *> args,
+                                 const Twine &name);
 
   Node *root_ = nullptr;
 
