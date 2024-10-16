@@ -3262,6 +3262,14 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         has_end_probe_ = true;
       }
     }
+  } else if (ap.provider == "bpftrace") {
+    if (ap.target == "signal") {
+      if (SIGNALS.find(ap.func) == SIGNALS.end())
+        LOG(ERROR, ap.loc, err_) << ap.func << " is not a supported signal";
+      return;
+    }
+    LOG(ERROR, ap.loc, err_)
+        << ap.target << " is not a supported bpftrace trigger";
   } else if (ap.provider == "kfunc" || ap.provider == "kretfunc") {
     if (!bpftrace_.feature_->has_kfunc()) {
       LOG(ERROR, ap.loc, err_)
