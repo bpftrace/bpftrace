@@ -206,8 +206,14 @@ EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
 BEFORE ./testprogs/uprobe_test
 
+# The function `str_has_prefix` is marked to be always inlined, so we'll get
+# more than one occurrence for it.
+# We first check that bpftrace attaches to more probes than the two defined in the script.
+# We also check that the offsets bpftrace attaches to are different from 0,
+# since they should be inline instances part of another function/symbol.
 NAME kprobe inlined function
-PROG config = { probe_inline = 1 } BEGIN { exit() }
-     kprobe:str_has_prefix { }
-EXPECT_NONE Attaching 2 probe...
+RUN {{BPFTRACE}} -ve \ 'config = { probe_inline = 1 } BEGIN { exit() } kprobe:str_has_prefix { }'
+EXPECT_NONE Attaching 1 probe...
+EXPECT_NONE Attaching 2 probes...
+EXPECT_REGEX_NONE ^bpf_attach_kprobe\(.*, 0, 0\)$
 REQUIRES_FEATURE dwarf kernel_dwarf
