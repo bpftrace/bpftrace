@@ -189,7 +189,10 @@ public:
   BpfBytecode bytecode_;
   StructManager structs;
   std::map<std::string, std::string> macros_;
-  std::map<std::string, uint64_t> enums_;
+  // Map of enum variant_name -> (variant_value, enum_name)
+  std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
+  // Map of enum_name to map of variant_value to variant_name
+  std::map<std::string, std::map<uint64_t, std::string>> enum_defs_;
   std::map<libbpf::bpf_func_id, location> helper_use_loc_;
   const FuncsModulesMap &get_traceable_funcs() const;
   KConfig kconfig;

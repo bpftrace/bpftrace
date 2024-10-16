@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <sstream>
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
@@ -102,6 +103,13 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
 
   return os;
+}
+
+std::string to_string(Type ty)
+{
+  std::ostringstream ss;
+  ss << ty;
+  return ss.str();
 }
 
 bool SizedType::IsSameType(const SizedType &t) const
@@ -369,6 +377,13 @@ SizedType CreateUInt32()
 SizedType CreateUInt64()
 {
   return CreateUInt(64);
+}
+
+SizedType CreateEnum(size_t bits, const std::string &name)
+{
+  auto ty = CreateUInt(bits);
+  ty.name_ = name;
+  return ty;
 }
 
 SizedType CreateString(size_t size)

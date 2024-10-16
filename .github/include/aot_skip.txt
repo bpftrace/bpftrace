@@ -17,6 +17,16 @@ aot.call.str_big_printf
 aot.call.buf_map_multikey
 aot.call.cgroup_path
 aot.call.cgroup_path printf
+# Enum metadata is not being serialized
+aot.call.printf_enum_symbolize
+# Enum metadata is not being serialized
+aot.call.printf_enum_symbolize_map
+# Enum metadata is not being serialized
+aot.call.printf_enum_symbolize_var
+# Enum metadata is not being serialized
+aot.call.printf_enum_symbolize_width
+# Enum metadata is not being serialized
+aot.call.printf_enum_symbolize_tracepoint
 aot.call.hist_10g
 aot.call.iter:task
 aot.call.iter:task_file

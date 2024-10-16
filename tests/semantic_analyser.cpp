@@ -2565,7 +2565,17 @@ TEST(semantic_analyser, macros)
 
 TEST(semantic_analyser, enums)
 {
+  // Anonymous enums have empty string names in libclang <= 15,
+  // so this is an important test
   test("enum { a = 1, b } kprobe:f { printf(\"%d\", a); }");
+  test("enum { a = 1, b } kprobe:f { printf(\"%s\", a); }");
+  test("enum { a = 1, b } kprobe:f { $e = a; printf(\"%s\", $e); }");
+  test("enum { a = 1, b } kprobe:f { printf(\"%15s %-15s\", a, a); }");
+
+  test("enum named { a = 1, b } kprobe:f { printf(\"%d\", a); }");
+  test("enum named { a = 1, b } kprobe:f { printf(\"%s\", a); }");
+  test("enum named { a = 1, b } kprobe:f { $e = a; printf(\"%s\", $e); }");
+  test("enum named { a = 1, b } kprobe:f { printf(\"%15s %-15s\", a, a); }");
 }
 
 TEST(semantic_analyser, signed_int_comparison_warnings)

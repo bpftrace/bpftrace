@@ -32,6 +32,8 @@ and this project adheres to
   - [#3390](https://github.com/bpftrace/bpftrace/pull/3390/)
 - Add `has_key` function for maps
   - [#3358](https://github.com/bpftrace/bpftrace/pull/3358)
+- Support symbolizing enum values using `%s` specifier in `printf()`
+  - [#3515](https://github.com/bpftrace/bpftrace/pull/3515)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

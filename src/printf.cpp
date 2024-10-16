@@ -1,4 +1,6 @@
 #include "printf.h"
+
+#include "log.h"
 #include "printf_format_types.h"
 #include "struct.h"
 
@@ -24,6 +26,7 @@ PrintableString::PrintableString(std::string value,
 int PrintableString::print(char *buf,
                            size_t size,
                            const char *fmt,
+                           Type,
                            ArgumentType)
 {
   return snprintf(buf, size, fmt, value_.c_str());
@@ -32,6 +35,7 @@ int PrintableString::print(char *buf,
 int PrintableBuffer::print(char *buf,
                            size_t size,
                            const char *fmt,
+                           Type,
                            ArgumentType)
 {
   return snprintf(
@@ -55,6 +59,7 @@ void PrintableBuffer::escape_hex(bool value)
 int PrintableCString::print(char *buf,
                             size_t size,
                             const char *fmt,
+                            Type,
                             ArgumentType)
 {
   return snprintf(buf, size, fmt, value_);
@@ -63,6 +68,7 @@ int PrintableCString::print(char *buf,
 int PrintableInt::print(char *buf,
                         size_t size,
                         const char *fmt,
+                        Type,
                         ArgumentType expected_type)
 {
   // Since the value is internally always stored as a 64-bit integer, a cast is
@@ -100,6 +106,7 @@ int PrintableInt::print(char *buf,
 int PrintableSInt::print(char *buf,
                          size_t size,
                          const char *fmt,
+                         Type,
                          ArgumentType expected_type)
 {
   switch (expected_type) {
@@ -127,4 +134,22 @@ int PrintableSInt::print(char *buf,
 
   __builtin_unreachable();
 }
+
+int PrintableEnum::print(char *buf,
+                         size_t size,
+                         const char *fmt,
+                         Type token,
+                         ArgumentType expected_type)
+{
+  switch (token) {
+    case Type::integer:
+      return PrintableInt(value_).print(buf, size, fmt, token, expected_type);
+    case Type::string:
+      return snprintf(buf, size, fmt, name_.c_str());
+    default:
+      LOG(BUG) << "Invalid token type for enum";
+      __builtin_unreachable();
+  }
+}
+
 } // namespace bpftrace
