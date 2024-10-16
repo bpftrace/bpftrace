@@ -190,12 +190,9 @@ void check_hardware(Probe &p,
   EXPECT_EQ("hardware:" + unit + ":" + std::to_string(freq), p.name);
 }
 
-void check_special_probe(Probe &p,
-                         const std::string &attach_point,
-                         const std::string &orig_name)
+void check_special_probe(Probe &p, const std::string &orig_name)
 {
   EXPECT_EQ(ProbeType::special, p.type);
-  EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ(orig_name, p.name);
 }
@@ -208,9 +205,7 @@ TEST(bpftrace, add_begin_probe)
   ASSERT_EQ(0U, bpftrace.get_probes().size());
   ASSERT_EQ(1U, bpftrace.get_special_probes().size());
 
-  check_special_probe(bpftrace.get_special_probes().at(0),
-                      "BEGIN_trigger",
-                      "BEGIN");
+  check_special_probe(bpftrace.get_special_probes()["BEGIN"], "BEGIN");
 }
 
 TEST(bpftrace, add_end_probe)
@@ -221,9 +216,7 @@ TEST(bpftrace, add_end_probe)
   ASSERT_EQ(0U, bpftrace.get_probes().size());
   ASSERT_EQ(1U, bpftrace.get_special_probes().size());
 
-  check_special_probe(bpftrace.get_special_probes().at(0),
-                      "END_trigger",
-                      "END");
+  check_special_probe(bpftrace.get_special_probes()["END"], "END");
 }
 
 TEST(bpftrace, add_probes_single)

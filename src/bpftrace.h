@@ -190,6 +190,7 @@ public:
   const FuncsModulesMap &get_traceable_funcs() const;
   KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
+  std::optional<int> sigusr1_prog_fd_;
 
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers;
 
@@ -232,9 +233,6 @@ public:
   Config config_;
 
 private:
-  int run_special_probe(std::string name,
-                        BpfBytecode &bytecode,
-                        void (*trigger)(void));
   void *ksyms_{ nullptr };
   // note: exe_sym_ is used when layout is same for all instances of program
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)

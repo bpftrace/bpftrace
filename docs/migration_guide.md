@@ -28,7 +28,7 @@ BEGIN {
 However, the value of `$x` at the print statement was considered undefined
 behavior. Issue: https://github.com/bpftrace/bpftrace/issues/3017
 
-Now variables are "block" scoped and the the above will throw an error at the 
+Now variables are "block" scoped and the the above will throw an error at the
 print statement: "ERROR: Undefined or undeclared variable: $x".
 
 If you see this error you can do multiple things to resolve it.
@@ -58,7 +58,7 @@ BEGIN {
 Declaring is useful for variables that hold internal bpftrace types
 e.g. the type returned by the `macaddr` function.
 
-This is also not valid even though `$x` is set in both branches (`$x` still 
+This is also not valid even though `$x` is set in both branches (`$x` still
 needs to exist in the outer scope):
 ```
 BEGIN {
@@ -139,5 +139,30 @@ To mitigate such an error, just typecast `pid` or `tid` to `uint64`:
 ```
 # bpftrace -e 'BEGIN { $x = (uint64)pid; $x = cgroup; }'
 Attaching 1 probe...
+```
+
+### default `SIGUSR1` handler removed
+
+https://github.com/bpftrace/bpftrace/pull/3522
+
+Previously, if the bpftrace process received a `SIGUSR1` signal, it would print all maps to stdout:
+```
+# bpftrace -e 'BEGIN { @b[1] = 2; }' & kill -s USR1 $(pidof bpftrace)
+...
+@b[1]: 2
+```
+
+This behavior is no longer supported and has been replaced with the ability
+to define custom handling probes:
+```
+# bpftrace -e 'self:signal:SIGUSR1 { print("hello"); }' & kill -s USR1 $(pidof bpftrace)
+...
+hello
+```
+
+To retain the previous functionality of printing maps, you need to
+manually include the print statements in your signal handler probe:
+```
+# bpftrace -e 'BEGIN { @b[1] = 2; } self:signal:SIGUSR1 { print(@b); }' & kill -s USR1 $(pidof bpftrace)
 ```
 

@@ -609,6 +609,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
     .show_in_userspace_list = true },
   { .name = "BEGIN", .aliases = { "BEGIN" }, .type = ProbeType::special },
   { .name = "END", .aliases = { "END" }, .type = ProbeType::special },
+  { .name = "self", .aliases = { "self" }, .type = ProbeType::special },
   { .name = "tracepoint",
     .aliases = { "t" },
     .type = ProbeType::tracepoint,

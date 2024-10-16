@@ -182,6 +182,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
     }
+    case ProbeType::special:
+      return { target + ":" };
     default:
       return {};
   }

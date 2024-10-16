@@ -47,6 +47,8 @@ const std::vector<ProbeListItem> HW_PROBE_LIST = {
 
 const std::unordered_set<std::string> TIME_UNITS = { "s", "ms", "us", "hz" };
 
+const std::unordered_set<std::string> SIGNALS = { "SIGUSR1" };
+
 class BPFtrace;
 
 typedef std::map<std::string, std::vector<std::string>> FuncParamLists;

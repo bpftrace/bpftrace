@@ -2190,6 +2190,22 @@ TEST(semantic_analyser, begin_end_probes)
   test("END { 1 } END { 2 }", 10);
 }
 
+TEST(semantic_analyser, self_probe)
+{
+  test("self:signal:SIGUSR1 { 1 }");
+
+  test_error("self:signal:sighup { 1 }", R"(
+stdin:1:1-19: ERROR: sighup is not a supported signal
+self:signal:sighup { 1 }
+~~~~~~~~~~~~~~~~~~
+)");
+  test_error("self:keypress:space { 1 }", R"(
+stdin:1:1-20: ERROR: keypress is not a supported trigger
+self:keypress:space { 1 }
+~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, tracepoint)
 {
   test("tracepoint:category:event { 1 }");
@@ -4377,7 +4393,7 @@ TEST(semantic_analyser, block_scoping)
   // if/else
   test("BEGIN { $a = 1; if (1) { $b = 2; print(($a, $b)); } }");
   test(R"(
-      BEGIN { 
+      BEGIN {
         $a = 1;
         if (1) {
           print(($a));

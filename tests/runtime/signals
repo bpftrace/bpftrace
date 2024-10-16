@@ -9,7 +9,7 @@ RUN {{BPFTRACE}} -e 'END { printf("%s %d", "SUCCESS", 1) }' & (./testprogs/sysca
 EXPECT SUCCESS 1
 TIMEOUT 2
 
-NAME print all maps on sigusr1
-RUN {{BPFTRACE}} -e 'BEGIN { @scalar = 5; } interval:s:2 { delete(@scalar); exit(); }'
+NAME custom signal handling probe
+RUN {{BPFTRACE}} -e 'self:signal:SIGUSR1 { print("signal handler"); exit(); }'
 AFTER kill -s USR1 $(pidof bpftrace)
-EXPECT @scalar: 5
+EXPECT signal handler

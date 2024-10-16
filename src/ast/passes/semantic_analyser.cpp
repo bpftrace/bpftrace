@@ -3347,6 +3347,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         has_end_probe_ = true;
       }
     }
+  } else if (ap.provider == "self") {
+    if (ap.target == "signal") {
+      if (SIGNALS.find(ap.func) == SIGNALS.end())
+        LOG(ERROR, ap.loc, err_) << ap.func << " is not a supported signal";
+      return;
+    }
+    LOG(ERROR, ap.loc, err_) << ap.target << " is not a supported trigger";
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       LOG(ERROR, ap.loc, err_)

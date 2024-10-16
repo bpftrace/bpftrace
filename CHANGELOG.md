@@ -18,6 +18,9 @@ and this project adheres to
 - Add lexical/block scoping for variables
   - [#3367](https://github.com/bpftrace/bpftrace/pull/3367)
   - [Migration guide](docs/migration_guide.md#added-block-scoping-for-scratch-variables)
+- Replace default map printing on `SIGUSR1` with custom signal handling probes
+  - [#3522](https://github.com/bpftrace/bpftrace/pull/3522)
+  - [Migration guide](docs/migration_guide.md#default-sigusr1-handler-removed)
 #### Added
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)

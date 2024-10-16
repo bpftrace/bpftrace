@@ -21,11 +21,9 @@ int BpfProgram::fd() const
   return bpf_program__fd(bpf_prog_);
 }
 
-void BpfProgram::set_prog_type(const Probe &probe, BPFfeature &feature)
+void BpfProgram::set_prog_type(const Probe &probe)
 {
   auto prog_type = progtype(probe.type);
-  if (probe.type == ProbeType::special && !feature.has_raw_tp_special())
-    prog_type = progtype(ProbeType::uprobe);
   bpf_program__set_type(bpf_prog_, static_cast<::bpf_prog_type>(prog_type));
 }
 

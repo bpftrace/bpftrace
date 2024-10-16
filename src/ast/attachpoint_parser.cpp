@@ -276,13 +276,22 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
 
 AttachPointParser::State AttachPointParser::special_parser()
 {
-  // Can only have reached here if provider is `BEGIN` or `END`
-  assert(ap_->provider == "BEGIN" || ap_->provider == "END");
+  // Can only have reached here if provider is `BEGIN` or `END` or `self`
+  assert(ap_->provider == "BEGIN" || ap_->provider == "END" ||
+         ap_->provider == "self");
 
-  if (parts_.size() == 2 && parts_[1] == "*")
-    parts_.pop_back();
-  if (parts_.size() != 1) {
-    return argument_count_error(0);
+  if (ap_->provider == "BEGIN" || ap_->provider == "END") {
+    if (parts_.size() == 2 && parts_[1] == "*")
+      parts_.pop_back();
+    if (parts_.size() != 1) {
+      return argument_count_error(0);
+    }
+  } else if (ap_->provider == "self") {
+    if (parts_.size() != 3) {
+      return argument_count_error(2);
+    }
+    ap_->target = parts_[1];
+    ap_->func = parts_[2];
   }
 
   return OK;
