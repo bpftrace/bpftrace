@@ -18,11 +18,15 @@
 #include "driver.h"
 #include "tracepoint_format_parser.h"
 
+#include "btf_common.h"
+
 namespace bpftrace {
 namespace test {
 namespace codegen {
 
 #define NAME (::testing::UnitTest::GetInstance()->current_test_info()->name())
+
+class codegen_btf : public test_btf {};
 
 static std::string get_expected(const std::string &name)
 {
