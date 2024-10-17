@@ -4,12 +4,13 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "btf_common.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 
 namespace bpftrace::test::portability_analyser {
+
+#include "btf_common.h"
 
 using ::testing::_;
 
