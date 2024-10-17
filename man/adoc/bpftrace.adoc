@@ -2771,6 +2771,11 @@ Most providers also support a short name which can be used instead of the full n
 | Built-in events
 | Kernel/User
 
+| <<probes-signal, `signal`>>
+| -
+| Built-in events
+| Kernel/User
+
 | <<probes-hardware, `hardware`>>
 | `h`
 | Processor-level events
@@ -2846,6 +2851,21 @@ To prevent printing all used maps need be cleared in the `END` probe:
 END {
     clear(@map1);
     clear(@map2);
+}
+----
+
+[#probes-signal]
+=== signal
+
+.variants
+* `signal:sigusr1`
+
+Signal probes are special built-in events provided by the bpftrace runtime.
+These are triggered when a specified signal is received. Currently, only SIGUSR1 is supported.
+
+----
+signal:sigusr1 {
+  print("abc");
 }
 ----
 

@@ -2188,6 +2188,17 @@ TEST(semantic_analyser, begin_end_probes)
   test("END { 1 } END { 2 }", 10);
 }
 
+TEST(semantic_analyser, signal_probe)
+{
+  test("signal:sigusr1 { 1 }");
+
+  test_error("signal:sighup { 1 }", R"(
+stdin:1:1-14: ERROR: sighup is not a supported signal
+signal:sighup { 1 }
+~~~~~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, tracepoint)
 {
   test("tracepoint:category:event { 1 }");

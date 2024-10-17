@@ -119,7 +119,8 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
   auto probe = generate_probe(ap, p, usdt_location_idx);
 
   // Add the new probe(s) to resources
-  if (ap.provider == "BEGIN" || ap.provider == "END") {
+  if (ap.provider == "BEGIN" || ap.provider == "END" ||
+      ap.provider == "signal") {
     // special probes
     probe.path = "/proc/self/exe";
     probe.attach_point = ap.provider + "_trigger";
@@ -820,29 +821,16 @@ bool attach_reverse(const Probe &p)
   return {}; // unreached
 }
 
-int BPFtrace::run_special_probe(std::string name,
-                                BpfBytecode &bytecode,
-                                trigger_fn_t trigger)
+int BPFtrace::run_special_probe(AttachedProbe &ap, trigger_fn_t trigger)
 {
-  for (auto &special_probe :
-       std::ranges::reverse_view(resources.special_probes)) {
-    if (special_probe.attach_point == name) {
-      auto aps = attach_probe(special_probe, bytecode);
-      if (aps.size() != 1)
-        return -1;
+  if (feature_->has_raw_tp_special()) {
+    struct bpf_test_run_opts opts = {};
+    opts.sz = sizeof(opts);
 
-      if (feature_->has_raw_tp_special()) {
-        struct bpf_test_run_opts opts = {};
-        opts.sz = sizeof(opts);
-
-        return ::bpf_prog_test_run_opts(aps[0]->progfd(), &opts);
-      } else {
-        trigger();
-        return 0;
-      }
-    }
+    return ::bpf_prog_test_run_opts(ap.progfd(), &opts);
   }
 
+  trigger();
   return 0;
 }
 
@@ -962,13 +950,30 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
-  // XXX: cast is a workaround for a gcc bug that causes an "invalid conversion"
-  // error here in case the trigger function has the `target` attribute set (see
-  // triggers.h): https://gcc.godbolt.org/z/44b5MjdbT
-  if (run_special_probe("BEGIN_trigger",
-                        bytecode_,
-                        reinterpret_cast<trigger_fn_t>(BEGIN_trigger)))
-    return -1;
+  for (auto &special_probe :
+       std::ranges::reverse_view(resources.special_probes)) {
+    if (special_probe.attach_point == "BEGIN_trigger") {
+      auto aps = attach_probe(special_probe, bytecode_);
+      if (aps.size() != 1)
+        return -1;
+      // XXX: cast is a workaround for a gcc bug that causes an "invalid
+      // conversion" error here in case the trigger function has the `target`
+      // attribute set (see triggers.h): https://gcc.godbolt.org/z/44b5MjdbT
+      if (run_special_probe(*aps[0],
+                            reinterpret_cast<trigger_fn_t>(BEGIN_trigger)))
+        return -1;
+    }
+  }
+
+  for (auto &special_probe :
+       std::ranges::reverse_view(resources.special_probes)) {
+    if (special_probe.attach_point == "signal_trigger") {
+      auto aps = attach_probe(special_probe, bytecode_);
+      if (aps.size() != 1)
+        return -1;
+      sigusr1_attached_probe_ = std::move(aps[0]);
+    }
+  }
 
   if (child_ && has_usdt_) {
     try {
@@ -1067,10 +1072,17 @@ int BPFtrace::run(BpfBytecode bytecode)
   finalize_ = false;
   exitsig_recv = false;
 
-  if (run_special_probe("END_trigger",
-                        bytecode_,
-                        reinterpret_cast<trigger_fn_t>(END_trigger)))
-    return -1;
+  for (auto &special_probe :
+       std::ranges::reverse_view(resources.special_probes)) {
+    if (special_probe.attach_point == "END_trigger") {
+      auto aps = attach_probe(special_probe, bytecode_);
+      if (aps.size() != 1)
+        return -1;
+      if (run_special_probe(*aps[0],
+                            reinterpret_cast<trigger_fn_t>(END_trigger)))
+        return -1;
+    }
+  }
 
   poll_output(/* drain */ true);
 
@@ -1225,10 +1237,18 @@ void BPFtrace::poll_output(bool drain)
       return;
     }
 
-    // Print all maps if we received a SIGUSR1 signal
     if (BPFtrace::sigusr1_recv) {
       BPFtrace::sigusr1_recv = false;
-      print_maps();
+
+      if (sigusr1_attached_probe_) {
+        if (run_special_probe(*sigusr1_attached_probe_,
+                              reinterpret_cast<trigger_fn_t>(signal_trigger))) {
+          LOG(ERROR) << "Failed to run signal probe";
+          return;
+        }
+      } else {
+        print_maps();
+      }
     }
   }
   return;
