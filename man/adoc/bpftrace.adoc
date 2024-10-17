@@ -3602,6 +3602,20 @@ Default: `..`
 Trailer to add to strings that were truncated.
 Set to empty string to disable truncation trailers.
 
+=== symbol_source
+
+Default: `dwarf` if `bpftrace` is compiled with LLDB, `symbol_table` otherwise
+
+Choose how bpftrace will resolve all `uprobe` symbol locations.
+
+Available options:
+
+- `dwarf` - locate uprobes using DebugInfo, which yields more accurate stack traces (`ustack`). Fall back to the Symbol Table if it can't locate the probe using DebugInfo.
+- `symbol_table` - don't use DebugInfo and rely on the ELF Symbol Table instead.
+
+If the DebugInfo was rewritten by a post-linkage optimisation tool (like BOLT or AutoFDO), it might yield an incorrect address for a probe location.
+This config can force using the Symbol Table, for when the DebugInfo returns invalid addresses.
+
 == Environment Variables
 
 These are not available as part of the standard set of <<Config Variables>> and can only be set as environment variables.
