@@ -4,7 +4,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-namespace {
+namespace array_integer_equal_comparison {
 constexpr auto PROG = "struct Foo { int arr[4]; }"
                       "kprobe:f"
                       "{"
@@ -15,7 +15,6 @@ constexpr auto PROG = "struct Foo { int arr[4]; }"
                       "    exit();"
                       "  }"
                       "}";
-}
 
 TEST(codegen, array_integer_equal_comparison)
 {
@@ -40,6 +39,8 @@ TEST(codegen, array_integer_equal_comparison_no_unroll)
 
   test(*bpftrace, PROG, NAME);
 }
+
+} // namespace array_integer_equal_comparison
 
 } // namespace codegen
 } // namespace test
