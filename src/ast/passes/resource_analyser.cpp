@@ -98,6 +98,8 @@ void ResourceAnalyser::visit(Call &call)
 {
   Visitor::visit(call);
 
+  const auto on_stack_limit = bpftrace_.config_.get(
+      ConfigKeyInt::on_stack_limit);
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
     // Implicit first field is the 64bit printf ID.
@@ -133,8 +135,12 @@ void ResourceAnalyser::visit(Call &call)
     // Keep track of max "tuple" size needed for fmt string args. Codegen
     // will use this information to create a percpu array map of large
     // enough size for all fmt string calls to use.
-    resources_.max_fmtstring_args_size = std::max(
-        resources_.max_fmtstring_args_size, static_cast<uint64_t>(tuple->size));
+    const auto tuple_size = static_cast<uint64_t>(tuple->size);
+    if (tuple_size > on_stack_limit) {
+      resources_.max_fmtstring_args_size = std::max(
+          resources_.max_fmtstring_args_size,
+          static_cast<uint64_t>(tuple_size));
+    }
 
     auto fmtstr = get_literal_string(*call.vargs.at(0));
     if (call.func == "printf") {
@@ -203,16 +209,22 @@ void ResourceAnalyser::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     if (!arg.is_map) {
       resources_.non_map_print_args.push_back(arg.type);
-      resources_.max_fmtstring_args_size = std::max(
-          resources_.max_fmtstring_args_size,
-          nonmap_headroom + arg.type.GetSize());
+
+      const auto fmtstring_args_size = nonmap_headroom + arg.type.GetSize();
+      if (fmtstring_args_size > on_stack_limit) {
+        resources_.max_fmtstring_args_size = std::max(
+            resources_.max_fmtstring_args_size, fmtstring_args_size);
+      }
     } else {
       auto &map = static_cast<Map &>(arg);
       if (map.key_expr) {
         resources_.non_map_print_args.push_back(map.type);
-        resources_.max_fmtstring_args_size = std::max(
-            resources_.max_fmtstring_args_size,
-            nonmap_headroom + map.type.GetSize());
+
+        const auto fmtstring_args_size = nonmap_headroom + map.type.GetSize();
+        if (fmtstring_args_size > on_stack_limit) {
+          resources_.max_fmtstring_args_size = std::max(
+              resources_.max_fmtstring_args_size, fmtstring_args_size);
+        }
       }
     }
   } else if (call.func == "cgroup_path") {
@@ -243,7 +255,9 @@ void ResourceAnalyser::visit(Call &call)
   }
 
   if (call.func == "str" || call.func == "buf" || call.func == "path") {
-    resources_.str_buffers++;
+    const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    if (max_strlen > on_stack_limit)
+      resources_.str_buffers++;
   }
 
   if (uses_usym_table(call.func)) {
@@ -266,9 +280,13 @@ void ResourceAnalyser::visit(Tuple &tuple)
 {
   Visitor::visit(tuple);
 
-  resources_.tuple_buffers++;
-  resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                       tuple.type.GetSize());
+  const auto on_stack_limit = bpftrace_.config_.get(
+      ConfigKeyInt::on_stack_limit);
+  if (tuple.type.GetSize() > on_stack_limit) {
+    resources_.tuple_buffers++;
+    resources_.max_tuple_size = std::max(resources_.max_tuple_size,
+                                         tuple.type.GetSize());
+  }
 }
 
 void ResourceAnalyser::visit(For &f)
@@ -276,9 +294,13 @@ void ResourceAnalyser::visit(For &f)
   Visitor::visit(f);
 
   // Need tuple per for loop to store key and value
-  resources_.tuple_buffers++;
-  resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                       f.decl->type.GetSize());
+  const auto on_stack_limit = bpftrace_.config_.get(
+      ConfigKeyInt::on_stack_limit);
+  if (f.decl->type.GetSize() > on_stack_limit) {
+    resources_.tuple_buffers++;
+    resources_.max_tuple_size = std::max(resources_.max_tuple_size,
+                                         f.decl->type.GetSize());
+  }
 }
 
 void ResourceAnalyser::visit(Ternary &ternary)
@@ -289,8 +311,14 @@ void ResourceAnalyser::visit(Ternary &ternary)
   // differing lengths and phi node wants identical types. So we have to
   // allocate a result temporary, but not on the stack b/c a big string would
   // blow it up. So we need a scratch buffer for it.
-  if (ternary.type.IsStringTy())
-    resources_.str_buffers++;
+
+  if (ternary.type.IsStringTy()) {
+    const auto on_stack_limit = bpftrace_.config_.get(
+        ConfigKeyInt::on_stack_limit);
+    const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    if (max_strlen > on_stack_limit)
+      resources_.str_buffers++;
+  }
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

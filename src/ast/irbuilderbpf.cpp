@@ -475,24 +475,57 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
                              failure_callback);
 }
 
-Value *IRBuilderBPF::CreateGetStrScratchBuffer(const location &loc, int key)
+Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
+                                            const location &loc,
+                                            AsyncIds &async_ids)
 {
-  return createScratchBuffer(bpftrace::globalvars::GlobalVar::GET_STR_BUFFER,
-                             loc,
-                             key);
+  const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+  const auto str_type = CreateArray(max_strlen, CreateInt8());
+  return createAllocation(bpftrace::globalvars::GlobalVar::GET_STR_BUFFER,
+                          GetType(str_type),
+                          name,
+                          loc,
+                          [&async_ids] { return async_ids.str(); });
 }
 
-Value *IRBuilderBPF::CreateGetFmtStringArgsScratchBuffer(const location &loc)
+Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
+                                                      const std::string &name,
+                                                      const location &loc)
 {
-  return createScratchBuffer(
-      bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER, loc);
+  return createAllocation(bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER,
+                          struct_type,
+                          name,
+                          loc);
 }
 
-Value *IRBuilderBPF::CreateTupleScratchBuffer(const location &loc, int key)
+Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
+                                           const std::string &name,
+                                           const location &loc,
+                                           AsyncIds &async_ids)
 {
-  return createScratchBuffer(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
-                             loc,
-                             key);
+  return createAllocation(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
+                          GetType(tuple_type),
+                          name,
+                          loc,
+                          [&async_ids] { return async_ids.tuple(); });
+}
+
+Value *IRBuilderBPF::createAllocation(
+    bpftrace::globalvars::GlobalVar globalvar,
+    llvm::Type *obj_type,
+    const std::string &name,
+    const location &loc,
+    std::optional<std::function<size_t()>> gen_async_id_cb)
+{
+  const auto obj_size = module_.getDataLayout().getTypeAllocSize(obj_type);
+  const auto on_stack_limit = bpftrace_.config_.get(
+      ConfigKeyInt::on_stack_limit);
+  if (obj_size > on_stack_limit) {
+    return createScratchBuffer(globalvar,
+                               loc,
+                               gen_async_id_cb ? (*gen_async_id_cb)() : 0);
+  }
+  return CreateAllocaBPF(obj_type, name);
 }
 
 Value *IRBuilderBPF::createScratchBuffer(

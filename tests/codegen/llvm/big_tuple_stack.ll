@@ -5,7 +5,7 @@ target triple = "bpf-pc-linux"
 
 %"struct map_t" = type { ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr, ptr, ptr }
-%print_int_8_t = type <{ i64, i64, [8 x i8] }>
+%"int64_string[5]__tuple_t" = type { i64, [5 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -16,41 +16,19 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !39 {
 entry:
-  %key = alloca i32, align 4
-  %print_int_8_t = alloca %print_int_8_t, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_8_t)
-  %1 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
-  store i64 30007, ptr %1, align 8
-  %2 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
-  store i64 0, ptr %2, align 8
-  %3 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %3, i8 0, i64 8, i1 false)
-  store i64 3, ptr %3, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_8_t, i64 24, i64 0)
-  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
-  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
-
-event_loss_counter:                               ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
-  store i32 0, ptr %key, align 4
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key)
-  %map_lookup_cond = icmp ne ptr %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
-
-counter_merge:                                    ; preds = %lookup_merge, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_8_t)
+  %tuple = alloca %"int64_string[5]__tuple_t", align 8
+  %str = alloca [5 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
+  store [5 x i8] c"xxxx\00", ptr %str, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
+  %1 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 0
+  store i64 1, ptr %1, align 8
+  %2 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 %str, i64 5, i1 false)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
-
-lookup_success:                                   ; preds = %event_loss_counter
-  %4 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
-  br label %lookup_merge
-
-lookup_failure:                                   ; preds = %event_loss_counter
-  br label %lookup_merge
-
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
-  br label %counter_merge
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -59,12 +37,16 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #3
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!36}
 !llvm.module.flags = !{!38}
