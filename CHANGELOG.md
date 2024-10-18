@@ -43,6 +43,8 @@ and this project adheres to
   - [#3515](https://github.com/bpftrace/bpftrace/pull/3515)
 - Configuration option to suppress printing maps by default at program exit
   - [#3547](https://github.com/bpftrace/bpftrace/pull/3547)
+- Add `symbol_source` config to source uprobe locations from either DWARF or the Symbol Table
+  - [#3504](https://github.com/bpftrace/bpftrace/pull/3504/)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
