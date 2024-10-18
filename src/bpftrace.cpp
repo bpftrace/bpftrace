@@ -165,15 +165,19 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
              probetype(ap.provider) == ProbeType::kprobe) {
     bool locations_from_dwarf = false;
 
+    // Don't set the DWARF target when the user wants to use the symbol table.
     std::optional<std::string> target;
-    if (probetype(ap.provider) == ProbeType::uprobe) {
-      target = probe.path;
-    } else {
-      // Only use the DWARF information of the Kernel,
-      // if the user wants to to probe inlined kprobes.
-      // Otherwise, fall back to using the symbol table.
-      if (config_.get(ConfigKeyBool::probe_inline))
-        target = find_vmlinux();
+    if (config_.get(ConfigKeySymbolSource::default_) ==
+        ConfigSymbolSource::dwarf) {
+      if (probetype(ap.provider) == ProbeType::uprobe) {
+        target = probe.path;
+      } else {
+        // Only use the DWARF information of the Kernel,
+        // if the user wants to to probe inlined kprobes.
+        // Otherwise, fall back to using the symbol table.
+        if (config_.get(ConfigKeyBool::probe_inline))
+          target = find_vmlinux();
+      }
     }
 
     // If the user specified an address/offset, do not overwrite
