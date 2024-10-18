@@ -33,9 +33,9 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
                                           BPFfeature &feature)
 {
   libbpf::bpf_attach_type attach_type = static_cast<libbpf::bpf_attach_type>(0);
-  if (probe.type == ProbeType::kfunc)
+  if (probe.type == ProbeType::fentry)
     attach_type = libbpf::BPF_TRACE_FENTRY;
-  else if (probe.type == ProbeType::kretfunc)
+  else if (probe.type == ProbeType::fexit)
     attach_type = libbpf::BPF_TRACE_FEXIT;
   else if (probe.type == ProbeType::iter)
     attach_type = libbpf::BPF_TRACE_ITER;
@@ -59,7 +59,7 @@ void BpfProgram::set_attach_target(const Probe &probe,
                                    const BTF &btf,
                                    const Config &config)
 {
-  if (probe.type != ProbeType::kfunc && probe.type != ProbeType::kretfunc &&
+  if (probe.type != ProbeType::fentry && probe.type != ProbeType::fexit &&
       probe.type != ProbeType::iter)
     return;
 

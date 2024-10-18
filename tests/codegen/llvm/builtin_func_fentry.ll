@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kfunc_mock_vmlinux_f_1(ptr %0) section "s_kfunc_mock_vmlinux_f_1" !dbg !41 {
+define i64 @fentry_mock_vmlinux_f_1(ptr %0) section "s_fentry_mock_vmlinux_f_1" !dbg !41 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -83,7 +83,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !38 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !39)
 !39 = !{!0, !22, !36}
 !40 = !{i32 2, !"Debug Info Version", i32 3}
-!41 = distinct !DISubprogram(name: "kfunc_mock_vmlinux_f_1", linkageName: "kfunc_mock_vmlinux_f_1", scope: !2, file: !2, type: !42, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
+!41 = distinct !DISubprogram(name: "fentry_mock_vmlinux_f_1", linkageName: "fentry_mock_vmlinux_f_1", scope: !2, file: !2, type: !42, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
 !42 = !DISubroutineType(types: !43)
 !43 = !{!21, !44}
 !44 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !45, size: 64)

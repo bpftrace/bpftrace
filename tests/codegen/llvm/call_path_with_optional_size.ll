@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kfunc_mock_vmlinux_filp_close_1(ptr %0) section "s_kfunc_mock_vmlinux_filp_close_1" !dbg !49 {
+define i64 @fentry_mock_vmlinux_filp_close_1(ptr %0) section "s_fentry_mock_vmlinux_filp_close_1" !dbg !49 {
 entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
@@ -89,7 +89,7 @@ attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !46 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !47)
 !47 = !{!0, !16, !36, !38}
 !48 = !{i32 2, !"Debug Info Version", i32 3}
-!49 = distinct !DISubprogram(name: "kfunc_mock_vmlinux_filp_close_1", linkageName: "kfunc_mock_vmlinux_filp_close_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !53)
+!49 = distinct !DISubprogram(name: "fentry_mock_vmlinux_filp_close_1", linkageName: "fentry_mock_vmlinux_filp_close_1", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !53)
 !50 = !DISubroutineType(types: !51)
 !51 = !{!35, !52}
 !52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !43, size: 64)

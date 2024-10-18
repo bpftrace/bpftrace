@@ -30,26 +30,26 @@ void test(const std::string &input, int expected_result = 0)
 
 class field_analyser_btf : public test_btf {};
 
-TEST_F(field_analyser_btf, kfunc_args)
+TEST_F(field_analyser_btf, fentry_args)
 {
   // func_1 and func_2 have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test("kfunc:func_1, kfunc:func_2 { }", 0);
+  test("fentry:func_1, fentry:func_2 { }", 0);
   // func_1 and func_2 have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_1, kfunc:func_2 { $x = args.foo; }", 1);
+  test("fentry:func_1, fentry:func_2 { $x = args.foo; }", 1);
   // func_2 and func_3 have same args -> PASS
-  test("kfunc:func_2, kfunc:func_3 { }", 0);
+  test("fentry:func_2, fentry:func_3 { }", 0);
   // func_2 and func_3 have same args -> PASS
-  test("kfunc:func_2, kfunc:func_3 { $x = args.foo1; }", 0);
+  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", 0);
   // aaa does not exist -> FAIL
-  test("kfunc:func_2, kfunc:aaa { $x = args.foo1; }", 1);
+  test("fentry:func_2, fentry:aaa { $x = args.foo1; }", 1);
   // func_* have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test("kfunc:func_* { }", 0);
+  test("fentry:func_* { }", 0);
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_* { $x = args.foo1; }", 1);
+  test("fentry:func_* { $x = args.foo1; }", 1);
 }
 
 TEST_F(field_analyser_btf, btf_types)
@@ -295,7 +295,7 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
   BPFtrace bpftrace;
   bpftrace.parse_btf({});
   test(bpftrace,
-       "kfunc:func_1 {\n"
+       "fentry:func_1 {\n"
        "  @foo2 = args.foo3[0].foo2;\n"
        "}",
        0);
