@@ -739,9 +739,6 @@ int main(int argc, char* argv[])
   Config config = Config(!args.cmd_str.empty());
   BPFtrace bpftrace(std::move(output), args.no_feature, config);
 
-  if (!args.cmd_str.empty())
-    bpftrace.cmd_ = args.cmd_str;
-
   parse_env(bpftrace);
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
@@ -900,15 +897,6 @@ int main(int argc, char* argv[])
     return 1;
 
   auto* ast_root = pmresult.Root();
-
-  if (!bpftrace.cmd_.empty()) {
-    try {
-      bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
-    } catch (const std::runtime_error& e) {
-      LOG(ERROR) << "Failed to fork child: " << e.what();
-      exit(1);
-    }
-  }
 
   err = bpftrace.create_pcaps();
   if (err) {
