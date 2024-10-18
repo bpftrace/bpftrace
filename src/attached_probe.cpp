@@ -341,7 +341,11 @@ static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
 
-static void check_alignment(std::string &path,
+static constexpr std::string_view hint_symbol_source =
+    "\nUse config 'symbol_source = \"symbol_table\"' in case of bad DebugInfo.";
+
+static void check_alignment(std::string &orig_name,
+                            std::string &path,
                             std::string &symbol,
                             uint64_t sym_offset,
                             uint64_t func_offset,
@@ -357,13 +361,20 @@ static void check_alignment(std::string &path,
     case AlignState::Ok:
       return;
     case AlignState::NotAlign:
-      if (safe_mode)
-        throw FatalUserException("Could not add " + probetypeName(type) +
-                                 " into middle of instruction: " + tmp +
-                                 std::string{ hint_unsafe });
-      else
+      if (safe_mode) {
+        auto msg = "Could not add " + probetypeName(type) +
+                   " into middle of instruction: " + tmp +
+                   std::string{ hint_unsafe };
+        if (orig_name.find('*') != std::string::npos)
+          msg += hint_symbol_source;
+        throw FatalUserException(std::move(msg));
+      } else {
+        std::string_view hint;
+        if (orig_name.find('*') != std::string::npos)
+          hint = hint_symbol_source;
         LOG(WARNING) << "Unsafe " << type
-                     << " in the middle of the instruction: " << tmp;
+                     << " in the middle of the instruction: " << tmp << hint;
+      }
       break;
 
     case AlignState::Fail:
@@ -473,8 +484,13 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   if (func_offset == 0)
     return true;
 
-  check_alignment(
-      probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+  check_alignment(probe_.orig_name,
+                  probe_.path,
+                  symbol,
+                  sym_offset,
+                  func_offset,
+                  safe_mode,
+                  probe_.type);
   return true;
 }
 
