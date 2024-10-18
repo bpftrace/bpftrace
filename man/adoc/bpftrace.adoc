@@ -2787,6 +2787,11 @@ Most providers also support a short name which can be used instead of the full n
 | Built-in events
 | Kernel/User
 
+| <<probes-bpftrace, `bpftrace`>>
+| -
+| Built-in events
+| Kernel/User
+
 | <<probes-hardware, `hardware`>>
 | `h`
 | Processor-level events
@@ -2862,6 +2867,21 @@ To prevent printing all used maps need be cleared in the `END` probe:
 END {
     clear(@map1);
     clear(@map2);
+}
+----
+
+[#probes-bpftrace]
+=== bpftrace
+
+.variants
+* `bpftrace:signal:SIGUSR1`
+
+These are special built-in events provided by the bpftrace runtime.
+They are triggered when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
+
+----
+bpftrace:signal:SIGUSR1 {
+  print("abc");
 }
 ----
 
