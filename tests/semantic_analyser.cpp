@@ -1427,32 +1427,32 @@ TEST(semantic_analyser, call_func)
   test("uprobe:/bin/sh:f { @[func] = count(); }");
   test("uprobe:/bin/sh:f { printf(\"%s\", func);  }");
 
-  test("kfunc:f { func }");
-  test("kretfunc:f { func }");
+  test("fentry:f { func }");
+  test("fexit:f { func }");
   test("kretprobe:f { func }");
   test("uretprobe:/bin/sh:f { func }");
 
   // We only care about the BPF_FUNC_get_func_ip feature and error message here,
   // but don't have enough control over the mock features to only disable that.
-  test_error("kfunc:f { func }",
+  test_error("fentry:f { func }",
              R"(
-stdin:1:1-8: ERROR: kfunc/kretfunc not available for your kernel version.
-kfunc:f { func }
-~~~~~~~
-stdin:1:11-15: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
-kfunc:f { func }
-          ~~~~
+stdin:1:1-9: ERROR: fentry/fexit not available for your kernel version.
+fentry:f { func }
+~~~~~~~~
+stdin:1:12-16: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
+fentry:f { func }
+           ~~~~
 )",
              false);
 
-  test_error("kretfunc:f { func }",
+  test_error("fexit:f { func }",
              R"(
-stdin:1:1-11: ERROR: kfunc/kretfunc not available for your kernel version.
-kretfunc:f { func }
-~~~~~~~~~~
-stdin:1:14-18: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
-kretfunc:f { func }
-             ~~~~
+stdin:1:1-8: ERROR: fentry/fexit not available for your kernel version.
+fexit:f { func }
+~~~~~~~
+stdin:1:11-15: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
+fexit:f { func }
+          ~~~~
 )",
              false);
 
@@ -3671,38 +3671,38 @@ fn f(): int64 { return func; }
 
 class semantic_analyser_btf : public test_btf {};
 
-TEST_F(semantic_analyser_btf, kfunc)
+TEST_F(semantic_analyser_btf, fentry)
 {
-  test("kfunc:func_1 { 1 }");
-  test("kretfunc:func_1 { 1 }");
-  test("kfunc:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }");
-  test("kretfunc:func_1 { $x = retval; }");
-  test("kfunc:vmlinux:func_1 { 1 }");
-  test("kfunc:*:func_1 { 1 }");
+  test("fentry:func_1 { 1 }");
+  test("fexit:func_1 { 1 }");
+  test("fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }");
+  test("fexit:func_1 { $x = retval; }");
+  test("fentry:vmlinux:func_1 { 1 }");
+  test("fentry:*:func_1 { 1 }");
 
-  test_error("kretfunc:func_1 { $x = args.foo; }", R"(
-stdin:1:24-29: ERROR: Can't find function parameter foo
-kretfunc:func_1 { $x = args.foo; }
-                       ~~~~~
+  test_error("fexit:func_1 { $x = args.foo; }", R"(
+stdin:1:21-26: ERROR: Can't find function parameter foo
+fexit:func_1 { $x = args.foo; }
+                    ~~~~~
 )");
-  test("kretfunc:func_1 { $x = args; }");
-  test("kfunc:func_1 { @ = args; }");
-  test("kfunc:func_1 { @[args] = 1; }");
-  // reg() is not available in kfunc
+  test("fexit:func_1 { $x = args; }");
+  test("fentry:func_1 { @ = args; }");
+  test("fentry:func_1 { @[args] = 1; }");
+  // reg() is not available in fentry
 #ifdef ARCH_X86_64
-  test_error("kfunc:func_1 { reg(\"ip\") }", R"(
-stdin:1:16-25: ERROR: reg can not be used with "kfunc" probes
-kfunc:func_1 { reg("ip") }
-               ~~~~~~~~~
+  test_error("fentry:func_1 { reg(\"ip\") }", R"(
+stdin:1:17-26: ERROR: reg can not be used with "fentry" probes
+fentry:func_1 { reg("ip") }
+                ~~~~~~~~~
 )");
-  test_error("kretfunc:func_1 { reg(\"ip\") }", R"(
-stdin:1:19-28: ERROR: reg can not be used with "kretfunc" probes
-kretfunc:func_1 { reg("ip") }
-                  ~~~~~~~~~
+  test_error("fexit:func_1 { reg(\"ip\") }", R"(
+stdin:1:16-25: ERROR: reg can not be used with "fexit" probes
+fexit:func_1 { reg("ip") }
+               ~~~~~~~~~
 )");
 #endif
   // Backwards compatibility
-  test("kfunc:func_1 { $x = args->a; }");
+  test("fentry:func_1 { $x = args->a; }");
 }
 
 TEST_F(semantic_analyser_btf, short_name)
@@ -3713,45 +3713,45 @@ TEST_F(semantic_analyser_btf, short_name)
 
 TEST_F(semantic_analyser_btf, call_path)
 {
-  test("kfunc:func_1 { @k = path( args.foo1 ) }");
-  test("kretfunc:func_1 { @k = path( retval->foo1 ) }");
-  test("kfunc:func_1 { path( args.foo1, 16);}");
-  test("kfunc:func_1 { path( args.foo1, \"Na\");}", 1);
-  test("kfunc:func_1 { path( args.foo1, -1);}", 1);
+  test("fentry:func_1 { @k = path( args.foo1 ) }");
+  test("fexit:func_1 { @k = path( retval->foo1 ) }");
+  test("fentry:func_1 { path( args.foo1, 16);}");
+  test("fentry:func_1 { path( args.foo1, \"Na\");}", 1);
+  test("fentry:func_1 { path( args.foo1, -1);}", 1);
 }
 
 TEST_F(semantic_analyser_btf, call_skb_output)
 {
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); }");
-  test("kretfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
+  test("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); }");
+  test("fexit:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
        "}");
 
-  test_error("kfunc:func_1 { $ret = skboutput(); }", R"(
-stdin:1:23-34: ERROR: skboutput() requires 4 arguments (0 provided)
-kfunc:func_1 { $ret = skboutput(); }
-                      ~~~~~~~~~~~
+  test_error("fentry:func_1 { $ret = skboutput(); }", R"(
+stdin:1:24-35: ERROR: skboutput() requires 4 arguments (0 provided)
+fentry:func_1 { $ret = skboutput(); }
+                       ~~~~~~~~~~~
 )");
-  test_error("kfunc:func_1 { $ret = skboutput(\"one.pcap\"); }", R"(
-stdin:1:23-44: ERROR: skboutput() requires 4 arguments (1 provided)
-kfunc:func_1 { $ret = skboutput("one.pcap"); }
-                      ~~~~~~~~~~~~~~~~~~~~~
+  test_error("fentry:func_1 { $ret = skboutput(\"one.pcap\"); }", R"(
+stdin:1:24-45: ERROR: skboutput() requires 4 arguments (1 provided)
+fentry:func_1 { $ret = skboutput("one.pcap"); }
+                       ~~~~~~~~~~~~~~~~~~~~~
 )");
-  test_error("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }", R"(
-stdin:1:23-55: ERROR: skboutput() requires 4 arguments (2 provided)
-kfunc:func_1 { $ret = skboutput("one.pcap", args.foo1); }
-                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  test_error("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }", R"(
+stdin:1:24-56: ERROR: skboutput() requires 4 arguments (2 provided)
+fentry:func_1 { $ret = skboutput("one.pcap", args.foo1); }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   test_error(
-      "kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }", R"(
-stdin:1:23-61: ERROR: skboutput() requires 4 arguments (3 provided)
-kfunc:func_1 { $ret = skboutput("one.pcap", args.foo1, 1500); }
-                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      "fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }", R"(
+stdin:1:24-62: ERROR: skboutput() requires 4 arguments (3 provided)
+fentry:func_1 { $ret = skboutput("one.pcap", args.foo1, 1500); }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
-  test_error("kfunc:func_1 { skboutput(\"one.pcap\", args.foo1, 1500, 0); }",
+  test_error("fentry:func_1 { skboutput(\"one.pcap\", args.foo1, 1500, 0); }",
              R"(
-stdin:1:16-57: ERROR: skboutput() should be assigned to a variable
-kfunc:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
-               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+stdin:1:17-58: ERROR: skboutput() should be assigned to a variable
+fentry:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -3763,7 +3763,7 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task_vma { $x = ctx->vma->vm_start }");
   test("iter:task { printf(\"%d\", ctx->task->pid); }");
   test_error("iter:task { $x = args.foo; }", R"(
-stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/kfunc/uprobe probes (iter used here)
+stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/fentry/uprobe probes (iter used here)
 iter:task { $x = args.foo; }
                  ~~~~
 )");
@@ -3779,40 +3779,40 @@ iter:task,f:func_1 { 1 }
 )");
 }
 
-// Sanity check for fentry/fexit aliases
-TEST_F(semantic_analyser_btf, fentry)
+// Sanity check for kfunc/kretfunc aliases
+TEST_F(semantic_analyser_btf, kfunc)
 {
-  test("fentry:func_1 { 1 }");
-  test("fexit:func_1 { 1 }");
-  test("fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }");
-  test("fexit:func_1 { $x = retval; }");
-  test("fentry:vmlinux:func_1 { 1 }");
-  test("fentry:*:func_1 { 1 }");
-  test("fentry:func_1 { @[func] = 1; }");
+  test("kfunc:func_1 { 1 }");
+  test("kretfunc:func_1 { 1 }");
+  test("kfunc:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }");
+  test("kretfunc:func_1 { $x = retval; }");
+  test("kfunc:vmlinux:func_1 { 1 }");
+  test("kfunc:*:func_1 { 1 }");
+  test("kfunc:func_1 { @[func] = 1; }");
 
-  test_error("fexit:func_1 { $x = args.foo; }", R"(
-stdin:1:21-26: ERROR: Can't find function parameter foo
-fexit:func_1 { $x = args.foo; }
-                    ~~~~~
+  test_error("kretfunc:func_1 { $x = args.foo; }", R"(
+stdin:1:24-29: ERROR: Can't find function parameter foo
+kretfunc:func_1 { $x = args.foo; }
+                       ~~~~~
 )");
-  test("fexit:func_1 { $x = args; }");
-  test("fentry:func_1 { @ = args; }");
-  test("fentry:func_1 { @[args] = 1; }");
-  // reg() is not available in fentry
+  test("kretfunc:func_1 { $x = args; }");
+  test("kfunc:func_1 { @ = args; }");
+  test("kfunc:func_1 { @[args] = 1; }");
+  // reg() is not available in kfunc
 #ifdef ARCH_X86_64
-  test_error("fentry:func_1 { reg(\"ip\") }", R"(
-stdin:1:17-26: ERROR: reg can not be used with "kfunc" probes
-fentry:func_1 { reg("ip") }
-                ~~~~~~~~~
-)");
-  test_error("fexit:func_1 { reg(\"ip\") }", R"(
-stdin:1:16-25: ERROR: reg can not be used with "kretfunc" probes
-fexit:func_1 { reg("ip") }
+  test_error("kfunc:func_1 { reg(\"ip\") }", R"(
+stdin:1:16-25: ERROR: reg can not be used with "fentry" probes
+kfunc:func_1 { reg("ip") }
                ~~~~~~~~~
+)");
+  test_error("kretfunc:func_1 { reg(\"ip\") }", R"(
+stdin:1:19-28: ERROR: reg can not be used with "fexit" probes
+kretfunc:func_1 { reg("ip") }
+                  ~~~~~~~~~
 )");
 #endif
   // Backwards compatibility
-  test("fentry:func_1 { $x = args->a; }");
+  test("kfunc:func_1 { $x = args->a; }");
 }
 
 TEST(semantic_analyser, btf_type_tags)
@@ -4138,10 +4138,10 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 
 TEST_F(semantic_analyser_btf, args_builtin_mixed_probes)
 {
-  test_error("kfunc:func_1,tracepoint:sched:sched_one { args }", R"(
-stdin:1:43-47: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
-kfunc:func_1,tracepoint:sched:sched_one { args }
-                                          ~~~~
+  test_error("fentry:func_1,tracepoint:sched:sched_one { args }", R"(
+stdin:1:44-48: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
+fentry:func_1,tracepoint:sched:sched_one { args }
+                                           ~~~~
 )");
 }
 
@@ -4206,16 +4206,16 @@ BEGIN { $l = 1; $b = buf(0, $l) }
                 ~~~~~~~~~~~~~~~
 )");
 
-  test_error(*bpftrace, "kfunc:foo { $p = path((uint8 *)0) }", R"(
-stdin:1:13-34: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
+  test_error(*bpftrace, "fentry:foo { $p = path((uint8 *)0) }", R"(
+stdin:1:14-35: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
 
 Examples:
     `$s = str(..);` => `$s = str(.., 32);`
     `$s = str(..);` => `@s = str(..);`
     `$s = str(..); print($s);` => `print(str(..));`
 
-kfunc:foo { $p = path((uint8 *)0) }
-            ~~~~~~~~~~~~~~~~~~~~~
+fentry:foo { $p = path((uint8 *)0) }
+             ~~~~~~~~~~~~~~~~~~~~~
 )");
 
   // Values clamped small enough should fit

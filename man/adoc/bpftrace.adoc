@@ -928,7 +928,7 @@ This feature is especially useful when working with IP addresses since various l
 Array casting allows seamless comparison of such representations:
 
 ----
-kfunc:tcp_connect {
+fentry:tcp_connect {
     if (args->sk->__sk_common.skc_daddr == (uint32)pton("127.0.0.1"))
         ...
 }
@@ -1065,7 +1065,7 @@ For string arguments use the `str()` call to retrieve the value.
 | struct args
 | n/a
 | n/a
-| The struct of all arguments of the traced function. Available in `tracepoint`, `kfunc`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
+| The struct of all arguments of the traced function. Available in `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
 
 | cgroup
 | uint64
@@ -1155,7 +1155,7 @@ For string arguments use the `str()` call to retrieve the value.
 | int64
 | n/a
 | n/a
-| Value returned by the function being traced (kretprobe, uretprobe, kretfunc)
+| Value returned by the function being traced (kretprobe, uretprobe, fexit)
 
 | tid
 | uint32
@@ -2048,11 +2048,11 @@ Usage
 
 ----
 # cat dump.bt
-kfunc:napi_gro_receive {
+fentry:napi_gro_receive {
   $ret = skboutput("receive.pcap", args.skb, args.skb->len, 0);
 }
 
-kfunc:dev_queue_xmit {
+fentry:dev_queue_xmit {
   // setting offset to 14, to exclude ethernet header
   $ret = skboutput("output.pcap", args.skb, args.skb->len, 14);
   printf("skboutput returns %d\n", $ret);
@@ -2802,7 +2802,7 @@ Most providers also support a short name which can be used instead of the full n
 | Iterators tracing
 | Kernel
 
-| <<probes-kfunc, `kfunc/kretfunc`>>
+| <<probes-fentry, `fentry/fexit`>>
 | `f`/`fr`
 | Kernel functions tracing with BTF support
 | Kernel
@@ -3013,42 +3013,42 @@ iter:task_file:/sys/fs/bpf/files {
  */
 ----
 
-[#probes-kfunc]
-=== kfunc and kretfunc
+[#probes-fentry]
+=== fentry and fexit
 
 .variants
-* `kfunc[:module]:fn`
 * `fentry[:module]:fn`
-* `kretfunc[:module]:fn`
 * `fexit[:module]:fn`
 
 .short names
-* `f` (`kfunc` or `fentry`)
-* `fr` (`kretfunc` or `fexit`)
+* `f` (`fentry`)
+* `fr` (`fexit`)
 
 .requires (`--info`)
 * Kernel features:BTF
-* Probe types:kfunc
+* Probe types:fentry
 
-``kfunc``s attach to kernel functions similar to <<probes-kprobe>>.
+``fentry``/``fexit`` probes attach to kernel functions similar to <<probes-kprobe>>.
 They make use of eBPF trampolines which allow kernel code to call into BPF programs with near zero overhead.
-`kfunc` and `kretfunc` are aliased as `fentry` and `fexit` to match how these are referenced in the kernel.
+Originally, these were called `kfunc` and `kretfunc` but were later renamed to `fentry` and `fexit` to match
+how these are referenced in the kernel and to prevent confusion with https://docs.kernel.org/bpf/kfuncs.html[BPF Kernel Functions].
+The original names are still supported for backwards compatibility.
 
-``kfunc``s make use of BTF type information to derive the type of function arguments at compile time.
+``fentry``/``fexit`` probes make use of BTF type information to derive the type of function arguments at compile time.
 This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
 The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see <<Listing Probes>>).
-These arguments are also available in the return probe (`kretfunc`), unlike `kretprobe`.
+These arguments are also available in the return probe (`fexit`), unlike `kretprobe`.
 
 ----
-# bpftrace -lv 'kfunc:tcp_reset'
+# bpftrace -lv 'fentry:tcp_reset'
 
-kfunc:tcp_reset
+fentry:tcp_reset
     struct sock * sk
     struct sk_buff * skb
 ----
 
 ----
-kfunc:x86_pmu_stop {
+fentry:x86_pmu_stop {
   printf("pmu %s stop\n", str(args.event->pmu->name));
 }
 ----
@@ -3056,7 +3056,7 @@ kfunc:x86_pmu_stop {
 The fget function takes one argument as file descriptor and you can access it via args.fd and the return value is accessible via retval:
 
 ----
-kretfunc:fget {
+fexit:fget {
   printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));
 }
 
@@ -3701,8 +3701,8 @@ combined with `-e` or filename args to see all the probes that a program would a
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
 
 ----
-# bpftrace -l 'kretfunc:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
-kretfunc:tcp_reset
+# bpftrace -l 'fexit:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
+fexit:tcp_reset
     struct sock * sk
     struct sk_buff * skb
 tracepoint:syscalls:sys_enter_openat

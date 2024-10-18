@@ -1,84 +1,84 @@
-NAME kfunc
-PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-AFTER ./testprogs/syscall read
-
-NAME kretfunc
-PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-AFTER ./testprogs/syscall read
-
-NAME kfunc_wildcard
-PROG kfunc:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-AFTER ./testprogs/syscall read
-
-NAME kfunc_module
-PROG kfunc:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-AFTER ./testprogs/syscall read
-
-NAME kfunc_module_wildcard
-PROG kfunc:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-AFTER ./testprogs/syscall read
-
-# https://github.com/bpftrace/bpftrace/issues/2447
-NAME kfunc_multiple_attach_point_multiple_functions
-PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } kfunc:vfs_read, kfunc:vfs_open /@a != 0/ { @a -= 1 } kfunc:vfs_read /@b == 1/ { @b = 0 } kfunc:vfs_open /@c == 1/ { @c = 0 }
-EXPECT @a: 0
-       @b: 0
-       @c: 0
-REQUIRES_FEATURE kfunc
-# Note: this calls both vfs_read and vfs_open
-AFTER ./testprogs/syscall read
-
-NAME kfunc args
-PROG kfunc:vfs_read { printf("%d\n", args.count); exit(); }
-EXPECT_REGEX [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-REQUIRES_FEATURE btf
-AFTER ./testprogs/syscall read
-
-# Checking backwards compatibility
-NAME kfunc args as a pointer
-PROG kfunc:vfs_read { printf("%d\n", args->count); exit(); }
-EXPECT_REGEX [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-REQUIRES_FEATURE btf
-AFTER ./testprogs/syscall read
-
-NAME kfunc func builtin
-PROG kfunc:vfs_read { printf("func: %s\n", func); exit(); }
-EXPECT func: vfs_read
-REQUIRES_FEATURE kfunc
-REQUIRES_FEATURE btf
-REQUIRES_FEATURE get_func_ip
-AFTER ./testprogs/syscall read
-
-NAME kretfunc large args
-PROG kretfunc:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
-REQUIRES_FEATURE btf
-AFTER ./testprogs/kfunc_args 1111 2222
-
-# Sanity check for fentry/fexit alias
 NAME fentry
 PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME fexit
 PROG fexit:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
+AFTER ./testprogs/syscall read
+
+NAME fentry_wildcard
+PROG fentry:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
+AFTER ./testprogs/syscall read
+
+NAME fentry_module
+PROG fentry:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
+AFTER ./testprogs/syscall read
+
+NAME fentry_module_wildcard
+PROG fentry:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
+AFTER ./testprogs/syscall read
+
+# https://github.com/bpftrace/bpftrace/issues/2447
+NAME fentry_multiple_attach_point_multiple_functions
+PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } fentry:vfs_read, fentry:vfs_open /@a != 0/ { @a -= 1 } fentry:vfs_read /@b == 1/ { @b = 0 } fentry:vfs_open /@c == 1/ { @c = 0 }
+EXPECT @a: 0
+       @b: 0
+       @c: 0
+REQUIRES_FEATURE fentry
+# Note: this calls both vfs_read and vfs_open
+AFTER ./testprogs/syscall read
+
+NAME fentry args
+PROG fentry:vfs_read { printf("%d\n", args.count); exit(); }
+EXPECT_REGEX [0-9][0-9]*
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
+AFTER ./testprogs/syscall read
+
+# Checking backwards compatibility
+NAME fentry args as a pointer
+PROG fentry:vfs_read { printf("%d\n", args->count); exit(); }
+EXPECT_REGEX [0-9][0-9]*
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
+AFTER ./testprogs/syscall read
+
+NAME fentry func builtin
+PROG fentry:vfs_read { printf("func: %s\n", func); exit(); }
+EXPECT func: vfs_read
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
+REQUIRES_FEATURE get_func_ip
+AFTER ./testprogs/syscall read
+
+NAME fexit large args
+PROG fexit:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
+AFTER ./testprogs/fentry_args 1111 2222
+
+# Sanity check for kfunc/kretfunc alias
+NAME kfunc
+PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
+AFTER ./testprogs/syscall read
+
+NAME kretfunc
+PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME kprobe

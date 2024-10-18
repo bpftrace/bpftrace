@@ -471,7 +471,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
     args.AddField(str, stype, args.size, std::nullopt, false);
-    // kfunc (fentry/fexit) args are stored in a u64 array.
+    // fentry args are stored in a u64 array.
     // Note that it's ok to represent them by a struct as we will use GEP with
     // funcarg_idx to access them in codegen.
     type_size = btf__resolve_size(func_id.btf, p->type);
@@ -484,7 +484,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
     args.AddField("$retval", stype, args.size, std::nullopt, false);
-    // kfunc (fentry/fexit) args (incl. retval) are stored in a u64 array
+    // fentry args (incl. retval) are stored in a u64 array
     args.size += btf__resolve_size(func_id.btf, t->type);
   }
   return args;

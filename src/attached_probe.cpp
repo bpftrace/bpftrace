@@ -67,8 +67,8 @@ libbpf::bpf_prog_type progtype(ProbeType t)
     case ProbeType::watchpoint: return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::asyncwatchpoint: return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::kfunc:      return libbpf::BPF_PROG_TYPE_TRACING; break;
-    case ProbeType::kretfunc:   return libbpf::BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::fentry:     return libbpf::BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::fexit:      return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::iter:       return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::rawtracepoint: return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     // clang-format on
@@ -93,7 +93,7 @@ std::string progtypeName(libbpf::bpf_prog_type t)
   }
 }
 
-void AttachedProbe::attach_kfunc()
+void AttachedProbe::attach_fentry()
 {
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0) {
@@ -101,7 +101,7 @@ void AttachedProbe::attach_kfunc()
   }
 }
 
-int AttachedProbe::detach_kfunc()
+int AttachedProbe::detach_fentry()
 {
   close(tracing_fd_);
   return 0;
@@ -181,9 +181,9 @@ AttachedProbe::AttachedProbe(Probe &probe,
     case ProbeType::hardware:
       attach_hardware();
       break;
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
-      attach_kfunc();
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+      attach_fentry();
       break;
     case ProbeType::iter:
       attach_iter();
@@ -239,9 +239,9 @@ AttachedProbe::~AttachedProbe()
       else
         close(linkfd_);
       break;
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
-      err = detach_kfunc();
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+      err = detach_fentry();
       break;
     case ProbeType::iter:
       err = detach_iter();

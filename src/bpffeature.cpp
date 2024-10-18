@@ -518,7 +518,7 @@ bool BPFfeature::has_uprobe_multi()
 
 bool BPFfeature::has_skb_output()
 {
-  if (!has_kfunc())
+  if (!has_fentry())
     return false;
 
   if (has_skb_output_.has_value())
@@ -640,7 +640,7 @@ std::string BPFfeature::report()
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
-      << "  kfunc: " << to_str(has_kfunc())
+      << "  fentry: " << to_str(has_fentry())
       << "  kprobe_multi: " << to_str(has_kprobe_multi())
       << "  uprobe_multi: " << to_str(has_uprobe_multi())
       << "  raw_tp_special: " << to_str(has_raw_tp_special())
@@ -649,9 +649,9 @@ std::string BPFfeature::report()
   return buf.str();
 }
 
-bool BPFfeature::has_prog_kfunc()
+bool BPFfeature::has_prog_fentry()
 {
-  if (!has_prog_kfunc_.has_value()) {
+  if (!has_prog_fentry_.has_value()) {
     int progfd;
     if (!detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
                           "sched_fork",
@@ -663,17 +663,17 @@ bool BPFfeature::has_prog_kfunc()
     if (tracing_fd < 0)
       goto out_false;
     close(tracing_fd);
-    has_prog_kfunc_ = std::make_optional<bool>(true);
+    has_prog_fentry_ = std::make_optional<bool>(true);
   }
-  return *(has_prog_kfunc_);
+  return *(has_prog_fentry_);
 out_false:
-  has_prog_kfunc_ = std::make_optional<bool>(false);
-  return *(has_prog_kfunc_);
+  has_prog_fentry_ = std::make_optional<bool>(false);
+  return *(has_prog_fentry_);
 }
 
-bool BPFfeature::has_kfunc()
+bool BPFfeature::has_fentry()
 {
-  return has_prog_kfunc() && btf_.has_data();
+  return has_prog_fentry() && btf_.has_data();
 }
 
 bool BPFfeature::has_module_btf()

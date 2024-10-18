@@ -96,10 +96,10 @@ public:
   bool has_uprobe_refcnt();
   bool has_kprobe_multi();
   bool has_uprobe_multi();
-  bool has_kfunc();
+  bool has_fentry();
   bool has_skb_output();
   bool has_raw_tp_special();
-  bool has_prog_kfunc();
+  bool has_prog_fentry();
   bool has_module_btf();
   bool has_iter(std::string name);
   bool has_kernel_dwarf();
@@ -141,7 +141,7 @@ protected:
   std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_raw_tp_special_;
-  std::optional<bool> has_prog_kfunc_;
+  std::optional<bool> has_prog_fentry_;
   std::optional<bool> has_module_btf_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;

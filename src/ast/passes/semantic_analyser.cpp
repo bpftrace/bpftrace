@@ -288,8 +288,8 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
   switch (pt) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
+    case ProbeType::fentry:
+    case ProbeType::fexit:
     case ProbeType::tracepoint:
     case ProbeType::iter:
     case ProbeType::rawtracepoint:
@@ -403,7 +403,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
     if (type == ProbeType::kretprobe || type == ProbeType::uretprobe) {
       builtin.type = CreateUInt64();
-    } else if (type == ProbeType::kfunc || type == ProbeType::kretfunc) {
+    } else if (type == ProbeType::fentry || type == ProbeType::fexit) {
       auto arg = bpftrace_.structs.GetProbeArg(*probe, "$retval");
       if (arg) {
         builtin.type = arg->type;
@@ -413,11 +413,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
     } else {
       LOG(ERROR, builtin.loc, err_)
           << "The retval builtin can only be used with 'kretprobe' and "
-          << "'uretprobe' and 'kfunc' probes"
+          << "'uretprobe' and 'fentry' probes"
           << (type == ProbeType::tracepoint ? " (try to use args.ret instead)"
                                             : "");
     }
-    // For kretprobe, kfunc, kretfunc -> AddrSpace::kernel
+    // For kretprobe, fentry, fexit -> AddrSpace::kernel
     // For uretprobe -> AddrSpace::user
     builtin.type.SetAS(find_addrspace(type));
   } else if (builtin.ident == "kstack") {
@@ -443,7 +443,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         builtin.type = CreateKSym();
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
         builtin.type = CreateUSym();
-      else if (type == ProbeType::kfunc || type == ProbeType::kretfunc) {
+      else if (type == ProbeType::fentry || type == ProbeType::fexit) {
         if (!bpftrace_.feature_->has_helper_get_func_ip()) {
           LOG(ERROR, builtin.loc, err_)
               << "BPF_FUNC_get_func_ip not available for your kernel version";
@@ -552,7 +552,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
           << "The args builtin can only be used within the context of a single "
              "probe type, e.g. \"probe1 {args}\" is valid while "
              "\"probe1,probe2 {args}\" is not.";
-    } else if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
+    } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
                type == ProbeType::uprobe) {
       if (type == ProbeType::uprobe &&
           bpftrace_.config_.get(ConfigKeyBool::probe_inline))
@@ -577,7 +577,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                               // tracepoint
     {
       LOG(ERROR, builtin.loc, err_) << "The args builtin can only be used with "
-                                       "tracepoint/kfunc/uprobe probes ("
+                                       "tracepoint/fentry/uprobe probes ("
                                     << type << " used here)";
     }
   } else {
@@ -1381,10 +1381,10 @@ void SemanticAnalyser::visit(Call &call)
 
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kfunc && type != ProbeType::kretfunc &&
+      if (type != ProbeType::fentry && type != ProbeType::fexit &&
           type != ProbeType::iter)
         LOG(ERROR, call.loc, err_) << "The path function can only be used with "
-                                   << "'kfunc', 'kretfunc', 'iter' probes";
+                                   << "'fentry', 'fexit', 'iter' probes";
     }
   } else if (call.func == "strerror") {
     call.type = CreateStrerror();
@@ -2519,7 +2519,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
           LOG(ERROR, acc.loc, err_) << acc.field << " has unsupported type";
 
         ProbeType probetype = single_provider_type(probe);
-        if (probetype == ProbeType::kfunc || probetype == ProbeType::kretfunc) {
+        if (probetype == ProbeType::fentry || probetype == ProbeType::fexit) {
           acc.type.is_btftype = true;
         }
       }
@@ -3262,17 +3262,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         has_end_probe_ = true;
       }
     }
-  } else if (ap.provider == "kfunc" || ap.provider == "kretfunc") {
-    if (!bpftrace_.feature_->has_kfunc()) {
+  } else if (ap.provider == "fentry" || ap.provider == "fexit") {
+    if (!bpftrace_.feature_->has_fentry()) {
       LOG(ERROR, ap.loc, err_)
-          << "kfunc/kretfunc not available for your kernel version.";
+          << "fentry/fexit not available for your kernel version.";
       return;
     }
 
     if (ap.func == "")
-      LOG(ERROR, ap.loc, err_) << "kfunc should specify a function";
+      LOG(ERROR, ap.loc, err_) << "fentry should specify a function";
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
-    if (!bpftrace_.feature_->has_kfunc()) {
+    if (!bpftrace_.feature_->has_fentry()) {
       LOG(ERROR, ap.loc, err_)
           << "fentry/fexit not available for your kernel version.";
       return;
@@ -3563,8 +3563,8 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::invalid:
       case ProbeType::special:
       case ProbeType::tracepoint:
-      case ProbeType::kfunc:
-      case ProbeType::kretfunc:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
       case ProbeType::iter:
       case ProbeType::rawtracepoint:
         return false;
@@ -3586,8 +3586,8 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::hardware:
       case ProbeType::watchpoint:
       case ProbeType::asyncwatchpoint:
-      case ProbeType::kfunc:
-      case ProbeType::kretfunc:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
       case ProbeType::iter:
       case ProbeType::rawtracepoint:
         return false;
@@ -3601,8 +3601,8 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::usdt:
       case ProbeType::tracepoint:
       case ProbeType::profile:
-      case ProbeType::kfunc:
-      case ProbeType::kretfunc:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
       case ProbeType::rawtracepoint:
         return true;
       case ProbeType::invalid:
