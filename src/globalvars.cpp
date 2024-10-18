@@ -140,6 +140,8 @@ static void update_global_vars_rodata(
       case GlobalVar::FMT_STRINGS_BUFFER:
       case GlobalVar::TUPLE_BUFFER:
       case GlobalVar::GET_STR_BUFFER:
+      case GlobalVar::READ_MAP_VALUE_BUFFER:
+      case GlobalVar::WRITE_MAP_VALUE_BUFFER:
         break;
     }
   }
@@ -269,11 +271,22 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
       assert(resources.tuple_buffers > 0);
       return make_rw_type(resources.tuple_buffers,
                           CreateArray(resources.max_tuple_size, CreateInt8()));
-    case bpftrace::globalvars::GlobalVar::GET_STR_BUFFER:
+    case bpftrace::globalvars::GlobalVar::GET_STR_BUFFER: {
       assert(resources.str_buffers > 0);
       const auto max_strlen = bpftrace_config.get(ConfigKeyInt::max_strlen);
       return make_rw_type(resources.str_buffers,
                           CreateArray(max_strlen, CreateInt8()));
+    }
+    case bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER:
+      assert(resources.max_read_map_value_size > 0);
+      assert(resources.read_map_value_buffers > 0);
+      return make_rw_type(resources.read_map_value_buffers,
+                          CreateArray(resources.max_read_map_value_size,
+                                      CreateInt8()));
+    case bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER:
+      assert(resources.max_write_map_value_size > 0);
+      return make_rw_type(
+          1, CreateArray(resources.max_write_map_value_size, CreateInt8()));
   }
   return {}; // unreachable
 }

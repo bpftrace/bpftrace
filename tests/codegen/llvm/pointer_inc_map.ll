@@ -22,14 +22,14 @@ entry:
   %"@_key2" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key1" = alloca i64, align 8
-  %"@_ptr" = alloca i64, align 8
+  %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_ptr")
-  store i64 1000, ptr %"@_ptr", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_ptr", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_ptr")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
+  store i64 1000, ptr %"@_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key1")
   store i64 0, ptr %"@_key1", align 8

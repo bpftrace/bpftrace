@@ -732,6 +732,8 @@ enum class GlobalVar {
   FMT_STRINGS_BUFFER,
   TUPLE_BUFFER,
   GET_STR_BUFFER,
+  READ_MAP_VALUE_BUFFER,
+  WRITE_MAP_VALUE_BUFFER,
 };
 
 } // namespace globalvars

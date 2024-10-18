@@ -115,10 +115,9 @@ EXPECT_REGEX /X{5555}
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 REQUIRES_FEATURE probe_read_kernel
 
-# Currently broken for big strings (>64 B) which is why ENV
-# is not being set. When big strings are fixed, enable this test.
 NAME str_big_read
 PROG BEGIN { @s = str(0); @ss = @s; print("success!"); exit() }
+ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT success!
 REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
@@ -145,6 +144,10 @@ TIMEOUT 1
 NAME fmt_str_args_scratch_buf
 PROG config = { on_stack_limit = 0 } BEGIN { printf("%s %d\n", "XXXX", 1) }
 EXPECT XXXX 1
+
+NAME map_val_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { @x = 1; @y = @x; print(@y) }
+EXPECT @y: 1
 
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }

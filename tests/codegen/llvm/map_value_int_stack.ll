@@ -21,26 +21,41 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !43 {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
+  %lookup_elem_val = alloca i64, align 8
+  %"@x_key1" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %1 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %1 to i32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  %2 = zext i32 %pid to i64
-  store i64 %2, ptr %"@x_val", align 8
+  store i64 1, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)()
-  %tid = trunc i64 %get_pid_tgid1 to i32
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
+  store i64 0, ptr %"@x_key1", align 8
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key1")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
+  %map_lookup_cond = icmp ne ptr %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
+
+lookup_success:                                   ; preds = %entry
+  %1 = load i64, ptr %lookup_elem, align 8
+  store i64 %1, ptr %lookup_elem_val, align 8
+  br label %lookup_merge
+
+lookup_failure:                                   ; preds = %entry
+  store i64 0, ptr %lookup_elem_val, align 8
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %2 = load i64, ptr %lookup_elem_val, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
-  %3 = zext i32 %tid to i64
-  store i64 %3, ptr %"@y_val", align 8
+  store i64 %2, ptr %"@y_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")

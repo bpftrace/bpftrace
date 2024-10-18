@@ -33,5 +33,7 @@ inline AddrSpace find_addrspace_stack(const SizedType &ty)
   return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
 }
 
+bool needAssignMapStatementAllocation(const AssignMapStatement &assignment);
+
 } // namespace ast
 } // namespace bpftrace

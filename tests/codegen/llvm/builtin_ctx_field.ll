@@ -59,8 +59,8 @@ entry:
   %10 = load volatile i16, ptr %9, align 2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_key")
   store i64 0, ptr %"@b_key", align 8
-  %11 = sext i16 %10 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_val")
+  %11 = sext i16 %10 to i64
   store i64 %11, ptr %"@b_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %"@b_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
@@ -72,8 +72,8 @@ entry:
   %16 = load volatile i8, ptr %15, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_key")
   store i64 0, ptr %"@c_key", align 8
-  %17 = sext i8 %16 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_val")
+  %17 = sext i8 %16 to i64
   store i64 %17, ptr %"@c_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_c, ptr %"@c_key", ptr %"@c_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_val")
@@ -89,8 +89,8 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct c.c")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_key")
   store i64 0, ptr %"@d_key", align 8
-  %24 = sext i8 %23 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_val")
+  %24 = sext i8 %23 to i64
   store i64 %24, ptr %"@d_val", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_d, ptr %"@d_key", ptr %"@d_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_val")

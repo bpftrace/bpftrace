@@ -476,8 +476,7 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
 }
 
 Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
-                                            const location &loc,
-                                            AsyncIds &async_ids)
+                                            const location &loc)
 {
   const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
   const auto str_type = CreateArray(max_strlen, CreateInt8());
@@ -485,7 +484,7 @@ Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
                           GetType(str_type),
                           name,
                           loc,
-                          [&async_ids] { return async_ids.str(); });
+                          [](AsyncIds &async_ids) { return async_ids.str(); });
 }
 
 Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
@@ -500,14 +499,38 @@ Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
 
 Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
                                            const std::string &name,
-                                           const location &loc,
-                                           AsyncIds &async_ids)
+                                           const location &loc)
 {
   return createAllocation(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
                           GetType(tuple_type),
                           name,
                           loc,
-                          [&async_ids] { return async_ids.tuple(); });
+                          [](AsyncIds &async_ids) {
+                            return async_ids.tuple();
+                          });
+}
+
+Value *IRBuilderBPF::CreateReadMapValueAllocation(const SizedType &value_type,
+                                                  const std::string &name,
+                                                  const location &loc)
+{
+  return createAllocation(
+      bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER,
+      GetType(value_type),
+      name,
+      loc,
+      [](AsyncIds &async_ids) { return async_ids.read_map_value(); });
+}
+
+Value *IRBuilderBPF::CreateWriteMapValueAllocation(const SizedType &value_type,
+                                                   const std::string &name,
+                                                   const location &loc)
+{
+  return createAllocation(
+      bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER,
+      GetType(value_type),
+      name,
+      loc);
 }
 
 Value *IRBuilderBPF::createAllocation(
@@ -515,15 +538,18 @@ Value *IRBuilderBPF::createAllocation(
     llvm::Type *obj_type,
     const std::string &name,
     const location &loc,
-    std::optional<std::function<size_t()>> gen_async_id_cb)
+    std::optional<std::function<size_t(AsyncIds &)>> gen_async_id_cb)
 {
   const auto obj_size = module_.getDataLayout().getTypeAllocSize(obj_type);
   const auto on_stack_limit = bpftrace_.config_.get(
       ConfigKeyInt::on_stack_limit);
   if (obj_size > on_stack_limit) {
-    return createScratchBuffer(globalvar,
-                               loc,
-                               gen_async_id_cb ? (*gen_async_id_cb)() : 0);
+    return CreatePointerCast(
+        createScratchBuffer(globalvar,
+                            loc,
+                            gen_async_id_cb ? (*gen_async_id_cb)(async_ids_)
+                                            : 0),
+        obj_type->getPointerTo());
   }
   return CreateAllocaBPF(obj_type, name);
 }
@@ -646,7 +672,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *value = CreatePointerCast(
+      CreateReadMapValueAllocation(type, "lookup_elem_val", loc),
+      GetType(type)->getPointerTo());
   Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
                                   GetNull(),
                                   "map_lookup_cond");
@@ -656,7 +684,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    assert(value->getAllocatedType() == getInt64Ty());
+    assert(GetType(type) == getInt64Ty());
     // createMapLookup  returns an u8*
     auto *cast = CreatePointerCast(call, value->getType(), "cast");
     CreateStore(CreateLoad(getInt64Ty(), cast), value);
@@ -677,7 +705,8 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   // value is a pointer to i64
   Value *ret = CreateLoad(getInt64Ty(), value);
-  CreateLifetimeEnd(value);
+  if (dyn_cast<AllocaInst>(value))
+    CreateLifetimeEnd(value);
   return ret;
 }
 

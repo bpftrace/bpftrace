@@ -165,16 +165,16 @@ public:
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,
                                      const location &loc);
-  Value *CreateGetStrAllocation(const std::string &name,
-                                const location &loc,
-                                AsyncIds &async_ids);
+  Value *CreateGetStrAllocation(const std::string &name, const location &loc);
   Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                           const std::string &name,
                                           const location &loc);
   Value *CreateTupleAllocation(const SizedType &tuple_type,
                                const std::string &name,
-                               const location &loc,
-                               AsyncIds &async_ids);
+                               const location &loc);
+  Value *CreateWriteMapValueAllocation(const SizedType &value_type,
+                                       const std::string &name,
+                                       const location &loc);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -305,12 +305,15 @@ private:
                                 const location &loc,
                                 BasicBlock *failure_callback,
                                 int key = 0);
-  Value *createAllocation(
-      globalvars::GlobalVar globalvar,
-      llvm::Type *obj_type,
-      const std::string &name,
-      const location &loc,
-      std::optional<std::function<size_t()>> gen_async_id_cb = std::nullopt);
+  Value *CreateReadMapValueAllocation(const SizedType &value_type,
+                                      const std::string &name,
+                                      const location &loc);
+  Value *createAllocation(globalvars::GlobalVar globalvar,
+                          llvm::Type *obj_type,
+                          const std::string &name,
+                          const location &loc,
+                          std::optional<std::function<size_t(AsyncIds &)>>
+                              gen_async_id_cb = std::nullopt);
   Value *createScratchBuffer(globalvars::GlobalVar globalvar,
                              const location &loc,
                              size_t key);

@@ -17,15 +17,15 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !41 {
 entry:
-  %"@x_ptr" = alloca i64, align 8
+  %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %get_cur_task = call i64 inttoptr (i64 35 to ptr)()
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_ptr")
-  store i64 %get_cur_task, ptr %"@x_ptr", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_ptr", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_ptr")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
+  store i64 %get_cur_task, ptr %"@x_val", align 8
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
 }
