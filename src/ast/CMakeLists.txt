@@ -3,6 +3,7 @@ add_library(ast_defs STATIC ast.cpp)
 add_library(ast STATIC
   async_event_types.cpp
   attachpoint_parser.cpp
+  codegen_helper.cpp
   dibuilderbpf.cpp
   int_parser.cpp
   irbuilderbpf.cpp

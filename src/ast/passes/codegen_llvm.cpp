@@ -769,10 +769,13 @@ void CodegenLLVM::visit(Call &call)
                                          : getMapKey(map);
     if (!is_bpf_map_clearable(map_types_[map.ident])) {
       // store zero instead of calling bpf_map_delete_elem()
-      AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+      auto val = b_.CreateWriteMapValueAllocation(map.type,
+                                                  map.ident + "_zero",
+                                                  call.loc);
       b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
       b_.CreateMapUpdateElem(ctx_, map.ident, key, val, call.loc);
-      b_.CreateLifetimeEnd(val);
+      if (dyn_cast<AllocaInst>(val))
+        b_.CreateLifetimeEnd(val);
     } else {
       b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
     }
@@ -812,7 +815,7 @@ void CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    Value *buf = b_.CreateGetStrAllocation("str", call.loc, async_ids_);
+    Value *buf = b_.CreateGetStrAllocation("str", call.loc);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
     auto arg0 = call.vargs.front();
     auto scoped_del = accept(call.vargs.front());
@@ -851,9 +854,7 @@ void CodegenLLVM::visit(Call &call)
       length = b_.getInt32(fixed_buffer_length);
     }
 
-    Value *stack_or_scratch_buf = b_.CreateGetStrAllocation("buf",
-                                                            call.loc,
-                                                            async_ids_);
+    Value *stack_or_scratch_buf = b_.CreateGetStrAllocation("buf", call.loc);
     auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
     std::ostringstream dynamic_sized_struct_name;
     dynamic_sized_struct_name << "buffer_" << fixed_buffer_length << "_t";
@@ -887,7 +888,7 @@ void CodegenLLVM::visit(Call &call)
     if (dyn_cast<AllocaInst>(buf))
       expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "path") {
-    Value *buf = b_.CreateGetStrAllocation("path", call.loc, async_ids_);
+    Value *buf = b_.CreateGetStrAllocation("path", call.loc);
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
                        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
@@ -1955,7 +1956,7 @@ void CodegenLLVM::visit(Ternary &ternary)
   // ordering of all the following statements is important
   Value *buf = nullptr;
   if (ternary.type.IsStringTy()) {
-    buf = b_.CreateGetStrAllocation("buf", ternary.loc, async_ids_);
+    buf = b_.CreateGetStrAllocation("buf", ternary.loc);
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   }
@@ -2282,9 +2283,7 @@ Value *CodegenLLVM::createTuple(
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
-  auto buf = b_.CreatePointerCast(
-      b_.CreateTupleAllocation(tuple_type, name, loc, async_ids_),
-      tuple_ty->getPointerTo());
+  auto buf = b_.CreateTupleAllocation(tuple_type, name, loc);
   b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
@@ -2368,7 +2367,6 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   Map &map = *assignment.map;
   auto scoped_del = accept(assignment.expr);
-  bool self_alloca = false;
 
   if (!expr_) // Some functions do the assignments themselves
     return;
@@ -2377,53 +2375,39 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   expr = expr_;
   auto [key, scoped_key_deleter] = getMapKey(map);
   auto &expr_type = assignment.expr->type;
+  const auto self_alloca = needAssignMapStatementAllocation(assignment);
+  val = self_alloca ? b_.CreateWriteMapValueAllocation(map.type,
+                                                       map.ident + "_val",
+                                                       assignment.loc)
+                    : expr;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
     if (!expr_type.IsSameSizeRecursive(map.type)) {
-      val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateMemsetBPF(val, b_.getInt8(0), map.type.GetSize());
       if (expr_type.IsTupleTy()) {
         createTupleCopy(expr_type, map.type, val, expr);
-        self_alloca = true;
       } else if (expr_type.IsStringTy()) {
         b_.CreateMemcpyBPF(val, expr, expr_type.GetSize());
-        self_alloca = true;
       } else {
         LOG(BUG) << "Type size mismatch. Map Type Size: " << map.type.GetSize()
                  << " Expression Type Size: " << expr_type.GetSize();
       }
-    } else {
-      val = expr;
     }
   } else if (map.type.IsRecordTy() || map.type.IsArrayTy()) {
-    if (expr_type.is_internal) {
-      val = expr;
-    } else {
+    if (!expr_type.is_internal) {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
-      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateProbeRead(
-          ctx_, dst, map.type, expr, assignment.loc, expr_type.GetAS());
-      val = dst;
-      self_alloca = true;
+          ctx_, val, map.type, expr, assignment.loc, expr_type.GetAS());
     }
-  } else if (map.type.IsPtrTy()) {
-    // expr currently contains a pointer to the struct
-    // and that's what we are saving
-    AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
-    b_.CreateStore(expr, dst);
-    val = dst;
-    self_alloca = true;
   } else {
     if (map.type.IsIntTy()) {
       // Integers are always stored as 64-bit in map values
       expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map.type.IsSigned());
     }
-    val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(expr, val);
-    self_alloca = true;
   }
   b_.CreateMapUpdateElem(ctx_, map.ident, key, val, assignment.loc);
-  if (self_alloca)
+  if (self_alloca && dyn_cast<AllocaInst>(val))
     b_.CreateLifetimeEnd(val);
 }
 
@@ -3510,19 +3494,17 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
-  Value *id_offset = b_.CreateGEP(
-      fmt_struct,
-      b_.CreatePointerCast(fmt_args, fmt_struct->getPointerTo()),
-      { b_.getInt32(0), b_.getInt32(0) });
+  Value *id_offset = b_.CreateGEP(fmt_struct,
+                                  fmt_args,
+                                  { b_.getInt32(0), b_.getInt32(0) });
   b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
 
   for (size_t i = 1; i < call.vargs.size(); i++) {
     Expression &arg = *call.vargs.at(i);
     auto scoped_del = accept(&arg);
-    Value *offset = b_.CreateGEP(
-        fmt_struct,
-        b_.CreatePointerCast(fmt_args, fmt_struct->getPointerTo()),
-        { b_.getInt32(0), b_.getInt32(i) });
+    Value *offset = b_.CreateGEP(fmt_struct,
+                                 fmt_args,
+                                 { b_.getInt32(0), b_.getInt32(i) });
     if (needMemcpy(arg.type))
       b_.CreateMemcpyBPF(offset, expr_, arg.type.GetSize());
     else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
@@ -3660,22 +3642,17 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
   // Store asyncactionid:
   b_.CreateStore(
       b_.getInt64(asyncactionint(AsyncAction::print_non_map)),
-      b_.CreateGEP(print_struct,
-                   b_.CreatePointerCast(buf, print_struct->getPointerTo()),
-                   { b_.getInt64(0), b_.getInt32(0) }));
+      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
   // Store print id
   b_.CreateStore(
       b_.getInt64(id),
-      b_.CreateGEP(print_struct,
-                   b_.CreatePointerCast(buf, print_struct->getPointerTo()),
-                   { b_.getInt64(0), b_.getInt32(1) }));
+      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
   // Store content
-  Value *content_offset = b_.CreateGEP(
-      print_struct,
-      b_.CreatePointerCast(buf, print_struct->getPointerTo()),
-      { b_.getInt32(0), b_.getInt32(2) });
+  Value *content_offset = b_.CreateGEP(print_struct,
+                                       buf,
+                                       { b_.getInt32(0), b_.getInt32(2) });
   b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type.GetSize());
   if (needMemcpy(arg.type)) {
     if (inBpfMemory(arg.type))
