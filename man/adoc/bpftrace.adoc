@@ -438,8 +438,8 @@ inside a script config block.
 === Data Types
 
 The following fundamental types are provided by the language.
-Note: Integers are by default represented as 64 bit signed but that can be 
-changed by either casting them or, for scratch variables, explicitly specifying 
+Note: Integers are by default represented as 64 bit signed but that can be
+changed by either casting them or, for scratch variables, explicitly specifying
 the type upon declaration.
 
 [cols="~,~"]
@@ -2505,12 +2505,25 @@ Count how often this function is called.
 
 Using `@=count()` is conceptually similar to `@++`.
 The difference is that the `count()` function uses a map type optimized for
-writing (PER_CPU), increasing performance and correctness. However, sync reads
+performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
-Note: In contrast to hash maps (e.g. `@++`), multiple writers to a shared
-global var might lose counts as bpftrace doesn't update them atomically.
 
+Note: This differs from "raw" writes (e.g. `@++`) where multiple writers to a
+shared location might lose updates, as bpftrace does not generate any implicit
+atomic operations.
+
+Example one:
+----
+BEGIN {
+  @ = count();
+  @ = count();
+  printf("%d\n", (int64)@);   // prints 2
+  exit();
+}
+----
+
+Example two:
 ----
 interval:ms:100 {
   @ = count();
@@ -2669,7 +2682,28 @@ Prints:
 * `max(int64 n)`
 
 Update the map with `n` if `n` is bigger than the current value held.
-Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
+Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+
+Note: this is different than the typical userspace `max()` in that bpftrace's `max()`
+only takes a single argument. The logical "other" argument to compare to is the value
+in the map the "result" is being assigned to.
+
+For example, compare the two logically equivalent samples (C++ vs bpftrace):
+
+In C++:
+----
+int x = std::max(3, 33);  // x contains 33
+----
+
+In bpftrace:
+----
+@x = max(3);
+@x = max(33);   // @x contains 33
+----
+
+Also note that bpftrace takes care to handle the unset case. In other words,
+there is no default value. The first value you pass to `max()` will always
+be returned.
 
 [#map-functions-min]
 === min
@@ -2678,7 +2712,9 @@ Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
 * `min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
-Similar to `count` this uses a PER_CPU map (fast writes, slow reads).
+Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+
+See `max()` above for how this differs from the typical userspace `min()`.
 
 [#map-functions-stats]
 === stats
@@ -2711,12 +2747,26 @@ Calculate the sum of all `n` passed.
 
 Using `@=sum(5)` is conceptually similar to `@+=5`.
 The difference is that the `sum()` function uses a map type optimized for
-writing (PER_CPU), increasing performance and correctness. However, sync reads
+performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
-Note: In contrast to hash maps (e.g. `@+=5`), multiple writers to a shared
-global var might lose updates as bpftrace doesn't update them atomically.
 
+Note: This differs from "raw" writes (e.g. `@+=5`) where multiple writers to a
+shared location might lose updates, as bpftrace does not generate any implicit
+atomic operations.
+
+Example one:
+----
+BEGIN {
+  @ = sum(5);
+  @ = sum(6);
+  printf("%d\n", (int64)@);   // prints 11
+  clear(@);
+  exit();
+}
+----
+
+Example two:
 ----
 interval:ms:100 {
   @ = sum(5);
@@ -4017,3 +4067,24 @@ ExecStart=bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
 
 Similarly to the systemd-run example, the service to be traced will not start
 until bpftrace started by the systemd unit has attached its probes.
+
+=== PER_CPU types
+
+For bpftrace PER_CPU types (search this document for "PER_CPU"), you may coerce
+(and thus force a more expensive synchronous read) the type to an integer using
+a cast or by doing a comparison. This is useful for when you need an integer
+during comparisons, `printf()`, or other.
+
+For example:
+
+----
+BEGIN {
+  @c = count();
+  @s = sum(3);
+  @s = sum(9);
+
+  if (@s == 12) {                             // Coerces @s
+    printf("%d %d\n", (int64)@c, (int64)@s);  // Coerces @c and @s and prints "1 12"
+  }
+}
+----
