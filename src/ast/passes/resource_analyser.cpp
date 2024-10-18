@@ -4,6 +4,7 @@
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
+#include "codegen_helper.h"
 #include "globalvars.h"
 #include "log.h"
 #include "struct.h"
@@ -66,6 +67,21 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
   if (resources_.str_buffers > 0) {
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::GET_STR_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
+  if (resources_.max_read_map_value_size > 0) {
+    assert(resources_.read_map_value_buffers > 0);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
+  if (resources_.max_write_map_value_size > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER);
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
@@ -242,6 +258,13 @@ void ResourceAnalyser::visit(Call &call)
 
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
+  } else if (call.func == "delete") {
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
+    if (map.type.GetSize() > on_stack_limit) {
+      resources_.max_write_map_value_size = std::max(
+          resources_.max_write_map_value_size, map.type.GetSize());
+    }
   }
 
   if (call.func == "print" || call.func == "clear" || call.func == "zero") {
@@ -271,9 +294,15 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor::visit(map);
 
-  auto &map_info = resources_.maps_info[map.ident];
-  map_info.value_type = map.type;
-  map_info.key_type = map.key_type;
+  update_map_info(map);
+
+  const auto on_stack_limit = bpftrace_.config_.get(
+      ConfigKeyInt::on_stack_limit);
+  if (map.type.GetSize() > on_stack_limit) {
+    resources_.read_map_value_buffers++;
+    resources_.max_read_map_value_size = std::max(
+        resources_.max_read_map_value_size, map.type.GetSize());
+  }
 }
 
 void ResourceAnalyser::visit(Tuple &tuple)
@@ -303,6 +332,43 @@ void ResourceAnalyser::visit(For &f)
   }
 }
 
+void ResourceAnalyser::visit(AssignMapStatement &assignment)
+{
+  /* CodegenLLVM traverses the AST like:
+   *      AssignmentMapStatement a
+   *        /                    \
+   *    accept(a.expr)        accept(a.map.key_expr)
+   *
+   * CodegenLLVM avoid traversing into the map node via accept(a.map)
+   * to avoid triggering a map lookup.
+   *
+   * However, ResourceAnalyser traverses the AST differently:
+   *      AssignmentMapStatement a
+   *        /                    \
+   *    visit(a.expr)        visit(a.map)
+   *                               \
+   *                           visit(a.map.key_expr)
+   *
+   * Unfortunately, calling ResourceAnalser::visit(a.map) will trigger
+   * an additional read map buffer. Thus to mimic CodegenLLVM, we
+   * skip calling ResourceAnalser::visit(a.map) and do the AST traversal
+   * ourselves.
+   */
+  assignment.expr->accept(*this);
+  Visitor::visit(*assignment.map);
+
+  update_map_info(*assignment.map);
+
+  if (needAssignMapStatementAllocation(assignment)) {
+    const auto on_stack_limit = bpftrace_.config_.get(
+        ConfigKeyInt::on_stack_limit);
+    if (assignment.map->type.GetSize() > on_stack_limit) {
+      resources_.max_write_map_value_size = std::max(
+          resources_.max_write_map_value_size, assignment.map->type.GetSize());
+    }
+  }
+}
+
 void ResourceAnalyser::visit(Ternary &ternary)
 {
   Visitor::visit(ternary);
@@ -324,6 +390,13 @@ void ResourceAnalyser::visit(Ternary &ternary)
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
   return fun == "usym" || fun == "func" || fun == "ustack";
+}
+
+void ResourceAnalyser::update_map_info(Map &map)
+{
+  auto &map_info = resources_.maps_info[map.ident];
+  map_info.value_type = map.type;
+  map_info.key_type = map.key_type;
 }
 
 Pass CreateResourcePass()

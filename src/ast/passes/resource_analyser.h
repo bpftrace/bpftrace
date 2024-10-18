@@ -36,10 +36,13 @@ private:
   void visit(Tuple &tuple) override;
   void visit(For &f) override;
   void visit(Ternary &ternary) override;
+  void visit(AssignMapStatement &assignment) override;
 
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.
   bool uses_usym_table(const std::string &fun);
+
+  void update_map_info(Map &map);
 
   RequiredResources resources_;
   Node *root_;
