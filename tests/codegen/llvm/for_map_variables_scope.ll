@@ -62,7 +62,7 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
-define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !69 {
+define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !74 {
   %"$var" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var")
   store i64 0, ptr %"$var", align 8
@@ -154,9 +154,17 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)
 !64 = !{!65}
 !65 = !DILocalVariable(name: "ctx", arg: 1, scope: !60, file: !2, type: !63)
-!66 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !67)
-!67 = !{!68}
-!68 = !DILocalVariable(name: "ctx", arg: 1, scope: !66, file: !2, type: !63)
-!69 = distinct !DISubprogram(name: "map_for_each_cb_1", linkageName: "map_for_each_cb_1", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !70)
-!70 = !{!71}
-!71 = !DILocalVariable(name: "ctx", arg: 1, scope: !69, file: !2, type: !63)
+!66 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !69)
+!67 = !DISubroutineType(types: !68)
+!68 = !{!18, !63, !63, !63, !63}
+!69 = !{!70, !71, !72, !73}
+!70 = !DILocalVariable(name: "map", arg: 1, scope: !66, file: !2, type: !63)
+!71 = !DILocalVariable(name: "key", arg: 2, scope: !66, file: !2, type: !63)
+!72 = !DILocalVariable(name: "value", arg: 3, scope: !66, file: !2, type: !63)
+!73 = !DILocalVariable(name: "ctx", arg: 4, scope: !66, file: !2, type: !63)
+!74 = distinct !DISubprogram(name: "map_for_each_cb_1", linkageName: "map_for_each_cb_1", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !57, retainedNodes: !75)
+!75 = !{!76, !77, !78, !79}
+!76 = !DILocalVariable(name: "map", arg: 1, scope: !74, file: !2, type: !63)
+!77 = !DILocalVariable(name: "key", arg: 2, scope: !74, file: !2, type: !63)
+!78 = !DILocalVariable(name: "value", arg: 3, scope: !74, file: !2, type: !63)
+!79 = !DILocalVariable(name: "ctx", arg: 4, scope: !74, file: !2, type: !63)

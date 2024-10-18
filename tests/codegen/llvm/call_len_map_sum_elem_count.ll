@@ -40,22 +40,12 @@ entry:
   %"$s" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
   store i64 0, ptr %"$s", align 8
-  %len = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %len)
-  store i64 0, ptr %len, align 8
-  %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_len_cb, ptr %len, i64 0)
-  %1 = load i64, ptr %len, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %len)
-  store i64 %1, ptr %"$s", align 8
+  %len = call i64 @bpf_map_sum_elem_count(ptr @AT_x)
+  store i64 %len, ptr %"$s", align 8
   ret i64 0
 }
 
-define internal i64 @map_len_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !60 {
-  %5 = load i64, ptr %3, align 8
-  %6 = add i64 %5, 1
-  store i64 %6, ptr %3, align 8
-  ret i64 0
-}
+declare !dbg !60 extern_weak i64 @bpf_map_sum_elem_count(ptr %0) local_unnamed_addr section ".ksyms"
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -123,6 +113,9 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !57 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !58)
 !58 = !{!59}
 !59 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !53)
-!60 = distinct !DISubprogram(name: "map_len_cb", linkageName: "map_len_cb", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !47, retainedNodes: !61)
-!61 = !{!62}
-!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !60, file: !2, type: !53)
+!60 = !DISubprogram(name: "bpf_map_sum_elem_count", linkageName: "bpf_map_sum_elem_count", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: 0)
+!61 = !DISubroutineType(types: !62)
+!62 = !{!18, !63}
+!63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !64, size: 64)
+!64 = !DICompositeType(tag: DW_TAG_structure_type, name: "struct bpf_map", scope: !2, file: !2, elements: !65)
+!65 = !{}

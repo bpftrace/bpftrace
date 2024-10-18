@@ -121,6 +121,13 @@ int bpf_iter_task_vma()
   return 0;
 }
 
+// kfunc definitions
+struct bpf_map {};
+long bpf_map_sum_elem_count(const struct bpf_map *map)
+{
+  return 0;
+}
+
 int main(void)
 {
   struct bpf_iter__task iter_task;
