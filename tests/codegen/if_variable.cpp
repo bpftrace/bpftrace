@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, if_variable)
 {
-  test("kprobe:f { if (1) { $x = 10 } $y = $x; }",
+  test("kprobe:f { let $x; if (1) { $x = 10 } $y = $x; }",
 
        NAME);
 }

@@ -318,7 +318,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -396,7 +396,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                   "struct task_struct")),
                                  AddrSpace::kernel);
   } else if (builtin.ident == "retval") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType type = single_provider_type(probe);
@@ -434,7 +434,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // Case: @=comm and strncmp(@, "name")
     builtin.type.SetAS(AddrSpace::kernel);
   } else if (builtin.ident == "func") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -463,7 +463,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
   } else if (builtin.is_argx()) {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -490,7 +490,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (!builtin.ident.compare(0, 4, "sarg") &&
              builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
              builtin.ident.at(4) <= '9') {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -519,7 +519,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = CreateUInt64();
     builtin.type.SetAS(addrspace);
   } else if (builtin.ident == "probe") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     builtin.type = CreateProbe();
@@ -533,7 +533,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.type = CreateUInt32();
   } else if (builtin.ident == "args") {
-    auto probe = get_probe_from_scope(scope_, builtin.loc, builtin.ident);
+    auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -645,7 +645,7 @@ void SemanticAnalyser::visit(Call &call)
     Visit(call.vargs[i]);
   }
 
-  if (auto probe = dynamic_cast<Probe *>(scope_)) {
+  if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
         LOG(ERROR, call.loc, err_) << call.func << " can not be used with \""
@@ -1074,7 +1074,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateUInt64();
-    if (auto probe = dynamic_cast<Probe *>(scope_)) {
+    if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
       ProbeType pt = single_provider_type(probe);
       // In case of different attach_points, Set the addrspace to none.
       call.type.SetAS(find_addrspace(pt));
@@ -1089,7 +1089,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "uaddr") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe(call.loc, call.func);
     if (probe == nullptr)
       return;
 
@@ -1337,7 +1337,7 @@ void SemanticAnalyser::visit(Call &call)
           << "signal only accepts string literals or integers";
     }
   } else if (call.func == "path") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe(call.loc, call.func);
     if (probe == nullptr)
       return;
 
@@ -1412,7 +1412,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   } else if (call.func == "override") {
-    auto probe = get_probe_from_scope(scope_, call.loc, call.func);
+    auto probe = get_probe(call.loc, call.func);
     if (probe == nullptr)
       return;
 
@@ -1628,11 +1628,9 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   call.type = CreateStack(kernel, stack_type);
 }
 
-Probe *SemanticAnalyser::get_probe_from_scope(Scope *scope,
-                                              const location &loc,
-                                              std::string name)
+Probe *SemanticAnalyser::get_probe(const location &loc, std::string name)
 {
-  auto probe = dynamic_cast<Probe *>(scope);
+  auto probe = dynamic_cast<Probe *>(top_level_node_);
   if (probe == nullptr) {
     // Attempting to use probe-specific feature in non-probe context
     if (name.empty()) {
@@ -1707,20 +1705,23 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  if (auto search_val = variables_[scope_].find(var.ident);
-      search_val != variables_[scope_].end()) {
-    if (search_val->second.was_assigned) {
-      var.type = search_val->second.type;
-    } else {
-      LOG(ERROR, var.loc, err_)
-          << "Variable used before it was assigned: " << var.ident;
-      var.type = CreateNone();
+  for (auto scope : scope_stack_) {
+    if (auto search_val = variables_[scope].find(var.ident);
+        search_val != variables_[scope].end()) {
+      if (search_val->second.was_assigned) {
+        var.type = search_val->second.type;
+      } else {
+        LOG(ERROR, var.loc, err_)
+            << "Variable used before it was assigned: " << var.ident;
+        var.type = CreateNone();
+      }
+      return;
     }
-  } else {
-    LOG(ERROR, var.loc, err_)
-        << "Undefined or undeclared variable: " << var.ident;
-    var.type = CreateNone();
   }
+
+  LOG(ERROR, var.loc, err_)
+      << "Undefined or undeclared variable: " << var.ident;
+  var.type = CreateNone();
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
@@ -2178,18 +2179,18 @@ void SemanticAnalyser::visit(Ternary &ternary)
   }
 }
 
-void SemanticAnalyser::visit(If &if_block)
+void SemanticAnalyser::visit(If &if_node)
 {
-  Visit(if_block.cond);
+  Visit(if_node.cond);
 
   if (is_final_pass()) {
-    const Type &cond = if_block.cond->type.GetTy();
+    const Type &cond = if_node.cond->type.GetTy();
     if (cond != Type::integer)
-      LOG(ERROR, if_block.loc, err_) << "Invalid condition in if(): " << cond;
+      LOG(ERROR, if_node.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
-  accept_statements(if_block.stmts);
-  accept_statements(if_block.else_stmts);
+  Visit(&if_node.if_block);
+  Visit(&if_node.else_block);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -2210,17 +2211,16 @@ void SemanticAnalyser::visit(Unroll &unroll)
     LOG(ERROR, unroll.loc, err_) << "unroll minimum value is 1";
   }
 
-  accept_statements(unroll.stmts);
+  Visit(&unroll.block);
 }
 
 void SemanticAnalyser::visit(Jump &jump)
 {
   switch (jump.ident) {
     case JumpType::RETURN:
-      if (jump.return_value) {
+      if (jump.return_value)
         Visit(jump.return_value);
-      }
-      if (auto subprog = dynamic_cast<Subprog *>(scope_)) {
+      if (auto subprog = dynamic_cast<Subprog *>(top_level_node_)) {
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
             (jump.return_value &&
@@ -2253,7 +2253,7 @@ void SemanticAnalyser::visit(While &while_block)
   Visit(while_block.cond);
 
   loop_depth_++;
-  accept_statements(while_block.stmts);
+  Visit(&while_block.block);
   loop_depth_--;
 }
 
@@ -2350,9 +2350,11 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate decl
   const auto &decl_name = f.decl->ident;
-  if (variables_[scope_].find(decl_name) != variables_[scope_].end()) {
-    LOG(ERROR, f.decl->loc, err_)
-        << "Loop declaration shadows existing variable: " + decl_name;
+  for (auto scope : scope_stack_) {
+    if (variables_[scope].find(decl_name) != variables_[scope].end()) {
+      LOG(ERROR, f.decl->loc, err_)
+          << "Loop declaration shadows existing variable: " + decl_name;
+    }
   }
 
   // Validate expr
@@ -2389,27 +2391,25 @@ void SemanticAnalyser::visit(For &f)
   // and declared before the loop. These will be passed into the loop callback
   // function as the context parameter.
   CollectNodes<Variable> vars_referenced;
-  std::unordered_set<std::string> var_set;
+  std::unordered_set<std::string> found_vars;
   for (auto *stmt : f.stmts) {
-    const auto &live_vars = variables_[scope_];
-    vars_referenced.run(*stmt, [&live_vars, &var_set](const auto &var) {
-      if (live_vars.find(var.ident) == live_vars.end())
+    vars_referenced.run(*stmt, [this, &f, &found_vars](const auto &var) {
+      if (found_vars.find(var.ident) != found_vars.end())
         return false;
-      if (var_set.find(var.ident) != var_set.end())
-        return false;
-      var_set.insert(var.ident);
-      return true;
-    });
-  }
 
-  // Collect a list of variables which are used in the loop without having been
-  // used before. This is a hack to simulate block scoping in the absence of the
-  // real thing (#3017).
-  CollectNodes<Variable> new_vars;
-  for (auto *stmt : f.stmts) {
-    const auto &live_vars = variables_[scope_];
-    new_vars.run(*stmt, [&live_vars](const auto &var) {
-      return live_vars.find(var.ident) == live_vars.end();
+      bool found = false;
+      for (auto scope : scope_stack_) {
+        const auto &live_vars = variables_[scope];
+        if (live_vars.find(var.ident) != live_vars.end()) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+      found_vars.insert(var.ident);
+      return true;
     });
   }
 
@@ -2429,13 +2429,17 @@ void SemanticAnalyser::visit(For &f)
 
   f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ *mapkey, *mapval }));
 
-  variables_[scope_][decl_name] = { .type = f.decl->type,
-                                    .can_resize = true,
-                                    .was_assigned = true };
+  scope_stack_.push_back(&f);
+
+  variables_[scope_stack_.back()][decl_name] = { .type = f.decl->type,
+                                                 .can_resize = true,
+                                                 .was_assigned = true };
 
   loop_depth_++;
   accept_statements(f.stmts);
   loop_depth_--;
+
+  scope_stack_.pop_back();
 
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
@@ -2449,14 +2453,6 @@ void SemanticAnalyser::visit(For &f)
       LOG(ERROR, builtin.loc, err_)
           << "'" << builtin.ident << "' builtin is not allowed in a for-loop";
     }
-  }
-
-  // Decl variable is not valid beyond this for-loop
-  variables_[scope_].erase(decl_name);
-
-  // Variables declared in a for-loop are not valid beyond it
-  for (const Variable &var : new_vars.nodes()) {
-    variables_[scope_].erase(var.ident);
   }
 
   // Finally, create the context tuple now that all variables inside the loop
@@ -2502,7 +2498,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   }
 
   if (type.is_funcarg) {
-    auto probe = get_probe_from_scope(scope_, acc.loc);
+    auto probe = get_probe(acc.loc);
     if (probe == nullptr)
       return;
     auto arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
@@ -2561,7 +2557,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   std::map<std::string, std::weak_ptr<const Struct>> structs;
 
   if (type.is_tparg) {
-    auto probe = get_probe_from_scope(scope_, acc.loc);
+    auto probe = get_probe(acc.loc);
     if (probe == nullptr)
       return;
 
@@ -2701,7 +2697,7 @@ void SemanticAnalyser::visit(Cast &cast)
   // case : BEGIN { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (cast.type.GetAS() == AddrSpace::none) {
-    if (auto probe = dynamic_cast<Probe *>(scope_)) {
+    if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
       ProbeType type = single_provider_type(probe);
       cast.type.SetAS(find_addrspace(type));
     } else {
@@ -2818,118 +2814,128 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 
   std::string var_ident = assignment.var->ident;
-  auto search = variables_[scope_].find(var_ident);
   auto &assignTy = assignment.expr->type;
 
-  if (search != variables_[scope_].end()) {
-    auto &storedTy = search->second.type;
-    bool type_mismatch_error = false;
-    if (storedTy.IsNoneTy()) {
-      storedTy = assignTy;
-    } else if (!storedTy.IsSameType(assignTy)) {
-      type_mismatch_error = true;
-    } else if (assignTy.IsStringTy()) {
-      if (search->second.can_resize) {
-        update_string_size(storedTy, assignTy);
-      } else if (!assignTy.FitsInto(storedTy)) {
+  Node *var_scope = nullptr;
+  for (auto scope : scope_stack_) {
+    auto search = variables_[scope].find(var_ident);
+
+    if (search != variables_[scope].end()) {
+      auto &storedTy = search->second.type;
+      bool type_mismatch_error = false;
+      if (storedTy.IsNoneTy()) {
+        storedTy = assignTy;
+      } else if (!storedTy.IsSameType(assignTy)) {
         type_mismatch_error = true;
-      }
-    } else if (storedTy.IsIntegerTy()) {
-      if (assignment.expr->is_literal) {
-        auto integer = static_cast<Integer *>(assignment.expr);
-        if (!storedTy.IsEqual(assignTy)) {
-          int64_t value = integer->n;
-          bool can_fit = false;
-          if (integer->is_negative) {
-            if (!storedTy.IsSigned()) {
-              type_mismatch_error = true;
-            } else {
-              auto min_max = getIntTypeRange(storedTy);
-              can_fit = value >= min_max.first;
-            }
-          } else {
-            if (!storedTy.IsSigned()) {
-              auto min_max = getUIntTypeRange(storedTy);
-              can_fit = static_cast<uint64_t>(value) <= min_max.second;
-            } else {
-              // Casting to a uint64 here because the assign 'value'
-              // might be larger than the max signed int64 e.g.
-              // `$x = -1; $x = 10223372036854775807;`
-              auto min_max = getIntTypeRange(storedTy);
-              can_fit = static_cast<uint64_t>(value) <=
-                        static_cast<uint64_t>(min_max.second);
-            }
-          }
-          if (can_fit) {
-            Expression *cast = ctx_.make_node<Cast>(
-                CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
-                assignment.expr,
-                assignment.loc);
-            Visit(cast);
-            assignment.expr = cast;
-          } else if (!type_mismatch_error) {
-            LOG(ERROR, assignment.loc, err_)
-                << "Type mismatch for " << var_ident << ": "
-                << "trying to assign value '"
-                << (integer->is_negative ? integer->n
-                                         : static_cast<uint64_t>(integer->n))
-                << "' which does not fit into the variable of type '"
-                << storedTy << "'";
-          }
-        }
-      } else if (storedTy.IsSigned() != assignTy.IsSigned()) {
-        type_mismatch_error = true;
-      } else {
-        if (!assignTy.FitsInto(storedTy)) {
-          LOG(ERROR, assignment.loc, err_)
-              << "Integer size mismatch. Assignment type '" << assignTy
-              << "' is larger than the variable type '" << storedTy << "'.";
-        }
-      }
-    } else if (assignTy.IsBufferTy()) {
-      auto var_size = storedTy.GetSize();
-      auto expr_size = assignTy.GetSize();
-      if (var_size != expr_size) {
-        LOG(WARNING, assignment.loc, out_)
-            << "Buffer size mismatch: " << var_size << " != " << expr_size
-            << (var_size < expr_size ? ". The value may be truncated."
-                                     : ". The value may contain garbage.");
-      }
-    } else if (assignTy.IsTupleTy()) {
-      update_string_size(storedTy, assignTy);
-      // Early passes may not have been able to deduce the full types of tuple
-      // elements yet. So wait until final pass.
-      if (is_final_pass()) {
-        if (!assignTy.FitsInto(storedTy)) {
+      } else if (assignTy.IsStringTy()) {
+        if (search->second.can_resize) {
+          update_string_size(storedTy, assignTy);
+        } else if (!assignTy.FitsInto(storedTy)) {
           type_mismatch_error = true;
         }
+      } else if (storedTy.IsIntegerTy()) {
+        if (assignment.expr->is_literal) {
+          auto integer = static_cast<Integer *>(assignment.expr);
+          if (!storedTy.IsEqual(assignTy)) {
+            int64_t value = integer->n;
+            bool can_fit = false;
+            if (integer->is_negative) {
+              if (!storedTy.IsSigned()) {
+                type_mismatch_error = true;
+              } else {
+                auto min_max = getIntTypeRange(storedTy);
+                can_fit = value >= min_max.first;
+              }
+            } else {
+              if (!storedTy.IsSigned()) {
+                auto min_max = getUIntTypeRange(storedTy);
+                can_fit = static_cast<uint64_t>(value) <= min_max.second;
+              } else {
+                // Casting to a uint64 here because the assign 'value'
+                // might be larger than the max signed int64 e.g.
+                // `$x = -1; $x = 10223372036854775807;`
+                auto min_max = getIntTypeRange(storedTy);
+                can_fit = static_cast<uint64_t>(value) <=
+                          static_cast<uint64_t>(min_max.second);
+              }
+            }
+            if (can_fit) {
+              Expression *cast = ctx_.make_node<Cast>(
+                  CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
+                  assignment.expr,
+                  assignment.loc);
+              Visit(cast);
+              assignment.expr = cast;
+            } else if (!type_mismatch_error) {
+              LOG(ERROR, assignment.loc, err_)
+                  << "Type mismatch for " << var_ident << ": "
+                  << "trying to assign value '"
+                  << (integer->is_negative ? integer->n
+                                           : static_cast<uint64_t>(integer->n))
+                  << "' which does not fit into the variable of type '"
+                  << storedTy << "'";
+            }
+          }
+        } else if (storedTy.IsSigned() != assignTy.IsSigned()) {
+          type_mismatch_error = true;
+        } else {
+          if (!assignTy.FitsInto(storedTy)) {
+            LOG(ERROR, assignment.loc, err_)
+                << "Integer size mismatch. Assignment type '" << assignTy
+                << "' is larger than the variable type '" << storedTy << "'.";
+          }
+        }
+      } else if (assignTy.IsBufferTy()) {
+        auto var_size = storedTy.GetSize();
+        auto expr_size = assignTy.GetSize();
+        if (var_size != expr_size) {
+          LOG(WARNING, assignment.loc, out_)
+              << "Buffer size mismatch: " << var_size << " != " << expr_size
+              << (var_size < expr_size ? ". The value may be truncated."
+                                       : ". The value may contain garbage.");
+        }
+      } else if (assignTy.IsTupleTy()) {
+        update_string_size(storedTy, assignTy);
+        // Early passes may not have been able to deduce the full types of tuple
+        // elements yet. So wait until final pass.
+        if (is_final_pass()) {
+          if (!assignTy.FitsInto(storedTy)) {
+            type_mismatch_error = true;
+          }
+        }
+      }
+      if (type_mismatch_error) {
+        auto err_segment =
+            search->second.was_assigned
+                ? "when variable already contains a value of type"
+                : "when variable already has a type";
+        LOG(ERROR, assignment.loc, err_)
+            << "Type mismatch for " << var_ident << ": "
+            << "trying to assign value of type '" << assignTy << "' "
+            << err_segment << " '" << storedTy << "'";
+      } else {
+        if (!search->second.was_assigned) {
+          // The assign type is possibly more complete than the stored type,
+          // which could come from a variable declaration. The assign type may
+          // resolve builtins like `curtask` which also specifies the address
+          // space.
+          search->second.type = assignTy;
+          search->second.was_assigned = true;
+        }
+        var_scope = scope;
+        break;
       }
     }
-    if (type_mismatch_error) {
-      auto err_segment = search->second.was_assigned
-                             ? "when variable already contains a value of type"
-                             : "when variable already has a type";
-      LOG(ERROR, assignment.loc, err_)
-          << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << assignTy << "' "
-          << err_segment << " '" << storedTy << "'";
-    } else {
-      if (!search->second.was_assigned) {
-        // The assign type is possibly more complete than the stored type, which
-        // could come from a variable declaration. The assign type may resolve
-        // builtins like `curtask` which also specifies the address space.
-        search->second.type = assignTy;
-        search->second.was_assigned = true;
-      }
-    }
-  } else {
-    // This variable hasn't been seen before
-    variables_[scope_].insert(
-        { var_ident,
-          { .type = assignTy, .can_resize = true, .was_assigned = true } });
   }
 
-  const auto &storedTy = variables_[scope_][var_ident].type;
+  if (var_scope == nullptr) {
+    variables_[scope_stack_.back()].insert(
+        { var_ident,
+          { .type = assignTy, .can_resize = true, .was_assigned = true } });
+    var_scope = scope_stack_.back();
+  }
+
+  const auto &storedTy = variables_[var_scope][var_ident].type;
   assignment.var->type = storedTy;
 
   if (is_final_pass()) {
@@ -2969,45 +2975,53 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
         << "Invalid variable declaration type: " << decl.var->type;
   }
 
-  // This should be the first time we're seeing this variable
-  if (auto decl_search = variable_decls_[scope_].find(var_ident);
-      decl_search != variable_decls_[scope_].end()) {
-    if (decl_search->second != decl.loc) {
-      // Note this will change if/when proper block/lexical scoping is added
-      LOG(ERROR, decl.loc, err_)
-          << "Variable " << var_ident << " was already declared.";
-      LOG(ERROR, decl_search->second, err_) << "Initial declaration";
+  if (is_first_pass()) {
+    for (auto scope : scope_stack_) {
+      // This should be the first time we're seeing this variable
+      if (auto decl_search = variable_decls_[scope].find(var_ident);
+          decl_search != variable_decls_[scope].end()) {
+        if (decl_search->second != decl.loc) {
+          LOG(ERROR, decl.loc, err_)
+              << "Variable " << var_ident
+              << " was already declared. Variable shadowing is not allowed.";
+          LOG(ERROR, decl_search->second, err_) << "Initial declaration";
+        }
+      }
     }
   }
 
-  if (auto search = variables_[scope_].find(var_ident);
-      search != variables_[scope_].end()) {
-    if (!variable_decls_[scope_].contains(var_ident)) {
-      LOG(ERROR, decl.loc, err_)
-          << "Variable declarations need to occur before variable usage or "
-             "assignment. Variable: "
-          << var_ident;
-    } else if (is_final_pass()) {
-      // Update the declaration type if it was either not set e.g. `let $a;`
-      // or the type is ambiguous or resizable e.g. `let $a: string;`
-      decl.var->type = search->second.type;
-    }
+  if (is_first_pass() || is_final_pass()) {
+    for (auto scope : scope_stack_) {
+      if (auto search = variables_[scope].find(var_ident);
+          search != variables_[scope].end()) {
+        if (!variable_decls_[scope].contains(var_ident) && is_first_pass()) {
+          LOG(ERROR, decl.loc, err_)
+              << "Variable declarations need to occur before variable usage or "
+                 "assignment. Variable: "
+              << var_ident;
+        } else if (is_final_pass()) {
+          // Update the declaration type if it was either not set e.g. `let $a;`
+          // or the type is ambiguous or resizable e.g. `let $a: string;`
+          decl.var->type = search->second.type;
+        }
 
-    if (is_final_pass() && !search->second.was_assigned) {
-      LOG(WARNING, decl.loc, out_)
-          << "Variable " << var_ident << " never assigned to.";
-    }
+        if (is_final_pass() && !search->second.was_assigned) {
+          LOG(WARNING, decl.loc, out_)
+              << "Variable " << var_ident << " never assigned to.";
+        }
 
-    return;
+        return;
+      }
+    }
   }
 
   bool can_resize = !decl.set_type || decl.var->type.GetSize() == 0;
 
-  variables_[scope_].insert({ var_ident,
-                              { .type = decl.var->type,
-                                .can_resize = can_resize,
-                                .was_assigned = false } });
-  variable_decls_[scope_].insert({ var_ident, decl.loc });
+  variables_[scope_stack_.back()].insert({ var_ident,
+                                           { .type = decl.var->type,
+                                             .can_resize = can_resize,
+                                             .was_assigned = false } });
+  variable_decls_[scope_stack_.back()].insert({ var_ident, decl.loc });
 }
 
 void SemanticAnalyser::visit(Predicate &pred)
@@ -3293,11 +3307,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   }
 }
 
+void SemanticAnalyser::visit(Block &block)
+{
+  scope_stack_.push_back(&block);
+  accept_statements(block.stmts);
+  scope_stack_.pop_back();
+}
+
 void SemanticAnalyser::visit(Probe &probe)
 {
   auto aps = probe.attach_points.size();
-
-  scope_ = &probe;
+  top_level_node_ = &probe;
 
   for (AttachPoint *ap : probe.attach_points) {
     if (!listing_ && aps > 1 && ap->provider == "iter") {
@@ -3309,9 +3329,7 @@ void SemanticAnalyser::visit(Probe &probe)
   if (probe.pred) {
     Visit(probe.pred);
   }
-  for (Statement *stmt : probe.stmts) {
-    Visit(stmt);
-  }
+  Visit(&probe.block);
 }
 
 void SemanticAnalyser::visit(Config &config)
@@ -3321,13 +3339,15 @@ void SemanticAnalyser::visit(Config &config)
 
 void SemanticAnalyser::visit(Subprog &subprog)
 {
-  scope_ = &subprog;
+  scope_stack_.push_back(&subprog);
+  top_level_node_ = &subprog;
   for (SubprogArg *arg : subprog.args) {
-    variables_[scope_].insert(
+    variables_[scope_stack_.back()].insert(
         { arg->name(),
           { .type = arg->type, .can_resize = true, .was_assigned = true } });
   }
   Visitor::visit(subprog);
+  scope_stack_.pop_back();
 }
 
 void SemanticAnalyser::visit(Program &program)
@@ -3362,6 +3382,11 @@ int SemanticAnalyser::analyse()
 bool SemanticAnalyser::is_final_pass() const
 {
   return pass_ == num_passes_;
+}
+
+bool SemanticAnalyser::is_first_pass() const
+{
+  return pass_ == 1;
 }
 
 bool SemanticAnalyser::check_assignment(const Call &call,

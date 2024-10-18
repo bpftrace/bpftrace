@@ -58,7 +58,7 @@ public:
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(VarDeclStatement &decl) override;
-  void visit(If &if_block) override;
+  void visit(If &if_node) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
   void visit(For &f) override;
@@ -68,6 +68,7 @@ public:
   void visit(Probe &probe) override;
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
+  void visit(Block &block) override;
 
   AllocaInst *getHistMapKey(Map &map, Value *log2);
   int getNextIndexForProbe();

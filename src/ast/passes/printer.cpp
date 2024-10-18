@@ -299,27 +299,23 @@ void Printer::visit(VarDeclStatement &decl)
   --depth_;
 }
 
-void Printer::visit(If &if_block)
+void Printer::visit(If &if_node)
 {
   std::string indent(depth_, ' ');
 
   out_ << indent << "if" << std::endl;
 
   ++depth_;
-  if_block.cond->accept(*this);
+  if_node.cond->accept(*this);
 
   ++depth_;
   out_ << indent << " then" << std::endl;
 
-  for (Statement *stmt : if_block.stmts) {
-    stmt->accept(*this);
-  }
+  if_node.if_block.accept(*this);
 
-  if (!if_block.else_stmts.empty()) {
+  if (!if_node.else_block.stmts.empty()) {
     out_ << indent << " else" << std::endl;
-    for (Statement *stmt : if_block.else_stmts) {
-      stmt->accept(*this);
-    }
+    if_node.else_block.accept(*this);
   }
   depth_ -= 2;
 }
@@ -334,9 +330,7 @@ void Printer::visit(Unroll &unroll)
   out_ << indent << " block" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : unroll.stmts) {
-    stmt->accept(*this);
-  }
+  unroll.block.accept(*this);
   depth_ -= 2;
 }
 
@@ -352,9 +346,7 @@ void Printer::visit(While &while_block)
   ++depth_;
   out_ << indent << " )" << std::endl;
 
-  for (Statement *stmt : while_block.stmts) {
-    stmt->accept(*this);
-  }
+  while_block.block.accept(*this);
 }
 
 void Printer::visit(For &for_loop)
@@ -424,6 +416,13 @@ void Printer::visit(AttachPoint &ap)
   out_ << indent << ap.name() << std::endl;
 }
 
+void Printer::visit(Block &block)
+{
+  for (Statement *stmt : block.stmts) {
+    stmt->accept(*this);
+  }
+}
+
 void Printer::visit(Probe &probe)
 {
   for (AttachPoint *ap : probe.attach_points) {
@@ -434,9 +433,7 @@ void Printer::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  for (Statement *stmt : probe.stmts) {
-    stmt->accept(*this);
-  }
+  probe.block.accept(*this);
   --depth_;
 }
 
