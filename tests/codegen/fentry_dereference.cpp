@@ -4,9 +4,9 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-TEST(codegen, kretfunc_dereference)
+TEST(codegen, fentry_dereference)
 {
-  test("kretfunc:sk_alloc { @[retval->__sk_common.skc_daddr] = 1; }", NAME);
+  test("fentry:tcp_sendmsg { @[args->sk->__sk_common.skc_daddr] = 1; }", NAME);
 }
 
 } // namespace codegen

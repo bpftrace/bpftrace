@@ -198,9 +198,9 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return watchpoint_parser();
     case ProbeType::asyncwatchpoint:
       return watchpoint_parser(true);
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
-      return kfunc_parser();
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+      return fentry_parser();
     case ProbeType::iter:
       return iter_parser();
     case ProbeType::rawtracepoint:
@@ -674,9 +674,9 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
   return OK;
 }
 
-AttachPointParser::State AttachPointParser::kfunc_parser()
+AttachPointParser::State AttachPointParser::fentry_parser()
 {
-  // kfunc[:module]:function
+  // fentry[:module]:function
   if (parts_.size() != 2 && parts_.size() != 3) {
     if (ap_->ignore_invalid)
       return SKIP;

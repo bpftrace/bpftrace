@@ -1,8 +1,8 @@
 aot.basic.has_key as a variable
 aot.basic.print_per_cpu_map_vals
 aot.btf.kernel_module_type_fwd
-aot.builtin.args in kfunc as a map key
-aot.builtin.args in kfunc store in map
+aot.builtin.args in fentry as a map key
+aot.builtin.args in fentry store in map
 aot.builtin.args in uprobe as a map key
 aot.builtin.args in uprobe print
 aot.builtin.args in uprobe store in map
@@ -10,7 +10,7 @@ aot.builtin.args in uprobe store in map and access field
 aot.builtin.cat limited output
 aot.builtin.comm
 aot.builtin.func_uprobe_elf_symtable
-aot.builtin.print args in kfunc
+aot.builtin.print args in fentry
 # AOT shim needs to parse config and set up BPFTRACE_MAX_STRLEN
 aot.call.str_big_printf
 # Same problem as #3392
@@ -22,10 +22,10 @@ aot.call.iter:task
 aot.call.iter:task_file
 aot.call.iter:task_vma
 aot.call.iter printf multiple values
-aot.call.path_in_unsupported_kfunc
+aot.call.path_in_unsupported_fentry
 aot.call.print_map_item_tuple
 aot.call.print_non_map_builtin
-aot.call.print_non_map_struct_kfunc
+aot.call.print_non_map_struct_fentry
 aot.call.print_non_map_tuple
 # Same problem as #3392
 aot.call.str_big_for
@@ -70,23 +70,23 @@ aot.other.if_compare_and_print_string
 aot.other.per_cpu_map_arithmetic
 aot.other.per_cpu_map_avg_if
 aot.probe.fentry
+aot.probe.fentry args
+aot.probe.fentry args as a pointer
+aot.probe.fentry func builtin
+aot.probe.fentry_module
+aot.probe.fentry_module_wildcard
+aot.probe.fentry_multiple_attach_point_multiple_functions
+aot.probe.fentry_wildcard
 aot.probe.fexit
 aot.probe.kfunc
-aot.probe.kfunc args
-aot.probe.kfunc args as a pointer
-aot.probe.kfunc func builtin
-aot.probe.kfunc_module
-aot.probe.kfunc_module_wildcard
-aot.probe.kfunc_multiple_attach_point_multiple_functions
-aot.probe.kfunc_wildcard
 aot.probe.kprobe_error_missing_probes
 aot.probe.kprobe_ignore_missing_probes
 aot.probe.kretfunc
 aot.probe.uprobe_error_missing_probes
 aot.probe.uprobe_ignore_missing_probes
-aot.regression.kfunc array access via pointer
-aot.regression.kfunc double pointer array access
-aot.regression.kfunc double pointer dereference
+aot.regression.fentry array access via pointer
+aot.regression.fentry double pointer array access
+aot.regression.fentry double pointer dereference
 aot.tuples.basic tuple map
 # Same problem as #3392
 aot.tuples.tuple map key

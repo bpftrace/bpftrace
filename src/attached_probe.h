@@ -69,8 +69,8 @@ private:
   void attach_software();
   void attach_hardware();
   void attach_watchpoint(int pid, const std::string &mode);
-  void attach_kfunc(void);
-  int detach_kfunc(void);
+  void attach_fentry(void);
+  int detach_fentry(void);
   void attach_iter(void);
   int detach_iter(void);
   void attach_raw_tracepoint(void);

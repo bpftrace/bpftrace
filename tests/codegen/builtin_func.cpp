@@ -24,9 +24,9 @@ TEST(codegen, builtin_func_uretprobe)
   test("uretprobe:/bin/sh:f { @x = func }", NAME);
 }
 
-TEST(codegen, builtin_func_kfunc)
+TEST(codegen, builtin_func_fentry)
 {
-  test("kfunc:f { @x = func }", NAME);
+  test("fentry:f { @x = func }", NAME);
 }
 
 } // namespace codegen

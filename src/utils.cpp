@@ -1302,7 +1302,7 @@ std::string hex_format_buffer(const char *buf,
 }
 
 /*
- * Attaching to these kernel functions with kfunc/fentry or kretfunc/fexit
+ * Attaching to these kernel functions with fentry/fexit (kfunc/kretfunc)
  * could lead to a recursive loop and kernel crash so we need additional
  * generated BPF code to protect against this if one of these are being
  * attached to.

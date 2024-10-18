@@ -381,7 +381,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (builtin.ident == "func") {
-    // kfunc/kretfunc probes do not have access to registers, so require use of
+    // fentry/fexit probes do not have access to registers, so require use of
     // the get_func_ip helper to get the instruction pointer.
     //
     // For [ku]retprobes, the IP register will not be pointing to the function
@@ -395,7 +395,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     // offsets), as the helper will fail for probes placed within a function
     // (not at the entry).
     auto probe_type = probetype(current_attach_point_->provider);
-    if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
+    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
         probe_type == ProbeType::kretprobe ||
         probe_type == ProbeType::uretprobe) {
       expr_ = b_.CreateGetFuncIp(ctx_, builtin.loc);
@@ -2036,7 +2036,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
-    if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
+    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit)
       expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
     else if (probe_type == ProbeType::uprobe) {
       Value *args = expr_;
@@ -2895,8 +2895,8 @@ int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
     case ProbeType::hardware:
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
+    case ProbeType::fentry:
+    case ProbeType::fexit:
     case ProbeType::iter:
     case ProbeType::rawtracepoint:
       return 0;

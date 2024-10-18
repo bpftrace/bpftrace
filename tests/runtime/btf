@@ -30,37 +30,37 @@ REQUIRES_FEATURE btf
 WILL_FAIL
 
 NAME kernel_module_attach
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'fentry:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_attach_wildcard
-RUN {{BPFTRACE}} -e 'kfunc:nf_table*:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'fentry:nf_table*:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_args
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args.size); exit(); }'
+RUN {{BPFTRACE}} -e 'fentry:nft_trans_alloc_gfp { printf("size: %d\n", args.size); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT_REGEX size: [0-9]+
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_types
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args.ctx->portid); exit(); }'
+RUN {{BPFTRACE}} -e 'fentry:nft_trans_alloc_gfp { printf("portid: %d\n", args.ctx->portid); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT_REGEX portid: [0-9]+
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
@@ -75,10 +75,10 @@ REQUIRES lsmod | grep "^xfs"
 # 'vmlinux' BTF and fully defined in 'kvm' BTF.
 # This tests checks that the correct BTF definition is pulled from 'kvm'.
 NAME kernel_module_type_fwd
-PROG kfunc:kvm:x86_emulate_insn { printf("%d\n", args.ctxt->mode); exit(); }
+PROG fentry:kvm:x86_emulate_insn { printf("%d\n", args.ctxt->mode); exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 2
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^kvm'
 
 NAME kprobe_kernel_module_type_fwd
