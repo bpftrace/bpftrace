@@ -12,6 +12,7 @@ namespace ast {
   DO(bpf_print)                                                                \
   DO(non_map_print)                                                            \
   DO(printf)                                                                   \
+  DO(read_map_value)                                                           \
   DO(skb_output)                                                               \
   DO(strftime)                                                                 \
   DO(str)                                                                      \
