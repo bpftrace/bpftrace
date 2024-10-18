@@ -60,13 +60,14 @@ TEST(portability_analyser, tracepoint_field_access)
 
 class portability_analyser_btf : public test_btf {};
 
-TEST_F(portability_analyser_btf, kfunc_field_access)
+TEST_F(portability_analyser_btf, fentry_field_access)
 {
-  test("kfunc:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }", 0);
-  test("kfunc:func_2 { args.foo1 }", 0);
-  test("kfunc:func_2, kfunc:func_3 { $x = args.foo1; }", 0);
+  test("fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }",
+       0);
+  test("fentry:func_2 { args.foo1 }", 0);
+  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", 0);
   // Backwards compatibility
-  test("kfunc:func_2 { args->foo1 }", 0);
+  test("fentry:func_2 { args->foo1 }", 0);
 }
 
 TEST(portability_analyser, positional_params_disabled)

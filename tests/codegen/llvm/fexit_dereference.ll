@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kretfunc_mock_vmlinux_sk_alloc_1(ptr %0) section "s_kretfunc_mock_vmlinux_sk_alloc_1" !dbg !50 {
+define i64 @fexit_mock_vmlinux_sk_alloc_1(ptr %0) section "s_fexit_mock_vmlinux_sk_alloc_1" !dbg !50 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -98,7 +98,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
 !48 = !{!0, !20, !34}
 !49 = !{i32 2, !"Debug Info Version", i32 3}
-!50 = distinct !DISubprogram(name: "kretfunc_mock_vmlinux_sk_alloc_1", linkageName: "kretfunc_mock_vmlinux_sk_alloc_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
+!50 = distinct !DISubprogram(name: "fexit_mock_vmlinux_sk_alloc_1", linkageName: "fexit_mock_vmlinux_sk_alloc_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
 !51 = !DISubroutineType(types: !52)
 !52 = !{!18, !53}
 !53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !54, size: 64)

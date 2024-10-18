@@ -812,10 +812,10 @@ bool attach_reverse(const Probe &p)
     case ProbeType::uretprobe:
     case ProbeType::usdt:
     case ProbeType::software:
-    case ProbeType::kfunc:
+    case ProbeType::fentry:
     case ProbeType::iter:
       return true;
-    case ProbeType::kretfunc:
+    case ProbeType::fexit:
     case ProbeType::kretprobe:
     case ProbeType::tracepoint:
     case ProbeType::profile:
@@ -2188,24 +2188,24 @@ struct bcc_symbol_option &BPFtrace::get_symbol_opts()
 
 /*
  * This prevents an ABBA deadlock when attaching to spin lock internal
- * functions e.g. "kfunc:queued_spin_lock_slowpath".
+ * functions e.g. "fentry:queued_spin_lock_slowpath".
  *
  * Specifically, if there are two hash maps (non percpu) being accessed by
  * two different CPUs by two bpf progs then we can get in a situation where,
  * because there are progs attached to spin lock internals, a lock is taken for
  * one map while a different lock is trying to be acquired for the other map.
- * This is specific to kfunc/fentry kretfunc/fexit as kprobes have kernel
+ * This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
  * protections against this type of deadlock.
  *
  * Note: it would be better if this was in resource analyzer but we need
  * probe_matcher to get the list of functions for the attach point
  */
-void BPFtrace::kfunc_recursion_check(ast::Program *prog)
+void BPFtrace::fentry_recursion_check(ast::Program *prog)
 {
   for (auto *probe : prog->probes) {
     for (auto *ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
+      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
         auto matches = probe_matcher_->get_matches_for_ap(*ap);
         for (const auto &match : matches) {
           if (is_recursive_func(match)) {

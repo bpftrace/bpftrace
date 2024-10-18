@@ -356,10 +356,10 @@ PROG struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *
 EXPECT { .m = 2, .n = 3 }
 AFTER ./testprogs/simple_struct
 
-NAME print_non_map_struct_kfunc
-PROG kfunc:vfs_open { print(*args.path); exit(); }
+NAME print_non_map_struct_fentry
+PROG fentry:vfs_open { print(*args.path); exit(); }
 EXPECT_REGEX { .mnt = 0x[0-9a-f]+, .dentry = 0x[0-9a-f]+ }
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME print_map_item
@@ -429,21 +429,21 @@ EXPECT_REGEX BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
 TIMEOUT 1
 
 NAME path
-RUN {{BPFTRACE}} -ve 'kfunc:filp_close { if (!strncmp(path(args.filp->f_path), "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'fentry:filp_close { if (!strncmp(path(args.filp->f_path), "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath kfunc
+REQUIRES_FEATURE dpath fentry
 AFTER ./testprogs/syscall read
 
 NAME path_with_optional_size
-RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $p = path(args.filp->f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_read_temp", 48)) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'fentry:filp_close { $p = path(args.filp->f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_read_temp", 48)) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath kfunc
+REQUIRES_FEATURE dpath fentry
 AFTER ./testprogs/syscall read
 
 NAME strcontains
-RUN {{BPFTRACE}} -ve 'kfunc:filp_close { if (strcontains(path(args.filp->f_path), "tmp")) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'fentry:filp_close { if (strcontains(path(args.filp->f_path), "tmp")) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath kfunc
+REQUIRES_FEATURE dpath fentry
 AFTER ./testprogs/syscall read
 
 NAME strcontains literals
@@ -453,13 +453,13 @@ TIMEOUT 1
 
 # The extra prints are here to confirm that we report on the correct helper, not
 # just the first or the last one.
-NAME path_in_unsupported_kfunc
-PROG kfunc:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT stdin:1:30-59: ERROR: helper bpf_d_path not allowed in probe
-EXPECT kfunc:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+NAME path_in_unsupported_fentry
+PROG fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+EXPECT stdin:1:31-60: ERROR: helper bpf_d_path not allowed in probe
+EXPECT fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+EXPECT                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 WILL_FAIL
 AFTER ./testprogs/syscall read
 
@@ -542,10 +542,10 @@ EXPECT 1234
 TIMEOUT 1
 
 NAME skboutput
-RUN {{BPFTRACE}} -e 'kfunc:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -e 'fentry:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
 AFTER ./testprogs/syscall connect 127.0.0.1 80
 EXPECT OK
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 REQUIRES_FEATURE skboutput
 MIN_KERNEL 5.5
 

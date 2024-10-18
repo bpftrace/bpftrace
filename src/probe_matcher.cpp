@@ -144,8 +144,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = get_symbols_from_list(HW_PROBE_LIST);
       break;
     }
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc: {
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
       // If BTF is not parsed, yet, read available_filter_functions instead.
       // This is useful as we will use the result to extract the list of
       // potentially used kernel modules and then only parse BTF for them.
@@ -339,9 +339,9 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
     if (!p.show_in_kernel_list) {
       continue;
     }
-    if (p.type == ProbeType::kfunc) {
-      // kfunc must be available
-      if (bpftrace_->feature_->has_kfunc())
+    if (p.type == ProbeType::fentry) {
+      // fentry must be available
+      if (bpftrace_->feature_->has_fentry())
         probes += p.name + "\n";
     } else {
       probes += p.name + "\n";
@@ -456,8 +456,8 @@ void ProbeMatcher::list_probes(ast::Program* prog)
       if (bt_verbose) {
         if (probe_type == ProbeType::tracepoint)
           param_lists = get_tracepoints_params(matches);
-        else if (probe_type == ProbeType::kfunc ||
-                 probe_type == ProbeType::kretfunc)
+        else if (probe_type == ProbeType::fentry ||
+                 probe_type == ProbeType::fexit)
           param_lists = bpftrace_->btf_->get_params(matches);
         else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
@@ -514,8 +514,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
     case ProbeType::tracepoint:
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc: {
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
       // Do not expand "target:" as that would match all functions in target.
       // This may occur when an absolute address is given instead of a function.
       if (attach_point.func.empty())

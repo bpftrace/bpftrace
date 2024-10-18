@@ -1137,21 +1137,21 @@ void check_probe(Probe &p, ProbeType type, const std::string &name)
   EXPECT_EQ(name, p.name);
 }
 
-TEST_F(bpftrace_btf, add_probes_kfunc)
+TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  parse_probe("kfunc:func_1,kretfunc:func_1 {}", *bpftrace);
+  parse_probe("fentry:func_1,fexit:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   check_probe(bpftrace->get_probes().at(0),
-              ProbeType::kfunc,
-              "kfunc:mock_vmlinux:func_1");
+              ProbeType::fentry,
+              "fentry:mock_vmlinux:func_1");
   check_probe(bpftrace->get_probes().at(1),
-              ProbeType::kretfunc,
-              "kretfunc:mock_vmlinux:func_1");
+              ProbeType::fexit,
+              "fexit:mock_vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_kprobe)

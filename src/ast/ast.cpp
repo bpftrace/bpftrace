@@ -402,12 +402,12 @@ AttachPoint AttachPoint::create_expansion_copy(const std::string &match) const
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
+    case ProbeType::fentry:
+    case ProbeType::fexit:
     case ProbeType::tracepoint:
-      // Tracepoint, uprobe, and k(ret)func probes specify both a target
+      // Tracepoint, uprobe, and fentry/fexit probes specify both a target
       // (category for tracepoints, binary for uprobes, and kernel module
-      // for k(ret)func) and a function name.
+      // for fentry/fexit and a function name.
       ap.func = match;
       ap.target = erase_prefix(ap.func);
       break;
