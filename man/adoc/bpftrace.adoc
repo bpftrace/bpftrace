@@ -68,8 +68,11 @@ When the child terminates bpftrace will also terminate, as if 'exit()' had been 
 If bpftrace terminates before the child process does the child process will be terminated with a SIGTERM.
 If used, 'USDT' probes will only be attached to the child process.
 To avoid a race condition when using 'USDTs', the child is stopped after 'execve' using 'ptrace(2)' and continued when all 'USDT' probes are attached.
-The child PID is available to programs as the 'cpid' builtin.
 The child process runs with the same privileges as bpftrace itself (usually root).
+
+Unless otherwise specified, bpftrace does not perform any implicit filtering. Therefore, if you are only interested in
+events in _COMMAND_, you may want to filter based on the child PID. The child PID is available to programs as the 'cpid' builtin.
+For example, you could add the predicate `/pid == cpid/` to probes with userspace context.
 
 === *-d STAGE*
 
