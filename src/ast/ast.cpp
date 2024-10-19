@@ -43,6 +43,7 @@ MAKE_ACCEPT(Unroll)
 MAKE_ACCEPT(While)
 MAKE_ACCEPT(For)
 MAKE_ACCEPT(Config)
+MAKE_ACCEPT(Block)
 MAKE_ACCEPT(Jump)
 MAKE_ACCEPT(Probe)
 MAKE_ACCEPT(SubprogArg)
@@ -242,31 +243,33 @@ AttachPoint::AttachPoint(const std::string &raw_input, location loc)
 {
 }
 
+Block::Block(StatementList &&stmts) : stmts(std::move(stmts))
+{
+}
+
 If::If(Expression *cond, StatementList &&stmts)
-    : cond(cond), stmts(std::move(stmts))
+    : cond(cond), if_block(Block(std::move(stmts))), else_block(Block({}))
 {
 }
 
 If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
-    : cond(cond), stmts(std::move(stmts)), else_stmts(std::move(else_stmts))
+    : cond(cond),
+      if_block(Block(std::move(stmts))),
+      else_block(Block(std::move(else_stmts)))
 {
 }
 
 Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
-    : Statement(loc), expr(expr), stmts(std::move(stmts))
-{
-}
-
-Scope::Scope(StatementList &&stmts) : stmts(std::move(stmts))
+    : Statement(loc), expr(expr), block(std::move(stmts))
 {
 }
 
 Probe::Probe(AttachPointList &&attach_points,
              Predicate *pred,
              StatementList &&stmts)
-    : Scope(std::move(stmts)),
-      attach_points(std::move(attach_points)),
-      pred(pred)
+    : attach_points(std::move(attach_points)),
+      pred(pred),
+      block(std::move(stmts))
 {
 }
 
@@ -284,9 +287,9 @@ Subprog::Subprog(std::string name,
                  SizedType return_type,
                  SubprogArgList &&args,
                  StatementList &&stmts)
-    : Scope(std::move(stmts)),
-      args(std::move(args)),
+    : args(std::move(args)),
       return_type(std::move(return_type)),
+      stmts(std::move(stmts)),
       name_(std::move(name))
 {
 }
