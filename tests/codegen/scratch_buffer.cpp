@@ -65,6 +65,20 @@ TEST(codegen, str_stack)
                                LARGE_ON_STACK_LIMIT);
 }
 
+TEST(codegen, map_value_scratch_buf)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x = 1; @y = @x }",
+                               NAME,
+                               SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, map_value_stack)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x = 1; @y = @x }",
+                               NAME,
+                               LARGE_ON_STACK_LIMIT);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

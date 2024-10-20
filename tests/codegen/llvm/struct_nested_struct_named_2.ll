@@ -35,8 +35,8 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Bar.x")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %6 = sext i32 %5 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
+  %6 = sext i32 %5 to i64
   store i64 %6, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
