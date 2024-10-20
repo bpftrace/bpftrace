@@ -78,6 +78,7 @@ public:
                             Map &map,
                             Value *callback,
                             Value *callback_ctx,
+                            Value *return_ctx,
                             const location &loc);
   void CreateProbeRead(Value *ctx,
                        Value *dst,

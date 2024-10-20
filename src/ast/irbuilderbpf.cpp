@@ -1044,6 +1044,7 @@ void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
                                         Map &map,
                                         Value *callback,
                                         Value *callback_ctx,
+                                        Value *return_ctx,
                                         const location &loc)
 {
   Value *map_ptr = GetMapVar(map.ident);
@@ -1075,6 +1076,8 @@ void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
                                 CreateBitCast(callback_ctx, int8_ptr),
                                 /*flags=*/getInt64(0) },
                               "for_each_map_elem");
+  if(return_ctx && return_ctx->getType() == GET_PTR_TY())
+    CreateStore(call, return_ctx);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_for_each_map_elem, loc);
 }
 
