@@ -1291,16 +1291,31 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
-    b_.CreateStore(b_.getInt64(0), len);
+    // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
+    // implement per-cpu counters and bpf_map_sum_elem_count would always return
+    // 0 for them. In our case, those maps typically have a single element so we
+    // can return 1 straight away.
+    // For the rest, use bpf_map_sum_elem_count if available and map supports
+    // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
+    if (map_has_single_elem(map.type, map.key_type)) {
+      expr_ = b_.getInt64(1);
+    } else if (bpftrace_.feature_->has_kernel_func("bpf_map_sum_elem_count") &&
+               !is_array_map(map.type, map.key_type)) {
+      expr_ = CreateKernelFuncCall("bpf_map_sum_elem_count",
+                                   { b_.GetMapVar(map.ident) },
+                                   "len");
+    } else {
+      AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
+      b_.CreateStore(b_.getInt64(0), len);
 
-    if (!map_len_func_)
-      map_len_func_ = createMapLenCallback();
+      if (!map_len_func_)
+        map_len_func_ = createMapLenCallback();
 
-    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, call.loc);
+      b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, call.loc);
 
-    expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
-    b_.CreateLifetimeEnd(len);
+      expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
+      b_.CreateLifetimeEnd(len);
+    }
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -2737,7 +2752,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
-  debug_.createFunctionDebugInfo(*func);
+  debug_.createProbeDebugInfo(*func);
+
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3556,7 +3572,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
-  debug_.createFunctionDebugInfo(*func);
+  debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
@@ -3760,6 +3776,22 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
   }
 }
 
+bool CodegenLLVM::is_array_map(const SizedType &val_type,
+                               const SizedType &key_type)
+{
+  auto map_type = get_map_type(val_type, key_type);
+  return map_type == libbpf::BPF_MAP_TYPE_ARRAY ||
+         map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+}
+
+// Check if we can special-case the map to have a single element. This is done
+// for keyless maps (e.g. @x = 1 or @++) of BPF_MAP_TYPE_(PERCPU_)ARRAY type.
+bool CodegenLLVM::map_has_single_elem(const SizedType &val_type,
+                                      const SizedType &key_type)
+{
+  return is_array_map(val_type, key_type) && key_type.IsNoneTy();
+}
+
 // Emit maps in libbpf format so that Clang can create BTF info for them which
 // can be read and used by libbpf.
 //
@@ -3795,12 +3827,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
     auto map_type = get_map_type(val_type, key_type);
-    // This is special casing for keyless maps eg: @x or @++. For a subset of
-    // keyless maps we can special case them to BPF_MAP_TYPE_ARRAY instead of
-    // HASH for efficiency
-    if ((map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
-         map_type == libbpf::BPF_MAP_TYPE_ARRAY) &&
-        key_type.IsNoneTy()) {
+    if (map_has_single_elem(val_type, key_type)) {
       max_entries = 1;
     }
 
@@ -4430,7 +4457,13 @@ Function *CodegenLLVM::createMapLenCallback()
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
-  debug_.createFunctionDebugInfo(*callback);
+
+  Struct debug_args;
+  debug_args.AddField("map", CreatePointer(CreateInt8()));
+  debug_args.AddField("key", CreatePointer(CreateInt8()));
+  debug_args.AddField("value", CreatePointer(CreateInt8()));
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
@@ -4479,7 +4512,13 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
-  debug_.createFunctionDebugInfo(*callback);
+
+  Struct debug_args;
+  debug_args.AddField("map", CreatePointer(CreateInt8()));
+  debug_args.AddField("key", CreatePointer(CreateInt8()));
+  debug_args.AddField("value", CreatePointer(CreateInt8()));
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
@@ -4598,6 +4637,66 @@ Value *CodegenLLVM::createFmtString(int print_id)
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
+}
+
+/// This should emit
+///
+///    declare !dbg !... extern_weak ... @func_name(...) section ".ksyms"
+///
+/// with proper debug info entry.
+///
+/// The function type is retrieved from kernel BTF.
+///
+/// If the function declaration is already in the module, just return it.
+///
+Function *CodegenLLVM::DeclareKernelFunc(const std::string &func_name)
+{
+  if (auto *fun = module_->getFunction(func_name))
+    return fun;
+
+  std::string err;
+  auto maybe_func_type = bpftrace_.btf_->resolve_args(func_name, true, err);
+  if (!maybe_func_type.has_value()) {
+    throw FatalUserException(err);
+  }
+
+  std::vector<llvm::Type *> args;
+  for (auto &field : maybe_func_type->fields) {
+    if (field.name != retval_field_name)
+      args.push_back(b_.GetType(field.type, false));
+  }
+
+  FunctionType *func_type = FunctionType::get(
+      b_.GetType(maybe_func_type->GetField(retval_field_name).type, false),
+      args,
+      false);
+
+  Function *fun = Function::Create(func_type,
+                                   llvm::GlobalValue::ExternalWeakLinkage,
+                                   func_name,
+                                   module_.get());
+  fun->setSection(".ksyms");
+  fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+
+  // Copy args and remove the last field (retval) as we pass it to
+  // createFunctionDebugInfo separately
+  Struct debug_args = *maybe_func_type; // copy here
+  debug_args.fields.pop_back();
+  debug_.createFunctionDebugInfo(
+      *fun,
+      maybe_func_type->GetField(retval_field_name).type,
+      debug_args,
+      true);
+
+  return fun;
+}
+
+CallInst *CodegenLLVM::CreateKernelFuncCall(const std::string &func_name,
+                                            ArrayRef<Value *> args,
+                                            const Twine &name)
+{
+  auto func = DeclareKernelFunc(func_name);
+  return b_.createCall(func->getFunctionType(), func, args, name);
 }
 
 } // namespace bpftrace::ast

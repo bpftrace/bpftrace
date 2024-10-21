@@ -290,7 +290,8 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
   return getIntN(size, C);
 }
 
-llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
+llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
+                                  bool emit_codegen_types)
 {
   llvm::Type *ty;
   if (stype.IsByteArray() || stype.IsRecordTy()) {
@@ -310,7 +311,10 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     ty = GetStructType(ty_name.str(), llvm_elems, false);
   } else if (stype.IsPtrTy()) {
-    ty = getInt64Ty();
+    if (emit_codegen_types)
+      ty = getInt64Ty();
+    else
+      ty = GET_PTR_TY();
   } else if (stype.IsVoidTy()) {
     ty = getVoidTy();
   } else {
