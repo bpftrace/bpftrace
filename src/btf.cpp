@@ -483,7 +483,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
-    args.AddField("$retval", stype, args.size, std::nullopt, false);
+    args.AddField(retval_field_name, stype, args.size, std::nullopt, false);
     // kfunc (fentry/fexit) args (incl. retval) are stored in a u64 array
     args.size += btf__resolve_size(func_id.btf, t->type);
   }
