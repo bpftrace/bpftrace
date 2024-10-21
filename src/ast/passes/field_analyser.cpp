@@ -168,7 +168,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
     Struct probe_args;
 
     auto probe_type = probetype(ap->provider);
-    if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
+    if (probe_type != ProbeType::fentry && probe_type != ProbeType::fexit &&
         probe_type != ProbeType::uprobe)
       continue;
 
@@ -187,21 +187,20 @@ void FieldAnalyser::resolve_args(Probe &probe)
 
       Struct ap_args;
       for (auto &match : matches) {
-        // Both uprobes and kfuncs have a target (binary for uprobes, kernel
-        // module for kfuncs).
+        // Both uprobes and fentry have a target (binary for uprobes, kernel
+        // module for fentry).
         std::string func = match;
         std::string target = erase_prefix(func);
 
-        // Trying to attach to multiple kfuncs. If some of them fails on
+        // Trying to attach to multiple fentry. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and
         // continue with other functions.
-        if (probe_type == ProbeType::kfunc ||
-            probe_type == ProbeType::kretfunc) {
+        if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
           std::string err;
           auto maybe_ap_args = bpftrace_.btf_->resolve_args(
-              func, probe_type == ProbeType::kretfunc, err);
+              func, probe_type == ProbeType::fexit, err);
           if (!maybe_ap_args.has_value()) {
-            LOG(WARNING) << "kfunc:" << ap->func << ": " << err;
+            LOG(WARNING) << "fentry:" << ap->func << ": " << err;
             continue;
           }
           ap_args = std::move(*maybe_ap_args);
@@ -224,12 +223,12 @@ void FieldAnalyser::resolve_args(Probe &probe)
       }
     } else {
       // Resolving args for an explicit function failed, print an error and fail
-      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc) {
+      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
         std::string err;
         auto maybe_probe_args = bpftrace_.btf_->resolve_args(
-            ap->func, probe_type == ProbeType::kretfunc, err);
+            ap->func, probe_type == ProbeType::fexit, err);
         if (!maybe_probe_args.has_value()) {
-          LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << err;
+          LOG(ERROR, ap->loc, err_) << "fentry:" << ap->func << ": " << err;
           return;
         }
         probe_args = std::move(*maybe_probe_args);

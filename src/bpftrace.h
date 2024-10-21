@@ -169,7 +169,7 @@ public:
   {
     return !dwarves_.empty();
   }
-  void kfunc_recursion_check(ast::Program *prog);
+  void fentry_recursion_check(ast::Program *prog);
 
   std::string cmd_;
   bool finalize_ = false;

@@ -77,14 +77,14 @@ void Driver::error(const std::string &m)
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to
 // identify modules whose BTF we need to parse.
-// Currently, this is useful for k(ret)func, k(ret)probe, and tracepoint probes.
+// Currently, this is useful for fentry/fexit, k(ret)probes, and tracepoints.
 std::set<std::string> Driver::list_modules() const
 {
   std::set<std::string> modules;
   for (auto &probe : ctx.root->probes) {
     for (auto &ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
+      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
           ((probe_type == ProbeType::kprobe ||
             probe_type == ProbeType::kretprobe) &&
            !ap->target.empty())) {

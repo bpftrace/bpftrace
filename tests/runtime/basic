@@ -45,11 +45,11 @@ RUN {{BPFTRACE}} -l | grep hardware
 EXPECT_REGEX hardware:.*
 TIMEOUT 1
 
-NAME it lists kfuncs
-RUN {{BPFTRACE}} -l | grep kfunc
-EXPECT_REGEX kfunc:.*
+NAME it lists fentry
+RUN {{BPFTRACE}} -l | grep fentry
+EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists rawtracepoints
@@ -57,11 +57,11 @@ RUN {{BPFTRACE}} -l | grep rawtracepoint
 EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
-NAME it lists kfunc params
-RUN {{BPFTRACE}} -lv "kfunc:*"
+NAME it lists fentry params
+RUN {{BPFTRACE}} -lv "fentry:*"
 EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists kprobes with regex filter
@@ -99,18 +99,18 @@ RUN {{BPFTRACE}} -l "hardware:*"
 EXPECT hardware:cpu-cycles:
 TIMEOUT 1
 
-NAME it lists kfuncs events with regex filter
-RUN {{BPFTRACE}} -l "kfunc:*"
-EXPECT_REGEX kfunc:.*
+NAME it lists fentry events with regex filter
+RUN {{BPFTRACE}} -l "fentry:*"
+EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 TIMEOUT 1
 
-NAME it lists kretfuncs events with regex filter
-RUN {{BPFTRACE}} -l "kretfunc:*"
-EXPECT_REGEX kretfunc:.*
+NAME it lists fexit events with regex filter
+RUN {{BPFTRACE}} -l "fexit:*"
+EXPECT_REGEX fexit:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists interval probes with regex filter
@@ -141,9 +141,9 @@ EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
 NAME it only lists probes in the program
-RUN {{BPFTRACE}} -l -e 'kfunc:vmlinux:vfs_read { exit(); }'
-EXPECT kfunc:vmlinux:vfs_read
-EXPECT_NONE kfunc:vmlinux:vfs_write
+RUN {{BPFTRACE}} -l -e 'fentry:vmlinux:vfs_read { exit(); }'
+EXPECT fentry:vmlinux:vfs_read
+EXPECT_NONE fentry:vmlinux:vfs_write
 
 NAME it lists uprobes in the program
 RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' -p {{BEFORE_PID}}

@@ -890,7 +890,7 @@ int main(int argc, char* argv[])
       break;
   }
 
-  bpftrace.kfunc_recursion_check(ast_ctx->root);
+  bpftrace.fentry_recursion_check(ast_ctx->root);
 
   auto pmresult = pm.Run(ast_ctx->root, ctx);
   if (!pmresult.Ok())

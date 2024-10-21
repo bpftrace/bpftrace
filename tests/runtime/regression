@@ -83,24 +83,24 @@ TIMEOUT 1
 # The verifier is not able to track BTF info for double pointer dereferences and
 # array accesses so we must use bpf_probe_read_kernel, otherwise the program is
 # rejected. The below two tests make sure that we handle such situations.
-NAME kfunc double pointer dereference
-PROG kfunc:__module_get { print((*args.module->trace_events)->flags); exit(); }
+NAME fentry double pointer dereference
+PROG fentry:__module_get { print((*args.module->trace_events)->flags); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 EXPECT Attaching 1 probe...
 TIMEOUT 1
 
-NAME kfunc double pointer array access
-PROG kfunc:__module_get { print(args.module->trace_events[1]->flags); exit(); }
+NAME fentry double pointer array access
+PROG fentry:__module_get { print(args.module->trace_events[1]->flags); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 EXPECT Attaching 1 probe...
 TIMEOUT 1
 
-NAME kfunc array access via pointer
-PROG kfunc:__module_get { print(args.module->version[0]); exit(); }
+NAME fentry array access via pointer
+PROG fentry:__module_get { print(args.module->version[0]); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE fentry
 EXPECT Attaching 1 probe...
 TIMEOUT 1
 

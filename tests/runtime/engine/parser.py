@@ -191,7 +191,7 @@ class TestParser(object):
                 features = {
                     "loop",
                     "btf",
-                    "kfunc",
+                    "fentry",
                     "probe_read_kernel",
                     "dpath",
                     "uprobe_refcount",
