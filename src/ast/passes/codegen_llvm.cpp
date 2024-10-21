@@ -1297,7 +1297,7 @@ void CodegenLLVM::visit(Call &call)
     if (!map_len_func_)
       map_len_func_ = createMapLenCallback();
 
-    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, call.loc);
+    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, len, call.loc);
 
     expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
     b_.CreateLifetimeEnd(len);
@@ -2684,7 +2684,7 @@ void CodegenLLVM::visit(For &f)
   }
 
   b_.CreateForEachMapElem(
-      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
+      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, nullptr, f.loc);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
@@ -4410,8 +4410,6 @@ Function *CodegenLLVM::createMapLenCallback()
   //
   // static int cb(struct map *map, void *key, void *value, void *ctx)
   // {
-  //   int *len = (int *)ctx;
-  //   (*len)++;
   //   return 0;
   // }
   auto saved_ip = b_.saveIP();
@@ -4434,11 +4432,6 @@ Function *CodegenLLVM::createMapLenCallback()
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
-
-  Value *ctx = callback->getArg(3);
-  auto len = b_.CreateBitCast(ctx, b_.getInt64Ty()->getPointerTo());
-  b_.CreateStore(
-      b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), len), b_.getInt64(1)), len);
 
   b_.CreateRet(b_.getInt64(0));
 

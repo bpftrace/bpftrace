@@ -44,6 +44,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %len)
   store i64 0, ptr %len, align 8
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_len_cb, ptr %len, i64 0)
+  store i64 %for_each_map_elem, ptr %len, align 8
   %1 = load i64, ptr %len, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %len)
   store i64 %1, ptr %"$s", align 8
@@ -51,9 +52,6 @@ entry:
 }
 
 define internal i64 @map_len_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !60 {
-  %5 = load i64, ptr %3, align 8
-  %6 = add i64 %5, 1
-  store i64 %6, ptr %3, align 8
   ret i64 0
 }
 
