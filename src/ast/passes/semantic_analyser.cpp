@@ -2627,6 +2627,16 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   }
 }
 
+// We can't hint for unsigned types. It is a syntax error,
+// because the word "unsigned" is not allowed in a type name.
+static std::unordered_map<std::string_view, std::string_view>
+    KNOWN_TYPE_ALIASES{
+      { "char", "int8" },   /* { "unsigned char", "uint8" }, */
+      { "short", "int16" }, /* { "unsigned short", "uint16" }, */
+      { "int", "int32" },   /* { "unsigned int", "uint32" }, */
+      { "long", "int64" },  /* { "unsigned long", "uint64" }, */
+    };
+
 void SemanticAnalyser::visit(Cast &cast)
 {
   Visit(cast.expr);
@@ -2648,7 +2658,13 @@ void SemanticAnalyser::visit(Cast &cast)
         !cast.type.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
       !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy())) {
-    LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
+    std::string hint;
+    if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
+        it != KNOWN_TYPE_ALIASES.end()) {
+      hint = ", did you mean \"" + std::string(it->second) + "\"?";
+    }
+    LOG(ERROR, cast.loc, err_)
+        << "Cannot cast to \"" << cast.type << "\"" << hint;
   }
 
   if (cast.type.IsArrayTy()) {
