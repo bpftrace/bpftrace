@@ -404,12 +404,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
     if (type == ProbeType::kretprobe || type == ProbeType::uretprobe) {
       builtin.type = CreateUInt64();
     } else if (type == ProbeType::fentry || type == ProbeType::fexit) {
-      auto arg = bpftrace_.structs.GetProbeArg(*probe, "$retval");
+      auto arg = bpftrace_.structs.GetProbeArg(*probe, RETVAL_FIELD_NAME);
       if (arg) {
         builtin.type = arg->type;
         builtin.type.is_btftype = true;
       } else
-        LOG(ERROR, builtin.loc, err_) << "Can't find a field $retval";
+        LOG(ERROR, builtin.loc, err_)
+            << "Can't find a field " << RETVAL_FIELD_NAME;
     } else {
       LOG(ERROR, builtin.loc, err_)
           << "The retval builtin can only be used with 'kretprobe' and "
