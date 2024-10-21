@@ -2372,6 +2372,43 @@ TEST(semantic_analyser, cast_unknown_type)
   test("kprobe:f { (struct faketype *)cpu }", 1);
 }
 
+TEST(semantic_analyser, cast_c_integers)
+{
+  // Casting to a C integer type gives a hint with the correct name
+  test_error("BEGIN { (char)cpu }", R"(
+stdin:1:9-15: ERROR: Cannot resolve unknown type "char"
+BEGIN { (char)cpu }
+        ~~~~~~
+stdin:1:9-15: ERROR: Cannot cast to "char", did you mean "int8"?
+BEGIN { (char)cpu }
+        ~~~~~~
+)");
+  test_error("BEGIN { (short)cpu }", R"(
+stdin:1:9-16: ERROR: Cannot resolve unknown type "short"
+BEGIN { (short)cpu }
+        ~~~~~~~
+stdin:1:9-16: ERROR: Cannot cast to "short", did you mean "int16"?
+BEGIN { (short)cpu }
+        ~~~~~~~
+)");
+  test_error("BEGIN { (int)cpu }", R"(
+stdin:1:9-14: ERROR: Cannot resolve unknown type "int"
+BEGIN { (int)cpu }
+        ~~~~~
+stdin:1:9-14: ERROR: Cannot cast to "int", did you mean "int32"?
+BEGIN { (int)cpu }
+        ~~~~~
+)");
+  test_error("BEGIN { (long)cpu }", R"(
+stdin:1:9-15: ERROR: Cannot resolve unknown type "long"
+BEGIN { (long)cpu }
+        ~~~~~~
+stdin:1:9-15: ERROR: Cannot cast to "long", did you mean "int64"?
+BEGIN { (long)cpu }
+        ~~~~~~
+)");
+}
+
 TEST(semantic_analyser, cast_struct)
 {
   // Casting struct by value is forbidden
