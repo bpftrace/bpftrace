@@ -149,6 +149,20 @@ NAME map_val_scratch_buf
 PROG config = { on_stack_limit = 0 } BEGIN { @x = 1; @y = @x; print(@y) }
 EXPECT @y: 1
 
+NAME variable_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { $x = "XXXX"; $y = $x; print($y) }
+EXPECT XXXX
+
+# Verify enough buffer space is allocated for same variable name in multiple scopes
+NAME variable_for_loop_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } }
+EXPECT (1, 1)
+
+# Verify enough buffer space is allocated for same variable name in multiple subprograms
+NAME variable_probe_subprog_scratch_buf
+PROG config = { on_stack_limit = 0 } BEGIN { $x = "XXXX" } i:ms:100 { $x = "YYYY"; exit(); }END { $x = "ZZZZ"; print($x) }
+EXPECT ZZZZ
+
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
 ENV BPFTRACE_MAX_STRLEN=9999

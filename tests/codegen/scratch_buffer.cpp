@@ -97,6 +97,24 @@ TEST(codegen, map_value_tuple_stack)
       LARGE_ON_STACK_LIMIT);
 }
 
+// Use an if statement with same variable name with two scopes to ensure
+// initialization happens prior to both scopes
+TEST(codegen, variable_scratch_buf)
+{
+  test_stack_or_scratch_buffer(
+      "kprobe:f { if (arg0 > 0) { $x = 1; } else { $x = 2 } }",
+      NAME,
+      SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, variable_stack)
+{
+  test_stack_or_scratch_buffer(
+      "kprobe:f { if (arg0 > 0) { $x = 1; } else { $x = 2 } }",
+      NAME,
+      LARGE_ON_STACK_LIMIT);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

@@ -2428,7 +2428,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 }
 
 void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
-                                     const SizedType &var_type)
+                                     const SizedType &var_type,
+                                     const location &loc)
 {
   if (maybeGetVariable(var_ident) != nullptr) {
     // Already been allocated
@@ -2445,9 +2446,9 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
     alloca_type = CreatePointer(pointee_type, var_type.GetAS());
   }
 
-  AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var_ident);
+  auto val = b_.CreateVariableAllocationInit(alloca_type, var_ident, loc);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
-    val, val->getAllocatedType()
+    val, b_.GetType(alloca_type)
   };
 }
 
@@ -2479,7 +2480,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   auto scoped_del = accept(assignment.expr);
 
-  maybeAllocVariable(var.ident, var.type);
+  maybeAllocVariable(var.ident, var.type, var.loc);
 
   if (var.type.IsArrayTy() || var.type.IsRecordTy()) {
     // For arrays and structs, only the pointer is stored
@@ -2512,7 +2513,7 @@ void CodegenLLVM::visit(VarDeclStatement &decl)
     // unused and has no type
     return;
   }
-  maybeAllocVariable(var.ident, var.type);
+  maybeAllocVariable(var.ident, var.type, var.loc);
 }
 
 void CodegenLLVM::visit(If &if_node)

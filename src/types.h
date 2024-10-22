@@ -739,6 +739,7 @@ enum class GlobalVar {
   GET_STR_BUFFER,
   READ_MAP_VALUE_BUFFER,
   WRITE_MAP_VALUE_BUFFER,
+  VARIABLE_BUFFER,
 };
 
 } // namespace globalvars

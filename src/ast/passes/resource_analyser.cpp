@@ -86,6 +86,14 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
+  if (resources_.max_variable_size > 0) {
+    assert(resources_.variable_buffers > 0);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::VARIABLE_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -114,8 +122,6 @@ void ResourceAnalyser::visit(Call &call)
 {
   Visitor::visit(call);
 
-  const auto on_stack_limit = bpftrace_.config_.get(
-      ConfigKeyInt::on_stack_limit);
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
     // Implicit first field is the 64bit printf ID.
@@ -152,7 +158,7 @@ void ResourceAnalyser::visit(Call &call)
     // will use this information to create a percpu array map of large
     // enough size for all fmt string calls to use.
     const auto tuple_size = static_cast<uint64_t>(tuple->size);
-    if (tuple_size > on_stack_limit) {
+    if (exceeds_stack_limit(tuple_size)) {
       resources_.max_fmtstring_args_size = std::max(
           resources_.max_fmtstring_args_size,
           static_cast<uint64_t>(tuple_size));
@@ -227,7 +233,7 @@ void ResourceAnalyser::visit(Call &call)
       resources_.non_map_print_args.push_back(arg.type);
 
       const auto fmtstring_args_size = nonmap_headroom + arg.type.GetSize();
-      if (fmtstring_args_size > on_stack_limit) {
+      if (exceeds_stack_limit(fmtstring_args_size)) {
         resources_.max_fmtstring_args_size = std::max(
             resources_.max_fmtstring_args_size, fmtstring_args_size);
       }
@@ -237,7 +243,7 @@ void ResourceAnalyser::visit(Call &call)
         resources_.non_map_print_args.push_back(map.type);
 
         const auto fmtstring_args_size = nonmap_headroom + map.type.GetSize();
-        if (fmtstring_args_size > on_stack_limit) {
+        if (exceeds_stack_limit(fmtstring_args_size)) {
           resources_.max_fmtstring_args_size = std::max(
               resources_.max_fmtstring_args_size, fmtstring_args_size);
         }
@@ -261,7 +267,7 @@ void ResourceAnalyser::visit(Call &call)
   } else if (call.func == "delete") {
     auto &arg0 = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg0);
-    if (map.type.GetSize() > on_stack_limit) {
+    if (exceeds_stack_limit(map.type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
           resources_.max_write_map_value_size, map.type.GetSize());
     }
@@ -279,7 +285,7 @@ void ResourceAnalyser::visit(Call &call)
 
   if (call.func == "str" || call.func == "buf" || call.func == "path") {
     const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
-    if (max_strlen > on_stack_limit)
+    if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
   }
 
@@ -296,9 +302,7 @@ void ResourceAnalyser::visit(Map &map)
 
   update_map_info(map);
 
-  const auto on_stack_limit = bpftrace_.config_.get(
-      ConfigKeyInt::on_stack_limit);
-  if (map.type.GetSize() > on_stack_limit) {
+  if (exceeds_stack_limit(map.type.GetSize())) {
     resources_.read_map_value_buffers++;
     resources_.max_read_map_value_size = std::max(
         resources_.max_read_map_value_size, map.type.GetSize());
@@ -309,9 +313,7 @@ void ResourceAnalyser::visit(Tuple &tuple)
 {
   Visitor::visit(tuple);
 
-  const auto on_stack_limit = bpftrace_.config_.get(
-      ConfigKeyInt::on_stack_limit);
-  if (tuple.type.GetSize() > on_stack_limit) {
+  if (exceeds_stack_limit(tuple.type.GetSize())) {
     resources_.tuple_buffers++;
     resources_.max_tuple_size = std::max(resources_.max_tuple_size,
                                          tuple.type.GetSize());
@@ -323,9 +325,7 @@ void ResourceAnalyser::visit(For &f)
   Visitor::visit(f);
 
   // Need tuple per for loop to store key and value
-  const auto on_stack_limit = bpftrace_.config_.get(
-      ConfigKeyInt::on_stack_limit);
-  if (f.decl->type.GetSize() > on_stack_limit) {
+  if (exceeds_stack_limit(f.decl->type.GetSize())) {
     resources_.tuple_buffers++;
     resources_.max_tuple_size = std::max(resources_.max_tuple_size,
                                          f.decl->type.GetSize());
@@ -360,9 +360,7 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   update_map_info(*assignment.map);
 
   if (needAssignMapStatementAllocation(assignment)) {
-    const auto on_stack_limit = bpftrace_.config_.get(
-        ConfigKeyInt::on_stack_limit);
-    if (assignment.map->type.GetSize() > on_stack_limit) {
+    if (exceeds_stack_limit(assignment.map->type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
           resources_.max_write_map_value_size, assignment.map->type.GetSize());
     }
@@ -379,12 +377,44 @@ void ResourceAnalyser::visit(Ternary &ternary)
   // blow it up. So we need a scratch buffer for it.
 
   if (ternary.type.IsStringTy()) {
-    const auto on_stack_limit = bpftrace_.config_.get(
-        ConfigKeyInt::on_stack_limit);
     const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
-    if (max_strlen > on_stack_limit)
+    if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
   }
+}
+
+void ResourceAnalyser::update_variable_info(Variable &var)
+{
+  /* Note we don't check if a variable has been declared/assigned before.
+   * We do this to simplify the code and make it more robust to changes
+   * in other modules at the expense of memory over-allocation. Otherwise,
+   * we would need to track scopes like SemanticAnalyser and CodegenLLVM
+   * and duplicate scope tracking in a third module.
+   */
+  if (exceeds_stack_limit(var.type.GetSize())) {
+    resources_.variable_buffers++;
+    resources_.max_variable_size = std::max(resources_.max_variable_size,
+                                            var.type.GetSize());
+  }
+}
+
+void ResourceAnalyser::visit(AssignVarStatement &assignment)
+{
+  Visitor::visit(assignment);
+
+  update_variable_info(*assignment.var);
+}
+
+void ResourceAnalyser::visit(VarDeclStatement &decl)
+{
+  Visitor::visit(decl);
+
+  update_variable_info(*decl.var);
+}
+
+bool ResourceAnalyser::exceeds_stack_limit(size_t size)
+{
+  return size > bpftrace_.config_.get(ConfigKeyInt::on_stack_limit);
 }
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)

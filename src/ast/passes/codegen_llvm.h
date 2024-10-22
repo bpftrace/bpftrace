@@ -265,7 +265,8 @@ private:
                             const SizedType &key_type);
 
   void maybeAllocVariable(const std::string &var_ident,
-                          const SizedType &var_type);
+                          const SizedType &var_type,
+                          const location &loc);
   VariableLLVM *maybeGetVariable(const std::string &);
   VariableLLVM &getVariable(const std::string &);
 

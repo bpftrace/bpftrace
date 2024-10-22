@@ -183,6 +183,15 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
   return CreateAllocaBPF(ty, name);
 }
 
+void IRBuilderBPF::CreateAllocationInit(const SizedType &stype, Value *alloc)
+{
+  if (needMemcpy(stype)) {
+    CreateMemsetBPF(alloc, getInt8(0), stype.GetSize());
+  } else {
+    CreateStore(ConstantInt::get(GetType(stype), 0), alloc);
+  }
+}
+
 AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
                                               const std::string &name)
 {
@@ -194,11 +203,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype,
     llvm::Type *ty = GetType(stype);
     alloca = CreateAlloca(ty, nullptr, name);
     CreateLifetimeStart(alloca);
-    if (needMemcpy(stype)) {
-      CreateMemsetBPF(alloca, getInt8(0), stype.GetSize());
-    } else {
-      CreateStore(ConstantInt::get(ty, 0), alloca);
-    }
+    CreateAllocationInit(stype, alloca);
   });
   return alloca;
 }
@@ -551,6 +556,28 @@ Value *IRBuilderBPF::CreateWriteMapValueAllocation(const SizedType &value_type,
       GetType(value_type),
       name,
       loc);
+}
+
+Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
+                                                  const std::string &name,
+                                                  const location &loc)
+{
+  /* Hoist variable declaration and initialization to entry point of
+   * probe/subprogram. While we technically do not need this as variables
+   * are properly scoped, it eases debugging and is consistent with previous
+   * stack-only variable implementation. */
+  Value *alloc;
+  hoist([this, &value_type, &name, &loc, &alloc] {
+    alloc = createAllocation(bpftrace::globalvars::GlobalVar::VARIABLE_BUFFER,
+                             GetType(value_type),
+                             name,
+                             loc,
+                             [](AsyncIds &async_ids) {
+                               return async_ids.variable();
+                             });
+    CreateAllocationInit(value_type, alloc);
+  });
+  return alloc;
 }
 
 Value *IRBuilderBPF::createAllocation(

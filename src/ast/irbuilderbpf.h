@@ -175,6 +175,9 @@ public:
   Value *CreateWriteMapValueAllocation(const SizedType &value_type,
                                        const std::string &name,
                                        const location &loc);
+  Value *CreateVariableAllocationInit(const SizedType &value_type,
+                                      const std::string &name,
+                                      const location &loc);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -314,6 +317,7 @@ private:
                           const location &loc,
                           std::optional<std::function<size_t(AsyncIds &)>>
                               gen_async_id_cb = std::nullopt);
+  void CreateAllocationInit(const SizedType &stype, Value *alloc);
   Value *createScratchBuffer(globalvars::GlobalVar globalvar,
                              const location &loc,
                              size_t key);
