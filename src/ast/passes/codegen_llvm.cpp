@@ -1291,16 +1291,11 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
-    b_.CreateStore(b_.getInt64(0), len);
-
     if (!map_len_func_)
       map_len_func_ = createMapLenCallback();
 
-    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, len, call.loc);
-
-    expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
-    b_.CreateLifetimeEnd(len);
+    expr_ = b_.CreateForEachMapElem(
+        ctx_, map, map_len_func_, nullptr, call.loc);
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -2684,7 +2679,7 @@ void CodegenLLVM::visit(For &f)
   }
 
   b_.CreateForEachMapElem(
-      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, nullptr, f.loc);
+      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
