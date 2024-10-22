@@ -1662,8 +1662,10 @@ void SemanticAnalyser::validate_map_key(const SizedType &key,
 void SemanticAnalyser::visit(Map &map)
 {
   SizedType new_key_type = CreateNone();
+  bool key_is_map = false;
   if (map.key_expr) {
     Visit(map.key_expr);
+    key_is_map = map.key_expr->is_map;
     new_key_type = create_key_type(map.key_expr->type, map.key_expr->loc);
   }
 
@@ -1683,7 +1685,11 @@ void SemanticAnalyser::visit(Map &map)
         }
       }
     } else {
-      map_key_.insert({ map.ident, new_key_type });
+      // If the key used is a map, we might not have the type of it yet
+      // e.g. `BEGIN { @mymap[@i] = "hello"; @i = 1; }`
+      if (!key_is_map || !new_key_type.IsNoneTy()) {
+        map_key_.insert({ map.ident, new_key_type });
+      }
     }
   }
 
@@ -2422,8 +2428,10 @@ void SemanticAnalyser::visit(For &f)
     return;
 
   if (!mapkey || mapkey->IsNoneTy()) {
-    LOG(ERROR, map.loc, err_)
-        << "Maps used as for-loop expressions must have keys to iterate over";
+    if (is_final_pass()) {
+      LOG(ERROR, map.loc, err_)
+          << "Maps used as for-loop expressions must have keys to iterate over";
+    }
     return;
   }
 

@@ -409,6 +409,8 @@ TEST(semantic_analyser, consistent_map_keys)
 {
   test("BEGIN { @x = 0; @x; }");
   test("BEGIN { @x[1] = 0; @x[2]; }");
+  test("BEGIN { @x[@y] = 5; @y = 1;}");
+  test("BEGIN { @x[@y[@z]] = 5; @y[2] = 1; @z = @x[0]; }");
 
   test_error("BEGIN { @x = 0; @x[1]; }", R"(
 stdin:1:17-22: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects no arguments
@@ -3872,6 +3874,8 @@ TEST(semantic_analyser, for_loop_map)
   test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }");
   test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv.0); } }");
   test("BEGIN { @map[0] = 1; for ($kv : @map) { print($kv.1); } }");
+  test("BEGIN { @map1[@map2] = 1; @map2 = 1; for ($kv : @map1) { print($kv); } "
+       "}");
 }
 
 TEST(semantic_analyser, for_loop_map_declared_after)
