@@ -4238,65 +4238,6 @@ uprobe:/bin/sh:f { buf(arg0) }
 )");
 }
 
-TEST(semantic_analyser, large_scratch_variables)
-{
-  auto bpftrace = get_mock_bpftrace();
-  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
-  configs.set(ConfigKeyInt::max_strlen, 1024);
-
-  test_error(*bpftrace, "BEGIN { $s = str(0, 999) }", R"(
-stdin:1:9-25: ERROR: Value is too big (999 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
-
-Examples:
-    `$s = str(..);` => `$s = str(.., 32);`
-    `$s = str(..);` => `@s = str(..);`
-    `$s = str(..); print($s);` => `print(str(..));`
-
-BEGIN { $s = str(0, 999) }
-        ~~~~~~~~~~~~~~~~
-)");
-
-  test_error(*bpftrace, "BEGIN { $s = str(0) }", R"(
-stdin:1:9-20: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
-
-Examples:
-    `$s = str(..);` => `$s = str(.., 32);`
-    `$s = str(..);` => `@s = str(..);`
-    `$s = str(..); print($s);` => `print(str(..));`
-
-BEGIN { $s = str(0) }
-        ~~~~~~~~~~~
-)");
-
-  test_error(*bpftrace, "BEGIN { $l = 1; $b = buf(0, $l) }", R"(
-stdin:1:17-32: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
-
-Examples:
-    `$s = str(..);` => `$s = str(.., 32);`
-    `$s = str(..);` => `@s = str(..);`
-    `$s = str(..); print($s);` => `print(str(..));`
-
-BEGIN { $l = 1; $b = buf(0, $l) }
-                ~~~~~~~~~~~~~~~
-)");
-
-  test_error(*bpftrace, "fentry:foo { $p = path((uint8 *)0) }", R"(
-stdin:1:14-35: ERROR: Value is too big (1024 bytes) for the stack. Try reducing its size, storing it in a map, or creating it in argument position to a helper call.
-
-Examples:
-    `$s = str(..);` => `$s = str(.., 32);`
-    `$s = str(..);` => `@s = str(..);`
-    `$s = str(..); print($s);` => `print(str(..));`
-
-fentry:foo { $p = path((uint8 *)0) }
-             ~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  // Values clamped small enough should fit
-  test("BEGIN { $s = str(0, 10) }");
-  test("BEGIN { $b = buf(0, 10) }");
-}
-
 TEST(semantic_analyser, variable_declarations)
 {
   test("BEGIN { let $a; $a = 1; }");

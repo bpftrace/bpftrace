@@ -37,12 +37,17 @@ private:
   void visit(For &f) override;
   void visit(Ternary &ternary) override;
   void visit(AssignMapStatement &assignment) override;
+  void visit(AssignVarStatement &assignment) override;
+  void visit(VarDeclStatement &decl) override;
 
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.
   bool uses_usym_table(const std::string &fun);
 
+  bool exceeds_stack_limit(size_t size);
+
   void update_map_info(Map &map);
+  void update_variable_info(Variable &var);
 
   RequiredResources resources_;
   Node *root_;

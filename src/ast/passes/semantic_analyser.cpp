@@ -3004,22 +3004,6 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     if (storedTy.IsNoneTy())
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << storedTy;
-
-    // Scratch variables are on the BPF stack, which is only 512 bytes at time
-    // of writing, so large values do not fit on there. 200 is a ballpark of
-    // what probably won't work.
-    auto expr_size = storedTy.GetSize();
-    if (expr_size > 200) {
-      LOG(ERROR, assignment.loc, err_)
-          << "Value is too big "
-          << "(" << expr_size << " bytes) for the stack. "
-          << "Try reducing its size, storing it in a map, or creating it in "
-             "argument position to a helper call.\n\n"
-          << "Examples:\n"
-          << "    `$s = str(..);` => `$s = str(.., 32);`\n"
-          << "    `$s = str(..);` => `@s = str(..);`\n"
-          << "    `$s = str(..); print($s);` => `print(str(..));`\n\n";
-    }
   }
 }
 
