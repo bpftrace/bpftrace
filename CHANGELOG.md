@@ -92,6 +92,8 @@ and this project adheres to
   - [#3517](https://github.com/bpftrace/bpftrace/pull/3517)
 - Fix verifier error when comparing result of len()
   - [#3308](https://github.com/bpftrace/bpftrace/issues/3308)
+- Fix type back propagation for map keys
+  - [#3536](https://github.com/bpftrace/bpftrace/pull/3536)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
