@@ -90,6 +90,8 @@ and this project adheres to
   - [#3475](https://github.com/bpftrace/bpftrace/pull/3475)
 - Fix binary operations on integers always returning 64 bit values
   - [#3517](https://github.com/bpftrace/bpftrace/pull/3517)
+- Fix verifier error when comparing result of len()
+  - [#3308](https://github.com/bpftrace/bpftrace/issues/3308)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
