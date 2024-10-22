@@ -810,9 +810,9 @@ All these operators are syntactic sugar for combining assignment with the specif
 
 ==== Increment and Decrement Operators
 
-The increment (`\++`) and decrement (`--`) operators can be used on integer and pointer variables to increment their value by one.
+The increment (`{plus}{plus}`) and decrement (`--`) operators can be used on integer and pointer variables to increment their value by one.
 They can only be used on variables and can either be applied as prefix or suffix.
-The difference is that the expression `x++` returns the original value of `x`, before it got incremented while `++x` returns the value of `x` post increment.
+The difference is that the expression `x{plus}{plus}` returns the original value of `x`, before it got incremented while `{plus}{plus}x` returns the value of `x` post increment.
 
 ----
 $x = 10;
@@ -824,7 +824,7 @@ $b = --$a; // a = 9; b = 9
 Note that maps will be implicitly declared and initialized to 0 if not already declared or defined.
 Scratch variables must be initialized before using these operators.
 
-Note `++`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
+Note `{plus}{plus}`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
 
 === Pointers
 
@@ -2503,13 +2503,13 @@ interval:s:10 {
 
 Count how often this function is called.
 
-Using `@=count()` is conceptually similar to `@++`.
+Using `@=count()` is conceptually similar to `@{plus}{plus}`.
 The difference is that the `count()` function uses a map type optimized for
 performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
 
-Note: This differs from "raw" writes (e.g. `@++`) where multiple writers to a
+Note: This differs from "raw" writes (e.g. `@{plus}{plus}`) where multiple writers to a
 shared location might lose updates, as bpftrace does not generate any implicit
 atomic operations.
 
