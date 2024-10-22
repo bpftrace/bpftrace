@@ -1291,16 +1291,11 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 
-    AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
-    b_.CreateStore(b_.getInt64(0), len);
-
     if (!map_len_func_)
       map_len_func_ = createMapLenCallback();
 
-    b_.CreateForEachMapElem(ctx_, map, map_len_func_, len, call.loc);
-
-    expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
-    b_.CreateLifetimeEnd(len);
+    expr_ = b_.CreateForEachMapElem(
+        ctx_, map, map_len_func_, nullptr, call.loc);
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -4410,8 +4405,6 @@ Function *CodegenLLVM::createMapLenCallback()
   //
   // static int cb(struct map *map, void *key, void *value, void *ctx)
   // {
-  //   int *len = (int *)ctx;
-  //   (*len)++;
   //   return 0;
   // }
   auto saved_ip = b_.saveIP();
@@ -4434,11 +4427,6 @@ Function *CodegenLLVM::createMapLenCallback()
 
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
-
-  Value *ctx = callback->getArg(3);
-  auto len = b_.CreateBitCast(ctx, b_.getInt64Ty()->getPointerTo());
-  b_.CreateStore(
-      b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), len), b_.getInt64(1)), len);
 
   b_.CreateRet(b_.getInt64(0));
 

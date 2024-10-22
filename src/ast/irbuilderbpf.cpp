@@ -1040,11 +1040,11 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_delete_elem, loc);
 }
 
-void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
-                                        Map &map,
-                                        Value *callback,
-                                        Value *callback_ctx,
-                                        const location &loc)
+Value *IRBuilderBPF::CreateForEachMapElem(Value *ctx,
+                                          Map &map,
+                                          Value *callback,
+                                          Value *callback_ctx,
+                                          const location &loc)
 {
   Value *map_ptr = GetMapVar(map.ident);
 
@@ -1068,14 +1068,16 @@ void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_for_each_map_elem),
       for_each_map_ptr_type);
-  CallInst *call = createCall(for_each_map_type,
-                              for_each_map_func,
-                              { map_ptr,
-                                callback,
-                                CreateBitCast(callback_ctx, int8_ptr),
-                                /*flags=*/getInt64(0) },
-                              "for_each_map_elem");
+  CallInst *call = createCall(
+      for_each_map_type,
+      for_each_map_func,
+      { map_ptr,
+        callback,
+        callback_ctx ? CreateBitCast(callback_ctx, int8_ptr) : GetNull(),
+        /*flags=*/getInt64(0) },
+      "for_each_map_elem");
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_for_each_map_elem, loc);
+  return call;
 }
 
 void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
