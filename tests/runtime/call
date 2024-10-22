@@ -607,6 +607,6 @@ EXPECT map len: 2
 TIMEOUT 3
 
 NAME map lencmp
-PROG BEGIN { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"); } else { print("false"); } exit(); }
+PROG BEGIN { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"); } exit(); }
 EXPECT true
 TIMEOUT 3
