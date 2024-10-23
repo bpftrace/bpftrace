@@ -20,6 +20,10 @@ constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
 constexpr std::string_view TUPLE_BUFFER_SECTION_NAME = ".data.tuple_buf";
 constexpr std::string_view GET_STR_BUFFER_SECTION_NAME = ".data.get_str_buf";
+constexpr std::string_view READ_MAP_VALUE_BUFFER_SECTION_NAME =
+    ".data.read_map_val_buf";
+constexpr std::string_view WRITE_MAP_VALUE_BUFFER_SECTION_NAME =
+    ".data.write_map_val_buf";
 
 struct GlobalVarConfig {
   std::string name;
@@ -37,6 +41,14 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
     { "tuple_buf", std::string(TUPLE_BUFFER_SECTION_NAME), false } },
   { GlobalVar::GET_STR_BUFFER,
     { "get_str_buf", std::string(GET_STR_BUFFER_SECTION_NAME), false } },
+  { GlobalVar::READ_MAP_VALUE_BUFFER,
+    { "read_map_val_buf",
+      std::string(READ_MAP_VALUE_BUFFER_SECTION_NAME),
+      false } },
+  { GlobalVar::WRITE_MAP_VALUE_BUFFER,
+    { "write_map_val_buf",
+      std::string(WRITE_MAP_VALUE_BUFFER_SECTION_NAME),
+      false } },
 };
 
 void update_global_vars(

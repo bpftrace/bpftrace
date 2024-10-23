@@ -65,6 +65,38 @@ TEST(codegen, str_stack)
                                LARGE_ON_STACK_LIMIT);
 }
 
+TEST(codegen, map_value_int_scratch_buf)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x = 1; @y = @x }",
+                               NAME,
+                               SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, map_value_int_stack)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x = 1; @y = @x }",
+                               NAME,
+                               LARGE_ON_STACK_LIMIT);
+}
+
+// Using two tuples with different sizes will trigger copying tuples to the
+// scratch buffer or stack prior to updating the map
+TEST(codegen, map_value_tuple_scratch_buf)
+{
+  test_stack_or_scratch_buffer(
+      "kprobe:f { @x = (\"xxx\", 1); @x = (\"xxxxxxx\", 1); @y = @x }",
+      NAME,
+      SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, map_value_tuple_stack)
+{
+  test_stack_or_scratch_buffer(
+      "kprobe:f { @x = (\"xxx\", 1); @x = (\"xxxxxxx\", 1); @y = @x }",
+      NAME,
+      LARGE_ON_STACK_LIMIT);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace
