@@ -15,6 +15,9 @@ and this project adheres to
 - Remove multi-map `delete` functionality
   - [#3506](https://github.com/bpftrace/bpftrace/pull/3506)
   - [Migration guide](docs/migration_guide.md#multi-key-delete-removed)
+- Replace default map printing on `SIGUSR1` with custom signal handling probes
+  - [#3522](https://github.com/bpftrace/bpftrace/pull/3522)
+  - [Migration guide](docs/migration_guide.md#default-sigusr1-handler-removed)
 #### Added
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)

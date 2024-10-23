@@ -3262,15 +3262,14 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         has_end_probe_ = true;
       }
     }
-  } else if (ap.provider == "fentry" || ap.provider == "fexit") {
-    if (!bpftrace_.feature_->has_fentry()) {
-      LOG(ERROR, ap.loc, err_)
-          << "fentry/fexit not available for your kernel version.";
+  } else if (ap.provider == "bpftrace") {
+    if (ap.target == "signal") {
+      if (SIGNALS.find(ap.func) == SIGNALS.end())
+        LOG(ERROR, ap.loc, err_) << ap.func << " is not a supported signal";
       return;
     }
-
-    if (ap.func == "")
-      LOG(ERROR, ap.loc, err_) << "fentry should specify a function";
+    LOG(ERROR, ap.loc, err_)
+        << ap.target << " is not a supported bpftrace trigger";
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       LOG(ERROR, ap.loc, err_)

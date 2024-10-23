@@ -2188,6 +2188,22 @@ TEST(semantic_analyser, begin_end_probes)
   test("END { 1 } END { 2 }", 10);
 }
 
+TEST(semantic_analyser, bpftrace_probe)
+{
+  test("bpftrace:signal:SIGUSR1 { 1 }");
+
+  test_error("bpftrace:signal:sighup { 1 }", R"(
+stdin:1:1-23: ERROR: sighup is not a supported signal
+bpftrace:signal:sighup { 1 }
+~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("bpftrace:keypress:space { 1 }", R"(
+stdin:1:1-24: ERROR: keypress is not a supported bpftrace trigger
+bpftrace:keypress:space { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, tracepoint)
 {
   test("tracepoint:category:event { 1 }");

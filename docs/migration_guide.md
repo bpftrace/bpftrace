@@ -69,3 +69,28 @@ To mitigate such an error, just typecast `pid` or `tid` to `uint64`:
 Attaching 1 probe...
 ```
 
+### default `SIGUSR1` handler removed
+
+https://github.com/bpftrace/bpftrace/pull/3522
+
+Previously, if the bpftrace process received a `SIGUSR1` signal, it would print all maps to stdout:
+```
+# bpftrace -e 'BEGIN { @b[1] = 2; }' & kill -s USR1 $(pidof bpftrace)
+...
+@b[1]: 2
+```
+
+This behavior is no longer supported and has been replaced with the ability
+to define custom handling probes:
+```
+# bpftrace -e 'bpftrace:signal:SIGUSR1 { print("hello"); }' & kill -s USR1 $(pidof bpftrace)
+...
+hello
+```
+
+To retain the previous functionality of printing maps, you need to
+manually include the print statements in your signal handler probe:
+```
+# bpftrace -e 'BEGIN { @b[1] = 2; } bpftrace:signal:SIGUSR1 { print(@b); }' & kill -s USR1 $(pidof bpftrace)
+```
+
