@@ -2489,7 +2489,7 @@ void CodegenLLVM::visit(VarDeclStatement &decl)
   maybeAllocVariable(var.ident, var.type);
 }
 
-void CodegenLLVM::visit(If &if_block)
+void CodegenLLVM::visit(If &if_node)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
@@ -2500,7 +2500,7 @@ void CodegenLLVM::visit(If &if_block)
                                           parent);
   BasicBlock *if_else = nullptr;
 
-  auto scoped_del = accept(if_block.cond);
+  auto scoped_del = accept(if_node.cond);
   Value *zero_value = Constant::getNullValue(expr_->getType());
   Value *cond = b_.CreateICmpNE(expr_, zero_value, "true_cond");
 
@@ -2515,7 +2515,7 @@ void CodegenLLVM::visit(If &if_block)
   // if condition is false, with else
   //   parent -> if_else -> if_end
   //
-  if (!if_block.else_stmts.empty()) {
+  if (!if_node.else_block.stmts.empty()) {
     // LLVM doesn't accept empty basic block, only create when needed
     if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
     b_.CreateCondBr(cond, if_true, if_else);
@@ -2524,17 +2524,15 @@ void CodegenLLVM::visit(If &if_block)
   }
 
   b_.SetInsertPoint(if_true);
-  for (Statement *stmt : if_block.stmts)
-    auto scoped_del = accept(stmt);
+  auto scoped_del_if_block = accept(&if_node.if_block);
 
   b_.CreateBr(if_end);
 
   b_.SetInsertPoint(if_end);
 
-  if (!if_block.else_stmts.empty()) {
+  if (!if_node.else_block.stmts.empty()) {
     b_.SetInsertPoint(if_else);
-    for (Statement *stmt : if_block.else_stmts)
-      auto scoped_del = accept(stmt);
+    auto scoped_del_else_block = accept(&if_node.else_block);
 
     b_.CreateBr(if_end);
     b_.SetInsertPoint(if_end);
@@ -2548,9 +2546,7 @@ void CodegenLLVM::visit(Unroll &unroll)
     // the same async calls multiple times.
     auto reset_ids = async_ids_.create_reset_ids();
 
-    for (Statement *stmt : unroll.stmts) {
-      auto scoped_del = accept(stmt);
-    }
+    auto scoped_del = accept(&unroll.block);
 
     if (i != unroll.var - 1)
       reset_ids();
@@ -2631,9 +2627,7 @@ void CodegenLLVM::visit(While &while_block)
   loop_hdr->setMetadata(LLVMContext::MD_loop, loop_metadata_);
 
   b_.SetInsertPoint(while_body);
-  for (Statement *stmt : while_block.stmts) {
-    auto scoped_del = accept(stmt);
-  }
+  auto scoped_del_block = accept(&while_block.block);
   b_.CreateBr(while_cond);
 
   b_.SetInsertPoint(while_end);
@@ -2712,6 +2706,13 @@ void CodegenLLVM::visit(AttachPoint &)
   // Empty
 }
 
+void CodegenLLVM::visit(Block &block)
+{
+  for (Statement *stmt : block.stmts) {
+    auto scoped_del = accept(stmt);
+  }
+}
+
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
                                 const std::string &name,
@@ -2748,9 +2749,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
     auto scoped_del = accept(probe.pred);
   }
   variables_.clear();
-  for (Statement *stmt : probe.stmts) {
-    auto scoped_del = accept(stmt);
-  }
+  auto scoped_del = accept(&probe.block);
 
   createRet();
 

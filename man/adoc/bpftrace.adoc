@@ -941,13 +941,27 @@ fentry:tcp_connect {
 
 bpftrace knows two types of variables, 'scratch' and 'map'.
 
-'scratch' variables are kept on the BPF stack and only exists during the execution of the action block and cannot be accessed outside of the program.
-Scratch variable names always start with a `$`, e.g. `$myvar`.
+'scratch' variables are kept on the BPF stack and their names always start
+with a `$`, e.g. `$myvar`.
+'scratch' variables cannot be accessed outside of their lexical block e.g.
+```
+$a = 1;
+if ($a == 1) {
+  $b = "hello"
+  $a = 2;
+}
+// $b is not accessible here
+```
 
 'scratch' variables can also declared before or during initialization with `let` e.g.
 ```
-let $x;
-let $y = 11;
+let $a = 1;
+let $b;
+if ($a == 1) {
+  $b = "hello"
+  $a = 2;
+}
+// $b IS accessible here and would be an empty string if the condition wasn't true
 ```
 
 If no assignment is specified variables will initialize to 0.
