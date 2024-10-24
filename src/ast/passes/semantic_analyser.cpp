@@ -213,7 +213,8 @@ void SemanticAnalyser::visit(StackMode &mode)
 void SemanticAnalyser::visit(Identifier &identifier)
 {
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
-    identifier.type = CreateUInt64();
+    const auto &enum_name = std::get<1>(bpftrace_.enums_[identifier.ident]);
+    identifier.type = CreateEnum(64, enum_name);
   } else if (bpftrace_.structs.Has(identifier.ident)) {
     identifier.type = CreateRecord(identifier.ident,
                                    bpftrace_.structs.Lookup(identifier.ident));

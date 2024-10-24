@@ -36,6 +36,8 @@ and this project adheres to
   - [#3301](https://github.com/bpftrace/bpftrace/pull/3095)
 - Variable declarations with `let`
   - [#3461](https://github.com/bpftrace/bpftrace/pull/3461)
+- Support symbolizing enum values using `%s` specifier in `printf()`
+  - [#3515](https://github.com/bpftrace/bpftrace/pull/3515)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

@@ -2,9 +2,12 @@
 
 #include <ostream>
 #include <regex>
+#include <string>
+#include <tuple>
 #include <vector>
 
 #include "printf.h"
+#include "types.h"
 
 namespace bpftrace {
 
@@ -34,8 +37,12 @@ public:
    */
   FormatString() = default;
 
-  FormatString(const char *s) : fmt_(s){};
-  FormatString(std::string &s) : fmt_(s){};
+  FormatString(const char *s) : fmt_(s)
+  {
+  }
+  FormatString(std::string &s) : fmt_(s)
+  {
+  }
 
   /**
    * format formats the format string with the given args. Its up to the caller
@@ -82,14 +89,15 @@ private:
   std::string fmt_;
   std::vector<std::string> parts_;
   std::vector<ArgumentType> expected_types_;
+  std::vector<std::tuple<std::string, Type>> tokens_;
 
   friend class cereal::access;
 
   template <typename Archive>
   void serialize(Archive &ar)
   {
-    // NOTE: parts_ is not constructed until first use, so no point in
-    // serializing it
+    // NOTE: parts_, expected_types_, and tokens_ are not constructed until
+    // first use, so no point in serializing them
     ar(fmt_);
   }
 };

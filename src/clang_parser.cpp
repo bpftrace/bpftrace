@@ -2,6 +2,8 @@
 #include <iostream>
 #include <limits>
 #include <regex>
+#include <sstream>
+#include <utility>
 #include <vector>
 
 #include "llvm/Config/llvm-config.h"
@@ -185,8 +187,13 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_LongLong:
     case CXType_Int:
       return CreateInt(size);
-    case CXType_Enum:
-      return CreateUInt(size);
+    case CXType_Enum: {
+      // The pretty printed type name contains `enum` prefix. That's not
+      // helpful for us, so remove it. We have our own metadata.
+      static std::regex re("enum ");
+      auto enum_name = std::regex_replace(typestr, re, "");
+      return CreateEnum(size, enum_name);
+    }
     case CXType_Pointer: {
       auto pointee_type = clang_getPointeeType(clang_type);
       return CreatePointer(get_sized_type(pointee_type, structs));
@@ -369,10 +376,31 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           return CXChildVisit_Recurse;
         }
 
+        // Each anon enum must have a unique ID otherwise two variants
+        // with different names but same value will clobber each other
+        // in enum_defs_.
+        static uint32_t anon_enum_count = 0;
+        if (clang_getCursorKind(c) == CXCursor_EnumDecl)
+          anon_enum_count++;
+
         if (clang_getCursorKind(parent) == CXCursor_EnumDecl) {
+          // Store variant name to variant value
           auto &enums = static_cast<BPFtrace *>(client_data)->enums_;
-          enums[get_clang_string(clang_getCursorSpelling(c))] =
-              clang_getEnumConstantDeclValue(c);
+          auto enum_name = get_clang_string(clang_getCursorSpelling(parent));
+          // Anonymous enums have empty string names in libclang <= 15
+          if (enum_name.empty()) {
+            std::ostringstream name;
+            name << "enum <anon_" << anon_enum_count << ">";
+            enum_name = std::move(name.str());
+          }
+          auto variant_name = get_clang_string(clang_getCursorSpelling(c));
+          auto variant_value = clang_getEnumConstantDeclValue(c);
+          enums[variant_name] = std::make_pair(variant_value, enum_name);
+
+          // Store enum name to variant value to variant name
+          auto &enum_defs = static_cast<BPFtrace *>(client_data)->enum_defs_;
+          enum_defs[enum_name][variant_value] = variant_name;
+
           return CXChildVisit_Recurse;
         }
 

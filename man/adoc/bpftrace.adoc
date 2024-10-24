@@ -1949,7 +1949,27 @@ The non-standard ones can be found in the table below:
 
 |===
 
-Supported escape sequences
+`printf()` can also symbolize enums as strings. User defined enums as well as enums
+defined in the kernel are supported. For example:
+
+----
+enum custom {
+  CUSTOM_ENUM = 3,
+};
+
+BEGIN {
+  $r = SKB_DROP_REASON_SOCKET_FILTER;
+  printf("%d, %s, %s\n", $r, $r, CUSTOM_ENUM);
+  exit();
+}
+----
+
+yields:
+
+----
+6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
+----
+
 
 Colors are supported too, using standard terminal escape sequences:
 
