@@ -36,6 +36,8 @@ and this project adheres to
   - [#3301](https://github.com/bpftrace/bpftrace/pull/3095)
 - Variable declarations with `let`
   - [#3461](https://github.com/bpftrace/bpftrace/pull/3461)
+- Add `symbol_source` config to source uprobe locations from either DWARF or the Symbol Table
+  - [#3504](https://github.com/bpftrace/bpftrace/pull/3504/)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
