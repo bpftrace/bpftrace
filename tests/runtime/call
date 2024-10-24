@@ -610,3 +610,7 @@ NAME map lencmp
 PROG BEGIN { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"); } exit(); }
 EXPECT true
 TIMEOUT 3
+
+NAME map len keyless
+PROG BEGIN { @ = 0; printf("map len: %d\n", len(@)); exit(); }
+EXPECT map len: 1

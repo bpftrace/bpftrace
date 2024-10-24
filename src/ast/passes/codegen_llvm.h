@@ -105,6 +105,9 @@ public:
   void generate_ir(void);
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const SizedType &key_type);
+  bool is_array_map(const SizedType &val_type, const SizedType &key_type);
+  bool map_has_single_elem(const SizedType &val_type,
+                           const SizedType &key_type);
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
@@ -256,6 +259,12 @@ private:
 
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type);
+
+  Function *DeclareKernelFunc(const std::string &func_name);
+
+  CallInst *CreateKernelFuncCall(const std::string &func_name,
+                                 ArrayRef<Value *> args,
+                                 const Twine &name);
 
   Node *root_ = nullptr;
 

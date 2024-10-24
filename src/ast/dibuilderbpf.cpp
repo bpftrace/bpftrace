@@ -14,18 +14,25 @@ DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
   file = createFile("bpftrace.bpf.o", ".");
 }
 
-void DIBuilderBPF::createFunctionDebugInfo(Function &func)
+void DIBuilderBPF::createFunctionDebugInfo(Function &func,
+                                           const SizedType &ret_type,
+                                           const Struct &args,
+                                           bool is_declaration)
 {
-  // BPF probe function has:
-  // - int return type
-  // - single parameter (ctx) of a pointer type
-  SmallVector<Metadata *, 2> types = { getInt64Ty(), getInt8PtrTy() };
+  // Return type should be at index 0
+  SmallVector<Metadata *> types;
+  types.reserve(args.fields.size() + 1);
+  types.push_back(GetType(ret_type, false));
+  for (auto &arg : args.fields)
+    types.push_back(GetType(arg.type, false));
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
   std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
 
-  DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  DISubprogram::DISPFlags flags = DISubprogram::SPFlagZero;
+  if (!is_declaration)
+    flags |= DISubprogram::SPFlagDefinition;
   if (func.isLocalLinkage(func.getLinkage()))
     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
 
@@ -39,10 +46,27 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          DINode::FlagPrototyped,
                                          flags);
 
-  createParameterVariable(
-      subprog, "ctx", 1, file, 0, static_cast<DIType *>(types[1]), true);
+  for (size_t i = 0; i < args.fields.size(); i++) {
+    createParameterVariable(subprog,
+                            args.fields.at(i).name,
+                            i + 1,
+                            file,
+                            0,
+                            static_cast<DIType *>(types[i + 1]),
+                            true);
+  }
 
   func.setSubprogram(subprog);
+}
+
+void DIBuilderBPF::createProbeDebugInfo(Function &probe_func)
+{
+  // BPF probe function has:
+  // - int return type
+  // - single parameter (ctx) of a pointer type
+  Struct args;
+  args.AddField("ctx", CreatePointer(CreateInt8()));
+  createFunctionDebugInfo(probe_func, CreateInt64(), args);
 }
 
 DIType *DIBuilderBPF::getInt8Ty()
@@ -170,8 +194,20 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
       num_bytes * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
 }
 
-DIType *DIBuilderBPF::GetType(const SizedType &stype)
+DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
+  if (!emit_codegen_types && stype.IsRecordTy()) {
+    return createStructType(file,
+                            stype.GetName(),
+                            file,
+                            0,
+                            stype.GetSize() * 8,
+                            0,
+                            DINode::FlagZero,
+                            nullptr,
+                            getOrCreateArray({}));
+  }
+
   if (stype.IsByteArray() || stype.IsRecordTy()) {
     auto subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
@@ -194,7 +230,10 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
     return CreateMapStructType(stype);
 
   if (stype.IsPtrTy())
-    return getInt64Ty();
+    return emit_codegen_types ? getInt64Ty()
+                              : createPointerType(GetType(*stype.GetPointeeTy(),
+                                                          emit_codegen_types),
+                                                  64);
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {

@@ -12,6 +12,8 @@
 
 namespace bpftrace {
 
+static constexpr std::string RETVAL_FIELD_NAME = "$retval";
+
 struct Bitfield {
   Bitfield(size_t byte_offset, size_t bit_width);
   Bitfield(size_t read_bytes, size_t access_rshift, uint64_t mask)
@@ -91,9 +93,9 @@ struct Struct {
   const Field &GetField(const std::string &name) const;
   void AddField(const std::string &field_name,
                 const SizedType &type,
-                ssize_t offset,
-                const std::optional<Bitfield> &bitfield,
-                bool is_data_loc);
+                ssize_t offset = 0,
+                const std::optional<Bitfield> &bitfield = std::nullopt,
+                bool is_data_loc = false);
   bool HasFields() const;
   void ClearFields();
 

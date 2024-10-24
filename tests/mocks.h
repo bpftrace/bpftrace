@@ -116,6 +116,11 @@ public:
     has_loop_ = std::make_optional<bool>(has);
   }
 
+  void mock_missing_kernel_func(const std::string &name)
+  {
+    available_kernel_funcs_.emplace(name, false);
+  }
+
   bool has_features_;
 };
 
