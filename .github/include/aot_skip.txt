@@ -77,8 +77,20 @@ aot.json-output.scalar
 aot.json-output.scalar_str
 aot.json-output.stats
 aot.other.if_compare_and_print_string
+# Enum metadata is not being serialized
+aot.other.no symbolize enum after arithmetic
+# Enum metadata is not being serialized
+aot.other.no symbolize enum after arithmetic mixed
 aot.other.per_cpu_map_arithmetic
 aot.other.per_cpu_map_avg_if
+# Enum metadata is not being serialized
+aot.other.symbolize enum in map key
+# Enum metadata is not being serialized
+aot.other.symbolize enum in map value
+# Enum metadata is not being serialized
+aot.other.symbolize enum in tuple map key
+# Enum metadata is not being serialized
+aot.other.symbolize enum in tuple map value
 aot.probe.fentry
 aot.probe.fentry args
 aot.probe.fentry args as a pointer

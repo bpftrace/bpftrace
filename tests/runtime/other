@@ -279,3 +279,30 @@ NAME dry run empty output
 RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
 EXPECT_NONE hello
 EXPECT_NONE @: 0
+
+NAME symbolize enum in map key
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE] = 11; @[TWO] = 22; @m[ONE] = 333; exit(); }
+EXPECT @[ONE]: 11
+EXPECT @[TWO]: 22
+EXPECT @m[ONE]: 333
+
+NAME symbolize enum in tuple map key
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE,TWO,ONE] = -1; exit(); }
+EXPECT @[ONE, TWO, ONE]: -1
+
+NAME symbolize enum in map value
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @ = ONE; exit(); }
+EXPECT @: ONE
+
+NAME symbolize enum in tuple map value
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @ = (ONE, TWO); exit(); }
+EXPECT @: (ONE, TWO)
+
+NAME no symbolize enum after arithmetic
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE+1] = TWO-1; exit(); }
+EXPECT @[2]: 1
+
+NAME no symbolize enum after arithmetic mixed
+PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE+1] = TWO-1; @[ONE] = ONE; exit(); }
+EXPECT @[2]: 1
+EXPECT @[1]: 1
