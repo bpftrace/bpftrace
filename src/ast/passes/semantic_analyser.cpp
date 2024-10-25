@@ -3731,7 +3731,8 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
     // Store all integer values as 64-bit in map keys, so that there will
     // be space for any integer in the map key later
     // This should have a better solution.
-    new_key_type = CreateInt64();
+    new_key_type.SetSign(true);
+    new_key_type.SetIntBitWidth(64);
   }
 
   validate_map_key(new_key_type, loc);

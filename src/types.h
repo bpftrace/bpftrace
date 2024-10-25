@@ -255,6 +255,11 @@ public:
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
 
+  void SetSign(bool is_signed)
+  {
+    is_signed_ = is_signed;
+  }
+
   bool IsSigned(void) const;
 
   size_t GetSize() const
