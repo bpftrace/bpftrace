@@ -2544,8 +2544,8 @@ can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
 
 Note: This differs from "raw" writes (e.g. `@{plus}{plus}`) where multiple writers to a
-shared location might lose updates, as bpftrace does not generate any implicit
-atomic operations.
+shared location might lose updates, as bpftrace does not generate any atomic instructions
+for `{plus}{plus}`.
 
 Example one:
 ----
