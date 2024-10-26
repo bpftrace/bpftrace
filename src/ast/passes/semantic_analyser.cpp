@@ -125,6 +125,18 @@ static bool IsValidVarDeclType(const SizedType &ty)
   return false; // unreachable
 }
 
+// These are special map aggregation types that cannot be assigned
+// to scratch variables or from one map to another e.g. these are both invalid:
+// `@a = hist(10); let $b = @a;`
+// `@a = hist(10); @b = @a;`
+static bool IsValidAssignment(const SizedType &ty, bool is_map)
+{
+  if (is_map && (ty.IsHistTy() || ty.IsLhistTy() || ty.IsStatsTy())) {
+    return false;
+  }
+  return true;
+}
+
 void SemanticAnalyser::visit(Integer &integer)
 {
   if (integer.is_negative) {
@@ -2731,10 +2743,30 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   Visit(assignment.map);
   Visit(assignment.expr);
 
+  auto type = assignment.expr->type;
+
+  if (!IsValidAssignment(type, assignment.expr->is_map)) {
+    auto hint = "";
+    if (type.IsHistTy()) {
+      hint = "hist(retval)";
+    } else if (type.IsLhistTy()) {
+      hint = "lhist(rand %10, 0, 10, 1)";
+    } else if (type.IsStatsTy()) {
+      hint = "stats(arg2)";
+    } else {
+      LOG(BUG) << "Missing assignment hint";
+    }
+    LOG(ERROR, assignment.loc, err_)
+        << "Map value '" << type
+        << "' cannot be assigned from one map to another. The function that "
+           "returns this "
+           "type must be called directly e.g. `@a = "
+        << hint << ";`.";
+  }
+
   assign_map_type(*assignment.map, assignment.expr->type);
 
   const std::string &map_ident = assignment.map->ident;
-  auto type = assignment.expr->type;
 
   if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
     std::string ty = assignment.expr->type.GetName();
@@ -2812,6 +2844,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   std::string var_ident = assignment.var->ident;
   auto &assignTy = assignment.expr->type;
+
+  if (!IsValidAssignment(assignTy, assignment.expr->is_map)) {
+    LOG(ERROR, assignment.loc, err_)
+        << "Map value '" << assignTy
+        << "' cannot be assigned to a scratch variable.";
+  }
 
   Node *var_scope = nullptr;
 
