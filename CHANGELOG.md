@@ -103,6 +103,8 @@ and this project adheres to
   - [#3308](https://github.com/bpftrace/bpftrace/issues/3308)
 - Fix type back propagation for map keys
   - [#3536](https://github.com/bpftrace/bpftrace/pull/3536)
+- Fix crash by adding checks for bad var/map assignments
+  - [#3542](https://github.com/bpftrace/bpftrace/pull/3542)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

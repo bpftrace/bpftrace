@@ -4513,4 +4513,43 @@ BEGIN { unroll(1) { $a = 1; } print(($a)); }
 )");
 }
 
+TEST(semantic_analyser, invalid_assignment)
+{
+  test_error("BEGIN { @a = hist(10); let $b = @a; }", R"(
+stdin:1:24-35: ERROR: Map value 'hist_t' cannot be assigned to a scratch variable.
+BEGIN { @a = hist(10); let $b = @a; }
+                       ~~~~~~~~~~~
+)");
+
+  test_error("BEGIN { @a = lhist(123, 0, 123, 1); let $b = @a; }", R"(
+stdin:1:37-48: ERROR: Map value 'lhist_t' cannot be assigned to a scratch variable.
+BEGIN { @a = lhist(123, 0, 123, 1); let $b = @a; }
+                                    ~~~~~~~~~~~
+)");
+
+  test_error("BEGIN { @a = stats(10); let $b = @a; }", R"(
+stdin:1:25-36: ERROR: Map value 'stats_t' cannot be assigned to a scratch variable.
+BEGIN { @a = stats(10); let $b = @a; }
+                        ~~~~~~~~~~~
+)");
+
+  test_error("BEGIN { @a = hist(10); @b = @a; }", R"(
+stdin:1:24-31: ERROR: Map value 'hist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = hist(retval);`.
+BEGIN { @a = hist(10); @b = @a; }
+                       ~~~~~~~
+)");
+
+  test_error("BEGIN { @a = lhist(123, 0, 123, 1); @b = @a; }", R"(
+stdin:1:37-44: ERROR: Map value 'lhist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = lhist(rand %10, 0, 10, 1);`.
+BEGIN { @a = lhist(123, 0, 123, 1); @b = @a; }
+                                    ~~~~~~~
+)");
+
+  test_error("BEGIN { @a = stats(10); @b = @a; }", R"(
+stdin:1:25-32: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = stats(arg2);`.
+BEGIN { @a = stats(10); @b = @a; }
+                        ~~~~~~~
+)");
+}
+
 } // namespace bpftrace::test::semantic_analyser
