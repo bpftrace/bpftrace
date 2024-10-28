@@ -26,6 +26,7 @@ enum class ConfigKeyBool {
   cpp_demangle,
   lazy_symbolication,
   probe_inline,
+  print_maps_on_exit,
 };
 
 enum class ConfigKeyInt {
@@ -89,6 +90,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
   { "missing_probes", ConfigKeyMissingProbes::default_ },
+  { "print_maps_on_exit", ConfigKeyBool::print_maps_on_exit },
 };
 
 // These are not tracked by the config class

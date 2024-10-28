@@ -49,6 +49,10 @@ aot.call.strftime
 aot.call.strftime_as_map_key
 aot.call.strftime_as_map_value
 aot.call.ustack_elf_symtable
+aot.config.maps are printed by default
+aot.config.maps can be disabled
+aot.config.scalar maps are printed by default
+aot.config.scalar maps can be disabled
 aot.dwarf.uprobe inlined function
 # Same problem as #3392
 aot.for.map delete

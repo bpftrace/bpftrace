@@ -48,6 +48,11 @@ TEST(Config, get_and_set)
   EXPECT_TRUE(config_setter.set(StackMode::bpftrace));
   EXPECT_EQ(config.get(ConfigKeyStackMode::default_), StackMode::bpftrace);
 
+  // Test that this is also true by default, as a requirement.
+  EXPECT_TRUE(config.get(ConfigKeyBool::print_maps_on_exit));
+  EXPECT_TRUE(config_setter.set(ConfigKeyBool::print_maps_on_exit, false));
+  EXPECT_EQ(config.get(ConfigKeyBool::print_maps_on_exit), false);
+
   EXPECT_TRUE(config_setter.set(UserSymbolCacheType::per_program));
   EXPECT_EQ(config.get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);

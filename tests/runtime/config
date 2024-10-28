@@ -25,3 +25,19 @@ RUN {{BPFTRACE}} -e 'config = { debug_output=1 } uprobe:./testprogs/uprobe_test:
 EXPECT stdin:1:12-25: ERROR: debug_output can only be set as an environment variable
 BEFORE ./testprogs/uprobe_test
 WILL_FAIL
+
+NAME maps are printed by default
+PROG BEGIN { @["test"] = count(); exit(); }
+EXPECT @[test]: 1
+
+NAME maps can be disabled
+PROG config = { print_maps_on_exit=0 } BEGIN { @["test"] = count(); exit(); }
+EXPECT_NONE @[test]: 1
+
+NAME scalar maps are printed by default
+PROG BEGIN { @test = 1; exit(); }
+EXPECT @test: 1
+
+NAME scalar maps can be disabled
+PROG config = { print_maps_on_exit=0 } BEGIN { @test = 1; exit(); }
+EXPECT_NONE @test: 1
