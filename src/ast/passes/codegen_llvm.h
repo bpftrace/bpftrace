@@ -30,6 +30,11 @@ using namespace llvm;
 
 using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
 
+struct VariableLLVM {
+  llvm::Value *value;
+  llvm::Type *type;
+};
+
 class CodegenLLVM : public Visitor {
 public:
   explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
@@ -261,6 +266,8 @@ private:
 
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type);
+  VariableLLVM *maybeGetVariable(const std::string &);
+  VariableLLVM &getVariable(const std::string &);
 
   Function *DeclareKernelFunc(Kfunc kfunc);
 
@@ -299,11 +306,8 @@ private:
   int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
 
-  struct VariableLLVM {
-    llvm::Value *value;
-    llvm::Type *type;
-  };
-  std::unordered_map<std::string, VariableLLVM> variables_;
+  std::vector<Node *> scope_stack_;
+  std::unordered_map<Node *, std::map<std::string, VariableLLVM>> variables_;
 
   std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
 

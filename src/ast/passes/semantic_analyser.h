@@ -8,6 +8,7 @@
 #include "ast/visitors.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
+#include "collect_nodes.h"
 #include "config.h"
 #include "types.h"
 
@@ -181,6 +182,7 @@ private:
 
   std::map<Node *, std::map<std::string, variable>> variables_;
   std::map<Node *, std::map<std::string, location>> variable_decls_;
+  std::map<Node *, CollectNodes<Variable>> for_vars_referenced_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
 
