@@ -3697,6 +3697,12 @@ Default: `..`
 Trailer to add to strings that were truncated.
 Set to empty string to disable truncation trailers.
 
+=== print_maps_on_exit
+
+Default: 1
+
+Controls whether maps are printed on exit. Set to `0` in order to change the default behavior and not automatically print maps at program exit.
+
 == Environment Variables
 
 These are not available as part of the standard set of <<Config Variables>> and can only be set as environment variables.
@@ -4049,8 +4055,21 @@ Therefore, when you need precise event statistics, it is recommended to use sync
 === Map Printing
 
 By default when a bpftrace program exits it will print all maps to stdout.
-If you don't want this to happen you can specify an `END` probe and `clear` the maps you don't want printed (unfortunately this doesn't work on scalar maps) e.g. this script:
+If you don't want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `END` probe and `clear` the maps you don't want printed (this second method doesn't work for scalar maps).
 
+For example, this script:
+```
+config = {
+  print_maps_on_exit=0
+}
+
+BEGIN {
+  @a = 1;
+  @b[1] = 1;
+}
+```
+
+would print nothing on exit, while this script:
 ```
 BEGIN {
   @a = 1;
@@ -4068,8 +4087,7 @@ will print this on exit:
 @a: 0
 ```
 
-Additionally, if you want to get a snapshot of your maps before script exit, you can send the running bpftrace process a `SIGUSR1` signal. bpftrace will then print all maps to stdout. Example:
-
+If you want to get a snapshot of your maps while the script is running, you can send the running bpftrace process a `SIGUSR1` signal. bpftrace will then print all maps to stdout. Example:
 ```
 # bpftrace -e 'BEGIN { @b[1] = 2; }' & kill -s USR1 $(pidof bpftrace)
 ...

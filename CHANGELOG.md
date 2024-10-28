@@ -41,6 +41,8 @@ and this project adheres to
   - [#3461](https://github.com/bpftrace/bpftrace/pull/3461)
 - Support symbolizing enum values using `%s` specifier in `printf()`
   - [#3515](https://github.com/bpftrace/bpftrace/pull/3515)
+- Configuration option to suppress printing maps by default at program exit
+  - [#3547](https://github.com/bpftrace/bpftrace/pull/3547)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)
