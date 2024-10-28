@@ -121,3 +121,17 @@ EXPECT Attaching 1 probe...
 NAME variable declaration not initialized
 PROG BEGIN { let $a; if (false) { $a = 1; } @b = $a; exit();}
 EXPECT @b: 0
+
+NAME variable doesn't escape scope
+RUN {{BPFTRACE}} runtime/scripts/variable_scope.bt
+EXPECT 0
+
+NAME late variable declaration
+RUN {{BPFTRACE}} runtime/scripts/variable_scope_late_decl.bt
+EXPECT (a, 1)
+EXPECT (b, 2)
+EXPECT (c, 0)
+
+NAME late map evaluation with ctx capture
+RUN {{BPFTRACE}} -e 'interval:ms:100 { $x = 1; for ($kv : @a) { print(($x, $kv.0, $kv.1)); exit(); } @a[1] = 1; }'
+EXPECT (1, 1, 1)

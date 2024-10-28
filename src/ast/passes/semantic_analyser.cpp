@@ -2406,19 +2406,33 @@ void SemanticAnalyser::visit(For &f)
   // Collect a list of unique variables which are referenced in the loop's body
   // and declared before the loop. These will be passed into the loop callback
   // function as the context parameter.
-  CollectNodes<Variable> vars_referenced;
   std::unordered_set<std::string> found_vars;
-  for (auto *stmt : f.stmts) {
-    vars_referenced.run(*stmt, [this, &found_vars](const auto &var) {
-      if (found_vars.find(var.ident) != found_vars.end())
-        return false;
+  // Only do this on the first pass because variables declared later
+  // in a script will get added to the outer scope, which these do not
+  // reference e.g.
+  // BEGIN { @a[1] = 1; for ($kv : @a) { $x = 2; } let $x; }
+  if (is_first_pass()) {
+    for (auto *stmt : f.stmts) {
+      // We save these for potential use at the end of this function in
+      // subsequent passes in case the map we're iterating over isn't ready
+      // yet and still needs additional passes to resolve its key/value types
+      // e.g. BEGIN { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
+      //
+      // This is especially tricky because we need to visit all statements
+      // inside the for loop to get the types of the referenced variables but
+      // only after we have the map's key/value type so we can also check
+      // the usages of the created $kv tuple variable
+      for_vars_referenced_[&f].run(*stmt, [this, &found_vars](const auto &var) {
+        if (found_vars.find(var.ident) != found_vars.end())
+          return false;
 
-      if (find_variable(var.ident)) {
-        found_vars.insert(var.ident);
-        return true;
-      }
-      return false;
-    });
+        if (find_variable(var.ident)) {
+          found_vars.insert(var.ident);
+          return true;
+        }
+        return false;
+      });
+    }
   }
 
   // Create type for the loop's decl
@@ -2469,7 +2483,7 @@ void SemanticAnalyser::visit(For &f)
   // have been visited.
   std::vector<SizedType> ctx_types;
   std::vector<std::string_view> ctx_idents;
-  for (const Variable &var : vars_referenced.nodes()) {
+  for (const Variable &var : for_vars_referenced_[&f].nodes()) {
     ctx_types.push_back(CreatePointer(var.type, AddrSpace::bpf));
     ctx_idents.push_back(var.ident);
   }
