@@ -133,6 +133,10 @@ target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdeman
 
 if(LLDB_FOUND)
   target_link_libraries(runtime LLDB)
+
+  add_executable(inline2usdt inline2usdt.cpp log.cpp)
+  target_link_libraries(inline2usdt LLDB)
+  target_include_directories(inline2usdt PRIVATE ${CMAKE_BINARY_DIR})
 endif(LLDB_FOUND)
 
 if(LIBPCAP_FOUND)
