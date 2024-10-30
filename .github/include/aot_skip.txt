@@ -92,6 +92,10 @@ aot.other.symbolize enum in map key
 # Enum metadata is not being serialized
 aot.other.symbolize enum in map value
 # Enum metadata is not being serialized
+aot.other.symbolize enum in scratch variable
+# Enum metadata is not being serialized
+aot.other.symbolize enum in scratch variable tuple
+# Enum metadata is not being serialized
 aot.other.symbolize enum in tuple map key
 # Enum metadata is not being serialized
 aot.other.symbolize enum in tuple map value

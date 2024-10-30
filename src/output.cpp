@@ -341,43 +341,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       return std::to_string(read_data<uint64_t>(value.data()) / div);
     }
     case Type::integer: {
-      if (type.IsEnumTy() && div == 1) {
-        assert(!is_per_cpu);
-
-        auto data = value.data();
-        auto enum_name = type.GetName();
-        uint64_t enum_val;
-        switch (type.GetIntBitWidth()) {
-          case 64:
-            enum_val = read_data<uint64_t>(data);
-            break;
-          case 32:
-            enum_val = read_data<uint32_t>(data);
-            break;
-          case 16:
-            enum_val = read_data<uint16_t>(data);
-            break;
-          case 8:
-            enum_val = read_data<uint8_t>(data);
-            break;
-          default:
-            LOG(BUG) << "value_to_str: Invalid int bitwidth: "
-                     << type.GetIntBitWidth() << "provided";
-            return {};
-        }
-
-        if (bpftrace.enum_defs_.contains(enum_name) &&
-            bpftrace.enum_defs_[enum_name].contains(enum_val)) {
-          return bpftrace.enum_defs_[enum_name][enum_val];
-        } else {
-          // Fall back to something comprehensible in case user somehow
-          // tricked the type system into accepting an invalid enum.
-          return std::to_string(enum_val);
-        }
-      } else {
-        auto sign = type.IsSigned();
-        switch (type.GetIntBitWidth()) {
-            // clang-format off
+      auto sign = type.IsSigned();
+      switch (type.GetIntBitWidth()) {
+          // clang-format off
           case 64:
             if (sign)
               return std::to_string(reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div));
@@ -397,12 +363,11 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
               return std::to_string(
                   reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
             return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
-            // clang-format on
-          default:
-            LOG(BUG) << "value_to_str: Invalid int bitwidth: "
-                     << type.GetIntBitWidth() << "provided";
-            return {};
-        }
+          // clang-format on
+        default:
+          LOG(BUG) << "value_to_str: Invalid int bitwidth: "
+                   << type.GetIntBitWidth() << "provided";
+          return {};
       }
     }
     case Type::sum_t: {
@@ -804,6 +769,43 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
       std::ostringstream res;
       res << "0x" << std::hex << read_data<uint64_t>(value.data());
       return res.str();
+    }
+    case Type::integer: {
+      if (type.IsEnumTy() && div == 1) {
+        assert(!is_per_cpu);
+
+        auto data = value.data();
+        auto enum_name = type.GetName();
+        uint64_t enum_val;
+        switch (type.GetIntBitWidth()) {
+          case 64:
+            enum_val = read_data<uint64_t>(data);
+            break;
+          case 32:
+            enum_val = read_data<uint32_t>(data);
+            break;
+          case 16:
+            enum_val = read_data<uint16_t>(data);
+            break;
+          case 8:
+            enum_val = read_data<uint8_t>(data);
+            break;
+          default:
+            LOG(BUG) << "value_to_str: Invalid int bitwidth: "
+                     << type.GetIntBitWidth() << "provided";
+            return {};
+        }
+
+        if (bpftrace.enum_defs_.contains(enum_name) &&
+            bpftrace.enum_defs_[enum_name].contains(enum_val)) {
+          return bpftrace.enum_defs_[enum_name][enum_val];
+        } else {
+          // Fall back to something comprehensible in case user somehow
+          // tricked the type system into accepting an invalid enum.
+          return std::to_string(enum_val);
+        }
+      }
+      [[fallthrough]];
     }
     default: {
       return Output::value_to_str(

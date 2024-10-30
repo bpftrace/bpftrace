@@ -168,3 +168,13 @@ TIMEOUT 1
 NAME print_hex_values
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @=(int16*) 0x32; exit(); }'
 EXPECT {"type": "map", "data": {"@": 50}}
+
+# To preserve backwards compat for machines parsing output, we do not symbolize enums in JSON output mode
+NAME enum_not_symbolized
+RUN {{BPFTRACE}} -q -f json -e 'enum { FOO = 333 }; BEGIN { $f = FOO; print($f); exit(); }'
+EXPECT {"type": "value", "data": 333}
+
+# But if user explicitly asks for enum symbolization, we provide it in JSON output
+NAME enum_symbolized_printf
+RUN {{BPFTRACE}} -q -f json -e 'enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s %d %s %d %s\n", ONE, ONE, TWO, TWO, OTHER, OTHER); exit() }'
+EXPECT {"type": "printf", "data": "1 ONE 2 TWO 99999 OTHER\n"}
