@@ -5,12 +5,12 @@
 
 namespace bpftrace {
 
-enum Kfunc {
+enum class Kfunc {
   bpf_map_sum_elem_count,
 };
 
 static const std::map<Kfunc, std::string> KFUNC_NAME_MAP = {
-  { bpf_map_sum_elem_count, "bpf_map_sum_elem_count" },
+  { Kfunc::bpf_map_sum_elem_count, "bpf_map_sum_elem_count" },
 };
 
 inline const std::string &kfunc_name(enum Kfunc kfunc)
