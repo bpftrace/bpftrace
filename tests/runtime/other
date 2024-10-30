@@ -306,3 +306,11 @@ NAME no symbolize enum after arithmetic mixed
 PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE+1] = TWO-1; @[ONE] = ONE; exit(); }
 EXPECT @[2]: 1
 EXPECT @[1]: 1
+
+NAME symbolize enum in scratch variable
+PROG enum { FOO = 333 }; BEGIN { $f = FOO; print($f); exit(); }
+EXPECT FOO
+
+NAME symbolize enum in scratch variable tuple
+PROG enum { FOO = 333, BAR }; BEGIN { $t = (FOO, BAR); print($t); exit(); }
+EXPECT (FOO, BAR)
