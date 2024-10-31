@@ -115,6 +115,8 @@ and this project adheres to
 - Remove mention of unsupported character literals
   - [#3283](https://github.com/bpftrace/bpftrace/pull/3283)
 #### Tools
+- Fix bashreadline tool probe for dynamically linked readline
+  - [#3564](https://github.com/bpftrace/bpftrace/pull/3564)
 
 ## [0.21.0] 2024-06-21
 
