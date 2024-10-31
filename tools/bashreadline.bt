@@ -15,13 +15,17 @@
  * 06-Sep-2018	Brendan Gregg	Created this.
  */
 
+config = { missing_probes = "ignore" }
+
 BEGIN
 {
 	printf("Tracing bash commands... Hit Ctrl-C to end.\n");
 	printf("%-9s %-6s %s\n", "TIME", "PID", "COMMAND");
 }
 
-uretprobe:/bin/bash:readline
+uretprobe:/bin/bash:readline,
+uretprobe:libreadline:readline
+/comm == "bash"/
 {
 	time("%H:%M:%S  ");
 	printf("%-6d %s\n", pid, str(retval));
