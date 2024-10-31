@@ -32,7 +32,7 @@ find_library(LIBPCAP_LIBRARIES
 include (FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set LIBPCAP_FOUND to TRUE if all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibPcap "Please install the libcap development package"
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibPcap "Please install the libpcap development package"
   LIBPCAP_LIBRARIES
   LIBPCAP_INCLUDE_DIRS)
 
