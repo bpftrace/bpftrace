@@ -131,7 +131,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
 // `@a = hist(10); @b = @a;`
 static bool IsValidAssignment(const SizedType &ty, bool is_map)
 {
-  if (is_map && (ty.IsHistTy() || ty.IsLhistTy() || ty.IsStatsTy())) {
+  if (is_map && (ty.IsMultiOutputMapTy())) {
     return false;
   }
   return true;
@@ -1209,10 +1209,16 @@ void SemanticAnalyser::visit(Call &call)
       if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
         if (map.key_expr) {
-          if (call.vargs.size() > 1)
+          if (call.vargs.size() > 1) {
             LOG(ERROR, call.loc, err_) << "Single-value (i.e. indexed) map "
                                           "print cannot take additional "
                                           "arguments.";
+          } else if (map.type.IsMultiOutputMapTy()) {
+            LOG(ERROR, call.loc, err_)
+                << "Map type " << map.type
+                << " cannot print the value of individual keys. You must print "
+                   "the whole map.";
+          }
         }
 
         if (is_final_pass()) {
@@ -2756,8 +2762,12 @@ void SemanticAnalyser::visit(Tuple &tuple)
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
     // creation. Cast already emits the error.
-    if (elem->type.IsNoneTy() || elem->type.GetSize() == 0)
+    if (elem->type.IsNoneTy() || elem->type.GetSize() == 0) {
       return;
+    } else if (elem->type.IsMultiOutputMapTy()) {
+      LOG(ERROR, elem->loc, err_)
+          << "Map type " << elem->type << " cannot exist inside a tuple.";
+    }
     elements.emplace_back(elem->type);
   }
 

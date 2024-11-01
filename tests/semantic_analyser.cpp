@@ -1042,6 +1042,11 @@ stdin:1:20-38: ERROR: Single-value (i.e. indexed) map print cannot take addition
 BEGIN { @x[1] = 1; print(@x[1], 3, 5); }
                    ~~~~~~~~~~~~~~~~~~
 )");
+  test_error("BEGIN { @x[1] = hist(10); print(@x[1]); }", R"(
+stdin:1:27-39: ERROR: Map type hist_t cannot print the value of individual keys. You must print the whole map.
+BEGIN { @x[1] = hist(10); print(@x[1]); }
+                          ~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_print_non_map)
@@ -3428,6 +3433,12 @@ BEGIN { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); }
 
   test(R"_(BEGIN { @t = (1, 2, "hi"); @t = (3, 4, "hellolongstr"); })_");
   test(R"_(BEGIN { $t = (1, ("hi", 2)); $t = (3, ("hellolongstr", 4)); })_");
+
+  test_error("BEGIN { @x[1] = hist(10); $y = (1, @x[1]); }", R"(
+stdin:1:36-41: ERROR: Map type hist_t cannot exist inside a tuple.
+BEGIN { @x[1] = hist(10); $y = (1, @x[1]); }
+                                   ~~~~~
+)");
 }
 
 TEST(semantic_analyser, tuple_indexing)
