@@ -1983,6 +1983,18 @@ TEST(Parser, offsetof_expression)
        "   x\n");
 }
 
+TEST(Parser, offsetof_builtin_type)
+{
+  test("struct Foo { timestamp x; } BEGIN { offsetof(struct Foo, timestamp); }",
+       "struct Foo { timestamp x; };\n"
+       "\n"
+       "Program\n"
+       " BEGIN\n"
+       "  offsetof: \n"
+       "   struct Foo\n"
+       "   timestamp\n");
+}
+
 TEST(Parser, dereference_precedence)
 {
   test("kprobe:sys_read { *@x+1 }",
@@ -2053,6 +2065,24 @@ TEST(Parser, field_access_builtin)
        "   dereference\n"
        "    map: @x\n"
        "   count\n");
+}
+
+TEST(Parser, field_access_builtin_type)
+{
+  test("kprobe:sys_read { @x.timestamp; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   map: @x\n"
+       "   timestamp\n");
+
+  test("kprobe:sys_read { @x->timestamp; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   timestamp\n");
 }
 
 TEST(Parser, array_access)

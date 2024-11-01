@@ -655,6 +655,7 @@ keyword:
 ident:
                 IDENT         { $$ = $1; }
         |       BUILTIN       { $$ = $1; }
+        |       BUILTIN_TYPE  { $$ = $1; }
         |       CALL          { $$ = $1; }
         |       CALL_BUILTIN  { $$ = $1; }
         |       STACK_MODE    { $$ = $1; }
