@@ -478,8 +478,15 @@ public:
   }
   bool IsMapIterableTy() const
   {
-    return !(type_ == Type::hist_t || type_ == Type::lhist_t ||
-             type_ == Type::stats_t);
+    return !IsMultiOutputMapTy();
+  }
+
+  // These are special map value types that can't be reduced to a single value
+  // and output multiple lines when printed
+  bool IsMultiOutputMapTy() const
+  {
+    return type_ == Type::hist_t || type_ == Type::lhist_t ||
+           type_ == Type::stats_t;
   }
 
   bool NeedsPercpuMap() const;
