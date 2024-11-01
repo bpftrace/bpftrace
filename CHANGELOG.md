@@ -105,6 +105,8 @@ and this project adheres to
   - [#3536](https://github.com/bpftrace/bpftrace/pull/3536)
 - Fix crash by adding checks for bad var/map assignments
   - [#3542](https://github.com/bpftrace/bpftrace/pull/3542)
+- Fix field access and offsetof for strings that are builtin types
+  - [#3565](https://github.com/bpftrace/bpftrace/pull/3565)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
