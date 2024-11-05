@@ -30,4 +30,17 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
   return true;
 }
 
+bool needMapKeyAllocation(const Map &map)
+{
+  return needMapKeyAllocation(map, map.key_expr);
+}
+
+bool needMapKeyAllocation(const Map &map, Expression *key_expr)
+{
+  if (key_expr && inBpfMemory(key_expr->type)) {
+    return !key_expr->type.IsSameSizeRecursive(map.key_type);
+  }
+  return true;
+}
+
 } // namespace bpftrace::ast

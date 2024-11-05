@@ -115,6 +115,37 @@ TEST(codegen, variable_stack)
       LARGE_ON_STACK_LIMIT);
 }
 
+TEST(codegen, map_key_scratch_buf)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x[1] = 1; @y[\"yyyy\"] = @x[1]; }",
+                               NAME,
+                               SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, map_key_stack)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x[1] = 1; @y[\"yyyy\"] = @x[1]; }",
+                               NAME,
+                               LARGE_ON_STACK_LIMIT);
+}
+
+// Test map keys with aggregation and map-related functions
+TEST(codegen, call_map_key_scratch_buf)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x[1] = count(); @y = hist(10); "
+                               "has_key(@x, 1); delete(@x, 1); }",
+                               NAME,
+                               SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, call_map_key_stack)
+{
+  test_stack_or_scratch_buffer("kprobe:f { @x[1] = count(); @y = hist(10); "
+                               "has_key(@x, 1); delete(@x, 1); }",
+                               NAME,
+                               LARGE_ON_STACK_LIMIT);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

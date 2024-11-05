@@ -178,6 +178,9 @@ public:
   Value *CreateVariableAllocationInit(const SizedType &value_type,
                                       const std::string &name,
                                       const location &loc);
+  Value *CreateMapKeyAllocation(const SizedType &value_type,
+                                const std::string &name,
+                                const location &loc);
   void CreateCheckSetRecursion(const location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,

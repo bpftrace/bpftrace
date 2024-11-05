@@ -712,9 +712,10 @@ void CodegenLLVM::visit(Call &call)
                              b_.getInt64Ty(),
                              call.vargs.front()->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr_, k }, "log2");
-    AllocaInst *key = getHistMapKey(map, log2);
+    auto key = getHistMapKey(map, log2, call.loc);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
-    b_.CreateLifetimeEnd(key);
+    if (dyn_cast<AllocaInst>(key))
+      b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   } else if (call.func == "lhist") {
     if (!linear_func_)
@@ -750,10 +751,10 @@ void CodegenLLVM::visit(Call &call)
                                   { value, min, max, step },
                                   "linear");
 
-    AllocaInst *key = getHistMapKey(map, linear);
+    auto key = getHistMapKey(map, linear, call.loc);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
-
-    b_.CreateLifetimeEnd(key);
+    if (dyn_cast<AllocaInst>(key))
+      b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   } else if (call.func == "delete") {
     auto &arg0 = *call.vargs.at(0);
@@ -3018,13 +3019,19 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     Expression *key_expr)
 {
   Value *key;
-  bool alloca_created_here = true;
+  const auto alloca_created_here = needMapKeyAllocation(map, key_expr);
+
   if (key_expr) {
     auto scoped_del = accept(key_expr);
+    const auto &key_type = map.key_type;
+    // Allocation needs to be done after recursing via accept(key_expr)
+    // so expr_ will be set properly
+    key = alloca_created_here ? b_.CreateMapKeyAllocation(key_type,
+                                                          map.ident + "_key",
+                                                          key_expr->loc)
+                              : expr_;
     if (inBpfMemory(key_expr->type)) {
-      auto &key_type = map.key_type;
       if (!key_expr->type.IsSameSizeRecursive(key_type)) {
-        key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
         b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
         if (key_expr->type.IsTupleTy()) {
           createTupleCopy(key_expr->type, key_type, key, expr_);
@@ -3036,25 +3043,23 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
                    << " Expression Type Size: " << key_expr->type.GetSize();
         }
       } else {
-        key = expr_;
         // Call-ee freed
         scoped_del.disarm();
-
-        // We don't have enough visibility into where key comes from to safely
-        // end its lifetime. It could be a variable, for example.
-        alloca_created_here = false;
       }
     } else if (map.key_type.IsIntTy()) {
-      key = b_.CreateAllocaBPF(map.key_type, map.ident + "_key");
       // Integers are always stored as 64-bit in map keys
       b_.CreateStore(
           b_.CreateIntCast(expr_, b_.getInt64Ty(), key_expr->type.IsSigned()),
           key);
     } else {
-      key = b_.CreateAllocaBPF(key_expr->type, map.ident + "_key");
       if (key_expr->type.IsArrayTy() || key_expr->type.IsRecordTy()) {
         // We need to read the entire array/struct and save it
-        b_.CreateProbeRead(ctx_, key, key_expr->type, expr_, key_expr->loc);
+        b_.CreateProbeRead(ctx_,
+                           b_.CreatePointerCast(
+                               key, b_.GetType(key_expr->type)->getPointerTo()),
+                           key_expr->type,
+                           expr_,
+                           key_expr->loc);
       } else {
         b_.CreateStore(
             b_.CreateIntCast(expr_, b_.getInt64Ty(), key_expr->type.IsSigned()),
@@ -3063,19 +3068,23 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     }
   } else {
     // No map key (e.g., @ = 1;). Use 0 as a key.
-    key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
+    assert(alloca_created_here);
+    key = b_.CreateMapKeyAllocation(CreateUInt64(),
+                                    map.ident + "_key",
+                                    map.loc);
     b_.CreateStore(b_.getInt64(0), key);
   }
 
   auto key_deleter = [this, key, alloca_created_here]() {
-    if (alloca_created_here)
+    if (alloca_created_here && dyn_cast<AllocaInst>(key))
       b_.CreateLifetimeEnd(key);
   };
   return std::make_tuple(key, ScopedExprDeleter(std::move(key_deleter)));
 }
 
-AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
-                                        const std::vector<Value *> &extra_keys)
+Value *CodegenLLVM::getMultiMapKey(Map &map,
+                                   const std::vector<Value *> &extra_keys,
+                                   const location &loc)
 {
   size_t size = map.key_type.GetSize();
   for (auto *extra_key : extra_keys) {
@@ -3084,7 +3093,9 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
   // If key ever changes to not be allocated here, be sure to update getMapKey()
   // as well to take the new lifetime semantics into account.
-  AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
+  auto key = b_.CreateMapKeyAllocation(CreateArray(size, CreateInt8()),
+                                       map.ident + "_key",
+                                       loc);
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
 
   int offset = 0;
@@ -3153,12 +3164,12 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   return key;
 }
 
-AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
+Value *CodegenLLVM::getHistMapKey(Map &map, Value *log2, const location &loc)
 {
   if (map.key_expr)
-    return getMultiMapKey(map, { log2 });
+    return getMultiMapKey(map, { log2 }, loc);
 
-  AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
+  auto key = b_.CreateMapKeyAllocation(CreateUInt64(), map.ident + "_key", loc);
   b_.CreateStore(log2, key);
   return key;
 }
