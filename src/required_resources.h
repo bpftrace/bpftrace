@@ -119,6 +119,10 @@ public:
   size_t variable_buffers = 0;
   size_t max_variable_size = 0;
 
+  // Required for sizing of map key scratch buffers
+  size_t map_key_buffers = 0;
+  size_t max_map_key_size = 0;
+
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.
   //

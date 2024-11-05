@@ -580,6 +580,19 @@ Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
   return alloc;
 }
 
+Value *IRBuilderBPF::CreateMapKeyAllocation(const SizedType &value_type,
+                                            const std::string &name,
+                                            const location &loc)
+{
+  return createAllocation(bpftrace::globalvars::GlobalVar::MAP_KEY_BUFFER,
+                          GetType(value_type),
+                          name,
+                          loc,
+                          [](AsyncIds &async_ids) {
+                            return async_ids.map_key();
+                          });
+}
+
 Value *IRBuilderBPF::createAllocation(
     bpftrace::globalvars::GlobalVar globalvar,
     llvm::Type *obj_type,

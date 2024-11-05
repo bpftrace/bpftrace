@@ -76,7 +76,7 @@ public:
   void visit(Program &program) override;
   void visit(Block &block) override;
 
-  AllocaInst *getHistMapKey(Map &map, Value *log2);
+  Value *getHistMapKey(Map &map, Value *log2, const location &loc);
   int getNextIndexForProbe();
   Value *createLogicalAnd(Binop &binop);
   Value *createLogicalOr(Binop &binop);
@@ -189,7 +189,9 @@ private:
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(
       Map &map,
       Expression *key_expr);
-  AllocaInst *getMultiMapKey(Map &map, const std::vector<Value *> &extra_keys);
+  Value *getMultiMapKey(Map &map,
+                        const std::vector<Value *> &extra_keys,
+                        const location &loc);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 

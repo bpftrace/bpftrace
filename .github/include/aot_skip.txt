@@ -45,6 +45,8 @@ aot.call.str_big_tuple
 aot.call.tuple_scratch_buf
 # Same problem as #3392
 aot.call.variable_for_loop_scratch_buf
+# Same problem as #3392
+aot.call.map_key_scratch_buf
 aot.call.str_truncated
 aot.call.str_truncated_custom
 aot.call.strftime

@@ -46,6 +46,8 @@ private:
 
   bool exceeds_stack_limit(size_t size);
 
+  void maybe_allocate_map_key_buffer(const Map &map);
+
   void update_map_info(Map &map);
   void update_variable_info(Variable &var);
 

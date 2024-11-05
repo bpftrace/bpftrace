@@ -143,6 +143,7 @@ static void update_global_vars_rodata(
       case GlobalVar::READ_MAP_VALUE_BUFFER:
       case GlobalVar::WRITE_MAP_VALUE_BUFFER:
       case GlobalVar::VARIABLE_BUFFER:
+      case GlobalVar::MAP_KEY_BUFFER:
         break;
     }
   }
@@ -293,6 +294,12 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
       assert(resources.max_variable_size > 0);
       return make_rw_type(resources.variable_buffers,
                           CreateArray(resources.max_variable_size,
+                                      CreateInt8()));
+    case GlobalVar::MAP_KEY_BUFFER:
+      assert(resources.map_key_buffers > 0);
+      assert(resources.max_map_key_size > 0);
+      return make_rw_type(resources.map_key_buffers,
+                          CreateArray(resources.max_map_key_size,
                                       CreateInt8()));
   }
   return {}; // unreachable
