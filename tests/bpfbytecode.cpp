@@ -1,8 +1,8 @@
 #include "bpfbytecode.h"
+#include "ast/passes/codegen_llvm.h"
+#include "ast/passes/semantic_analyser.h"
 #include "driver.h"
 #include "mocks.h"
-#include "passes/codegen_llvm.h"
-#include "passes/semantic_analyser.h"
 
 #include "gtest/gtest.h"
 
