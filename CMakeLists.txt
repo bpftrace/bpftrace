@@ -55,6 +55,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_compile_options("-Wno-narrowing")
 endif()
 
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR})
+
 # Ninja buffers output so gcc/clang think it's not an interactive session.
 # Colors are useful for compiler errors so force the color
 if("${CMAKE_GENERATOR}" STREQUAL "Ninja")
@@ -112,7 +115,7 @@ flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
 add_flex_bison_dependency(flex_lexer bison_parser)
 add_library(parser STATIC ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
 target_compile_options(parser PRIVATE "-w")
-target_include_directories(parser PRIVATE src src/ast ${CMAKE_BINARY_DIR})
+target_include_directories(parser PRIVATE src src/ast)
 
 include(CheckSymbolExists)
 set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)

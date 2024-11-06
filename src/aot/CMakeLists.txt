@@ -1,8 +1,6 @@
 add_library(aot STATIC aot.cpp)
-add_dependencies(aot parser version_h)
-target_link_libraries(aot required_resources)
-target_include_directories(aot PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(aot PRIVATE ${CMAKE_BINARY_DIR})
+add_dependencies(aot version_h)
+target_link_libraries(aot required_resources parser)
 target_compile_definitions(aot PRIVATE ${BPFTRACE_FLAGS})
 
 if(STATIC_LINKING)
@@ -18,8 +16,6 @@ if(NOT LIBBCC_BPF_CONTAINS_RUNTIME)
 endif()
 
 add_executable(bpftrace-aotrt aot_main.cpp)
-target_include_directories(bpftrace-aotrt PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(bpftrace-aotrt PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(bpftrace-aotrt aot runtime arch ast ast_defs cxxdemangler_stdlib)
 install(TARGETS bpftrace-aotrt DESTINATION ${CMAKE_INSTALL_BINDIR})
 
