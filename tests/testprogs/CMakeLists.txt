@@ -36,6 +36,6 @@ foreach(testprog_source ${testprog_sources})
 endforeach()
 add_custom_target(testprogs DEPENDS ${testprogtargets})
 
-target_include_directories(usdt_lib PUBLIC ${CMAKE_SOURCE_DIR}/tests/testlibs/)
+target_include_directories(usdt_lib PRIVATE ${CMAKE_SOURCE_DIR}/tests/testlibs/)
 target_compile_options(usdt_lib PRIVATE -fPIC)
 target_link_libraries(usdt_lib usdt_tp)

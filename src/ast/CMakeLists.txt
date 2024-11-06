@@ -1,4 +1,7 @@
 add_library(ast_defs STATIC ast.cpp)
+target_include_directories(ast_defs PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(ast_defs PRIVATE ${CMAKE_BINARY_DIR})
+add_dependencies(ast_defs parser)
 
 add_library(ast STATIC
   async_event_types.cpp
@@ -22,13 +25,10 @@ add_library(ast STATIC
   passes/return_path_analyser.cpp
 )
 
-target_include_directories(ast_defs PUBLIC ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(ast_defs PUBLIC ${CMAKE_BINARY_DIR})
-target_link_libraries(ast ast_defs arch parser)
-
-add_dependencies(ast_defs parser)
-
+target_include_directories(ast PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(ast PRIVATE ${CMAKE_BINARY_DIR})
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
+target_link_libraries(ast ast_defs arch parser)
 
 if(STATIC_LINKING)
   include(Util)
