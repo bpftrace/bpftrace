@@ -650,6 +650,15 @@ PROG BEGIN { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"
 EXPECT true
 TIMEOUT 3
 
-NAME map len keyless
+NAME scalar map len
 PROG BEGIN { @ = 0; printf("map len: %d\n", len(@)); exit(); }
 EXPECT map len: 1
+
+NAME scalar map clear
+PROG BEGIN { @ = 5; @s = 6; exit(); } END { clear(@s) }
+EXPECT @: 5
+EXPECT_NONE @s: 6
+
+NAME scalar map clear in non-end then set in end
+PROG BEGIN { @ = 5; clear(@); exit(); } END { @ = 5 }
+EXPECT @: 5

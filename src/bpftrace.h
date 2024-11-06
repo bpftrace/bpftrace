@@ -286,6 +286,13 @@ private:
   mutable FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+
+  // Used to keep track of which maps are cleared in END probe. This is
+  // necessary for scalar maps, as they are backed by an arraymap and
+  // thus cannot have its entries deleted - only zeroed. So to avoid
+  // printing out zero entries, keep track of which maps are semantically
+  // cleared.
+  std::unordered_set<int> cleared_map_fds_;
 };
 
 } // namespace bpftrace

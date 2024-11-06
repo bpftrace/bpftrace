@@ -1068,6 +1068,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 #endif
 
   attached_probes_.clear();
+  cleared_map_fds_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise
   // perf_event_printer() can ignore the `END` events.
   finalize_ = false;
@@ -1284,11 +1285,13 @@ int BPFtrace::print_maps()
   if (dry_run)
     return 0;
 
-  for (auto &map : bytecode_.maps()) {
-    if (!map.second.is_printable())
+  for (auto &[_, map] : bytecode_.maps()) {
+    if (!map.is_printable())
+      continue;
+    if (cleared_map_fds_.contains(map.fd()))
       continue;
 
-    int err = print_map(map.second, 0, 0);
+    int err = print_map(map, 0, 0);
     if (err)
       return err;
   }
@@ -1299,6 +1302,8 @@ int BPFtrace::print_maps()
 // clear a map
 int BPFtrace::clear_map(const BpfMap &map)
 {
+  cleared_map_fds_.insert(map.fd());
+
   if (!map.is_clearable())
     return zero_map(map);
 

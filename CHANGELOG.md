@@ -112,6 +112,8 @@ and this project adheres to
   - [#3542](https://github.com/bpftrace/bpftrace/pull/3542)
 - Fix field access and offsetof for strings that are builtin types
   - [#3565](https://github.com/bpftrace/bpftrace/pull/3565)
+- Fix printing of cleared scalar maps as 0 value even if cleared in END probe
+  - [#3578](https://github.com/bpftrace/bpftrace/pull/3578)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
