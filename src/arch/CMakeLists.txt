@@ -18,4 +18,4 @@ else()
   message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
-target_include_directories(arch PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(arch PRIVATE ${CMAKE_SOURCE_DIR}/src)

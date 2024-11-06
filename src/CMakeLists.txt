@@ -58,11 +58,15 @@ add_library(libbpftrace STATIC
 )
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")
+target_include_directories(libbpftrace PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(libbpftrace PRIVATE ${CMAKE_BINARY_DIR})
 
 add_executable(${BPFTRACE}
   ${MAIN_SRC}
 )
-target_include_directories(${BPFTRACE} PUBLIC ${CMAKE_BINARY_DIR}/src)
+target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_BINARY_DIR}/src)
+target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_BINARY_DIR})
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
