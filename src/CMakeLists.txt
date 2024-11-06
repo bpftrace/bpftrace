@@ -65,7 +65,6 @@ add_executable(${BPFTRACE}
   ${MAIN_SRC}
 )
 target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_BINARY_DIR}/src)
 target_include_directories(${BPFTRACE} PRIVATE ${CMAKE_BINARY_DIR})
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -108,7 +107,7 @@ target_compile_definitions(runtime PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE
 add_custom_target(version_h
   COMMAND ${CMAKE_COMMAND}
     -DVERSION_H_IN=${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
-    -DVERSION_H=${CMAKE_CURRENT_BINARY_DIR}/version.h
+    -DVERSION_H=${CMAKE_BINARY_DIR}/version.h
     -Dbpftrace_VERSION_MAJOR=${bpftrace_VERSION_MAJOR}
     -Dbpftrace_VERSION_MINOR=${bpftrace_VERSION_MINOR}
     -Dbpftrace_VERSION_PATCH=${bpftrace_VERSION_PATCH}
