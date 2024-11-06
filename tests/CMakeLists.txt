@@ -67,7 +67,6 @@ target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_BINARY_DIR})
-target_include_directories(bpftrace_test PRIVATE ${CMAKE_BINARY_DIR}/src)
 target_link_libraries(bpftrace_test libbpftrace)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
