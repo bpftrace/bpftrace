@@ -12,7 +12,7 @@
 
 namespace bpftrace {
 
-static constexpr std::string RETVAL_FIELD_NAME = "$retval";
+static constexpr auto RETVAL_FIELD_NAME = "$retval";
 
 struct Bitfield {
   Bitfield(size_t byte_offset, size_t bit_width);
