@@ -650,6 +650,7 @@ keyword:
         |       SIZEOF        { $$ = $1; }
         |       UNROLL        { $$ = $1; }
         |       WHILE         { $$ = $1; }
+        |       SUBPROG       { $$ = $1; }
         ;
 
 ident:

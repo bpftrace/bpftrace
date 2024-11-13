@@ -3104,6 +3104,8 @@ TEST(semantic_analyser, struct_member_keywords)
     "raw",
     "uprobe",
     "kprobe",
+    "config",
+    "fn",
   };
   for (auto kw : keywords) {
     test("struct S{ int " + kw + ";}; k:f { ((struct S*)arg0)->" + kw + "}");
