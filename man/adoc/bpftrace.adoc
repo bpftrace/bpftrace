@@ -1044,6 +1044,24 @@ kretprobe:do_nanosleep /has_key(@start, tid)/ {
  */
 ----
 
+This style of map may also be useful for capturing output parameters, or other context, between two different probes. For example:
+
+----
+tracepoint:syscalls:sys_enter_wait4
+{
+  @out[tid] = args.ru;
+}
+
+tracepoint:syscalls:sys_exit_wait4
+{
+  $ru = @out[tid];
+  delete(@out, tid);
+  if ($ru != 0) {
+    printf("got usage ...", ...);
+  }
+}
+----
+
 == Builtins
 
 Builtins are special variables built into the language.
