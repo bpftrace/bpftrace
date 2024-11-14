@@ -1302,22 +1302,18 @@ int BPFtrace::clear_map(const BpfMap &map)
   if (!map.is_clearable())
     return zero_map(map);
 
-  auto maybe_old_key = find_empty_key(map);
-  if (!maybe_old_key.has_value()) {
-    return -2;
-  }
-  auto old_key(std::move(*maybe_old_key));
-  auto key(old_key);
+  uint8_t *old_key = nullptr;
+  auto key = std::vector<uint8_t>(map.key_size());
 
   // snapshot keys, then operate on them
   std::vector<std::vector<uint8_t>> keys;
-  while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
+  while (bpf_get_next_key(map.fd(), old_key, key.data()) == 0) {
     keys.push_back(key);
-    old_key = key;
+    old_key = key.data();
   }
 
-  for (auto &key : keys) {
-    int err = bpf_delete_elem(map.fd(), key.data());
+  for (auto &k : keys) {
+    int err = bpf_delete_elem(map.fd(), k.data());
     if (err && err != -ENOENT) {
       LOG(ERROR) << "failed to look up elem: " << err;
       return -1;
@@ -1331,24 +1327,21 @@ int BPFtrace::clear_map(const BpfMap &map)
 int BPFtrace::zero_map(const BpfMap &map)
 {
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  auto maybe_old_key = find_empty_key(map);
-  if (!maybe_old_key.has_value()) {
-    return -2;
-  }
-  auto old_key(std::move(*maybe_old_key));
-  auto key(old_key);
+
+  uint8_t *old_key = nullptr;
+  auto key = std::vector<uint8_t>(map.key_size());
 
   // snapshot keys, then operate on them
   std::vector<std::vector<uint8_t>> keys;
-  while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
+  while (bpf_get_next_key(map.fd(), old_key, key.data()) == 0) {
     keys.push_back(key);
-    old_key = key;
+    old_key = key.data();
   }
 
   int value_size = map.value_size() * nvalues;
   std::vector<uint8_t> zero(value_size, 0);
-  for (auto &key : keys) {
-    int err = bpf_update_elem(map.fd(), key.data(), zero.data(), BPF_EXIST);
+  for (auto &k : keys) {
+    int err = bpf_update_elem(map.fd(), k.data(), zero.data(), BPF_EXIST);
 
     if (err && err != -ENOENT) {
       LOG(ERROR) << "failed to look up elem: " << err;
@@ -1367,17 +1360,14 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
     return print_map_hist(map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  auto maybe_old_key = find_empty_key(map);
-  if (!maybe_old_key.has_value()) {
-    return -2;
-  }
-  auto old_key(std::move(*maybe_old_key));
-  auto key(old_key);
+
+  uint8_t *old_key = nullptr;
+  auto key = std::vector<uint8_t>(map.key_size());
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       values_by_key;
 
-  while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
+  while (bpf_get_next_key(map.fd(), old_key, key.data()) == 0) {
     auto value = std::vector<uint8_t>(map.value_size() * nvalues);
     int err = bpf_lookup_elem(map.fd(), key.data(), value.data());
     if (err == -ENOENT) {
@@ -1391,7 +1381,7 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
 
     values_by_key.push_back({ key, value });
 
-    old_key = key;
+    old_key = key.data();
   }
 
   if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy()) {
@@ -1456,17 +1446,14 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
   // would actually be stored with the key: [1, 2, 3]
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  auto maybe_old_key = find_empty_key(map);
-  if (!maybe_old_key.has_value()) {
-    return -2;
-  }
-  auto old_key(std::move(*maybe_old_key));
-  auto key(old_key);
+
+  uint8_t *old_key = nullptr;
+  auto key = std::vector<uint8_t>(map.key_size());
 
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
 
   const auto &map_info = resources.maps_info.at(map.name());
-  while (bpf_get_next_key(map.fd(), old_key.data(), key.data()) == 0) {
+  while (bpf_get_next_key(map.fd(), old_key, key.data()) == 0) {
     auto key_prefix = std::vector<uint8_t>(map_info.key_type.GetSize());
     uint64_t bucket = read_data<uint64_t>(key.data() +
                                           map_info.key_type.GetSize());
@@ -1495,7 +1482,7 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
     values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value,
                                                                   nvalues);
 
-    old_key = key;
+    old_key = key.data();
   }
 
   // Sort based on sum of counts in all buckets
@@ -1530,33 +1517,6 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   else {
     return std::nullopt;
   }
-}
-
-std::optional<std::vector<uint8_t>> BPFtrace::find_empty_key(
-    const BpfMap &map) const
-{
-  // 4.12 and above kernel supports passing NULL to BPF_MAP_GET_NEXT_KEY
-  // to get first key of the map. For older kernels, the call will fail.
-  auto key = std::vector<uint8_t>(map.key_size());
-  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  int value_size = map.value_size() * nvalues;
-  auto value = std::vector<uint8_t>(value_size);
-
-  if (bpf_lookup_elem(map.fd(), key.data(), value.data()))
-    return key;
-
-  for (auto &elem : key)
-    elem = 0xff;
-  if (bpf_lookup_elem(map.fd(), key.data(), value.data()))
-    return key;
-
-  for (auto &elem : key)
-    elem = 0x55;
-  if (bpf_lookup_elem(map.fd(), key.data(), value.data()))
-    return key;
-
-  LOG(ERROR) << "Failed to get key for map '" << map.name();
-  return std::nullopt;
 }
 
 std::string BPFtrace::get_stack(int64_t stackid,
