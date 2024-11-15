@@ -1947,6 +1947,21 @@ Changing the print call to `print(@, 5, 2)` will take the top 5 values and scale
 @[10]: 5
 ----
 
+As a convenience, variables, maps and builtins will be automatically printed when they are appear alone as a statement.
+The following two programs are equivalent:
+
+----
+kprobe:f {
+  print(kstack)
+}
+
+kprobe:f {
+  kstack
+}
+----
+
+This does not work for more complex expressions, tuples, calls, or anything else that may have side-effects.
+
 [#functions-printf]
 === printf
 
