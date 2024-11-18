@@ -117,5 +117,5 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !61 = !DISubroutineType(types: !62)
 !62 = !{!18, !63}
 !63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !64, size: 64)
-!64 = !DICompositeType(tag: DW_TAG_structure_type, name: "struct bpf_map", scope: !2, file: !2, elements: !65)
+!64 = !DICompositeType(tag: DW_TAG_structure_type, name: "bpf_map", scope: !2, file: !2, elements: !65)
 !65 = !{}
