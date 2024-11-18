@@ -13,9 +13,10 @@ find_program(STRIP strip REQUIRED)
 # Build data_source.o and inject BTF into it
 set(DATA_SOURCE_C ${CMAKE_CURRENT_SOURCE_DIR}/data_source.c)
 set(DATA_SOURCE_O ${CMAKE_CURRENT_BINARY_DIR}/data_source.o)
+set(DATA_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/data_source)
 add_custom_command(
   OUTPUT ${DATA_SOURCE_O}
-  COMMAND gcc -g -o ${DATA_SOURCE_O} ${DATA_SOURCE_C}
+  COMMAND gcc -g -c -o ${DATA_SOURCE_O} ${DATA_SOURCE_C}
   # pahole uses LLVM_OBJCOPY env var.
   # We must hack it like this b/c cmake does not support setting env vars at build time
   COMMAND bash -c "LLVM_OBJCOPY=${LLVM_OBJCOPY} pahole -J ${DATA_SOURCE_O}"
@@ -49,7 +50,8 @@ if(${LLDB_FOUND})
   set(DWARF_DATA_FILE ${CMAKE_CURRENT_BINARY_DIR}/dwarf_data)
   add_custom_command(
     OUTPUT ${DWARF_DATA_FILE}
-    COMMAND strip --only-keep-debug -o ${DWARF_DATA_FILE} ${DATA_SOURCE_O}
+    COMMAND gcc ${DATA_SOURCE_O} -o ${DATA_SOURCE}
+    COMMAND strip --only-keep-debug -o ${DWARF_DATA_FILE} ${DATA_SOURCE}
     DEPENDS data_source_o)
 
   # Generate dwarf_data.hex from dwarf_data

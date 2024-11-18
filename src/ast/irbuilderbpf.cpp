@@ -2141,6 +2141,39 @@ CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const location &loc)
                           &loc);
 }
 
+CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
+                                        Value *cpu,
+                                        const location &loc)
+{
+  // void *bpf_per_cpu_ptr(const void *percpu_ptr, u32 cpu)
+  // Return:
+  //    A pointer pointing to the kernel percpu variable on
+  //    cpu, or NULL, if cpu is invalid.
+  FunctionType *percpuptr_func_type = FunctionType::get(
+      GET_PTR_TY(), { GET_PTR_TY(), getInt64Ty() }, false);
+  return CreateHelperCall(libbpf::BPF_FUNC_per_cpu_ptr,
+                          percpuptr_func_type,
+                          { var, cpu },
+                          "per_cpu_ptr",
+                          &loc);
+}
+
+CallInst *IRBuilderBPF::CreateThisCpuPtr(Value *var, const location &loc)
+{
+  // void *bpf_per_cpu_ptr(const void *percpu_ptr)
+  // Return:
+  //    A pointer pointing to the kernel percpu variable on
+  //    this cpu. May never be NULL.
+  FunctionType *percpuptr_func_type = FunctionType::get(GET_PTR_TY(),
+                                                        { GET_PTR_TY() },
+                                                        false);
+  return CreateHelperCall(libbpf::BPF_FUNC_this_cpu_ptr,
+                          percpuptr_func_type,
+                          { var },
+                          "this_cpu_ptr",
+                          &loc);
+}
+
 void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
                                         AllocaInst *buf,
                                         size_t size,

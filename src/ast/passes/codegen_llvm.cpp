@@ -927,6 +927,18 @@ void CodegenLLVM::visit(Call &call)
     if (!addr)
       throw FatalUserException("Failed to resolve kernel symbol: " + name);
     expr_ = b_.getInt64(addr);
+  } else if (call.func == "percpu_kaddr") {
+    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto var = b_.CreatePointerCast(DeclareKernelVar(name), b_.GET_PTR_TY());
+    Value *percpu_ptr;
+    if (call.vargs.size() == 1) {
+      percpu_ptr = b_.CreateThisCpuPtr(var, call.loc);
+    } else {
+      auto scoped_del = accept(call.vargs.at(1));
+      Value *cpu = expr_;
+      percpu_ptr = b_.CreatePerCpuPtr(var, cpu, call.loc);
+    }
+    expr_ = b_.CreatePtrToInt(percpu_ptr, b_.getInt64Ty());
   } else if (call.func == "uaddr") {
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
     struct symbol sym = {};
@@ -4695,6 +4707,36 @@ CallInst *CodegenLLVM::CreateKernelFuncCall(Kfunc kfunc,
 {
   auto func = DeclareKernelFunc(kfunc);
   return b_.createCall(func->getFunctionType(), func, args, name);
+}
+
+/// This should emit
+///
+///    declare !dbg !... extern ... @var_name(...) section ".ksyms"
+///
+/// with proper debug info entry.
+///
+/// The function type is retrieved from kernel BTF.
+///
+/// If the function declaration is already in the module, just return it.
+///
+GlobalVariable *CodegenLLVM::DeclareKernelVar(const std::string &var_name)
+{
+  if (auto *sym = module_->getGlobalVariable(var_name))
+    return sym;
+
+  std::string err;
+  auto type = bpftrace_.btf_->get_var_type(var_name);
+  assert(!type.IsNoneTy()); // already checked in semantic analyser
+
+  auto var = llvm::dyn_cast<GlobalVariable>(
+      module_->getOrInsertGlobal(var_name, b_.GetType(type)));
+  var->setSection(".ksyms");
+  var->setLinkage(llvm::GlobalValue::ExternalLinkage);
+
+  auto var_debug = debug_.createGlobalVariable(var_name, type);
+  var->addDebugInfo(var_debug);
+
+  return var;
 }
 
 } // namespace bpftrace::ast

@@ -875,4 +875,17 @@ SizedType BTF::get_stype(const std::string &type_name)
   return CreateNone();
 }
 
+SizedType BTF::get_var_type(const std::string &var_name)
+{
+  auto var_id = find_id(var_name, BTF_KIND_VAR);
+  if (!var_id.btf)
+    return CreateNone();
+
+  const struct btf_type *t = btf__type_by_id(var_id.btf, var_id.id);
+  if (!t)
+    return CreateNone();
+
+  return get_stype(BTFId{ .btf = var_id.btf, .id = t->type });
+}
+
 } // namespace bpftrace

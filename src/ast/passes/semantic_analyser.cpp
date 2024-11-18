@@ -1102,6 +1102,20 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
+  } else if (call.func == "percpu_kaddr") {
+    if (check_varargs(call, 1, 2)) {
+      check_arg(call, Type::string, 0, true);
+      if (call.vargs.size() == 2)
+        check_arg(call, Type::integer, 1, false);
+
+      auto symbol = bpftrace_.get_string_literal(call.vargs.at(0));
+      if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
+        LOG(ERROR, call.loc, err_)
+            << "Could not resolve variable \"" << symbol << "\" from BTF";
+      }
+    }
+    call.type = CreateUInt64();
+    call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "uaddr") {
     auto probe = get_probe(call.loc, call.func);
     if (probe == nullptr)

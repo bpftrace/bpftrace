@@ -128,6 +128,9 @@ long bpf_map_sum_elem_count(const struct bpf_map *map)
   return 0;
 }
 
+// kernel percpu variables
+__attribute__((section(".data..percpu"))) unsigned long process_counts;
+
 // Make sure all new mocked kernel functions are called in this main (below)
 // so they don't get optimzed away
 int main(void)

@@ -220,11 +220,15 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     // failures when the verifier log is non-empty.
     std::string_view log(log_bufs[name].data());
     if (!log.empty()) {
-      // This should be the only error that may occur here and does not imply
+      // These should be the only errors that may occur here which do not imply
       // a bpftrace bug so throw immediately with a proper error message.
       maybe_throw_helper_verifier_error(log,
                                         "helper call is not allowed in probe",
                                         " not allowed in probe");
+      maybe_throw_helper_verifier_error(
+          log,
+          "pointer arithmetic on ptr_or_null_ prohibited, null-check it first",
+          ": result needs to be null-checked before accessing fields");
 
       std::stringstream errmsg;
       errmsg << "Error loading BPF program for " << name << ".";

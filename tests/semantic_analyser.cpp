@@ -3838,6 +3838,24 @@ fentry:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
 )");
 }
 
+TEST_F(semantic_analyser_btf, call_percpu_kaddr)
+{
+  test("kprobe:f { percpu_kaddr(\"process_counts\"); }");
+  test("kprobe:f { percpu_kaddr(\"process_counts\", 0); }");
+  test("kprobe:f { @x = percpu_kaddr(\"process_counts\"); }");
+  test("kprobe:f { @x = percpu_kaddr(\"process_counts\", 0); }");
+  test("kprobe:f { percpu_kaddr(); }", 1);
+  test("kprobe:f { percpu_kaddr(0); }", 1);
+
+  test_error("kprobe:f { percpu_kaddr(\"nonsense\"); }",
+             R"(
+stdin:1:12-36: ERROR: Could not resolve variable "nonsense" from BTF
+kprobe:f { percpu_kaddr("nonsense"); }
+           ~~~~~~~~~~~~~~~~~~~~~~~~
+)",
+             false);
+}
+
 TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }");
