@@ -213,10 +213,12 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
   if (!emit_codegen_types && stype.IsRecordTy()) {
     std::string name = stype.GetName();
-    if (name.find("struct ") == 0)
-      name = name.substr(std::string("struct ").length());
-    else if (name.find("union ") == 0)
-      name = name.substr(std::string("union ").length());
+    static constexpr std::string struct_prefix = "struct ";
+    static constexpr std::string union_prefix = "union ";
+    if (name.find(struct_prefix) == 0)
+      name = name.substr(struct_prefix.length());
+    else if (name.find(union_prefix) == 0)
+      name = name.substr(union_prefix.length());
 
     return createStructType(file,
                             name,

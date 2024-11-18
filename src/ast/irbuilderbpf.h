@@ -161,6 +161,8 @@ public:
                            StackType stack_type,
                            const location &loc);
   CallInst *CreateGetFuncIp(Value *ctx, const location &loc);
+  CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const location &loc);
+  CallInst *CreateThisCpuPtr(Value *var, const location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const location &loc);
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,

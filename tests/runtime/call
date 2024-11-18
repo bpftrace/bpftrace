@@ -677,3 +677,22 @@ TIMEOUT 3
 NAME map len keyless
 PROG BEGIN { @ = 0; printf("map len: %d\n", len(@)); exit(); }
 EXPECT map len: 1
+
+NAME percpu_kaddr
+PROG BEGIN { printf("processes: %d\n", *percpu_kaddr("process_counts", 0)); exit(); }
+EXPECT_REGEX processes: -?[0-9]+
+
+NAME percpu_kaddr this cpu
+PROG BEGIN { if (*percpu_kaddr("process_counts") == *percpu_kaddr("process_counts", cpu)) { printf("SUCCESS\n") } exit(); }
+EXPECT SUCCESS
+
+NAME percpu_kaddr field access
+PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq->nr_running) } exit() }
+EXPECT_REGEX nr_running: [0-9]+
+
+NAME percpu_kaddr field access no NULL check
+PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+EXPECT stdin:1:17-60: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
+       BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+WILL_FAIL

@@ -67,6 +67,7 @@ public:
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const BTFId& type_id, const std::string& field);
   SizedType get_stype(const std::string& type_name);
+  SizedType get_var_type(const std::string& var_name);
 
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_funcs() const;

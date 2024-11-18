@@ -48,6 +48,8 @@ and this project adheres to
   - [#3547](https://github.com/bpftrace/bpftrace/pull/3547)
 - Add `symbol_source` config to source uprobe locations from either DWARF or the Symbol Table
   - [#3504](https://github.com/bpftrace/bpftrace/pull/3504/)
+- Introduce builtin to access percpu kernel data
+  - [#3596](https://github.com/bpftrace/bpftrace/pull/3596/)
 #### Changed
 - Merge output into `stdout` when `-lv`
   - [#3383](https://github.com/bpftrace/bpftrace/pull/3383)

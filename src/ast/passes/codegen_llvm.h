@@ -278,6 +278,8 @@ private:
                                  ArrayRef<Value *> args,
                                  const Twine &name);
 
+  GlobalVariable *DeclareKernelVar(const std::string &name);
+
   Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;

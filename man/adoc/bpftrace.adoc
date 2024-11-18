@@ -1364,6 +1364,10 @@ Tracing block I/O sizes > 0 bytes
 | Return full path
 | Sync
 
+| <<functions-percpu-kaddr, `percpu_kaddr(const string name [, int cpu])`>>
+| Resolve percpu kernel symbol name
+| Sync
+
 | <<functions-print, `print(...)`>>
 | Print a non-map value with default formatting
 | Async
@@ -1845,6 +1849,39 @@ Return full path referenced by struct path pointer in argument. If `size` is set
 the path will be clamped by `size` otherwise `BPFTRACE_MAX_STRLEN` is used.
 
 This function can only be used by functions that are allowed to, these functions are contained in the `btf_allowlist_d_path` set in the kernel.
+
+[#functions-percpu-kaddr]
+=== percpu_kaddr
+
+.variants
+* `void *percpu_kaddr(const string name)`
+* `void *percpu_kaddr(const string name, int cpu)`
+
+*sync*
+
+Get the address of the percpu kernel symbol `name` for CPU `cpu`. When `cpu` is
+omitted, the current CPU is used.
+
+----
+interval:s:1 {
+  $proc_cnt = percpu_kaddr("process_counts");
+  printf("% processes are running on CPU %d\n", *$proc_cnt, cpu);
+}
+----
+
+The second variant may return NULL if `cpu` is higher than the number of
+available CPUs. Therefore, it is necessary to perform a NULL-check on the result
+when accessing fields of the pointed structure, otherwise the BPF program will
+be rejected.
+
+----
+interval:s:1 {
+  $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
+  if ($runqueues != 0) {         // The check is mandatory here
+    print($runqueues->nr_running);
+  }
+}
+----
 
 [#functions-print]
 === print
