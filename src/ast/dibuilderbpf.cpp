@@ -347,7 +347,7 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalVariable(
     const SizedType &stype)
 {
   return createGlobalVariableExpression(
-      file, name, "global", file, 0, GetType(stype), false);
+      file, name, "global", file, 0, GetType(stype, false), false);
 }
 
 } // namespace bpftrace::ast
