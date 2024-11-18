@@ -212,8 +212,14 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
   if (!emit_codegen_types && stype.IsRecordTy()) {
+    std::string name = stype.GetName();
+    if (name.find("struct ") == 0)
+      name = name.substr(std::string("struct ").length());
+    else if (name.find("union ") == 0)
+      name = name.substr(std::string("union ").length());
+
     return createStructType(file,
-                            stype.GetName(),
+                            name,
                             file,
                             0,
                             stype.GetSize() * 8,
