@@ -275,6 +275,10 @@ NAME per_cpu_map_cast
 PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); exit();}
 EXPECT 1-10
 
+NAME per_cpu_map_as_map_key
+PROG BEGIN {@a = count(); @b = sum(5); @c = min(1); @d = max(10); @e = avg(7); @[@a, @b, @c, @d, @e] = 1; exit(); }
+EXPECT @[1, 5, 1, 10, 7]: 1
+
 NAME dry run empty output
 RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
 EXPECT_NONE hello

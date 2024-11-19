@@ -694,6 +694,9 @@ kprobe:f { $x = hist(1); }
 stdin:1:12-22: ERROR: hist() should be directly assigned to a map
 kprobe:f { @x[hist(1)] = 1; }
            ~~~~~~~~~~
+stdin:1:12-22: ERROR: hist_t cannot be used as a map key
+kprobe:f { @x[hist(1)] = 1; }
+           ~~~~~~~~~~
 )");
   test_error("kprobe:f { if(hist()) { 123 } }", R"(
 stdin:1:12-21: ERROR: hist() should be directly assigned to a map
@@ -764,6 +767,9 @@ stdin:1:12-21: ERROR: lhist() should be directly assigned to a map
 kprobe:f { @[lhist()] = 1; }
            ~~~~~~~~~
 stdin:1:12-21: ERROR: lhist() requires 4 arguments (0 provided)
+kprobe:f { @[lhist()] = 1; }
+           ~~~~~~~~~
+stdin:1:12-21: ERROR: lhist_t cannot be used as a map key
 kprobe:f { @[lhist()] = 1; }
            ~~~~~~~~~
 )");
@@ -2553,6 +2559,33 @@ TEST(semantic_analyser, struct_as_map_key)
 stdin:4:9-30: ERROR: Argument mismatch for @x: trying to access with arguments: 'struct B' when map expects arguments: 'struct A'
         @x[*((struct B *)0)] = 1;
         ~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, per_cpu_map_as_map_key)
+{
+  test("BEGIN { @x = count(); @y[@x] = 1; }");
+  test("BEGIN { @x = sum(10); @y[@x] = 1; }");
+  test("BEGIN { @x = min(1); @y[@x] = 1; }");
+  test("BEGIN { @x = max(1); @y[@x] = 1; }");
+  test("BEGIN { @x = avg(1); @y[@x] = 1; }");
+
+  test_error("BEGIN { @x = hist(10); @y[@x] = 1; }", R"(
+stdin:1:24-29: ERROR: hist_t cannot be used as a map key
+BEGIN { @x = hist(10); @y[@x] = 1; }
+                       ~~~~~
+)");
+
+  test_error("BEGIN { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }", R"(
+stdin:1:35-40: ERROR: lhist_t cannot be used as a map key
+BEGIN { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }
+                                  ~~~~~
+)");
+
+  test_error("BEGIN { @x = stats(10); @y[@x] = 1; }", R"(
+stdin:1:25-30: ERROR: stats_t cannot be used as a map key
+BEGIN { @x = stats(10); @y[@x] = 1; }
+                        ~~~~~
 )");
 }
 

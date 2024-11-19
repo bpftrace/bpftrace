@@ -91,6 +91,7 @@ aot.other.no symbolize enum after arithmetic
 aot.other.no symbolize enum after arithmetic mixed
 aot.other.per_cpu_map_arithmetic
 aot.other.per_cpu_map_avg_if
+aot.other.per_cpu_map_as_map_key
 # Enum metadata is not being serialized
 aot.other.symbolize enum in map key
 # Enum metadata is not being serialized
