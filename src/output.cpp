@@ -452,6 +452,11 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
     case Type::array:
     case Type::mac_address:
     case Type::record:
+    case Type::count_t:
+    case Type::avg_t:
+    case Type::max_t:
+    case Type::min_t:
+    case Type::sum_t:
       return value_to_str(bpftrace, arg, data, false, 1, true);
     case Type::tuple: {
       std::vector<std::string> elems;
@@ -466,17 +471,12 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
     }
     case Type::cgroup_path_t:
     case Type::strerror_t:
-    case Type::avg_t:
-    case Type::count_t:
     case Type::hist_t:
     case Type::lhist_t:
-    case Type::max_t:
-    case Type::min_t:
     case Type::none:
     case Type::reference:
     case Type::stack_mode:
     case Type::stats_t:
-    case Type::sum_t:
     case Type::timestamp_mode:
     case Type::voidtype:
       LOG(BUG) << "Invalid mapkey argument type: " << arg;

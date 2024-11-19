@@ -1672,6 +1672,10 @@ void SemanticAnalyser::validate_map_key(const SizedType &key,
     LOG(ERROR, loc, err_) << "context cannot be used as a map key";
   }
 
+  if (key.IsHistTy() || key.IsLhistTy() || key.IsStatsTy()) {
+    LOG(ERROR, loc, err_) << key << " cannot be used as a map key";
+  }
+
   if (is_final_pass() && key.IsNoneTy()) {
     LOG(ERROR, loc, err_) << "Invalid expression for assignment: ";
   }

@@ -112,6 +112,8 @@ and this project adheres to
   - [#3542](https://github.com/bpftrace/bpftrace/pull/3542)
 - Fix field access and offsetof for strings that are builtin types
   - [#3565](https://github.com/bpftrace/bpftrace/pull/3565)
+- Fix crash when using castable per-cpu map types as map keys
+  - [#3594](https://github.com/bpftrace/bpftrace/pull/3594)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals
