@@ -4265,6 +4265,11 @@ fentry:func_1,tracepoint:sched:sched_one { args }
 )");
 }
 
+TEST_F(semantic_analyser_btf, binop_late_ptr_resolution)
+{
+  test(R"(fentry:func_1 { if (@a[1] == args.foo1) { } @a[1] = args.foo1; })");
+}
+
 TEST(semantic_analyser, buf_strlen_too_large)
 {
   auto bpftrace = get_mock_bpftrace();

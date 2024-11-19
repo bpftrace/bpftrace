@@ -1987,6 +1987,12 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
     else
       invalid_op();
   }
+  // Might need an additional pass to resolve the type
+  else if (other.IsNoneTy()) {
+    if (is_final_pass()) {
+      invalid_op();
+    }
+  }
   // Binop on a pointer and something else
   else {
     invalid_op();
