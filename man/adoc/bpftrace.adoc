@@ -97,7 +97,7 @@ Valid values are::
 *json* +
 *text*
 
-Note: the json output is ndjson, meaning each line of the streamed output is a single blob of valid json.
+The JSON output is compatible with NDJSON and JSON Lines, meaning each line of the streamed output is a single blob of valid JSON.
 
 === *-h, --help*
 
