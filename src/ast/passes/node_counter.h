@@ -11,6 +11,10 @@ namespace ast {
 
 class NodeCounter : public Visitor {
 public:
+  explicit NodeCounter(ASTContext &ctx) : Visitor(ctx)
+  {
+  }
+
   void Visit(Node &node) override
   {
     count_++;
@@ -28,9 +32,9 @@ private:
 
 inline Pass CreateCounterPass()
 {
-  auto fn = [](Node &n, PassContext &ctx) {
-    NodeCounter c;
-    c.Visit(n);
+  auto fn = [](PassContext &ctx) {
+    NodeCounter c(ctx.ast_ctx);
+    c.Visit(*ctx.ast_ctx.root);
     auto node_count = c.get_count();
     auto max = ctx.b.max_ast_nodes_;
     LOG(V1) << "AST node count: " << node_count;

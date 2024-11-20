@@ -3,8 +3,8 @@
 
 namespace bpftrace::ast {
 
-ReturnPathAnalyser::ReturnPathAnalyser(Node *root, std::ostream &out)
-    : root_(root), out_(out)
+ReturnPathAnalyser::ReturnPathAnalyser(ASTContext &ctx, std::ostream &out)
+    : ctx_(ctx), out_(out)
 {
 }
 
@@ -65,7 +65,7 @@ bool ReturnPathAnalyser::default_visitor(__attribute__((unused)) Node &node)
 
 int ReturnPathAnalyser::analyse()
 {
-  int result = Visit(*root_) ? 0 : 1;
+  int result = Visit(*ctx_.root) ? 0 : 1;
   if (result)
     out_ << err_.str();
   return result;
@@ -73,8 +73,8 @@ int ReturnPathAnalyser::analyse()
 
 Pass CreateReturnPathPass()
 {
-  auto fn = [](Node &n, __attribute__((unused)) PassContext &ctx) {
-    auto return_path = ReturnPathAnalyser(&n);
+  auto fn = [](PassContext &ctx) {
+    auto return_path = ReturnPathAnalyser(ctx.ast_ctx);
     int err = return_path.analyse();
     if (err)
       return PassResult::Error("ReturnPath");

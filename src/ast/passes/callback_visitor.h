@@ -11,7 +11,8 @@ using callback = std::function<void(Node *)>;
 
 class CallbackVisitor : public Visitor {
 public:
-  explicit CallbackVisitor(callback func) : func_(func)
+  explicit CallbackVisitor(ASTContext &ctx, callback func)
+      : Visitor(ctx), func_(func)
   {
   }
 

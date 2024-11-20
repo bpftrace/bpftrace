@@ -22,16 +22,16 @@ struct CodegenResources {
 // logic makes things easier to understand and maintain.
 class CodegenResourceAnalyser : public Visitor {
 public:
-  CodegenResourceAnalyser(Node *root, const ::bpftrace::Config &config);
+  CodegenResourceAnalyser(ASTContext &ctx, const ::bpftrace::Config &config);
   CodegenResources analyse();
 
 private:
   void visit(Builtin &map) override;
   void visit(Call &call) override;
 
+private:
   const ::bpftrace::Config &config_;
   CodegenResources resources_;
-  Node *root_;
 };
 
 } // namespace ast
