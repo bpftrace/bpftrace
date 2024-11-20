@@ -31,7 +31,7 @@ void test(BPFtrace &bpftrace,
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ConfigAnalyser config_analyser(driver.ctx.root, bpftrace, out);
+  ast::ConfigAnalyser config_analyser(*driver.ctx.root, bpftrace, out);
   EXPECT_EQ(config_analyser.analyse(), expected_result)
       << msg.str() << out.str();
   if (expected_error.data()) {

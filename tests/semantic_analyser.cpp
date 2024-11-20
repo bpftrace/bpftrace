@@ -69,7 +69,7 @@ void test(BPFtrace &bpftrace,
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
+  ast::FieldAnalyser fields(*driver.ctx.root, bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() + out.str();
 
   ClangParser clang;

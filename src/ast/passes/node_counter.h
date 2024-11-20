@@ -28,9 +28,9 @@ private:
 
 inline Pass CreateCounterPass()
 {
-  auto fn = [](Node &n, PassContext &ctx) {
+  auto fn = [](Program &program, PassContext &ctx) {
     NodeCounter c;
-    c.Visit(n);
+    c.Visit(program);
     auto node_count = c.get_count();
     auto max = ctx.b.max_ast_nodes_;
     LOG(V1) << "AST node count: " << node_count;

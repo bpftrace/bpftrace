@@ -16,10 +16,10 @@ namespace ast {
 
 class FieldAnalyser : public Visitor {
 public:
-  explicit FieldAnalyser(Node *root,
+  explicit FieldAnalyser(Program &program,
                          BPFtrace &bpftrace,
                          std::ostream &out = std::cerr)
-      : root_(root),
+      : program_(program),
         bpftrace_(bpftrace),
         prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC),
         out_(out)
@@ -48,7 +48,7 @@ private:
   void resolve_fields(SizedType &type);
   void resolve_type(SizedType &type);
 
-  Node *root_;
+  Program &program_;
   ProbeType probe_type_;
   std::string attach_func_;
   SizedType sized_type_;

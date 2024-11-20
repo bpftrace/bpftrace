@@ -16,7 +16,7 @@ namespace ast {
 // features.
 class PortabilityAnalyser : public Visitor {
 public:
-  PortabilityAnalyser(Node *root, std::ostream &out = std::cerr);
+  PortabilityAnalyser(Program &program, std::ostream &out = std::cerr);
   int analyse();
 
 private:
@@ -26,7 +26,8 @@ private:
   void visit(Cast &cast) override;
   void visit(AttachPoint &ap) override;
 
-  Node *root_;
+private:
+  Program &program_;
   std::ostream &out_;
   std::ostringstream err_;
 };

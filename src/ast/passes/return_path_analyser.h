@@ -8,7 +8,7 @@ namespace ast {
 
 class ReturnPathAnalyser : public Dispatcher<bool> {
 public:
-  explicit ReturnPathAnalyser(Node *root, std::ostream &out = std::cerr);
+  explicit ReturnPathAnalyser(Program &program, std::ostream &out = std::cerr);
 
   // visit methods return true iff all return paths of the analyzed code
   // (represented by the given node) return a value
@@ -26,7 +26,7 @@ public:
   int analyse();
 
 private:
-  Node *root_;
+  Program &program_;
   std::ostream &out_;
   std::ostringstream err_;
 };

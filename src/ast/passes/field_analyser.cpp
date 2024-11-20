@@ -329,7 +329,7 @@ void FieldAnalyser::visit(Subprog &subprog)
 
 int FieldAnalyser::analyse()
 {
-  Visit(*root_);
+  Visit(program_);
 
   std::string errors = err_.str();
   if (!errors.empty()) {

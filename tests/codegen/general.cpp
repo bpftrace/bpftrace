@@ -68,12 +68,12 @@ TEST(codegen, printf_offsets)
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx.root, *bpftrace);
+  ast::ResourceAnalyser resource_analyser(*driver.ctx.root, *bpftrace);
   auto resources_optional = resource_analyser.analyse();
   ASSERT_TRUE(resources_optional.has_value());
   bpftrace->resources = resources_optional.value();
 
-  ast::CodegenLLVM codegen(driver.ctx.root, *bpftrace);
+  ast::CodegenLLVM codegen(*driver.ctx.root, *bpftrace);
   codegen.generate_ir();
 
   EXPECT_EQ(bpftrace->resources.printf_args.size(), 1U);
@@ -115,7 +115,7 @@ TEST(codegen, probe_count)
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
-  ast::CodegenLLVM codegen(driver.ctx.root, bpftrace);
+  ast::CodegenLLVM codegen(*driver.ctx.root, bpftrace);
   codegen.generate_ir();
 }
 } // namespace codegen

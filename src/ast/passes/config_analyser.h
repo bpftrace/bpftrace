@@ -16,10 +16,10 @@ namespace ast {
 
 class ConfigAnalyser : public Visitor {
 public:
-  explicit ConfigAnalyser(Node *root,
+  explicit ConfigAnalyser(Program &program,
                           BPFtrace &bpftrace,
                           std::ostream &out = std::cerr)
-      : root_(root),
+      : program_(program),
         bpftrace_(bpftrace),
         config_setter_(ConfigSetter(bpftrace.config_, ConfigSource::script)),
         out_(out)
@@ -34,7 +34,7 @@ public:
   bool analyse();
 
 private:
-  Node *root_ = nullptr;
+  Program &program_;
   BPFtrace &bpftrace_;
   ConfigSetter config_setter_;
   std::ostream &out_;

@@ -49,15 +49,15 @@
 
 namespace bpftrace::ast {
 
-CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
-    : CodegenLLVM(root, bpftrace, std::make_unique<USDTHelper>())
+CodegenLLVM::CodegenLLVM(Program &program, BPFtrace &bpftrace)
+    : CodegenLLVM(program, bpftrace, std::make_unique<USDTHelper>())
 {
 }
 
-CodegenLLVM::CodegenLLVM(Node *root,
+CodegenLLVM::CodegenLLVM(Program &program,
                          BPFtrace &bpftrace,
                          std::unique_ptr<USDTHelper> usdt_helper)
-    : root_(root),
+    : program_(program),
       bpftrace_(bpftrace),
       usdt_helper_(std::move(usdt_helper)),
       context_(std::make_unique<LLVMContext>()),
@@ -3749,13 +3749,13 @@ void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
 
-  auto analyser = CodegenResourceAnalyser(root_, bpftrace_.config_);
+  auto analyser = CodegenResourceAnalyser(program_, bpftrace_.config_);
   auto codegen_resources = analyser.analyse();
 
   generate_maps(bpftrace_.resources, codegen_resources);
   generate_global_vars(bpftrace_.resources, bpftrace_.config_);
 
-  auto scoped_del = accept(root_);
+  auto scoped_del = accept(&program_);
   debug_.finalize();
   state_ = State::IR;
 }

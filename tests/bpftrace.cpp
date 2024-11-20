@@ -38,7 +38,7 @@ static auto parse_probe(const std::string &str,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(str), 0);
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace);
+  ast::FieldAnalyser fields(*driver.ctx.root, bpftrace);
   ASSERT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
@@ -49,7 +49,7 @@ static auto parse_probe(const std::string &str,
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.ctx.root, bpftrace, std::move(usdt_helper));
+  ast::CodegenLLVM codegen(*driver.ctx.root, bpftrace, std::move(usdt_helper));
   codegen.generate_ir();
 }
 

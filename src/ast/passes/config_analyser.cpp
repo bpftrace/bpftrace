@@ -190,7 +190,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 
 bool ConfigAnalyser::analyse()
 {
-  Visit(*root_);
+  Visit(program_);
   std::string errors = err_.str();
   if (!errors.empty()) {
     out_ << errors;
@@ -201,8 +201,8 @@ bool ConfigAnalyser::analyse()
 
 Pass CreateConfigPass()
 {
-  auto fn = [](Node &n, PassContext &ctx) {
-    auto configs = ConfigAnalyser(&n, ctx.b);
+  auto fn = [](Program &program, PassContext &ctx) {
+    auto configs = ConfigAnalyser(program, ctx.b);
     if (!configs.analyse())
       return PassResult::Error("Config");
     return PassResult::Success();
