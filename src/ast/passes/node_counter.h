@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ast/pass_manager.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 #include "config.h"
 #include "log.h"
@@ -9,12 +9,11 @@
 namespace bpftrace {
 namespace ast {
 
-class NodeCounter : public Visitor {
+class NodeCounter : public Visitor<NodeCounter> {
 public:
-  void Visit(Node &node) override
+  void preVisit([[maybe_unused]] Node &node)
   {
     count_++;
-    Visitor::Visit(node);
   }
 
   size_t get_count()
@@ -30,7 +29,7 @@ inline Pass CreateCounterPass()
 {
   auto fn = [](Program &program, PassContext &ctx) {
     NodeCounter c;
-    c.Visit(program);
+    c.visitAll(program);
     auto node_count = c.get_count();
     auto max = ctx.b.max_ast_nodes_;
     LOG(V1) << "AST node count: " << node_count;

@@ -2,54 +2,54 @@
 
 #include <ostream>
 
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 
 namespace bpftrace {
 namespace ast {
 
-class Printer : public Visitor {
+class Printer : public Visitor<Printer> {
 public:
   explicit Printer(std::ostream &out) : out_(out)
   {
   }
 
-  void print(Node *node);
+  void print(Program &program);
 
-  void visit(Integer &integer) override;
-  void visit(PositionalParameter &param) override;
-  void visit(String &string) override;
-  void visit(StackMode &mode) override;
-  void visit(Identifier &identifier) override;
-  void visit(Builtin &builtin) override;
-  void visit(Call &call) override;
-  void visit(Sizeof &szof) override;
-  void visit(Offsetof &ofof) override;
-  void visit(Map &map) override;
-  void visit(Variable &var) override;
-  void visit(Binop &binop) override;
-  void visit(Unop &unop) override;
-  void visit(Ternary &ternary) override;
-  void visit(FieldAccess &acc) override;
-  void visit(ArrayAccess &arr) override;
-  void visit(Cast &cast) override;
-  void visit(Tuple &tuple) override;
-  void visit(ExprStatement &expr) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(AssignConfigVarStatement &assignment) override;
-  void visit(VarDeclStatement &decl) override;
-  void visit(If &if_node) override;
-  void visit(Unroll &unroll) override;
-  void visit(While &while_block) override;
-  void visit(For &for_loop) override;
-  void visit(Config &config) override;
-  void visit(Block &block) override;
-  void visit(Jump &jump) override;
-  void visit(Predicate &pred) override;
-  void visit(AttachPoint &ap) override;
-  void visit(Probe &probe) override;
-  void visit(Subprog &subprog) override;
-  void visit(Program &program) override;
+  using Visitor<Printer>::visit;
+  void visit(Integer &integer);
+  void visit(PositionalParameter &param);
+  void visit(String &string);
+  void visit(StackMode &mode);
+  void visit(Identifier &identifier);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Sizeof &szof);
+  void visit(Offsetof &ofof);
+  void visit(Map &map);
+  void visit(Variable &var);
+  void visit(Binop &binop);
+  void visit(Unop &unop);
+  void visit(Ternary &ternary);
+  void visit(FieldAccess &acc);
+  void visit(ArrayAccess &arr);
+  void visit(Cast &cast);
+  void visit(Tuple &tuple);
+  void visit(ExprStatement &expr);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(AssignConfigVarStatement &assignment);
+  void visit(VarDeclStatement &decl);
+  void visit(If &if_node);
+  void visit(Unroll &unroll);
+  void visit(While &while_block);
+  void visit(For &for_loop);
+  void visit(Config &config);
+  void visit(Jump &jump);
+  void visit(Predicate &pred);
+  void visit(AttachPoint &ap);
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+  void visit(Program &program);
 
   int depth_ = -1;
 

@@ -62,7 +62,7 @@ void FieldAnalyser::visit(Builtin &builtin)
 void FieldAnalyser::visit(Map &map)
 {
   if (map.key_expr)
-    Visit(*map.key_expr);
+    visit(*map.key_expr);
 
   auto it = var_types_.find(map.ident);
   if (it != var_types_.end())
@@ -80,7 +80,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
 {
   has_builtin_args_ = false;
 
-  Visit(*acc.expr);
+  visit(*acc.expr);
 
   if (has_builtin_args_) {
     auto arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
@@ -108,8 +108,8 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
 void FieldAnalyser::visit(ArrayAccess &arr)
 {
-  Visit(*arr.indexpr);
-  Visit(*arr.expr);
+  visit(*arr.indexpr);
+  visit(*arr.expr);
   if (sized_type_.IsPtrTy()) {
     sized_type_ = *sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
@@ -121,40 +121,38 @@ void FieldAnalyser::visit(ArrayAccess &arr)
 
 void FieldAnalyser::visit(Cast &cast)
 {
-  Visit(*cast.expr);
+  visit(*cast.expr);
   resolve_type(cast.type);
 }
 
 void FieldAnalyser::visit(Sizeof &szof)
 {
-  if (szof.expr)
-    Visit(*szof.expr);
+  visit(*szof.expr);
   resolve_type(szof.argtype);
 }
 
 void FieldAnalyser::visit(Offsetof &ofof)
 {
-  if (ofof.expr)
-    Visit(*ofof.expr);
+  visit(*ofof.expr);
   resolve_type(ofof.record);
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
-  Visit(*assignment.map);
-  Visit(*assignment.expr);
+  visit(*assignment.map);
+  visit(*assignment.expr);
   var_types_.emplace(assignment.map->ident, sized_type_);
 }
 
 void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
-  Visit(*assignment.expr);
+  visit(*assignment.expr);
   var_types_.emplace(assignment.var->ident, sized_type_);
 }
 
 void FieldAnalyser::visit(Unop &unop)
 {
-  Visit(*unop.expr);
+  visit(*unop.expr);
   if (unop.op == Operator::MUL && sized_type_.IsPtrTy()) {
     sized_type_ = *sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
@@ -313,9 +311,9 @@ void FieldAnalyser::visit(Probe &probe)
     attach_func_ = ap->func;
   }
   if (probe.pred) {
-    Visit(*probe.pred);
+    visit(*probe.pred);
   }
-  Visit(*probe.block);
+  visit(*probe.block);
 }
 
 void FieldAnalyser::visit(Subprog &subprog)
@@ -323,13 +321,13 @@ void FieldAnalyser::visit(Subprog &subprog)
   probe_ = nullptr;
 
   for (Statement *stmt : subprog.stmts) {
-    Visit(*stmt);
+    visit(*stmt);
   }
 }
 
 int FieldAnalyser::analyse()
 {
-  Visit(program_);
+  visitAll(program_);
 
   std::string errors = err_.str();
   if (!errors.empty()) {

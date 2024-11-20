@@ -13,7 +13,7 @@ void print(Program &program, const std::string &name, std::ostream &out)
   out << "\nAST after: " << name << std::endl;
   out << "-------------------\n";
   ast::Printer printer(out);
-  printer.print(&program);
+  printer.print(program);
   out << std::endl;
 }
 } // namespace

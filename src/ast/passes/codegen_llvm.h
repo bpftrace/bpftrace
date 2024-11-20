@@ -15,7 +15,7 @@
 #include "ast/async_ids.h"
 #include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 #include "codegen_resources.h"
 #include "format_string.h"
@@ -35,46 +35,46 @@ struct VariableLLVM {
   llvm::Type *type;
 };
 
-class CodegenLLVM : public Visitor {
+class CodegenLLVM : public Visitor<CodegenLLVM> {
 public:
   explicit CodegenLLVM(Program &program, BPFtrace &bpftrace);
   explicit CodegenLLVM(Program &program,
                        BPFtrace &bpftrace,
                        std::unique_ptr<USDTHelper> usdt_helper);
 
-  void visit(Integer &integer) override;
-  void visit(PositionalParameter &param) override;
-  void visit(String &string) override;
-  void visit(Identifier &identifier) override;
-  void visit(Builtin &builtin) override;
-  void visit(StackMode &) override{};
-  void visit(Call &call) override;
-  void visit(Sizeof &szof) override;
-  void visit(Offsetof &ofof) override;
-  void visit(Map &map) override;
-  void visit(Variable &var) override;
-  void visit(Binop &binop) override;
-  void visit(Unop &unop) override;
-  void visit(Ternary &ternary) override;
-  void visit(FieldAccess &acc) override;
-  void visit(ArrayAccess &arr) override;
-  void visit(Cast &cast) override;
-  void visit(Tuple &tuple) override;
-  void visit(ExprStatement &expr) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(VarDeclStatement &decl) override;
-  void visit(If &if_node) override;
-  void visit(Unroll &unroll) override;
-  void visit(While &while_block) override;
-  void visit(For &f) override;
-  void visit(Jump &jump) override;
-  void visit(Predicate &pred) override;
-  void visit(AttachPoint &ap) override;
-  void visit(Probe &probe) override;
-  void visit(Subprog &subprog) override;
-  void visit(Program &program) override;
-  void visit(Block &block) override;
+  using Visitor<CodegenLLVM>::visit;
+  void visit(Integer &integer);
+  void visit(PositionalParameter &param);
+  void visit(String &string);
+  void visit(Identifier &identifier);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Sizeof &szof);
+  void visit(Offsetof &ofof);
+  void visit(Map &map);
+  void visit(Variable &var);
+  void visit(Binop &binop);
+  void visit(Unop &unop);
+  void visit(Ternary &ternary);
+  void visit(FieldAccess &acc);
+  void visit(ArrayAccess &arr);
+  void visit(Cast &cast);
+  void visit(Tuple &tuple);
+  void visit(ExprStatement &expr);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(VarDeclStatement &decl);
+  void visit(If &if_node);
+  void visit(Unroll &unroll);
+  void visit(While &while_block);
+  void visit(For &f);
+  void visit(Jump &jump);
+  void visit(Predicate &pred);
+  void visit(AttachPoint &ap);
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+  void visit(Program &program);
+  void visit(Block &block);
 
   Value *getHistMapKey(Map &map, Value *log2, const location &loc);
   int getNextIndexForProbe();
@@ -279,6 +279,26 @@ private:
                                  const Twine &name);
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
+
+  template <typename T>
+  ScopedExprDeleter accept(T *node)
+  {
+    // This wraps the visit by essentially stacking return values in this
+    // object, and popping them. This should be converted in the future to
+    // using the structured visit (e.g. Visitor<CodegenLLVM, SomeThing>. The
+    // special handling of Expression and Statement will also be removed once
+    // we are no longer relying on RTTI for object type information.
+    expr_deleter_ = nullptr;
+    if constexpr (std::is_same<Expression, T>::value)
+      visit(node);
+    else if constexpr (std::is_same<Statement, T>::value)
+      visit(node);
+    else
+      visit(*node);
+    auto deleter = std::move(expr_deleter_);
+    expr_deleter_ = nullptr;
+    return ScopedExprDeleter(deleter);
+  }
 
   Program &program_;
   BPFtrace &bpftrace_;

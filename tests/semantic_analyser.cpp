@@ -201,7 +201,7 @@ void test(BPFtrace &bpftrace,
 
   std::ostringstream out;
   ast::Printer printer(out);
-  printer.print(driver.ctx.root);
+  printer.print(*driver.ctx.root);
 
   if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
     // Remove globs from beginning and end
