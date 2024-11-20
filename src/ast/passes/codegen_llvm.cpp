@@ -57,7 +57,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace)
 CodegenLLVM::CodegenLLVM(ASTContext &ctx,
                          BPFtrace &bpftrace,
                          std::unique_ptr<USDTHelper> usdt_helper)
-    : Visitor(ctx),
+    : Visitor<CodegenLLVM>(ctx),
       bpftrace_(bpftrace),
       usdt_helper_(std::move(usdt_helper)),
       context_(std::make_unique<LLVMContext>()),
@@ -1439,7 +1439,7 @@ void CodegenLLVM::visit(Call &call)
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (call.func == "unwatch") {
     Expression *addr = call.vargs.at(0);
-    addr->accept(*this);
+    visit(addr);
 
     auto elements = AsyncEvent::WatchpointUnwatch().asLLVMType(b_);
     StructType *unwatch_struct = b_.GetStructType("unwatch_t", elements, true);
@@ -1490,11 +1490,14 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
 
     auto &arg_skb = *call.vargs.at(1);
-    arg_skb.accept(*this);
+    // FIXME(#3740): this is a likely bug, as we are not appropriately holding
+    // the lifetime of the expression until after the output.
+    visit(arg_skb);
     Value *skb = expr_;
 
     auto &arg_len = *call.vargs.at(2);
-    arg_len.accept(*this);
+    // FIXME(#3740): Same as above.
+    visit(arg_len);
     Value *len = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 
     Value *ret = b_.CreateSkbOutput(skb, len, data, getStructSize(hdr_t));
@@ -4140,15 +4143,6 @@ void CodegenLLVM::DumpIR(const std::string filename)
   file.open(filename);
   raw_os_ostream os(file);
   module_->print(os, nullptr, false, true);
-}
-
-CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
-{
-  expr_deleter_ = nullptr;
-  node->accept(*this);
-  auto deleter = std::move(expr_deleter_);
-  expr_deleter_ = nullptr;
-  return ScopedExprDeleter(deleter);
 }
 
 // Read a single element from a compound data structure (i.e. an array or

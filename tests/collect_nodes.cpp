@@ -24,7 +24,7 @@ TEST(CollectNodes, direct)
   auto &var = *ctx.make_node<Variable>("myvar", bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(var);
+  visitor.visit(var);
 
   test({ var }, visitor.nodes());
 }
@@ -38,7 +38,7 @@ TEST(CollectNodes, indirect)
                                     bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(unop);
+  visitor.visit(unop);
 
   test({ var }, visitor.nodes());
 }
@@ -52,7 +52,7 @@ TEST(CollectNodes, none)
                                     bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(unop);
+  visitor.visit(unop);
 
   test({}, visitor.nodes());
 }
@@ -71,8 +71,8 @@ TEST(CollectNodes, multiple_runs)
                                      bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(unop1);
-  visitor.run(unop2);
+  visitor.visit(unop1);
+  visitor.visit(unop2);
 
   test({ var1, var2 }, visitor.nodes());
 }
@@ -86,7 +86,7 @@ TEST(CollectNodes, multiple_children)
       &var1, Operator::PLUS, &var2, bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(binop);
+  visitor.visit(binop);
 
   test({ var1, var2 }, visitor.nodes());
 }
@@ -100,7 +100,7 @@ TEST(CollectNodes, predicate)
       &var1, Operator::PLUS, &var2, bpftrace::location{});
 
   CollectNodes<Variable> visitor(ctx);
-  visitor.run(binop, [](const auto &var) { return var.ident == "myvar2"; });
+  visitor.visit(binop, [](const auto &var) { return var.ident == "myvar2"; });
 
   test({ var2 }, visitor.nodes());
 }
@@ -117,8 +117,8 @@ TEST(CollectNodes, nested)
       &binop1, Operator::MINUS, &var3, bpftrace::location{});
 
   CollectNodes<Binop> visitor(ctx);
-  visitor.run(binop2,
-              [](const auto &binop) { return binop.op == Operator::PLUS; });
+  visitor.visit(binop2,
+                [](const auto &binop) { return binop.op == Operator::PLUS; });
 
   test({ binop1 }, visitor.nodes());
 }
