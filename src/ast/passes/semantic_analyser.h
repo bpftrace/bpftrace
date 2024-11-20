@@ -28,7 +28,7 @@ public:
                             std::ostream &out = std::cerr,
                             bool has_child = true,
                             bool listing = false)
-      : ctx_(ctx),
+      : Visitor(ctx),
         bpftrace_(bpftrace),
         out_(out),
         listing_(listing),
@@ -105,7 +105,6 @@ public:
   int analyse();
 
 private:
-  ASTContext &ctx_;
   BPFtrace &bpftrace_;
   std::ostream &out_;
   std::ostringstream err_;

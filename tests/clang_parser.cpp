@@ -23,7 +23,7 @@ static void parse(const std::string &input,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace);
   EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;

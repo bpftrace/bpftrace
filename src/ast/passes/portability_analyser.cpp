@@ -7,14 +7,14 @@
 
 namespace bpftrace::ast {
 
-PortabilityAnalyser::PortabilityAnalyser(Node *root, std::ostream &out)
-    : root_(root), out_(out)
+PortabilityAnalyser::PortabilityAnalyser(ASTContext &ctx, std::ostream &out)
+    : Visitor(ctx), out_(out)
 {
 }
 
 int PortabilityAnalyser::analyse()
 {
-  Visit(*root_);
+  Visit(*ctx_.root);
 
   std::string errors = err_.str();
   if (!errors.empty()) {
@@ -109,8 +109,8 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
 
 Pass CreatePortabilityPass()
 {
-  auto fn = [](Node &n, PassContext &__attribute__((unused))) {
-    PortabilityAnalyser analyser{ &n };
+  auto fn = [](PassContext &ctx) {
+    PortabilityAnalyser analyser(ctx.ast_ctx);
     if (analyser.analyse()) {
       // Used by runtime test framework to know when to skip an AOT test
       if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))

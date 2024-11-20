@@ -69,7 +69,7 @@ void test(BPFtrace &bpftrace,
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() + out.str();
 
   ClangParser clang;
@@ -200,7 +200,7 @@ void test(BPFtrace &bpftrace,
     expected_ast.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
-  ast::Printer printer(out);
+  ast::Printer printer(driver.ctx, out);
   printer.print(driver.ctx.root);
 
   if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
