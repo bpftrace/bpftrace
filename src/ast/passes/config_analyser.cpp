@@ -142,7 +142,7 @@ void ConfigAnalyser::visit(StackMode &mode)
 
 void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 {
-  Visitor::visit(assignment);
+  Visitor<ConfigAnalyser>::visit(assignment);
   std::string &raw_ident = assignment.config_var;
 
   std::string err_msg;
@@ -167,7 +167,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 
 bool ConfigAnalyser::analyse()
 {
-  Visit(*ctx_.root);
+  visit(ctx_.root);
   std::string errors = err_.str();
   if (!errors.empty()) {
     out_ << errors;

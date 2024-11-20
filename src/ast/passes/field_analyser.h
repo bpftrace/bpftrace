@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 
 namespace libbpf {
@@ -14,32 +14,33 @@ namespace libbpf {
 namespace bpftrace {
 namespace ast {
 
-class FieldAnalyser : public Visitor {
+class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
   explicit FieldAnalyser(ASTContext &ctx,
                          BPFtrace &bpftrace,
                          std::ostream &out = std::cerr)
-      : Visitor(ctx),
+      : Visitor<FieldAnalyser>(ctx),
         bpftrace_(bpftrace),
         prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC),
         out_(out)
   {
   }
 
-  void visit(Identifier &identifier) override;
-  void visit(Builtin &builtin) override;
-  void visit(Map &map) override;
-  void visit(Variable &var) override;
-  void visit(FieldAccess &acc) override;
-  void visit(ArrayAccess &arr) override;
-  void visit(Cast &cast) override;
-  void visit(Sizeof &szof) override;
-  void visit(Offsetof &offof) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(Unop &unop) override;
-  void visit(Probe &probe) override;
-  void visit(Subprog &subprog) override;
+  using Visitor<FieldAnalyser>::visit;
+  void visit(Identifier &identifier);
+  void visit(Builtin &builtin);
+  void visit(Map &map);
+  void visit(Variable &var);
+  void visit(FieldAccess &acc);
+  void visit(ArrayAccess &arr);
+  void visit(Cast &cast);
+  void visit(Sizeof &szof);
+  void visit(Offsetof &offof);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(Unop &unop);
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
 
   int analyse();
 
@@ -54,7 +55,7 @@ private:
   BPFtrace &bpftrace_;
   libbpf::bpf_prog_type prog_type_;
   bool has_builtin_args_;
-  Probe *probe_;
+  Probe *probe_ = nullptr;
 
   std::ostream &out_;
   std::ostringstream err_;
