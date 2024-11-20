@@ -656,7 +656,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    Visit(call.vargs[i]);
+    call.vargs[i] = dereference_if_needed(call.vargs[i]);
   }
 
   if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -1581,7 +1581,7 @@ void SemanticAnalyser::visit(Sizeof &szof)
 {
   szof.type = CreateUInt64();
   if (szof.expr) {
-    Visit(szof.expr);
+    szof.expr = dereference_if_needed(szof.expr);
     szof.argtype = szof.expr->type;
   }
   resolve_struct_type(szof.argtype, szof.loc);
@@ -1591,7 +1591,7 @@ void SemanticAnalyser::visit(Offsetof &ofof)
 {
   ofof.type = CreateUInt64();
   if (ofof.expr) {
-    Visit(ofof.expr);
+    ofof.expr = dereference_if_needed(ofof.expr);
     ofof.record = ofof.expr->type;
   }
   resolve_struct_type(ofof.record, ofof.loc);
@@ -1706,7 +1706,7 @@ void SemanticAnalyser::visit(Map &map)
   SizedType new_key_type = CreateNone();
   bool key_is_map = false;
   if (map.key_expr) {
-    Visit(map.key_expr);
+    map.key_expr = dereference_if_needed(map.key_expr);
     key_is_map = map.key_expr->is_map;
     new_key_type = create_key_type(map.key_expr->type, map.key_expr->loc);
   }
@@ -1773,8 +1773,8 @@ void SemanticAnalyser::visit(Variable &var)
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
 {
-  Visit(arr.expr);
-  Visit(arr.indexpr);
+  arr.expr = dereference_if_needed(arr.expr);
+  arr.indexpr = dereference_if_needed(arr.indexpr);
 
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
@@ -2021,8 +2021,8 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
 
 void SemanticAnalyser::visit(Binop &binop)
 {
-  Visit(binop.left);
-  Visit(binop.right);
+  binop.left = dereference_if_needed(binop.left);
+  binop.right = dereference_if_needed(binop.right);
 
   auto &lht = binop.left->type;
   auto &rht = binop.right->type;
@@ -2133,7 +2133,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   }
 
-  Visit(unop.expr);
+  unop.expr = dereference_if_needed(unop.expr);
 
   auto valid_ptr_op = false;
   switch (unop.op) {
@@ -2149,8 +2149,8 @@ void SemanticAnalyser::visit(Unop &unop)
   if (is_final_pass()) {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
     // and context (we allow args->field for backwards compatibility)
-    // References are not allowed, instead they get turned into pointers by
-    // the `dereference_if_needed()` function, during the `Visit()` above.
+    // References are not allowed, instead they get turned into pointers by the
+    // `dereference_if_needed()`.
     if (!type.IsIntegerTy() &&
         !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
       LOG(ERROR, unop.loc, err_)
@@ -2203,9 +2203,9 @@ void SemanticAnalyser::visit(Unop &unop)
 
 void SemanticAnalyser::visit(Ternary &ternary)
 {
-  Visit(ternary.cond);
-  Visit(ternary.left);
-  Visit(ternary.right);
+  ternary.cond = dereference_if_needed(ternary.cond);
+  ternary.left = dereference_if_needed(ternary.left);
+  ternary.right = dereference_if_needed(ternary.right);
 
   const Type &cond = ternary.cond->type.GetTy();
   const Type &lhs = ternary.left->type.GetTy();
@@ -2234,7 +2234,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 
 void SemanticAnalyser::visit(If &if_node)
 {
-  Visit(if_node.cond);
+  if_node.cond = dereference_if_needed(if_node.cond);
 
   if (is_final_pass()) {
     const Type &cond = if_node.cond->type.GetTy();
@@ -2242,13 +2242,13 @@ void SemanticAnalyser::visit(If &if_node)
       LOG(ERROR, if_node.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
-  Visit(if_node.if_block);
-  Visit(if_node.else_block);
+  visit(*if_node.if_block);
+  visit(*if_node.else_block);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
-  Visit(unroll.expr);
+  unroll.expr = dereference_if_needed(unroll.expr);
 
   auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
   if (!unroll_value.has_value()) {
@@ -2264,7 +2264,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
     LOG(ERROR, unroll.loc, err_) << "unroll minimum value is 1";
   }
 
-  Visit(unroll.block);
+  visit(*unroll.block);
 }
 
 void SemanticAnalyser::visit(Jump &jump)
@@ -2272,7 +2272,7 @@ void SemanticAnalyser::visit(Jump &jump)
   switch (jump.ident) {
     case JumpType::RETURN:
       if (jump.return_value) {
-        Visit(jump.return_value);
+        jump.return_value = dereference_if_needed(jump.return_value);
       }
       if (auto subprog = dynamic_cast<Subprog *>(top_level_node_)) {
         if ((subprog->return_type.IsVoidTy() !=
@@ -2304,10 +2304,10 @@ void SemanticAnalyser::visit(While &while_block)
            " on LLVMs loop unroll to generate loadable code.";
   }
 
-  Visit(while_block.cond);
+  while_block.cond = dereference_if_needed(while_block.cond);
 
   loop_depth_++;
-  Visit(while_block.block);
+  visit(*while_block.block);
   loop_depth_--;
 }
 
@@ -2425,16 +2425,14 @@ void SemanticAnalyser::visit(For &f)
   // Validate body
   // This could be relaxed in the future:
   CollectNodes<Jump> jumps;
-  for (auto *stmt : f.stmts) {
-    jumps.run(*stmt);
-  }
+  jumps.visit(f.stmts);
   for (const Jump &n : jumps.nodes()) {
     LOG(ERROR, n.loc, err_)
         << "'" << opstr(n) << "' statement is not allowed in a for-loop";
   }
 
   map.skip_key_validation = true;
-  Visit(&map);
+  visit(map);
 
   if (has_error())
     return;
@@ -2458,16 +2456,18 @@ void SemanticAnalyser::visit(For &f)
       // inside the for loop to get the types of the referenced variables but
       // only after we have the map's key/value type so we can also check
       // the usages of the created $kv tuple variable
-      for_vars_referenced_[&f].run(*stmt, [this, &found_vars](const auto &var) {
-        if (found_vars.find(var.ident) != found_vars.end())
-          return false;
+      for_vars_referenced_[&f].visit(stmt,
+                                     [this, &found_vars](const auto &var) {
+                                       if (found_vars.find(var.ident) !=
+                                           found_vars.end())
+                                         return false;
 
-        if (find_variable(var.ident)) {
-          found_vars.insert(var.ident);
-          return true;
-        }
-        return false;
-      });
+                                       if (find_variable(var.ident)) {
+                                         found_vars.insert(var.ident);
+                                         return true;
+                                       }
+                                       return false;
+                                     });
     }
   }
 
@@ -2504,9 +2504,7 @@ void SemanticAnalyser::visit(For &f)
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
   CollectNodes<Builtin> builtins;
-  for (auto *stmt : f.stmts) {
-    builtins.run(*stmt);
-  }
+  builtins.visit(f.stmts);
   for (const Builtin &builtin : builtins.nodes()) {
     if (builtin.type.IsCtxAccess() || builtin.is_argx() ||
         builtin.ident == "retval") {
@@ -2532,7 +2530,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   // A field access must have a field XOR index
   assert((acc.field.size() > 0) != (acc.index >= 0));
 
-  Visit(acc.expr);
+  acc.expr = dereference_if_needed(acc.expr);
 
   SizedType &type = acc.expr->type;
 
@@ -2702,7 +2700,7 @@ static std::unordered_map<std::string_view, std::string_view>
 
 void SemanticAnalyser::visit(Cast &cast)
 {
-  Visit(cast.expr);
+  cast.expr = dereference_if_needed(cast.expr);
 
   // cast type is synthesised in parser, if it is a struct, it needs resolving
   resolve_struct_type(cast.type, cast.loc);
@@ -2785,7 +2783,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
   for (auto &elem : tuple.elems) {
-    Visit(elem);
+    elem = dereference_if_needed(elem);
 
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
@@ -2804,13 +2802,13 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
-  Visit(expr.expr);
+  expr.expr = dereference_if_needed(expr.expr);
 }
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
-  Visit(assignment.map);
-  Visit(assignment.expr);
+  visit(assignment.map);
+  assignment.expr = dereference_if_needed(assignment.expr);
 
   auto type = assignment.expr->type;
 
@@ -2906,9 +2904,9 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
-  Visit(assignment.expr);
+  assignment.expr = dereference_if_needed(assignment.expr);
   if (assignment.var_decl_stmt) {
-    Visit(assignment.var_decl_stmt);
+    visit(assignment.var_decl_stmt);
   }
 
   std::string var_ident = assignment.var->ident;
@@ -2967,8 +2965,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                 CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
                 assignment.expr,
                 assignment.loc);
-            Visit(cast);
-            assignment.expr = cast;
+            assignment.expr = dereference_if_needed(cast);
           } else if (!type_mismatch_error) {
             LOG(ERROR, assignment.loc, err_)
                 << "Type mismatch for " << var_ident << ": "
@@ -3047,7 +3044,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
 void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
 {
-  Visit(assignment.expr);
+  assignment.expr = dereference_if_needed(assignment.expr);
 }
 
 void SemanticAnalyser::visit(VarDeclStatement &decl)
@@ -3119,7 +3116,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
 
 void SemanticAnalyser::visit(Predicate &pred)
 {
-  Visit(pred.expr);
+  pred.expr = dereference_if_needed(pred.expr);
   if (is_final_pass()) {
     SizedType &ty = pred.expr->type;
     if (!ty.IsIntTy() && !ty.IsPtrTy()) {
@@ -3415,12 +3412,12 @@ void SemanticAnalyser::visit(Probe &probe)
       LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
       return;
     }
-    Visit(ap);
+    visit(*ap);
   }
   if (probe.pred) {
-    Visit(probe.pred);
+    visit(*probe.pred);
   }
-  Visit(probe.block);
+  visit(*probe.block);
 }
 
 void SemanticAnalyser::visit(Config &config)
@@ -3437,19 +3434,8 @@ void SemanticAnalyser::visit(Subprog &subprog)
         { arg->name(),
           { .type = arg->type, .can_resize = true, .was_assigned = true } });
   }
-  Visitor::visit(subprog);
+  Visitor<SemanticAnalyser>::visit(subprog);
   scope_stack_.pop_back();
-}
-
-void SemanticAnalyser::visit(Program &program)
-{
-  for (Subprog *subprog : program.functions)
-    Visit(subprog);
-  for (Probe *probe : program.probes)
-    Visit(probe);
-
-  if (program.config)
-    Visit(program.config);
 }
 
 int SemanticAnalyser::analyse()
@@ -3459,7 +3445,7 @@ int SemanticAnalyser::analyse()
 
   int num_passes = listing_ ? 1 : num_passes_;
   for (pass_ = 1; pass_ <= num_passes; pass_++) {
-    Visit(ctx_.root);
+    visit(*ctx_.root);
     errors = err_.str();
     if (!errors.empty()) {
       out_ << errors;
@@ -3801,7 +3787,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 void SemanticAnalyser::accept_statements(StatementList &stmts)
 {
   for (size_t i = 0; i < stmts.size(); i++) {
-    Visit(stmts.at(i));
+    visit(stmts.at(i));
     auto stmt = stmts.at(i);
 
     if (is_final_pass()) {
@@ -3958,21 +3944,25 @@ Pass CreateSemanticPass()
   return Pass("Semantic", fn);
 };
 
-void SemanticAnalyser::dereference_if_needed(Expression *&expr)
+Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
 {
+  visit(*expr);
   if (expr->type.IsRefTy()) {
     expr->type.IntoPointer();
     const SizedType &ptr_type = expr->type;
     Expression *ptr_expr = expr;
 
-    Unop *deref_expr = new Unop(Operator::MUL, ptr_expr, ptr_expr->loc);
+    Unop *deref_expr = ctx_.make_node<Unop>(Operator::MUL,
+                                            ptr_expr,
+                                            ptr_expr->loc);
     deref_expr->type = *ptr_type.GetPointeeTy();
     deref_expr->type.is_internal = ptr_type.is_internal;
     deref_expr->type.SetAS(ptr_type.GetAS());
     if (ptr_type.IsCtxAccess())
       deref_expr->type.MarkCtxAccess();
-    expr = deref_expr;
+    return deref_expr;
   }
+  return expr;
 }
 
 variable *SemanticAnalyser::find_variable(const std::string &var_ident)

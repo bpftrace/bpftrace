@@ -23,7 +23,7 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
     return true;
 
   for (Statement *stmt : subprog.stmts) {
-    if (Visit(*stmt))
+    if (visit(*stmt))
       return true;
   }
   LOG(ERROR, subprog.loc, err_) << "Not all code paths returned a value";
@@ -39,7 +39,7 @@ bool ReturnPathAnalyser::visit(If &if_node)
 {
   bool result = false;
   for (Statement *stmt : if_node.if_block->stmts) {
-    if (Visit(*stmt))
+    if (visit(stmt))
       result = true;
   }
   if (!result) {
@@ -48,7 +48,7 @@ bool ReturnPathAnalyser::visit(If &if_node)
   }
 
   for (Statement *stmt : if_node.else_block->stmts) {
-    if (Visit(*stmt)) {
+    if (visit(stmt)) {
       // both blocks have a return
       return true;
     }
@@ -57,15 +57,9 @@ bool ReturnPathAnalyser::visit(If &if_node)
   return false;
 }
 
-bool ReturnPathAnalyser::default_visitor(__attribute__((unused)) Node &node)
-{
-  // not a return instruction
-  return false;
-}
-
 int ReturnPathAnalyser::analyse()
 {
-  int result = Visit(program_) ? 0 : 1;
+  int result = visitAll(program_) ? 0 : 1;
   if (result)
     out_ << err_.str();
   return result;

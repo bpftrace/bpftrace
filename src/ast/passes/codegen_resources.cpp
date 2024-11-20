@@ -15,7 +15,7 @@ CodegenResourceAnalyser::CodegenResourceAnalyser(
 
 CodegenResources CodegenResourceAnalyser::analyse()
 {
-  Visit(program_);
+  visitAll(program_);
   return std::move(resources_);
 }
 

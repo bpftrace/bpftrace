@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "ast/pass_manager.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 
 namespace bpftrace {
 namespace ast {
@@ -14,17 +14,17 @@ namespace ast {
 //
 // Over time, we expect to relax these restrictions as AOT supports more
 // features.
-class PortabilityAnalyser : public Visitor {
+class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
 public:
   PortabilityAnalyser(Program &program, std::ostream &out = std::cerr);
   int analyse();
 
-private:
-  void visit(PositionalParameter &param) override;
-  void visit(Builtin &builtin) override;
-  void visit(Call &call) override;
-  void visit(Cast &cast) override;
-  void visit(AttachPoint &ap) override;
+  using Visitor<PortabilityAnalyser>::visit;
+  void visit(PositionalParameter &param);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Cast &cast);
+  void visit(AttachPoint &ap);
 
 private:
   Program &program_;

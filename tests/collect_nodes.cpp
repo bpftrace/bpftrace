@@ -23,7 +23,7 @@ TEST(CollectNodes, direct)
   auto &var = *new Variable{ "myvar", bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
-  visitor.run(var);
+  visitor.visit(var);
 
   test({ var }, visitor.nodes());
 }
@@ -34,7 +34,7 @@ TEST(CollectNodes, indirect)
   auto &unop = *new Unop{ Operator::INCREMENT, &var, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
-  visitor.run(unop);
+  visitor.visit(unop);
 
   test({ var }, visitor.nodes());
 }
@@ -45,7 +45,7 @@ TEST(CollectNodes, none)
   auto &unop = *new Unop{ Operator::INCREMENT, &map, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
-  visitor.run(unop);
+  visitor.visit(unop);
 
   test({}, visitor.nodes());
 }
@@ -59,8 +59,8 @@ TEST(CollectNodes, multiple_runs)
   auto &unop2 = *new Unop{ Operator::INCREMENT, &var2, bpftrace::location{} };
 
   CollectNodes<Variable> visitor;
-  visitor.run(unop1);
-  visitor.run(unop2);
+  visitor.visit(unop1);
+  visitor.visit(unop2);
 
   test({ var1, var2 }, visitor.nodes());
 }
@@ -75,7 +75,7 @@ TEST(CollectNodes, multiple_children)
   };
 
   CollectNodes<Variable> visitor;
-  visitor.run(binop);
+  visitor.visit(binop);
 
   test({ var1, var2 }, visitor.nodes());
 }
@@ -90,7 +90,7 @@ TEST(CollectNodes, predicate)
   };
 
   CollectNodes<Variable> visitor;
-  visitor.run(binop, [](const auto &var) { return var.ident == "myvar2"; });
+  visitor.visit(binop, [](const auto &var) { return var.ident == "myvar2"; });
 
   test({ var2 }, visitor.nodes());
 }
@@ -109,8 +109,8 @@ TEST(CollectNodes, nested)
   };
 
   CollectNodes<Binop> visitor;
-  visitor.run(binop2,
-              [](const auto &binop) { return binop.op == Operator::PLUS; });
+  visitor.visit(binop2,
+                [](const auto &binop) { return binop.op == Operator::PLUS; });
 
   test({ binop1 }, visitor.nodes());
 }

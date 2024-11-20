@@ -42,7 +42,7 @@ ResourceAnalyser::ResourceAnalyser(Program &program,
 
 std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
-  Visit(program_);
+  visitAll(program_);
 
   if (!err_.str().empty()) {
     out_ << err_.str();
@@ -108,13 +108,13 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
 void ResourceAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
-  Visitor::visit(probe);
+  Visitor<ResourceAnalyser>::visit(probe);
 }
 
 void ResourceAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
-  Visitor::visit(subprog);
+  Visitor<ResourceAnalyser>::visit(subprog);
 }
 
 void ResourceAnalyser::visit(Builtin &builtin)
@@ -128,7 +128,7 @@ void ResourceAnalyser::visit(Builtin &builtin)
 
 void ResourceAnalyser::visit(Call &call)
 {
-  Visitor::visit(call);
+  Visitor<ResourceAnalyser>::visit(call);
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
@@ -361,7 +361,7 @@ void ResourceAnalyser::visit(Call &call)
 
 void ResourceAnalyser::visit(Map &map)
 {
-  Visitor::visit(map);
+  Visitor<ResourceAnalyser>::visit(map);
 
   update_map_info(map);
 
@@ -375,7 +375,7 @@ void ResourceAnalyser::visit(Map &map)
 
 void ResourceAnalyser::visit(Tuple &tuple)
 {
-  Visitor::visit(tuple);
+  Visitor<ResourceAnalyser>::visit(tuple);
 
   if (exceeds_stack_limit(tuple.type.GetSize())) {
     resources_.tuple_buffers++;
@@ -386,7 +386,7 @@ void ResourceAnalyser::visit(Tuple &tuple)
 
 void ResourceAnalyser::visit(For &f)
 {
-  Visitor::visit(f);
+  Visitor<ResourceAnalyser>::visit(f);
 
   // Need tuple per for loop to store key and value
   if (exceeds_stack_limit(f.decl->type.GetSize())) {
@@ -401,9 +401,9 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   /* CodegenLLVM traverses the AST like:
    *      AssignmentMapStatement a
    *        /                    \
-   *    accept(a.expr)        accept(a.map.key_expr)
+   *    visit(a.expr)        visit(a.map.key_expr)
    *
-   * CodegenLLVM avoid traversing into the map node via accept(a.map)
+   * CodegenLLVM avoid traversing into the map node via visit(a.map)
    * to avoid triggering a map lookup.
    *
    * However, ResourceAnalyser traverses the AST differently:
@@ -418,8 +418,8 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
    * skip calling ResourceAnalser::visit(a.map) and do the AST traversal
    * ourselves.
    */
-  assignment.expr->accept(*this);
-  Visitor::visit(*assignment.map);
+  visit(assignment.expr);
+  visit(assignment.map->key_expr);
 
   update_map_info(*assignment.map);
 
@@ -434,7 +434,7 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
 
 void ResourceAnalyser::visit(Ternary &ternary)
 {
-  Visitor::visit(ternary);
+  Visitor<ResourceAnalyser>::visit(ternary);
 
   // Codegen cannot use a phi node for ternary string b/c strings can be of
   // differing lengths and phi node wants identical types. So we have to
@@ -465,14 +465,14 @@ void ResourceAnalyser::update_variable_info(Variable &var)
 
 void ResourceAnalyser::visit(AssignVarStatement &assignment)
 {
-  Visitor::visit(assignment);
+  Visitor<ResourceAnalyser>::visit(assignment);
 
   update_variable_info(*assignment.var);
 }
 
 void ResourceAnalyser::visit(VarDeclStatement &decl)
 {
-  Visitor::visit(decl);
+  Visitor<ResourceAnalyser>::visit(decl);
 
   update_variable_info(*decl.var);
 }
