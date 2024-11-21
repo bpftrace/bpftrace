@@ -2,7 +2,9 @@
 
 This document is for bpftrace internals developers.
 
-<center><a href="../images/bpftrace_internals_2018.png"><img src="../images/bpftrace_internals_2018.png" border=0 width=700></a></center>
+**WARNING:** The information below may be out of date. The codegen tips
+are still helpful but some of the generated code and verifier errors might
+have changed.
 
 # Codegen
 
