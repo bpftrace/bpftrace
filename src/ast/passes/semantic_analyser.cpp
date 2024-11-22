@@ -127,11 +127,23 @@ static bool IsValidVarDeclType(const SizedType &ty)
 // These are special map aggregation types that cannot be assigned
 // to scratch variables or from one map to another e.g. these are both invalid:
 // `@a = hist(10); let $b = @a;`
-// `@a = hist(10); @b = @a;`
-static bool IsValidAssignment(const SizedType &ty, bool is_map)
+// `@a = count(); @b = @a;`
+// However, if the assigned map already contains integers, we implicitly cast
+// the aggregation into an integer to retrieve its value, so this is valid:
+// `@a = count(); @b = 0; @b = @a`
+bool SemanticAnalyser::is_valid_assignment(const Expression *target,
+                                           const Expression *expr)
 {
-  if (is_map && (ty.IsMultiOutputMapTy())) {
-    return false;
+  if (expr->is_map) {
+    // Prevent assigning multi-output aggregations to another map.
+    if (expr->type.IsMultiOutputMapTy())
+      return false;
+    // Prevent declaring a map copying another aggregate map.
+    if (auto *target_map = dynamic_cast<const Map *>(target)) {
+      bool map_has_type = get_map_type(*target_map);
+      if (expr->type.IsCastableMapTy() && map_has_type == false)
+        return false;
+    }
   }
   return true;
 }
@@ -2824,35 +2836,61 @@ void SemanticAnalyser::visit(ExprStatement &expr)
   Visit(expr.expr);
 }
 
+static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
+  { Type::count_t, "count()" },
+  { Type::sum_t, "sum(retval)" },
+  { Type::min_t, "min(retval)" },
+  { Type::max_t, "max(retval)" },
+  { Type::avg_t, "avg(retval)" },
+  { Type::hist_t, "hist(retval)" },
+  { Type::lhist_t, "lhist(rand %10, 0, 10, 1)" },
+  { Type::stats_t, "stats(arg2)" },
+};
+
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
   Visit(assignment.map);
   Visit(assignment.expr);
 
-  auto type = assignment.expr->type;
-
-  if (!IsValidAssignment(type, assignment.expr->is_map)) {
-    auto hint = "";
-    if (type.IsHistTy()) {
-      hint = "hist(retval)";
-    } else if (type.IsLhistTy()) {
-      hint = "lhist(rand %10, 0, 10, 1)";
-    } else if (type.IsStatsTy()) {
-      hint = "stats(arg2)";
-    } else {
+  const auto *map_type_before = get_map_type(*assignment.map);
+  if (!is_valid_assignment(assignment.map, assignment.expr)) {
+    const auto &type = assignment.expr->type;
+    auto hint = AGGREGATE_HINTS.find(type.GetTy());
+    if (hint == AGGREGATE_HINTS.end())
       LOG(BUG) << "Missing assignment hint";
-    }
+
     LOG(ERROR, assignment.loc, err_)
         << "Map value '" << type
-        << "' cannot be assigned from one map to another. The function that "
-           "returns this "
-           "type must be called directly e.g. `@a = "
-        << hint << ";`.";
+        << "' cannot be assigned from one map to another. "
+           "The function that returns this type must be called directly e.g. `"
+        << assignment.map->ident << " = " << hint->second << ";`.";
+
+    if (auto *expr_map = dynamic_cast<const Map *>(assignment.expr)) {
+      if (type.IsCastableMapTy()) {
+        LOG(HINT, err_)
+            << "Add a cast to integer if you want the value of the aggregate, "
+               "e.g. `"
+            << assignment.map->ident << " = (int64)" << expr_map->ident
+            << ";`.";
+      }
+    }
+  }
+
+  // Add an implicit cast when copying the value of an aggregate map to an
+  // existing map of int. Enables the following: `@x = 1; @y = count(); @x = @y`
+  const bool map_contains_int = map_type_before && map_type_before->IsIntTy();
+  const bool expr_is_map_with_castable_agg =
+      assignment.expr->is_map && assignment.expr->type.IsCastableMapTy();
+  if (map_contains_int && expr_is_map_with_castable_agg) {
+    assignment.expr = ctx_.make_node<Cast>(*map_type_before,
+                                           assignment.expr,
+                                           assignment.expr->loc);
   }
 
   assign_map_type(*assignment.map, assignment.expr->type);
 
-  const std::string &map_ident = assignment.map->ident;
+  const auto &map_ident = assignment.map->ident;
+  const auto &type = assignment.expr->type;
 
   if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
     std::string ty = assignment.expr->type.GetName();
@@ -2928,16 +2966,23 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     Visit(assignment.var_decl_stmt);
   }
 
-  std::string var_ident = assignment.var->ident;
-  auto &assignTy = assignment.expr->type;
-
-  if (!IsValidAssignment(assignTy, assignment.expr->is_map)) {
+  if (!is_valid_assignment(assignment.var, assignment.expr)) {
     LOG(ERROR, assignment.loc, err_)
-        << "Map value '" << assignTy
+        << "Map value '" << assignment.expr->type
         << "' cannot be assigned to a scratch variable.";
   }
 
+  const bool expr_is_map_with_castable_agg =
+      assignment.expr->is_map && assignment.expr->type.IsCastableMapTy();
+  if (expr_is_map_with_castable_agg) {
+    assignment.expr = ctx_.make_node<Cast>(CreateInt64(),
+                                           assignment.expr,
+                                           assignment.expr->loc);
+  }
+
   Node *var_scope = nullptr;
+  const auto &var_ident = assignment.var->ident;
+  const auto &assignTy = assignment.expr->type;
 
   if (auto *scope = find_variable_scope(var_ident)) {
     auto &foundVar = variables_[scope][var_ident];

@@ -136,6 +136,7 @@ private:
 
   Probe *get_probe(const location &loc, std::string name = "");
 
+  bool is_valid_assignment(const Expression *target, const Expression *expr);
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);

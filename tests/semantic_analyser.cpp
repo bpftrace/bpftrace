@@ -2349,6 +2349,80 @@ TEST(semantic_analyser, map_cast_types)
 
 TEST(semantic_analyser, map_aggregations_implicit_cast)
 {
+  // When assigning an aggregation to a map containing integers,
+  // the aggregation is implicitly cast to an integer.
+  test("kprobe:f { @x = 1; @y = count(); @x = @y; }", R"(*
+  =
+   map: @x :: [int64]
+   (int64)
+    map: @y :: [count_t]
+*)");
+  test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }", R"(*
+  =
+   map: @x :: [int64]
+   (int64)
+    map: @y :: [sum_t]
+*)");
+  test("kprobe:f { @x = 1; @y = min(5); @x = @y; }", R"(*
+  =
+   map: @x :: [int64]
+   (int64)
+    map: @y :: [min_t]
+*)");
+  test("kprobe:f { @x = 1; @y = max(5); @x = @y; }", R"(*
+  =
+   map: @x :: [int64]
+   (int64)
+    map: @y :: [max_t]
+*)");
+  test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }", R"(*
+  =
+   map: @x :: [int64]
+   (int64)
+    map: @y :: [avg_t]
+*)");
+
+  // Assigning to a newly declared map requires an explicit cast
+  // to get the value of the aggregation.
+  test("kprobe:f { @x = count(); @y = (uint64)@x; }");
+  test("kprobe:f { @x = sum(5); @y = (uint64)@x; }");
+  test("kprobe:f { @x = min(5); @y = (uint64)@x; }");
+  test("kprobe:f { @x = max(5); @y = (uint64)@x; }");
+  test("kprobe:f { @x = avg(5); @y = (uint64)@x; }");
+
+  // However, if there is no explicit cast,
+  // the assignment is rejected and casting is suggested.
+  test_error("kprobe:f { @y = count(); @x = @y; }", R"(
+stdin:1:26-33: ERROR: Map value 'count_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = count();`.
+kprobe:f { @y = count(); @x = @y; }
+                         ~~~~~~~
+HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
+)");
+  test_error("kprobe:f { @y = sum(5); @x = @y; }", R"(
+stdin:1:25-32: ERROR: Map value 'sum_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = sum(retval);`.
+kprobe:f { @y = sum(5); @x = @y; }
+                        ~~~~~~~
+HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
+)");
+  test_error("kprobe:f { @y = min(5); @x = @y; }", R"(
+stdin:1:25-32: ERROR: Map value 'min_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = min(retval);`.
+kprobe:f { @y = min(5); @x = @y; }
+                        ~~~~~~~
+HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
+)");
+  test_error("kprobe:f { @y = max(5); @x = @y; }", R"(
+stdin:1:25-32: ERROR: Map value 'max_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = max(retval);`.
+kprobe:f { @y = max(5); @x = @y; }
+                        ~~~~~~~
+HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
+)");
+  test_error("kprobe:f { @y = avg(5); @x = @y; }", R"(
+stdin:1:25-32: ERROR: Map value 'avg_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = avg(retval);`.
+kprobe:f { @y = avg(5); @x = @y; }
+                        ~~~~~~~
+HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
+)");
+
   test("kprobe:f { @ = count(); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = sum(5); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = min(5); if (@ > 0) { print((1)); } }");
@@ -4598,19 +4672,19 @@ BEGIN { @a = stats(10); let $b = @a; }
 )");
 
   test_error("BEGIN { @a = hist(10); @b = @a; }", R"(
-stdin:1:24-31: ERROR: Map value 'hist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = hist(retval);`.
+stdin:1:24-31: ERROR: Map value 'hist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = hist(retval);`.
 BEGIN { @a = hist(10); @b = @a; }
                        ~~~~~~~
 )");
 
   test_error("BEGIN { @a = lhist(123, 0, 123, 1); @b = @a; }", R"(
-stdin:1:37-44: ERROR: Map value 'lhist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = lhist(rand %10, 0, 10, 1);`.
+stdin:1:37-44: ERROR: Map value 'lhist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = lhist(rand %10, 0, 10, 1);`.
 BEGIN { @a = lhist(123, 0, 123, 1); @b = @a; }
                                     ~~~~~~~
 )");
 
   test_error("BEGIN { @a = stats(10); @b = @a; }", R"(
-stdin:1:25-32: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@a = stats(arg2);`.
+stdin:1:25-32: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = stats(arg2);`.
 BEGIN { @a = stats(10); @b = @a; }
                         ~~~~~~~
 )");
