@@ -21,14 +21,26 @@ add_custom_command(
   # We must hack it like this b/c cmake does not support setting env vars at build time
   COMMAND bash -c "LLVM_OBJCOPY=${LLVM_OBJCOPY} pahole -J ${DATA_SOURCE_O}"
   DEPENDS ${DATA_SOURCE_C})
+
+# We don't want to use just ${DATA_SOURCE_O} as the dependency of the below
+# commands as that would make data_source.o be regenerated for every command
+# which is not only inefficient but also prone to race conditions.
+# So, we introduce a custom target data_source_o but unfortunately, it is not
+# sufficient to use solely that either as it just creates a target-ordering
+# dependency and not a file dependency, which causes the below commands not be
+# rerun when data_source.o changes.
+# The solution here is to use **both** data_source_o (to ensure correct target
+# ordering) and ${DATA_SOURCE_O} (to create file dependency) targets. We tie
+# them together in the ${DATA_SOURCE_DEPS} variable which should be used.
 add_custom_target(data_source_o DEPENDS ${DATA_SOURCE_O})
+set(DATA_SOURCE_DEPS data_source_o ${DATA_SOURCE_O})
 
 # Generate btf_data from BTF in data_source.o
 set(BTF_DATA_FILE ${CMAKE_CURRENT_BINARY_DIR}/btf_data)
 add_custom_command(
   OUTPUT ${BTF_DATA_FILE}
   COMMAND ${LLVM_OBJCOPY} --dump-section .BTF=${BTF_DATA_FILE} ${DATA_SOURCE_O}
-  DEPENDS data_source_o)
+  DEPENDS ${DATA_SOURCE_DEPS})
 
 # Generate btf_data.hex from btf_data
 set(BTF_DATA_HEX ${CMAKE_CURRENT_BINARY_DIR}/btf_data.hex)
@@ -43,7 +55,7 @@ add_custom_command(
   OUTPUT ${FUNC_LIST_HEX}
   COMMAND nm ${DATA_SOURCE_O} | awk -v ORS=\\\\n "$2 == \"T\" { print $3 }" > ${FUNC_LIST_HEX}
   VERBATIM
-  DEPENDS data_source_o)
+  DEPENDS ${DATA_SOURCE_DEPS})
 
 if(${LLDB_FOUND})
   # Generate dwarf_data from data_source.o
@@ -52,7 +64,7 @@ if(${LLDB_FOUND})
     OUTPUT ${DWARF_DATA_FILE}
     COMMAND gcc ${DATA_SOURCE_O} -o ${DATA_SOURCE}
     COMMAND strip --only-keep-debug -o ${DWARF_DATA_FILE} ${DATA_SOURCE}
-    DEPENDS data_source_o)
+    DEPENDS ${DATA_SOURCE_DEPS})
 
   # Generate dwarf_data.hex from dwarf_data
   set(DWARF_DATA_HEX ${CMAKE_CURRENT_BINARY_DIR}/dwarf_data.hex)
