@@ -11,6 +11,9 @@
 #include "utils.h"
 
 namespace bpftrace {
+
+class Function;
+
 namespace ast {
 
 class VisitorBase;
@@ -195,6 +198,7 @@ public:
 
   std::string func;
   ExpressionList vargs;
+  const Function *function = nullptr;
 
 private:
   Call(const Call &other) = default;

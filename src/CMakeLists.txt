@@ -16,6 +16,12 @@ endif()
 add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
 
+add_library(compiler_core STATIC
+  functions.cpp
+  struct.cpp
+  types.cpp
+)
+
 add_library(runtime STATIC
   attached_probe.cpp
   bpffeature.cpp
@@ -37,10 +43,8 @@ add_library(runtime STATIC
   printf.cpp
   resolve_cgroupid.cpp
   run_bpftrace.cpp
-  struct.cpp
   tracefs.cpp
   debugfs.cpp
-  types.cpp
   usdt.cpp
   utils.cpp
   pcap_writer.cpp

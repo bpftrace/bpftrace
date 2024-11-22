@@ -79,7 +79,7 @@ public:
   LogStream(const std::string& file,
             int line,
             LogType type,
-            const location& loc,
+            std::optional<location> loc,
             std::ostream& out = std::cerr);
   template <typename T>
   LogStream& operator<<(const T& v)
@@ -112,7 +112,7 @@ public:
   LogStreamBug(const std::string& file,
                int line,
                __attribute__((unused)) LogType,
-               const location& loc,
+               std::optional<location> loc,
                std::ostream& out = std::cerr)
       : LogStream(file, line, LogType::BUG, loc, out){};
   [[noreturn]] ~LogStreamBug();
