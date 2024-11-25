@@ -680,16 +680,8 @@ external_name:
         ;
 
 call:
-                CALL "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       CALL "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
-        |       CALL_BUILTIN  "(" ")"        { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       CALL_BUILTIN "(" vargs ")"   { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
-        |       IDENT "(" ")"                { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       IDENT "(" vargs ")"          { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       BUILTIN "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       BUILTIN "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       STACK_MODE "(" ")"           { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       STACK_MODE "(" vargs ")"     { error(@1, "Unknown function: " + $1); YYERROR;  }
+                ident "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
+        |       ident "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
                 ;
 
 map:
