@@ -23,6 +23,7 @@
 #include "config.h"
 #include "dwarf_parser.h"
 #include "functions.h"
+#include "import.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -287,6 +288,25 @@ private:
   mutable FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+
+  bool init_imports();
+
+public: // TODO not public
+  using handle_sample_func_type = int (*)(void *, const void *, void *, size_t);
+  std::unordered_map<std::string, void *> module_handles_;
+  std::unordered_map<std::string, handle_sample_func_type> module_type_funcs_;
+
+  const std::vector<Import> imports() const
+  {
+    return imports_;
+  }
+  void add_import(Import import)
+  {
+    imports_.push_back(std::move(import));
+  }
+
+private:
+  std::vector<Import> imports_;
 };
 
 } // namespace bpftrace
