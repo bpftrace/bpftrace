@@ -772,6 +772,45 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   return ret;
 }
 
+Value *IRBuilderBPF::CreateMapLookupElemAddr(Value *ctx,
+                                             const std::string &map_name,
+                                             Value *key,
+                                             SizedType &type,
+                                             const location &loc)
+{
+  assert(ctx && ctx->getType() == GET_PTR_TY());
+  CallInst *call = createMapLookup(map_name, key);
+
+  // Check if result == 0
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
+                                                      "lookup_merge",
+                                                      parent);
+
+  Value *condition = CreateICmpNE(CreateIntCast(call, GET_PTR_TY(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+  // have addr in "call"
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+  // addr == nullptr TODO what do we do here?
+  CreateRet(getInt64(0));
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_merge_block);
+  return call;
+}
+
 Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              Map &map,
                                              Value *key,

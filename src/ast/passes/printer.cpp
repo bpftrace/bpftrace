@@ -109,6 +109,11 @@ void Printer::visit(Call &call)
   out_ << indent << "call: " << call.func << type(call.type) << std::endl;
 
   ++depth_;
+
+  if (call.function) {
+    out_ << " TODO print which function this is resolved to" << std::endl;
+  }
+
   for (Expression *expr : call.vargs) {
     expr->accept(*this);
   }

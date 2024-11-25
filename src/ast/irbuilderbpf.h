@@ -59,6 +59,11 @@ public:
                              Value *key,
                              SizedType &type,
                              const location &loc);
+  Value *CreateMapLookupElemAddr(Value *ctx,
+                                 const std::string &map_name,
+                                 Value *key,
+                                 SizedType &type,
+                                 const location &loc);
   Value *CreatePerCpuMapAggElems(Value *ctx,
                                  Map &map,
                                  Value *key,
