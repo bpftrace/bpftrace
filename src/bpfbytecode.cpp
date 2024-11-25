@@ -174,7 +174,7 @@ bool is_log_trimmed(std::string_view log)
 } // namespace
 
 void BpfBytecode::load_progs(const RequiredResources &resources,
-                             const BTF &btf,
+                             const btf::BTF &btf,
                              BPFfeature &feature,
                              const Config &config)
 {
@@ -265,7 +265,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
 }
 
 void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
-                                const BTF &btf,
+                                const btf::BTF &btf,
                                 BPFfeature &feature,
                                 const Config &config)
 {

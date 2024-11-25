@@ -221,7 +221,7 @@ public:
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
 
-  std::unique_ptr<BTF> btf_;
+  std::unique_ptr<btf::BTF> btf_;
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;

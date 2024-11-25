@@ -172,14 +172,16 @@ void Struct::ClearFields()
   fields.clear();
 }
 
-void StructManager::Add(const std::string &name,
-                        size_t size,
-                        bool allow_override)
+std::weak_ptr<Struct> StructManager::Add(const std::string &name,
+                                         size_t size,
+                                         bool allow_override)
 {
-  if (struct_map_.find(name) != struct_map_.end())
+  auto [it, inserted] = struct_map_.insert(
+      { name, std::make_unique<Struct>(size, allow_override) });
+  if (!inserted)
     throw FatalUserException("Type redefinition: type with name \'" + name +
                              "\' already exists");
-  struct_map_[name] = std::make_unique<Struct>(size, allow_override);
+  return it->second;
 }
 
 void StructManager::Add(const std::string &name, Struct &&record)

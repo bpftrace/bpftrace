@@ -3,6 +3,7 @@
 #include "bpffeature.h"
 #include "bpfmap.h"
 #include "bpfprogram.h"
+#include "btf.h"
 #include "config.h"
 #include "required_resources.h"
 #include "types.h"
@@ -35,7 +36,7 @@ public:
 
   void update_global_vars(BPFtrace &bpftrace);
   void load_progs(const RequiredResources &resources,
-                  const BTF &btf,
+                  const btf::BTF &btf,
                   BPFfeature &feature,
                   const Config &config);
 
@@ -54,7 +55,7 @@ public:
 
 private:
   void prepare_progs(const std::vector<Probe> &probes,
-                     const BTF &btf,
+                     const btf::BTF &btf,
                      BPFfeature &feature,
                      const Config &config);
   bool all_progs_loaded();

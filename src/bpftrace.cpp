@@ -2127,7 +2127,7 @@ bool BPFtrace::write_pcaps(uint64_t id,
 
 void BPFtrace::parse_btf(const std::set<std::string> &modules)
 {
-  btf_ = std::make_unique<BTF>(this, modules);
+  btf_ = std::make_unique<btf::BTF>(this, modules);
 }
 
 bool BPFtrace::has_btf_data() const
