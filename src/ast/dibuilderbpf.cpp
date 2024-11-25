@@ -1,11 +1,13 @@
 #include "dibuilderbpf.h"
 
+#include <string_view>
+
+#include <llvm/IR/Function.h>
+
 #include "libbpf/bpf.h"
 #include "log.h"
 #include "struct.h"
 #include "utils.h"
-
-#include <llvm/IR/Function.h>
 
 namespace bpftrace::ast {
 
@@ -213,8 +215,8 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
   if (!emit_codegen_types && stype.IsRecordTy()) {
     std::string name = stype.GetName();
-    static constexpr std::string struct_prefix = "struct ";
-    static constexpr std::string union_prefix = "union ";
+    static constexpr std::string_view struct_prefix = "struct ";
+    static constexpr std::string_view union_prefix = "union ";
     if (name.find(struct_prefix) == 0)
       name = name.substr(struct_prefix.length());
     else if (name.find(union_prefix) == 0)
