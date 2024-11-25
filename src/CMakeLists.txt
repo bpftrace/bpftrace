@@ -57,6 +57,7 @@ add_library(libbpftrace STATIC
   build_info.cpp
   clang_parser.cpp
   driver.cpp
+  lib_parser.cpp
   lockdown.cpp
   tracepoint_format_parser.cpp
 )
@@ -69,6 +70,7 @@ add_executable(${BPFTRACE}
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
+target_link_libraries(${BPFTRACE} ${LIBBPF_LIBRARIES})
 
 if (BUILD_FUZZ)
   target_compile_options(${BPFTRACE} PUBLIC "-DFUZZ")
