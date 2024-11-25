@@ -1560,6 +1560,20 @@ void CodegenLLVM::visit(Variable &var)
   }
 }
 
+void CodegenLLVM::visit(AddrOf &addrof)
+{
+  if (addrof.expr->is_variable) {
+    auto &var = static_cast<Variable &>(*addrof.expr);
+    expr_ = getVariable(var.ident).value;
+  } else if (addrof.expr->is_map) {
+    auto &map = static_cast<Map &>(*addrof.expr);
+    auto [key, scoped_key_deleter] = getMapKey(map);
+    expr_ = b_.CreateMapLookupElemAddr(ctx_, map.ident, key, map.type, map.loc);
+  } else {
+    LOG(BUG) << "Unexpected node under AddrOf";
+  }
+}
+
 std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
 {
   std::pair<Value *, uint64_t> result;

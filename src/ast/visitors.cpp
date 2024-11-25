@@ -57,6 +57,11 @@ void Visitor::visit(Variable &var __attribute__((__unused__)))
 {
 }
 
+void Visitor::visit(AddrOf &addrof)
+{
+  Visit(*addrof.expr);
+}
+
 void Visitor::visit(Binop &binop)
 {
   Visit(*binop.left);

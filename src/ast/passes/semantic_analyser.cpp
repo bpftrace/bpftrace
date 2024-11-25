@@ -1765,6 +1765,12 @@ void SemanticAnalyser::visit(Variable &var)
   var.type = CreateNone();
 }
 
+void SemanticAnalyser::visit(AddrOf &addrof)
+{
+  addrof.expr->accept(*this);
+  addrof.type = CreatePointer(addrof.expr->type, AddrSpace::bpf);
+}
+
 void SemanticAnalyser::visit(ArrayAccess &arr)
 {
   Visit(arr.expr);

@@ -257,6 +257,20 @@ private:
   Variable(const Variable &other) = default;
 };
 
+class AddrOf : public Expression {
+public:
+  DEFINE_ACCEPT
+
+  explicit AddrOf(Map *map) : expr(map)
+  {
+  }
+  explicit AddrOf(Variable *var) : expr(var)
+  {
+  }
+
+  Expression *expr;
+};
+
 class Binop : public Expression {
 public:
   DEFINE_ACCEPT

@@ -163,6 +163,15 @@ void Printer::visit(Variable &var)
   out_ << indent << "variable: " << var.ident << type(var.type) << std::endl;
 }
 
+void Printer::visit(AddrOf &addrof)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "addrof: " << type(addrof.type) << std::endl;
+  ++depth_;
+  addrof.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');

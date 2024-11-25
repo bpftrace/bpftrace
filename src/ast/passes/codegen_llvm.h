@@ -53,6 +53,7 @@ public:
   void visit(Offsetof &ofof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
+  void visit(AddrOf &addrof) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
   void visit(Ternary &ternary) override;
