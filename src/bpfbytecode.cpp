@@ -12,15 +12,6 @@
 
 namespace bpftrace {
 
-BpfBytecode::BpfBytecode(std::span<uint8_t> elf)
-    : BpfBytecode(std::as_bytes(elf))
-{
-}
-
-BpfBytecode::BpfBytecode(std::span<char> elf) : BpfBytecode(std::as_bytes(elf))
-{
-}
-
 static std::optional<std::string> get_global_var_section_name(
     std::string_view map_name,
     const std::unordered_set<std::string> &section_names)
@@ -33,7 +24,17 @@ static std::optional<std::string> get_global_var_section_name(
   return std::nullopt;
 }
 
-BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
+BpfBytecode::BpfBytecode(std::span<uint8_t> elf, bool preserveElf)
+    : BpfBytecode(std::as_bytes(elf), preserveElf)
+{
+}
+
+BpfBytecode::BpfBytecode(std::span<char> elf, bool preserveElf)
+    : BpfBytecode(std::as_bytes(elf), preserveElf)
+{
+}
+
+BpfBytecode::BpfBytecode(std::span<const std::byte> elf, bool preserveElf)
 {
   int log_level = 0;
   // In debug mode, show full verifier log.
@@ -71,6 +72,10 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   struct bpf_program *p;
   bpf_object__for_each_program (p, bpf_object_.get()) {
     programs_.emplace(bpf_program__name(p), BpfProgram(p));
+  }
+
+  if (preserveElf) {
+    elf_.assign(elf.begin(), elf.end());
   }
 }
 
@@ -184,6 +189,9 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
                                        '\0');
     auto &log_buf = log_bufs[name];
     bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
+
+    //    bpf_program__set_flags(prog.bpf_prog(),
+    //    bpf_program__flags(prog.bpf_prog()) | BPF_F_SLEEPABLE);
   }
 
   std::vector<Probe> special_probes;
@@ -333,6 +341,17 @@ int BpfBytecode::countStackMaps() const
       n++;
   }
   return n;
+}
+
+btf::BtfObject BpfBytecode::btf() const
+{
+  return btf::BtfObject{ bpf_object_.get() };
+}
+
+std::span<const std::byte> BpfBytecode::elf() const
+{
+  assert(!elf_.empty() && "elf not preserved");
+  return elf_;
 }
 
 void BpfBytecode::set_map_ids(RequiredResources &resources)
