@@ -32,55 +32,51 @@ std::ostream &operator<<(std::ostream &os, ProbeType type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
+  os << typestr(type);
+  return os;
+}
+
+std::string typestr(const SizedType &type)
+{
   switch (type.GetTy()) {
-    case Type::integer: {
-      os << (type.is_signed_ ? "" : "u") << "int" << 8 * type.GetSize();
-      break;
-    }
+    case Type::integer:
+      return (type.is_signed_ ? "int" : "uint") +
+             std::to_string(8 * type.GetSize());
     case Type::inet:
     case Type::string:
-    case Type::buffer: {
-      os << type.GetTy() << "[" << type.GetSize() << "]";
-      break;
-    }
+    case Type::buffer:
+      return typestr(type.GetTy()) + "[" + std::to_string(type.GetSize()) + "]";
     case Type::pointer: {
+      std::string prefix;
       if (type.IsCtxAccess())
-        os << "(ctx) ";
-      os << *type.GetPointeeTy() << " *";
-      break;
+        prefix = "(ctx) ";
+      return prefix + typestr(*type.GetPointeeTy()) + " *";
     }
-    case Type::array: {
-      os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
-      break;
-    }
-    case Type::record: {
-      os << type.GetName();
-      break;
-    }
-    case Type::reference: {
-      os << *type.GetDereferencedTy() << " &";
-      break;
-    }
+    case Type::array:
+      return typestr(*type.GetElementTy()) + "[" +
+             std::to_string(type.GetNumElements()) + "]";
+    case Type::record:
+      return type.GetName();
+    case Type::reference:
+      return typestr(*type.GetDereferencedTy()) + " &";
     case Type::tuple: {
-      os << "(";
+      std::string res = "(";
       size_t n = type.GetFieldCount();
       for (size_t i = 0; i < n; ++i) {
-        os << type.GetField(i).type;
+        res += typestr(type.GetField(i).type);
         if (i != n - 1)
-          os << ",";
+          res += ",";
       }
-      os << ")";
-      break;
+      res += ")";
+      return res;
     }
     case Type::max_t:
     case Type::min_t:
     case Type::sum_t:
     case Type::avg_t:
     case Type::count_t:
-    case Type::stats_t: {
-      os << (type.is_signed_ ? "" : "u") << type.GetTy();
-      break;
-    }
+    case Type::stats_t:
+      return (type.is_signed_ ? "" : "u") + typestr(type.GetTy());
     case Type::mac_address:
     case Type::kstack_t:
     case Type::ustack_t:
@@ -96,13 +92,9 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
     case Type::hist_t:
     case Type::lhist_t:
     case Type::none:
-    case Type::voidtype: {
-      os << type.GetTy();
-      break;
-    }
+    case Type::voidtype:
+      return typestr(type.GetTy());
   }
-
-  return os;
 }
 
 std::string to_string(Type ty)
