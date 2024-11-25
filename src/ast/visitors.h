@@ -50,6 +50,7 @@ public:
   virtual void visit(Block &block) = 0;
   virtual void visit(SubprogArg &subprog_arg) = 0;
   virtual void visit(Subprog &subprog) = 0;
+  virtual void visit(Import &import) = 0;
   virtual void visit(Program &program) = 0;
 };
 
@@ -120,6 +121,7 @@ public:
   void visit(Config &config) override;
   void visit(SubprogArg &subprog_arg) override;
   void visit(Subprog &subprog) override;
+  void visit(Import &import) override;
   void visit(Program &program) override;
   void visit(Block &block) override;
 };
@@ -191,6 +193,7 @@ public:
   virtual R visit(Config &node) DEFAULT_FN;
   virtual R visit(SubprogArg &node) DEFAULT_FN;
   virtual R visit(Subprog &node) DEFAULT_FN;
+  virtual R visit(Import &node) DEFAULT_FN;
   virtual R visit(Program &node) DEFAULT_FN;
 
   virtual R default_visitor(Node &node)
@@ -246,6 +249,7 @@ private:
     DEFINE_DISPATCH(Probe);
     DEFINE_DISPATCH(Config);
     DEFINE_DISPATCH(Block);
+    DEFINE_DISPATCH(Import);
     DEFINE_DISPATCH(Program);
 
     return table;

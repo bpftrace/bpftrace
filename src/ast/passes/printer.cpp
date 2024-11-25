@@ -467,6 +467,12 @@ void Printer::visit(Subprog &subprog)
   --depth_;
 }
 
+void Printer::visit(Import &import)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "import: " << import.name() << std::endl;
+}
+
 void Printer::visit(Program &program)
 {
   if (program.c_definitions.size() > 0)
@@ -475,13 +481,14 @@ void Printer::visit(Program &program)
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
 
+  ++depth_;
+
   if (program.config) {
-    ++depth_;
     program.config->accept(*this);
-    --depth_;
   }
 
-  ++depth_;
+  for (Import *import : program.imports)
+    import->accept(*this);
   for (Subprog *subprog : program.functions)
     subprog->accept(*this);
   for (Probe *probe : program.probes)

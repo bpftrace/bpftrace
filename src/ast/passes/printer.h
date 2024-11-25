@@ -50,6 +50,7 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Subprog &subprog) override;
+  void visit(Import &import) override;
   void visit(Program &program) override;
 
   int depth_ = -1;
