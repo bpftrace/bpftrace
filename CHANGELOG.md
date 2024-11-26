@@ -63,8 +63,6 @@ and this project adheres to
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
 - Remove length limitations for the `buf` builtin function
   - [#3249](https://github.com/bpftrace/bpftrace/pull/3249)
-- Faster map access for keyless maps by using BPF_MAP_TYPE_ARRAY
-  - [#3300](https://github.com/bpftrace/bpftrace/pull/3300)
 - Change `delete` API to accept a map and key as separate args
   - [#3472](https://github.com/bpftrace/bpftrace/pull/3472)
 - Symbolize enums when used in maps
