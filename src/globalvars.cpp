@@ -94,7 +94,12 @@ static std::map<GlobalVar, int> find_btf_var_offsets(
     }
 
     std::string_view name = btf__name_by_offset(self_btf, type_id->name_off);
-    vars_and_offsets[from_string(name)] = member->offset;
+
+    // Only deal with bpftrace's known global variables. Other global variables
+    // could come from imported BPF libraries, for example.
+    auto global_var = from_string(name);
+    if (global_var)
+      vars_and_offsets[*global_var] = member->offset;
   }
 
   for (const auto [global_var, offset] : vars_and_offsets) {
@@ -238,14 +243,13 @@ std::string to_string(GlobalVar global_var)
   return get_config(global_var).name;
 }
 
-GlobalVar from_string(std::string_view name)
+std::optional<GlobalVar> from_string(std::string_view name)
 {
   for (const auto &[global_var, config] : GLOBAL_VAR_CONFIGS) {
     if (config.name == name)
       return global_var;
   }
-  LOG(BUG) << "Unknown global variable " << name;
-  return {}; // unreachable
+  return {};
 }
 
 static SizedType make_rw_type(size_t num_elements,
