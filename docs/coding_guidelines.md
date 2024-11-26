@@ -97,6 +97,9 @@ and line number)
 - `V1`: log info only if verbose logging is enabled (-v); use this (among
   others) for printing warnings which may occur on every bpftrace execution
   (like BTF is not available)
+- `HINT`: log info that could give tips on how the user can resolve a problem
+they have encountered. This would normally be used immediately after a
+LOG(WARNING) or LOG(ERROR).
 - `WARNING`: log info that might affect bpftrace behavior or output but allows
 the run to continue; like using stderr
 - `ERROR`: log info to indicate that the user did something invalid, which will

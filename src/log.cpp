@@ -8,6 +8,7 @@ std::string logtype_str(LogType t)
     // clang-format off
     case LogType::DEBUG   : return "";
     case LogType::V1      : return "";
+    case LogType::HINT    : return "HINT: ";
     case LogType::WARNING : return "WARNING: ";
     case LogType::ERROR   : return "ERROR: ";
     case LogType::BUG     : return "BUG: ";
@@ -19,10 +20,11 @@ std::string logtype_str(LogType t)
 
 Log::Log()
 {
-  enabled_map_[LogType::ERROR] = true;
-  enabled_map_[LogType::WARNING] = true;
-  enabled_map_[LogType::V1] = false;
   enabled_map_[LogType::DEBUG] = true;
+  enabled_map_[LogType::V1] = false;
+  enabled_map_[LogType::HINT] = true;
+  enabled_map_[LogType::WARNING] = true;
+  enabled_map_[LogType::ERROR] = true;
   enabled_map_[LogType::BUG] = true;
 }
 

@@ -15,6 +15,7 @@ enum class LogType
 {
   DEBUG,
   V1,
+  HINT,
   WARNING,
   ERROR,
   BUG,
@@ -127,6 +128,7 @@ public:
 #define LOGSTREAM_COMMON(...) bpftrace::LogStream(__FILE__, __LINE__, __VA_ARGS__)
 #define LOGSTREAM_DEBUG(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_V1(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_HINT(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_WARNING(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_ERROR(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_BUG(...) bpftrace::LogStreamBug(__FILE__, __LINE__, __VA_ARGS__)
