@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <set>
 #include <string>
 
@@ -13,7 +14,7 @@ namespace bpftrace {
 namespace globalvars {
 
 std::string to_string(GlobalVar global_var);
-GlobalVar from_string(std::string_view name);
+std::optional<GlobalVar> from_string(std::string_view name);
 
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
