@@ -696,3 +696,7 @@ EXPECT stdin:1:17-60: ERROR: helper bpf_per_cpu_ptr: result needs to be null-che
        BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 WILL_FAIL
+
+NAME clear on scalar map prevents printing
+PROG BEGIN { @xx = 5; clear(@xx); exit() }
+EXPECT_NONE @xx: 5
