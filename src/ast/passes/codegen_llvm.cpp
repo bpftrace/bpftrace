@@ -3856,7 +3856,11 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
     auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
     auto map_type = get_map_type(val_type, key_type);
-    if (map_has_single_elem(val_type, key_type)) {
+
+    // hist() and lhist() transparently create additional elements in whatever
+    // map they are assigned to. So even if the map looks like it has no keys,
+    // multiple keys are necessary.
+    if (key_type.IsNoneTy() && !val_type.IsHistTy() && !val_type.IsLhistTy()) {
       max_entries = 1;
     }
 
