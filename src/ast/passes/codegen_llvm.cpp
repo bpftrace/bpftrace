@@ -3798,8 +3798,6 @@ libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
   } else if (bpftrace_.feature_->has_map_percpu_hash() &&
              val_type.NeedsPercpuMap()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
-  } else if (!val_type.NeedsPercpuMap() && key_type.IsNoneTy()) {
-    return libbpf::BPF_MAP_TYPE_ARRAY;
   } else {
     return libbpf::BPF_MAP_TYPE_HASH;
   }
@@ -3814,7 +3812,7 @@ bool CodegenLLVM::is_array_map(const SizedType &val_type,
 }
 
 // Check if we can special-case the map to have a single element. This is done
-// for keyless maps (e.g. @x = 1 or @++) of BPF_MAP_TYPE_(PERCPU_)ARRAY type.
+// for keyless maps BPF_MAP_TYPE_(PERCPU_)ARRAY type.
 bool CodegenLLVM::map_has_single_elem(const SizedType &val_type,
                                       const SizedType &key_type)
 {

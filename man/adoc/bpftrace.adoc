@@ -4145,9 +4145,9 @@ Therefore, when you need precise event statistics, it is recommended to use sync
 === Map Printing
 
 By default when a bpftrace program exits it will print all maps to stdout.
-If you don't want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `END` probe and `clear` the maps you don't want printed (this second method doesn't work for scalar maps).
+If you don't want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `END` probe and `clear` the maps you don't want printed.
 
-For example, this script:
+For example, these two scripts are equivalent and will print nothing on exit:
 ```
 config = {
   print_maps_on_exit=0
@@ -4159,7 +4159,6 @@ BEGIN {
 }
 ```
 
-would print nothing on exit, while this script:
 ```
 BEGIN {
   @a = 1;
@@ -4170,11 +4169,6 @@ END {
   clear(@a);
   clear(@b);
 }
-```
-
-will print this on exit:
-```
-@a: 0
 ```
 
 === Systemd support
