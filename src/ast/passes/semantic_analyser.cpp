@@ -2099,7 +2099,7 @@ void SemanticAnalyser::visit(Binop &binop)
     auto *lit = binop.left->is_literal ? binop.left : binop.right;
     auto *str = lit == binop.left ? binop.right : binop.left;
     auto lit_len = bpftrace_.get_string_literal(lit).size();
-    auto str_len = str->type.GetNumElements();
+    auto str_len = str->type.GetSize();
     if (lit_len > str_len) {
       LOG(WARNING, binop.left->loc + binop.loc + binop.right->loc, out_)
           << "The literal is longer than the variable string (size=" << str_len
