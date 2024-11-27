@@ -2715,13 +2715,11 @@ void SemanticAnalyser::visit(Cast &cast)
         !cast.type.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
       !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy())) {
-    std::string hint;
+    LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
     if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
         it != KNOWN_TYPE_ALIASES.end()) {
-      hint = ", did you mean \"" + std::string(it->second) + "\"?";
+      LOG(HINT, cast.loc, err_) << "Did you mean \"" << it->second << "\"?";
     }
-    LOG(ERROR, cast.loc, err_)
-        << "Cannot cast to \"" << cast.type << "\"" << hint;
   }
 
   if (cast.type.IsArrayTy()) {

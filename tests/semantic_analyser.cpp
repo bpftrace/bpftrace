@@ -2398,7 +2398,19 @@ TEST(semantic_analyser, map_casts_are_global)
 
 TEST(semantic_analyser, cast_unknown_type)
 {
-  test("kprobe:f { (struct faketype *)cpu }", 1);
+  test_error("BEGIN { (struct faketype *)cpu }", R"(
+stdin:1:9-29: ERROR: Cannot resolve unknown type "struct faketype"
+BEGIN { (struct faketype *)cpu }
+        ~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("BEGIN { (faketype)cpu }", R"(
+stdin:1:9-19: ERROR: Cannot resolve unknown type "faketype"
+BEGIN { (faketype)cpu }
+        ~~~~~~~~~~
+stdin:1:9-19: ERROR: Cannot cast to "faketype"
+BEGIN { (faketype)cpu }
+        ~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, cast_c_integers)
@@ -2408,7 +2420,10 @@ TEST(semantic_analyser, cast_c_integers)
 stdin:1:9-15: ERROR: Cannot resolve unknown type "char"
 BEGIN { (char)cpu }
         ~~~~~~
-stdin:1:9-15: ERROR: Cannot cast to "char", did you mean "int8"?
+stdin:1:9-15: ERROR: Cannot cast to "char"
+BEGIN { (char)cpu }
+        ~~~~~~
+stdin:1:9-15: HINT: Did you mean "int8"?
 BEGIN { (char)cpu }
         ~~~~~~
 )");
@@ -2416,7 +2431,10 @@ BEGIN { (char)cpu }
 stdin:1:9-16: ERROR: Cannot resolve unknown type "short"
 BEGIN { (short)cpu }
         ~~~~~~~
-stdin:1:9-16: ERROR: Cannot cast to "short", did you mean "int16"?
+stdin:1:9-16: ERROR: Cannot cast to "short"
+BEGIN { (short)cpu }
+        ~~~~~~~
+stdin:1:9-16: HINT: Did you mean "int16"?
 BEGIN { (short)cpu }
         ~~~~~~~
 )");
@@ -2424,7 +2442,10 @@ BEGIN { (short)cpu }
 stdin:1:9-14: ERROR: Cannot resolve unknown type "int"
 BEGIN { (int)cpu }
         ~~~~~
-stdin:1:9-14: ERROR: Cannot cast to "int", did you mean "int32"?
+stdin:1:9-14: ERROR: Cannot cast to "int"
+BEGIN { (int)cpu }
+        ~~~~~
+stdin:1:9-14: HINT: Did you mean "int32"?
 BEGIN { (int)cpu }
         ~~~~~
 )");
@@ -2432,7 +2453,10 @@ BEGIN { (int)cpu }
 stdin:1:9-15: ERROR: Cannot resolve unknown type "long"
 BEGIN { (long)cpu }
         ~~~~~~
-stdin:1:9-15: ERROR: Cannot cast to "long", did you mean "int64"?
+stdin:1:9-15: ERROR: Cannot cast to "long"
+BEGIN { (long)cpu }
+        ~~~~~~
+stdin:1:9-15: HINT: Did you mean "int64"?
 BEGIN { (long)cpu }
         ~~~~~~
 )");
@@ -2441,10 +2465,21 @@ BEGIN { (long)cpu }
 TEST(semantic_analyser, cast_struct)
 {
   // Casting struct by value is forbidden
-  test("struct type { int field; }"
-       "kprobe:f { $s = (struct type *)cpu; $u = (uint32)*$s; }",
-       1);
-  test("struct type { int field; } kprobe:f { $s = (struct type)cpu }", 1);
+  test_error("struct mytype { int field; }\n"
+             "BEGIN { $s = (struct mytype *)cpu; (uint32)*$s; }",
+             R"(
+stdin:2:37-45: ERROR: Cannot cast from struct type "struct mytype"
+BEGIN { $s = (struct mytype *)cpu; (uint32)*$s; }
+                                    ~~~~~~~~
+stdin:2:37-45: ERROR: Cannot cast from "struct mytype" to "uint32"
+BEGIN { $s = (struct mytype *)cpu; (uint32)*$s; }
+                                    ~~~~~~~~
+)");
+  test_error("struct mytype { int field; } BEGIN { (struct mytype)cpu }", R"(
+stdin:1:38-54: ERROR: Cannot cast to "struct mytype"
+struct mytype { int field; } BEGIN { (struct mytype)cpu }
+                                     ~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, field_access)
