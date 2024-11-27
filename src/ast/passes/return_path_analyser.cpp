@@ -38,7 +38,7 @@ bool ReturnPathAnalyser::visit(Jump &jump)
 bool ReturnPathAnalyser::visit(If &if_node)
 {
   bool result = false;
-  for (Statement *stmt : if_node.if_block.stmts) {
+  for (Statement *stmt : if_node.if_block->stmts) {
     if (Visit(*stmt))
       result = true;
   }
@@ -47,7 +47,7 @@ bool ReturnPathAnalyser::visit(If &if_node)
     return false;
   }
 
-  for (Statement *stmt : if_node.else_block.stmts) {
+  for (Statement *stmt : if_node.else_block->stmts) {
     if (Visit(*stmt)) {
       // both blocks have a return
       return true;

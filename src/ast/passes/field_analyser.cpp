@@ -315,7 +315,7 @@ void FieldAnalyser::visit(Probe &probe)
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  Visit(probe.block);
+  Visit(*probe.block);
 }
 
 void FieldAnalyser::visit(Subprog &subprog)

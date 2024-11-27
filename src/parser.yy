@@ -320,7 +320,7 @@ probe:
                 attach_points pred block
                 {
                   if (!driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, std::move($3));
+                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3)));
                   else
                   {
                     error(@$, "unexpected listing query format");
@@ -330,7 +330,7 @@ probe:
         |       attach_points END
                 {
                   if (driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), nullptr, ast::StatementList());
+                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), nullptr, driver.ctx.make_node<ast::Block>(ast::StatementList()));
                   else
                   {
                     error(@$, "unexpected end of file, expected {");
@@ -437,9 +437,9 @@ jump_stmt:
                 ;
 
 loop_stmt:
-                UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, std::move($5), @1 + @4); }
-        |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, std::move($5), @1 + @4); }
-        |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, std::move($5), @1); }
+                UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1 + @4); }
+        |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1 + @4); }
+        |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1); }
                 ;
 
 for_stmt:
@@ -447,8 +447,8 @@ for_stmt:
                 ;
 
 if_stmt:
-                IF "(" expr ")" block                  { $$ = driver.ctx.make_node<ast::If>($3, std::move($5)); }
-        |       IF "(" expr ")" block ELSE block_or_if { $$ = driver.ctx.make_node<ast::If>($3, std::move($5), std::move($7)); }
+                IF "(" expr ")" block                  { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5)), driver.ctx.make_node<ast::Block>(ast::StatementList())); }
+        |       IF "(" expr ")" block ELSE block_or_if { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5)), driver.ctx.make_node<ast::Block>(std::move($7))); }
                 ;
 
 block_or_if:
@@ -476,7 +476,7 @@ assign_stmt:
                   $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, b, @$);
                 }
         ;
-        
+
 var_decl_stmt:
                  LET var {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, @$); }
         |        LET var COLON type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }

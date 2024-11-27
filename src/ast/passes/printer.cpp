@@ -311,11 +311,11 @@ void Printer::visit(If &if_node)
   ++depth_;
   out_ << indent << " then" << std::endl;
 
-  if_node.if_block.accept(*this);
+  if_node.if_block->accept(*this);
 
-  if (!if_node.else_block.stmts.empty()) {
+  if (!if_node.else_block->stmts.empty()) {
     out_ << indent << " else" << std::endl;
-    if_node.else_block.accept(*this);
+    if_node.else_block->accept(*this);
   }
   depth_ -= 2;
 }
@@ -330,7 +330,7 @@ void Printer::visit(Unroll &unroll)
   out_ << indent << " block" << std::endl;
 
   ++depth_;
-  unroll.block.accept(*this);
+  unroll.block->accept(*this);
   depth_ -= 2;
 }
 
@@ -346,7 +346,7 @@ void Printer::visit(While &while_block)
   ++depth_;
   out_ << indent << " )" << std::endl;
 
-  while_block.block.accept(*this);
+  while_block.block->accept(*this);
 }
 
 void Printer::visit(For &for_loop)
@@ -433,7 +433,7 @@ void Printer::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  probe.block.accept(*this);
+  probe.block->accept(*this);
   --depth_;
 }
 
