@@ -603,7 +603,6 @@ std::string BPFfeature::report()
 
   buf << "Map types" << std::endl
       << "  hash: " << to_str(has_map_hash())
-      << "  percpu hash: " << to_str(has_map_percpu_hash())
       << "  array: " << to_str(has_map_array())
       << "  percpu array: " << to_str(has_map_percpu_array())
       << "  stack_trace: " << to_str(has_map_stack_trace())
