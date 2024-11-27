@@ -446,12 +446,11 @@ class If : public Statement {
 public:
   DEFINE_ACCEPT
 
-  If(Expression *cond, StatementList &&stmts);
-  If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts);
+  If(Expression *cond, Block *if_block, Block *else_block);
 
   Expression *cond = nullptr;
-  Block if_block;
-  Block else_block;
+  Block *if_block = nullptr;
+  Block *else_block = nullptr;
 
 private:
   If(const If &other) = default;
@@ -461,11 +460,11 @@ class Unroll : public Statement {
 public:
   DEFINE_ACCEPT
 
-  Unroll(Expression *expr, StatementList &&stmts, location loc);
+  Unroll(Expression *expr, Block *block, location loc);
 
   long int var = 0;
   Expression *expr = nullptr;
-  Block block;
+  Block *block = nullptr;
 
 private:
   Unroll(const Unroll &other) = default;
@@ -518,13 +517,13 @@ class While : public Statement {
 public:
   DEFINE_ACCEPT
 
-  While(Expression *cond, StatementList &&stmts, location loc)
-      : Statement(loc), cond(cond), block(std::move(stmts))
+  While(Expression *cond, Block *block, location loc)
+      : Statement(loc), cond(cond), block(block)
   {
   }
 
   Expression *cond = nullptr;
-  Block block;
+  Block *block = nullptr;
 
 private:
   While(const While &other) = default;
@@ -613,13 +612,11 @@ class Probe : public Node {
 public:
   DEFINE_ACCEPT
 
-  Probe(AttachPointList &&attach_points,
-        Predicate *pred,
-        StatementList &&stmts);
+  Probe(AttachPointList &&attach_points, Predicate *pred, Block *block);
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
-  Block block;
+  Block *block = nullptr;
 
   std::string name() const;
   std::string args_typename() const;

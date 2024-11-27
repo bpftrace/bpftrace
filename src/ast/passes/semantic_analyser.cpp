@@ -2236,8 +2236,8 @@ void SemanticAnalyser::visit(If &if_node)
       LOG(ERROR, if_node.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
-  Visit(&if_node.if_block);
-  Visit(&if_node.else_block);
+  Visit(if_node.if_block);
+  Visit(if_node.else_block);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -2258,7 +2258,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
     LOG(ERROR, unroll.loc, err_) << "unroll minimum value is 1";
   }
 
-  Visit(&unroll.block);
+  Visit(unroll.block);
 }
 
 void SemanticAnalyser::visit(Jump &jump)
@@ -2301,7 +2301,7 @@ void SemanticAnalyser::visit(While &while_block)
   Visit(while_block.cond);
 
   loop_depth_++;
-  Visit(&while_block.block);
+  Visit(while_block.block);
   loop_depth_--;
 }
 
@@ -3416,7 +3416,7 @@ void SemanticAnalyser::visit(Probe &probe)
   if (probe.pred) {
     Visit(probe.pred);
   }
-  Visit(&probe.block);
+  Visit(probe.block);
 }
 
 void SemanticAnalyser::visit(Config &config)

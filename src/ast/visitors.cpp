@@ -127,20 +127,20 @@ void Visitor::visit(VarDeclStatement &decl)
 void Visitor::visit(If &if_node)
 {
   Visit(*if_node.cond);
-  Visit(if_node.if_block);
-  Visit(if_node.else_block);
+  Visit(*if_node.if_block);
+  Visit(*if_node.else_block);
 }
 
 void Visitor::visit(Unroll &unroll)
 {
   Visit(*unroll.expr);
-  Visit(unroll.block);
+  Visit(*unroll.block);
 }
 
 void Visitor::visit(While &while_block)
 {
   Visit(*while_block.cond);
-  Visit(while_block.block);
+  Visit(*while_block.block);
 }
 
 void Visitor::visit(For &for_loop)
@@ -177,7 +177,7 @@ void Visitor::visit(Probe &probe)
   if (probe.pred) {
     Visit(*probe.pred);
   }
-  Visit(probe.block);
+  Visit(*probe.block);
 }
 
 void Visitor::visit(Config &config)

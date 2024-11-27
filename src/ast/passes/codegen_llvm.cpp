@@ -2555,7 +2555,7 @@ void CodegenLLVM::visit(If &if_node)
   // if condition is false, with else
   //   parent -> if_else -> if_end
   //
-  if (!if_node.else_block.stmts.empty()) {
+  if (!if_node.else_block->stmts.empty()) {
     // LLVM doesn't accept empty basic block, only create when needed
     if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
     b_.CreateCondBr(cond, if_true, if_else);
@@ -2564,15 +2564,15 @@ void CodegenLLVM::visit(If &if_node)
   }
 
   b_.SetInsertPoint(if_true);
-  auto scoped_del_if_block = accept(&if_node.if_block);
+  auto scoped_del_if_block = accept(if_node.if_block);
 
   b_.CreateBr(if_end);
 
   b_.SetInsertPoint(if_end);
 
-  if (!if_node.else_block.stmts.empty()) {
+  if (!if_node.else_block->stmts.empty()) {
     b_.SetInsertPoint(if_else);
-    auto scoped_del_else_block = accept(&if_node.else_block);
+    auto scoped_del_else_block = accept(if_node.else_block);
 
     b_.CreateBr(if_end);
     b_.SetInsertPoint(if_end);
@@ -2586,7 +2586,7 @@ void CodegenLLVM::visit(Unroll &unroll)
     // the same async calls multiple times.
     auto reset_ids = async_ids_.create_reset_ids();
 
-    auto scoped_del = accept(&unroll.block);
+    auto scoped_del = accept(unroll.block);
 
     if (i != unroll.var - 1)
       reset_ids();
@@ -2667,7 +2667,7 @@ void CodegenLLVM::visit(While &while_block)
   loop_hdr->setMetadata(LLVMContext::MD_loop, loop_metadata_);
 
   b_.SetInsertPoint(while_body);
-  auto scoped_del_block = accept(&while_block.block);
+  auto scoped_del_block = accept(while_block.block);
   b_.CreateBr(while_cond);
 
   b_.SetInsertPoint(while_end);
@@ -2794,7 +2794,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
     auto scoped_del = accept(probe.pred);
   }
   variables_.clear();
-  auto scoped_del = accept(&probe.block);
+  auto scoped_del = accept(probe.block);
 
   createRet();
 

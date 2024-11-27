@@ -247,29 +247,18 @@ Block::Block(StatementList &&stmts) : stmts(std::move(stmts))
 {
 }
 
-If::If(Expression *cond, StatementList &&stmts)
-    : cond(cond), if_block(Block(std::move(stmts))), else_block(Block({}))
+If::If(Expression *cond, Block *if_block, Block *else_block)
+    : cond(cond), if_block(if_block), else_block(else_block)
 {
 }
 
-If::If(Expression *cond, StatementList &&stmts, StatementList &&else_stmts)
-    : cond(cond),
-      if_block(Block(std::move(stmts))),
-      else_block(Block(std::move(else_stmts)))
+Unroll::Unroll(Expression *expr, Block *block, location loc)
+    : Statement(loc), expr(expr), block(block)
 {
 }
 
-Unroll::Unroll(Expression *expr, StatementList &&stmts, location loc)
-    : Statement(loc), expr(expr), block(std::move(stmts))
-{
-}
-
-Probe::Probe(AttachPointList &&attach_points,
-             Predicate *pred,
-             StatementList &&stmts)
-    : attach_points(std::move(attach_points)),
-      pred(pred),
-      block(std::move(stmts))
+Probe::Probe(AttachPointList &&attach_points, Predicate *pred, Block *block)
+    : attach_points(std::move(attach_points)), pred(pred), block(block)
 {
 }
 
