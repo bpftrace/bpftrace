@@ -134,6 +134,7 @@
                   nftables
                   procps
                   python3
+                  python3Packages.looseversion
                   strace
                   unixtools.ping
                   util-linux
