@@ -2,7 +2,7 @@
   description = "High-level tracing language for Linux";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
       # Use fork until following PRs are in:
