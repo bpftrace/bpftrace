@@ -126,6 +126,7 @@ def shell(
             # play nice with root or writing temporary files. So that
             # requires further investigation.
             "--preserve-env=PATH",
+            "--preserve-env=PYTHONPATH",
             # Also preserve any caller specified env vars
             f"--preserve-env={to_preserve}",
         ]

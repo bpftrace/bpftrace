@@ -6,7 +6,7 @@ import signal
 import sys
 import os
 import time
-from distutils.version import LooseVersion
+from looseversion import LooseVersion
 import re
 from functools import lru_cache
 
