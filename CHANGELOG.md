@@ -151,6 +151,8 @@ and this project adheres to
 #### Tools
 - Fix bashreadline tool probe for dynamically linked readline
   - [#3564](https://github.com/bpftrace/bpftrace/pull/3564)
+- Switch all bio* tools to tracepoints
+  - [#3622](https://github.com/bpftrace/bpftrace/pull/3622)
 
 ## [0.21.0] 2024-06-21
 
