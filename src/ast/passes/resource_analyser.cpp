@@ -240,9 +240,9 @@ void ResourceAnalyser::visit(Call &call)
     if (!arg.is_map) {
       resources_.non_map_print_args.push_back(arg.type);
 
-      const auto fmtstring_args_size = nonmap_headroom + arg.type.GetSize();
+      const size_t fmtstring_args_size = nonmap_headroom + arg.type.GetSize();
       if (exceeds_stack_limit(fmtstring_args_size)) {
-        resources_.max_fmtstring_args_size = std::max(
+        resources_.max_fmtstring_args_size = std::max<uint64_t>(
             resources_.max_fmtstring_args_size, fmtstring_args_size);
       }
     } else {
@@ -250,9 +250,9 @@ void ResourceAnalyser::visit(Call &call)
       if (map.key_expr) {
         resources_.non_map_print_args.push_back(map.type);
 
-        const auto fmtstring_args_size = nonmap_headroom + map.type.GetSize();
+        const size_t fmtstring_args_size = nonmap_headroom + map.type.GetSize();
         if (exceeds_stack_limit(fmtstring_args_size)) {
-          resources_.max_fmtstring_args_size = std::max(
+          resources_.max_fmtstring_args_size = std::max<uint64_t>(
               resources_.max_fmtstring_args_size, fmtstring_args_size);
         }
       }
