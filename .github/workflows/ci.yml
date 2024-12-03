@@ -28,37 +28,29 @@ jobs:
         - NAME: LLVM 14
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm14
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 15
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm15
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 16
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm16
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 17
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm17
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 18
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 19 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm19
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 19 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 19 Clang Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
           CC: clang
           CXX: clang++
-          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: AOT (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
