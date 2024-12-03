@@ -556,9 +556,13 @@ void Output::map_hist_contents(
     auto key_str = map_key_to_str(bpftrace, map, key);
     std::string val_str;
     if (map_type.IsHistTy()) {
+      if (!map_info.hist_bits_arg.has_value())
+        LOG(BUG) << "call to hist with missing \"bits\" argument";
       val_str = hist_to_str(value, div, *map_info.hist_bits_arg);
     } else {
       auto &args = map_info.lhist_args;
+      if (!args.has_value())
+        LOG(BUG) << "call to lhist with missing arguments";
       val_str = lhist_to_str(value, args->min, args->max, args->step);
     }
     map_key_val(map_type, key_str, val_str);

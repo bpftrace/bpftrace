@@ -679,7 +679,11 @@ void SemanticAnalyser::visit(Call &call)
       if (!check_arg(call, Type::integer, 1, true))
         return;
       const auto bits = bpftrace_.get_int_literal(call.vargs.at(1));
-      if (bits < 0 || bits > 5) {
+      if (!bits.has_value()) {
+        // Bug here as the validity of the integer literal is already checked by
+        // check_arg above.
+        LOG(BUG) << call.func << ": invalid bits value";
+      } else if (*bits < 0 || *bits > 5) {
         LOG(ERROR, call.loc, err_)
             << call.func << ": bits " << *bits << " must be 0..5";
       }
@@ -1361,7 +1365,9 @@ void SemanticAnalyser::visit(Call &call)
       }
     } else if (arg.type.IsIntTy() && arg.is_literal) {
       auto sig = bpftrace_.get_int_literal(&arg);
-      if (!sig.has_value() || *sig < 1 || *sig > 64) {
+      if (!sig.has_value())
+        LOG(ERROR, call.loc, err_) << call.func << ": invalid signal value";
+      else if (*sig < 1 || *sig > 64) {
         LOG(ERROR, call.loc, err_)
             << std::to_string(*sig)
             << " is not a valid signal, allowed range: [1,64]";
@@ -1403,10 +1409,10 @@ void SemanticAnalyser::visit(Call &call)
             if (size < 0)
               LOG(ERROR, call.loc, err_)
                   << "Builtin path requires a non-negative size";
+            call_type_size = size.value();
           } else {
             LOG(ERROR, call.loc, err_) << call.func << ": invalid size value";
           }
-          call_type_size = size.value();
         }
       }
 

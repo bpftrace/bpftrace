@@ -513,7 +513,7 @@ bool BPFfeature::has_uprobe_multi()
 #else
   has_uprobe_multi_ = false;
 #endif // HAVE_LIBBPF_UPROBE_MULTI
-  return *has_uprobe_multi_;
+  return *has_uprobe_multi_; // NOLINT(bugprone-unchecked-optional-access)
 }
 
 bool BPFfeature::has_skb_output()
