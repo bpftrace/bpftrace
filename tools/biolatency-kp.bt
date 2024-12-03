@@ -8,6 +8,11 @@
  * Copyright 2018 Netflix, Inc.
  * Licensed under the Apache License, Version 2.0 (the "License")
  *
+ * This version of the tool uses kprobes to attach to kernel events.
+ * Note that these do not exist or are inlined on newer kernels
+ * (since kernel version 6.4) and therefore this version will not work.
+ * On newer kernels, use biolatency.bt.
+ *
  * 13-Sep-2018	Brendan Gregg	Created this.
  */
 
