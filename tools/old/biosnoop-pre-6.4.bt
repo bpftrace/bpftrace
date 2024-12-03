@@ -1,0 +1,56 @@
+#!/usr/bin/env bpftrace
+/*
+ * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
+ *               For Linux, uses bpftrace, eBPF.
+ *
+ * TODO: switch to block tracepoints. Add offset and size columns.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * For Linux <= 6.3.
+ *
+ * 15-Nov-2017	Brendan Gregg	Created this.
+ */
+
+#ifndef BPFTRACE_HAVE_BTF
+#include <linux/blkdev.h>
+#include <linux/blk-mq.h>
+#endif
+
+BEGIN
+{
+	printf("%-12s %-7s %-16s %-6s %7s\n", "TIME(ms)", "DISK", "COMM", "PID", "LAT(ms)");
+}
+
+kprobe:blk_account_io_start,
+kprobe:__blk_account_io_start
+{
+	@start[arg0] = nsecs;
+	@iopid[arg0] = pid;
+	@iocomm[arg0] = comm;
+	@disk[arg0] = ((struct request *)arg0)->q->disk->disk_name;
+}
+
+kprobe:blk_account_io_done,
+kprobe:__blk_account_io_done
+/@start[arg0] != 0 && @iopid[arg0] != 0 && @iocomm[arg0] != ""/
+
+{
+	$now = nsecs;
+	printf("%-12u %-7s %-16s %-6d %7d\n",
+	    elapsed / 1e6, @disk[arg0], @iocomm[arg0], @iopid[arg0],
+	    ($now - @start[arg0]) / 1e6);
+
+	delete(@start, arg0);
+	delete(@iopid, arg0);
+	delete(@iocomm, arg0);
+	delete(@disk, arg0);
+}
+
+END
+{
+	clear(@start);
+	clear(@iopid);
+	clear(@iocomm);
+	clear(@disk);
+}
