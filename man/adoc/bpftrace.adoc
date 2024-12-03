@@ -3753,6 +3753,13 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 
+=== probe_inline
+
+Default: 0
+
+Set to `1` to add the ability to attach uprobes/uretprobes, kprobes/kretprobes, and fentry/fexit to inlined functions.
+This may restrict the use of some builtins.
+
 === stack_mode
 
 Default: bpftrace
