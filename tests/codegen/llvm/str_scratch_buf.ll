@@ -22,8 +22,9 @@ entry:
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 64, i1 false)
-  %3 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %3, align 8
+  %3 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %4 = getelementptr i64, ptr %3, i64 14
+  %arg0 = load volatile i64, ptr %4, align 8
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 64, i64 %arg0)
   ret i64 0
 }
@@ -31,8 +32,12 @@ entry:
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48}

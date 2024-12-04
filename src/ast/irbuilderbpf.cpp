@@ -2479,12 +2479,22 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
   return call;
 }
 
-Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
-                                   SizedType &type,
-                                   std::string &name)
+Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
+                                    SizedType &type,
+                                    std::string &name)
 {
   assert(type.IsIntTy() || type.IsPtrTy());
+
+#if LLVM_VERSION_MAJOR <= 14
+  // Older versions of LLVM check that the type matches the GEP. Newer versions
+  // do not use this cast because we need to specifically preserve the pattern
+  // `GEP(preserveStaticOffsets(ctx))`, which doesn't exist on older versions.
   ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
+#endif
+
+  // The context passed here is already wrapped in `preserve_static_offset`,
+  // and should therefore be a raw pointer. The int64 type in the GEP below
+  // should override any type information it happens to be carrying.
   Value *expr = CreateLoad(
       GetType(type),
       CreateGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
@@ -2503,7 +2513,13 @@ Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
   int offset = atoi(builtin.substr(3).c_str());
   llvm::Type *type = getInt64Ty();
 
+#if LLVM_VERSION_MAJOR <= 14
+  // See CreateKFuncArg; we must preserve the type in these cases.
   ctx = CreatePointerCast(ctx, type->getPointerTo());
+#endif
+
+  // All arguments are coerced into Int64, the context is a raw pointer that is
+  // generally wrapped in `preserve_static_offset`.
   Value *expr = CreateLoad(type,
                            CreateGEP(type, ctx, getInt64(offset)),
                            builtin);
@@ -2564,12 +2580,14 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
   // Bitwidth of register values in struct pt_regs is the same as the kernel
   // pointer width on all supported architectures.
   llvm::Type *registerTy = getKernelPointerStorageTy();
-  Value *ctx_ptr = CreatePointerCast(ctx, registerTy->getPointerTo());
-  // LLVM optimization is possible to transform `(uint64*)ctx` into
-  // `(uint8*)ctx`, but sometimes this causes invalid context access.
-  // Mark every context access to suppress any LLVM optimization.
+
+#if LLVM_VERSION_MAJOR <= 14
+  // See CreateKFuncArg; we must preserve the type in these cases.
+  ctx = CreatePointerCast(ctx, registerTy->getPointerTo());
+#endif
+
   Value *result = CreateLoad(registerTy,
-                             CreateGEP(registerTy, ctx_ptr, getInt64(offset)),
+                             CreateGEP(registerTy, ctx, getInt64(offset)),
                              name);
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
   // so call setVolatile() manually
@@ -2716,11 +2734,18 @@ void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
       getInt64(libbpf::BPF_FUNC_seq_printf),
       seq_printf_func_ptr_type);
 
+#if LLVM_VERSION_MAJOR <= 14
+  // See CreateKFuncArg; we must preserve the type in these cases.
   ctx = CreatePointerCast(ctx, getInt8Ty()->getPointerTo());
-  Value *meta = CreateLoad(getInt64Ty()->getPointerTo(),
-                           CreateGEP(getInt8Ty(), ctx, getInt64(0)),
-                           "meta");
-  dyn_cast<LoadInst>(meta)->setVolatile(true);
+#endif
+
+  // The context has been wrapped in a call to `preserve_static_offset` and is
+  // a raw pointer, the type provided here elides the need for any kind of
+  // cast. On older versions, it is already guaranteed to be an int8*.
+  LoadInst *meta = CreateLoad(getInt64Ty()->getPointerTo(),
+                              CreateGEP(getInt8Ty(), ctx, getInt64(0)),
+                              "meta");
+  meta->setVolatile(true);
 
   Value *seq = CreateLoad(getInt64Ty(),
                           CreateGEP(getInt64Ty(), meta, getInt64(0)),
@@ -2805,6 +2830,21 @@ llvm::Value *IRBuilderBPF::CreatePtrOffset(const SizedType &type,
                          : type.GetSize();
 
   return CreateMul(index, getInt64(elem_size));
+}
+
+llvm::Value *IRBuilderBPF::preserveStaticOffset(llvm::Value *ptr)
+{
+#if LLVM_VERSION_MAJOR >= 18
+  if (!preserve_static_offset_) {
+    preserve_static_offset_ = llvm::Intrinsic::getDeclaration(
+        &module_, llvm::Intrinsic::preserve_static_offset);
+  }
+  return CreateCall(preserve_static_offset_, ptr);
+#else
+  // We can't explicit guarantee that LLVM does not optimize this code and
+  // preserve offsets during access.
+  return ptr;
+#endif
 }
 
 llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
