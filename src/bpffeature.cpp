@@ -568,12 +568,12 @@ std::string BPFfeature::report()
 {
   std::stringstream buf;
 
-  auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
+  auto to_str = [](bool f) -> std::string { return f ? " yes" : " no"; };
 
   constexpr int width = 35;
 
   buf << "Kernel helpers" << std::endl
-      << std::setw(width) << std::left << std::left
+      << std::setw(width) << std::left
       << "  probe_read:" + to_str(has_helper_probe_read()) << std::setw(width)
       << "probe_read_str:" + to_str(has_helper_probe_read_str()) << std::endl
       << std::setw(width) << std::left << std::left
@@ -609,7 +609,7 @@ std::string BPFfeature::report()
   buf << std::endl
       << "Kernel features" << std::endl
       << std::setw(width) << std::left
-      << "  Instruction limit:" + std::to_string(instruction_limit())
+      << "  Instruction limit: " + std::to_string(instruction_limit())
       << std::setw(width) << "Loop support:" + to_str(has_loop()) << std::endl
       << std::setw(width) << std::left << "  btf:" + to_str(has_btf())
       << std::setw(width) << std::left
@@ -623,13 +623,13 @@ std::string BPFfeature::report()
   buf << std::endl
       << "Map types" << std::endl
       << std::setw(width) << std::left << "  hash:" + to_str(has_map_hash())
-      << std::setw(width) << "  array:" + to_str(has_map_array()) << std::endl
+      << std::setw(width) << "array:" + to_str(has_map_array()) << std::endl
       << std::setw(width) << std::left
       << "  percpu array:" + to_str(has_map_percpu_array()) << std::setw(width)
-      << "  stack_trace:" + to_str(has_map_stack_trace()) << std::endl
+      << "stack_trace:" + to_str(has_map_stack_trace()) << std::endl
       << std::setw(width) << std::left
       << "  perf_event_array:" + to_str(has_map_perf_event_array())
-      << std::setw(width) << "  ringbuf:" + to_str(has_map_ringbuf())
+      << std::setw(width) << "ringbuf:" + to_str(has_map_ringbuf())
       << std::endl;
 
   buf << std::endl
