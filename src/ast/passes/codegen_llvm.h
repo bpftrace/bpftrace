@@ -327,6 +327,11 @@ private:
     return module_->getDataLayout().getTypeAllocSize(s);
   }
 
+  Value *getContext()
+  {
+    return b_.preserveStaticOffset(ctx_);
+  }
+
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
 

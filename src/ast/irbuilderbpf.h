@@ -239,7 +239,7 @@ public:
   AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
-  Value *CreatKFuncArg(Value *ctx, SizedType &type, std::string &name);
+  Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
   llvm::Type *UprobeArgsType(const SizedType &args_type);
@@ -265,6 +265,11 @@ public:
   llvm::Value *CreatePtrOffset(const SizedType &type,
                                llvm::Value *index,
                                AddrSpace as);
+
+  // Wrap a Value with a call to the intrinsic `preserve_static_offset`, which
+  // will ensure that LLVM does not apply certain basic optimizations. This is
+  // required for the context pointer, which cannot be modified.
+  llvm::Value *preserveStaticOffset(Value *ptr);
 
   StoreInst *createAlignedStore(Value *val, Value *ptr, unsigned align);
   // moves the insertion point to the start of the function you're inside,
@@ -349,6 +354,7 @@ private:
                        const SizedType &type);
 
   std::map<std::string, StructType *> structs_;
+  Function *preserve_static_offset_ = nullptr;
 };
 
 } // namespace ast
