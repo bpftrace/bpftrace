@@ -564,87 +564,91 @@ bool BPFfeature::has_skb_output()
   return *has_skb_output_;
 }
 
+void tabulate(std::stringstream& buf,
+              std::vector<std::pair<std::string, std::string>>& data)
+{
+  size_t len = data.size();
+  constexpr int width = 35;
+  for (size_t i = 0; i < len; i += 2) {
+    buf << std::setw(width) << std::left
+        << " " + data[i].first + ": " + data[i].second << std::setw(width);
+    if (i + 1 < len) {
+      buf << data[i + 1].first + ": " + data[i + 1].second << std::endl;
+    } else {
+      buf << std::endl;
+    }
+  }
+}
+
 std::string BPFfeature::report()
 {
   std::stringstream buf;
 
-  auto to_str = [](bool f) -> std::string { return f ? " yes" : " no"; };
+  auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
 
-  constexpr int width = 35;
+  std::vector<std::pair<std::string, std::string>> helpers = {
+    { "probe_read", to_str(has_helper_probe_read()) },
+    { "probe_read_str", to_str(has_helper_probe_read_str()) },
+    { "probe_read_user", to_str(has_helper_probe_read_user()) },
+    { "probe_read_user_str", to_str(has_helper_probe_read_user_str()) },
+    { "probe_read_kernel", to_str(has_helper_probe_read_kernel()) },
+    { "probe_read_kernel_str", to_str(has_helper_probe_read_kernel_str()) },
+    { "get_current_cgroup_id", to_str(has_helper_get_current_cgroup_id()) },
+    { "send_signal", to_str(has_helper_send_signal()) },
+    { "override_return", to_str(has_helper_override_return()) },
+    { "get_boot_ns", to_str(has_helper_ktime_get_boot_ns()) },
+    { "dpath", to_str(has_d_path()) },
+    { "skboutput", to_str(has_skb_output()) },
+    { "get_tai_ns", to_str(has_helper_ktime_get_tai_ns()) },
+    { "get_func_ip", to_str(has_helper_get_func_ip()) },
+    { "jiffies64", to_str(has_helper_jiffies64()) },
+    { "for_each_map_elem", to_str(has_helper_for_each_map_elem()) }
+  };
 
-  buf << "Kernel helpers" << std::endl
-      << std::setw(width) << std::left
-      << "  probe_read:" + to_str(has_helper_probe_read()) << std::setw(width)
-      << "probe_read_str:" + to_str(has_helper_probe_read_str()) << std::endl
-      << std::setw(width) << std::left << std::left
-      << "  probe_read_user:" + to_str(has_helper_probe_read_user())
-      << std::setw(width)
-      << "probe_read_user_str:" + to_str(has_helper_probe_read_user_str())
-      << std::endl
-      << std::setw(width) << std::left
-      << "  probe_read_kernel:" + to_str(has_helper_probe_read_kernel())
-      << std::setw(width)
-      << "probe_read_kernel_str:" + to_str(has_helper_probe_read_kernel_str())
-      << std::endl
-      << std::setw(width) << std::left
-      << "  get_current_cgroup_id:" + to_str(has_helper_get_current_cgroup_id())
-      << std::setw(width) << "send_signal:" + to_str(has_helper_send_signal())
-      << std::endl
-      << std::setw(width) << std::left
-      << "  override_return:" + to_str(has_helper_override_return())
-      << std::setw(width)
-      << "get_boot_ns:" + to_str(has_helper_ktime_get_boot_ns()) << std::endl
-      << std::setw(width) << std::left << "  dpath:" + to_str(has_d_path())
-      << std::setw(width) << "skboutput:" + to_str(has_skb_output())
-      << std::endl
-      << std::setw(width) << std::left
-      << "  get_tai_ns:" + to_str(has_helper_ktime_get_tai_ns())
-      << std::setw(width) << "get_func_ip:" + to_str(has_helper_get_func_ip())
-      << std::endl
-      << std::setw(width) << std::left
-      << "  jiffies64:" + to_str(has_helper_jiffies64()) << std::setw(width)
-      << "for_each_map_elem:" + to_str(has_helper_for_each_map_elem())
-      << std::endl;
+  std::vector<std::pair<std::string, std::string>> features = {
+    { "Instruction limit", std::to_string(instruction_limit()) },
+    { "Loop support", to_str(has_loop()) },
+    { "btf", to_str(has_btf()) },
+    { "module btf", to_str(has_module_btf()) },
+    { "Kernel DWARF", to_str(has_kernel_dwarf()) },
+    { "map batch", to_str(has_map_batch()) },
+    { "uprobe refcount", to_str(has_uprobe_refcnt()) }
+  };
 
-  buf << std::endl
-      << "Kernel features" << std::endl
-      << std::setw(width) << std::left
-      << "  Instruction limit: " + std::to_string(instruction_limit())
-      << std::setw(width) << "Loop support:" + to_str(has_loop()) << std::endl
-      << std::setw(width) << std::left << "  btf:" + to_str(has_btf())
-      << std::setw(width) << std::left
-      << "module btf:" + to_str(has_module_btf()) << std::endl
-      << std::setw(width) << std::left
-      << "  Kernel DWARF:" + to_str(has_kernel_dwarf()) << std::setw(width)
-      << "map batch:" + to_str(has_map_batch()) << std::endl
-      << std::setw(width) << std::left
-      << "  uprobe refcount:" + to_str(has_uprobe_refcnt()) << std::endl;
+  std::vector<std::pair<std::string, std::string>> map_types = {
+    { "hash", to_str(has_map_hash()) },
+    { "array", to_str(has_map_array()) },
+    { "percpu array", to_str(has_map_percpu_array()) },
+    { "stack_trace", to_str(has_map_stack_trace()) },
+    { "perf_event_array", to_str(has_map_perf_event_array()) },
+    { "ringbuf", to_str(has_map_ringbuf()) }
+  };
 
-  buf << std::endl
-      << "Map types" << std::endl
-      << std::setw(width) << std::left << "  hash:" + to_str(has_map_hash())
-      << std::setw(width) << "array:" + to_str(has_map_array()) << std::endl
-      << std::setw(width) << std::left
-      << "  percpu array:" + to_str(has_map_percpu_array()) << std::setw(width)
-      << "stack_trace:" + to_str(has_map_stack_trace()) << std::endl
-      << std::setw(width) << std::left
-      << "  perf_event_array:" + to_str(has_map_perf_event_array())
-      << std::setw(width) << "ringbuf:" + to_str(has_map_ringbuf())
-      << std::endl;
+  std::vector<std::pair<std::string, std::string>> probe_types = {
+    { "kprobe", to_str(has_prog_kprobe()) },
+    { "tracepoint", to_str(has_prog_tracepoint()) },
+    { "perf_event", to_str(has_prog_perf_event()) },
+    { "fentry", to_str(has_fentry()) },
+    { "kprobe_multi", to_str(has_kprobe_multi()) },
+    { "uprobe_multi", to_str(has_uprobe_multi()) },
+    { "iter", to_str(has_iter("task")) }
+  };
 
-  buf << std::endl
-      << "Probe types" << std::endl
-      << std::setw(width) << std::left
-      << "  kprobe:" + to_str(has_prog_kprobe()) << std::setw(width)
-      << "tracepoint:" + to_str(has_prog_tracepoint()) << std::endl
-      << std::setw(width) << std::left
-      << "  perf_event:" + to_str(has_prog_perf_event()) << std::setw(width)
-      << "fentry:" + to_str(has_fentry()) << std::endl
-      << std::setw(width) << std::left
-      << "  kprobe_multi:" + to_str(has_kprobe_multi()) << std::setw(width)
-      << "uprobe_multi:" + to_str(has_uprobe_multi()) << std::endl
-      << std::setw(width) << std::left << "  iter:" + to_str(has_iter("task"))
-      << std::endl;
+  buf << "Kernel helpers" << std::endl;
+  tabulate(buf, helpers);
+  buf << std::endl;
+
+  buf << "Kernel features" << std::endl;
+  tabulate(buf, features);
+  buf << std::endl;
+
+  buf << "Map types" << std::endl;
+  tabulate(buf, map_types);
+  buf << std::endl;
+
+  buf << "Probe types" << std::endl;
+  tabulate(buf, probe_types);
+  buf << std::endl;
 
   return buf.str();
 }
