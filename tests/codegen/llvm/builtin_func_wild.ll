@@ -19,8 +19,9 @@ define i64 @kprobe_do_execve__1(ptr %0) section "s_kprobe_do_execve__1" !dbg !45
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %1 = getelementptr i64, ptr %0, i64 16
-  %func = load volatile i64, ptr %1, align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i64, ptr %1, i64 16
+  %func = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
@@ -31,14 +32,18 @@ entry:
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!42}
 !llvm.module.flags = !{!44}

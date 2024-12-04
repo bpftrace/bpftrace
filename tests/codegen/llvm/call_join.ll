@@ -26,10 +26,12 @@ entry:
   store i64 0, ptr %"$x", align 8
   store i64 0, ptr %"$x", align 8
   %1 = load i64, ptr %"$x", align 8
-  %2 = add i64 %1, 0
+  %2 = inttoptr i64 %1 to ptr
+  %3 = call ptr @llvm.preserve.static.offset(ptr %2)
+  %4 = getelementptr i8, ptr %3, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct arg.argv")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct arg.argv", i32 8, i64 %2)
-  %3 = load i64, ptr %"struct arg.argv", align 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct arg.argv", i32 8, ptr %4)
+  %5 = load i64, ptr %"struct arg.argv", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct arg.argv")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_join_key)
   store i32 0, ptr %lookup_join_key, align 4
@@ -46,88 +48,88 @@ lookup_join_failure:                              ; preds = %entry
 
 lookup_join_merge:                                ; preds = %entry
   store i64 30005, ptr %lookup_join_map, align 8
-  %4 = getelementptr i8, ptr %lookup_join_map, i64 8
-  store i64 0, ptr %4, align 8
+  %6 = getelementptr i8, ptr %lookup_join_map, i64 8
+  store i64 0, ptr %6, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %join_r0)
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %3)
-  %5 = load i64, ptr %join_r0, align 8
-  %6 = getelementptr i8, ptr %lookup_join_map, i64 16
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %6, i32 1024, i64 %5)
-  %7 = add i64 %3, 8
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %7)
-  %8 = load i64, ptr %join_r0, align 8
-  %9 = getelementptr i8, ptr %lookup_join_map, i64 1040
-  %probe_read_kernel_str3 = call i64 inttoptr (i64 115 to ptr)(ptr %9, i32 1024, i64 %8)
-  %10 = add i64 %7, 8
-  %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %10)
-  %11 = load i64, ptr %join_r0, align 8
-  %12 = getelementptr i8, ptr %lookup_join_map, i64 2064
-  %probe_read_kernel_str5 = call i64 inttoptr (i64 115 to ptr)(ptr %12, i32 1024, i64 %11)
-  %13 = add i64 %10, 8
-  %probe_read_kernel6 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %13)
-  %14 = load i64, ptr %join_r0, align 8
-  %15 = getelementptr i8, ptr %lookup_join_map, i64 3088
-  %probe_read_kernel_str7 = call i64 inttoptr (i64 115 to ptr)(ptr %15, i32 1024, i64 %14)
-  %16 = add i64 %13, 8
-  %probe_read_kernel8 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %16)
-  %17 = load i64, ptr %join_r0, align 8
-  %18 = getelementptr i8, ptr %lookup_join_map, i64 4112
-  %probe_read_kernel_str9 = call i64 inttoptr (i64 115 to ptr)(ptr %18, i32 1024, i64 %17)
-  %19 = add i64 %16, 8
-  %probe_read_kernel10 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %19)
-  %20 = load i64, ptr %join_r0, align 8
-  %21 = getelementptr i8, ptr %lookup_join_map, i64 5136
-  %probe_read_kernel_str11 = call i64 inttoptr (i64 115 to ptr)(ptr %21, i32 1024, i64 %20)
-  %22 = add i64 %19, 8
-  %probe_read_kernel12 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %22)
-  %23 = load i64, ptr %join_r0, align 8
-  %24 = getelementptr i8, ptr %lookup_join_map, i64 6160
-  %probe_read_kernel_str13 = call i64 inttoptr (i64 115 to ptr)(ptr %24, i32 1024, i64 %23)
-  %25 = add i64 %22, 8
-  %probe_read_kernel14 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %25)
-  %26 = load i64, ptr %join_r0, align 8
-  %27 = getelementptr i8, ptr %lookup_join_map, i64 7184
-  %probe_read_kernel_str15 = call i64 inttoptr (i64 115 to ptr)(ptr %27, i32 1024, i64 %26)
-  %28 = add i64 %25, 8
-  %probe_read_kernel16 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %28)
-  %29 = load i64, ptr %join_r0, align 8
-  %30 = getelementptr i8, ptr %lookup_join_map, i64 8208
-  %probe_read_kernel_str17 = call i64 inttoptr (i64 115 to ptr)(ptr %30, i32 1024, i64 %29)
-  %31 = add i64 %28, 8
-  %probe_read_kernel18 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %31)
-  %32 = load i64, ptr %join_r0, align 8
-  %33 = getelementptr i8, ptr %lookup_join_map, i64 9232
-  %probe_read_kernel_str19 = call i64 inttoptr (i64 115 to ptr)(ptr %33, i32 1024, i64 %32)
-  %34 = add i64 %31, 8
-  %probe_read_kernel20 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %34)
-  %35 = load i64, ptr %join_r0, align 8
-  %36 = getelementptr i8, ptr %lookup_join_map, i64 10256
-  %probe_read_kernel_str21 = call i64 inttoptr (i64 115 to ptr)(ptr %36, i32 1024, i64 %35)
-  %37 = add i64 %34, 8
-  %probe_read_kernel22 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %37)
-  %38 = load i64, ptr %join_r0, align 8
-  %39 = getelementptr i8, ptr %lookup_join_map, i64 11280
-  %probe_read_kernel_str23 = call i64 inttoptr (i64 115 to ptr)(ptr %39, i32 1024, i64 %38)
-  %40 = add i64 %37, 8
-  %probe_read_kernel24 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %40)
-  %41 = load i64, ptr %join_r0, align 8
-  %42 = getelementptr i8, ptr %lookup_join_map, i64 12304
-  %probe_read_kernel_str25 = call i64 inttoptr (i64 115 to ptr)(ptr %42, i32 1024, i64 %41)
-  %43 = add i64 %40, 8
-  %probe_read_kernel26 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %43)
-  %44 = load i64, ptr %join_r0, align 8
-  %45 = getelementptr i8, ptr %lookup_join_map, i64 13328
-  %probe_read_kernel_str27 = call i64 inttoptr (i64 115 to ptr)(ptr %45, i32 1024, i64 %44)
-  %46 = add i64 %43, 8
-  %probe_read_kernel28 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %46)
-  %47 = load i64, ptr %join_r0, align 8
-  %48 = getelementptr i8, ptr %lookup_join_map, i64 14352
-  %probe_read_kernel_str29 = call i64 inttoptr (i64 115 to ptr)(ptr %48, i32 1024, i64 %47)
-  %49 = add i64 %46, 8
-  %probe_read_kernel30 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %49)
-  %50 = load i64, ptr %join_r0, align 8
-  %51 = getelementptr i8, ptr %lookup_join_map, i64 15376
-  %probe_read_kernel_str31 = call i64 inttoptr (i64 115 to ptr)(ptr %51, i32 1024, i64 %50)
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %5)
+  %7 = load i64, ptr %join_r0, align 8
+  %8 = getelementptr i8, ptr %lookup_join_map, i64 16
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %8, i32 1024, i64 %7)
+  %9 = add i64 %5, 8
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %9)
+  %10 = load i64, ptr %join_r0, align 8
+  %11 = getelementptr i8, ptr %lookup_join_map, i64 1040
+  %probe_read_kernel_str3 = call i64 inttoptr (i64 115 to ptr)(ptr %11, i32 1024, i64 %10)
+  %12 = add i64 %9, 8
+  %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %12)
+  %13 = load i64, ptr %join_r0, align 8
+  %14 = getelementptr i8, ptr %lookup_join_map, i64 2064
+  %probe_read_kernel_str5 = call i64 inttoptr (i64 115 to ptr)(ptr %14, i32 1024, i64 %13)
+  %15 = add i64 %12, 8
+  %probe_read_kernel6 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %15)
+  %16 = load i64, ptr %join_r0, align 8
+  %17 = getelementptr i8, ptr %lookup_join_map, i64 3088
+  %probe_read_kernel_str7 = call i64 inttoptr (i64 115 to ptr)(ptr %17, i32 1024, i64 %16)
+  %18 = add i64 %15, 8
+  %probe_read_kernel8 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %18)
+  %19 = load i64, ptr %join_r0, align 8
+  %20 = getelementptr i8, ptr %lookup_join_map, i64 4112
+  %probe_read_kernel_str9 = call i64 inttoptr (i64 115 to ptr)(ptr %20, i32 1024, i64 %19)
+  %21 = add i64 %18, 8
+  %probe_read_kernel10 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %21)
+  %22 = load i64, ptr %join_r0, align 8
+  %23 = getelementptr i8, ptr %lookup_join_map, i64 5136
+  %probe_read_kernel_str11 = call i64 inttoptr (i64 115 to ptr)(ptr %23, i32 1024, i64 %22)
+  %24 = add i64 %21, 8
+  %probe_read_kernel12 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %24)
+  %25 = load i64, ptr %join_r0, align 8
+  %26 = getelementptr i8, ptr %lookup_join_map, i64 6160
+  %probe_read_kernel_str13 = call i64 inttoptr (i64 115 to ptr)(ptr %26, i32 1024, i64 %25)
+  %27 = add i64 %24, 8
+  %probe_read_kernel14 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %27)
+  %28 = load i64, ptr %join_r0, align 8
+  %29 = getelementptr i8, ptr %lookup_join_map, i64 7184
+  %probe_read_kernel_str15 = call i64 inttoptr (i64 115 to ptr)(ptr %29, i32 1024, i64 %28)
+  %30 = add i64 %27, 8
+  %probe_read_kernel16 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %30)
+  %31 = load i64, ptr %join_r0, align 8
+  %32 = getelementptr i8, ptr %lookup_join_map, i64 8208
+  %probe_read_kernel_str17 = call i64 inttoptr (i64 115 to ptr)(ptr %32, i32 1024, i64 %31)
+  %33 = add i64 %30, 8
+  %probe_read_kernel18 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %33)
+  %34 = load i64, ptr %join_r0, align 8
+  %35 = getelementptr i8, ptr %lookup_join_map, i64 9232
+  %probe_read_kernel_str19 = call i64 inttoptr (i64 115 to ptr)(ptr %35, i32 1024, i64 %34)
+  %36 = add i64 %33, 8
+  %probe_read_kernel20 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %36)
+  %37 = load i64, ptr %join_r0, align 8
+  %38 = getelementptr i8, ptr %lookup_join_map, i64 10256
+  %probe_read_kernel_str21 = call i64 inttoptr (i64 115 to ptr)(ptr %38, i32 1024, i64 %37)
+  %39 = add i64 %36, 8
+  %probe_read_kernel22 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %39)
+  %40 = load i64, ptr %join_r0, align 8
+  %41 = getelementptr i8, ptr %lookup_join_map, i64 11280
+  %probe_read_kernel_str23 = call i64 inttoptr (i64 115 to ptr)(ptr %41, i32 1024, i64 %40)
+  %42 = add i64 %39, 8
+  %probe_read_kernel24 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %42)
+  %43 = load i64, ptr %join_r0, align 8
+  %44 = getelementptr i8, ptr %lookup_join_map, i64 12304
+  %probe_read_kernel_str25 = call i64 inttoptr (i64 115 to ptr)(ptr %44, i32 1024, i64 %43)
+  %45 = add i64 %42, 8
+  %probe_read_kernel26 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %45)
+  %46 = load i64, ptr %join_r0, align 8
+  %47 = getelementptr i8, ptr %lookup_join_map, i64 13328
+  %probe_read_kernel_str27 = call i64 inttoptr (i64 115 to ptr)(ptr %47, i32 1024, i64 %46)
+  %48 = add i64 %45, 8
+  %probe_read_kernel28 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %48)
+  %49 = load i64, ptr %join_r0, align 8
+  %50 = getelementptr i8, ptr %lookup_join_map, i64 14352
+  %probe_read_kernel_str29 = call i64 inttoptr (i64 115 to ptr)(ptr %50, i32 1024, i64 %49)
+  %51 = add i64 %48, 8
+  %probe_read_kernel30 = call i64 inttoptr (i64 113 to ptr)(ptr %join_r0, i32 8, i64 %51)
+  %52 = load i64, ptr %join_r0, align 8
+  %53 = getelementptr i8, ptr %lookup_join_map, i64 15376
+  %probe_read_kernel_str31 = call i64 inttoptr (i64 115 to ptr)(ptr %53, i32 1024, i64 %52)
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %lookup_join_map, i64 16400, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
@@ -143,7 +145,7 @@ counter_merge:                                    ; preds = %lookup_merge, %look
   br label %failure_callback
 
 lookup_success:                                   ; preds = %event_loss_counter
-  %52 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
+  %54 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %event_loss_counter
@@ -157,11 +159,15 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!51}
 !llvm.module.flags = !{!53}
