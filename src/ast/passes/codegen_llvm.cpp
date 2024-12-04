@@ -412,7 +412,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.type.is_funcarg) {
-      expr_ = b_.CreatKFuncArg(ctx_, builtin.type, builtin.ident);
+      expr_ = b_.CreateKFuncArg(ctx_, builtin.type, builtin.ident);
       return;
     }
 
@@ -473,10 +473,9 @@ void CodegenLLVM::visit(Builtin &builtin)
     // uprobe args record is built on stack
     expr_ = b_.CreateUprobeArgsRecord(ctx_, builtin.type);
   } else if (builtin.ident == "args" || builtin.ident == "ctx") {
-    // ctx is undocumented builtin: for debugging
-    // ctx_ is casted to int for arithmetic operation
-    // it will be casted to a pointer when loading
-    expr_ = b_.CreatePtrToInt(ctx_, b_.getInt64Ty());
+    // ctx is undocumented builtin: for debugging. The context value is left as
+    // a pointer type, and may be cast explicitly if needed.
+    expr_ = ctx_;
   } else if (builtin.ident == "cpid") {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
@@ -2067,7 +2066,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit)
-      expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
+      expr_ = b_.CreateKFuncArg(ctx_, acc.type, acc.field);
     else if (probe_type == ProbeType::uprobe) {
       Value *args = expr_;
       llvm::Type *args_type = b_.UprobeArgsType(type);
@@ -2126,17 +2125,20 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // (bitfields and _data_loc)
     if (field.type.IsIntTy() &&
         (field.bitfield.has_value() || field.is_data_loc)) {
-      Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
-
       if (field.bitfield.has_value()) {
         Value *raw;
         auto field_type = b_.GetType(field.type);
-        if (type.IsCtxAccess())
-          raw = b_.CreateLoad(field_type,
-                              b_.CreateIntToPtr(src,
-                                                field_type->getPointerTo()),
-                              true);
-        else {
+        if (type.IsCtxAccess()) {
+          // The offset is specified in absolute terms here; and the load
+          // will implicitly convert to the intended field_type.
+          Value *src = b_.CreateSafeGEP(b_.GET_PTR_TY(),
+                                        expr_,
+                                        b_.getInt64(field.offset));
+          raw = b_.CreateLoad(field_type, src, true);
+        } else {
+          // Since `src` is treated as a offset for a constructed probe read,
+          // we are not constrained in the same way.
+          Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
           AllocaInst *dst = b_.CreateAllocaBPF(field.type,
                                                type.GetName() + "." +
                                                    acc.field);
@@ -2166,22 +2168,23 @@ void CodegenLLVM::visit(FieldAccess &acc)
         // `is_data_loc` should only be set if field access is on `args` which
         // has to be a ctx access
         assert(type.IsCtxAccess());
-        assert(ctx_->getType() == b_.GET_PTR_TY());
         // Parser needs to have rewritten field to be a u64
         assert(field.type.IsIntTy());
         assert(field.type.GetIntBitWidth() == 64);
 
         // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
-        // offset which we add to the start of the tracepoint struct.
-        expr_ = b_.CreateLoad(
-            b_.getInt32Ty(),
-            b_.CreateGEP(b_.getInt32Ty(),
-                         b_.CreatePointerCast(ctx_,
-                                              b_.getInt32Ty()->getPointerTo()),
-                         b_.getInt64(field.offset / 4)));
+        // offset which we add to the start of the tracepoint struct. We need
+        // to wrap the context here in a special way to treat it as the
+        // expected pointer type for all versions.
+        expr_ = b_.CreateLoad(b_.getInt32Ty(),
+                              b_.CreateSafeGEP(b_.getInt32Ty(),
+                                               ctx_,
+                                               b_.getInt64(field.offset / 4)));
         expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
         expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
-        expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
+        expr_ = b_.CreateSafeGEP(b_.getInt32Ty(), ctx_, expr_);
+        expr_ = b_.CreatePointerCast(expr_,
+                                     b_.GetType(field.type)->getPointerTo());
       }
     } else {
       probereadDatastructElem(expr_,
@@ -2701,7 +2704,7 @@ void CodegenLLVM::visit(For &f)
     for (size_t i = 0; i < ctx_fields.size(); i++) {
       const auto &field = ctx_fields[i];
       auto *field_expr = getVariable(field.name).value;
-      auto *ctx_field_ptr = b_.CreateGEP(
+      auto *ctx_field_ptr = b_.CreateSafeGEP(
           ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
 #if LLVM_VERSION_MAJOR < 15
       // An extra cast is required for older LLVM versions, pre-opaque-pointers
@@ -4197,9 +4200,13 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
                                           location loc,
                                           const std::string &temp_name)
 {
-  Value *src = b_.CreateAdd(src_data, offset);
-
+  // We treat this access as a raw byte offset, but may then subsequently need
+  // to cast the pointer to the expected value.
+  Value *src = b_.CreateSafeGEP(b_.getInt8Ty(), src_data, offset);
   auto dst_type = b_.GetType(elem_type);
+  if (dst_type != b_.getInt8Ty())
+    src = b_.CreatePointerCast(src, dst_type->getPointerTo());
+
   if (elem_type.IsRecordTy() || elem_type.IsArrayTy()) {
     // For nested arrays and structs, just pass the pointer along and
     // dereference it later when necessary. We just need to extend lifetime
@@ -4221,11 +4228,9 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
   } else {
     // Read data onto stack
     if (data_type.IsCtxAccess() || data_type.is_btftype) {
+      // Types have already been suitably casted; just do the access.
       expr_ = b_.CreateDatastructElemLoad(
-          elem_type,
-          b_.CreateIntToPtr(src, dst_type->getPointerTo()),
-          true,
-          data_type.GetAS());
+          elem_type, src, true, data_type.GetAS());
       // check context access for iter probes (required by kernel)
       if (data_type.IsCtxAccess() &&
           probetype(current_attach_point_->provider) == ProbeType::iter) {

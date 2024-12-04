@@ -22,13 +22,16 @@ entry:
   %"$foo" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i64 0, ptr %"$foo", align 8
-  %1 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %1, align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i64, ptr %1, i64 14
+  %arg0 = load volatile i64, ptr %2, align 8
   store i64 %arg0, ptr %"$foo", align 8
-  %2 = load i64, ptr %"$foo", align 8
-  %3 = add i64 %2, 0
+  %3 = load i64, ptr %"$foo", align 8
+  %4 = inttoptr i64 %3 to ptr
+  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
+  %6 = getelementptr i8, ptr %5, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.str")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 32, i64 %3)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 32, ptr %6)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@mystr_key")
   store i64 0, ptr %"@mystr_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_mystr, ptr %"@mystr_key", ptr %"struct Foo.str", i64 0)
@@ -37,14 +40,18 @@ entry:
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!48}
 !llvm.module.flags = !{!50}

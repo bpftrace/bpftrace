@@ -1421,10 +1421,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     // bpftrace's args are internally represented as 64 bit integers. However,
     // the underlying argument (of the target program) may be less than 64
     // bits. So we must be careful to zero out unused bits.
-    Value *reg = CreateGEP(getInt8Ty(),
-                           ctx,
-                           getInt64(offset * sizeof(uintptr_t)),
-                           "load_register");
+    Value *reg = CreateSafeGEP(getInt8Ty(),
+                               ctx,
+                               getInt64(offset * sizeof(uintptr_t)),
+                               "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
     Value *index_offset = nullptr;
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
@@ -1433,10 +1433,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
         LOG(BUG) << "offset for register " << argument->index_register_name
                  << " not known";
       }
-      index_offset = CreateGEP(getInt8Ty(),
-                               ctx,
-                               getInt64(ioffset * sizeof(uintptr_t)),
-                               "load_register");
+      index_offset = CreateSafeGEP(getInt8Ty(),
+                                   ctx,
+                                   getInt64(ioffset * sizeof(uintptr_t)),
+                                   "load_register");
       index_offset = CreateLoad(getInt64Ty(), index_offset);
       if (argument->valid & BCC_USDT_ARGUMENT_SCALE) {
         index_offset = CreateMul(index_offset, getInt64(argument->scale));
@@ -2479,15 +2479,14 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
   return call;
 }
 
-Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
-                                   SizedType &type,
-                                   std::string &name)
+Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
+                                    SizedType &type,
+                                    std::string &name)
 {
   assert(type.IsIntTy() || type.IsPtrTy());
-  ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
   Value *expr = CreateLoad(
       GetType(type),
-      CreateGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
+      CreateSafeGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
       name);
 
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
@@ -2503,9 +2502,9 @@ Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
   int offset = atoi(builtin.substr(3).c_str());
   llvm::Type *type = getInt64Ty();
 
-  ctx = CreatePointerCast(ctx, type->getPointerTo());
+  // All arguments are coerced into Int64.
   Value *expr = CreateLoad(type,
-                           CreateGEP(type, ctx, getInt64(offset)),
+                           CreateSafeGEP(type, ctx, getInt64(offset)),
                            builtin);
 
   return expr;
@@ -2564,12 +2563,9 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
   // Bitwidth of register values in struct pt_regs is the same as the kernel
   // pointer width on all supported architectures.
   llvm::Type *registerTy = getKernelPointerStorageTy();
-  Value *ctx_ptr = CreatePointerCast(ctx, registerTy->getPointerTo());
-  // LLVM optimization is possible to transform `(uint64*)ctx` into
-  // `(uint8*)ctx`, but sometimes this causes invalid context access.
-  // Mark every context access to suppress any LLVM optimization.
+
   Value *result = CreateLoad(registerTy,
-                             CreateGEP(registerTy, ctx_ptr, getInt64(offset)),
+                             CreateSafeGEP(registerTy, ctx, getInt64(offset)),
                              name);
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
   // so call setVolatile() manually
@@ -2716,11 +2712,10 @@ void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
       getInt64(libbpf::BPF_FUNC_seq_printf),
       seq_printf_func_ptr_type);
 
-  ctx = CreatePointerCast(ctx, getInt8Ty()->getPointerTo());
-  Value *meta = CreateLoad(getInt64Ty()->getPointerTo(),
-                           CreateGEP(getInt8Ty(), ctx, getInt64(0)),
-                           "meta");
-  dyn_cast<LoadInst>(meta)->setVolatile(true);
+  LoadInst *meta = CreateLoad(getInt64Ty()->getPointerTo(),
+                              CreateSafeGEP(getInt64Ty(), ctx, getInt64(0)),
+                              "meta");
+  meta->setVolatile(true);
 
   Value *seq = CreateLoad(getInt64Ty(),
                           CreateGEP(getInt64Ty(), meta, getInt64(0)),
@@ -2805,6 +2800,40 @@ llvm::Value *IRBuilderBPF::CreatePtrOffset(const SizedType &type,
                          : type.GetSize();
 
   return CreateMul(index, getInt64(elem_size));
+}
+
+llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
+                                         llvm::Value *ptr,
+                                         llvm::ArrayRef<Value *> offsets,
+                                         const llvm::Twine &name)
+{
+  if (!ptr->getType()->isPointerTy()) {
+    assert(ptr->getType()->isIntegerTy());
+    ptr = CreateIntToPtr(ptr, ty->getPointerTo());
+  }
+
+#if LLVM_VERSION_MAJOR <= 14
+  // Older versions of LLVM check that the type matches the GEP. Newer versions
+  // do not use this cast because we need to specifically preserve the pattern
+  // `GEP(preserveStaticOffsets(ctx))`, which doesn't exist on older versions.
+  if (ptr->getType() != ty->getPointerTo()) {
+    assert(ptr->getType()->isPointerTy());
+    ptr = CreatePointerCast(ptr, ty->getPointerTo());
+  }
+#endif
+
+#if LLVM_VERSION_MAJOR >= 18
+  if (!preserve_static_offset_) {
+    preserve_static_offset_ = llvm::Intrinsic::getDeclaration(
+        &module_, llvm::Intrinsic::preserve_static_offset);
+  }
+  ptr = CreateCall(preserve_static_offset_, ptr);
+#endif
+
+  // Create the GEP itself; on newer versions of LLVM this coerces the pointer
+  // value into a pointer to the given type, and older versions have guaranteed
+  // a suitable cast above (first from integer, then to the right pointer).
+  return CreateGEP(ty, ptr, offsets, name);
 }
 
 llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)

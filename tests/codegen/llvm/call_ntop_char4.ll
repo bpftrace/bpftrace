@@ -25,7 +25,9 @@ entry:
   store i64 2, ptr %1, align 8
   %2 = getelementptr %inet, ptr %inet, i32 0, i32 1
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 4, i64 0)
+  %3 = call ptr @llvm.preserve.static.offset(ptr null)
+  %4 = getelementptr i8, ptr %3, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 4, ptr %4)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %inet, i64 0)
@@ -40,12 +42,16 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #3
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!48}
 !llvm.module.flags = !{!50}

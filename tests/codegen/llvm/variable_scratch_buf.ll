@@ -27,10 +27,11 @@ entry:
   %cpu.id.bounded = and i64 %get_cpu_id, %3
   %4 = getelementptr [1 x [2 x [8 x i8]]], ptr @var_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 0, ptr %4, align 8
-  %5 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %5, align 8
-  %6 = icmp ugt i64 %arg0, 0
-  %true_cond = icmp ne i1 %6, false
+  %5 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %6 = getelementptr i64, ptr %5, i64 14
+  %arg0 = load volatile i64, ptr %6, align 8
+  %7 = icmp ugt i64 %arg0, 0
+  %true_cond = icmp ne i1 %7, false
   br i1 %true_cond, label %if_body, label %else_body
 
 if_body:                                          ; preds = %entry
@@ -45,7 +46,11 @@ else_body:                                        ; preds = %entry
   br label %if_end
 }
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
+
 attributes #0 = { nounwind }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48}
