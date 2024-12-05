@@ -564,7 +564,7 @@ bool BPFfeature::has_skb_output()
   return *has_skb_output_;
 }
 
-void tabulate(std::stringstream& buf,
+static void tabulate(std::stringstream& buf,
               std::vector<std::pair<std::string, std::string>>& data)
 {
   size_t len = data.size();
@@ -612,7 +612,7 @@ std::string BPFfeature::report()
     { "module btf", to_str(has_module_btf()) },
     { "Kernel DWARF", to_str(has_kernel_dwarf()) },
     { "map batch", to_str(has_map_batch()) },
-    { "uprobe refcount", to_str(has_uprobe_refcnt()) }
+    { "uprobe refcount", to_str(has_uprobe_refcnt()) } //depends on Build:bcc bpf_attach_uprobe refcount:
   };
 
   std::vector<std::pair<std::string, std::string>> map_types = {
