@@ -138,8 +138,7 @@ class Runner(object):
         bpffeature["btf"] = output.find("btf: yes") != -1
         bpffeature["fentry"] = output.find("fentry: yes") != -1
         bpffeature["dpath"] = output.find("dpath: yes") != -1
-        bpffeature["uprobe_refcount"] = \
-            output.find("uprobe refcount") != -1
+        bpffeature["uprobe_refcount"] = output.find("uprobe refcount") != -1
         bpffeature["signal"] = output.find("send_signal: yes") != -1
         bpffeature["iter"] = output.find("iter: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1

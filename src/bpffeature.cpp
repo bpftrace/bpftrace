@@ -612,7 +612,8 @@ std::string BPFfeature::report()
     { "module btf", to_str(has_module_btf()) },
     { "Kernel DWARF", to_str(has_kernel_dwarf()) },
     { "map batch", to_str(has_map_batch()) },
-    { "uprobe refcount", to_str(has_uprobe_refcnt()) } //depends on Build:bcc bpf_attach_uprobe refcount:
+    // Depends on BCC's bpf_attach_uprobe refcount feature
+    { "uprobe refcount", to_str(has_uprobe_refcnt()) } 
   };
 
   std::vector<std::pair<std::string, std::string>> map_types = {
