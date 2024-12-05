@@ -12,6 +12,7 @@ add_library(ast STATIC
   signal.cpp
   visitors.cpp
 
+  passes/auto_print.cpp
   passes/codegen_resources.cpp
   passes/config_analyser.cpp
   passes/field_analyser.cpp
