@@ -565,7 +565,7 @@ bool BPFfeature::has_skb_output()
 }
 
 static void tabulate(std::stringstream& buf,
-              std::vector<std::pair<std::string, std::string>>& data)
+                     std::vector<std::pair<std::string, std::string>>& data)
 {
   size_t len = data.size();
   constexpr int width = 35;
@@ -613,7 +613,7 @@ std::string BPFfeature::report()
     { "Kernel DWARF", to_str(has_kernel_dwarf()) },
     { "map batch", to_str(has_map_batch()) },
     // Depends on BCC's bpf_attach_uprobe refcount feature
-    { "uprobe refcount", to_str(has_uprobe_refcnt()) } 
+    { "uprobe refcount", to_str(has_uprobe_refcnt()) }
   };
 
   std::vector<std::pair<std::string, std::string>> map_types = {
