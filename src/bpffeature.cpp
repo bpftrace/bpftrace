@@ -571,7 +571,7 @@ static void tabulate(std::stringstream& buf,
   constexpr int width = 35;
   for (size_t i = 0; i < len; i += 2) {
     buf << std::setw(width) << std::left
-        << " " + data[i].first + ": " + data[i].second << std::setw(width);
+        << "  " + data[i].first + ": " + data[i].second << std::setw(width);
     if (i + 1 < len) {
       buf << data[i + 1].first + ": " + data[i + 1].second << std::endl;
     } else {
