@@ -1,6 +1,6 @@
 # This Dockerfile is used to test STATIC_LINKING=ON builds in the CI
 
-FROM alpine:3.18
+FROM alpine:3.21
 
 RUN apk add --update \
   asciidoctor \
@@ -12,8 +12,9 @@ RUN apk add --update \
   bzip2-static \
   build-base \
   cereal \
-  clang-dev \
-  clang-static \
+  clang18-dev \
+  clang18-extra-tools \
+  clang18-static \
   cmake \
   elfutils-dev \
   flex-dev \
@@ -24,8 +25,9 @@ RUN apk add --update \
   libpcap-dev \
   libc6-compat \
   linux-headers \
-  llvm16-dev \
-  llvm16-static \
+  llvm18-dev \
+  llvm18-gtest \
+  llvm18-static \
   musl-obstack-dev \
   openssl-dev \
   pahole \
@@ -39,6 +41,12 @@ RUN apk add --update \
   zstd-dev \
   zstd-static
 
-# It looks like llvm16 prefers to dynamically link against zstd. Extremely
+# It looks like llvm18 prefers to dynamically link against zstd. Extremely
 # unclear why.  Work around it by modifying LLVMExports.cmake.
-RUN sed -i 's/libzstd_shared/libzstd_static/g' /usr/lib/llvm16/lib/cmake/llvm/LLVMExports.cmake
+RUN sed -i 's/libzstd_shared/libzstd_static/g' /usr/lib/llvm18/lib/cmake/llvm/LLVMExports.cmake
+
+# bcc-static needs clang/llvm 18 instead of the latest 19. As a consequence,
+# CMake reports errors as that it cannot find files in /usr/lib/cmake/clang/ as
+# it's a symlink for /usr/lib/cmake/clangXX/ which is only created when the
+# latest clang is installed. To fix this, create the symlink manually.
+RUN ln -s 'clang18' /usr/lib/cmake/clang
