@@ -33,6 +33,7 @@ if(STATIC_LINKING)
       clangAST
       clangAnalysis
       clangBasic
+      clangCodeGen
       clangDriver
       clangEdit
       clangFormat
@@ -49,9 +50,13 @@ if(STATIC_LINKING)
 
   set(llvm_lib_names
       bpfcodegen
+      coverage
+      frontenddriver
+      frontendhlsl
       frontendopenmp
       ipo
       irreader
+      lto
       mcjit
       option
       orcjit
