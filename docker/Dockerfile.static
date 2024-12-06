@@ -1,6 +1,6 @@
 # This Dockerfile is used to test STATIC_LINKING=ON builds in the CI
 
-FROM alpine:3.18
+FROM alpine:3.21
 
 RUN apk add --update \
   asciidoctor \
