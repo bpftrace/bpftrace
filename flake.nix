@@ -5,10 +5,14 @@
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
-      # Use fork until following PRs are in:
-      #   https://github.com/ralismark/nix-appimage/pull/8
+      # We're maintaining a fork b/c upstream is missing support for 24.11
+      # and has also dropped the following feature we depend on:
       #   https://github.com/ralismark/nix-appimage/pull/9
-      url = "github:danobi/nix-appimage/83c61d93ee96d4d530f5382edca51ee30ce2769f";
+      #
+      # Also b/c appimage-runtime (which nix-appimage depends on) has a bug
+      # that's being fixed in:
+      #   https://github.com/AppImageCrafters/appimage-runtime/pull/14
+      url = "github:danobi/nix-appimage/74e44691812b4f220e84fd89895931ff4f904a03";
       # Avoid multiple copies of the same dependency
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
