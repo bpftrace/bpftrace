@@ -398,9 +398,9 @@ void CodegenLLVM::visit(Builtin &builtin)
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
         probe_type == ProbeType::kretprobe ||
         probe_type == ProbeType::uretprobe) {
-      expr_ = b_.CreateGetFuncIp(ctx_, builtin.loc);
+      expr_ = b_.CreateGetFuncIp(getContext(), builtin.loc);
     } else {
-      expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
+      expr_ = b_.CreateRegisterRead(getContext(), builtin.ident);
     }
 
     if (builtin.type.IsUsymTy()) {
@@ -412,13 +412,13 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.type.is_funcarg) {
-      expr_ = b_.CreatKFuncArg(ctx_, builtin.type, builtin.ident);
+      expr_ = b_.CreateKFuncArg(getContext(), builtin.type, builtin.ident);
       return;
     }
 
     if (builtin.ident.find("arg") != std::string::npos &&
         probe_type == ProbeType::usdt) {
-      expr_ = b_.CreateUSDTReadArgument(ctx_,
+      expr_ = b_.CreateUSDTReadArgument(getContext(),
                                         current_attach_point_,
                                         current_usdt_location_index_,
                                         atoi(builtin.ident.substr(3).c_str()),
@@ -430,9 +430,9 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
 
     if (builtin.is_argx() && probe_type == ProbeType::rawtracepoint)
-      expr_ = b_.CreateRawTracepointArg(ctx_, builtin.ident);
+      expr_ = b_.CreateRawTracepointArg(getContext(), builtin.ident);
     else
-      expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
+      expr_ = b_.CreateRegisterRead(getContext(), builtin.ident);
 
     if (builtin.type.IsUsymTy()) {
       expr_ = b_.CreateUSym(expr_, get_probe_id(), builtin.loc);
@@ -448,7 +448,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *sp = b_.CreateRegisterRead(ctx_, sp_offset, "reg_sp");
+    Value *sp = b_.CreateRegisterRead(getContext(), sp_offset, "reg_sp");
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
 
     // Pointer width is used when calculating the SP offset and the number of
@@ -462,7 +462,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     Value *src = b_.CreateAdd(
         sp, b_.getInt64((arg_num + arch::arg_stack_offset()) * arg_width));
-    b_.CreateProbeRead(ctx_, dst, arg_type, src, builtin.loc);
+    b_.CreateProbeRead(getContext(), dst, arg_type, src, builtin.loc);
     expr_ = b_.CreateLoad(b_.GetType(builtin.type), dst);
     b_.CreateLifetimeEnd(dst);
   } else if (builtin.ident == "probe") {
@@ -471,12 +471,11 @@ void CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack
-    expr_ = b_.CreateUprobeArgsRecord(ctx_, builtin.type);
+    expr_ = b_.CreateUprobeArgsRecord(getContext(), builtin.type);
   } else if (builtin.ident == "args" || builtin.ident == "ctx") {
     // ctx is undocumented builtin: for debugging
     // ctx_ is casted to int for arithmetic operation
-    // it will be casted to a pointer when loading
-    expr_ = b_.CreatePtrToInt(ctx_, b_.getInt64Ty());
+    expr_ = getContext();
   } else if (builtin.ident == "cpid") {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
@@ -2067,7 +2066,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit)
-      expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
+      expr_ = b_.CreateKFuncArg(ctx_, acc.type, acc.field);
     else if (probe_type == ProbeType::uprobe) {
       Value *args = expr_;
       llvm::Type *args_type = b_.UprobeArgsType(type);
@@ -2126,17 +2125,26 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // (bitfields and _data_loc)
     if (field.type.IsIntTy() &&
         (field.bitfield.has_value() || field.is_data_loc)) {
-      Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
-
       if (field.bitfield.has_value()) {
         Value *raw;
         auto field_type = b_.GetType(field.type);
-        if (type.IsCtxAccess())
-          raw = b_.CreateLoad(field_type,
-                              b_.CreateIntToPtr(src,
-                                                field_type->getPointerTo()),
-                              true);
-        else {
+        if (type.IsCtxAccess()) {
+          // We must preserve pointer semantics. See `probereadDatastructElem`
+          // where the logic is essentially constrained in the same way.
+          if (expr_->getType()->isPointerTy()) {
+            expr_ = b_.CreateIntToPtr(expr_, b_.GET_PTR_TY());
+            expr_ = b_.preserveStaticOffset(expr_);
+          }
+          Value *src = b_.CreateGEP(b_.getInt8Ty(),
+                                    expr_,
+                                    b_.getInt64(field.offset));
+          if (field_type != b_.getInt8Ty())
+            src = b_.CreatePointerCast(src, field_type->getPointerTo());
+          raw = b_.CreateLoad(field_type, src, true);
+        } else {
+          // Since `src` is treated as a offset for a constructed probe read,
+          // we are not constrained in the same way.
+          Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
           AllocaInst *dst = b_.CreateAllocaBPF(field.type,
                                                type.GetName() + "." +
                                                    acc.field);
@@ -2166,22 +2174,21 @@ void CodegenLLVM::visit(FieldAccess &acc)
         // `is_data_loc` should only be set if field access is on `args` which
         // has to be a ctx access
         assert(type.IsCtxAccess());
-        assert(ctx_->getType() == b_.GET_PTR_TY());
         // Parser needs to have rewritten field to be a u64
         assert(field.type.IsIntTy());
         assert(field.type.GetIntBitWidth() == 64);
 
         // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
         // offset which we add to the start of the tracepoint struct.
-        expr_ = b_.CreateLoad(
-            b_.getInt32Ty(),
-            b_.CreateGEP(b_.getInt32Ty(),
-                         b_.CreatePointerCast(ctx_,
-                                              b_.getInt32Ty()->getPointerTo()),
-                         b_.getInt64(field.offset / 4)));
+        expr_ = b_.CreateLoad(b_.getInt32Ty(),
+                              b_.CreateGEP(b_.getInt32Ty(),
+                                           getContext(),
+                                           b_.getInt64(field.offset / 4)));
         expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
         expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
-        expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
+        expr_ = b_.CreateGEP(b_.getInt32Ty(), getContext(), expr_);
+        expr_ = b_.CreatePointerCast(expr_,
+                                     b_.GetType(field.type)->getPointerTo());
       }
     } else {
       probereadDatastructElem(expr_,
@@ -4197,9 +4204,26 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
                                           location loc,
                                           const std::string &temp_name)
 {
-  Value *src = b_.CreateAdd(src_data, offset);
+  // FIXME(amscanne): Pointers are often casted into integer types, and
+  // therefore we need to handle this case. Unfortunately, this means that we
+  // need to rewrap in the intrinsic to ensure that these continue to preserve
+  // offsets during access.  The solution to this to have have the local types
+  // accurately reflect the true types, rather than using `codegen_types`, and
+  // simply apply appropriate conversions at the moment needed.
+  if (!src_data->getType()->isPointerTy()) {
+    src_data = b_.CreateIntToPtr(src_data, b_.GET_PTR_TY());
+    src_data = b_.preserveStaticOffset(src_data);
+  }
 
+  // We treat this access as a raw byte offset, but still need to go through
+  // GEP to support the appropriate `preserve_static_offsets` intrinsic. Since
+  // we may leave this value as the expression result, we may inject a proper
+  // cast in order to ensure that the type is sensible.
+  Value *src = b_.CreateGEP(b_.getInt8Ty(), src_data, offset);
   auto dst_type = b_.GetType(elem_type);
+  if (dst_type != b_.getInt8Ty())
+    src = b_.CreatePointerCast(src, dst_type->getPointerTo());
+
   if (elem_type.IsRecordTy() || elem_type.IsArrayTy()) {
     // For nested arrays and structs, just pass the pointer along and
     // dereference it later when necessary. We just need to extend lifetime

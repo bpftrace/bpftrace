@@ -20,24 +20,25 @@ define i64 @uprobe__tmp_bpftrace_test_dwarf_data_func_1_1(ptr %0) section "s_upr
 entry:
   %"@_key" = alloca i64, align 8
   %args = alloca %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %args)
-  %1 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %1, align 8
-  %2 = trunc i64 %arg0 to i32
-  %3 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 0
-  store i32 %2, ptr %3, align 4
-  %4 = getelementptr i64, ptr %0, i64 13
-  %arg1 = load volatile i64, ptr %4, align 8
-  %5 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 1
-  store i64 %arg1, ptr %5, align 8
-  %6 = getelementptr i64, ptr %0, i64 12
-  %arg2 = load volatile i64, ptr %6, align 8
-  %7 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 2
-  store i64 %arg2, ptr %7, align 8
-  %8 = getelementptr i64, ptr %0, i64 11
-  %arg3 = load volatile i64, ptr %8, align 8
-  %9 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
-  store i64 %arg3, ptr %9, align 8
+  %2 = getelementptr i64, ptr %1, i64 14
+  %arg0 = load volatile i64, ptr %2, align 8
+  %3 = trunc i64 %arg0 to i32
+  %4 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 0
+  store i32 %3, ptr %4, align 4
+  %5 = getelementptr i64, ptr %1, i64 13
+  %arg1 = load volatile i64, ptr %5, align 8
+  %6 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 1
+  store i64 %arg1, ptr %6, align 8
+  %7 = getelementptr i64, ptr %1, i64 12
+  %arg2 = load volatile i64, ptr %7, align 8
+  %8 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 2
+  store i64 %arg2, ptr %8, align 8
+  %9 = getelementptr i64, ptr %1, i64 11
+  %arg3 = load volatile i64, ptr %9, align 8
+  %10 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
+  store i64 %arg3, ptr %10, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %args, i64 0)
@@ -45,14 +46,18 @@ entry:
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!48}
 !llvm.module.flags = !{!50}
