@@ -2346,6 +2346,12 @@ TEST(semantic_analyser, map_cast_types)
 
 TEST(semantic_analyser, map_aggregations_implicit_cast)
 {
+  test("kprobe:f { @x = 1; @y = count(); @x = @y; }");
+  test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }");
+  test("kprobe:f { @x = 1; @y = min(5); @x = @y; }");
+  test("kprobe:f { @x = 1; @y = max(5); @x = @y; }");
+  test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }");
+
   test("kprobe:f { @ = count(); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = sum(5); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = min(5); if (@ > 0) { print((1)); } }");
