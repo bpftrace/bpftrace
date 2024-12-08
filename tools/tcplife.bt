@@ -30,7 +30,7 @@
 
 BEGIN
 {
-	printf("%-5s %-16s %-39s %-5s %-39s %-5s ", "PID", "COMM",
+	printf("%-5s %-16s %-15s %-5s %-15s %-5s ", "PID", "COMM",
 	    "LADDR", "LPORT", "RADDR", "RPORT");
 	printf("%5s %5s %s\n", "TX_KB", "RX_KB", "MS");
 }
@@ -91,7 +91,7 @@ kprobe:tcp_set_state
 			$daddr = ntop(AF_INET6,
 			    $sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
 		}
-		printf("%-5d %-16.16s %-39s %-5d %-39s %-6d ", $pid,
+		printf("%-5d %-16.16s %-15s %-5d %-15s %-6d ", $pid,
 		    $comm, $saddr, $lport, $daddr, $dport);
 		printf("%5d %5d %d\n", $tp->bytes_acked / 1024,
 		    $tp->bytes_received / 1024, $delta_ms);
