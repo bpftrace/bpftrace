@@ -462,8 +462,13 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = b_.CreateLoad(b_.GetType(builtin.type), dst);
     b_.CreateLifetimeEnd(dst);
   } else if (builtin.ident == "probe") {
-    builtin.probe_id = get_probe_id();
-    expr_ = b_.getInt64(builtin.probe_id);
+    auto probe_str = probefull_;
+    probe_str.resize(builtin.type.GetSize() - 1);
+    auto probe_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+        probe_str, ArrayType::get(b_.getInt8Ty(), builtin.type.GetSize())));
+    probe_var->setInitializer(
+        ConstantDataArray::getString(module_->getContext(), probe_str));
+    expr_ = probe_var;
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack
@@ -1569,6 +1574,7 @@ std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
     result.second = expr->type.GetSize();
     expr_deleter_ = scoped_del.disarm();
   }
+
   return result;
 }
 

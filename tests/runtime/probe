@@ -455,6 +455,14 @@ REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { print(probe); exit();}
 EXPECT hardware:cache-misses:10
 
+NAME probe_builtin_string_compare
+RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction* { if (strcontains(probe, "uprobeFunction2")) { print(probe); } }' -c ./testprogs/uprobe_test
+EXPECT uprobe:testprogs/uprobe_test:uprobeFunction2
+
+NAME probe_builtin_scratch_buf
+PROG config = { on_stack_limit = 0 } software:cpu:1 { print(probe); exit(); }
+EXPECT software:cpu:1
+
 NAME BEGIN
 PROG BEGIN { printf("Hello\n"); exit();}
 EXPECT Hello

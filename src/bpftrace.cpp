@@ -615,10 +615,6 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         arg_values.push_back(std::make_unique<PrintableString>(
             resolve_uid(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
         break;
-      case Type::probe:
-        arg_values.push_back(std::make_unique<PrintableString>(resolve_probe(
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
-        break;
       case Type::kstack_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
