@@ -32,6 +32,7 @@ private:
   void visit(Subprog &subprog) override;
   void visit(Builtin &map) override;
   void visit(Call &call) override;
+  void visit(Cast &cast) override;
   void visit(Map &map) override;
   void visit(Tuple &tuple) override;
   void visit(For &f) override;

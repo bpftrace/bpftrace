@@ -359,6 +359,17 @@ void ResourceAnalyser::visit(Call &call)
   }
 }
 
+void ResourceAnalyser::visit(Cast &cast)
+{
+  Visitor::visit(cast);
+  if (cast.type.IsStringTy() && cast.expr->type.IsProbeTy()) {
+    const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    if (exceeds_stack_limit(max_strlen)) {
+      resources_.str_buffers++;
+    }
+  }
+}
+
 void ResourceAnalyser::visit(Map &map)
 {
   Visitor::visit(map);

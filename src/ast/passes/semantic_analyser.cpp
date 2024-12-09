@@ -2716,15 +2716,26 @@ void SemanticAnalyser::visit(Cast &cast)
         << "Cannot cast from \"" << cast.expr->type << "\" type";
   }
 
-  if (!cast.type.IsIntTy() && !cast.type.IsPtrTy() &&
+  if (!cast.type.IsIntTy() && !cast.type.IsPtrTy() && !cast.type.IsStringTy() &&
       !(cast.type.IsPtrTy() && !cast.type.GetElementTy()->IsIntTy() &&
         !cast.type.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
       !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy())) {
     LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
-    if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
-        it != KNOWN_TYPE_ALIASES.end()) {
-      LOG(HINT, cast.loc, err_) << "Did you mean \"" << it->second << "\"?";
+    if (cast.type.IsRecordTy() || cast.type.IsEnumTy()) {
+      if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
+          it != KNOWN_TYPE_ALIASES.end()) {
+        LOG(HINT, cast.loc, err_) << "Did you mean \"" << it->second << "\"?";
+      }
+    }
+  }
+
+  if (cast.type.IsStringTy()) {
+    if (rhs.IsProbeTy()) {
+      cast.type.SetSize(bpftrace_.config_.get(ConfigKeyInt::max_strlen));
+    } else {
+      LOG(ERROR, cast.loc, err_)
+          << "Cannot cast from \"" << rhs << "\" to \"" << cast.type << "\"";
     }
   }
 
