@@ -88,7 +88,6 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
     case Type::ksym_t:
     case Type::usym_t:
     case Type::username:
-    case Type::probe:
     case Type::stack_mode:
     case Type::timestamp_mode:
     case Type::cgroup_path_t:
@@ -230,7 +229,6 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym_t:     return "ksym_t";     break;
     case Type::usym_t:     return "usym_t";     break;
-    case Type::probe:    return "probe";    break;
     case Type::username: return "username"; break;
     case Type::inet:     return "inet";     break;
     case Type::stack_mode:return "stack_mode";break;
@@ -480,11 +478,6 @@ SizedType CreateStats(bool is_signed)
   return SizedType(Type::stats_t, 8, is_signed);
 }
 
-SizedType CreateProbe()
-{
-  return SizedType(Type::probe, 8);
-}
-
 SizedType CreateUsername()
 {
   return SizedType(Type::username, 8);
@@ -726,7 +719,6 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::string:
     case bpftrace::Type::ksym_t:
     case bpftrace::Type::usym_t:
-    case bpftrace::Type::probe:
     case bpftrace::Type::username:
     case bpftrace::Type::inet:
     case bpftrace::Type::stack_mode:

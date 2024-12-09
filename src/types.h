@@ -41,7 +41,6 @@ enum class Type : uint8_t {
   string,
   ksym_t,
   usym_t,
-  probe,
   username,
   inet,
   stack_mode,
@@ -419,10 +418,6 @@ public:
   {
     return type_ == Type::usym_t;
   };
-  bool IsProbeTy(void) const
-  {
-    return type_ == Type::probe;
-  };
   bool IsUsernameTy(void) const
   {
     return type_ == Type::username;
@@ -550,7 +545,6 @@ SizedType CreateSum(bool is_signed);
 SizedType CreateCount(bool is_signed);
 SizedType CreateAvg(bool is_signed);
 SizedType CreateStats(bool is_signed);
-SizedType CreateProbe();
 SizedType CreateUsername();
 SizedType CreateInet(size_t size);
 SizedType CreateLhist();

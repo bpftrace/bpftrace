@@ -24,7 +24,6 @@ bool is_quoted_type(const SizedType &ty)
     case Type::inet:
     case Type::kstack_t:
     case Type::ksym_t:
-    case Type::probe:
     case Type::strerror_t:
     case Type::string:
     case Type::timestamp:
@@ -391,9 +390,6 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       }
       return std::to_string(read_data<uint64_t>(value.data()) / div);
     }
-    case Type::probe: {
-      return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
-    }
     case Type::timestamp: {
       return bpftrace.resolve_timestamp(
           reinterpret_cast<const AsyncEvent::Strftime *>(value.data())->mode,
@@ -445,7 +441,6 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
     case Type::usym_t:
     case Type::inet:
     case Type::username:
-    case Type::probe:
     case Type::string:
     case Type::buffer:
     case Type::pointer:
