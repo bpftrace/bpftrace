@@ -2260,6 +2260,17 @@ void CodegenLLVM::visit(Cast &cast)
     auto v = b_.CreateAllocaBPF(expr_->getType());
     b_.CreateStore(expr_, v);
     expr_ = b_.CreatePointerCast(v, b_.GetType(cast.type)->getPointerTo());
+  } else if (cast.type.IsStringTy() && cast.expr->type.IsProbeTy()) {
+    Value *buf = b_.CreateGetStrAllocation("probe", cast.loc);
+    b_.CreateMemsetBPF(buf,
+                       b_.getInt8(0),
+                       bpftrace_.config_.get(ConfigKeyInt::max_strlen));
+
+    Constant *const_str = ConstantDataArray::getString(module_->getContext(),
+                                                       probefull_,
+                                                       true);
+    b_.CreateStore(const_str, buf);
+    expr_ = buf;
   }
 }
 
