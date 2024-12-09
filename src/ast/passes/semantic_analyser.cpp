@@ -98,7 +98,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::sum_t:
     case Type::stack_mode:
     case Type::voidtype:
-    case Type::probe:
       return false;
     case Type::integer:
     case Type::kstack_t:
@@ -536,7 +535,17 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto probe = get_probe(builtin.loc, builtin.ident);
     if (probe == nullptr)
       return;
-    builtin.type = CreateProbe();
+    size_t str_size = 0;
+    for (AttachPoint *attach_point : probe->attach_points) {
+      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
+          *attach_point);
+      for (const auto &match : matches) {
+        str_size = std::max(
+            str_size,
+            attach_point->create_expansion_copy(match).name().length());
+      }
+    }
+    builtin.type = CreateString(str_size + 1);
     probe->need_expansion = true;
   } else if (builtin.ident == "username") {
     builtin.type = CreateUsername();
@@ -2722,9 +2731,11 @@ void SemanticAnalyser::visit(Cast &cast)
       // we support casting integers to int arrays
       !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy())) {
     LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
-    if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
-        it != KNOWN_TYPE_ALIASES.end()) {
-      LOG(HINT, cast.loc, err_) << "Did you mean \"" << it->second << "\"?";
+    if (cast.type.IsRecordTy() || cast.type.IsEnumTy()) {
+      if (auto it = KNOWN_TYPE_ALIASES.find(cast.type.GetName());
+          it != KNOWN_TYPE_ALIASES.end()) {
+        LOG(HINT, cast.loc, err_) << "Did you mean \"" << it->second << "\"?";
+      }
     }
   }
 
