@@ -168,6 +168,9 @@ public:
                                      BasicBlock *failure_callback,
                                      const location &loc);
   Value *CreateGetStrAllocation(const std::string &name, const location &loc);
+  Value *CreateProbeStrAllocation(const SizedType &value_type,
+                                  const std::string &name,
+                                  const location &loc);
   Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                           const std::string &name,
                                           const location &loc);

@@ -27,6 +27,8 @@ constexpr std::string_view WRITE_MAP_VALUE_BUFFER_SECTION_NAME =
     ".data.write_map_val_buf";
 constexpr std::string_view VARIABLE_BUFFER_SECTION_NAME = ".data.var_buf";
 constexpr std::string_view MAP_KEY_BUFFER_SECTION_NAME = ".data.map_key_buf";
+constexpr std::string_view PROBE_STR_BUFFER_SECTION_NAME =
+    ".data.probe_str_buf";
 
 struct GlobalVarConfig {
   std::string name;
@@ -56,6 +58,8 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
     { "var_buf", std::string(VARIABLE_BUFFER_SECTION_NAME), false } },
   { GlobalVar::MAP_KEY_BUFFER,
     { "map_key_buf", std::string(MAP_KEY_BUFFER_SECTION_NAME), false } },
+  { GlobalVar::PROBE_STR_BUFFER,
+    { "probe_str_buf", std::string(PROBE_STR_BUFFER_SECTION_NAME), false } },
 };
 
 void update_global_vars(

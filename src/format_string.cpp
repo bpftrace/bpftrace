@@ -109,11 +109,10 @@ std::string validate_format_string(const std::string &fmt,
     std::unordered_set<Type> arg_types;
     Type arg_type = args.at(i).type.GetTy();
     if (arg_type == Type::ksym_t || arg_type == Type::usym_t ||
-        arg_type == Type::probe || arg_type == Type::username ||
-        arg_type == Type::kstack_t || arg_type == Type::ustack_t ||
-        arg_type == Type::inet || arg_type == Type::timestamp ||
-        arg_type == Type::mac_address || arg_type == Type::cgroup_path_t ||
-        arg_type == Type::strerror_t) {
+        arg_type == Type::username || arg_type == Type::kstack_t ||
+        arg_type == Type::ustack_t || arg_type == Type::inet ||
+        arg_type == Type::timestamp || arg_type == Type::mac_address ||
+        arg_type == Type::cgroup_path_t || arg_type == Type::strerror_t) {
       arg_types.insert(Type::string); // Symbols should be printed as
                                       // strings
     } else if (arg_type == Type::pointer) {

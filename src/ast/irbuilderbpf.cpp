@@ -512,6 +512,16 @@ Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
                           [](AsyncIds &async_ids) { return async_ids.str(); });
 }
 
+Value *IRBuilderBPF::CreateProbeStrAllocation(const SizedType &value_type,
+                                              const std::string &name,
+                                              const location &loc)
+{
+  return createAllocation(bpftrace::globalvars::GlobalVar::PROBE_STR_BUFFER,
+                          GetType(value_type),
+                          name,
+                          loc);
+}
+
 Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                                       const std::string &name,
                                                       const location &loc)
