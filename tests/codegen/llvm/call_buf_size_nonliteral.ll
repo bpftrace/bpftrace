@@ -21,41 +21,47 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
   %"@x_key" = alloca i64, align 8
-  %1 = getelementptr i64, ptr %0, i64 13
-  %arg1 = load volatile i64, ptr %1, align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i64, ptr %1, i64 13
+  %arg1 = load volatile i64, ptr %2, align 8
   %length.cmp = icmp ule i64 %arg1, 60
   %length.select = select i1 %length.cmp, i64 %arg1, i64 60
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %2 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %2
-  %3 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %4 = getelementptr %buffer_60_t, ptr %3, i32 0, i32 0
-  %5 = trunc i64 %length.select to i32
-  store i32 %5, ptr %4, align 4
-  %6 = getelementptr %buffer_60_t, ptr %3, i32 0, i32 1
-  call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 60, i1 false)
-  %7 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %7, align 8
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 %5, i64 %arg0)
+  %3 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %3
+  %4 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %5 = getelementptr %buffer_60_t, ptr %4, i32 0, i32 0
+  %6 = trunc i64 %length.select to i32
+  store i32 %6, ptr %5, align 4
+  %7 = getelementptr %buffer_60_t, ptr %4, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %7, i8 0, i64 60, i1 false)
+  %8 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %9 = getelementptr i64, ptr %8, i64 14
+  %arg0 = load volatile i64, ptr %9, align 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %7, i32 %6, i64 %arg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %3, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %4, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
 }
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
+
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #3
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #3
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!54}
 !llvm.module.flags = !{!56}
