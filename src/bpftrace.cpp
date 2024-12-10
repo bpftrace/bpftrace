@@ -174,7 +174,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
         // Only use the DWARF information of the Kernel,
         // if the user wants to to probe inlined kprobes.
         // Otherwise, fall back to using the symbol table.
-        if (config_.get(ConfigKeyBool::probe_inline))
+        if (config_.get(ConfigKeyBool::unstable_attach_to_inline_funcs))
           target = find_vmlinux();
       }
     }
@@ -186,7 +186,8 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
       // prologue and also returns locations of inlined function calls.
       if (auto *dwarf = get_dwarf(target.value())) {
         const auto locations = dwarf->get_function_locations(
-            probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
+            probe.attach_point,
+            config_.get(ConfigKeyBool::unstable_attach_to_inline_funcs));
         for (const auto loc : locations) {
           // Clear the attach point, so the address will be used instead
           Probe probe_copy = probe;

@@ -3793,6 +3793,15 @@ Available options:
 If the DebugInfo was rewritten by a post-linkage optimisation tool (like BOLT or AutoFDO), it might yield an incorrect address for a probe location.
 This config can force using the Symbol Table, for when the DebugInfo returns invalid addresses.
 
+**NOTE**: the following config variables are experimental (as indicated by their "unstable" prefix) so use these with caution and be aware they may be changed in future releases.
+
+=== unstable_attach_to_inline_funcs
+
+Default: 0
+
+Set to `1` to add the ability to attach uprobes/uretprobes, kprobes/kretprobes, and fentry/fexit to inlined functions.
+This may restrict the use of some builtins.
+
 == Environment Variables
 
 These are not available as part of the standard set of <<Config Variables>> and can only be set as environment variables.
