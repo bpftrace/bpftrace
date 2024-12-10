@@ -110,7 +110,7 @@ int fuzz_main(const char* data, size_t sz)
   uint64_t node_count = 0;
   ast::CallbackVisitor counter(
       [&](ast::Node* node __attribute__((unused))) { node_count += 1; });
-  driver.root->accept(counter);
+  counter.visit(driver.root);
   if (node_count > max_ast_nodes)
     return 1;
 

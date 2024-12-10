@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <unordered_set>
 
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "config.h"
 
 namespace bpftrace {
@@ -20,18 +20,19 @@ struct CodegenResources {
 // This pass collects specific information codegen later needs. All this
 // could be done in codegen pass itself, but splitting out some "prerun"
 // logic makes things easier to understand and maintain.
-class CodegenResourceAnalyser : public Visitor {
+class CodegenResourceAnalyser : public Visitor<CodegenResourceAnalyser> {
 public:
-  CodegenResourceAnalyser(Node *root, const ::bpftrace::Config &config);
+  CodegenResourceAnalyser(Program &program, const ::bpftrace::Config &config);
   CodegenResources analyse();
 
-private:
-  void visit(Builtin &map) override;
-  void visit(Call &call) override;
+  using Visitor<CodegenResourceAnalyser>::visit;
+  void visit(Builtin &map);
+  void visit(Call &call);
 
+private:
+  Program &program_;
   const ::bpftrace::Config &config_;
   CodegenResources resources_;
-  Node *root_;
 };
 
 } // namespace ast
