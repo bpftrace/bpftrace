@@ -31,7 +31,7 @@ void test(BPFtrace &bpftrace,
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ConfigAnalyser config_analyser(driver.ctx.root, bpftrace, out);
+  ast::ConfigAnalyser config_analyser(*driver.ctx.root, bpftrace, out);
   EXPECT_EQ(config_analyser.analyse(), expected_result)
       << msg.str() << out.str();
   if (expected_error.data()) {
@@ -126,11 +126,19 @@ TEST(config_analyser, config_setting)
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
 
+#ifdef HAVE_LIBLLDB
   EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::dwarf);
   test(*bpftrace, "config = { symbol_source = \"symbol_table\" } BEGIN { }");
   EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::symbol_table);
+#else
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::symbol_table);
+  test(*bpftrace, "config = { symbol_source = \"dwarf\" } BEGIN { }");
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::dwarf);
+#endif
 }
 
 } // namespace bpftrace::test::config_analyser
