@@ -126,11 +126,21 @@ TEST(config_analyser, config_setting)
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
 
+  // When liblldb is present, the default config for symbol_source is "dwarf",
+  // otherwise the default is "symbol_table".
+#ifdef HAVE_LIBLLDB
   EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::dwarf);
   test(*bpftrace, "config = { symbol_source = \"symbol_table\" } BEGIN { }");
   EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::symbol_table);
+#else
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::symbol_table);
+  test(*bpftrace, "config = { symbol_source = \"dwarf\" } BEGIN { }");
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+            ConfigSymbolSource::dwarf);
+#endif
 }
 
 } // namespace bpftrace::test::config_analyser
