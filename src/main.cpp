@@ -15,6 +15,7 @@
 #include "aot/aot.h"
 #include "ast/pass_manager.h"
 
+#include "ast/passes/auto_print.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
@@ -425,6 +426,7 @@ ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
   pm.AddPass(ast::CreateConfigPass());
+  pm.AddPass(ast::CreateAutoPrintPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());
@@ -436,6 +438,7 @@ ast::PassManager CreateDynamicPM()
 ast::PassManager CreateAotPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateAutoPrintPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
