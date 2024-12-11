@@ -466,8 +466,16 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = b_.CreateLoad(b_.GetType(builtin.type), dst);
     b_.CreateLifetimeEnd(dst);
   } else if (builtin.ident == "probe") {
-    builtin.probe_id = get_probe_id();
-    expr_ = b_.getInt64(builtin.probe_id);
+    auto probe_str = probefull_;
+    probe_str.resize(builtin.type.GetSize() - 1);
+    Constant *const_str = ConstantDataArray::getString(module_->getContext(),
+                                                       probe_str,
+                                                       true);
+    AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "probe");
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.type.GetSize());
+    b_.CreateStore(const_str, buf);
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack

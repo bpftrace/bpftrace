@@ -67,6 +67,8 @@ and this project adheres to
   - [#3472](https://github.com/bpftrace/bpftrace/pull/3472)
 - Symbolize enums when used in maps
   - [#3539](https://github.com/bpftrace/bpftrace/pull/3539)
+- `probe` builtin is now represented as a string type
+  - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
 #### Deprecated
 #### Removed
 - Remove the `-dd` CLI option
