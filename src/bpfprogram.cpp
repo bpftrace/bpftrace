@@ -63,24 +63,29 @@ void BpfProgram::set_attach_target(const Probe &probe,
 
   const std::string &mod = probe.path;
   const std::string &fun = probe.attach_point;
+  const std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
 
   const std::string &btf_fun = probe.type == ProbeType::iter ? "bpf_iter_" + fun
                                                              : fun;
   if (btf.get_btf_id(btf_fun, mod) < 0) {
-    std::string msg = "No BTF found for " + mod + ":" + fun;
+    const std::string msg = "No BTF found for " + attach_target;
     if (probe.orig_name != probe.name &&
         config.get(ConfigKeyMissingProbes::default_) !=
             ConfigMissingProbes::error) {
+      // One attach point in a multi-attachpoint probe failed and the user
+      // requested not to error out. Show a warning (if requested) and continue
+      // but disable auto-loading of the program as it would make the entire BPF
+      // object loading fail.
       if (config.get(ConfigKeyMissingProbes::default_) ==
           ConfigMissingProbes::warn)
         LOG(WARNING) << msg << ", skipping.";
+      bpf_program__set_autoload(bpf_prog_, false);
     } else {
       // explicit match failed, fail hard
       throw FatalUserException(msg);
     }
   }
 
-  const std::string &attach_target = !mod.empty() ? mod + ":" + fun : fun;
   bpf_program__set_attach_target(bpf_prog_, 0, attach_target.c_str());
 }
 
