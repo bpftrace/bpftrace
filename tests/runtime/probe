@@ -68,6 +68,19 @@ REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 AFTER ./testprogs/fentry_args 1111 2222
 
+NAME fentry_warn_missing_probes
+PROG fentry:vfs_read,fentry:nonsense { exit(); }
+EXPECT WARNING: No BTF found for nonsense, skipping.
+
+NAME fentry_ignore_missing_probes
+PROG config = { missing_probes = "ignore" } fentry:vfs_read,fentry:nonsense { exit(); }
+EXPECT_NONE WARNING: No BTF found for nonsense, skipping.
+
+NAME fentry_error_missing_probes
+PROG config = { missing_probes = "error" } fentry:vfs_read,fentry:nonsense { exit(); }
+EXPECT ERROR: No BTF found for nonsense
+WILL_FAIL
+
 # Sanity check for kfunc/kretfunc alias
 NAME kfunc
 PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }

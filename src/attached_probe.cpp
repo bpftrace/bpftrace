@@ -95,6 +95,9 @@ std::string progtypeName(libbpf::bpf_prog_type t)
 
 void AttachedProbe::attach_fentry()
 {
+  if (progfd_ < 0)
+    return;
+
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0) {
     throw FatalUserException("Error attaching probe: " + probe_.name);

@@ -107,10 +107,13 @@ aot.other.symbolize enum in tuple map value
 aot.probe.fentry
 aot.probe.fentry args
 aot.probe.fentry args as a pointer
+aot.probe.fentry_error_missing_probes
 aot.probe.fentry func builtin
+aot.probe.fentry_ignore_missing_probes
 aot.probe.fentry_module
 aot.probe.fentry_module_wildcard
 aot.probe.fentry_multiple_attach_point_multiple_functions
+aot.probe.fentry_warn_missing_probes
 aot.probe.fentry_wildcard
 aot.probe.fexit
 aot.probe.kfunc
