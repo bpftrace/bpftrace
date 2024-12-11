@@ -1690,9 +1690,12 @@ uint64_t BPFtrace::resolve_kname(const std::string &name) const
   std::string line;
 
   while (std::getline(file, line) && addr == 0) {
+    // https://elixir.bootlin.com/linux/v2.5.71/source/kernel/kallsyms.c#L227
+    // https://github.com/torvalds/linux/blob/v6.12/kernel/kallsyms.c#L748
     auto tokens = split_string(line, ' ');
+    auto names = split_string(tokens[2], '\t', true);
 
-    if (name == tokens[2]) {
+    if (name == names[0]) {
       addr = read_address_from_output(line);
       break;
     }
