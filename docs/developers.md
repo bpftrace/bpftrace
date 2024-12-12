@@ -40,6 +40,15 @@ The distro build is documented in [INSTALL.md](../INSTALL.md#generic-build-proce
 Every contribution should (1) not break the existing tests and (2) introduce new
 tests if relevant. See existing tests for inspiration on how to write new ones. [Read more on the different kinds and how to run them](../tests/README.md).
 
+## Performance
+
+We aim to not be wasteful, but always keep in mind that performance of the BPF
+programs and runtime are the things in the critical path. Often, simplicity and
+understandability on non-critical paths is often more important than
+performance. That said, occasionally it is useful to measure the performance of
+different parts of the pipeline. You may run bpftrace using `--test benchmark`
+in order to see the performance of the various passes during compilation.
+
 ## Continuous integration
 
 CI executes the above tests in a matrix of different LLVM versions on NixOS.

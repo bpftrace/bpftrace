@@ -87,6 +87,11 @@ public:
     return source_;
   }
 
+  // clears all the nodes and diagnostics, but does not affect the underlying
+  // `ASTSource` object. This is useful if you want to e.g. reparse the full
+  // syntax tree in place.
+  void clear();
+
   Program *root = nullptr;
 
 private:
