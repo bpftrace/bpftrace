@@ -56,6 +56,12 @@ add_executable(bpftrace_test
 )
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
+add_executable(bpftrace_benchmark
+  benchmarks.cpp
+  mocks.cpp
+  tracepoint_format_parser.cpp
+)
+
 add_subdirectory(data)
 if(${LLDB_FOUND})
   add_dependencies(bpftrace_test debuginfo_dwarf_data)
@@ -64,9 +70,12 @@ endif()
 add_dependencies(bpftrace_test debuginfo_btf_data)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(bpftrace_benchmark PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(bpftrace_benchmark PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_link_libraries(bpftrace_test libbpftrace)
+target_link_libraries(bpftrace_benchmark libbpftrace)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   target_compile_definitions(bpftrace_test PRIVATE ARCH_AARCH64)
@@ -92,11 +101,15 @@ endif()
 # modules don't respect minimum requested version.
 find_package(GTest REQUIRED)
 find_package(GMock REQUIRED)
+find_package(benchmark REQUIRED)
 include_directories(SYSTEM ${GTEST_INCLUDE_DIRS} ${GMOCK_INCLUDE_DIRS})
 target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
+target_link_libraries(bpftrace_benchmark ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
+target_link_libraries(bpftrace_benchmark benchmark::benchmark)
 
 find_package(Threads REQUIRED)
 target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(bpftrace_benchmark ${CMAKE_THREAD_LIBS_INIT})
 
 add_subdirectory(testprogs)
 add_subdirectory(testlibs)

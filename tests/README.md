@@ -173,3 +173,11 @@ test suite
 - `TOOLS_TEST_DISABLE`: comma separated list of tools to skip, e.g.
   `vfscount.bt,swapin.bt`
 - `TOOLS_TEST_OLDVERSION`: tests the tools/old version of these tools instead.
+
+## Benchmarks
+
+Some basic benchmarks are available in `tests/benchmarks.cpp`. These can be run
+by building and executing the tool `tests/bpftrace_benchmark`. All benchmarks
+are self-contained.
+
+For more detailed information about how to run specific benchmarks, see the [Google benchmarks user manual](https://github.com/google/benchmark/blob/main/docs/user_guide.md#command-line).
