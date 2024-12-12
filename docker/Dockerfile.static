@@ -8,6 +8,7 @@ RUN apk add --update \
   bash \
   bcc-dev \
   bcc-static \
+  benchmark \
   bison \
   bzip2-static \
   build-base \
