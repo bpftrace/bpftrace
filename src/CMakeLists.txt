@@ -55,6 +55,7 @@ set_target_properties(libbpftrace PROPERTIES PREFIX "")
 
 add_executable(bpftrace
   main.cpp
+  benchmark.cpp
 )
 
 # TODO: Honor `STATIC_LINKING` properly.

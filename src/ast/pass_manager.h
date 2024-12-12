@@ -30,7 +30,9 @@ public:
     char value[N];
     std::string str() const
     {
-      return std::string(value, sizeof(value));
+      // N.B. the value here includes the trailing zero, so when constructing a
+      // string we truncate this zero.
+      return std::string(value, sizeof(value) - 1);
     }
   };
 
@@ -85,6 +87,14 @@ public:
       return static_cast<T &>(extern_it->second.get());
     }
     no_object_failure(type_id);
+  }
+
+  // has indicates whether the given state is present or not.
+  template <typename T>
+  bool has()
+  {
+    int type_id = TypeId<T>::type_id();
+    return state_.contains(type_id) || extern_state_.contains(type_id);
   }
 
 private:

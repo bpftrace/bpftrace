@@ -31,4 +31,11 @@ ASTContext::ASTContext() : ASTContext("", "")
 {
 }
 
+void ASTContext::clear()
+{
+  root = nullptr;
+  nodes_.clear();
+  diagnostics_->clear();
+}
+
 } // namespace bpftrace::ast
