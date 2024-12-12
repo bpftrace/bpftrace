@@ -87,6 +87,14 @@ public:
     no_object_failure(type_id);
   }
 
+  // has indicates whether the given state is present or not.
+  template <typename T>
+  bool has()
+  {
+    int type_id = TypeId<T>::type_id();
+    return state_.contains(type_id) || extern_state_.contains(type_id);
+  }
+
 private:
   // for the failed lookup path, see above.
   [[noreturn]] static void no_object_failure(int type_id);

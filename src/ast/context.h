@@ -82,6 +82,8 @@ public:
     return *diagnostics_;
   }
 
+  void clear();
+
   Program *root = nullptr;
 
 private:

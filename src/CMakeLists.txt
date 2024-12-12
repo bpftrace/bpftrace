@@ -53,17 +53,20 @@ set_target_properties(libbpftrace PROPERTIES PREFIX "")
 
 add_executable(bpftrace
   main.cpp
+  benchmark.cpp
 )
+
+install(TARGETS bpftrace DESTINATION ${CMAKE_INSTALL_BINDIR})
+target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS} BENCHMARK_STATIC_DEFINE)
+
+find_package(benchmark REQUIRED)
+target_link_libraries(bpftrace PRIVATE libbpftrace benchmark::benchmark)
 
 # TODO: Honor `STATIC_LINKING` properly.
 if(LIBBLAZESYM_FOUND)
   target_include_directories(runtime PRIVATE ${LIBBLAZESYM_INCLUDE_DIRS})
   target_link_libraries(runtime ${LIBBLAZESYM_LIBRARIES})
 endif()
-
-install(TARGETS bpftrace DESTINATION ${CMAKE_INSTALL_BINDIR})
-target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS})
-target_link_libraries(bpftrace libbpftrace)
 
 # compile definitions
 
