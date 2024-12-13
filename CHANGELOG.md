@@ -9,6 +9,20 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+#### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+
+## [0.22.0] [Branch Created](https://github.com/bpftrace/bpftrace/tree/release/0.22.x)
+
+Not yet released.
+
+#### Breaking Changes
 - Return `uint32` instead of `uint64` for `pid` and `tid` builtins
   - [#3441](https://github.com/bpftrace/bpftrace/pull/3441)
   - [Migration guide](docs/migration_guide.md#pid-and-tid-builtins-return-uint32)
