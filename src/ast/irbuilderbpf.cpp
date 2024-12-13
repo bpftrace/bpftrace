@@ -204,7 +204,9 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype,
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
 {
-  llvm::Type *ty = ArrayType::get(getInt8Ty(), bytes);
+  // Note that we allocate this as a Int64 array in order to ensure that it has
+  // basic alignment. This is a backport for #3644.
+  llvm::Type *ty = ArrayType::get(getInt64Ty(), (bytes + 7) >> 3);
   return CreateAllocaBPF(ty, name);
 }
 

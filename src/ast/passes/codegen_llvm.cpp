@@ -2828,6 +2828,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   // as well to take the new lifetime semantics into account.
   AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
+  Value *cast_key = b_.CreatePointerCast(key, key_type->getPointerTo());
 
   int offset = 0;
   bool aligned = true;
@@ -2870,7 +2871,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 
   for (auto *extra_key : extra_keys) {
     Value *offset_val = b_.CreateGEP(key_type,
-                                     key,
+                                     cast_key,
                                      { b_.getInt64(0), b_.getInt64(offset) });
     Value *offset_val_cast = b_.CreatePointerCast(
         offset_val, extra_key->getType()->getPointerTo());
