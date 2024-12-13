@@ -1,5 +1,6 @@
 #pragma once
 
+#include "functions.h"
 #include "types.h"
 
 #include <linux/bpf.h>
@@ -19,11 +20,11 @@ class DIBuilderBPF : public DIBuilder {
 public:
   DIBuilderBPF(Module &module);
 
-  void createFunctionDebugInfo(Function &func,
+  void createFunctionDebugInfo(llvm::Function &func,
                                const SizedType &ret_type,
                                const Struct &args,
                                bool is_declaration = false);
-  void createProbeDebugInfo(Function &probe_func);
+  void createProbeDebugInfo(llvm::Function &probe_func);
 
   DIType *getInt8Ty();
   DIType *getInt16Ty();

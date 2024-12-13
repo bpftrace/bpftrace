@@ -196,7 +196,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(1) }));
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *stack_scratch_failure = BasicBlock::Create(
       module_->getContext(), "stack_scratch_failure", parent);
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
@@ -523,7 +523,7 @@ void CodegenLLVM::visit(Call &call)
 
     llvm::Type *mm_struct_ty = b_.GetMapValueType(map.type);
 
-    Function *parent = b_.GetInsertBlock()->getParent();
+    llvm::Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
                                                           "lookup_success",
                                                           parent);
@@ -631,7 +631,7 @@ void CodegenLLVM::visit(Call &call)
 
     llvm::Type *avg_struct_ty = b_.GetMapValueType(map.type);
 
-    Function *parent = b_.GetInsertBlock()->getParent();
+    llvm::Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
                                                           "lookup_success",
                                                           parent);
@@ -959,7 +959,7 @@ void CodegenLLVM::visit(Call &call)
     auto scoped_del = accept(arg0);
     auto addrspace = arg0->type.GetAS();
 
-    Function *parent = b_.GetInsertBlock()->getParent();
+    llvm::Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *failure_callback = BasicBlock::Create(module_->getContext(),
                                                       "failure_callback",
                                                       parent);
@@ -1462,9 +1462,9 @@ void CodegenLLVM::visit(Call &call)
     assert(arg->type.IsIntegerTy());
     if (arg->type.GetSize() > 1) {
       llvm::Type *arg_type = b_.GetType(arg->type);
-      Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
-                                                     Intrinsic::bswap,
-                                                     { arg_type });
+      llvm::Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
+                                                           Intrinsic::bswap,
+                                                           { arg_type });
 
       expr_ = b_.CreateCall(swap_fun, { expr_ });
     }
@@ -1975,7 +1975,7 @@ void CodegenLLVM::visit(Unop &unop)
 
 void CodegenLLVM::visit(Ternary &ternary)
 {
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *left_block = BasicBlock::Create(module_->getContext(),
                                               "left",
                                               parent);
@@ -2537,7 +2537,7 @@ void CodegenLLVM::visit(VarDeclStatement &decl)
 
 void CodegenLLVM::visit(If &if_node)
 {
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
                                            "if_body",
                                            parent);
@@ -2638,7 +2638,7 @@ void CodegenLLVM::visit(Jump &jump)
   //   br label %while_cond
   //
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *unreach = BasicBlock::Create(module_->getContext(),
                                            "unreach",
                                            parent);
@@ -2650,7 +2650,7 @@ void CodegenLLVM::visit(While &while_block)
   if (!loop_metadata_)
     loop_metadata_ = createLoopMetadata();
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
                                               "while_cond",
                                               parent);
@@ -2726,7 +2726,7 @@ void CodegenLLVM::visit(For &f)
 
 void CodegenLLVM::visit(Predicate &pred)
 {
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),
                                                     "pred_false",
                                                     parent);
@@ -2780,8 +2780,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
   auto func_name = get_function_name_for_probe(name,
                                                index,
                                                usdt_location_index);
-  Function *func = Function::Create(
-      func_type, Function::ExternalLinkage, func_name, module_.get());
+  auto *func = llvm::Function::Create(
+      func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
   debug_.createProbeDebugInfo(*func);
 
@@ -2869,8 +2869,10 @@ void CodegenLLVM::visit(Subprog &subprog)
                                               arg_types,
                                               0);
 
-  Function *func = Function::Create(
-      func_type, Function::InternalLinkage, subprog.name(), module_.get());
+  auto *func = llvm::Function::Create(func_type,
+                                      llvm::Function::InternalLinkage,
+                                      subprog.name(),
+                                      module_.get());
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3197,7 +3199,7 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
   assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(),
                                                   "&&_lhs_true",
                                                   parent);
@@ -3246,7 +3248,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
   assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(),
                                                    "||_lhs_false",
                                                    parent);
@@ -3290,7 +3292,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   return b_.CreateLoad(b_.getInt64Ty(), result);
 }
 
-Function *CodegenLLVM::createLog2Function()
+llvm::Function *CodegenLLVM::createLog2Function()
 {
   auto ip = b_.saveIP();
   // Arguments: VAL (int64), K (0..5)
@@ -3332,8 +3334,8 @@ Function *CodegenLLVM::createLog2Function()
 
   FunctionType *log2_func_type = FunctionType::get(
       b_.getInt64Ty(), { b_.getInt64Ty(), b_.getInt64Ty() }, false);
-  Function *log2_func = Function::Create(
-      log2_func_type, Function::InternalLinkage, "log2", module_.get());
+  auto *log2_func = llvm::Function::Create(
+      log2_func_type, llvm::Function::InternalLinkage, "log2", module_.get());
   log2_func->addFnAttr(Attribute::AlwaysInline);
   log2_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
@@ -3412,7 +3414,7 @@ Function *CodegenLLVM::createLog2Function()
   return module_->getFunction("log2");
 }
 
-Function *CodegenLLVM::createLinearFunction()
+llvm::Function *CodegenLLVM::createLinearFunction()
 {
   auto ip = b_.saveIP();
   // lhist() returns a bucket index for the given value. The first and last
@@ -3438,8 +3440,10 @@ Function *CodegenLLVM::createLinearFunction()
       b_.getInt64Ty(),
       { b_.getInt64Ty(), b_.getInt64Ty(), b_.getInt64Ty(), b_.getInt64Ty() },
       false);
-  Function *linear_func = Function::Create(
-      linear_func_type, Function::InternalLinkage, "linear", module_.get());
+  auto *linear_func = llvm::Function::Create(linear_func_type,
+                                             llvm::Function::InternalLinkage,
+                                             "linear",
+                                             module_.get());
   linear_func->addFnAttr(Attribute::AlwaysInline);
   linear_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
@@ -3609,8 +3613,8 @@ void CodegenLLVM::generateWatchpointSetupProbe(
 {
   auto func_name = get_function_name_for_watchpoint_setup(expanded_probe_name,
                                                           index);
-  Function *func = Function::Create(
-      func_type, Function::ExternalLinkage, func_name, module_.get());
+  auto *func = llvm::Function::Create(
+      func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
   debug_.createProbeDebugInfo(*func);
 
@@ -4237,7 +4241,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
       // check context access for iter probes (required by kernel)
       if (data_type.IsCtxAccess() &&
           probetype(current_attach_point_->provider) == ProbeType::iter) {
-        Function *parent = b_.GetInsertBlock()->getParent();
+        llvm::Function *parent = b_.GetInsertBlock()->getParent();
         BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),
                                                           "pred_false",
                                                           parent);
@@ -4308,7 +4312,7 @@ void CodegenLLVM::createIncDec(Unop &unop)
   }
 }
 
-Function *CodegenLLVM::createMurmurHash2Func()
+llvm::Function *CodegenLLVM::createMurmurHash2Func()
 {
   // The goal is to produce the following code:
   //
@@ -4339,10 +4343,11 @@ Function *CodegenLLVM::createMurmurHash2Func()
                                        b_.getInt64Ty() };
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
 
-  Function *callback = Function::Create(callback_type,
-                                        Function::LinkageTypes::InternalLinkage,
-                                        "murmur_hash_2",
-                                        module_.get());
+  auto *callback = llvm::Function::Create(
+      callback_type,
+      llvm::Function::LinkageTypes::InternalLinkage,
+      "murmur_hash_2",
+      module_.get());
   callback->addFnAttr(Attribute::AlwaysInline);
   callback->setSection("helpers");
 
@@ -4379,7 +4384,7 @@ Function *CodegenLLVM::createMurmurHash2Func()
   // int i = 0;
   b_.CreateStore(b_.getInt8(0), i);
 
-  Function *parent = b_.GetInsertBlock()->getParent();
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
                                               "while_cond",
                                               parent);
@@ -4469,7 +4474,7 @@ Function *CodegenLLVM::createMurmurHash2Func()
   return callback;
 }
 
-Function *CodegenLLVM::createMapLenCallback()
+llvm::Function *CodegenLLVM::createMapLenCallback()
 {
   // The goal is to produce the following code:
   //
@@ -4485,10 +4490,11 @@ Function *CodegenLLVM::createMapLenCallback()
 
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
 
-  Function *callback = Function::Create(callback_type,
-                                        Function::LinkageTypes::InternalLinkage,
-                                        "map_len_cb",
-                                        module_.get());
+  auto *callback = llvm::Function::Create(
+      callback_type,
+      llvm::Function::LinkageTypes::InternalLinkage,
+      "map_len_cb",
+      module_.get());
 
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
@@ -4511,7 +4517,8 @@ Function *CodegenLLVM::createMapLenCallback()
   return callback;
 }
 
-Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
+llvm::Function *CodegenLLVM::createForEachMapCallback(const For &f,
+                                                      llvm::Type *ctx_t)
 {
   /*
    * Create a callback function suitable for passing to bpf_for_each_map_elem,
@@ -4536,10 +4543,11 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
   };
 
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
-  Function *callback = Function::Create(callback_type,
-                                        Function::LinkageTypes::InternalLinkage,
-                                        "map_for_each_cb",
-                                        module_.get());
+  auto *callback = llvm::Function::Create(
+      callback_type,
+      llvm::Function::LinkageTypes::InternalLinkage,
+      "map_for_each_cb",
+      module_.get());
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
@@ -4664,7 +4672,7 @@ Value *CodegenLLVM::createFmtString(int print_id)
 ///
 /// If the function declaration is already in the module, just return it.
 ///
-Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
+llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
 {
   const std::string &func_name = kfunc_name(kfunc);
   if (auto *fun = module_->getFunction(func_name))
@@ -4687,10 +4695,10 @@ Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
       args,
       false);
 
-  Function *fun = Function::Create(func_type,
-                                   llvm::GlobalValue::ExternalWeakLinkage,
-                                   func_name,
-                                   module_.get());
+  auto *fun = llvm::Function::Create(func_type,
+                                     llvm::GlobalValue::ExternalWeakLinkage,
+                                     func_name,
+                                     module_.get());
   fun->setSection(".ksyms");
   fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
 

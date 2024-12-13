@@ -23,6 +23,7 @@
 #include "child.h"
 #include "config.h"
 #include "dwarf_parser.h"
+#include "functions.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -182,6 +183,7 @@ public:
   RequiredResources resources;
   BpfBytecode bytecode_;
   StructManager structs;
+  FunctionRegistry functions;
   std::map<std::string, std::string> macros_;
   // Map of enum variant_name to (variant_value, enum_name)
   std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
