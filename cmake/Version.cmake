@@ -13,7 +13,7 @@
 # Try and get a version string from Git tags
 execute_process(
   COMMAND git describe --abbrev=4 --dirty --tags
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  WORKING_DIRECTORY ${bpftrace_SOURCE_DIR}
   OUTPUT_VARIABLE BPFTRACE_VERSION
   ERROR_VARIABLE GIT_DESCRIBE_ERROR
   OUTPUT_STRIP_TRAILING_WHITESPACE
