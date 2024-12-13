@@ -107,6 +107,7 @@ add_custom_target(version_h
     -Dbpftrace_VERSION_MAJOR=${bpftrace_VERSION_MAJOR}
     -Dbpftrace_VERSION_MINOR=${bpftrace_VERSION_MINOR}
     -Dbpftrace_VERSION_PATCH=${bpftrace_VERSION_PATCH}
+    -Dbpftrace_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -P ${CMAKE_SOURCE_DIR}/cmake/Version.cmake
 )
 add_dependencies(${BPFTRACE} version_h)
