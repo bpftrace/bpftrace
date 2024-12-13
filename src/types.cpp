@@ -644,7 +644,15 @@ bool SizedType::FitsInto(const SizedType &t) const
     return GetSize() <= t.GetSize();
 
   if (IsIntegerTy()) {
-    return (IsSigned() == t.IsSigned()) && (GetSize() <= t.GetSize());
+    if (IsSigned() == t.IsSigned())
+      return GetSize() <= t.GetSize();
+
+    // Unsigned into signed requires the destination to be bigger than the
+    // source, e.g. uint32 -> int64.  uint32 does not fit into int32.
+    if (!IsSigned())
+      return GetSize() < t.GetSize();
+
+    return false; // signed never fits into unsigned
   }
 
   if (IsTupleTy()) {
