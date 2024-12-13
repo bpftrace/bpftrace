@@ -3106,12 +3106,16 @@ Value *CodegenLLVM::getMultiMapKey(Map &map,
     size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
 
-  // If key ever changes to not be allocated here, be sure to update getMapKey()
-  // as well to take the new lifetime semantics into account.
-  auto key = b_.CreateMapKeyAllocation(CreateArray(size, CreateInt8()),
+  // If key ever changes to not be allocated here, be sure to update
+  // getMapKey() as well to take the new lifetime semantics into account. Note
+  // that we allocate this as a Int64 array in order to ensure that it has
+  // basic alignment. We handle intra-key alignment below, but need to ensure
+  // that the start of the record makes sense.
+  auto key = b_.CreateMapKeyAllocation(CreateArray((size + 7) >> 3, CreateInt64()),
                                        map.ident + "_key",
                                        loc);
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
+  key = b_.CreatePointerCast(key, key_type->getPointerTo());
 
   int offset = 0;
   bool aligned = true;
