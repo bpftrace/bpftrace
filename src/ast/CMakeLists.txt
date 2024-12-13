@@ -24,7 +24,7 @@ add_library(ast STATIC
 )
 
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
-target_link_libraries(ast PUBLIC ast_defs arch parser)
+target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
 
 if(STATIC_LINKING)
   include(Util)

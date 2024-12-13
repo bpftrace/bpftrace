@@ -374,7 +374,7 @@ private:
                        const SizedType &type);
 
   std::map<std::string, StructType *> structs_;
-  Function *preserve_static_offset_ = nullptr;
+  llvm::Function *preserve_static_offset_ = nullptr;
 };
 
 } // namespace ast

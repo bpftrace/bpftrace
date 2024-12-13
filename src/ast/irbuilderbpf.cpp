@@ -173,15 +173,15 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
   // Declare external LLVM function
   FunctionType *pseudo_func_type = FunctionType::get(
       getInt64Ty(), { getInt64Ty(), getInt64Ty() }, false);
-  Function::Create(pseudo_func_type,
-                   GlobalValue::ExternalLinkage,
-                   "llvm.bpf.pseudo",
-                   &module_);
+  llvm::Function::Create(pseudo_func_type,
+                         GlobalValue::ExternalLinkage,
+                         "llvm.bpf.pseudo",
+                         &module_);
 }
 
 void IRBuilderBPF::hoist(const std::function<void()> &functor)
 {
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
 
   auto ip = saveIP();
@@ -701,7 +701,7 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
       map_name, keyAlloc, val_ptr_ty, "lookup_" + name + "_map");
   CreateLifetimeEnd(keyAlloc);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_failure_block = BasicBlock::Create(
       module_.getContext(), "lookup_" + name + "_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(
@@ -754,7 +754,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CallInst *call = createMapLookup(map_name, key);
 
   // Check if result == 0
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         parent);
@@ -840,7 +840,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   CreateStore(getInt64(0), val_1);
   CreateStore(getInt64(0), val_2);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
                                               "while_cond",
                                               parent);
@@ -868,7 +868,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                          key,
                                          CreateLoad(getInt32Ty(), i));
 
-  Function *lookup_parent = GetInsertBlock()->getParent();
+  llvm::Function *lookup_parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         lookup_parent);
@@ -898,7 +898,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
   CreateBr(while_cond);
   SetInsertPoint(lookup_failure_block);
 
-  Function *error_parent = GetInsertBlock()->getParent();
+  llvm::Function *error_parent = GetInsertBlock()->getParent();
   BasicBlock *error_success_block = BasicBlock::Create(module_.getContext(),
                                                        "error_success",
                                                        error_parent);
@@ -939,7 +939,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
     // the value is negative, flip it, do an unsigned division, and then
     // flip it back
     if (type.IsSigned()) {
-      Function *avg_parent = GetInsertBlock()->getParent();
+      llvm::Function *avg_parent = GetInsertBlock()->getParent();
       BasicBlock *is_negative_block = BasicBlock::Create(module_.getContext(),
                                                          "is_negative",
                                                          avg_parent);
@@ -1028,7 +1028,7 @@ void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
    * }
    */
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *val_set_success = BasicBlock::Create(module_.getContext(),
                                                    "val_set_success",
                                                    parent);
@@ -1212,7 +1212,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
 
   CallInst *call = createMapLookup(map_ident, key);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         parent);
@@ -1244,7 +1244,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
                                         8,
                                         AtomicOrdering::SequentiallyConsistent);
 
-  Function *set_parent = GetInsertBlock()->getParent();
+  llvm::Function *set_parent = GetInsertBlock()->getParent();
   BasicBlock *value_is_set_block = BasicBlock::Create(module_.getContext(),
                                                       "value_is_set",
                                                       set_parent);
@@ -1284,7 +1284,7 @@ void IRBuilderBPF::CreateUnSetRecursion(const location &loc)
 
   CallInst *call = createMapLookup(map_ident, key);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         parent);
@@ -1585,7 +1585,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   std::optional<std::string> literal1 = ValToString(str1);
   std::optional<std::string> literal2 = ValToString(str2);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
                                           "strcmp.false",
@@ -1703,7 +1703,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
     }
   }
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
                                              "strcontains.true",
@@ -1859,7 +1859,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
   AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
   AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
   CreateStore(getInt1(inverse), store);
   BasicBlock *arr_ne = BasicBlock::Create(module_.getContext(),
@@ -1958,7 +1958,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
   CreateStore(getInt1(inverse), store);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
                                               "while_cond",
                                               parent);
@@ -2301,7 +2301,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                 "ringbuf_output",
                                 loc);
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *loss_block = BasicBlock::Create(module_.getContext(),
                                               "event_loss_counter",
                                               parent);
@@ -2326,7 +2326,7 @@ void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
   CreateStore(getInt32(idx), key);
 
   CallInst *call = createMapLookup(map_name, key);
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         parent);
@@ -2381,7 +2381,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
   CallInst *call = CreateMapLookup(map, key);
   SizedType &type = map.type;
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
                                                         parent);
@@ -2723,7 +2723,7 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
       (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
     return;
 
-  Function *parent = GetInsertBlock()->getParent();
+  llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *helper_failure_block = BasicBlock::Create(module_.getContext(),
                                                         "helper_failure",
                                                         parent);
