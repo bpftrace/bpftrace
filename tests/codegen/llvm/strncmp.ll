@@ -49,7 +49,6 @@ pred_false:                                       ; preds = %strcmp.false
   ret i64 1
 
 pred_true:                                        ; preds = %strcmp.false
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
@@ -63,6 +62,7 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   %11 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   %12 = zext i1 %11 to i64
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
   %predcond = icmp eq i64 %12, 0
   br i1 %predcond, label %pred_false, label %pred_true
 

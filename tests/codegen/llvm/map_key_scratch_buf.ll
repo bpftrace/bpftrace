@@ -67,11 +67,15 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %12 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded8, i64 0, i64 0
   store i64 %10, ptr %12, align 8
   %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %str, ptr %12, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
