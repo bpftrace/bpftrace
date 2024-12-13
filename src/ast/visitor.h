@@ -218,10 +218,10 @@ public:
   // does not permit the modification of the underlying value, but does allow
   // the existing passes to continue to work (which do not modify anything, so
   // this is not a problem for the time being).
-  template <typename T>
+  template <NodeType T>
   R visit(T &t)
   {
-    auto ptr = &t;
+    T *ptr = &t;
     if constexpr (!std::is_void_v<R>) {
       auto rval = visitAndReplace(&ptr);
       assert(ptr == &t); // Should not be modified.
