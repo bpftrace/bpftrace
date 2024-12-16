@@ -309,7 +309,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   else if (type.IsIntTy()) {
     auto sign = type.IsSigned();
     switch (type.GetIntBitWidth()) {
-      // clang-format off
+        // clang-format off
       case 64:
         if (sign)
           return std::to_string(reduce_value<int64_t>(value, nvalues) / (int64_t)div);

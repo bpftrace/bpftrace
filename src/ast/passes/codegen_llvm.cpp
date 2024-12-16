@@ -2832,6 +2832,16 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   int offset = 0;
   bool aligned = true;
   int i = 0;
+
+  // Determine if we need alignment for all keys first
+  for (size_t h = 0; h < map.vargs->size(); ++h) {
+    size_t map_key_size = map.key_type.args_[h].GetSize();
+    if ((map_key_size % 8) != 0) {
+      aligned = false;
+      break;
+    }
+  }
+
   // Construct a map key in the stack
   for (Expression *expr : *map.vargs) {
     auto scoped_del = accept(expr);
@@ -2844,14 +2854,10 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
       if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
         b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
-      if ((expr->type.GetSize() % 8) != 0)
-        aligned = false;
     } else {
       if (expr->type.IsArrayTy() || expr->type.IsRecordTy()) {
         // Read the array/struct into the key
         b_.CreateProbeRead(ctx_, offset_val, expr->type, expr_, expr->loc);
-        if ((expr->type.GetSize() % 8) != 0)
-          aligned = false;
       } else {
         // promote map key to 64-bit:
         Value *key_elem = b_.CreateIntCast(expr_,
