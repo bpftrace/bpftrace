@@ -300,3 +300,18 @@ NAME print_per_cpu_map_vals
 PROG BEGIN { @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@c, @s, @mn, @mx)); exit(); }
 EXPECT (1, 5, 1, -1)
 TIMEOUT 3
+
+NAME multi map keys need alignment strings last
+PROG BEGIN { @[0, "asdfasdf"] = 1; }
+EXPECT Attaching 1 probe...
+TIMEOUT 3
+
+NAME multi map keys need alignment different size strings
+PROG BEGIN { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
+EXPECT Attaching 1 probe...
+TIMEOUT 3
+
+NAME multi map keys need alignment kstack
+PROG BEGIN { @[0, kstack] = 1; }
+EXPECT Attaching 1 probe...
+TIMEOUT 3
