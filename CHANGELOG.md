@@ -17,6 +17,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.21.3] 2024-12-16
+
+- Fix alignment issue for multi-key maps
+  - [#3646](https://github.com/bpftrace/bpftrace/pull/3646)
+
 ## [0.21.2] 2024-07-17
 
 - Fix min/max map functions
