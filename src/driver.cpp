@@ -5,7 +5,10 @@
 #include "log.h"
 #include "parser.tab.hh"
 
-extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
+struct yy_buffer_state;
+
+extern struct yy_buffer_state *yy_scan_string(const char *yy_str,
+                                              yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy(yyscan_t yyscanner);
 extern bpftrace::location loc;
