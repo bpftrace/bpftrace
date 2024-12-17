@@ -27,6 +27,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
   store [4 x i8] c"abc\00", ptr %str1, align 1
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %str1, ptr %str, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0

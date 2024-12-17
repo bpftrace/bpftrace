@@ -58,6 +58,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   store i64 %2, ptr %"@y_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %str, ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   ret i64 0
 }
 

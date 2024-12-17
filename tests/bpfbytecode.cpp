@@ -18,7 +18,7 @@ BpfBytecode codegen(std::string_view input)
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   EXPECT_EQ(semantics.analyse(), 0);
 
-  ast::CodegenLLVM codegen(driver.ctx.root, *bpftrace);
+  ast::CodegenLLVM codegen(*driver.ctx.root, *bpftrace);
   return codegen.compile();
 }
 

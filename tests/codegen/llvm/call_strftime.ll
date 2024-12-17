@@ -25,11 +25,15 @@ entry:
   %get_ns = call i64 inttoptr (i64 125 to ptr)()
   %3 = getelementptr %strftime_t, ptr %strftime_args, i64 0, i32 2
   store i64 %get_ns, ptr %3, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %strftime_args)
   ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

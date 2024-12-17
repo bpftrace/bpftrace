@@ -3,33 +3,34 @@
 #include <istream>
 #include <set>
 
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 
 namespace bpftrace {
 
 namespace ast {
 
-class TracepointArgsVisitor : public Visitor {
+class TracepointArgsVisitor : public Visitor<TracepointArgsVisitor> {
 public:
-  void visit(Builtin &builtin) override
+  using Visitor<TracepointArgsVisitor>::visit;
+  void visit(Builtin &builtin)
   {
-    Visitor::visit(builtin);
+    Visitor<TracepointArgsVisitor>::visit(builtin);
 
     if (builtin.ident == "args" && probe_->tp_args_structs_level == -1)
       probe_->tp_args_structs_level = 0;
   };
-  void visit(FieldAccess &acc) override
+  void visit(FieldAccess &acc)
   {
-    Visitor::visit(acc);
+    Visitor<TracepointArgsVisitor>::visit(acc);
 
     if (probe_->tp_args_structs_level >= 0)
       probe_->tp_args_structs_level++;
   };
-  void visit(Probe &probe) override
+  void visit(Probe &probe)
   {
     probe_ = &probe;
-    Visitor::visit(probe);
+    Visitor<TracepointArgsVisitor>::visit(probe);
   };
 
 private:

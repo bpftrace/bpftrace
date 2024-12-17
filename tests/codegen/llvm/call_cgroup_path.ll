@@ -47,6 +47,7 @@ event_loss_counter:                               ; preds = %entry
 
 counter_merge:                                    ; preds = %lookup_merge, %entry
   call void @llvm.lifetime.end.p0(i64 -1, ptr %print_cgroup_path_t_16_t)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %cgroup_path_args)
   ret i64 0
 
 lookup_success:                                   ; preds = %event_loss_counter

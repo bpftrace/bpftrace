@@ -18,8 +18,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !45 {
 entry:
   %"@_newval" = alloca i64, align 8
-  %lookup_elem_val7 = alloca i64, align 8
-  %"@_key2" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key1" = alloca i64, align 8
   %"@_val" = alloca i64, align 8
@@ -50,32 +48,12 @@ lookup_failure:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %2 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key1")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key2")
-  store i64 0, ptr %"@_key2", align 8
-  %lookup_elem3 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_, ptr %"@_key2")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val7)
-  %map_lookup_cond8 = icmp ne ptr %lookup_elem3, null
-  br i1 %map_lookup_cond8, label %lookup_success4, label %lookup_failure5
-
-lookup_success4:                                  ; preds = %lookup_merge
-  %3 = load i64, ptr %lookup_elem3, align 8
-  store i64 %3, ptr %lookup_elem_val7, align 8
-  br label %lookup_merge6
-
-lookup_failure5:                                  ; preds = %lookup_merge
-  store i64 0, ptr %lookup_elem_val7, align 8
-  br label %lookup_merge6
-
-lookup_merge6:                                    ; preds = %lookup_failure5, %lookup_success4
-  %4 = load i64, ptr %lookup_elem_val7, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val7)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_newval")
-  %5 = add i64 %4, 2
-  store i64 %5, ptr %"@_newval", align 8
-  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key2", ptr %"@_newval", i64 0)
+  %3 = add i64 %2, 2
+  store i64 %3, ptr %"@_newval", align 8
+  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key1", ptr %"@_newval", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_newval")
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key2")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key1")
   ret i64 0
 }
 
