@@ -102,6 +102,13 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
+  if (resources_.probe_str_buffers > 0) {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::PROBE_STR_BUFFER);
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+  }
+
   return std::optional{ std::move(resources_) };
 }
 
@@ -123,6 +130,13 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
+  }
+  if (builtin.ident == "probe") {
+    if (exceeds_stack_limit(builtin.type.GetSize())) {
+      resources_.probe_str_buffers++;
+      resources_.max_probe_str_size = std::max(resources_.max_probe_str_size,
+                                               builtin.type.GetSize());
+    }
   }
 }
 

@@ -69,7 +69,6 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateKSym()), "ksym_t");
   EXPECT_EQ(to_str(CreateUSym()), "usym_t");
   EXPECT_EQ(to_str(CreateUsername()), "username");
-  EXPECT_EQ(to_str(CreateProbe()), "probe");
   EXPECT_EQ(to_str(CreateStackMode()), "stack_mode");
   EXPECT_EQ(to_str(CreateTimestampMode()), "timestamp_mode");
   EXPECT_EQ(to_str(CreateCgroupPath()), "cgroup_path_t");
