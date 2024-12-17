@@ -2837,7 +2837,15 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
   const std::string &map_ident = assignment.map->ident;
 
-  if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
+  if (type.IsCastableMapTy() && map_val_[map_ident].IsIntTy()) {
+    if (dynamic_cast<Call *>(assignment.expr)) {
+      LOG(ERROR, assignment.map->loc, err_)
+          << "Type mismatch for " << map_ident << ": "
+          << "trying to assign value of type '" << type
+          << "' when map already contains a value of type '"
+          << map_val_[map_ident] << "'";
+    }
+  } else if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
     std::string ty = assignment.expr->type.GetName();
     std::string stored_ty = map_val_[map_ident].GetName();
     if (!stored_ty.empty() && stored_ty != ty) {
@@ -3778,6 +3786,8 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       else
         *maptype = type;
+    } else if (maptype->IsIntTy() && type.IsCastableMapTy()) {
+      // We will transparently cast `type` to integer
     } else if (maptype->GetTy() != type.GetTy()) {
       LOG(ERROR, map.loc, err_)
           << "Type mismatch for " << map_ident << ": "
