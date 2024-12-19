@@ -50,6 +50,44 @@ void test(std::string_view input, std::string_view expected)
   test(bpftrace, input, expected);
 }
 
+TEST(Parser, unreserved_keywords)
+{
+  std::string keywords[] = {
+    "import",
+  };
+
+  for (const auto &kw : keywords) {
+    // Valid in attach point
+    test("kprobe:" + kw + " {}",
+         "Program\n"
+         " kprobe:)" +
+             kw + "\n");
+
+    // Valid as variable name
+    test("kprobe:f { $" + kw + " = 1; }",
+         "Program\n"
+         " kprobe:f\n"
+         "  =\n"
+         "   $" +
+             kw +
+             "\n"
+             "   int: 1\n");
+
+    // Valid as map name
+    test("kprobe:f { @" + kw + " = 1; }",
+         "Program\n"
+         " kprobe:f\n"
+         "  =\n"
+         "   @" +
+             kw +
+             "\n"
+             "   int: 1\n");
+
+    // Valid as function name
+    // TODO
+  }
+}
+
 TEST(Parser, builtin_variables)
 {
   test("kprobe:f { pid }", R"(

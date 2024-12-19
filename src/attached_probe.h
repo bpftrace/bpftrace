@@ -7,7 +7,6 @@
 
 #include "bpffeature.h"
 #include "bpfprogram.h"
-#include "btf.h"
 #include "config.h"
 #include "types.h"
 #include "usdt.h"

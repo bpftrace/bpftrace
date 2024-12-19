@@ -11,12 +11,7 @@
 
 namespace bpftrace::ast {
 
-DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
-{
-  file = createFile("bpftrace.bpf.o", ".");
-}
-
-void DIBuilderBPF::createFunctionDebugInfo(Function &func,
+void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
                                            const SizedType &ret_type,
                                            const Struct &args,
                                            bool is_declaration)
@@ -35,6 +30,7 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func,
   DISubprogram::DISPFlags flags = DISubprogram::SPFlagZero;
   if (!is_declaration)
     flags |= DISubprogram::SPFlagDefinition;
+  // TODO is this needed?
   if (func.isLocalLinkage(func.getLinkage()))
     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
 
@@ -61,7 +57,7 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func,
   func.setSubprogram(subprog);
 }
 
-void DIBuilderBPF::createProbeDebugInfo(Function &probe_func)
+void DIBuilderBPF::createProbeDebugInfo(llvm::Function &probe_func)
 {
   // BPF probe function has:
   // - int return type
@@ -70,6 +66,92 @@ void DIBuilderBPF::createProbeDebugInfo(Function &probe_func)
   args.AddField("ctx", CreatePointer(CreateInt8()));
   createFunctionDebugInfo(probe_func, CreateInt64(), args);
 }
+
+DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
+{
+  file = createFile("bpftrace.bpf.o", ".");
+}
+
+void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
+                                           const SizedType &returnType,
+                                           const std::vector<Param> &params)
+{
+  SmallVector<Metadata *, 5> types = { GetType(returnType, false) };
+  std::transform(params.begin(),
+                 params.end(),
+                 std::back_inserter(types),
+                 [this](const Param &param) {
+                   return GetType(param.type(), false);
+                 });
+
+  DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
+
+  std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
+
+  // DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  // if (func.isLocalLinkage(func.getLinkage()))
+  //   flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
+
+  DISubprogram *subprog = createFunction(file,
+                                         sanitised_name,
+                                         sanitised_name,
+                                         file,
+                                         0,
+                                         ditype,
+                                         0,
+                                         DINode::FlagPrototyped,
+                                         DISubprogram::SPFlagZero);
+
+  for (size_t i = 0; i < params.size(); i++) {
+    createParameterVariable(subprog,
+                            params[i].name(),
+                            i,
+                            file,
+                            0,
+                            static_cast<DIType *>(types[i + 1]),
+                            true);
+  }
+
+  func.setSubprogram(subprog);
+}
+
+// void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func, const
+// SizedType &returnType, const std::vector<SizedType> &params)
+//{
+//   std::vector<SizedType> stypes = { returnType };
+//   stypes.insert(stypes.end(), params.begin(), params.end());
+//
+//   SmallVector<Metadata *, 5> types;
+//   std::transform(stypes.begin(), stypes.end(), std::back_inserter(types),
+//       [this](const SizedType &stype) { return GetType(stype); });
+//
+//   DISubroutineType *ditype =
+//   createSubroutineType(getOrCreateTypeArray(types));
+//
+//   std::string sanitised_name =
+//   sanitise_bpf_program_name(func.getName().str());
+//
+//   DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+//   if (func.isLocalLinkage(func.getLinkage()))
+//     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
+//
+//   DISubprogram *subprog = createFunction(file,
+//                                          sanitised_name,
+//                                          sanitised_name,
+//                                          file,
+//                                          0,
+//                                          ditype,
+//                                          0,
+//                                          DINode::FlagPrototyped,
+//                                          flags);
+//
+//   for (size_t i = 1; i < types.size(); i++) {
+//     createParameterVariable(subprog, "", i, file, 0,
+//     static_cast<DIType*>(types[i+1]), true);
+//   }
+//
+//   func.setSubprogram(subprog);
+// }
 
 DIType *DIBuilderBPF::getInt8Ty()
 {
@@ -117,6 +199,11 @@ DIType *DIBuilderBPF::getInt8PtrTy()
     types_.int8_ptr = createPointerType(getInt8Ty(), 64);
 
   return types_.int8_ptr;
+}
+
+DIType *DIBuilderBPF::getVoidTy()
+{
+  return nullptr;
 }
 
 // Create anonymous struct with anonymous fields. It's possible that there will
@@ -211,28 +298,55 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 /// as it is not necessary for the current use-cases. For debug info types, this
 /// is not the case and we need to emit a struct type with at least the correct
 /// name and size (fields are not necessary).
+///  ^ TODO this comment is out of date
 DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
-  if (!emit_codegen_types && stype.IsRecordTy()) {
-    std::string name = stype.GetName();
-    static constexpr std::string_view struct_prefix = "struct ";
-    static constexpr std::string_view union_prefix = "union ";
-    if (name.find(struct_prefix) == 0)
-      name = name.substr(struct_prefix.length());
-    else if (name.find(union_prefix) == 0)
-      name = name.substr(union_prefix.length());
+  // TODO get rid of emit_codegen_types?
+  //if (!emit_codegen_types && stype.IsRecordTy()) {
+  //  std::string name = stype.GetName();
+  //  static constexpr std::string_view struct_prefix = "struct ";
+  //  static constexpr std::string_view union_prefix = "union ";
+  //  if (name.find(struct_prefix) == 0)
+  //    name = name.substr(struct_prefix.length());
+  //  else if (name.find(union_prefix) == 0)
+  //    name = name.substr(union_prefix.length());
 
-    return createStructType(file,
-                            name,
-                            file,
-                            0,
-                            stype.GetSize() * 8,
-                            0,
-                            DINode::FlagZero,
-                            nullptr,
-                            getOrCreateArray({}));
+  //  return createStructType(file,
+  //                          name,
+  //                          file,
+  //                          0,
+  //                          stype.GetSize() * 8,
+  //                          0,
+  //                          DINode::FlagZero,
+  //                          nullptr,
+  //                          getOrCreateArray({}));
+  //}
+
+  if (auto it = aaatypes_.find(&stype); it != aaatypes_.end())
+    return it->second;
+
+  if (stype.IsRecordTy()) {
+    auto *type = createStructTypeBPF(stype);
+
+    SmallVector<Metadata *, 8> fields;
+    for (const auto &field : stype.GetFields()) {
+      fields.push_back(createMemberType(file,
+                                        field.name,
+                                        file,
+                                        0,
+                                        field.type.GetSize() * 8,
+                                        0,
+                                        field.offset * 8,
+                                        DINode::FlagZero,
+                                        GetType(field.type)));
+    }
+
+    type->replaceElements(getOrCreateArray(fields));
+    return type;
   }
 
+  // TODO record types always handled above if we get rid of emit_codegen_types
+  //  if (stype.IsByteArray()) {
   if (stype.IsByteArray() || stype.IsRecordTy()) {
     auto subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
@@ -259,6 +373,8 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
                               : createPointerType(GetType(*stype.GetPointeeTy(),
                                                           emit_codegen_types),
                                                   64);
+  if (stype.IsVoidTy())
+    return getVoidTy();
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {
@@ -271,10 +387,11 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
     case 1:
       return getInt8Ty();
     default:
-      LOG(BUG) << "Cannot generate debug info for type "
-               << typestr(stype.GetTy()) << " (" << stype.GetSize()
-               << " is not a valid type size)";
-      return nullptr;
+      return getVoidTy();
+      //      LOG(BUG) << "Cannot generate debug info for type "
+      //               << typestr(stype.GetTy()) << " (" << stype.GetSize()
+      //               << " is not a valid type size)";
+      //      return nullptr;
   }
 }
 
@@ -358,6 +475,36 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalVariable(
 {
   return createGlobalVariableExpression(
       file, name, "global", file, 0, GetType(stype, false), false);
+}
+
+DIGlobalVariableExpression *DIBuilderBPF::createGlobalString(
+    std::string_view name,
+    std::string_view contents)
+{
+  uint64_t len = contents.size() + 1;
+  auto *charArrayTy = createArrayType(len * 8,
+                                      0,
+                                      getInt8Ty(),
+                                      getOrCreateArray(
+                                          { getOrCreateSubrange(0, len) }));
+
+  return createGlobalVariableExpression(
+      file, name, "global", file, 0, charArrayTy, false);
+}
+
+DICompositeType *DIBuilderBPF::createStructTypeBPF(const SizedType &stype)
+{
+  auto *t = createStructType(file,
+                             stype.GetName(),
+                             file,
+                             0,
+                             stype.GetSize() * 8,
+                             0,
+                             DINode::FlagZero,
+                             nullptr,
+                             getOrCreateArray({}));
+  aaatypes_.insert({ &stype, t });
+  return t;
 }
 
 } // namespace bpftrace::ast
