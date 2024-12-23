@@ -88,7 +88,7 @@ void BM_compile(benchmark::State &state, const std::string &input)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
 
-  for (auto _ : state) {
+  for (auto _ : state) {  // NOLINT
     std::unique_ptr<Driver> driver;
     std::unique_ptr<ast::FieldAnalyser> fields;
     std::unique_ptr<ClangParser> clang;
@@ -140,7 +140,7 @@ BEGIN
     printf("hello world!\n");
     exit();
 }
-)")
+)")  // NOLINT
     ->MeasureProcessCPUTime()
     ->UseRealTime()
     ->Unit(benchmark::kMillisecond);
