@@ -11,6 +11,7 @@
 #include "utils.h"
 
 namespace bpftrace {
+
 namespace ast {
 
 class VisitorBase;
