@@ -25,7 +25,7 @@ enum class ConfigSource {
 enum class ConfigKeyBool {
   cpp_demangle,
   lazy_symbolication,
-  probe_inline,
+  unstable_attach_to_inline_funcs,
   print_maps_on_exit,
 };
 
@@ -96,7 +96,8 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
   { "on_stack_limit", ConfigKeyInt::on_stack_limit },
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
-  { "probe_inline", ConfigKeyBool::probe_inline },
+  { "unstable_attach_to_inline_funcs",
+    ConfigKeyBool::unstable_attach_to_inline_funcs },
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
   { "symbol_source", ConfigKeySymbolSource::default_ },
