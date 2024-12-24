@@ -19,7 +19,6 @@ RUN apk add --update \
   elfutils-dev \
   flex-dev \
   git \
-  gtest-dev \
   libbpf-dev \
   libelf-static \
   libpcap-dev \
