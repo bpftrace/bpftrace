@@ -134,14 +134,12 @@ void CodegenLLVM::visit(PositionalParameter &param)
           expr_ = b_.getInt64(std::stoull(pstr, nullptr, 0));
         }
       } else {
-        Constant *const_str = ConstantDataArray::getString(
-            module_->getContext(), pstr, true);
-        AllocaInst *buf = b_.CreateAllocaBPF(
-            ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-        b_.CreateMemsetBPF(buf, b_.getInt8(0), pstr.length() + 1);
-        b_.CreateStore(const_str, buf);
-        expr_ = b_.CreatePtrToInt(buf, b_.getInt64Ty());
-        expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+        auto string_param = llvm::dyn_cast<GlobalVariable>(
+            module_->getOrInsertGlobal(
+                pstr, ArrayType::get(b_.getInt8Ty(), pstr.length() + 1)));
+        string_param->setInitializer(
+            ConstantDataArray::getString(module_->getContext(), pstr));
+        expr_ = b_.CreatePtrToInt(string_param, b_.getInt64Ty());
       }
     } break;
     case PositionalParameterType::count:
@@ -153,13 +151,11 @@ void CodegenLLVM::visit(PositionalParameter &param)
 void CodegenLLVM::visit(String &string)
 {
   string.str.resize(string.type.GetSize() - 1);
-  Constant *const_str = ConstantDataArray::getString(module_->getContext(),
-                                                     string.str,
-                                                     true);
-  AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
-  b_.CreateStore(const_str, buf);
-  expr_ = buf;
-  expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  auto string_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+      string.str, ArrayType::get(b_.getInt8Ty(), string.type.GetSize())));
+  string_var->setInitializer(
+      ConstantDataArray::getString(module_->getContext(), string.str));
+  expr_ = string_var;
 }
 
 // NB: we do not resolve identifiers that are structs. That is because in
