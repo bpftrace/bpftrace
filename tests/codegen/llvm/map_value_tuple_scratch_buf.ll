@@ -20,26 +20,23 @@ target triple = "bpf-pc-linux"
 @read_map_val_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !67
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !69
 @tuple_buf = dso_local externally_initialized global [1 x [2 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !71
+@xxx = global [4 x i8] c"xxx\00"
+@xxxxxxx = global [8 x i8] c"xxxxxxx\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !78 {
 entry:
-  %str5 = alloca [8 x i8], align 1
-  %str = alloca [4 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"xxx\00", ptr %str, align 1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
   %3 = getelementptr %"string[4]_int64__tuple_t", ptr %2, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 %str, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @xxx, i64 4, i1 false)
   %4 = getelementptr %"string[4]_int64__tuple_t", ptr %2, i32 0, i32 1
   store i64 1, ptr %4, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
   %5 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
@@ -57,34 +54,31 @@ entry:
   %12 = getelementptr %"string[8]_int64__tuple_t", ptr %8, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %12, ptr align 1 %11, i64 8, i1 false)
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %6, ptr %8, i64 0)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str5)
-  store [8 x i8] c"xxxxxxx\00", ptr %str5, align 1
-  %get_cpu_id6 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)()
   %13 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded7 = and i64 %get_cpu_id6, %13
-  %14 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded7, i64 1, i64 0
+  %cpu.id.bounded6 = and i64 %get_cpu_id5, %13
+  %14 = getelementptr [1 x [2 x [16 x i8]]], ptr @tuple_buf, i64 0, i64 %cpu.id.bounded6, i64 1, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %14, i8 0, i64 16, i1 false)
   %15 = getelementptr %"string[8]_int64__tuple_t", ptr %14, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %15, ptr align 1 %str5, i64 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %15, ptr align 1 @xxxxxxx, i64 8, i1 false)
   %16 = getelementptr %"string[8]_int64__tuple_t", ptr %14, i32 0, i32 1
   store i64 1, ptr %16, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str5)
-  %get_cpu_id8 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
   %17 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded9 = and i64 %get_cpu_id8, %17
-  %18 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded9, i64 1, i64 0
+  %cpu.id.bounded8 = and i64 %get_cpu_id7, %17
+  %18 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded8, i64 1, i64 0
   store i64 0, ptr %18, align 8
-  %update_elem10 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %18, ptr %14, i64 0)
-  %get_cpu_id11 = call i64 inttoptr (i64 8 to ptr)()
+  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %18, ptr %14, i64 0)
+  %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)()
   %19 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded12 = and i64 %get_cpu_id11, %19
-  %20 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
+  %cpu.id.bounded11 = and i64 %get_cpu_id10, %19
+  %20 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded11, i64 2, i64 0
   store i64 0, ptr %20, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %20)
-  %get_cpu_id13 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id12 = call i64 inttoptr (i64 8 to ptr)()
   %21 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded14 = and i64 %get_cpu_id13, %21
-  %22 = getelementptr [1 x [1 x [16 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded14, i64 0, i64 0
+  %cpu.id.bounded13 = and i64 %get_cpu_id12, %21
+  %22 = getelementptr [1 x [1 x [16 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded13, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
@@ -97,31 +91,24 @@ lookup_failure:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %get_cpu_id15 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)()
   %23 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded16 = and i64 %get_cpu_id15, %23
-  %24 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded16, i64 3, i64 0
+  %cpu.id.bounded15 = and i64 %get_cpu_id14, %23
+  %24 = getelementptr [1 x [4 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
   store i64 0, ptr %24, align 8
-  %update_elem17 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %24, ptr %22, i64 0)
+  %update_elem16 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %24, ptr %22, i64 0)
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
-
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #3
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!75}
 !llvm.module.flags = !{!77}

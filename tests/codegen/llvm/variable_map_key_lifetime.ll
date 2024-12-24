@@ -11,6 +11,7 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !39
+@abc = global [4 x i8] c"abc\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -22,11 +23,7 @@ entry:
   %"$myvar" = alloca [4 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$myvar")
   call void @llvm.memset.p0.i64(ptr align 1 %"$myvar", i8 0, i64 4, i1 false)
-  %str = alloca [4 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"abc\00", ptr %str, align 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$myvar", ptr align 1 %str, i64 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$myvar", ptr align 1 @abc, i64 4, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 1, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"$myvar", ptr %"@x_val", i64 0)

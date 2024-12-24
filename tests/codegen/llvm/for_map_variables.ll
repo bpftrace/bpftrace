@@ -15,6 +15,8 @@ target triple = "bpf-pc-linux"
 @AT_map = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !16
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !25
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !39
+@abc = global [4 x i8] c"abc\00"
+@def = global [4 x i8] c"def\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -27,11 +29,9 @@ entry:
   %"$var3" = alloca [4 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var3")
   call void @llvm.memset.p0.i64(ptr align 1 %"$var3", i8 0, i64 4, i1 false)
-  %str1 = alloca [4 x i8], align 1
   %"$var2" = alloca [4 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var2")
   call void @llvm.memset.p0.i64(ptr align 1 %"$var2", i8 0, i64 4, i1 false)
-  %str = alloca [4 x i8], align 1
   %"$var1" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var1")
   store i64 0, ptr %"$var1", align 8
@@ -45,14 +45,8 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_key")
   store i64 123, ptr %"$var1", align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"abc\00", ptr %str, align 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var2", ptr align 1 %str, i64 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
-  store [4 x i8] c"def\00", ptr %str1, align 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var3", ptr align 1 %str1, i64 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var2", ptr align 1 @abc, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var3", ptr align 1 @def, i64 4, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
   %1 = call ptr @llvm.preserve.static.offset(ptr %ctx)
   %"ctx.$var1" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
@@ -66,7 +60,7 @@ entry:
   store i64 0, ptr %"@len_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_val")
   store i64 %3, ptr %"@len_val", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %"@len_val", i64 0)
+  %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %"@len_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_key")
   ret i64 0

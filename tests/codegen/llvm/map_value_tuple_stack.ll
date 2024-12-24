@@ -15,6 +15,8 @@ target triple = "bpf-pc-linux"
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !27
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !41
+@xxx = global [4 x i8] c"xxx\00"
+@xxxxxxx = global [8 x i8] c"xxxxxxx\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -23,23 +25,18 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !57 {
 entry:
   %"@y_key" = alloca i64, align 8
   %lookup_elem_val = alloca %"string[8]_int64__tuple_t", align 8
-  %"@x_key5" = alloca i64, align 8
-  %"@x_key3" = alloca i64, align 8
-  %tuple2 = alloca %"string[8]_int64__tuple_t", align 8
-  %str1 = alloca [8 x i8], align 1
+  %"@x_key4" = alloca i64, align 8
+  %"@x_key2" = alloca i64, align 8
+  %tuple1 = alloca %"string[8]_int64__tuple_t", align 8
   %"@x_val" = alloca %"string[8]_int64__tuple_t", align 8
   %"@x_key" = alloca i64, align 8
   %tuple = alloca %"string[4]_int64__tuple_t", align 8
-  %str = alloca [4 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"xxx\00", ptr %str, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
   %1 = getelementptr %"string[4]_int64__tuple_t", ptr %tuple, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 %str, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 @xxx, i64 4, i1 false)
   %2 = getelementptr %"string[4]_int64__tuple_t", ptr %tuple, i32 0, i32 1
   store i64 1, ptr %2, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
@@ -54,23 +51,20 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
-  store [8 x i8] c"xxxxxxx\00", ptr %str1, align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple2)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple2, i8 0, i64 16, i1 false)
-  %7 = getelementptr %"string[8]_int64__tuple_t", ptr %tuple2, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %str1, i64 8, i1 false)
-  %8 = getelementptr %"string[8]_int64__tuple_t", ptr %tuple2, i32 0, i32 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple1)
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple1, i8 0, i64 16, i1 false)
+  %7 = getelementptr %"string[8]_int64__tuple_t", ptr %tuple1, i32 0, i32 0
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 @xxxxxxx, i64 8, i1 false)
+  %8 = getelementptr %"string[8]_int64__tuple_t", ptr %tuple1, i32 0, i32 1
   store i64 1, ptr %8, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str1)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key3")
-  store i64 0, ptr %"@x_key3", align 8
-  %update_elem4 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key3", ptr %tuple2, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key3")
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple2)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key5")
-  store i64 0, ptr %"@x_key5", align 8
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key5")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key2")
+  store i64 0, ptr %"@x_key2", align 8
+  %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key2", ptr %tuple1, i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key2")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple1)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key4")
+  store i64 0, ptr %"@x_key4", align 8
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key4")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
@@ -84,10 +78,10 @@ lookup_failure:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key5")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key4")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
-  %update_elem6 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %lookup_elem_val, i64 0)
+  %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %lookup_elem_val, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   ret i64 0

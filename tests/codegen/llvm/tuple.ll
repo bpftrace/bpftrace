@@ -12,6 +12,7 @@ target triple = "bpf-pc-linux"
 @AT_t = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !40
+@str = global [4 x i8] c"str\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -20,9 +21,6 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !56 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"int64_int64_string[4]__tuple_t", align 8
-  %str = alloca [4 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"str\00", ptr %str, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 24, i1 false)
   %1 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 0
@@ -30,8 +28,7 @@ entry:
   %2 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 1
   store i64 2, ptr %2, align 8
   %3 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 2
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 %str, i64 4, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @str, i64 4, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %tuple, i64 0)

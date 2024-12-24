@@ -10,6 +10,7 @@ target triple = "bpf-pc-linux"
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @event_loss_counter = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !16
+@xxxx = global [5 x i8] c"xxxx\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -17,16 +18,12 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !39 {
 entry:
   %tuple = alloca %"int64_string[5]__tuple_t", align 8
-  %str = alloca [5 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [5 x i8] c"xxxx\00", ptr %str, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
   %1 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 0
   store i64 1, ptr %1, align 8
   %2 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 %str, i64 5, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @xxxx, i64 5, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
 }

@@ -14,29 +14,18 @@ target triple = "bpf-pc-linux"
 @AT_x = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !23
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !37
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !51
+@xyz = global [4 x i8] c"xyz\00"
+@abc = global [4 x i8] c"abc\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !67 {
 entry:
-  %str1 = alloca [4 x i8], align 1
-  %str = alloca [4 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [4 x i8] c"xyz\00", ptr %str, align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str1)
-  store [4 x i8] c"abc\00", ptr %str1, align 1
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %str1, ptr %str, i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr @abc, ptr @xyz, i64 0)
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0
 }
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !73 {
   %"@x_key" = alloca i64, align 8
@@ -54,11 +43,17 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   ret i64 0
 }
 
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #3
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

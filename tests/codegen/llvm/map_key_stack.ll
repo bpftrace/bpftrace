@@ -13,6 +13,7 @@ target triple = "bpf-pc-linux"
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !30
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !44
+@yyyy = global [5 x i8] c"yyyy\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -20,7 +21,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !60 {
 entry:
   %"@y_val" = alloca i64, align 8
-  %str = alloca [5 x i8], align 1
   %lookup_elem_val = alloca i64, align 8
   %"@x_key1" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
@@ -52,11 +52,9 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %2 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [5 x i8] c"yyyy\00", ptr %str, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
   store i64 %2, ptr %"@y_val", align 8
-  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %str, ptr %"@y_val", i64 0)
+  %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr @yyyy, ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   ret i64 0
 }

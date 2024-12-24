@@ -17,13 +17,13 @@ target triple = "bpf-pc-linux"
 @write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !64
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !68
 @read_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !70
+@yyyy = global [5 x i8] c"yyyy\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !75 {
 entry:
-  %str = alloca [5 x i8], align 1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
@@ -59,22 +59,16 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %10 = load i64, ptr %8, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  store [5 x i8] c"yyyy\00", ptr %str, align 1
   %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
   %11 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded8 = and i64 %get_cpu_id7, %11
   %12 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded8, i64 0, i64 0
   store i64 %10, ptr %12, align 8
-  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %str, ptr %12, i64 0)
+  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr @yyyy, ptr %12, i64 0)
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
-
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!72}
 !llvm.module.flags = !{!74}
