@@ -15,6 +15,7 @@ target triple = "bpf-pc-linux"
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !40
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !52
 @get_str_buf = dso_local externally_initialized global [1 x [1 x [64 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !54
+@0 = global [1 x i8] zeroinitializer
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -22,7 +23,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !61 {
 entry:
   %"@y_key" = alloca i64, align 8
-  %str = alloca [1 x i8], align 1
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
@@ -37,12 +37,7 @@ entry:
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 64, i1 false)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %str)
-  call void @llvm.memset.p0.i64(ptr align 1 %str, i8 0, i64 1, i1 false)
-  store [1 x i8] zeroinitializer, ptr %str, align 1
-  %3 = ptrtoint ptr %str to i64
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 64, i64 %3)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %str)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 64, i64 ptrtoint (ptr @0 to i64))
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %2, i64 0)
