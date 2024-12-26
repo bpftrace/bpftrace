@@ -92,7 +92,7 @@ void usage()
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl;
   std::cerr << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
+  std::cerr << "    -B MODE        output buffering mode ('line', 'full', 'none')" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
