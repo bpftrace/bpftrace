@@ -1955,7 +1955,8 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   auto &ptr = left_is_ptr ? lht : rht;
   auto &other = left_is_ptr ? rht : lht;
 
-  auto compare = false;
+  bool compare = false;
+  bool logical = false;
 
   // Do what C does
   switch (binop.op) {
@@ -1966,6 +1967,10 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
     case Operator::LT:
     case Operator::GT:
       compare = true;
+      break;
+    case Operator::LAND:
+    case Operator::LOR:
+      logical = true;
       break;
     default:;
   }
@@ -1991,8 +1996,11 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
               << *re << "')";
         }
       }
-    } else
+    } else if (logical) {
+      binop.type = CreateUInt(64);
+    } else {
       invalid_op();
+    }
   }
   // Binop on a pointer and int
   else if (other.IsIntTy()) {
@@ -2002,7 +2010,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
       invalid_op();
     else if (binop.op == Operator::PLUS || binop.op == Operator::MINUS)
       binop.type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
-    else if (compare)
+    else if (compare || logical)
       binop.type = CreateInt(64);
     else
       invalid_op();
@@ -2216,7 +2224,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
           << "Ternary operator must return the same type: "
           << "have '" << lhs << "' and '" << rhs << "'";
     }
-    if (cond != Type::integer)
+    if (cond != Type::integer && cond != Type::pointer)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
   }
   if (lhs == Type::string) {
@@ -2238,7 +2246,7 @@ void SemanticAnalyser::visit(If &if_node)
 
   if (is_final_pass()) {
     const Type &cond = if_node.cond->type.GetTy();
-    if (cond != Type::integer)
+    if (cond != Type::integer && cond != Type::pointer)
       LOG(ERROR, if_node.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
