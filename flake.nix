@@ -88,6 +88,23 @@
             '';
           };
 
+          # Define lambda that returns a derivation for a kernel bzImage given kernel version and SHA as input
+          mkBzImage = kernelVersion: sha256:
+            with pkgs;
+            pkgs.stdenv.mkDerivation rec {
+              name = "bzImage";
+              version = kernelVersion;
+              src = builtins.fetchurl {
+                url = "https://github.com/danobi/vmtest/releases/download/test_assets/bzImage-v${kernelVersion}-archlinux";
+                sha256 = sha256;
+              };
+              # Remove all other phases b/c we already have a prebuilt binary
+              phases = [ "installPhase" ];
+              installPhase = ''
+                install -m755 -D $src $out/bin/bzImage
+              '';
+            };
+
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
@@ -214,6 +231,10 @@
                 "... libLLVM-11.so"
               ];
             };
+
+            # Kernels to run runtime tests against
+            bzImage-6_1 = mkBzImage "6.1" "sha256:0g3ap1x1yyyz54y2rnprs7vwbcpdak4ga501jgrrqjifv4890frh";
+            bzImage-6_6 = mkBzImage "6.6" "sha256:1pzyn022b9dqp64wxd1aq2jir5v30fnv36qkv8495m02zvzb2irv";
           };
 
           # Define apps that can be run with `nix run`
