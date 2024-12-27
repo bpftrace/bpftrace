@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Pointers may now be used in if conditions, tenary conditions and as operands in logical AND and OR expressions
+  - [#3656](https://github.com/bpftrace/bpftrace/pull/3656)
 #### Changed
 #### Deprecated
 #### Removed

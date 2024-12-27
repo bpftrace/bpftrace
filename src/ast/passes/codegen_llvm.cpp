@@ -3191,8 +3191,8 @@ Value *CodegenLLVM::getHistMapKey(Map &map, Value *log2, const location &loc)
 
 Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 {
-  assert(binop.left->type.IsIntTy());
-  assert(binop.right->type.IsIntTy());
+  assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
+  assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(),
@@ -3212,19 +3212,19 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
-      lhs_true_block,
-      false_block);
+  Value *lhs_zero_value = Constant::getNullValue(lhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, lhs_zero_value, "lhs_true_cond"),
+                  lhs_true_block,
+                  false_block);
 
   b_.SetInsertPoint(lhs_true_block);
   Value *rhs;
   auto scoped_del_right = accept(binop.right);
   rhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
-      true_block,
-      false_block);
+  Value *rhs_zero_value = Constant::getNullValue(rhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, rhs_zero_value, "rhs_true_cond"),
+                  true_block,
+                  false_block);
 
   b_.SetInsertPoint(true_block);
   b_.CreateStore(b_.getInt64(1), result);
@@ -3240,8 +3240,8 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 
 Value *CodegenLLVM::createLogicalOr(Binop &binop)
 {
-  assert(binop.left->type.IsIntTy());
-  assert(binop.right->type.IsIntTy());
+  assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
+  assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(),
@@ -3261,19 +3261,19 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
-      true_block,
-      lhs_false_block);
+  Value *lhs_zero_value = Constant::getNullValue(lhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, lhs_zero_value, "lhs_true_cond"),
+                  true_block,
+                  lhs_false_block);
 
   b_.SetInsertPoint(lhs_false_block);
   Value *rhs;
   auto scoped_del_right = accept(binop.right);
   rhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
-      true_block,
-      false_block);
+  Value *rhs_zero_value = Constant::getNullValue(rhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, rhs_zero_value, "rhs_true_cond"),
+                  true_block,
+                  false_block);
 
   b_.SetInsertPoint(false_block);
   b_.CreateStore(b_.getInt64(0), result);

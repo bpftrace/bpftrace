@@ -482,6 +482,8 @@ TEST(semantic_analyser, if_statements)
   test("kprobe:f { if(1) { 123 } else { 456 } }");
   test("kprobe:f { if(0) { 123 } else if(1) { 456 } else { 789 } }");
   test("kprobe:f { if((int32)pid) { 123 } }");
+  test("kprobe:f { if(curtask) { 123 } }");
+  test("kprobe:f { if(curtask && (int32)pid) { 123 } }");
 }
 
 TEST(semantic_analyser, predicate_expressions)
@@ -509,6 +511,7 @@ TEST(semantic_analyser, ternary_expressions)
   test("kprobe:f { @x = pid < 10000 ? 1 : 2 }");
   test(R"(kprobe:f { @x = pid < 10000 ? "lo" : "high" })");
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
+  test("kprobe:f { curtask ? printf(\"lo\") : exit() }");
   test(R"(kprobe:f { @x = pid < 10000 ? printf("lo") : cat("/proc/uptime") })",
        10);
   // Error location is incorrect: #3063

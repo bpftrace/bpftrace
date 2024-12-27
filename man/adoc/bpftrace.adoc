@@ -689,6 +689,11 @@ promoted to the size of the larger one. Sign is preserved in the promotion.
 For example, `(uint32)5 + (uint8)3` is converted to `(uint32)5 + (uint32)3`
 which results in `(uint32)8`.
 
+Pointers may be used with arithmetic operators but only for addition and
+subtraction. For subtraction, the pointer must appear on the left side of the
+operator. Pointers may also be used with logical operators; they are considered
+true when non-null.
+
 ==== Logical Operators
 
 [cols="~,~"]
