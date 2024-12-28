@@ -121,6 +121,7 @@
               pkgs.mkShell {
                 buildInputs = [
                   binutils
+                  bpftools
                   coreutils
                   # Needed for the nix-aware "wrapped" clang-tidy
                   clang-tools
