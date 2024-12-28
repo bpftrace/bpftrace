@@ -59,6 +59,11 @@ jobs:
           CC: clang
           CXX: clang++
           TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LTS kernel vmtest (LLVM 19 Debug)
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET_KERNEL: .#kernel-6_6
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: AOT (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
@@ -80,11 +85,7 @@ jobs:
     - uses: DeterminateSystems/nix-installer-action@v11
     - uses: DeterminateSystems/magic-nix-cache-action@v6
     - uses: ./.github/actions/configure_kvm
-    - name: Load kernel modules
-      # nf_tables and xfs are necessary for testing kernel modules BTF support
-      run: |
-        sudo modprobe nf_tables
-        sudo modprobe xfs
+
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
