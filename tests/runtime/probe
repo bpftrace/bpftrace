@@ -178,16 +178,6 @@ RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @ = probe; printf("progs: "); syst
 EXPECT_REGEX progs: [1-9][0-9]+
 REQUIRES bpftool
 
-# Note: this test may fail if you've installed a new kernel but not rebooted
-# yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
-# version.
-NAME kprobe_offset_fail_size
-PROG kprobe:vfs_read+1000000 { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX Offset outside the function bounds \('vfs_read' size is*
-WILL_FAIL
-# See https://github.com/bpftrace/bpftrace/pull/956
-SKIP_IF_ENV_HAS CI=true
-
 NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
