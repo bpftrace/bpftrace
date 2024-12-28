@@ -59,6 +59,11 @@ jobs:
           CC: clang
           CXX: clang++
           TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LTS kernel vmtest (LLVM 19 Debug)
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET_KERNEL: .#bzImage-6_6
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: AOT (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
