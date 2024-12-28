@@ -500,19 +500,19 @@ NAME path
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file->f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath fentry
-AFTER ./testprogs/syscall open
+AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME path_with_optional_size
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { $p = path(args.file->f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_open_temp", 48)) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath fentry
-AFTER ./testprogs/syscall open
+AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME strcontains
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (strcontains(path(args.file->f_path), "tmp")) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath fentry
-AFTER ./testprogs/syscall open
+AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME strcontains literals
 RUN {{BPFTRACE}} -e 'BEGIN { if (strcontains("abc", "a")) { printf("OK\n"); exit(); } }'
