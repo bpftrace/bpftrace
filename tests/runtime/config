@@ -1,29 +1,27 @@
 NAME config as env var
-RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 EXPECT_REGEX ^\s+[0-9a-f]+$
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME config short name
-RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 EXPECT_REGEX ^\s+[0-9a-f]+$
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME env var takes precedence
-RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=perf } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=perf } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 ENV BPFTRACE_STACK_MODE=raw
 EXPECT_REGEX ^\s+[0-9a-f]+$
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME bad config
-RUN {{BPFTRACE}} -e 'config = { bad_config=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'config = { bad_config=raw } BEGIN {}'
 EXPECT stdin:1:12-23: ERROR: Unrecognized config variable: bad_config
-BEFORE ./testprogs/uprobe_test
 WILL_FAIL
 
 NAME env only config
-RUN {{BPFTRACE}} -e 'config = { debug_output=1 } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'config = { debug_output=1 } BEGIN {}'
 EXPECT stdin:1:12-25: ERROR: debug_output can only be set as an environment variable
-BEFORE ./testprogs/uprobe_test
 WILL_FAIL
 
 NAME maps are printed by default
