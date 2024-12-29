@@ -116,6 +116,8 @@ and this project adheres to
   - [#3565](https://github.com/bpftrace/bpftrace/pull/3565)
 - Fix crash when using castable per-cpu map types as map keys
   - [#3594](https://github.com/bpftrace/bpftrace/pull/3594)
+- Fix loop values with per-cpu aggregations
+  - [#3664](https://github.com/bpftrace/bpftrace/pull/3664)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

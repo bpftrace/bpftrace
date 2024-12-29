@@ -72,3 +72,12 @@ EXPECT_REGEX ^abc\ndef\ndef$
 NAME variable context multiple
 PROG BEGIN { @map[0] = 0; $var1 = 123; $var2 = "abc"; for ($kv : @map) { print(($var1, $var2)); } exit(); }
 EXPECT (123, abc)
+
+NAME map two keys with a per cpu aggregation
+PROG BEGIN { @map[16,17] = count(); @map[16,17] = count(); @map[1,2] = count(); for ($kv : @map) { print($kv); } exit(); }
+EXPECT ((16, 17), 2)
+EXPECT ((1, 2), 1)
+
+NAME map stack key with a per cpu aggregation
+PROG BEGIN { @map[kstack(raw)] = count(); for ($kv : @map) { print($kv.1); } exit(); }
+EXPECT 1

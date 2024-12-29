@@ -68,6 +68,7 @@ aot.for.map strings
 # Same problem as #3392
 aot.for.map two key elements
 aot.for.map two keys
+aot.for.map two keys with a per cpu aggregation
 aot.for.variable context multiple
 aot.json-output.complex
 aot.json-output.histogram

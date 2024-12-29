@@ -4563,11 +4563,8 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key_type)) {
-    AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
-                                             "lookup_key");
-    b_.CreateStore(key, key_ptr);
-
-    val = b_.CreatePerCpuMapAggElems(ctx_, map, key_ptr, map_val_type, map.loc);
+    val = b_.CreatePerCpuMapAggElems(
+        ctx_, map, callback->getArg(1), map_val_type, map.loc);
   } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }
