@@ -72,10 +72,7 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
   %val_2 = alloca i64, align 8
   %val_1 = alloca i64, align 8
   %i = alloca i32, align 4
-  %lookup_key = alloca i64, align 8
   %key = load i64, ptr %1, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_key)
-  store i64 %key, ptr %lookup_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %val_1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %val_2)
@@ -92,7 +89,7 @@ while_cond:                                       ; preds = %lookup_success, %4
 
 while_body:                                       ; preds = %while_cond
   %7 = load i32, ptr %i, align 4
-  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %lookup_key, i32 %7)
+  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %1, i32 %7)
   %map_lookup_cond = icmp ne ptr %lookup_percpu_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
