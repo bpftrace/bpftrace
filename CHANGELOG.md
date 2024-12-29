@@ -22,7 +22,7 @@ and this project adheres to
   - [#3522](https://github.com/bpftrace/bpftrace/pull/3522)
   - [Migration guide](docs/migration_guide.md#default-sigusr1-handler-removed)
 #### Added
-= Bump max supported LLVM version to 19
+- Bump max supported LLVM version to 19
   - [#3433](https://github.com/bpftrace/bpftrace/pull/3433)
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
