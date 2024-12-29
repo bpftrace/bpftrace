@@ -36,19 +36,19 @@ NAME uprobe arg by name - char
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args.c); exit(); }
 EXPECT c = x
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME uprobe arg by name - pointer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("n = %d\n", *(args.n)); exit(); }
 EXPECT n = 13
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME uprobe arg by name - struct
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->a = %d\n", args.foo1->a); exit(); }
 EXPECT foo1->a = 123
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 # NAME uprobe arg by index - 128-bits integer
 # PROG uprobe:./testprogs/uprobe_test:uprobeFunctionUint128 { printf("x = %x\ny = %x\nz = %x\nw = %x\n", arg0, arg1, arg2, arg3); exit(); }
@@ -57,7 +57,7 @@ BEFORE ./testprogs/uprobe_test
 #        z = cdcdcdcd
 #        w = abababab
 # REQUIRES_FEATURE dwarf
-# BEFORE ./testprogs/uprobe_test
+# AFTER ./testprogs/uprobe_test
 
 # NAME uprobe arg by name - 128-bits integer
 # PROG uprobe:./testprogs/uprobe_test:uprobeFunctionUint128 { printf("x = %x\ny = %x\nz = %x\nw = %x\n", args.x, args.y, args.z, args.w); exit(); }
@@ -66,13 +66,13 @@ BEFORE ./testprogs/uprobe_test
 #        z = cdcdcdcd
 #        w = abababab
 # REQUIRES_FEATURE dwarf
-# BEFORE ./testprogs/uprobe_test
+# AFTER ./testprogs/uprobe_test
 
 NAME uprobe arg by name - struct with 128-bits integer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->d = %x\n", args.foo1->d); exit(); }
 EXPECT foo1->d = 9abcdef0
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME uprobe without dwarf
 PROG config = { symbol_source = "symbol_table"; cache_user_symbols = "PER_PROGRAM"; }
@@ -196,31 +196,31 @@ NAME uprobe args as pointer
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("c = %c\n", args->c); exit(); }
 EXPECT c = x
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME struct field string
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->b = %s\n", args.foo1->b); exit(); }
 EXPECT foo1->b = hello
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME struct field array
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { print(args.foo1->c); exit(); }
 EXPECT [1,2,3]
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME cast to struct
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->a = %d\n", ((struct Foo *)arg0)->a); exit(); }
 EXPECT foo1->a = 123
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 NAME struct override
 PROG struct Foo { int b; } uprobe:./testprogs/uprobe_test:uprobeFunction2 { printf("foo1->b = %d\n", ((struct Foo *)arg0)->b); exit(); }
 EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
-BEFORE ./testprogs/uprobe_test
+AFTER ./testprogs/uprobe_test
 
 # The function `str_has_prefix` is marked to be always inlined, so we'll get
 # more than one occurrence for it.
