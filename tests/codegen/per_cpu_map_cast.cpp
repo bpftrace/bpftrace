@@ -59,6 +59,19 @@ TEST(codegen, count_no_cast_for_print)
   test("BEGIN { @ = count(); print(@) }", NAME);
 }
 
+TEST(codegen, count_cast_loop_multi_key)
+{
+  test("kprobe:f { @x[1, 2] = count(); for ($kv : @x) { $res = $kv.1; } }",
+       NAME);
+}
+
+TEST(codegen, count_cast_loop_stack_key)
+{
+  test("kprobe:f { @x[kstack(raw)] = count(); for ($kv : @x) { $res = $kv.1; } "
+       "}",
+       NAME);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace
