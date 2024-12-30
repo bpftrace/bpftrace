@@ -1,0 +1,7 @@
+# This file contains selftests for runtime engine
+
+NAME command doesn't respond to SIGTERM
+# The __BPFTRACE_NOTIFY_PROBES_ATTACHED is needed to disable attach timeout
+RUN trap '' TERM; echo __BPFTRACE_NOTIFY_PROBES_ATTACHED && sleep 999 && echo "shouldn't echo"
+TIMEOUT 1
+EXPECT_NONE shouldn't echo

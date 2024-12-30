@@ -420,7 +420,16 @@ class Runner(object):
             if p:
                 if p.poll() is None:
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-                output += p.stdout.read()
+                try:
+                    # SIGTERM only sets the exit flag in bpftrace event loop.
+                    # If bpftrace is stuck somewhere else, it won't exit. So we
+                    # have to set a timeout here to prevent hangs.
+                    output += p.communicate(timeout=1)[0]
+                except subprocess.TimeoutExpired:
+                    # subprocess.communicate() docs say communicate() is only
+                    # reliable after a TimeoutExpired if you kill and retry.
+                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+                    output += p.communicate()[0]
                 result = check_result(output)
 
                 if not result:
@@ -435,10 +444,10 @@ class Runner(object):
                     try:
                         befores_output.append(before.communicate(timeout=1)[0])
                     except subprocess.TimeoutExpired:
-                        pass # if timed out getting output, there is effectively no output
-                    if before.poll() is None:
                         os.killpg(os.getpgid(before.pid), signal.SIGKILL)
+                        befores_output.append(before.communicate()[0])
 
+            # Cleanup just in case
             if bpftrace and bpftrace.poll() is None:
                 os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
@@ -446,9 +455,8 @@ class Runner(object):
                 try:
                     after_output = after.communicate(timeout=1)[0]
                 except subprocess.TimeoutExpired:
-                        pass # if timed out getting output, there is effectively no output
-                if after.poll() is None:
                     os.killpg(os.getpgid(after.pid), signal.SIGKILL)
+                    after_output = after.communicate()[0]
 
         if test.cleanup:
             try:
