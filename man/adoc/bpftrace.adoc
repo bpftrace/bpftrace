@@ -1853,6 +1853,8 @@ Error attaching probe: 'kprobe:vfs_read'
 Return full path referenced by struct path pointer in argument. If `size` is set,
 the path will be clamped by `size` otherwise `BPFTRACE_MAX_STRLEN` is used.
 
+If `size` is smaller than the resolved path, the resulting string will be truncated at the front rather than at the end.
+
 This function can only be used by functions that are allowed to, these functions are contained in the `btf_allowlist_d_path` set in the kernel.
 
 [#functions-percpu-kaddr]
