@@ -83,71 +83,71 @@ enum Options {
 };
 } // namespace
 
-void usage()
+void usage(std::ostream& out)
 {
   // clang-format off
-  std::cerr << "USAGE:" << std::endl;
-  std::cerr << "    bpftrace [options] filename" << std::endl;
-  std::cerr << "    bpftrace [options] - <stdin input>" << std::endl;
-  std::cerr << "    bpftrace [options] -e 'program'" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
-  std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
-  std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
-  std::cerr << "    -e 'program'   execute this program" << std::endl;
-  std::cerr << "    -h, --help     show this help message" << std::endl;
-  std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
-  std::cerr << "    --include FILE add an #include file before preprocessing" << std::endl;
-  std::cerr << "    -l [search|filename]" << std::endl;
-  std::cerr << "                   list kernel probes or probes in a program" << std::endl;
-  std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
-  std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
-  std::cerr << "    --usdt-file-activation" << std::endl;
-  std::cerr << "                   activate usdt semaphores based on file path" << std::endl;
-  std::cerr << "    --unsafe       allow unsafe/destructive functionality" << std::endl;
-  std::cerr << "    -q             keep messages quiet" << std::endl;
-  std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
-  std::cerr << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
-  std::cerr << "    -kk            check all bpf helper functions" << std::endl;
-  std::cerr << "    -V, --version  bpftrace version" << std::endl;
-  std::cerr << "    --no-warnings  disable all warning messages" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
-  std::cerr << "    -v                      verbose messages" << std::endl;
-  std::cerr << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
-  std::cerr << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
-  std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
-  std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "ENVIRONMENT:" << std::endl;
-  std::cerr << "    BPFTRACE_BTF                      [default: none] BTF file" << std::endl;
-  std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS       [default: auto] enable user symbol cache" << std::endl;
-  std::cerr << "    BPFTRACE_CPP_DEMANGLE             [default: 1] enable C++ symbol demangling" << std::endl;
-  std::cerr << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
-  std::cerr << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
-  std::cerr << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
-  std::cerr << "    BPFTRACE_LAZY_SYMBOLICATION       [default: 0] symbolicate lazily/on-demand" << std::endl;
-  std::cerr << "    BPFTRACE_LOG_SIZE                 [default: 1000000] log size in bytes" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_BPF_PROGS            [default: 512] max number of generated BPF programs" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_MAP_KEYS             [default: 4096] max keys in a map" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
-  std::cerr << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
-  std::cerr << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
-  std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER        [default: '..'] string truncation trailer" << std::endl;
-  std::cerr << "    BPFTRACE_VMLINUX                  [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "EXAMPLES:" << std::endl;
-  std::cerr << "bpftrace -l '*sleep*'" << std::endl;
-  std::cerr << "    list probes containing \"sleep\"" << std::endl;
-  std::cerr << R"(bpftrace -e 'kprobe:do_nanosleep { printf("PID %d sleeping...\n", pid); }')" << std::endl;
-  std::cerr << "    trace processes calling sleep" << std::endl;
-  std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
-  std::cerr << "    count syscalls by process name" << std::endl;
+  out << "USAGE:" << std::endl;
+  out << "    bpftrace [options] filename" << std::endl;
+  out << "    bpftrace [options] - <stdin input>" << std::endl;
+  out << "    bpftrace [options] -e 'program'" << std::endl;
+  out << std::endl;
+  out << "OPTIONS:" << std::endl;
+  out << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
+  out << "    -f FORMAT      output format ('text', 'json')" << std::endl;
+  out << "    -o file        redirect bpftrace output to file" << std::endl;
+  out << "    -e 'program'   execute this program" << std::endl;
+  out << "    -h, --help     show this help message" << std::endl;
+  out << "    -I DIR         add the directory to the include search path" << std::endl;
+  out << "    --include FILE add an #include file before preprocessing" << std::endl;
+  out << "    -l [search|filename]" << std::endl;
+  out << "                   list kernel probes or probes in a program" << std::endl;
+  out << "    -p PID         enable USDT probes on PID" << std::endl;
+  out << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
+  out << "    --usdt-file-activation" << std::endl;
+  out << "                   activate usdt semaphores based on file path" << std::endl;
+  out << "    --unsafe       allow unsafe/destructive functionality" << std::endl;
+  out << "    -q             keep messages quiet" << std::endl;
+  out << "    --info         Print information about kernel BPF support" << std::endl;
+  out << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
+  out << "    -kk            check all bpf helper functions" << std::endl;
+  out << "    -V, --version  bpftrace version" << std::endl;
+  out << "    --no-warnings  disable all warning messages" << std::endl;
+  out << std::endl;
+  out << "TROUBLESHOOTING OPTIONS:" << std::endl;
+  out << "    -v                      verbose messages" << std::endl;
+  out << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
+  out << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
+  out << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
+  out << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
+  out << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
+  out << std::endl;
+  out << "ENVIRONMENT:" << std::endl;
+  out << "    BPFTRACE_BTF                      [default: none] BTF file" << std::endl;
+  out << "    BPFTRACE_CACHE_USER_SYMBOLS       [default: auto] enable user symbol cache" << std::endl;
+  out << "    BPFTRACE_CPP_DEMANGLE             [default: 1] enable C++ symbol demangling" << std::endl;
+  out << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
+  out << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
+  out << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
+  out << "    BPFTRACE_LAZY_SYMBOLICATION       [default: 0] symbolicate lazily/on-demand" << std::endl;
+  out << "    BPFTRACE_LOG_SIZE                 [default: 1000000] log size in bytes" << std::endl;
+  out << "    BPFTRACE_MAX_BPF_PROGS            [default: 512] max number of generated BPF programs" << std::endl;
+  out << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  out << "    BPFTRACE_MAX_MAP_KEYS             [default: 4096] max keys in a map" << std::endl;
+  out << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
+  out << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
+  out << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
+  out << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
+  out << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
+  out << "    BPFTRACE_STR_TRUNC_TRAILER        [default: '..'] string truncation trailer" << std::endl;
+  out << "    BPFTRACE_VMLINUX                  [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
+  out << std::endl;
+  out << "EXAMPLES:" << std::endl;
+  out << "bpftrace -l '*sleep*'" << std::endl;
+  out << "    list probes containing \"sleep\"" << std::endl;
+  out << R"(bpftrace -e 'kprobe:do_nanosleep { printf("PID %d sleeping...\n", pid); }')" << std::endl;
+  out << "    trace processes calling sleep" << std::endl;
+  out << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
+  out << "    count syscalls by process name" << std::endl;
   // clang-format on
 }
 
@@ -170,16 +170,16 @@ static void info(BPFnofeature no_feature)
   struct utsname utsname;
   uname(&utsname);
 
-  std::cerr << "System" << std::endl
+  std::cout << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
             << utsname.version << std::endl
             << "  Arch: " << utsname.machine << std::endl;
 
-  std::cerr << std::endl;
-  std::cerr << BuildInfo::report();
+  std::cout << std::endl;
+  std::cout << BuildInfo::report();
 
-  std::cerr << std::endl;
-  std::cerr << BPFfeature(no_feature).report();
+  std::cout << std::endl;
+  std::cout << BPFfeature(no_feature).report();
 }
 
 static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
@@ -612,7 +612,7 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'h':
       case Options::HELP:
-        usage();
+        usage(std::cout);
         exit(0);
       case 'V':
       case Options::VERSION:
@@ -621,24 +621,24 @@ Args parse_args(int argc, char* argv[])
       case 'k':
         args.helper_check_level++;
         if (args.helper_check_level >= 3) {
-          usage();
+          usage(std::cerr);
           exit(1);
         }
         break;
       default:
-        usage();
+        usage(std::cerr);
         exit(1);
     }
   }
 
   if (argc == 1) {
-    usage();
+    usage(std::cerr);
     exit(1);
   }
 
   if (!args.cmd_str.empty() && !args.pid_str.empty()) {
     LOG(ERROR) << "USAGE: Cannot use both -c and -p.";
-    usage();
+    usage(std::cerr);
     exit(1);
   }
 
@@ -665,7 +665,7 @@ Args parse_args(int argc, char* argv[])
       }
       optind++;
     } else {
-      usage();
+      usage(std::cerr);
       exit(1);
     }
   } else {

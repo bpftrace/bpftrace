@@ -1051,7 +1051,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
-    std::cerr << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
+    std::cout << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
 
 #ifdef HAVE_LIBSYSTEMD
   err = sd_notify(false, "READY=1\nSTATUS=Processing events...");
