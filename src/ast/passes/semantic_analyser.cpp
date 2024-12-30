@@ -1756,13 +1756,7 @@ void SemanticAnalyser::visit(Map &map)
 void SemanticAnalyser::visit(Variable &var)
 {
   if (auto *found = find_variable(var.ident)) {
-    if (found->was_assigned) {
-      var.type = found->type;
-    } else {
-      LOG(ERROR, var.loc, err_)
-          << "Variable used before it was assigned: " << var.ident;
-      var.type = CreateNone();
-    }
+    var.type = found->type;
     return;
   }
 
@@ -2492,8 +2486,7 @@ void SemanticAnalyser::visit(For &f)
   scope_stack_.push_back(&f);
 
   variables_[scope_stack_.back()][decl_name] = { .type = f.decl->type,
-                                                 .can_resize = true,
-                                                 .was_assigned = true };
+                                                 .can_resize = true };
 
   loop_depth_++;
   accept_statements(f.stmts);
@@ -3008,30 +3001,23 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       }
     }
     if (type_mismatch_error) {
-      auto err_segment = foundVar.was_assigned
-                             ? "when variable already contains a value of type"
-                             : "when variable already has a type";
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignTy << "' "
-          << err_segment << " '" << storedTy << "'";
+          << "when variable has type '" << storedTy << "'";
     } else {
-      if (!foundVar.was_assigned) {
-        // The assign type is possibly more complete than the stored type,
-        // which could come from a variable declaration. The assign type may
-        // resolve builtins like `curtask` which also specifies the address
-        // space.
+      // The assign type is possibly more complete than the stored type, which
+      // could come from a variable declaration. The assign type may resolve
+      // builtins like `curtask` which also specifies the address space.
+      if (assignTy.IsPtrTy() || assignTy.IsArrayTy())
         foundVar.type = assignTy;
-        foundVar.was_assigned = true;
-      }
       var_scope = scope;
     }
   }
 
   if (var_scope == nullptr) {
     variables_[scope_stack_.back()].insert(
-        { var_ident,
-          { .type = assignTy, .can_resize = true, .was_assigned = true } });
+        { var_ident, { .type = assignTy, .can_resize = true } });
     var_scope = scope_stack_.back();
   }
 
@@ -3099,21 +3085,14 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
         decl.var->type = foundVar.type;
       }
 
-      if (is_final_pass() && !foundVar.was_assigned) {
-        LOG(WARNING, decl.loc, out_)
-            << "Variable " << var_ident << " never assigned to.";
-      }
-
       return;
     }
   }
 
   bool can_resize = !decl.set_type || decl.var->type.GetSize() == 0;
 
-  variables_[scope_stack_.back()].insert({ var_ident,
-                                           { .type = decl.var->type,
-                                             .can_resize = can_resize,
-                                             .was_assigned = false } });
+  variables_[scope_stack_.back()].insert(
+      { var_ident, { .type = decl.var->type, .can_resize = can_resize } });
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl.loc });
 }
 
@@ -3434,8 +3413,7 @@ void SemanticAnalyser::visit(Subprog &subprog)
   top_level_node_ = &subprog;
   for (SubprogArg *arg : subprog.args) {
     variables_[scope_stack_.back()].insert(
-        { arg->name(),
-          { .type = arg->type, .can_resize = true, .was_assigned = true } });
+        { arg->name(), { .type = arg->type, .can_resize = true } });
   }
   Visitor::visit(subprog);
   scope_stack_.pop_back();

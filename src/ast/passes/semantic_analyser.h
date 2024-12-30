@@ -18,7 +18,6 @@ namespace ast {
 struct variable {
   SizedType type;
   bool can_resize;
-  bool was_assigned;
 };
 
 class SemanticAnalyser : public Visitor {
