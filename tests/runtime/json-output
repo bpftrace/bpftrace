@@ -157,11 +157,11 @@ EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "r
 TIMEOUT 1
 
 NAME cgroup_path
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': '.*'}$
 
 NAME strftime
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $t = (1, strftime("%m/%d/%y", nsecs)); print($t); exit() }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $t = (1, strftime("%m/%d/%y", nsecs)); print($t); exit() }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': \[1, '[0-9]{2}\/[0-9]{2}\/[0-9]{2}'\]}$
 TIMEOUT 1
 

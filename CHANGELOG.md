@@ -15,6 +15,8 @@ and this project adheres to
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
+- Change bpftrace help flag output from stderr to stdout
+  - [#3678](https://github.com/bpftrace/bpftrace/pull/3678)
 #### Deprecated
 #### Removed
 #### Fixed

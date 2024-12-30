@@ -12,21 +12,21 @@
 
 using namespace bpftrace;
 
-void usage(std::string_view filename)
+void usage(std::ostream& out, std::string_view filename)
 {
   // clang-format off
-  std::cerr << "USAGE: " << filename << " [options]" << std::endl;
-  std::cerr << std::endl;
-  std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
-  std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
-  std::cerr << "    -q,            keep messages quiet" << std::endl;
-  std::cerr << "    -v,            verbose messages" << std::endl;
-  std::cerr << "    -d STAGE       debug info for various stages of bpftrace execution" << std::endl;
-  std::cerr << "                   ('all', 'libbpf', 'verifier')" << std::endl;
-  std::cerr << "    -h, --help     show this help message" << std::endl;
-  std::cerr << "    -V, --version  bpftrace version" << std::endl;
-  std::cerr << std::endl;
+  out << "USAGE: " << filename << " [options]" << std::endl;
+  out << std::endl;
+  out << "OPTIONS:" << std::endl;
+  out << "    -f FORMAT      output format ('text', 'json')" << std::endl;
+  out << "    -o file        redirect bpftrace output to file" << std::endl;
+  out << "    -q,            keep messages quiet" << std::endl;
+  out << "    -v,            verbose messages" << std::endl;
+  out << "    -d STAGE       debug info for various stages of bpftrace execution" << std::endl;
+  out << "                   ('all', 'libbpf', 'verifier')" << std::endl;
+  out << "    -h, --help     show this help message" << std::endl;
+  out << "    -V, --version  bpftrace version" << std::endl;
+  out << std::endl;
   // clang-format on
   return;
 }
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
         output_format = optarg;
         break;
       case 'h':
-        usage(argv[0]);
+        usage(std::cout, argv[0]);
         return 0;
       case 'V':
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
@@ -113,13 +113,13 @@ int main(int argc, char* argv[])
         }
         break;
       default:
-        usage(argv[0]);
+        usage(std::cerr, argv[0]);
         return 1;
     }
   }
 
   if (argv[optind]) {
-    usage(argv[0]);
+    usage(std::cerr, argv[0]);
     return 1;
   }
 
