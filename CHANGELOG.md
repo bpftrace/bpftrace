@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 #### Added
 #### Changed
+- `probe` builtin is now represented as a string type
+  - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
 #### Deprecated
 #### Removed
 #### Fixed

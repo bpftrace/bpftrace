@@ -146,6 +146,20 @@ TEST(codegen, call_map_key_stack)
                                LARGE_ON_STACK_LIMIT);
 }
 
+TEST(codegen, probe_str_scratch_buf)
+{
+  test_stack_or_scratch_buffer("tracepoint:sched:sched_one { @x = probe }",
+                               NAME,
+                               SMALL_ON_STACK_LIMIT);
+}
+
+TEST(codegen, probe_str_stack)
+{
+  test_stack_or_scratch_buffer("tracepoint:sched:sched_one { @x = probe }",
+                               NAME,
+                               LARGE_ON_STACK_LIMIT);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace
