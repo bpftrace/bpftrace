@@ -477,23 +477,13 @@ EXPECT 123
 TIMEOUT 1
 
 NAME print_avg_map_args
-PROG BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }
-EXPECT BEGIN
-       @[c]: 3
-       @[d]: 4
-       
-       END
+PROG BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@); exit(); }
+EXPECT_FILE  runtime/outputs/print_avg_map_args.txt
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-PROG BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }
-EXPECT BEGIN
-       @[a]: 1
-       @[b]: 2
-       @[c]: 3
-       @[d]: 4
-       
-       END
+PROG BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@); exit(); }
+EXPECT_FILE runtime/outputs/print_avg_map_with_large_top.txt
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
