@@ -63,9 +63,25 @@ Each runtime testcase consists of multiple directives. In no particular order:
   available placeholders. This XOR the `PROG` field is required
 * `PROG`: Run the provided bpftrace program. This directive is preferred over
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
-  `RUN` field is required
+  `RUN` field is required. Multi-line program is supported by whitespace aligning
+  subsequent lines to the beginning column of the first.
+  * Example of multi-line program:
+    ```
+    NAME multi-line
+    PROG BEGIN { printf("hello ") }
+         END { printf("world!\n") }
+    EXPECT hello world!
+    ```
 * `EXPECT`: The expected output. Performs a literal match on an entire line of
-  output.
+  output. Multi-line EXPECT is supported by whitespace aligning subsequent
+  lines to the beginning column of the first (same as `PROG`).
+  * Example of multi-line EXPECT:
+    ```
+    NAME multi-line
+    PROG BEGIN { print("hello!"); print("world!") }
+    EXPECT hello!
+           world!
+    ```
 * `EXPECT_NONE`: The negation of `EXPECT`.
 * `EXPECT_REGEX`: A python regular expression to match the expected output.
 * `EXPECT_REGEX_NONE`: The negation of `EXPECT_REGEX`.
