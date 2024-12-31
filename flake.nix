@@ -128,6 +128,7 @@
                   gawk
                   git
                   gnugrep
+                  iproute2
                   kmod
                   # For git-clang-format
                   libclang.python

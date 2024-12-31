@@ -620,9 +620,11 @@ EXPECT 1234
 TIMEOUT 1
 
 NAME skboutput
-RUN {{BPFTRACE}} -e 'fentry:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
-AFTER ./testprogs/syscall connect 127.0.0.1 80
-EXPECT OK
+RUN {{BPFTRACE}} -e 'fentry:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); printf("ret: %d\n", $ret); exit(); }'
+SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
+AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
+CLEANUP ip netns delete bpftrace-test
+EXPECT ret: 0
 REQUIRES_FEATURE fentry
 REQUIRES_FEATURE skboutput
 MIN_KERNEL 5.5
