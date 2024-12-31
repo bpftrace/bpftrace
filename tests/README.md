@@ -64,11 +64,11 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `PROG`: Run the provided bpftrace program. This directive is preferred over
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
   `RUN` field is required
-* `EXPECT`: The expected output. Python regular expressions are supported.
-   One or more `EXPECT` and `EXPECT_NONE` or a single `EXPECT_FILE` or
-   `EXPECT_JSON` is required.
-* `EXPECT_NONE`: The negation of `EXPECT`, which also supports Python regular
-   expressions.
+* `EXPECT`: The expected output. Performs a literal match on an entire line of
+  output.
+* `EXPECT_NONE`: The negation of `EXPECT`.
+* `EXPECT_REGEX`: A python regular expression to match the expected output.
+* `EXPECT_REGEX_NONE`: The negation of `EXPECT_REGEX`.
 * `EXPECT_FILE`: A file containing the expected output, matched as plain
    text after stripping initial and final empty lines
 * `EXPECT_JSON`: A json file containing the expected output, matched after
@@ -103,6 +103,9 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `SKIP_IF_ENV_HAS`: Skip test case if specified environment variable is found
   and matches value provided. Accepted format is KEY=VALUE. Only a single key/value
   pair per test is accepted.
+
+One or more [`EXPECT`, `EXPECT_NONE`, `EXPECT_REGEX`, `EXPECT_REGEX_NONE`] or
+a single [`EXPECT_FILE`, `EXPECT_JSON`] is required.
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
