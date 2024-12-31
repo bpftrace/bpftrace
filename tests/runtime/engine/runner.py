@@ -177,6 +177,28 @@ class Runner(object):
 
 
     @staticmethod
+    def __setup_cleanup(test, setup=True):
+        test_ident = f"{test.suite}.{test.name}"
+        if setup:
+            cmd = test.setup
+            name = "SETUP"
+        else:
+            cmd = test.cleanup
+            name = "CLEANUP"
+
+        try:
+            process = subprocess.run(cmd, shell=True, stderr=subprocess.STDOUT,
+                                     stdout=subprocess.PIPE, universal_newlines=True)
+            process.check_returncode()
+        except subprocess.CalledProcessError as e:
+            print(fail(f"[  FAILED  ] {test_ident}"))
+            print(f"\t{name} error: %s" % e.stdout)
+            return Runner.FAIL
+
+        return None
+
+
+    @staticmethod
     def run_test(test):
         current_kernel = LooseVersion(os.uname()[2])
         if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
@@ -302,6 +324,11 @@ class Runner(object):
 
             if test.new_pidns and not test.befores:
                 raise ValueError("`NEW_PIDNS` requires at least one `BEFORE` directive as something needs to run in the new pid namespace")
+
+            if test.setup:
+                setup = Runner.__setup_cleanup(test, setup=True)
+                if setup:
+                    return setup
 
             if test.befores:
                 if test.new_pidns:
@@ -459,14 +486,9 @@ class Runner(object):
                     after_output = after.communicate()[0]
 
         if test.cleanup:
-            try:
-                cleanup = subprocess.run(test.cleanup, shell=True, stderr=subprocess.PIPE,
-                                         stdout=subprocess.PIPE, universal_newlines=True)
-                cleanup.check_returncode()
-            except subprocess.CalledProcessError as e:
-                print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
-                print('\tCLEANUP error: %s' % e.stderr)
-                return Runner.FAIL
+                cleanup = Runner.__setup_cleanup(test, setup=False)
+                if cleanup:
+                    return cleanup
 
         def to_utf8(s):
             return s.encode("unicode_escape").decode("utf-8")
