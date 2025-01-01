@@ -163,7 +163,7 @@ LogStream::LogStream(const std::string& file,
 LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
-                     const location& loc,
+                     std::optional<location> loc,
                      std::ostream& out)
     : sink_(Log::get()),
       type_(type),

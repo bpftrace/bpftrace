@@ -22,6 +22,8 @@ namespace libbpf {
 
 namespace bpftrace::ast {
 
+using Function = llvm::Function;
+
 namespace {
 std::string probeReadHelperName(libbpf::bpf_func_id id)
 {
