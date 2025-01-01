@@ -74,6 +74,10 @@ RUN {{BPFTRACE}} -e 'usdt:*:tracetest:testprobe { printf("here\n" ); exit(); }'
 EXPECT here
 BEFORE ./testprogs/usdt_test
 NEW_PIDNS
+# On 9pfs, is_elf() hangs on a syscall to fstat64. We suspect it's
+# a bug with 9pfs. https://github.com/danobi/vmtest/pull/88 should help
+# when it lands. So for now, don't run this test on 9pfs.
+REQUIRES findmnt -n / | awk '{exit $3!="9pfs"}'
 
 NAME usdt probes - attach to fully specified library probe by pid
 RUN {{BPFTRACE}} -e 'usdt:./testlibs/libusdt_tp.so:tracetestlib:lib_probe_1 { printf("here\n" ); exit(); }' -p $(pidof usdt_lib)
