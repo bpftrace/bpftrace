@@ -1192,10 +1192,10 @@ For string arguments use the `str()` call to retrieve the value.
 | The return keyword is used to exit the current probe. This differs from exit() in that it doesn't exit bpftrace.
 
 | retval
-| int64
+| uint64
 | n/a
 | n/a
-| Value returned by the function being traced (kretprobe, uretprobe, fexit)
+| Value returned by the function being traced (kretprobe, uretprobe, fexit). For kretprobe and uretprobe, its type is `uint64`, but for fexit it depends. You can look up the type using `bpftrace -lv`
 
 | tid
 | uint32
