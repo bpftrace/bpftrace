@@ -15,6 +15,7 @@ import cmake_vars
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
+ATTACH_TIMEOUT = 10
 
 
 OK_COLOR = '\033[92m'
@@ -410,7 +411,7 @@ class Runner(object):
             bpftrace = p
 
             attached = False
-            signal.alarm(test.timeout)
+            signal.alarm(ATTACH_TIMEOUT)
 
             while p.poll() is None:
                 nextline = p.stdout.readline()
@@ -419,6 +420,7 @@ class Runner(object):
                     attached = True
                     if test.has_exact_expect:
                         output = ""  # ignore earlier ouput
+                    signal.alarm(test.timeout)
                     if test.after:
                         after_cmd = get_pid_ns_cmd(test.after) if test.new_pidns else test.after
                         after = subprocess.Popen(after_cmd, shell=True,
