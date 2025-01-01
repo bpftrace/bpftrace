@@ -71,8 +71,6 @@ int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
       LOG(V1) << "Child exited with code: " << val;
   }
 
-  bpftrace.close_pcaps();
-
   if (err)
     return err;
 

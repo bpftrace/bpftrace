@@ -157,8 +157,6 @@ public:
   virtual bool is_traceable_func(const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
-  int create_pcaps(void);
-  void close_pcaps(void);
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
 
   void parse_btf(const std::set<std::string> &modules);
@@ -191,8 +189,6 @@ public:
   KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::optional<int> sigusr1_prog_fd_;
-
-  std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers;
 
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
@@ -242,12 +238,15 @@ private:
   std::vector<std::string> params_;
 
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
+  std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers_;
 
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
       const BpfProgram &program,
       int pid,
       bool file_activation);
+  int create_pcaps();
+  void close_pcaps();
   int setup_output();
   int setup_perf_events();
   void setup_ringbuf();

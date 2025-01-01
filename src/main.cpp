@@ -694,8 +694,6 @@ Args parse_args(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-  int err;
-
   const Args args = parse_args(argc, argv);
 
   std::ostream* os = &std::cout;
@@ -897,12 +895,6 @@ int main(int argc, char* argv[])
     return 1;
 
   auto* ast_root = pmresult.Root();
-
-  err = bpftrace.create_pcaps();
-  if (err) {
-    LOG(ERROR) << "Failed to create pcap file";
-    return err;
-  }
 
   ast::CodegenLLVM llvm(ast_root, bpftrace);
   BpfBytecode bytecode;
