@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import json
+import math
 import subprocess
 import signal
 import sys
@@ -193,6 +194,7 @@ class Runner(object):
 
         signal.signal(signal.SIGALRM, Runner.__handler)
 
+        start_time = time.time()
         p = None
         befores = []
         befores_output = []
@@ -478,12 +480,15 @@ class Runner(object):
             if after_output is not None:
                 print(f"\tAfter cmd output: {to_utf8(after_output)}")
 
+        elapsed = math.ceil((time.time() - start_time) * 1000)
+        label = f"{test.suite}.{test.name} ({elapsed} ms)"
+
         if '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED' in to_utf8(output):
-            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            print(warn("[   SKIP   ] ") + label)
             return Runner.SKIP_AOT_NOT_SUPPORTED
 
         if p and p.returncode != test.return_code and not test.will_fail and not timeout:
-            print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
+            print(fail("[  FAILED  ] ") + label)
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
             print('\tOutput: ' + to_utf8(output))
@@ -491,10 +496,10 @@ class Runner(object):
             return Runner.FAIL
 
         if result:
-            print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
+            print(ok("[       OK ] ") + label)
             return Runner.PASS
         else:
-            print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
+            print(fail("[  FAILED  ] ") + label)
             print('\tCommand: ' + bpf_call)
             for failed_expect in failed_expects:
                 if failed_expect.mode == "text":
