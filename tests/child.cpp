@@ -21,11 +21,30 @@ namespace bpftrace::test::child {
 
 using ::testing::HasSubstr;
 
-#define TEST_BIN "/bin/ls"
-#define TEST_BIN_ERR "/bin/ls /does/not/exist/abc"
-#define TEST_BIN_SLOW "/bin/sleep 10"
+class childproc : public ::testing::Test {
+protected:
+  void find(std::string &out, const char *path)
+  {
+    std::error_code ec;
+    auto self = std::filesystem::read_symlink("/proc/self/exe", ec);
+    ASSERT_FALSE(ec);
+    auto parent_dir = self.parent_path();
+    out = parent_dir / std::filesystem::path(path);
+  }
 
-TEST(childproc, exe_does_not_exist)
+  void SetUp() override
+  {
+    find(TEST_BIN, "testprogs/true");
+    find(TEST_BIN_ERR, "testprogs/false");
+    find(TEST_BIN_SLOW, "testprogs/wait10");
+  }
+
+  std::string TEST_BIN;
+  std::string TEST_BIN_ERR;
+  std::string TEST_BIN_SLOW;
+};
+
+TEST_F(childproc, exe_does_not_exist)
 {
   try {
     ChildProc child("/does/not/exist/abc/fed");
@@ -35,10 +54,10 @@ TEST(childproc, exe_does_not_exist)
   }
 }
 
-TEST(childproc, too_many_arguments)
+TEST_F(childproc, too_many_arguments)
 {
   std::stringstream cmd;
-  cmd << "/bin/ls";
+  cmd << TEST_BIN;
   for (int i = 0; i < 280; i++)
     cmd << " a";
 
@@ -50,7 +69,7 @@ TEST(childproc, too_many_arguments)
   }
 }
 
-TEST(childproc, child_exit_success)
+TEST_F(childproc, child_exit_success)
 {
   // Spawn a child that exits successfully
   auto child = getChild(TEST_BIN);
@@ -62,7 +81,7 @@ TEST(childproc, child_exit_success)
   EXPECT_EQ(child->term_signal(), -1);
 }
 
-TEST(childproc, child_exit_err)
+TEST_F(childproc, child_exit_err)
 {
   // Spawn a child that exits with an error
   auto child = getChild(TEST_BIN_ERR);
@@ -74,7 +93,7 @@ TEST(childproc, child_exit_err)
   EXPECT_EQ(child->term_signal(), -1);
 }
 
-TEST(childproc, terminate)
+TEST_F(childproc, terminate)
 {
   auto child = getChild(TEST_BIN_SLOW);
 
@@ -85,7 +104,7 @@ TEST(childproc, terminate)
   EXPECT_EQ(child->term_signal(), SIGTERM);
 }
 
-TEST(childproc, destructor_destroy_child)
+TEST_F(childproc, destructor_destroy_child)
 {
   pid_t child_pid = 0;
   {
@@ -105,7 +124,7 @@ TEST(childproc, destructor_destroy_child)
          << ", errno: " << errno << ", status: " << status << std::endl;
 }
 
-TEST(childproc, child_kill_before_exec)
+TEST_F(childproc, child_kill_before_exec)
 {
   signal(SIGHUP, SIG_DFL);
   auto child = getChild(TEST_BIN_SLOW);
@@ -118,7 +137,7 @@ TEST(childproc, child_kill_before_exec)
   EXPECT_EQ(child->term_signal(), SIGHUP);
 }
 
-TEST(childproc, stop_cont)
+TEST_F(childproc, stop_cont)
 {
   // STOP/CONT should not incorrectly mark the child
   // as dead
@@ -153,7 +172,7 @@ TEST(childproc, stop_cont)
   EXPECT_EQ(child->term_signal(), SIGTERM);
 }
 
-TEST(childproc, ptrace_child_exit_success)
+TEST_F(childproc, ptrace_child_exit_success)
 {
   auto child = getChild(TEST_BIN);
 
@@ -165,7 +184,7 @@ TEST(childproc, ptrace_child_exit_success)
   EXPECT_EQ(child->term_signal(), -1);
 }
 
-TEST(childproc, ptrace_child_exit_error)
+TEST_F(childproc, ptrace_child_exit_error)
 {
   auto child = getChild(TEST_BIN_ERR);
 
@@ -177,7 +196,7 @@ TEST(childproc, ptrace_child_exit_error)
   EXPECT_EQ(child->term_signal(), -1);
 }
 
-TEST(childproc, ptrace_child_kill_before_execve)
+TEST_F(childproc, ptrace_child_kill_before_execve)
 {
   auto child = getChild(TEST_BIN);
 
@@ -189,7 +208,7 @@ TEST(childproc, ptrace_child_kill_before_execve)
   EXPECT_EQ(child->term_signal(), 9);
 }
 
-TEST(childproc, ptrace_child_term_before_execve)
+TEST_F(childproc, ptrace_child_term_before_execve)
 {
   auto child = getChild(TEST_BIN);
 
@@ -201,7 +220,7 @@ TEST(childproc, ptrace_child_term_before_execve)
   EXPECT_EQ(child->term_signal(), 15);
 }
 
-TEST(childproc, multi_exec_match)
+TEST_F(childproc, multi_exec_match)
 {
   std::error_code ec;
 
@@ -226,7 +245,7 @@ TEST(childproc, multi_exec_match)
     std::ifstream src;
     std::ofstream dst;
 
-    src.open("/bin/sleep", std::ios::in | std::ios::binary);
+    src.open(TEST_BIN_SLOW, std::ios::in | std::ios::binary);
     dst.open(binary, std::ios::out | std::ios::binary);
     dst << src.rdbuf();
     src.close();
@@ -242,9 +261,8 @@ TEST(childproc, multi_exec_match)
   new_path += symlink_bin.c_str();
   EXPECT_EQ(::setenv("PATH", new_path.c_str(), 1), 0);
 
-  // 'mysleep' will match /bin/mysleep and /usr/bin/mysleep, but they are
-  // actually the same file.
-  auto child = getChild("mysleep 5");
+  // Use the filename with ambiguity.
+  auto child = getChild(std::string(binary.filename()));
 
   child->run();
   child->terminate();
