@@ -26,7 +26,12 @@ TEST(procmon, no_such_proc)
 
 TEST(procmon, child_terminates)
 {
-  auto child = getChild("/bin/ls");
+  std::error_code ec;
+  auto self = std::filesystem::read_symlink("/proc/self/exe", ec);
+  ASSERT_FALSE(ec);
+  auto parent_dir = self.parent_path();
+  auto out = parent_dir / std::filesystem::path("testprogs/true");
+  auto child = getChild(out.c_str());
   auto procmon = std::make_unique<ProcMon>(child->pid());
   EXPECT_TRUE(procmon->is_alive());
   child->run();

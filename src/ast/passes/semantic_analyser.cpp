@@ -3264,7 +3264,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
                                  << "' does not exist or is not executable";
         break;
       case 1:
-        ap.target = paths.front();
+        // Replace the glob at this stage only if this is *not* a wildcard,
+        // otherwise we rely on the probe matcher. This is not going through
+        // any interfaces that can be properly mocked.
+        if (ap.target.find("*") == std::string::npos)
+          ap.target = paths.front();
         break;
       default:
         // If we are doing a PATH lookup (ie not glob), we follow shell
@@ -3292,12 +3296,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
                                    << "' does not exist or is not executable";
           break;
         case 1:
-          ap.target = paths.front();
+          // See uprobe, above.
+          if (ap.target.find("*") == std::string::npos)
+            ap.target = paths.front();
           break;
         default:
-          // If we are doing a PATH lookup (ie not glob), we follow shell
-          // behavior and take the first match.
-          // Otherwise we keep the target with glob, it will be expanded later
+          // See uprobe, above.
           if (ap.target.find("*") == std::string::npos) {
             LOG(WARNING, ap.loc, out_)
                 << "attaching to usdt target file '" << paths.front()
