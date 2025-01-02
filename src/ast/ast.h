@@ -11,6 +11,9 @@
 #include "utils.h"
 
 namespace bpftrace {
+
+class Function;
+
 namespace ast {
 
 class VisitorBase;
@@ -195,6 +198,7 @@ public:
 
   std::string func;
   ExpressionList vargs;
+  const Function *function = nullptr;
 
 private:
   Call(const Call &other) = default;
@@ -255,6 +259,20 @@ public:
 
 private:
   Variable(const Variable &other) = default;
+};
+
+class AddrOf : public Expression {
+public:
+  DEFINE_ACCEPT
+
+  explicit AddrOf(Map *map) : expr(map)
+  {
+  }
+  explicit AddrOf(Variable *var) : expr(var)
+  {
+  }
+
+  Expression *expr;
 };
 
 class Binop : public Expression {
@@ -671,17 +689,35 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Import : public Node {
+public:
+  DEFINE_ACCEPT
+
+  Import(std::string name);
+
+  const std::string &name() const
+  {
+    return name_;
+  }
+
+private:
+  std::string name_;
+};
+using ImportList = std::vector<Import *>;
+
 class Program : public Node {
 public:
   DEFINE_ACCEPT
 
   Program(const std::string &c_definitions,
           Config *config,
+          ImportList &&imports,
           SubprogList &&functions,
           ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
+  ImportList imports;
   SubprogList functions;
   ProbeList probes;
 

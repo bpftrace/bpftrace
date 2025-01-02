@@ -57,6 +57,11 @@ void Visitor::visit(Variable &var __attribute__((__unused__)))
 {
 }
 
+void Visitor::visit(AddrOf &addrof)
+{
+  Visit(*addrof.expr);
+}
+
 void Visitor::visit(Binop &binop)
 {
   Visit(*binop.left);
@@ -199,6 +204,10 @@ void Visitor::visit(Subprog &subprog)
   for (Statement *stmt : subprog.stmts) {
     Visit(*stmt);
   }
+}
+
+void Visitor::visit(Import &)
+{
 }
 
 void Visitor::visit(Program &program)

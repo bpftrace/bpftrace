@@ -1,3 +1,8 @@
+#include "ast/ast.h"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <array>
 #include <bpf/libbpf.h>
 #include <cstdio>
@@ -32,6 +37,7 @@
 #include "clang_parser.h"
 #include "config.h"
 #include "driver.h"
+#include "lib_parser.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
@@ -692,6 +698,54 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
+static bool resolve_imports(
+    const ast::ImportList& imports,
+    const std::vector<std_filesystem::path>& searchPaths,
+    BPFtrace& bpftrace)
+{
+  bool all_ok = true;
+
+  for (ast::Import* import_node : imports) {
+    bool found = false;
+    for (const auto& dir : searchPaths) {
+      std::string importFileName = import_node->name() + ".bpf.o";
+      std_filesystem::path libPath = dir / importFileName;
+      if (!std_filesystem::exists(libPath))
+        continue;
+
+      std::string userlandLibFileName = import_node->name() + ".so";
+      std_filesystem::path userlandLibPath = dir / userlandLibFileName;
+      if (std_filesystem::exists(userlandLibPath))
+        bpftrace.add_import(
+            Import{ import_node->name(), libPath, userlandLibPath });
+      else
+        bpftrace.add_import(Import{ import_node->name(), libPath });
+
+      found = true;
+      break;
+    }
+
+    if (!found) {
+      LOG(ERROR) << "Imported library not found: " << import_node->name();
+      all_ok = false;
+    }
+  }
+
+  return all_ok;
+}
+
+bool parse_imports(BPFtrace& bpftrace)
+{
+  for (const auto& import : bpftrace.imports()) {
+    LibParser pp;
+    // TODO create namespaced types
+    pp.parse(
+        import.name(), import.path(), bpftrace.functions, bpftrace.structs);
+  }
+  // TODO can we check parsing was successful?
+  return true;
+}
+
 int main(int argc, char* argv[])
 {
   const Args args = parse_args(argc, argv);
@@ -889,6 +943,18 @@ int main(int argc, char* argv[])
   }
 
   bpftrace.fentry_recursion_check(ast_ctx->root);
+
+  // TODO take these from command line arguments
+  // TODO default to some system directory
+  std::vector<std_filesystem::path> searchPaths = { "." };
+  // TODO dodgy cast
+  if (!resolve_imports(((ast::Program*)ast_ctx->root)->imports,
+                       searchPaths,
+                       bpftrace))
+    return 1;
+
+  if (!parse_imports(bpftrace))
+    return 1;
 
   auto pmresult = pm.Run(ast_ctx->root, ctx);
   if (!pmresult.Ok())
