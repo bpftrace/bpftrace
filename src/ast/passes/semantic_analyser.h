@@ -21,6 +21,43 @@ struct variable {
   bool was_assigned;
 };
 
+class PassTracker {
+public:
+  void mark_final_pass()
+  {
+    is_final_pass_ = true;
+  }
+  bool is_final_pass() const
+  {
+    return is_final_pass_;
+  }
+  void inc_num_unresolved()
+  {
+    num_unresolved_++;
+  }
+  void reset_num_unresolved()
+  {
+    num_unresolved_ = 0;
+  }
+  int get_num_unresolved() const
+  {
+    return num_unresolved_;
+  }
+  int get_num_passes() const
+  {
+    return num_passes_;
+  }
+  void inc_num_passes()
+  {
+    num_passes_++;
+  }
+
+private:
+  bool is_final_pass_ = false;
+  int num_unresolved_ = 0;
+  int num_passes_ = 1;
+};
+
 class SemanticAnalyser : public Visitor {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
@@ -105,11 +142,10 @@ public:
   int analyse();
 
 private:
+  PassTracker pass_tracker_;
   BPFtrace &bpftrace_;
   std::ostream &out_;
   std::ostringstream err_;
-  int pass_;
-  const int num_passes_ = 10;
   bool listing_;
 
   bool is_final_pass() const;

@@ -1738,7 +1738,7 @@ void SemanticAnalyser::visit(Map &map)
         update_current_key(key->second, new_key_type);
         validate_new_key(key->second, new_key_type, map.ident, map.loc);
       } else {
-        if (!key->second.IsNoneTy() && is_final_pass()) {
+        if (!key->second.IsNoneTy()) {
           LOG(ERROR, map.loc, err_)
               << "Argument mismatch for " << map.ident << ": "
               << "trying to access with no arguments when map expects "
@@ -1760,9 +1760,12 @@ void SemanticAnalyser::visit(Map &map)
   if (search_val != map_val_.end()) {
     map.type = search_val->second;
   } else {
-    if (is_final_pass()) {
+    // If there is no record of any assignment after the first pass
+    // then it's safe to say this map is undefined
+    if (!is_first_pass()) {
       LOG(ERROR, map.loc, err_) << "Undefined map: " << map.ident;
     }
+    pass_tracker_.inc_num_unresolved();
     map.type = CreateNone();
   }
 
@@ -2955,12 +2958,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
   }
-
-  if (is_final_pass()) {
-    if (type.IsNoneTy())
-      LOG(ERROR, assignment.expr->loc, err_)
-          << "Invalid expression for assignment: " << type;
-  }
 }
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
@@ -2995,7 +2992,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     if (storedTy.IsNoneTy()) {
       storedTy = assignTy;
     } else if (!storedTy.IsSameType(assignTy)) {
-      type_mismatch_error = true;
+      if (!assignTy.IsNoneTy() || is_final_pass()) {
+        type_mismatch_error = true;
+      } else {
+        pass_tracker_.inc_num_unresolved();
+      }
     } else if (assignTy.IsStringTy()) {
       if (foundVar.can_resize) {
         update_string_size(storedTy, assignTy);
@@ -3520,30 +3521,47 @@ void SemanticAnalyser::visit(Program &program)
 
 int SemanticAnalyser::analyse()
 {
-  // Multiple passes to handle variables being used before they are defined
   std::string errors;
 
-  int num_passes = listing_ ? 1 : num_passes_;
-  for (pass_ = 1; pass_ <= num_passes; pass_++) {
+  int last_num_unresolved = 0;
+  // Multiple passes to handle variables being used before they are defined
+  while (true) {
+    pass_tracker_.reset_num_unresolved();
+
     Visit(ctx_.root);
+
     errors = err_.str();
     if (!errors.empty()) {
       out_ << errors;
-      return pass_;
+      return pass_tracker_.get_num_passes();
     }
-  }
 
-  return 0;
+    if (is_final_pass()) {
+      return 0;
+    }
+
+    int num_unresolved = pass_tracker_.get_num_unresolved();
+
+    if (num_unresolved > 0 &&
+        (last_num_unresolved == 0 || num_unresolved < last_num_unresolved)) {
+      // If we're making progress, keep making passes
+      last_num_unresolved = num_unresolved;
+    } else {
+      pass_tracker_.mark_final_pass();
+    }
+
+    pass_tracker_.inc_num_passes();
+  }
 }
 
-bool SemanticAnalyser::is_final_pass() const
+inline bool SemanticAnalyser::is_final_pass() const
 {
-  return pass_ == num_passes_;
+  return pass_tracker_.is_final_pass();
 }
 
 bool SemanticAnalyser::is_first_pass() const
 {
-  return pass_ == 1;
+  return pass_tracker_.get_num_passes() == 1;
 }
 
 bool SemanticAnalyser::check_assignment(const Call &call,
@@ -3840,6 +3858,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
   auto *maptype = get_map_type(map);
   if (maptype) {
     if (maptype->IsNoneTy()) {
+      pass_tracker_.inc_num_unresolved();
       if (is_final_pass())
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       else
