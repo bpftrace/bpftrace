@@ -222,8 +222,6 @@ def tests_finish(results: List[TestResult]):
 
 def run_runtime_tests():
     """Runs runtime tests, under a controlled kernel if requested"""
-    script = "./tests/runtime-tests.sh"
-
     if NIX_TARGET_KERNEL:
         # Bring bzImage into nix store then grab the path
         subprocess.run([nix(), "build", NIX_TARGET_KERNEL], check=True)
@@ -234,7 +232,11 @@ def run_runtime_tests():
             text=True,
         )
 
-        cmd = ["vmtest", "-k", f"{eval.stdout}/bin/bzImage", script]
+        script = "./tests/runtime-tests.sh"
+        # nf_tables and xfs are necessary for testing kernel modules BTF support
+        modules = ["nf_tables", "xfs"]
+        c = f"modprobe -d {eval.stdout} -a {' '.join(modules)} && {script}"
+        cmd = ["vmtest", "-k", f"{eval.stdout}/bzImage", c]
     else:
         cmd = [script]
 

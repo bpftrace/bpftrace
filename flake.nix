@@ -88,21 +88,23 @@
             '';
           };
 
-          # Define lambda that returns a derivation for a kernel bzImage given kernel version and SHA as input
-          mkBzImage = kernelVersion: sha256:
+          # Define lambda that returns a derivation for a kernel given kernel version and SHA as input
+          mkKernel = kernelVersion: sha256:
             with pkgs;
             pkgs.stdenv.mkDerivation rec {
-              name = "bzImage";
+              name = "kernel";
               version = kernelVersion;
               src = builtins.fetchurl {
-                url = "https://github.com/danobi/vmtest/releases/download/test_assets/bzImage-v${kernelVersion}-archlinux";
+                url = "https://github.com/bpftrace/kernels/releases/download/assets/linux-v${kernelVersion}.tar.zst";
                 sha256 = sha256;
               };
               # Remove all other phases b/c we already have a prebuilt binary
               phases = [ "installPhase" ];
               installPhase = ''
-                install -m755 -D $src $out/bin/bzImage
+                mkdir -p $out
+                tar xvf $src --strip-components=1 -C $out
               '';
+              nativeBuildInputs = [ pkgs.gnutar pkgs.zstd ];
             };
 
           # Define lambda that returns a derivation for bpftrace given llvm version as input
@@ -233,8 +235,10 @@
             };
 
             # Kernels to run runtime tests against
-            bzImage-6_1 = mkBzImage "6.1" "sha256:0g3ap1x1yyyz54y2rnprs7vwbcpdak4ga501jgrrqjifv4890frh";
-            bzImage-6_6 = mkBzImage "6.6" "sha256:1pzyn022b9dqp64wxd1aq2jir5v30fnv36qkv8495m02zvzb2irv";
+            kernel-5_15 = mkKernel "5.15" "sha256:0qakz8lkmwy725zp182725zvmr0l76fl6hmkyw9qdy49zvdvvzya";
+            kernel-6_1 = mkKernel "6.1" "sha256:1h33rqrk0169z4jq00fr9hfpk794p42nsnsxq95vwm08gqk8mdil";
+            kernel-6_6 = mkKernel "6.6" "sha256:1dj5q454z82fzca4dhljg4za09z7gca2awfs6dknyb9rpzpi2305";
+            kernel-6_12 = mkKernel "6.12" "sha256:150w9xn6k0rw2drpxahfqxjfgvv1djdnmkf28nq4qrzpkhz7wnb3";
           };
 
           # Define apps that can be run with `nix run`

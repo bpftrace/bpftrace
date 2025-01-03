@@ -17,18 +17,14 @@ jobs:
         - NAME: LTS kernel vmtest (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-          NIX_TARGET_KERNEL: .#bzImage-6_6
+          NIX_TARGET_KERNEL: .#kernel-6_6
           TOOLS_TEST_DISABLE: biosnoop.bt
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
     - uses: DeterminateSystems/magic-nix-cache-action@v6
     - uses: ./.github/actions/configure_kvm
-    - name: Load kernel modules
-      # nf_tables and xfs are necessary for testing kernel modules BTF support
-      run: |
-        sudo modprobe nf_tables
-        sudo modprobe xfs
+
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
