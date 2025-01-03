@@ -110,8 +110,9 @@ private:
   std::ostream &out_;
   std::ostringstream err_;
   int pass_;
-  const int num_passes_ = 10;
   bool listing_;
+  bool is_final_pass_ = false;
+  int num_unresolved_;
 
   bool is_final_pass() const;
   bool is_first_pass() const;
