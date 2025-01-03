@@ -86,6 +86,7 @@
                   asciidoctor
                   cereal
                   elfutils
+                  gbenchmark
                   gtest
                   libbfd
                   libelf
