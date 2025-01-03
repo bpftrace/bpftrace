@@ -70,19 +70,19 @@ EXPECT _A_
 
 NAME str
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
-AFTER ./testprogs/syscall execve /bin/ls
+AFTER ./testprogs/syscall execve ./testprogs/true
 EXPECT_REGEX P: /*.
 
 NAME str_truncated
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5
-AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
+AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
 EXPECT_REGEX P: /...\.\.
 
 NAME str_truncated_custom
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
-AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
+AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
 EXPECT_REGEX P: /..._xxx
 
 NAME str_big
