@@ -185,17 +185,19 @@ REQUIRES_FEATURE kprobe_multi
 AFTER ./testprogs/syscall read
 
 NAME kprobe_offset_module
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x4 { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
 ARCH x86_64
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
+# Proxy for testing if running virtualized. The offset is specific to our pre-built kernels.
+REQUIRES test -d /mnt/vmtest
 CLEANUP nft delete table bpftrace
 
-# Local entry point to nft_trans_alloc_gfp is located at offset of 8 bytes in ppc64 and aarch64.
+# Local entry point to nf_tables_newtable is located at offset of 8 bytes in ppc64 and aarch64.
 NAME kprobe_offset_module
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x8 { printf("hit\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x8 { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
 ARCH ppc64|ppc64le|aarch64
