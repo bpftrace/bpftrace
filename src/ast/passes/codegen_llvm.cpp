@@ -1308,7 +1308,8 @@ void CodegenLLVM::visit(Call &call)
     // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
     if (map_has_single_elem(map.type, map.key_type)) {
       expr_ = b_.getInt64(1);
-    } else if (bpftrace_.feature_->has_kernel_func(
+    } else if (LLVM_VERSION_MAJOR >= 17 &&
+               bpftrace_.feature_->has_kernel_func(
                    Kfunc::bpf_map_sum_elem_count) &&
                !is_array_map(map.type, map.key_type)) {
       expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
