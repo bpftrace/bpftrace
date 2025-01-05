@@ -15,6 +15,15 @@ import cmake_vars
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
+
+# This attach specific timeout doesn't make much sense - all time should just
+# be accounted towards TIMEOUT directive value.
+#
+# But deleting the attachment specific timeout causes hangs.  And I can't quite
+# figure out why. The next person that reads this is encouraged to try and
+# debug it. But please try running the CI at least 5-10 times before merging.
+# The hang will cause the job to hang indefinitely, so it should be easy to
+# spot.
 ATTACH_TIMEOUT = 10
 
 
