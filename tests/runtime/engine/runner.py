@@ -53,6 +53,9 @@ def warn(s):
 def fail(s):
     return colorify(s, ERROR_COLOR)
 
+def to_utf8(s):
+    return s.encode("unicode_escape").decode("utf-8")
+
 class TimeoutError(Exception):
     pass
 
@@ -202,7 +205,7 @@ class Runner(object):
             process.check_returncode()
         except subprocess.CalledProcessError as e:
             print(fail(f"[  FAILED  ] {test_ident}"))
-            print(f"\t{name} error: %s" % e.stdout)
+            print(f"\t{name} error: %s" % to_utf8(e.stdout))
             return Runner.FAIL
 
         return None
@@ -496,20 +499,19 @@ class Runner(object):
                     os.killpg(os.getpgid(after.pid), signal.SIGKILL)
                     after_output = after.communicate()[0]
 
-        if test.cleanup:
-                cleanup = Runner.__setup_cleanup(test, setup=False)
-                if cleanup:
-                    return cleanup
-
-        def to_utf8(s):
-            return s.encode("unicode_escape").decode("utf-8")
-
         def print_befores_and_after_output():
             if len(befores_output) > 0:
                 for out in befores_output:
                     print(f"\tBefore cmd output: {to_utf8(out)}")
             if after_output is not None:
                 print(f"\tAfter cmd output: {to_utf8(after_output)}")
+
+        if test.cleanup:
+                cleanup = Runner.__setup_cleanup(test, setup=False)
+                if cleanup:
+                    print('\tOutput: ' + to_utf8(output))
+                    print_befores_and_after_output()
+                    return cleanup
 
         elapsed = math.ceil((time.time() - start_time) * 1000)
         label = f"{test.suite}.{test.name} ({elapsed} ms)"
