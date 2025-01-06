@@ -420,7 +420,8 @@ class Runner(object):
             bpftrace = p
 
             attached = False
-            signal.alarm(ATTACH_TIMEOUT)
+            signal.alarm(test.timeout)
+            start = time.time()
 
             while p.poll() is None:
                 nextline = p.stdout.readline()
@@ -429,7 +430,7 @@ class Runner(object):
                     attached = True
                     if test.has_exact_expect:
                         output = ""  # ignore earlier ouput
-                    signal.alarm(test.timeout)
+                    # signal.alarm(test.timeout)
                     if test.after:
                         after_cmd = get_pid_ns_cmd(test.after) if test.new_pidns else test.after
                         after = subprocess.Popen(after_cmd, shell=True,
@@ -437,6 +438,8 @@ class Runner(object):
                                                  universal_newlines=True,
                                                  stdout=subprocess.PIPE,
                                                  stderr=subprocess.STDOUT)
+                if (time.time() - start) > test.timeout:
+                    os.killpg(os.getpgid(p.pid), signal.SIGTERM)
 
             signal.alarm(0)
             output += p.stdout.read()

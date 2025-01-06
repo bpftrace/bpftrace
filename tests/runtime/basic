@@ -33,7 +33,6 @@ TIMEOUT 1
 NAME it lists tracepoints
 RUN {{BPFTRACE}} -l | grep tracepoint
 EXPECT_REGEX tracepoint:.*
-TIMEOUT 1
 
 NAME it lists software events
 RUN {{BPFTRACE}} -l | grep software
@@ -43,7 +42,6 @@ TIMEOUT 1
 NAME it lists hardware events
 RUN {{BPFTRACE}} -l | grep hardware
 EXPECT_REGEX hardware:.*
-TIMEOUT 1
 
 NAME it lists fentry
 RUN {{BPFTRACE}} -l | grep fentry
@@ -55,19 +53,16 @@ TIMEOUT 1
 NAME it lists rawtracepoints
 RUN {{BPFTRACE}} -l | grep rawtracepoint
 EXPECT_REGEX rawtracepoint:.*
-TIMEOUT 1
 
 NAME it lists fentry params
 RUN {{BPFTRACE}} -lv "fentry:*"
 EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE fentry
-TIMEOUT 1
 
 NAME it lists kprobes with regex filter
 RUN {{BPFTRACE}} -l "kprobe:*"
 EXPECT_REGEX kprobe:.*
-TIMEOUT 1
 
 NAME it lists kretprobes with regex filter
 RUN {{BPFTRACE}} -l "kretprobe:*"
@@ -92,7 +87,6 @@ TIMEOUT 1
 NAME it lists software events with regex filter
 RUN {{BPFTRACE}} -l "software:*"
 EXPECT software:cpu:
-TIMEOUT 1
 
 NAME it lists hardware events with regex filter
 RUN {{BPFTRACE}} -l "hardware:*"
@@ -111,7 +105,6 @@ RUN {{BPFTRACE}} -l "fexit:*"
 EXPECT_REGEX fexit:.*
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE fentry
-TIMEOUT 1
 
 NAME it lists interval probes with regex filter
 RUN {{BPFTRACE}} -l "interval:*"
