@@ -1,0 +1,16 @@
+# This only tests for the presence of mangled rust probe names. We need to add
+# support for automatically unmangling the names (and include the 'rust'
+# language type).
+NAME uprobes - list rust uprobes (mangled)
+REQUIRES testprogs/hello_rust
+RUN {{BPFTRACE}} -l 'uprobe:./testprogs/hello_rust:*'
+EXPECT_REGEX uprobe:./testprogs/hello_rust.*fun1
+
+# This only tests for the presence of the builtin symbol `runtime.schedule`.
+# Argument unpacking and other things will *not* be supported in Go for a
+# while, since the calling convention is different. But useful analysis can
+# still be done with the basics.
+NAME uprobes - list Go uprobes (no arguments)
+REQUIRES testprogs/hello_go
+RUN {{BPFTRACE}} -l 'uprobe:./testprogs/hello_go:*'
+EXPECT_REGEX uprobe:./testprogs/hello_go:runtime.schedule
