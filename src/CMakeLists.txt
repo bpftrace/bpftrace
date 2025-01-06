@@ -131,7 +131,7 @@ endif(STATIC_LINKING)
 
 
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
-target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm)
+target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm rustdemangler_llvm)
 
 if(LLDB_FOUND)
   target_link_libraries(runtime LLDB)
@@ -241,3 +241,4 @@ add_subdirectory(arch)
 add_subdirectory(ast)
 add_subdirectory(cxxdemangler)
 add_subdirectory(resources)
+add_subdirectory(rustdemangler)

@@ -1237,6 +1237,14 @@ bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
     return false;
 }
 
+bool symbol_has_rust_mangled_signature(const std::string &sym_name)
+{
+  if (!sym_name.rfind("_R", 0))
+    return true;
+  else
+    return false;
+}
+
 static std::string get_invalid_pid_message(const std::string &pid,
                                            const std::string &msg)
 {

@@ -8,13 +8,15 @@
 #include <vector>
 
 #include "bpftrace.h"
-#include "cxxdemangler/cxxdemangler.h"
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "scopeguard.h"
 #include "tracefs.h"
 #include "utils.h"
+
+#include "cxxdemangler/cxxdemangler.h"
+#include "rustdemangler/rustdemangler.h"
 
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -64,25 +66,33 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
         auto prefix = fun_line.find(':') != std::string::npos
                           ? erase_prefix(fun_line) + ":"
                           : "";
+        // Note that legacy rust programs use the same C++ mangling convention,
+        // and therefore will always start with _Z. This is fine, but they also
+        // include a symbol hash at the end which would normally be stripped
+        // off. If users have legacy rust programs, they can just use a
+        // wildcard match against the hash component, and the rust specific
+        // bits will match against the newer v0 rust mangling convention.
+        std::string demangled_name;
         if (symbol_has_cpp_mangled_signature(fun_line)) {
-          char* demangled_name = cxxdemangle(fun_line.c_str());
-          if (!demangled_name)
+          demangled_name = cxxdemangle(fun_line.c_str());
+          if (demangled_name.empty())
             continue;
-          SCOPE_EXIT
-          {
-            ::free(demangled_name);
-          };
+        } else if (symbol_has_rust_mangled_signature(fun_line)) {
+          demangled_name = rustdemangle(fun_line.c_str());
+          if (demangled_name.empty())
+            continue;
+        } else {
+          continue;
+        }
 
-          // Match against the demanled name.
-          std::string match_line = prefix + demangled_name;
-          if (truncate_parameters) {
-            erase_parameter_list(match_line);
-          }
+        // Match against the demanled name.
+        std::string match_line = prefix + demangled_name;
+        if (truncate_parameters) {
+          erase_parameter_list(match_line);
+        }
 
-          if (wildcard_match(
-                  match_line, tokens, start_wildcard, end_wildcard)) {
-            goto out;
-          }
+        if (wildcard_match(match_line, tokens, start_wildcard, end_wildcard)) {
+          goto out;
         }
       }
       continue;
@@ -472,19 +482,25 @@ void ProbeMatcher::list_probes(ast::Program* prog)
 
       for (auto& match : matches) {
         std::string match_print = match;
-        if (ap->lang == "cpp") {
+
+        if (ap->lang == "cpp" || ap->lang == "rust") {
           std::string target = erase_prefix(match_print);
-          char* demangled_name = cxxdemangle(match_print.c_str());
-          SCOPE_EXIT
-          {
-            ::free(demangled_name);
-          };
+          std::string demangled_name;
+
+          // The legacy mangling scheme for rust actually uses the C++
+          // demangler with an extra hash at the end. We use the same scheme,
+          // and users will need to explicitly wildcard against this hash.
+          if (ap->lang == "cpp" ||
+              symbol_has_cpp_mangled_signature(match_print))
+            demangled_name = cxxdemangle(match_print.c_str());
+          if (ap->lang == "rust")
+            demangled_name = rustdemangle(match_print.c_str());
 
           // demangled name may contain symbols not accepted by the attach point
           // parser, so surround it with quotes to make the entry directly
           // usable as an attach point
-          auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
-                                     : match_print;
+          auto func = !demangled_name.empty() ? "\"" + demangled_name + "\""
+                                              : match_print;
 
           match_print = target + ":" + ap->lang + ":" + func;
         }

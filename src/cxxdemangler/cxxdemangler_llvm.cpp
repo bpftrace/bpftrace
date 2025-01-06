@@ -5,13 +5,20 @@
 
 namespace bpftrace {
 
-char* cxxdemangle(const char* mangled)
+std::string cxxdemangle(const char *mangled)
 {
+  std::string s;
 #if LLVM_VERSION_MAJOR <= 16
-  return llvm::itaniumDemangle(mangled, nullptr, nullptr, nullptr);
+  char *d = llvm::itaniumDemangle(mangled, nullptr, nullptr, nullptr);
 #else
-  return llvm::itaniumDemangle(mangled);
+  char *d = llvm::itaniumDemangle(mangled);
 #endif
+  if (!d) {
+    return s;
+  }
+  s = std::string(d);
+  free(d);
+  return s;
 }
 
 } // namespace bpftrace
