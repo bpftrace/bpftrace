@@ -20,9 +20,7 @@ and this project adheres to
 #### Docs
 #### Tools
 
-## [0.22.0] [Branch Created](https://github.com/bpftrace/bpftrace/tree/release/0.22.x)
-
-Not yet released.
+## [0.22.0] 2025-01-07
 
 #### Breaking Changes
 - Return `uint32` instead of `uint64` for `pid` and `tid` builtins
