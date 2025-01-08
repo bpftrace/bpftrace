@@ -20,6 +20,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix json output for none type
+  - [#3692](https://github.com/bpftrace/bpftrace/pull/3692)
 #### Security
 #### Docs
 #### Tools

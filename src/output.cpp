@@ -24,6 +24,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::inet:
     case Type::kstack_t:
     case Type::ksym_t:
+    case Type::none:
     case Type::strerror_t:
     case Type::string:
     case Type::timestamp:
@@ -40,7 +41,6 @@ bool is_quoted_type(const SizedType &ty)
     case Type::mac_address:
     case Type::max_t:
     case Type::min_t:
-    case Type::none:
     case Type::pointer:
     case Type::reference:
     case Type::record:
