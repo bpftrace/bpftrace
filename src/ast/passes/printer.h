@@ -9,11 +9,11 @@ namespace ast {
 
 class Printer : public Visitor {
 public:
-  explicit Printer(std::ostream &out) : out_(out)
+  explicit Printer(ASTContext &ctx, std::ostream &out) : Visitor(ctx), out_(out)
   {
   }
 
-  void print(Node *root);
+  void print(Node *node);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;

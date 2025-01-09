@@ -12,6 +12,10 @@ namespace ast {
 
 class TracepointArgsVisitor : public Visitor {
 public:
+  explicit TracepointArgsVisitor(ASTContext &ctx) : Visitor(ctx)
+  {
+  }
+
   void visit(Builtin &builtin) override
   {
     Visitor::visit(builtin);
@@ -39,7 +43,7 @@ private:
 
 class TracepointFormatParser {
 public:
-  static bool parse(ast::Program *program, BPFtrace &bpftrace);
+  static bool parse(ast::ASTContext &ctx, BPFtrace &bpftrace);
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
   static std::string get_struct_name(const std::string &probe_id);

@@ -37,8 +37,8 @@ struct VariableLLVM {
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
-  explicit CodegenLLVM(Node *root,
+  explicit CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace);
+  explicit CodegenLLVM(ASTContext &ctx,
                        BPFtrace &bpftrace,
                        std::unique_ptr<USDTHelper> usdt_helper);
 
@@ -279,8 +279,6 @@ private:
                                  const Twine &name);
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
-
-  Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;
   std::unique_ptr<USDTHelper> usdt_helper_;

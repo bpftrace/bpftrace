@@ -357,12 +357,12 @@ static void parse_env(BPFtrace& bpftrace)
 
   bpftrace.parse_btf(driver.list_modules());
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace);
   err = fields.analyse();
   if (err)
     return {};
 
-  if (TracepointFormatParser::parse(driver.ctx.root, bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.ctx, bpftrace) == false)
     return {};
 
   // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
@@ -890,13 +890,11 @@ int main(int argc, char* argv[])
 
   bpftrace.fentry_recursion_check(ast_ctx->root);
 
-  auto pmresult = pm.Run(ast_ctx->root, ctx);
+  auto pmresult = pm.Run(ctx);
   if (!pmresult.Ok())
     return 1;
 
-  auto* ast_root = pmresult.Root();
-
-  ast::CodegenLLVM llvm(ast_root, bpftrace);
+  ast::CodegenLLVM llvm(ctx.ast_ctx, bpftrace);
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();

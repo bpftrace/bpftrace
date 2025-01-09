@@ -33,16 +33,16 @@ std::string get_literal_string(Expression &expr)
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(Node *root,
+ResourceAnalyser::ResourceAnalyser(ASTContext &ctx,
                                    BPFtrace &bpftrace,
                                    std::ostream &out)
-    : root_(root), bpftrace_(bpftrace), out_(out), probe_(nullptr)
+    : Visitor(ctx), bpftrace_(bpftrace), out_(out), probe_(nullptr)
 {
 }
 
 std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
-  Visit(*root_);
+  Visit(*ctx_.root);
 
   if (!err_.str().empty()) {
     out_ << err_.str();
@@ -507,8 +507,8 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map)
 
 Pass CreateResourcePass()
 {
-  auto fn = [](Node &n, PassContext &ctx) {
-    ResourceAnalyser analyser{ &n, ctx.b };
+  auto fn = [](PassContext &ctx) {
+    ResourceAnalyser analyser(ctx.ast_ctx, ctx.b);
     auto pass_result = analyser.analyse();
 
     if (!pass_result.has_value())

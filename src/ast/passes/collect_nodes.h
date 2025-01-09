@@ -16,6 +16,10 @@ namespace bpftrace::ast {
 template <typename NodeT>
 class CollectNodes : public Visitor {
 public:
+  explicit CollectNodes(ASTContext &ctx) : Visitor(ctx)
+  {
+  }
+
   void run(
       Node &node,
       std::function<bool(const NodeT &)> pred = [](const auto &) {

@@ -62,7 +62,9 @@ public:
 */
 class Visitor : public VisitorBase {
 public:
-  explicit Visitor() = default;
+  explicit Visitor(ASTContext &ctx) : ctx_(ctx)
+  {
+  }
   ~Visitor() = default;
 
   Visitor(const Visitor &) = delete;
@@ -120,6 +122,9 @@ public:
   void visit(Subprog &subprog) override;
   void visit(Program &program) override;
   void visit(Block &block) override;
+
+protected:
+  ASTContext &ctx_;
 };
 
 /**

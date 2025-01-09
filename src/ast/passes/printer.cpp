@@ -10,10 +10,10 @@
 
 namespace bpftrace::ast {
 
-void Printer::print(Node *root)
+void Printer::print(Node *node)
 {
   ++depth_;
-  Visit(*root);
+  Visit(*node);
   --depth_;
 }
 
