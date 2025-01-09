@@ -56,6 +56,8 @@ volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
 BPFtrace::~BPFtrace()
 {
+  close_pcaps();
+
   for (const auto &pair : exe_sym_) {
     if (pair.second.second)
       bcc_free_symcache(pair.second.second, pair.second.first);
@@ -613,10 +615,6 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         arg_values.push_back(std::make_unique<PrintableString>(
             resolve_uid(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
         break;
-      case Type::probe:
-        arg_values.push_back(std::make_unique<PrintableString>(resolve_probe(
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
-        break;
       case Type::kstack_t:
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
@@ -950,6 +948,12 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (err)
     return err;
 
+  err = create_pcaps();
+  if (err) {
+    LOG(ERROR) << "Failed to create pcap file(s)";
+    return err;
+  }
+
   if (bytecode_.hasMap(MapType::Elapsed)) {
     struct timespec ts;
     clock_gettime(CLOCK_BOOTTIME, &ts);
@@ -1043,7 +1047,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
-    std::cerr << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
+    std::cout << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
 
 #ifdef HAVE_LIBSYSTEMD
   err = sd_notify(false, "READY=1\nSTATUS=Processing events...");
@@ -2088,7 +2092,7 @@ int BPFtrace::create_pcaps()
   for (auto arg : resources.skboutput_args_) {
     auto file = std::get<0>(arg);
 
-    if (pcap_writers.count(file) > 0) {
+    if (pcap_writers_.count(file) > 0) {
       return 0;
     }
 
@@ -2097,7 +2101,7 @@ int BPFtrace::create_pcaps()
     if (!writer->open(file))
       return -1;
 
-    pcap_writers[file] = std::move(writer);
+    pcap_writers_[file] = std::move(writer);
   }
 
   return 0;
@@ -2105,7 +2109,7 @@ int BPFtrace::create_pcaps()
 
 void BPFtrace::close_pcaps()
 {
-  for (auto &writer : pcap_writers) {
+  for (auto &writer : pcap_writers_) {
     writer.second->close();
   }
 }
@@ -2120,7 +2124,7 @@ bool BPFtrace::write_pcaps(uint64_t id,
   }
 
   auto file = std::get<0>(resources.skboutput_args_.at(id));
-  auto &writer = pcap_writers.at(file);
+  auto &writer = pcap_writers_.at(file);
 
   return writer->write(ns, pkt, size);
 }

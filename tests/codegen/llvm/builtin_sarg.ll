@@ -25,45 +25,51 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %sarg0 = alloca i64, align 8
-  %1 = getelementptr i64, ptr %0, i64 19
-  %reg_sp = load volatile i64, ptr %1, align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i64, ptr %1, i64 19
+  %reg_sp = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg0)
-  %2 = add i64 %reg_sp, 8
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %sarg0, i32 8, i64 %2)
-  %3 = load i64, ptr %sarg0, align 8
+  %3 = add i64 %reg_sp, 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %sarg0, i32 8, i64 %3)
+  %4 = load i64, ptr %sarg0, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %3, ptr %"@x_val", align 8
+  store i64 %4, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  %4 = getelementptr i64, ptr %0, i64 19
-  %reg_sp1 = load volatile i64, ptr %4, align 8
+  %5 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %6 = getelementptr i64, ptr %5, i64 19
+  %reg_sp1 = load volatile i64, ptr %6, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg2)
-  %5 = add i64 %reg_sp1, 24
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %sarg2, i32 8, i64 %5)
-  %6 = load i64, ptr %sarg2, align 8
+  %7 = add i64 %reg_sp1, 24
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %sarg2, i32 8, i64 %7)
+  %8 = load i64, ptr %sarg2, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
-  store i64 %6, ptr %"@y_val", align 8
+  store i64 %8, ptr %"@y_val", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!44}
 !llvm.module.flags = !{!46}

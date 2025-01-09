@@ -33,6 +33,7 @@ TestStruct = namedtuple(
         'timeout',
         'befores',
         'after',
+        'setup',
         'cleanup',
         'suite',
         'kernel_min',
@@ -114,6 +115,7 @@ class TestParser(object):
         timeout = ''
         befores = []
         after = ''
+        setup = ''
         cleanup = ''
         kernel_min = ''
         kernel_max = ''
@@ -173,6 +175,8 @@ class TestParser(object):
                 befores.append(line)
             elif item_name == 'AFTER':
                 after = line
+            elif item_name == 'SETUP':
+                setup = line
             elif item_name == 'CLEANUP':
                 cleanup = line
             elif item_name == 'MIN_KERNEL':
@@ -256,6 +260,7 @@ class TestParser(object):
             timeout,
             befores,
             after,
+            setup,
             cleanup,
             test_suite,
             kernel_min,

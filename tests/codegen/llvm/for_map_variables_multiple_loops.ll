@@ -40,13 +40,16 @@ entry:
   store i64 0, ptr %"$var1", align 8
   store i64 0, ptr %"$var2", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
-  %"ctx.$var1" = getelementptr %ctx_t, ptr %ctx, i64 0, i32 0
+  %1 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$var1" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
   store ptr %"$var1", ptr %"ctx.$var1", align 8
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_, ptr @map_for_each_cb, ptr %ctx, i64 0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx1)
-  %"ctx.$var12" = getelementptr %ctx_t.2, ptr %ctx1, i64 0, i32 0
+  %2 = call ptr @llvm.preserve.static.offset(ptr %ctx1)
+  %"ctx.$var12" = getelementptr %ctx_t.2, ptr %2, i64 0, i32 0
   store ptr %"$var1", ptr %"ctx.$var12", align 8
-  %"ctx.$var2" = getelementptr %ctx_t.2, ptr %ctx1, i64 0, i32 1
+  %3 = call ptr @llvm.preserve.static.offset(ptr %ctx1)
+  %"ctx.$var2" = getelementptr %ctx_t.2, ptr %3, i64 0, i32 1
   store ptr %"$var2", ptr %"ctx.$var2", align 8
   %for_each_map_elem3 = call i64 inttoptr (i64 164 to ptr)(ptr @AT_, ptr @map_for_each_cb.1, ptr %ctx1, i64 0)
   ret i64 0
@@ -57,6 +60,9 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
 
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !57 {
   %"$_" = alloca %int64_int64__tuple_t, align 8
@@ -77,7 +83,7 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".t
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !65 {
   %"$_" = alloca %int64_int64__tuple_t, align 8
@@ -104,7 +110,8 @@ define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) section "
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!47}
 !llvm.module.flags = !{!49}

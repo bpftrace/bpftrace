@@ -239,7 +239,7 @@ public:
   AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
-  Value *CreatKFuncArg(Value *ctx, SizedType &type, std::string &name);
+  Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
   llvm::Type *UprobeArgsType(const SizedType &args_type);
@@ -265,6 +265,20 @@ public:
   llvm::Value *CreatePtrOffset(const SizedType &type,
                                llvm::Value *index,
                                AddrSpace as);
+
+  // Safely handle pointer references by wrapping the address with the
+  // intrinsic `preserve_static_offset` [1], which will ensure that LLVM does
+  // not apply certain basic optimizations (notably, saving any intermediate
+  // offset from this pointer). This is required for the context pointer,
+  // which, if modified. will trigger an error in the verifier. This method
+  // also automatically handles casts from integers and other pointers; the
+  // output value is always a pointer to `ty`.
+  //
+  // [1] https://reviews.llvm.org/D133361
+  llvm::Value *CreateSafeGEP(llvm::Type *Ty,
+                             llvm::Value *Ptr,
+                             llvm::ArrayRef<Value *> IdxList,
+                             const llvm::Twine &Name = "");
 
   StoreInst *createAlignedStore(Value *val, Value *ptr, unsigned align);
   // moves the insertion point to the start of the function you're inside,
@@ -349,6 +363,7 @@ private:
                        const SizedType &type);
 
   std::map<std::string, StructType *> structs_;
+  Function *preserve_static_offset_ = nullptr;
 };
 
 } // namespace ast

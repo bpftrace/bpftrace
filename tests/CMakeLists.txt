@@ -54,6 +54,7 @@ add_executable(bpftrace_test
 
   ${CODEGEN_SRC}
 )
+add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
 add_subdirectory(data)
 if(${LLDB_FOUND})
@@ -94,11 +95,8 @@ find_package(GMock REQUIRED)
 include_directories(SYSTEM ${GTEST_INCLUDE_DIRS} ${GMOCK_INCLUDE_DIRS})
 target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
 
-add_test(NAME bpftrace_test COMMAND bpftrace_test)
-if(NOT STATIC_LINKING)
-  find_package(Threads REQUIRED)
-  target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
-endif(NOT STATIC_LINKING)
+find_package(Threads REQUIRED)
+target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 
 add_subdirectory(testprogs)
 add_subdirectory(testlibs)

@@ -20,17 +20,21 @@ define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !58 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"struct Foo_int32[4]__tuple_t", align 8
-  %1 = getelementptr i64, ptr %0, i64 14
-  %arg0 = load volatile i64, ptr %1, align 8
-  %2 = getelementptr i64, ptr %0, i64 13
-  %arg1 = load volatile i64, ptr %2, align 8
-  %3 = add i64 %arg1, 0
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i64, ptr %1, i64 14
+  %arg0 = load volatile i64, ptr %2, align 8
+  %3 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %4 = getelementptr i64, ptr %3, i64 13
+  %arg1 = load volatile i64, ptr %4, align 8
+  %5 = inttoptr i64 %arg1 to ptr
+  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
+  %7 = getelementptr i8, ptr %6, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 24, i1 false)
-  %4 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 8, i64 %arg0)
-  %5 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 1
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %5, i32 16, i64 %3)
+  %8 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %8, i32 8, i64 %arg0)
+  %9 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 1
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %9, i32 16, ptr %7)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %tuple, i64 0)
@@ -39,18 +43,22 @@ entry:
   ret i64 0
 }
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!55}
 !llvm.module.flags = !{!57}

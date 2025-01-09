@@ -134,14 +134,12 @@ void CodegenLLVM::visit(PositionalParameter &param)
           expr_ = b_.getInt64(std::stoull(pstr, nullptr, 0));
         }
       } else {
-        Constant *const_str = ConstantDataArray::getString(
-            module_->getContext(), pstr, true);
-        AllocaInst *buf = b_.CreateAllocaBPF(
-            ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-        b_.CreateMemsetBPF(buf, b_.getInt8(0), pstr.length() + 1);
-        b_.CreateStore(const_str, buf);
-        expr_ = b_.CreatePtrToInt(buf, b_.getInt64Ty());
-        expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+        auto string_param = llvm::dyn_cast<GlobalVariable>(
+            module_->getOrInsertGlobal(
+                pstr, ArrayType::get(b_.getInt8Ty(), pstr.length() + 1)));
+        string_param->setInitializer(
+            ConstantDataArray::getString(module_->getContext(), pstr));
+        expr_ = b_.CreatePtrToInt(string_param, b_.getInt64Ty());
       }
     } break;
     case PositionalParameterType::count:
@@ -153,13 +151,11 @@ void CodegenLLVM::visit(PositionalParameter &param)
 void CodegenLLVM::visit(String &string)
 {
   string.str.resize(string.type.GetSize() - 1);
-  Constant *const_str = ConstantDataArray::getString(module_->getContext(),
-                                                     string.str,
-                                                     true);
-  AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
-  b_.CreateStore(const_str, buf);
-  expr_ = buf;
-  expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  auto string_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+      string.str, ArrayType::get(b_.getInt8Ty(), string.type.GetSize())));
+  string_var->setInitializer(
+      ConstantDataArray::getString(module_->getContext(), string.str));
+  expr_ = string_var;
 }
 
 // NB: we do not resolve identifiers that are structs. That is because in
@@ -412,7 +408,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.type.is_funcarg) {
-      expr_ = b_.CreatKFuncArg(ctx_, builtin.type, builtin.ident);
+      expr_ = b_.CreateKFuncArg(ctx_, builtin.type, builtin.ident);
       return;
     }
 
@@ -466,17 +462,21 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = b_.CreateLoad(b_.GetType(builtin.type), dst);
     b_.CreateLifetimeEnd(dst);
   } else if (builtin.ident == "probe") {
-    builtin.probe_id = get_probe_id();
-    expr_ = b_.getInt64(builtin.probe_id);
+    auto probe_str = probefull_;
+    probe_str.resize(builtin.type.GetSize() - 1);
+    auto probe_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+        probe_str, ArrayType::get(b_.getInt8Ty(), builtin.type.GetSize())));
+    probe_var->setInitializer(
+        ConstantDataArray::getString(module_->getContext(), probe_str));
+    expr_ = probe_var;
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack
     expr_ = b_.CreateUprobeArgsRecord(ctx_, builtin.type);
   } else if (builtin.ident == "args" || builtin.ident == "ctx") {
-    // ctx is undocumented builtin: for debugging
-    // ctx_ is casted to int for arithmetic operation
-    // it will be casted to a pointer when loading
-    expr_ = b_.CreatePtrToInt(ctx_, b_.getInt64Ty());
+    // ctx is undocumented builtin: for debugging. The context value is left as
+    // a pointer type, and may be cast explicitly if needed.
+    expr_ = ctx_;
   } else if (builtin.ident == "cpid") {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
@@ -1313,7 +1313,8 @@ void CodegenLLVM::visit(Call &call)
     // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
     if (map_has_single_elem(map.type, map.key_type)) {
       expr_ = b_.getInt64(1);
-    } else if (bpftrace_.feature_->has_kernel_func(
+    } else if (LLVM_VERSION_MAJOR >= 17 &&
+               bpftrace_.feature_->has_kernel_func(
                    Kfunc::bpf_map_sum_elem_count) &&
                !is_array_map(map.type, map.key_type)) {
       expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
@@ -1573,6 +1574,7 @@ std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
     result.second = expr->type.GetSize();
     expr_deleter_ = scoped_del.disarm();
   }
+
   return result;
 }
 
@@ -2067,7 +2069,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit)
-      expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
+      expr_ = b_.CreateKFuncArg(ctx_, acc.type, acc.field);
     else if (probe_type == ProbeType::uprobe) {
       Value *args = expr_;
       llvm::Type *args_type = b_.UprobeArgsType(type);
@@ -2126,17 +2128,20 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // (bitfields and _data_loc)
     if (field.type.IsIntTy() &&
         (field.bitfield.has_value() || field.is_data_loc)) {
-      Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
-
       if (field.bitfield.has_value()) {
         Value *raw;
         auto field_type = b_.GetType(field.type);
-        if (type.IsCtxAccess())
-          raw = b_.CreateLoad(field_type,
-                              b_.CreateIntToPtr(src,
-                                                field_type->getPointerTo()),
-                              true);
-        else {
+        if (type.IsCtxAccess()) {
+          // The offset is specified in absolute terms here; and the load
+          // will implicitly convert to the intended field_type.
+          Value *src = b_.CreateSafeGEP(b_.GET_PTR_TY(),
+                                        expr_,
+                                        b_.getInt64(field.offset));
+          raw = b_.CreateLoad(field_type, src, true);
+        } else {
+          // Since `src` is treated as a offset for a constructed probe read,
+          // we are not constrained in the same way.
+          Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
           AllocaInst *dst = b_.CreateAllocaBPF(field.type,
                                                type.GetName() + "." +
                                                    acc.field);
@@ -2166,22 +2171,23 @@ void CodegenLLVM::visit(FieldAccess &acc)
         // `is_data_loc` should only be set if field access is on `args` which
         // has to be a ctx access
         assert(type.IsCtxAccess());
-        assert(ctx_->getType() == b_.GET_PTR_TY());
         // Parser needs to have rewritten field to be a u64
         assert(field.type.IsIntTy());
         assert(field.type.GetIntBitWidth() == 64);
 
         // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
-        // offset which we add to the start of the tracepoint struct.
-        expr_ = b_.CreateLoad(
-            b_.getInt32Ty(),
-            b_.CreateGEP(b_.getInt32Ty(),
-                         b_.CreatePointerCast(ctx_,
-                                              b_.getInt32Ty()->getPointerTo()),
-                         b_.getInt64(field.offset / 4)));
+        // offset which we add to the start of the tracepoint struct. We need
+        // to wrap the context here in a special way to treat it as the
+        // expected pointer type for all versions.
+        expr_ = b_.CreateLoad(b_.getInt32Ty(),
+                              b_.CreateSafeGEP(b_.getInt32Ty(),
+                                               ctx_,
+                                               b_.getInt64(field.offset / 4)));
         expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
         expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
-        expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
+        expr_ = b_.CreateSafeGEP(b_.getInt32Ty(), ctx_, expr_);
+        expr_ = b_.CreatePointerCast(expr_,
+                                     b_.GetType(field.type)->getPointerTo());
       }
     } else {
       probereadDatastructElem(expr_,
@@ -2701,7 +2707,7 @@ void CodegenLLVM::visit(For &f)
     for (size_t i = 0; i < ctx_fields.size(); i++) {
       const auto &field = ctx_fields[i];
       auto *field_expr = getVariable(field.name).value;
-      auto *ctx_field_ptr = b_.CreateGEP(
+      auto *ctx_field_ptr = b_.CreateSafeGEP(
           ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
 #if LLVM_VERSION_MAJOR < 15
       // An extra cast is required for older LLVM versions, pre-opaque-pointers
@@ -3191,8 +3197,8 @@ Value *CodegenLLVM::getHistMapKey(Map &map, Value *log2, const location &loc)
 
 Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 {
-  assert(binop.left->type.IsIntTy());
-  assert(binop.right->type.IsIntTy());
+  assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
+  assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(),
@@ -3212,19 +3218,19 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
-      lhs_true_block,
-      false_block);
+  Value *lhs_zero_value = Constant::getNullValue(lhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, lhs_zero_value, "lhs_true_cond"),
+                  lhs_true_block,
+                  false_block);
 
   b_.SetInsertPoint(lhs_true_block);
   Value *rhs;
   auto scoped_del_right = accept(binop.right);
   rhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
-      true_block,
-      false_block);
+  Value *rhs_zero_value = Constant::getNullValue(rhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, rhs_zero_value, "rhs_true_cond"),
+                  true_block,
+                  false_block);
 
   b_.SetInsertPoint(true_block);
   b_.CreateStore(b_.getInt64(1), result);
@@ -3240,8 +3246,8 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 
 Value *CodegenLLVM::createLogicalOr(Binop &binop)
 {
-  assert(binop.left->type.IsIntTy());
-  assert(binop.right->type.IsIntTy());
+  assert(binop.left->type.IsIntTy() || binop.left->type.IsPtrTy());
+  assert(binop.right->type.IsIntTy() || binop.right->type.IsPtrTy());
 
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(),
@@ -3261,19 +3267,19 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
-      true_block,
-      lhs_false_block);
+  Value *lhs_zero_value = Constant::getNullValue(lhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, lhs_zero_value, "lhs_true_cond"),
+                  true_block,
+                  lhs_false_block);
 
   b_.SetInsertPoint(lhs_false_block);
   Value *rhs;
   auto scoped_del_right = accept(binop.right);
   rhs = expr_;
-  b_.CreateCondBr(
-      b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
-      true_block,
-      false_block);
+  Value *rhs_zero_value = Constant::getNullValue(rhs->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, rhs_zero_value, "rhs_true_cond"),
+                  true_block,
+                  false_block);
 
   b_.SetInsertPoint(false_block);
   b_.CreateStore(b_.getInt64(0), result);
@@ -4200,9 +4206,13 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
                                           location loc,
                                           const std::string &temp_name)
 {
-  Value *src = b_.CreateAdd(src_data, offset);
-
+  // We treat this access as a raw byte offset, but may then subsequently need
+  // to cast the pointer to the expected value.
+  Value *src = b_.CreateSafeGEP(b_.getInt8Ty(), src_data, offset);
   auto dst_type = b_.GetType(elem_type);
+  if (dst_type != b_.getInt8Ty())
+    src = b_.CreatePointerCast(src, dst_type->getPointerTo());
+
   if (elem_type.IsRecordTy() || elem_type.IsArrayTy()) {
     // For nested arrays and structs, just pass the pointer along and
     // dereference it later when necessary. We just need to extend lifetime
@@ -4224,11 +4234,9 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
   } else {
     // Read data onto stack
     if (data_type.IsCtxAccess() || data_type.is_btftype) {
+      // Types have already been suitably casted; just do the access.
       expr_ = b_.CreateDatastructElemLoad(
-          elem_type,
-          b_.CreateIntToPtr(src, dst_type->getPointerTo()),
-          true,
-          data_type.GetAS());
+          elem_type, src, true, data_type.GetAS());
       // check context access for iter probes (required by kernel)
       if (data_type.IsCtxAccess() &&
           probetype(current_attach_point_->provider) == ProbeType::iter) {
@@ -4566,11 +4574,8 @@ Function *CodegenLLVM::createForEachMapCallback(const For &f, llvm::Type *ctx_t)
 
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key_type)) {
-    AllocaInst *key_ptr = b_.CreateAllocaBPF(b_.GetType(key_type),
-                                             "lookup_key");
-    b_.CreateStore(key, key_ptr);
-
-    val = b_.CreatePerCpuMapAggElems(ctx_, map, key_ptr, map_val_type, map.loc);
+    val = b_.CreatePerCpuMapAggElems(
+        ctx_, map, callback->getArg(1), map_val_type, map.loc);
   } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

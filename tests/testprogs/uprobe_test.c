@@ -61,25 +61,27 @@ __uint128_t uprobeFunctionUint128(__uint128_t x,
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 {
-  usleep(1000000);
+  while (1) {
+    int n = 13;
+    char c = 'x';
+    uprobeFunction1(&n, c);
 
-  int n = 13;
-  char c = 'x';
-  uprobeFunction1(&n, c);
+    struct Foo foo1 = {
+      .a = 123, .b = "hello", .c = { 1, 2, 3 }, .d = 0x123456789ABCDEF0
+    };
+    struct Foo foo2 = {
+      .a = 456, .b = "world", .c = { 4, 5, 6 }, .d = 0xFEDCBA9876543210
+    };
+    uprobeFunction2(&foo1, &foo2);
 
-  struct Foo foo1 = {
-    .a = 123, .b = "hello", .c = { 1, 2, 3 }, .d = 0x123456789ABCDEF0
-  };
-  struct Foo foo2 = {
-    .a = 456, .b = "world", .c = { 4, 5, 6 }, .d = 0xFEDCBA9876543210
-  };
-  uprobeFunction2(&foo1, &foo2);
+    __uint128_t x = 0x123456789ABCDEF0;
+    __uint128_t y = 0xEFEFEFEFEFEFEFEF;
+    __uint128_t z = 0xCDCDCDCDCDCDCDCD;
+    __uint128_t w = 0xABABABABABABABAB;
+    uprobeFunctionUint128(x, y, z, w);
 
-  __uint128_t x = 0x123456789ABCDEF0;
-  __uint128_t y = 0xEFEFEFEFEFEFEFEF;
-  __uint128_t z = 0xCDCDCDCDCDCDCDCD;
-  __uint128_t w = 0xABABABABABABABAB;
-  uprobeFunctionUint128(x, y, z, w);
+    usleep(100000);
+  }
 
   return 0;
 }

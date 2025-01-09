@@ -9,6 +9,26 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+#### Added
+- Pointers may now be used in if conditions, tenary conditions and as operands in logical AND and OR expressions
+  - [#3656](https://github.com/bpftrace/bpftrace/pull/3656)
+#### Changed
+- `probe` builtin is now represented as a string type
+  - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
+- Change bpftrace help flag output from stderr to stdout
+  - [#3678](https://github.com/bpftrace/bpftrace/pull/3678)
+#### Deprecated
+#### Removed
+#### Fixed
+- Fix json output for none type
+  - [#3692](https://github.com/bpftrace/bpftrace/pull/3692)
+#### Security
+#### Docs
+#### Tools
+
+## [0.22.0] 2025-01-07
+
+#### Breaking Changes
 - Return `uint32` instead of `uint64` for `pid` and `tid` builtins
   - [#3441](https://github.com/bpftrace/bpftrace/pull/3441)
   - [Migration guide](docs/migration_guide.md#pid-and-tid-builtins-return-uint32)
@@ -22,7 +42,7 @@ and this project adheres to
   - [#3522](https://github.com/bpftrace/bpftrace/pull/3522)
   - [Migration guide](docs/migration_guide.md#default-sigusr1-handler-removed)
 #### Added
-= Bump max supported LLVM version to 19
+- Bump max supported LLVM version to 19
   - [#3433](https://github.com/bpftrace/bpftrace/pull/3433)
 - Add `--dry-run` CLI option
   - [#3203](https://github.com/bpftrace/bpftrace/pull/3203)
@@ -69,6 +89,8 @@ and this project adheres to
   - [#3472](https://github.com/bpftrace/bpftrace/pull/3472)
 - Symbolize enums when used in maps
   - [#3539](https://github.com/bpftrace/bpftrace/pull/3539)
+- Supported LLVM version for static builds changed to LLVM 18
+  - [#3631](https://github.com/bpftrace/bpftrace/pull/3631)
 #### Deprecated
 #### Removed
 - Remove the `-dd` CLI option
@@ -116,6 +138,8 @@ and this project adheres to
   - [#3565](https://github.com/bpftrace/bpftrace/pull/3565)
 - Fix crash when using castable per-cpu map types as map keys
   - [#3594](https://github.com/bpftrace/bpftrace/pull/3594)
+- Fix loop values with per-cpu aggregations
+  - [#3664](https://github.com/bpftrace/bpftrace/pull/3664)
 #### Security
 #### Docs
 - Remove mention of unsupported character literals

@@ -157,11 +157,11 @@ EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "r
 TIMEOUT 1
 
 NAME cgroup_path
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': '.*'}$
 
 NAME strftime
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $t = (1, strftime("%m/%d/%y", nsecs)); print($t); exit() }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { $t = (1, strftime("%m/%d/%y", nsecs)); print($t); exit() }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': \[1, '[0-9]{2}\/[0-9]{2}\/[0-9]{2}'\]}$
 TIMEOUT 1
 
@@ -178,3 +178,10 @@ EXPECT {"type": "value", "data": 333}
 NAME enum_symbolized_printf
 RUN {{BPFTRACE}} -q -f json -e 'enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s %d %s %d %s\n", ONE, ONE, TWO, TWO, OTHER, OTHER); exit() }'
 EXPECT {"type": "printf", "data": "1 ONE 2 TWO 99999 OTHER\n"}
+
+# Note: if we fix the underlying issue, which is that we don't support unions
+# or anon structs, then we will need to change/delete this test
+NAME none type
+RUN {{BPFTRACE}} -q -f json -e 'union N { int i; float f; }; struct Foo { int m; union N n; }; uprobe:./testprogs/struct_with_union:func { print(*((struct Foo *) arg0)); exit(); }'
+EXPECT {"type": "value", "data": { "m": 2, "n": { "i": 5, "f": "" } }}
+AFTER ./testprogs/struct_with_union

@@ -120,9 +120,9 @@ EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall read
 
 NAME kprobe_wildcard_multi
-RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT progs: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME kprobe_module
@@ -161,51 +161,41 @@ EXPECT ERROR: Error attaching probe: kprobe:vmlinux:nonsense
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME uprobe_multi_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
 EXPECT link: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
 
 NAME kprobe_wildcard probe builtin
-RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @ = probe; printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @ = probe; printf("progs: "); system("bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT_REGEX progs: [1-9][0-9]+
-REQUIRES /usr/sbin/bpftool
-
-# Note: this test may fail if you've installed a new kernel but not rebooted
-# yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
-# version.
-NAME kprobe_offset_fail_size
-PROG kprobe:vfs_read+1000000 { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX Offset outside the function bounds \('vfs_read' size is*
-WILL_FAIL
-# See https://github.com/bpftrace/bpftrace/pull/956
-SKIP_IF_ENV_HAS CI=true
+REQUIRES bpftool
 
 NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
-AFTER /usr/sbin/nft add table bpftrace
+AFTER nft add table bpftrace
 EXPECT hit
 ARCH x86_64
 REQUIRES lsmod | grep '^nf_tables'
-REQUIRES /usr/sbin/nft --help
-CLEANUP /usr/sbin/nft delete table bpftrace
+REQUIRES nft --help
+CLEANUP nft delete table bpftrace
 
 # Local entry point to nft_trans_alloc_gfp is located at offset of 8 bytes in ppc64 and aarch64.
 NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x8 { printf("hit\n"); exit(); }'
-AFTER /usr/sbin/nft add table bpftrace
+AFTER nft add table bpftrace
 EXPECT hit
 ARCH ppc64|ppc64le|aarch64
 REQUIRES lsmod | grep '^nf_tables'
-REQUIRES /usr/sbin/nft --help
-CLEANUP /usr/sbin/nft delete table bpftrace
+REQUIRES nft --help
+CLEANUP nft delete table bpftrace
 
 NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
@@ -255,28 +245,28 @@ EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_wildcard_multi
-RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { system("bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME kretprobe_wildcard_multi_link
-RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
 
 NAME uretprobe_multi_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'uretprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'uretprobe:./testprogs/uprobe_test:uprobeFunction* { printf("link: "); system("bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }'
 EXPECT link: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_multi_wildcard_target_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' -p {{BEFORE_PID}}
 EXPECT link: 1
-REQUIRES /usr/sbin/bpftool
+REQUIRES bpftool
 REQUIRES_FEATURE uprobe_multi
 BEFORE ./testprogs/uprobe_test
 
@@ -464,6 +454,14 @@ NAME hardware_probe_builtin
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { print(probe); exit();}
 EXPECT hardware:cache-misses:10
+
+NAME probe_builtin_string_compare
+RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction* { if (strcontains(probe, "uprobeFunction2")) { print(probe); } }' -c ./testprogs/uprobe_test
+EXPECT uprobe:testprogs/uprobe_test:uprobeFunction2
+
+NAME probe_builtin_scratch_buf
+PROG config = { on_stack_limit = 0 } software:cpu:1 { print(probe); exit(); }
+EXPECT software:cpu:1
 
 NAME BEGIN
 PROG BEGIN { printf("Hello\n"); exit();}

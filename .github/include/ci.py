@@ -41,9 +41,7 @@ RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
-GTEST_COLOR = os.environ.get("GTEST_COLOR", "auto")
 CI = os.environ.get("CI", "false")
-RUNTIME_TEST_COLOR = os.environ.get("RUNTIME_TEST_COLOR", "auto")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
@@ -240,7 +238,7 @@ def test():
             lambda: shell(
                 ["./tests/bpftrace_test"],
                 cwd=Path(BUILD_DIR),
-                env={"GTEST_COLOR": GTEST_COLOR},
+                env={"GTEST_COLOR": "yes"},
             ),
         )
     )
@@ -254,7 +252,7 @@ def test():
                 cwd=Path(BUILD_DIR),
                 env={
                     "CI": CI,
-                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
+                    "RUNTIME_TEST_COLOR": "yes",
                 },
             ),
         )
@@ -299,7 +297,7 @@ def test():
                 cwd=Path(BUILD_DIR),
                 env={
                     "CI": CI,
-                    "RUNTIME_TEST_COLOR": RUNTIME_TEST_COLOR,
+                    "RUNTIME_TEST_COLOR": "yes",
                 },
             ),
         )

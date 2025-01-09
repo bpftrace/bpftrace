@@ -63,22 +63,41 @@ Each runtime testcase consists of multiple directives. In no particular order:
   available placeholders. This XOR the `PROG` field is required
 * `PROG`: Run the provided bpftrace program. This directive is preferred over
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
-  `RUN` field is required
-* `EXPECT`: The expected output. Python regular expressions are supported.
-   One or more `EXPECT` and `EXPECT_NONE` or a single `EXPECT_FILE` or
-   `EXPECT_JSON` is required.
-* `EXPECT_NONE`: The negation of `EXPECT`, which also supports Python regular
-   expressions.
+  `RUN` field is required. Multi-line program is supported by whitespace aligning
+  subsequent lines to the beginning column of the first.
+  * Example of multi-line program:
+    ```
+    NAME multi-line
+    PROG BEGIN { printf("hello ") }
+         END { printf("world!\n") }
+    EXPECT hello world!
+    ```
+* `EXPECT`: The expected output. Performs a literal match on an entire line of
+  output. Multi-line EXPECT is supported by whitespace aligning subsequent
+  lines to the beginning column of the first (same as `PROG`).
+  * Example of multi-line EXPECT:
+    ```
+    NAME multi-line
+    PROG BEGIN { print("hello!"); print("world!") }
+    EXPECT hello!
+           world!
+    ```
+* `EXPECT_NONE`: The negation of `EXPECT`.
+* `EXPECT_REGEX`: A python regular expression to match the expected output.
+* `EXPECT_REGEX_NONE`: The negation of `EXPECT_REGEX`.
 * `EXPECT_FILE`: A file containing the expected output, matched as plain
    text after stripping initial and final empty lines
 * `EXPECT_JSON`: A json file containing the expected output, matched after
    converting the output and the file to a dict (thus ignoring field order).
 * `TIMEOUT`: The timeout for the testcase (in seconds). This field is required.
 * `BEFORE`: Run the command in a shell before running bpftrace. The command
-  will be terminated after testcase is over. Can be used multiple times,
-  commands will run in parallel.
+  will run while bpftrace is running and be terminated after the test case
+  finishes. Can be used multiple times, commands will run in parallel.
 * `AFTER`: Run the command in a shell after running bpftrace (after the probes
   are attached). The command will be terminated after the testcase is over.
+* `SETUP`: Run the command in a shell before the test is run. This differs from
+  the `BEFORE` directive in that setup commands are expected to exit before
+  bpftrace is executed.
 * `CLEANUP`: Run the command in a shell after test is over. This holds any
   cleanup command to free resources after test completes.
 * `MIN_KERNEL`: Skip the test unless the host's kernel version is >= the
@@ -100,6 +119,9 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `SKIP_IF_ENV_HAS`: Skip test case if specified environment variable is found
   and matches value provided. Accepted format is KEY=VALUE. Only a single key/value
   pair per test is accepted.
+
+One or more [`EXPECT`, `EXPECT_NONE`, `EXPECT_REGEX`, `EXPECT_REGEX_NONE`] or
+a single [`EXPECT_FILE`, `EXPECT_JSON`] is required.
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.

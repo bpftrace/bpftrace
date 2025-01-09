@@ -109,6 +109,16 @@ PROG BEGIN { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
 EXPECT Attaching 1 probe...
 TIMEOUT 1
 
+# In some cases, LLVM can generate code that violates the BPF verifier
+# constraint that the context pointer is not modified prior to access (see
+# #3603). #3629 introduces the use of intrinsics that should ensure that this
+# doesn't happen, but this runtime test exercises a pattern that previously
+# produced code that failed to verify.
+NAME preserve context pointer
+PROG BEGIN { @test[1] = (uint64)1; } tracepoint:syscalls:sys_enter_kill { if (strcontains(comm, "test")) { @test[(uint64)args.pid] = 1; } if (args.pid == @test[1]) { print((1)); } if (args.pid == @test[1]) { print((1)); exit(); } }
+EXPECT Attaching 2 probes...
+TIMEOUT 1
+
 # In the past, codegen would generate misaligned access for multi-key maps in
 # certain conditions. Make sure that this does not happen. See #3644.
 NAME unaligned multi-key map

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import json
+import math
 import subprocess
 import signal
 import sys
@@ -14,6 +15,15 @@ import cmake_vars
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
+
+# This attach specific timeout doesn't make much sense - all time should just
+# be accounted towards TIMEOUT directive value.
+#
+# But deleting the attachment specific timeout causes hangs.  And I can't quite
+# figure out why. The next person that reads this is encouraged to try and
+# debug it. But please try running the CI at least 5-10 times before merging.
+# The hang will cause the job to hang indefinitely, so it should be easy to
+# spot.
 ATTACH_TIMEOUT = 10
 
 
@@ -177,6 +187,28 @@ class Runner(object):
 
 
     @staticmethod
+    def __setup_cleanup(test, setup=True):
+        test_ident = f"{test.suite}.{test.name}"
+        if setup:
+            cmd = test.setup
+            name = "SETUP"
+        else:
+            cmd = test.cleanup
+            name = "CLEANUP"
+
+        try:
+            process = subprocess.run(cmd, shell=True, stderr=subprocess.STDOUT,
+                                     stdout=subprocess.PIPE, universal_newlines=True)
+            process.check_returncode()
+        except subprocess.CalledProcessError as e:
+            print(fail(f"[  FAILED  ] {test_ident}"))
+            print(f"\t{name} error: %s" % e.stdout)
+            return Runner.FAIL
+
+        return None
+
+
+    @staticmethod
     def run_test(test):
         current_kernel = LooseVersion(os.uname()[2])
         if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
@@ -193,6 +225,7 @@ class Runner(object):
 
         signal.signal(signal.SIGALRM, Runner.__handler)
 
+        start_time = time.time()
         p = None
         befores = []
         befores_output = []
@@ -301,6 +334,11 @@ class Runner(object):
 
             if test.new_pidns and not test.befores:
                 raise ValueError("`NEW_PIDNS` requires at least one `BEFORE` directive as something needs to run in the new pid namespace")
+
+            if test.setup:
+                setup = Runner.__setup_cleanup(test, setup=True)
+                if setup:
+                    return setup
 
             if test.befores:
                 if test.new_pidns:
@@ -420,7 +458,16 @@ class Runner(object):
             if p:
                 if p.poll() is None:
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-                output += p.stdout.read()
+                try:
+                    # SIGTERM only sets the exit flag in bpftrace event loop.
+                    # If bpftrace is stuck somewhere else, it won't exit. So we
+                    # have to set a timeout here to prevent hangs.
+                    output += p.communicate(timeout=1)[0]
+                except subprocess.TimeoutExpired:
+                    # subprocess.communicate() docs say communicate() is only
+                    # reliable after a TimeoutExpired if you kill and retry.
+                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+                    output += p.communicate()[0]
                 result = check_result(output)
 
                 if not result:
@@ -435,10 +482,10 @@ class Runner(object):
                     try:
                         befores_output.append(before.communicate(timeout=1)[0])
                     except subprocess.TimeoutExpired:
-                        pass # if timed out getting output, there is effectively no output
-                    if before.poll() is None:
                         os.killpg(os.getpgid(before.pid), signal.SIGKILL)
+                        befores_output.append(before.communicate()[0])
 
+            # Cleanup just in case
             if bpftrace and bpftrace.poll() is None:
                 os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
@@ -446,19 +493,13 @@ class Runner(object):
                 try:
                     after_output = after.communicate(timeout=1)[0]
                 except subprocess.TimeoutExpired:
-                        pass # if timed out getting output, there is effectively no output
-                if after.poll() is None:
                     os.killpg(os.getpgid(after.pid), signal.SIGKILL)
+                    after_output = after.communicate()[0]
 
         if test.cleanup:
-            try:
-                cleanup = subprocess.run(test.cleanup, shell=True, stderr=subprocess.PIPE,
-                                         stdout=subprocess.PIPE, universal_newlines=True)
-                cleanup.check_returncode()
-            except subprocess.CalledProcessError as e:
-                print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
-                print('\tCLEANUP error: %s' % e.stderr)
-                return Runner.FAIL
+                cleanup = Runner.__setup_cleanup(test, setup=False)
+                if cleanup:
+                    return cleanup
 
         def to_utf8(s):
             return s.encode("unicode_escape").decode("utf-8")
@@ -470,12 +511,15 @@ class Runner(object):
             if after_output is not None:
                 print(f"\tAfter cmd output: {to_utf8(after_output)}")
 
+        elapsed = math.ceil((time.time() - start_time) * 1000)
+        label = f"{test.suite}.{test.name} ({elapsed} ms)"
+
         if '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED' in to_utf8(output):
-            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            print(warn("[   SKIP   ] ") + label)
             return Runner.SKIP_AOT_NOT_SUPPORTED
 
         if p and p.returncode != test.return_code and not test.will_fail and not timeout:
-            print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
+            print(fail("[  FAILED  ] ") + label)
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
             print('\tOutput: ' + to_utf8(output))
@@ -483,10 +527,10 @@ class Runner(object):
             return Runner.FAIL
 
         if result:
-            print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
+            print(ok("[       OK ] ") + label)
             return Runner.PASS
         else:
-            print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
+            print(fail("[  FAILED  ] ") + label)
             print('\tCommand: ' + bpf_call)
             for failed_expect in failed_expects:
                 if failed_expect.mode == "text":
