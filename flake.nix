@@ -139,6 +139,10 @@
                   strace
                   unixtools.ping
                   util-linux
+                  # For runtime tests
+                  rustc
+                  cargo
+                  go
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
 
                 # Some hardening features (like _FORTIFY_SOURCE) requires building with
