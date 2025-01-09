@@ -21,7 +21,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx.root, bpftrace, out);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() << out.str();
 
   ClangParser clang;
@@ -32,7 +32,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ReturnPathAnalyser return_path(driver.ctx.root, out);
+  ast::ReturnPathAnalyser return_path(driver.ctx, out);
   EXPECT_EQ(return_path.analyse(), expected_result) << msg.str() << out.str();
 }
 

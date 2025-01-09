@@ -13,7 +13,7 @@ class BPFtrace;
 namespace ast {
 
 class ASTContext;
-class Node;
+class Program;
 class SemanticAnalyser;
 class Pass;
 
@@ -25,7 +25,7 @@ public:
   static PassResult Error(const std::string &pass);
   static PassResult Error(const std::string &pass, int code);
   static PassResult Error(const std::string &pass, const std::string &msg);
-  static PassResult Success(Node *root = nullptr);
+  static PassResult Success();
 
   // Ok returns whether the pass was successful or not
   bool Ok() const
@@ -51,11 +51,6 @@ public:
     return errpass_;
   }
 
-  Node *Root() const
-  {
-    return root_;
-  };
-
 private:
   PassResult(const std::string &pass) : success_(false), errpass_(pass)
   {
@@ -76,7 +71,7 @@ private:
   {
   }
 
-  PassResult(Node *root) : success_(true), root_(root)
+  PassResult() : success_(true)
   {
   }
 
@@ -84,7 +79,6 @@ private:
   std::optional<std::string> errpass_;
   std::optional<int> errcode_;
   std::optional<std::string> errmsg_;
-  Node *root_ = nullptr;
 };
 
 /**
@@ -100,7 +94,7 @@ public:
   ASTContext &ast_ctx;
 };
 
-using PassFPtr = std::function<PassResult(Node &, PassContext &)>;
+using PassFPtr = std::function<PassResult(PassContext &)>;
 
 /*
   Base pass
@@ -112,9 +106,9 @@ public:
 
   virtual ~Pass() = default;
 
-  PassResult Run(Node &root, PassContext &ctx)
+  PassResult Run(PassContext &ctx)
   {
-    return fn_(root, ctx);
+    return fn_(ctx);
   };
 
 private:
@@ -129,7 +123,7 @@ public:
   PassManager() = default;
 
   void AddPass(Pass p);
-  [[nodiscard]] PassResult Run(Node *n, PassContext &ctx);
+  [[nodiscard]] PassResult Run(PassContext &ctx);
 
 private:
   std::vector<Pass> passes_;

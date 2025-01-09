@@ -7,14 +7,14 @@
 
 namespace bpftrace::ast {
 
-PortabilityAnalyser::PortabilityAnalyser(Node *root, std::ostream &out)
-    : root_(root), out_(out)
+PortabilityAnalyser::PortabilityAnalyser(ASTContext &ctx, std::ostream &out)
+    : Visitor<PortabilityAnalyser>(ctx), out_(out)
 {
 }
 
 int PortabilityAnalyser::analyse()
 {
-  Visit(*root_);
+  visitAll(*ctx_.root);
 
   std::string errors = err_.str();
   if (!errors.empty()) {
@@ -54,7 +54,7 @@ void PortabilityAnalyser::visit(Builtin &builtin)
 void PortabilityAnalyser::visit(Call &call)
 {
   for (Expression *expr : call.vargs)
-    Visit(*expr);
+    visit(*expr);
 
   // kaddr() and uaddr() both resolve symbols -> address during codegen and
   // embeds the values into the bytecode. For AOT to support kaddr()/uaddr(),
@@ -73,7 +73,7 @@ void PortabilityAnalyser::visit(Call &call)
 
 void PortabilityAnalyser::visit(Cast &cast)
 {
-  Visit(*cast.expr);
+  visit(*cast.expr);
 
   // The goal here is to block arbitrary field accesses but still allow `args`
   // access. `args` for tracepoint is fairly stable and should be considered
@@ -109,8 +109,8 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
 
 Pass CreatePortabilityPass()
 {
-  auto fn = [](Node &n, PassContext &__attribute__((unused))) {
-    PortabilityAnalyser analyser{ &n };
+  auto fn = [](PassContext &ctx) {
+    PortabilityAnalyser analyser(ctx.ast_ctx);
     if (analyser.analyse()) {
       // Used by runtime test framework to know when to skip an AOT test
       if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))

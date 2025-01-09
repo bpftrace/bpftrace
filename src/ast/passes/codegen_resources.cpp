@@ -7,15 +7,15 @@
 namespace bpftrace::ast {
 
 CodegenResourceAnalyser::CodegenResourceAnalyser(
-    Node *root,
+    ASTContext &ctx,
     const ::bpftrace::Config &config)
-    : config_(config), root_(root)
+    : Visitor<CodegenResourceAnalyser>(ctx), config_(config)
 {
 }
 
 CodegenResources CodegenResourceAnalyser::analyse()
 {
-  Visit(*root_);
+  visitAll(*ctx_.root);
   return std::move(resources_);
 }
 

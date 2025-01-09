@@ -14,8 +14,10 @@ namespace bpftrace {
 
 std::set<std::string> TracepointFormatParser::struct_list;
 
-bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
+bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
 {
+  ast::Program *program = ctx.root;
+
   std::vector<ast::Probe *> probes_with_tracepoint;
   for (ast::Probe *probe : program->probes) {
     if (probe->has_ap_of_probetype(ProbeType::tracepoint))
@@ -25,7 +27,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
   if (probes_with_tracepoint.empty())
     return true;
 
-  ast::TracepointArgsVisitor n{};
+  ast::TracepointArgsVisitor n(ctx);
   if (!bpftrace.has_btf_data())
     program->c_definitions += "#include <linux/types.h>\n";
   for (ast::Probe *probe : probes_with_tracepoint) {

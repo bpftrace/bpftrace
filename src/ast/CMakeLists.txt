@@ -10,7 +10,6 @@ add_library(ast STATIC
   irbuilderbpf.cpp
   pass_manager.cpp
   signal.cpp
-  visitors.cpp
 
   passes/codegen_resources.cpp
   passes/config_analyser.cpp

@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "config.h"
@@ -14,27 +14,27 @@
 namespace bpftrace {
 namespace ast {
 
-class ConfigAnalyser : public Visitor {
+class ConfigAnalyser : public Visitor<ConfigAnalyser> {
 public:
-  explicit ConfigAnalyser(Node *root,
+  explicit ConfigAnalyser(ASTContext &ctx,
                           BPFtrace &bpftrace,
                           std::ostream &out = std::cerr)
-      : root_(root),
+      : Visitor<ConfigAnalyser>(ctx),
         bpftrace_(bpftrace),
         config_setter_(ConfigSetter(bpftrace.config_, ConfigSource::script)),
         out_(out)
   {
   }
 
-  void visit(Integer &integer) override;
-  void visit(String &string) override;
-  void visit(StackMode &mode) override;
-  void visit(AssignConfigVarStatement &assignment) override;
+  using Visitor<ConfigAnalyser>::visit;
+  void visit(Integer &integer);
+  void visit(String &string);
+  void visit(StackMode &mode);
+  void visit(AssignConfigVarStatement &assignment);
 
   bool analyse();
 
 private:
-  Node *root_ = nullptr;
   BPFtrace &bpftrace_;
   ConfigSetter config_setter_;
   std::ostream &out_;
