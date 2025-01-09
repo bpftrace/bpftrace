@@ -49,6 +49,7 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0
 }

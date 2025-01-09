@@ -20,9 +20,8 @@ entry:
   store i64 0, ptr %"$v", align 8
   store i64 1000, ptr %"$v", align 8
   %1 = load i64, ptr %"$v", align 8
-  %2 = load i64, ptr %"$v", align 8
-  %3 = add i64 %2, 2
-  store i64 %3, ptr %"$v", align 8
+  %2 = add i64 %1, 2
+  store i64 %2, ptr %"$v", align 8
   ret i64 0
 }
 

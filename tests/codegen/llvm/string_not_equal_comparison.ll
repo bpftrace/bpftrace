@@ -35,9 +35,9 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   %3 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   %4 = zext i1 %3 to i64
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 %4, ptr %"@_key", align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)

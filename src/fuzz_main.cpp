@@ -110,18 +110,18 @@ int fuzz_main(const char* data, size_t sz)
   uint64_t node_count = 0;
   ast::CallbackVisitor counter(
       [&](ast::Node* node __attribute__((unused))) { node_count += 1; });
-  driver.root->accept(counter);
+  counter.visit(driver.root);
   if (node_count > max_ast_nodes)
     return 1;
 
   // Field Analyzer
-  ast::FieldAnalyser fields(driver.root.get(), bpftrace, devnull);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace, devnull);
   err = fields.analyse();
   if (err)
     return err;
 
   // Tracepoint parser
-  if (TracepointFormatParser::parse(driver.root.get(), bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.ctx, bpftrace) == false)
     return 1;
 
   // ClangParser
@@ -148,7 +148,7 @@ int fuzz_main(const char* data, size_t sz)
     return err;
 
   // Semantic Analyzer
-  ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, devnull, false);
+  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, devnull, false);
   err = semantics.analyse();
   if (err)
     return err;
@@ -163,7 +163,7 @@ int fuzz_main(const char* data, size_t sz)
     return err;
 
   // Codegen
-  ast::CodegenLLVM llvm(driver.root.get(), bpftrace);
+  ast::CodegenLLVM llvm(driver.ctx, bpftrace);
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();

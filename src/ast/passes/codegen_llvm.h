@@ -6,6 +6,7 @@
 #include <ostream>
 #include <tuple>
 
+#include <llvm/ADT/FunctionExtras.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -15,7 +16,7 @@
 #include "ast/async_ids.h"
 #include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 #include "codegen_resources.h"
 #include "format_string.h"
@@ -35,51 +36,132 @@ struct VariableLLVM {
   llvm::Type *type;
 };
 
-class CodegenLLVM : public Visitor {
+// ScopedExpr ties an SSA value to a "delete" function, that typically will end
+// the lifetime of some needed storage. You must explicitly construct a
+// ScopedExpr, and can either construct from:
+// * A value only, with no associated function when out of scope.
+// * A value and associated function to run when out of scope.
+// * A value and another ScopedExpr, whose lifetime will be preserved until
+//   this value is out of scope.
+class ScopedExpr {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
-  explicit CodegenLLVM(Node *root,
+  // Neither a value nor a deletion method.
+  explicit ScopedExpr() : value_(nullptr), deleter_(std::nullopt)
+  {
+  }
+
+  // Value only.
+  explicit ScopedExpr(Value *value) : value_(value), deleter_(std::nullopt)
+  {
+  }
+
+  // Value with an explicit deletion method.
+  explicit ScopedExpr(Value *value, llvm::unique_function<void()> &&deleter)
+      : value_(value), deleter_(std::move(deleter))
+  {
+  }
+
+  // Value with another ScopedExpr whose lifetime should be bound.
+  explicit ScopedExpr(Value *value, ScopedExpr &&other)
+      : value_(value), deleter_(std::move(other.deleter_))
+  {
+    other.deleter_.reset();
+  }
+
+  ScopedExpr(ScopedExpr &&other)
+      : value_(other.value_), deleter_(std::move(other.deleter_))
+  {
+    other.deleter_.reset();
+  }
+
+  ScopedExpr &operator=(ScopedExpr &&other)
+  {
+    value_ = other.value_;
+    deleter_.swap(other.deleter_);
+    return *this;
+  }
+
+  ScopedExpr(const ScopedExpr &other) = delete;
+  ScopedExpr &operator=(const ScopedExpr &other) = delete;
+
+  ~ScopedExpr()
+  {
+    if (deleter_) {
+      std::move(deleter_).value()();
+    }
+  }
+
+  Value *value()
+  {
+    return value_;
+  }
+
+  // Convenience method to override the current value, but preserve all the
+  // scope and deleter properties. Typically will be used for casts, etc.
+  void setValue(Value *value)
+  {
+    value_ = value;
+  }
+
+  // May be used to disable the deletion method, essentially leaking some
+  // memory within the frame. The use of this function should be generally
+  // considered a bug, as it will make dealing with larger functions and
+  // multiple scopes more problematic over time.
+  void disarm()
+  {
+    deleter_.reset();
+  }
+
+private:
+  Value *value_ = nullptr;
+  std::optional<llvm::unique_function<void()>> deleter_ = std::nullopt;
+};
+
+class CodegenLLVM : public Visitor<CodegenLLVM, ScopedExpr> {
+public:
+  explicit CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace);
+  explicit CodegenLLVM(ASTContext &ctx,
                        BPFtrace &bpftrace,
                        std::unique_ptr<USDTHelper> usdt_helper);
 
-  void visit(Integer &integer) override;
-  void visit(PositionalParameter &param) override;
-  void visit(String &string) override;
-  void visit(Identifier &identifier) override;
-  void visit(Builtin &builtin) override;
-  void visit(StackMode &) override{};
-  void visit(Call &call) override;
-  void visit(Sizeof &szof) override;
-  void visit(Offsetof &ofof) override;
-  void visit(Map &map) override;
-  void visit(Variable &var) override;
-  void visit(Binop &binop) override;
-  void visit(Unop &unop) override;
-  void visit(Ternary &ternary) override;
-  void visit(FieldAccess &acc) override;
-  void visit(ArrayAccess &arr) override;
-  void visit(Cast &cast) override;
-  void visit(Tuple &tuple) override;
-  void visit(ExprStatement &expr) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(VarDeclStatement &decl) override;
-  void visit(If &if_node) override;
-  void visit(Unroll &unroll) override;
-  void visit(While &while_block) override;
-  void visit(For &f) override;
-  void visit(Jump &jump) override;
-  void visit(Predicate &pred) override;
-  void visit(AttachPoint &ap) override;
-  void visit(Probe &probe) override;
-  void visit(Subprog &subprog) override;
-  void visit(Program &program) override;
-  void visit(Block &block) override;
+  using Visitor<CodegenLLVM, ScopedExpr>::visit;
+  ScopedExpr visit(Integer &integer);
+  ScopedExpr visit(PositionalParameter &param);
+  ScopedExpr visit(String &string);
+  ScopedExpr visit(Identifier &identifier);
+  ScopedExpr visit(Builtin &builtin);
+  ScopedExpr visit(Call &call);
+  ScopedExpr visit(Sizeof &szof);
+  ScopedExpr visit(Offsetof &ofof);
+  ScopedExpr visit(Map &map);
+  ScopedExpr visit(Variable &var);
+  ScopedExpr visit(Binop &binop);
+  ScopedExpr visit(Unop &unop);
+  ScopedExpr visit(Ternary &ternary);
+  ScopedExpr visit(FieldAccess &acc);
+  ScopedExpr visit(ArrayAccess &arr);
+  ScopedExpr visit(Cast &cast);
+  ScopedExpr visit(Tuple &tuple);
+  ScopedExpr visit(ExprStatement &expr);
+  ScopedExpr visit(AssignMapStatement &assignment);
+  ScopedExpr visit(AssignVarStatement &assignment);
+  ScopedExpr visit(VarDeclStatement &decl);
+  ScopedExpr visit(If &if_node);
+  ScopedExpr visit(Unroll &unroll);
+  ScopedExpr visit(While &while_block);
+  ScopedExpr visit(For &f);
+  ScopedExpr visit(Jump &jump);
+  ScopedExpr visit(Predicate &pred);
+  ScopedExpr visit(AttachPoint &ap);
+  ScopedExpr visit(Probe &probe);
+  ScopedExpr visit(Subprog &subprog);
+  ScopedExpr visit(Program &program);
+  ScopedExpr visit(Block &block);
 
-  Value *getHistMapKey(Map &map, Value *log2, const location &loc);
+  ScopedExpr getHistMapKey(Map &map, Value *log2, const location &loc);
   int getNextIndexForProbe();
-  Value *createLogicalAnd(Binop &binop);
-  Value *createLogicalOr(Binop &binop);
+  ScopedExpr createLogicalAnd(Binop &binop);
+  ScopedExpr createLogicalOr(Binop &binop);
 
   // Exists to make calling from a debugger easier
   void DumpIR(void);
@@ -128,43 +210,6 @@ public:
 
 private:
   static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
-  class ScopedExprDeleter {
-  public:
-    explicit ScopedExprDeleter(std::function<void()> deleter)
-    {
-      deleter_ = std::move(deleter);
-    }
-
-    ScopedExprDeleter(const ScopedExprDeleter &other) = delete;
-    ScopedExprDeleter &operator=(const ScopedExprDeleter &other) = delete;
-
-    ScopedExprDeleter(ScopedExprDeleter &&other)
-    {
-      *this = std::move(other);
-    }
-
-    ScopedExprDeleter &operator=(ScopedExprDeleter &&other)
-    {
-      deleter_ = other.disarm();
-      return *this;
-    }
-
-    ~ScopedExprDeleter()
-    {
-      if (deleter_)
-        deleter_();
-    }
-
-    std::function<void()> disarm()
-    {
-      auto ret = deleter_;
-      deleter_ = nullptr;
-      return ret;
-    }
-
-  private:
-    std::function<void()> deleter_;
-  };
 
   // Generate a probe for `current_attach_point_`
   //
@@ -184,14 +229,12 @@ private:
                  const std::string &name,
                  FunctionType *func_type);
 
-  [[nodiscard]] ScopedExprDeleter accept(Node *node);
-  [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
-  [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(
+  [[nodiscard]] ScopedExpr getMapKey(Map &map);
+  [[nodiscard]] ScopedExpr getMapKey(Map &map, Expression *key_expr);
+  [[nodiscard]] ScopedExpr getMultiMapKey(
       Map &map,
-      Expression *key_expr);
-  Value *getMultiMapKey(Map &map,
-                        const std::vector<Value *> &extra_keys,
-                        const location &loc);
+      const std::vector<Value *> &extra_keys,
+      const location &loc);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 
@@ -199,20 +242,20 @@ private:
   Function *createLinearFunction();
   MDNode *createLoopMetadata();
 
-  std::pair<Value *, uint64_t> getString(Expression *expr);
+  std::pair<ScopedExpr, uint64_t> getString(Expression &expr);
 
-  void binop_string(Binop &binop);
-  void binop_integer_array(Binop &binop);
-  void binop_buf(Binop &binop);
-  void binop_int(Binop &binop);
-  void binop_ptr(Binop &binop);
+  ScopedExpr binop_string(Binop &binop);
+  ScopedExpr binop_integer_array(Binop &binop);
+  ScopedExpr binop_buf(Binop &binop);
+  ScopedExpr binop_int(Binop &binop);
+  ScopedExpr binop_ptr(Binop &binop);
 
-  void unop_int(Unop &unop);
-  void unop_ptr(Unop &unop);
+  ScopedExpr unop_int(Unop &unop);
+  ScopedExpr unop_ptr(Unop &unop);
 
-  void kstack_ustack(const std::string &ident,
-                     StackType stack_type,
-                     const location &loc);
+  ScopedExpr kstack_ustack(const std::string &ident,
+                           StackType stack_type,
+                           const location &loc);
 
   int get_probe_id();
 
@@ -237,25 +280,22 @@ private:
                                     int arg_num,
                                     int index);
 
-  void readDatastructElemFromStack(Value *src_data,
-                                   Value *index,
-                                   const SizedType &data_type,
-                                   const SizedType &elem_type,
-                                   ScopedExprDeleter &scoped_del);
-  void readDatastructElemFromStack(Value *src_data,
-                                   Value *index,
-                                   llvm::Type *data_type,
-                                   const SizedType &elem_type,
-                                   ScopedExprDeleter &scoped_del);
-  void probereadDatastructElem(Value *src_data,
-                               Value *offset,
-                               const SizedType &data_type,
-                               const SizedType &elem_type,
-                               ScopedExprDeleter &scoped_del,
-                               location loc,
-                               const std::string &temp_name);
+  ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
+                                         Value *index,
+                                         const SizedType &data_type,
+                                         const SizedType &elem_type);
+  ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
+                                         Value *index,
+                                         llvm::Type *data_type,
+                                         const SizedType &elem_type);
+  ScopedExpr probereadDatastructElem(ScopedExpr &&scoped_src,
+                                     Value *offset,
+                                     const SizedType &data_type,
+                                     const SizedType &elem_type,
+                                     location loc,
+                                     const std::string &temp_name);
 
-  void createIncDec(Unop &unop);
+  ScopedExpr createIncDec(Unop &unop);
 
   Function *createMapLenCallback();
   Function *createForEachMapCallback(const For &f, llvm::Type *ctx_t);
@@ -280,8 +320,6 @@ private:
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
 
-  Node *root_ = nullptr;
-
   BPFtrace &bpftrace_;
   std::unique_ptr<USDTHelper> usdt_helper_;
   std::unique_ptr<LLVMContext> context_;
@@ -297,8 +335,6 @@ private:
     return module_->getDataLayout();
   }
 
-  Value *expr_ = nullptr;
-  std::function<void()> expr_deleter_; // intentionally empty
   Value *ctx_;
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
