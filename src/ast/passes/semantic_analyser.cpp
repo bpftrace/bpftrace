@@ -1726,7 +1726,7 @@ void SemanticAnalyser::visit(Map &map)
         update_current_key(key->second, new_key_type);
         validate_new_key(key->second, new_key_type, map.ident, map.loc);
       } else {
-        if (!key->second.IsNoneTy() && is_final_pass()) {
+        if (!key->second.IsNoneTy()) {
           LOG(ERROR, map.loc, err_)
               << "Argument mismatch for " << map.ident << ": "
               << "trying to access with no arguments when map expects "
@@ -1748,9 +1748,12 @@ void SemanticAnalyser::visit(Map &map)
   if (search_val != map_val_.end()) {
     map.type = search_val->second;
   } else {
-    if (is_final_pass()) {
+    // If there is no record of any assignment after the first pass
+    // then it's safe to say this map is undefined
+    if (!is_first_pass()) {
       LOG(ERROR, map.loc, err_) << "Undefined map: " << map.ident;
     }
+    num_unresolved_++;
     map.type = CreateNone();
   }
 
@@ -2913,12 +2916,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
   }
-
-  if (is_final_pass()) {
-    if (type.IsNoneTy())
-      LOG(ERROR, assignment.expr->loc, err_)
-          << "Invalid expression for assignment: " << type;
-  }
 }
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
@@ -2946,7 +2943,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     if (storedTy.IsNoneTy()) {
       storedTy = assignTy;
     } else if (!storedTy.IsSameType(assignTy)) {
-      type_mismatch_error = true;
+      if (!assignTy.IsNoneTy() || is_final_pass()) {
+        type_mismatch_error = true;
+      } else {
+        num_unresolved_++;
+      }
     } else if (assignTy.IsStringTy()) {
       if (foundVar.can_resize) {
         update_string_size(storedTy, assignTy);
@@ -3471,25 +3472,41 @@ void SemanticAnalyser::visit(Program &program)
 
 int SemanticAnalyser::analyse()
 {
-  // Multiple passes to handle variables being used before they are defined
   std::string errors;
 
-  int num_passes = listing_ ? 1 : num_passes_;
-  for (pass_ = 1; pass_ <= num_passes; pass_++) {
+  int last_num_unresolved = 0;
+  pass_ = 1;
+  // Multiple passes to handle variables being used before they are defined
+  while (true) {
+    num_unresolved_ = 0;
+
     Visit(ctx_.root);
+
     errors = err_.str();
     if (!errors.empty()) {
       out_ << errors;
       return pass_;
     }
-  }
 
-  return 0;
+    if (is_final_pass_) {
+      return 0;
+    }
+
+    if (num_unresolved_ > 0 &&
+        (last_num_unresolved == 0 || num_unresolved_ < last_num_unresolved)) {
+      // If we're making progress, keep making passes
+      last_num_unresolved = num_unresolved_;
+    } else {
+      is_final_pass_ = true;
+    }
+
+    pass_++;
+  }
 }
 
 bool SemanticAnalyser::is_final_pass() const
 {
-  return pass_ == num_passes_;
+  return is_final_pass_;
 }
 
 bool SemanticAnalyser::is_first_pass() const
@@ -3791,6 +3808,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
   auto *maptype = get_map_type(map);
   if (maptype) {
     if (maptype->IsNoneTy()) {
+      num_unresolved_++;
       if (is_final_pass())
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       else
