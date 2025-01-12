@@ -120,11 +120,11 @@
               with pkgs;
               pkgs.mkShell {
                 buildInputs = [
+                  bc
                   binutils
                   coreutils
                   # Needed for the nix-aware "wrapped" clang-tidy
                   clang-tools
-                  findutils
                   gawk
                   git
                   gnugrep
