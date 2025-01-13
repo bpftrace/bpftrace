@@ -1,5 +1,6 @@
 #pragma once
 
+#include "functions.h"
 #include "types.h"
 
 #include <linux/bpf.h>
@@ -19,11 +20,19 @@ class DIBuilderBPF : public DIBuilder {
 public:
   DIBuilderBPF(Module &module);
 
-  void createFunctionDebugInfo(Function &func,
+  // TODO get rid of this overload?
+  void createFunctionDebugInfo(llvm::Function &func,
                                const SizedType &ret_type,
                                const Struct &args,
                                bool is_declaration = false);
-  void createProbeDebugInfo(Function &probe_func);
+  void createProbeDebugInfo(llvm::Function &probe_func);
+  // TODO is this overload still needed after rebase?
+  void createFunctionDebugInfo(llvm::Function &func);
+  void createFunctionDebugInfo(llvm::Function &func,
+                               const SizedType &returnType,
+                               const std::vector<Param> &params);
+  // void createFunctionDebugInfo(llvm::Function &func, const SizedType
+  // &returnType, const std::vector<SizedType> &params);
 
   DIType *getInt8Ty();
   DIType *getInt16Ty();
@@ -34,14 +43,16 @@ public:
   // generating debuginfo for some BPF map fields. For details, see comment in
   // DIBuilderBPF::GetMapFieldInt.
   DIType *getIntTy();
+  DIType *getVoidTy();
 
-  DIType *GetType(const SizedType &stype, bool emit_codegen_types = true);
+  DIType *GetType(const SizedType &stype, bool emit_codegen_types = false);
   DIType *CreateTupleType(const SizedType &stype);
   DIType *CreateMapStructType(const SizedType &stype);
   DIType *CreateByteArrayType(uint64_t num_bytes);
   DIType *createPointerMemberType(const std::string &name,
                                   uint64_t offset,
                                   DIType *type);
+  DICompositeType *createStructTypeBPF(const SizedType &stype);
   DIType *GetMapKeyType(const SizedType &key_type,
                         const SizedType &value_type,
                         libbpf::bpf_map_type map_type);
@@ -53,6 +64,10 @@ public:
                                              const SizedType &value_type);
   DIGlobalVariableExpression *createGlobalVariable(std::string_view name,
                                                    const SizedType &stype);
+  // TODO are these overloads still needed after rebase?
+  DIGlobalVariableExpression *createGlobalInt64(std::string_view name);
+  DIGlobalVariableExpression *createGlobalString(std::string_view name,
+                                                 std::string_view contents);
 
   DIFile *file = nullptr;
 
@@ -67,7 +82,7 @@ private:
     DIType *int_ = nullptr;
   } types_;
 
-  std::unordered_map<std::string, DIType *> structs_;
+  std::unordered_map<const SizedType *, DIType *> aaatypes_;
 };
 
 } // namespace ast

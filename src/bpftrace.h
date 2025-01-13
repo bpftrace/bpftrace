@@ -22,6 +22,8 @@
 #include "child.h"
 #include "config.h"
 #include "dwarf_parser.h"
+#include "functions.h"
+#include "import.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -179,6 +181,7 @@ public:
   RequiredResources resources;
   BpfBytecode bytecode_;
   StructManager structs;
+  FunctionRegistry functions;
   std::map<std::string, std::string> macros_;
   // Map of enum variant_name to (variant_value, enum_name)
   std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
@@ -215,7 +218,7 @@ public:
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
 
-  std::unique_ptr<BTF> btf_;
+  std::unique_ptr<btf::BTF> btf_;
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
@@ -284,6 +287,25 @@ private:
   mutable FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+
+  bool init_imports();
+
+public: // TODO not public
+  using handle_sample_func_type = int (*)(void *, const void *, void *, size_t);
+  std::unordered_map<std::string, void *> module_handles_;
+  std::unordered_map<std::string, handle_sample_func_type> module_type_funcs_;
+
+  const std::vector<Import> imports() const
+  {
+    return imports_;
+  }
+  void add_import(Import import)
+  {
+    imports_.push_back(std::move(import));
+  }
+
+private:
+  std::vector<Import> imports_;
 };
 
 } // namespace bpftrace

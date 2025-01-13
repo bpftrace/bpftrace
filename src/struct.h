@@ -164,7 +164,9 @@ namespace bpftrace {
 class StructManager {
 public:
   // struct map manipulation
-  void Add(const std::string &name, size_t size, bool allow_override = true);
+  std::weak_ptr<Struct> Add(const std::string &name,
+                            size_t size,
+                            bool allow_override = true);
   void Add(const std::string &name, Struct &&record);
   std::weak_ptr<Struct> Lookup(const std::string &name) const;
   std::weak_ptr<Struct> LookupOrAdd(const std::string &name,

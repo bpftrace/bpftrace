@@ -1,3 +1,5 @@
+#include <dlfcn.h>
+
 #include "btf.h"
 #include <algorithm>
 #include <arpa/inet.h>
@@ -920,6 +922,55 @@ int BPFtrace::prerun() const
   return 0;
 }
 
+// TODO don't include this here... define a common API
+struct pystacks_opts {
+  size_t pidCount = 0;
+  pid_t *pids = nullptr;
+};
+
+bool BPFtrace::init_imports()
+{
+  for (const auto &import : imports_) {
+    if (!import.user_path()) {
+      // Skip initialisation if there's no userland component
+      continue;
+    }
+
+    void *module_handle = dlopen(import.user_path()->c_str(),
+                                 RTLD_LAZY | RTLD_LOCAL);
+    if (!module_handle) {
+      // TODO log error
+      LOG(ERROR) << dlerror();
+      return false;
+    }
+
+    pystacks_opts opts = {};
+
+    using init_func_type = void *(*)(struct bpf_object *,
+                                     struct pystacks_opts &);
+
+    std::string init_func_name = import.name() + "_init";
+    // TODO check this cast:
+    auto *init_func = (init_func_type)dlsym(module_handle,
+                                            init_func_name.c_str());
+    if (init_func) {
+      // TODO de-init it when done with library
+      void *ret = init_func(bytecode_.raw_objHACK(), opts);
+      module_handles_[import.name()] = ret;
+    }
+
+    // TODO needs to support multiple print functions for multiple types from
+    // library
+    auto *handle_sample_func = (handle_sample_func_type)dlsym(
+        module_handle, "pystacks_symbolize_stack");
+    if (handle_sample_func) {
+      module_type_funcs_["pystacks_stack"] = handle_sample_func;
+    }
+  }
+
+  return true;
+}
+
 int BPFtrace::run(BpfBytecode bytecode)
 {
   int err = prerun();
@@ -943,6 +994,9 @@ int BPFtrace::run(BpfBytecode bytecode)
     LOG(ERROR) << e.what();
     return -1;
   }
+
+  if (!init_imports())
+    return 1;
 
   err = setup_output();
   if (err)
@@ -2131,7 +2185,7 @@ bool BPFtrace::write_pcaps(uint64_t id,
 
 void BPFtrace::parse_btf(const std::set<std::string> &modules)
 {
-  btf_ = std::make_unique<BTF>(this, modules);
+  btf_ = std::make_unique<btf::BTF>(this, modules);
 }
 
 bool BPFtrace::has_btf_data() const

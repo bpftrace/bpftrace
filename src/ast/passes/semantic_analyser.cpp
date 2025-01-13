@@ -620,6 +620,7 @@ bool skip_key_validation(const Call &call)
 
 void SemanticAnalyser::visit(Call &call)
 {
+  // TODO make this unsafe check work with FunctionRegistry
   // Check for unsafe-ness first. It is likely the most pertinent issue
   // (and should be at the top) for any function call.
   if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
@@ -668,6 +669,48 @@ void SemanticAnalyser::visit(Call &call)
     Visit(call.vargs[i]);
   }
 
+  std::vector<SizedType> arg_types;
+  arg_types.reserve(call.vargs.size());
+  for (const auto &arg : call.vargs) {
+    arg_types.push_back(arg->type);
+  }
+
+  if (call.function) {
+    // Avoid re-searching for an already-found function
+    // TODO add some sema unit tests for this
+    return;
+  }
+
+  bool foundFunc = false;
+  if (auto *func = bpftrace_.functions.get(call.func, arg_types)) {
+    foundFunc = true;
+
+    call.function = func;
+    call.type = func->returnType();
+
+    if (call.vargs.size() != func->params().size()) {
+      LOG(ERROR) << "WRONG NUMBER OF ARGUMENTS";
+      return;
+    }
+    for (size_t i = 0; i < func->params().size(); ++i) {
+      const auto &param = func->params()[i];
+      if (!param.type().IsPtrTy() || is_final_pass()) // nasty
+        continue;
+
+      // Convert our variable or map into a pointer
+      auto &arg = *call.vargs[i];
+      if (arg.is_variable) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Variable *>(&arg));
+      } else if (arg.is_map) {
+        call.vargs[i] = ctx_.make_node<AddrOf>(static_cast<Map *>(&arg));
+      } else {
+        LOG(ERROR) << "CAN'T USE EXPRESSION as a reference";
+        // return;
+      }
+    }
+  }
+
+  // TODO make this work with FunctionRegistry
   if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
@@ -675,6 +718,10 @@ void SemanticAnalyser::visit(Call &call)
                                    << ap->provider << "\" probes";
       }
     }
+  }
+
+  if (foundFunc) {
+    return; // hack
   }
 
   if (call.func == "hist") {
@@ -1778,6 +1825,12 @@ void SemanticAnalyser::visit(Variable &var)
   LOG(ERROR, var.loc, err_)
       << "Undefined or undeclared variable: " << var.ident;
   var.type = CreateNone();
+}
+
+void SemanticAnalyser::visit(AddrOf &addrof)
+{
+  addrof.expr->accept(*this);
+  addrof.type = CreatePointer(addrof.expr->type, AddrSpace::bpf);
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)

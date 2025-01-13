@@ -233,6 +233,13 @@ std::string Output::get_helper_error_msg(int func_id, int retcode) const
   return msg;
 }
 
+// TODO don't include this - define a proper API
+struct stack_walker_frame {
+  char function_name[512];
+  char file_name[512];
+  size_t line_number;
+};
+
 std::string Output::value_to_str(BPFtrace &bpftrace,
                                  const SizedType &type,
                                  const std::vector<uint8_t> &value,
@@ -301,6 +308,39 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       return array_to_str(elems);
     }
     case Type::record: {
+      if (type.GetName() == "pystacks_message") {
+        // !!!HACK!!! - resolve with pystacks
+
+        //      LOG(WARNING) << "Sz: " << value.size();
+        //      for (uint8_t val : value) {
+        //        LOG(WARNING) << std::to_string(val);
+        //      }
+
+        auto *handle_samples = bpftrace.module_type_funcs_["pystacks_stack"];
+        assert(handle_samples);
+
+        auto *pystacks_handle = bpftrace.module_handles_["pystacks"];
+        assert(pystacks_handle);
+
+        std::array<struct stack_walker_frame, 512> stack;
+
+        //      LOG(WARNING) << "bpftrace::::" << pystacks_handle << " " <<
+        //      value.data() << " " << stack.data();
+
+        int stackCount = handle_samples(
+            pystacks_handle, value.data(), stack.data(), stack.size());
+        //      LOG(WARNING) << "stack count: " << stackCount;
+
+        std::string symbolicated_stack;
+        for (int i = 0; i < stackCount; i++) {
+          symbolicated_stack += "\n    ";
+          symbolicated_stack += stack[i].function_name;
+        }
+        symbolicated_stack.push_back('\n');
+
+        return symbolicated_stack;
+      }
+
       std::vector<std::string> elems;
       for (auto &field : type.GetFields()) {
         std::vector<uint8_t> elem_data(value.begin() + field.offset,

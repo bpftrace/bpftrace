@@ -53,6 +53,7 @@ public:
   void visit(Offsetof &ofof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
+  void visit(AddrOf &addrof) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
   void visit(Ternary &ternary) override;
@@ -195,8 +196,8 @@ private:
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 
-  Function *createLog2Function();
-  Function *createLinearFunction();
+  llvm::Function *createLog2Function();
+  llvm::Function *createLinearFunction();
   MDNode *createLoopMetadata();
 
   std::pair<Value *, uint64_t> getString(Expression *expr);
@@ -257,9 +258,9 @@ private:
 
   void createIncDec(Unop &unop);
 
-  Function *createMapLenCallback();
-  Function *createForEachMapCallback(const For &f, llvm::Type *ctx_t);
-  Function *createMurmurHash2Func();
+  llvm::Function *createMapLenCallback();
+  llvm::Function *createForEachMapCallback(const For &f, llvm::Type *ctx_t);
+  llvm::Function *createMurmurHash2Func();
 
   Value *createFmtString(int print_id);
 
@@ -272,7 +273,7 @@ private:
   VariableLLVM *maybeGetVariable(const std::string &);
   VariableLLVM &getVariable(const std::string &);
 
-  Function *DeclareKernelFunc(Kfunc kfunc);
+  llvm::Function *DeclareKernelFunc(Kfunc kfunc);
 
   CallInst *CreateKernelFuncCall(Kfunc kfunc,
                                  ArrayRef<Value *> args,
@@ -316,10 +317,10 @@ private:
 
   std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
 
-  Function *linear_func_ = nullptr;
-  Function *log2_func_ = nullptr;
-  Function *murmur_hash_2_func_ = nullptr;
-  Function *map_len_func_ = nullptr;
+  llvm::Function *linear_func_ = nullptr;
+  llvm::Function *log2_func_ = nullptr;
+  llvm::Function *murmur_hash_2_func_ = nullptr;
+  llvm::Function *map_len_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
