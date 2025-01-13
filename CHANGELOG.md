@@ -22,6 +22,8 @@ and this project adheres to
 #### Fixed
 - Fix json output for none type
   - [#3692](https://github.com/bpftrace/bpftrace/pull/3692)
+- Fix bug where strftime() %f specifier could be off by up to 1s
+  - [#3704](https://github.com/bpftrace/bpftrace/pull/3704)
 #### Security
 #### Docs
 #### Tools
