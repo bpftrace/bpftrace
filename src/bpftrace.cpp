@@ -1613,6 +1613,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint64_t nsecs)
 {
   static const auto usec_regex = std::regex("%f");
+  static constexpr auto ns_in_sec = 1'000'000'000;
   TimestampMode ts_mode = static_cast<TimestampMode>(mode);
   struct timespec zero = {};
   struct timespec *basetime = &zero;
@@ -1629,7 +1630,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
 
   // Calculate and localize timestamp
   struct tm tmp;
-  time_t time = basetime->tv_sec + ((basetime->tv_nsec + nsecs) / 1e9);
+  time_t time = basetime->tv_sec + ((basetime->tv_nsec + nsecs) / ns_in_sec);
   if (!localtime_r(&time, &tmp)) {
     LOG(ERROR) << "localtime_r: " << strerror(errno);
     return "(?)";
@@ -1637,7 +1638,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
 
   // Process strftime() format string extensions
   const auto &raw_fmt = resources.strftime_args[strftime_id];
-  uint64_t us = ((basetime->tv_nsec + nsecs) % 1000000000) / 1000;
+  uint64_t us = ((basetime->tv_nsec + nsecs) % ns_in_sec) / 1000;
   char usecs_buf[7];
   snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);

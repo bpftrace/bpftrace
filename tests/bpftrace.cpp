@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstring>
 
 #include "ast/passes/codegen_llvm.h"
@@ -1288,6 +1289,29 @@ TEST(bpftrace, add_probes_rawtracepoint_wildcard_no_matches)
 
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+}
+
+TEST(bpftrace, resolve_timestamp)
+{
+  static const auto bootmode = static_cast<uint32_t>(TimestampMode::boot);
+  auto bpftrace = get_strict_mock_bpftrace();
+
+  // Basic sanity check
+  bpftrace->boottime_ = { .tv_sec = 3, .tv_nsec = 0 };
+  bpftrace->resources.strftime_args.push_back("%s.%f");
+  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 0, 1000), "3.000001");
+
+  // Check that boottime nsecs close to 1s doesn't trigger floating-point error.
+  //
+  // Due to the peculiarities of floating-point, not _any_ set of numbers
+  // trigger the bug here. These values were discovered in the wild.
+  bpftrace->boottime_ = { .tv_sec = 1736725826, .tv_nsec = 999999985 };
+  bpftrace->resources.strftime_args.push_back("%s");
+  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 1, 0), "1736725826");
+
+  // Now check that we handle rollover to a new second correctly
+  bpftrace->resources.strftime_args.push_back("%s.%f");
+  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 2, 15), "1736725827.000000");
 }
 
 } // namespace bpftrace::test::bpftrace

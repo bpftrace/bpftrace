@@ -71,6 +71,42 @@
 
           pkgs = import nixpkgs { inherit system; };
 
+          # Download statically linked vmtest binary
+          arch = pkgs.lib.strings.removeSuffix "-linux" system;
+          vmtestVersion = "0.18.0";
+          vmtest = pkgs.stdenv.mkDerivation {
+            name = "vmtest";
+            version = vmtestVersion;
+            src = builtins.fetchurl {
+              url = "https://github.com/danobi/vmtest/releases/download/v${vmtestVersion}/vmtest-${arch}";
+              sha256 = "sha256:1wv49fq7n820jj7zyvbvrrzg2vwvyy8kb3gfw1lg55rzfqzhl9v3";
+            };
+            # Remove all other phases b/c we already have a prebuilt binary
+            phases = [ "installPhase" ];
+            installPhase = ''
+              install -m755 -D $src $out/bin/vmtest
+            '';
+          };
+
+          # Define lambda that returns a derivation for a kernel given kernel version and SHA as input
+          mkKernel = kernelVersion: sha256:
+            with pkgs;
+            pkgs.stdenv.mkDerivation rec {
+              name = "kernel";
+              version = kernelVersion;
+              src = builtins.fetchurl {
+                url = "https://github.com/bpftrace/kernels/releases/download/assets/linux-v${kernelVersion}.tar.zst";
+                sha256 = sha256;
+              };
+              # Remove all other phases b/c we already have a prebuilt binary
+              phases = [ "installPhase" ];
+              installPhase = ''
+                mkdir -p $out
+                tar xvf $src --strip-components=1 -C $out
+              '';
+              nativeBuildInputs = [ pkgs.gnutar pkgs.zstd ];
+            };
+
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
@@ -120,11 +156,12 @@
               with pkgs;
               pkgs.mkShell {
                 buildInputs = [
+                  bc
                   binutils
+                  bpftools
                   coreutils
                   # Needed for the nix-aware "wrapped" clang-tidy
                   clang-tools
-                  findutils
                   gawk
                   git
                   gnugrep
@@ -136,9 +173,11 @@
                   procps
                   python3
                   python3Packages.looseversion
+                  qemu_kvm
                   strace
                   unixtools.ping
                   util-linux
+                  vmtest
                 ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
 
                 # Some hardening features (like _FORTIFY_SOURCE) requires building with
@@ -193,6 +232,12 @@
                 "... libLLVM-11.so"
               ];
             };
+
+            # Kernels to run runtime tests against
+            kernel-5_15 = mkKernel "5.15" "sha256:05awbz25mbiy47zl7xvaf9c37zb6z71sk12flbqli7yppi7ryd13";
+            kernel-6_1 = mkKernel "6.1" "sha256:1b7bal1l8zy2fkr1dbp0jxsrzjas4yna78psj9bwwbs9qzrcf5m9";
+            kernel-6_6 = mkKernel "6.6" "sha256:19chnfwv84mc0anyf263vgg2x7sczypx8rangd34nf3sywb5cv5y";
+            kernel-6_12 = mkKernel "6.12" "sha256:06192wf6fh7wzjqjzbz3klqc88r22rgx24wrdqrvj4pgl6vgyfr5";
           };
 
           # Define apps that can be run with `nix run`
