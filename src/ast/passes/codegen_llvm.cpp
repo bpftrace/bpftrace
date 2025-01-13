@@ -49,6 +49,8 @@
 
 namespace bpftrace::ast {
 
+using Function = llvm::Function;
+
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     : CodegenLLVM(root, bpftrace, std::make_unique<USDTHelper>())
 {
