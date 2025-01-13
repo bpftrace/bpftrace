@@ -13,7 +13,7 @@ Config::Config(bool has_cmd)
   config_map_ = {
     { ConfigKeyBool::cpp_demangle, { .value = true } },
     { ConfigKeyBool::lazy_symbolication, { .value = false } },
-    { ConfigKeyBool::probe_inline, { .value = false } },
+    { ConfigKeyBool::unstable_attach_to_inline_funcs, { .value = false } },
     { ConfigKeyBool::print_maps_on_exit, { .value = true } },
     { ConfigKeyInt::log_size, { .value = static_cast<uint64_t>(1000000) } },
     { ConfigKeyInt::max_bpf_progs, { .value = static_cast<uint64_t>(512) } },
