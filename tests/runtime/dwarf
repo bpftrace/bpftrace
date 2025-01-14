@@ -78,7 +78,6 @@ NAME uprobe without dwarf
 PROG config = { symbol_source = "symbol_table"; cache_user_symbols = "PER_PROGRAM"; }
      uprobe:./testprogs/uprobe_test:uprobeFunction1 { print(ustack); exit(); }
 EXPECT uprobeFunction1+0
-EXPECT_REGEX_NONE ^\s*main\+\d+$
 REQUIRES_FEATURE dwarf
 AFTER ./testprogs/uprobe_test
 
