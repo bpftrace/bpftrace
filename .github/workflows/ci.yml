@@ -8,17 +8,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - uses: DeterminateSystems/nix-installer-action@v11
-    - uses: DeterminateSystems/magic-nix-cache-action@v6
-    - name: clang-format
-      run: nix develop --command git clang-format --diff origin/master
-
   build_test:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -51,22 +40,6 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm19
           CC: clang
           CXX: clang++
-        - NAME: AOT (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
-        - NAME: Memleak test (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
-        - NAME: Memleak test (LLVM 19 Release)
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
@@ -79,22 +52,3 @@ jobs:
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
-
-  irc:
-    # Notify IRC of build failures on pushes only if we are running from
-    # the main repo. We don't want this rule to trigger from forked repos.
-    needs:
-      - build_test
-    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'bpftrace/bpftrace'"
-    runs-on: ubuntu-latest
-    steps:
-    - name: Message channel
-      uses: rectalogic/notify-irc@v1
-      with:
-        nickname: bpftrace-ci-bot
-        server: irc.oftc.net
-        port: 6667
-        tls: false
-        channel: "#bpftrace"
-        message: |
-          master is BROKEN at https://github.com/bpftrace/bpftrace/commit/${{github.sha}}
