@@ -507,7 +507,7 @@ REQUIRES_FEATURE dpath fentry
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME strcontains
-RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (strcontains(path(args.file->f_path), "tmp")) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -e 'fentry:security_file_open { if (strcontains(path(args.file->f_path), "tmp")) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath fentry
 AFTER TMPDIR=/tmp ./testprogs/syscall open

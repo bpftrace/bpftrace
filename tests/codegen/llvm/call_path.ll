@@ -10,7 +10,7 @@ target triple = "bpf-pc-linux"
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @event_loss_counter = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !16
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !36
-@get_str_buf = dso_local externally_initialized global [1 x [1 x [64 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !38
+@get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !38
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -20,17 +20,13 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 64, i1 false)
-  %d_path = call i64 inttoptr (i64 147 to ptr)(ptr null, ptr %2, i32 64)
+  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
+  %d_path = call i64 inttoptr (i64 147 to ptr)(ptr null, ptr %2, i32 1024)
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
-
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48}
@@ -75,12 +71,12 @@ attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !37 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !35, isLocal: false, isDefinition: true)
 !38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
 !39 = distinct !DIGlobalVariable(name: "get_str_buf", linkageName: "global", scope: !2, file: !2, type: !40, isLocal: false, isDefinition: true)
-!40 = !DICompositeType(tag: DW_TAG_array_type, baseType: !41, size: 512, elements: !28)
-!41 = !DICompositeType(tag: DW_TAG_array_type, baseType: !42, size: 512, elements: !28)
-!42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !43, size: 512, elements: !44)
+!40 = !DICompositeType(tag: DW_TAG_array_type, baseType: !41, size: 8192, elements: !28)
+!41 = !DICompositeType(tag: DW_TAG_array_type, baseType: !42, size: 8192, elements: !28)
+!42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !43, size: 8192, elements: !44)
 !43 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !44 = !{!45}
-!45 = !DISubrange(count: 64, lowerBound: 0)
+!45 = !DISubrange(count: 1024, lowerBound: 0)
 !46 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !47)
 !47 = !{!0, !16, !36, !38}
 !48 = !{i32 2, !"Debug Info Version", i32 3}

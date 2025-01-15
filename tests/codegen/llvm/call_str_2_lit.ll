@@ -12,7 +12,7 @@ target triple = "bpf-pc-linux"
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !21
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !35
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !48
-@get_str_buf = dso_local externally_initialized global [1 x [1 x [64 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !50
+@get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !50
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -23,8 +23,8 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 64, i1 false)
+  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
   %4 = getelementptr i64, ptr %3, i64 14
   %arg0 = load volatile i64, ptr %4, align 8
@@ -36,22 +36,18 @@ entry:
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
-
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #3
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #3
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!57}
 !llvm.module.flags = !{!59}
@@ -108,11 +104,11 @@ attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !49 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !14, isLocal: false, isDefinition: true)
 !50 = !DIGlobalVariableExpression(var: !51, expr: !DIExpression())
 !51 = distinct !DIGlobalVariable(name: "get_str_buf", linkageName: "global", scope: !2, file: !2, type: !52, isLocal: false, isDefinition: true)
-!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !53, size: 512, elements: !9)
-!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 512, elements: !9)
-!54 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 512, elements: !55)
+!52 = !DICompositeType(tag: DW_TAG_array_type, baseType: !53, size: 8192, elements: !9)
+!53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 8192, elements: !9)
+!54 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, size: 8192, elements: !55)
 !55 = !{!56}
-!56 = !DISubrange(count: 64, lowerBound: 0)
+!56 = !DISubrange(count: 1024, lowerBound: 0)
 !57 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !58)
 !58 = !{!0, !21, !35, !48, !50}
 !59 = !{i32 2, !"Debug Info Version", i32 3}

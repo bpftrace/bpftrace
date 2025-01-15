@@ -17,6 +17,8 @@ and this project adheres to
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
 - Change bpftrace help flag output from stderr to stdout
   - [#3678](https://github.com/bpftrace/bpftrace/pull/3678)
+- Change max_strlen default from 64 to 1024
+  - [#3713](https://github.com/bpftrace/bpftrace/pull/3713)
 #### Deprecated
 #### Removed
 #### Fixed
