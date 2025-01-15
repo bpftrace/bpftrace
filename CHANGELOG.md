@@ -52,6 +52,8 @@ and this project adheres to
   - [#3522](https://github.com/bpftrace/bpftrace/pull/3522)
   - [Migration guide](docs/migration_guide.md#default-sigusr1-handler-removed)
 #### Added
+- Add env var to colorize bpftrace log output
+  - [#3710](https://github.com/bpftrace/bpftrace/pull/3710)
 - Bump max supported LLVM version to 19
   - [#3433](https://github.com/bpftrace/bpftrace/pull/3433)
 - Add `--dry-run` CLI option

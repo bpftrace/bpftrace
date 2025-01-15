@@ -123,6 +123,7 @@ void usage(std::ostream& out)
   out << "ENVIRONMENT:" << std::endl;
   out << "    BPFTRACE_BTF                      [default: none] BTF file" << std::endl;
   out << "    BPFTRACE_CACHE_USER_SYMBOLS       [default: auto] enable user symbol cache" << std::endl;
+  out << "    BPFTRACE_COLOR                    [default: auto] enable log output colorization" << std::endl;
   out << "    BPFTRACE_CPP_DEMANGLE             [default: 1] enable C++ symbol demangling" << std::endl;
   out << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
   out << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
@@ -689,10 +690,32 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
+bool is_colorize()
+{
+  const char* color_env = std::getenv("BPFTRACE_COLOR");
+  if (!color_env) {
+    return isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
+  }
+
+  std::string_view mode(color_env);
+  if (mode == "always") {
+    return true;
+  } else if (mode == "never") {
+    return false;
+  } else {
+    if (mode != "auto") {
+      LOG(WARNING) << "Invalid env value! The valid values of `BPFTRACE_COLOR` "
+                      "are [auto|always|never]. The current value is "
+                   << mode << "!";
+    }
+    return isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
+  }
+}
+
 int main(int argc, char* argv[])
 {
+  Log::get().set_colorize(is_colorize());
   const Args args = parse_args(argc, argv);
-
   std::ostream* os = &std::cout;
   std::ofstream outputstream;
   if (!args.output_file.empty()) {

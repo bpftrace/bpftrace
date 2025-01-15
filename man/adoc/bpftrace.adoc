@@ -3827,6 +3827,12 @@ This specifies the vmlinux path used for kernel symbol resolution when attaching
 If this value is not given, bpftrace searches vmlinux from pre defined locations.
 See src/attached_probe.cpp:find_vmlinux() for details.
 
+=== BPFTRACE_COLOR
+
+Default: auto
+
+Colorize the bpftrace log output message. Valid values are auto, always and never.
+
 == Options Expanded
 
 === Debug Output
