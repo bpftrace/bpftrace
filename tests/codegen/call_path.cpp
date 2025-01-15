@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_path)
 {
-  test("fentry:filp_close { path(args->filp->f_path); }", NAME);
+  test("fentry:filp_close { path((uint8 *)0); }", NAME);
 }
 
 } // namespace codegen
