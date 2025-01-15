@@ -12,7 +12,7 @@ target triple = "bpf-pc-linux"
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !16
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !30
 @max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !42
-@get_str_buf = dso_local externally_initialized global [1 x [1 x [64 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !44
+@get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !44
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -26,12 +26,12 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [64 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 64, i1 false)
+  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
   %4 = getelementptr i8, ptr %3, i64 8
   %5 = load volatile i64, ptr %4, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 64, i64 %5)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %5)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
   call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
@@ -257,22 +257,22 @@ strcmp.loop_null_cmp58:                           ; preds = %strcmp.loop53
   br i1 %strcmp.cmp_null60, label %strcmp.done, label %strcmp.loop57
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
-
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #3
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #3
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!52}
 !llvm.module.flags = !{!54}
@@ -323,12 +323,12 @@ attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !43 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !14, isLocal: false, isDefinition: true)
 !44 = !DIGlobalVariableExpression(var: !45, expr: !DIExpression())
 !45 = distinct !DIGlobalVariable(name: "get_str_buf", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
-!46 = !DICompositeType(tag: DW_TAG_array_type, baseType: !47, size: 512, elements: !9)
-!47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !48, size: 512, elements: !9)
-!48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !49, size: 512, elements: !50)
+!46 = !DICompositeType(tag: DW_TAG_array_type, baseType: !47, size: 8192, elements: !9)
+!47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !48, size: 8192, elements: !9)
+!48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !49, size: 8192, elements: !50)
 !49 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
 !50 = !{!51}
-!51 = !DISubrange(count: 64, lowerBound: 0)
+!51 = !DISubrange(count: 1024, lowerBound: 0)
 !52 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !53)
 !53 = !{!0, !16, !30, !42, !44}
 !54 = !{i32 2, !"Debug Info Version", i32 3}
