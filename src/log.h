@@ -10,6 +10,13 @@
 
 namespace bpftrace {
 
+namespace LogColor {
+constexpr const char* RESET = "\033[0m";
+constexpr const char* RED = "\033[31m";
+constexpr const char* YELLOW = "\033[33m";
+constexpr const char* DEFAULT = "";
+} // namespace LogColor
+
 // clang-format off
 enum class LogType
 {
@@ -58,6 +65,11 @@ public:
     return enabled_map_[type];
   }
 
+  inline void set_colorize(bool is_colorize)
+  {
+    is_colorize_ = is_colorize;
+  }
+
 private:
   Log();
   ~Log() = default;
@@ -67,7 +79,9 @@ private:
                          const location&,
                          std::ostream&,
                          const std::string&);
+  std::string log_format_output(LogType, std::string&&);
   std::unordered_map<LogType, bool> enabled_map_;
+  bool is_colorize_ = false;
 };
 
 class LogStream {

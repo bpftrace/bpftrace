@@ -5,7 +5,7 @@ namespace bpftrace {
 std::string logtype_str(LogType t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case LogType::DEBUG   : return "";
     case LogType::V1      : return "";
     case LogType::HINT    : return "HINT: ";
@@ -39,26 +39,43 @@ void Log::take_input(LogType type,
                      std::ostream& out,
                      std::string&& input)
 {
-  auto print_out = [&]() { out << logtype_str(type) << input << std::endl; };
-
   if (loc) {
     if (src_.empty()) {
       std::cerr << "Log: cannot resolve location before calling set_source()."
                 << std::endl;
-      print_out();
+      out << log_format_output(type, std::move(input));
     } else if (loc->begin.line == 0) {
       std::cerr << "Log: invalid location." << std::endl;
-      print_out();
+      out << log_format_output(type, std::move(input));
     } else if (loc->begin.line > loc->end.line) {
       std::cerr << "Log: loc.begin > loc.end: " << loc->begin << ":" << loc->end
                 << std::endl;
-      print_out();
+      out << log_format_output(type, std::move(input));
     } else {
       log_with_location(type, loc.value(), out, input);
     }
   } else {
-    print_out();
+    out << log_format_output(type, std::move(input));
   }
+}
+
+std::string Log::log_format_output(LogType type, std::string&& input)
+{
+  if (!is_colorize_) {
+    return logtype_str(type) + std::move(input) + '\n';
+  }
+  std::string color;
+  switch (type) {
+    case LogType::ERROR:
+      color = LogColor::RED;
+      break;
+    case LogType::WARNING:
+      color = LogColor::YELLOW;
+      break;
+    default:
+      return logtype_str(type) + std::move(input) + '\n';
+  }
+  return color + logtype_str(type) + std::move(input) + LogColor::RESET + '\n';
 }
 
 const std::string Log::get_source_line(unsigned int n)
@@ -82,6 +99,23 @@ void Log::log_with_location(LogType type,
                             std::ostream& out,
                             const std::string& m)
 {
+  const char* color_begin = LogColor::DEFAULT;
+  const char* color_end = LogColor::DEFAULT;
+  if (is_colorize_) {
+    switch (type) {
+      case LogType::ERROR:
+        color_begin = LogColor::RED;
+        color_end = LogColor::RESET;
+        break;
+      case LogType::WARNING:
+        color_begin = LogColor::YELLOW;
+        color_end = LogColor::RESET;
+        break;
+      default:
+        break;
+    }
+  }
+  out << color_begin;
   if (filename_.size()) {
     out << filename_ << ":";
   }
@@ -98,7 +132,8 @@ void Log::log_with_location(LogType type,
   */
   if (l.begin.line < l.end.line) {
     out << l.begin.line << "-" << l.end.line << ": " << typestr << msg
-        << std::endl;
+        << std::endl
+        << color_end;
     return;
   }
 
@@ -116,13 +151,14 @@ void Log::log_with_location(LogType type,
             ~~~~~~~~~~
   */
   out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": " << typestr << msg << std::endl;
+  out << ": " << typestr << msg << std::endl << color_end;
 
   // for bpftrace::position, valid line# starts from 1
   std::string srcline = get_source_line(l.begin.line - 1);
 
-  if (srcline == "")
+  if (srcline == "") {
     return;
+  }
 
   // To get consistent printing all tabs will be replaced with 4 spaces
   for (auto c : srcline) {
