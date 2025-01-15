@@ -3982,7 +3982,9 @@ void SemanticAnalyser::dereference_if_needed(Expression *&expr)
     const SizedType &ptr_type = expr->type;
     Expression *ptr_expr = expr;
 
-    Unop *deref_expr = new Unop(Operator::MUL, ptr_expr, ptr_expr->loc);
+    Unop *deref_expr = ctx_.make_node<Unop>(Operator::MUL,
+                                            ptr_expr,
+                                            ptr_expr->loc);
     deref_expr->type = *ptr_type.GetPointeeTy();
     deref_expr->type.is_internal = ptr_type.is_internal;
     deref_expr->type.SetAS(ptr_type.GetAS());
