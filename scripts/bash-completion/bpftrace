@@ -1,0 +1,67 @@
+# bash completion of bpftrace(8)
+
+_bpftrace_filedir()
+{
+  # bash-completion 2.11-1091-g6e8a1546bde2 rename _filedir to _comp_compgen_filedir
+  if [[ ${BASH_COMPLETION_VERSINFO[0]} == 2 ]] && \
+     [[ ${BASH_COMPLETION_VERSINFO[1]} > 11 ]]; then
+    _comp_compgen_filedir "${@}"
+  else
+    _filedir "${@}"
+  fi
+}
+
+_bpftrace()
+{
+  local cur prev words
+
+  _init_completion -- "$@" || return
+
+  local all_args='-B -f -o -e -h --help -I --include -l -p -c
+                  --usdt-file-activation --unsafe -q --info -k -kk
+                  -V --version --no-warnings -v --dry-run -d
+                  --emit-elf --emit-llvm'
+
+  case ${prev} in
+  -B)
+    COMPREPLY=( $(compgen -W "line full none" -- ${cur}) )
+    return 0
+    ;;
+  -f)
+    COMPREPLY=( $(compgen -W "text json" -- ${cur}) )
+    return 0
+    ;;
+  -c)
+    COMPREPLY=( $(compgen -c -- ${cur}) )
+    return 0
+    ;;
+  -o | --include | --emit-elf | --emit-llvm)
+    _bpftrace_filedir
+    return 0
+    ;;
+  -I)
+    _bpftrace_filedir -d
+    return 0
+    ;;
+  -p)
+    local PIDS=$(cd /proc && echo [0-9]*)
+    COMPREPLY=( $(compgen -W "$PIDS" -- ${cur}) )
+    return 0
+    ;;
+  -d)
+    COMPREPLY=( $(compgen -W "all ast codegen codegen-opt dis libbpf verifier" -- ${cur}) )
+    return 0
+    ;;
+  -h | --help | -V | --version | --info)
+    return
+    ;;
+  esac
+
+  # Just drop -e content completion, because it's very complex.
+  if ([[ ${cur} == -* ]] || [[ -z ${cur} ]]) && [[ ${prev} != -e ]]; then
+    COMPREPLY=( $(compgen -W "${all_args}" -- ${cur}) )
+    return
+  fi
+}
+
+complete -F _bpftrace bpftrace

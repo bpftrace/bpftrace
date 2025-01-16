@@ -92,7 +92,7 @@ void usage(std::ostream& out)
   out << "    bpftrace [options] -e 'program'" << std::endl;
   out << std::endl;
   out << "OPTIONS:" << std::endl;
-  out << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
+  out << "    -B MODE        output buffering mode ('line', 'full', 'none')" << std::endl;
   out << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   out << "    -o file        redirect bpftrace output to file" << std::endl;
   out << "    -e 'program'   execute this program" << std::endl;
