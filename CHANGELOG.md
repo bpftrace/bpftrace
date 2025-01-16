@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1] 2025-01-16
+
+#### Fixed
+- Do not generate functions for empty attach points
+  - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
+#### Tools
+- Switch all bio* tools to tracepoints
+  - [#3622](https://github.com/bpftrace/bpftrace/pull/3622)
+- Fix dcsnoop.bt on newer kernels
+  - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
+
 ## [0.22.0] 2025-01-07
 
 #### Breaking Changes
