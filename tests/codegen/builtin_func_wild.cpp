@@ -9,7 +9,7 @@ using ::testing::Return;
 
 TEST(codegen, builtin_func_wild)
 {
-  test("kprobe:do_execve* { @x = func }", NAME);
+  test("kprobe:sys_* { @x = func }", NAME);
 }
 
 } // namespace codegen

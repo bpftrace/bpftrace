@@ -2823,6 +2823,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 {
   current_attach_point_ = &ap;
   probefull_ = ap.name();
+  if (ap.expansion == ExpansionType::MULTI) {
+    // For non-full expansion (currently only multi), we need to avoid
+    // generating the code as the BPF program would fail to load.
+    if (bpftrace_.probe_matcher_->get_matches_for_ap(ap).empty())
+      return;
+  }
   if (probetype(ap.provider) == ProbeType::usdt) {
     auto usdt = usdt_helper_->find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
     if (!usdt.has_value()) {
