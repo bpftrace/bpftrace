@@ -220,6 +220,9 @@ if (ENABLE_MAN)
   add_subdirectory(man)
 endif(ENABLE_MAN)
 
+set(BASH_COMPLETION_PATH ${CMAKE_CURRENT_SOURCE_DIR}/scripts/bash-completion/bpftrace)
+install(FILES ${BASH_COMPLETION_PATH} DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/bash-completion/completions)
+
 if(NOT TARGET uninstall)
   configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CmakeUninstall.cmake.in"

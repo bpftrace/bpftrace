@@ -110,6 +110,7 @@ bpftrace has several plugins/definitions, integrating the syntax into your edito
 - [Emacs](https://gitlab.com/jgkamat/bpftrace-mode)
 - [Vim](https://github.com/mmarchini/bpftrace.vim)
 - [VS Code](https://github.com/bolinfest/bpftrace-vscode)
+- [Bash Completion](https://github.com/scop/bash-completion)
 
 ## License
 
