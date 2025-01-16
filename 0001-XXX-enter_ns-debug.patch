@@ -1,0 +1,56 @@
+From 565bc8ff7822281295283dd44c89882dfad72a17 Mon Sep 17 00:00:00 2001
+Message-ID: <565bc8ff7822281295283dd44c89882dfad72a17.1737151133.git.dxu@dxuuu.xyz>
+From: Daniel Xu <dxu@dxuuu.xyz>
+Date: Fri, 17 Jan 2025 13:46:59 -0700
+Subject: [PATCH] XXX: enter_ns debug
+
+Signed-off-by: Daniel Xu <dxu@dxuuu.xyz>
+---
+ src/cc/bcc_proc.c  | 2 ++
+ src/cc/bcc_syms.cc | 8 ++++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/src/cc/bcc_proc.c b/src/cc/bcc_proc.c
+index 3f0d50a3..179ebb3c 100644
+--- a/src/cc/bcc_proc.c
++++ b/src/cc/bcc_proc.c
+@@ -192,8 +192,10 @@ int _procfs_maps_each_module(FILE *procmap, int pid,
+ 
+     resolved_name = NULL;
+     if (strstr(name, "/memfd:")) {
++      fprintf(stderr, "XXX: BCC: memfd name=%s\n", name);
+       resolved_name = _procutils_memfd_path(pid, mod.inode);
+       if (resolved_name != NULL) {
++	fprintf(stderr, "XXX: BCC: memfd enter_ns=0\n");
+         enter_ns = 0;
+       }
+     } else if (_procfs_might_be_zip_path(mod.name)) {
+diff --git a/src/cc/bcc_syms.cc b/src/cc/bcc_syms.cc
+index a015850c..0ddf3386 100644
+--- a/src/cc/bcc_syms.cc
++++ b/src/cc/bcc_syms.cc
+@@ -39,6 +39,7 @@
+ 
+ ProcSyms::ModulePath::ModulePath(const std::string &ns_path, int root_fd,
+                                  int pid, bool enter_ns) {
++  std::cerr << "XXX: bcc: modulepath: enter_ns=" << enter_ns << std::endl;
+   if (!enter_ns) {
+     path_ = ns_path;
+     proc_root_path_ = ns_path;
+@@ -194,6 +195,13 @@ void ProcSyms::refresh() {
+ 
+ int ProcSyms::_add_module(mod_info *mod, int enter_ns, void *payload) {
+   ProcSyms *ps = static_cast<ProcSyms *>(payload);
++  std::cerr << "XXX: bcc: _add_module: enter_ns=" << enter_ns << " pid_=" << ps->pid_ << std::endl;
++  if (!enter_ns) {
++	char buf[256];
++	snprintf(buf, sizeof(buf), "cat /proc/%d/maps 1>&2", ps->pid_);
++	system(buf);
++  }
++
+   std::shared_ptr<ModulePath> modpath =
+       std::make_shared<ModulePath>(mod->name, ps->procstat_.get_root_fd(),
+                                    ps->pid_, enter_ns && ps->pid_ != -1);
+-- 
+2.47.1
+

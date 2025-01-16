@@ -495,9 +495,18 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto &args = std::get<1>(bpftrace->resources.printf_args[printf_id]);
   auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-  bpftrace->out_->message(MessageType::printf,
-                          fmt.format_str(arg_values),
-                          false);
+  auto fmted = fmt.format_str(arg_values);
+  char buf[256];
+  snprintf(buf, sizeof(buf), "lsof -p %d 1>&2", getpid());
+  system(buf);
+  auto ret = write(STDOUT_FILENO, fmted.c_str(), fmted.size());
+  if (ret > 0) {
+    LOG(DEBUG) << "write was ok";
+  } else if (ret == 0) {
+    LOG(DEBUG) << "write wrote nothing?";
+  } else {
+    LOG(DEBUG) << "write failed: errno=" << errno << ": " << strerror(errno);
+  }
 }
 
 int ringbuf_printer(void *cb_cookie, void *data, size_t size)
@@ -900,6 +909,10 @@ int BPFtrace::run_iter()
 
 int BPFtrace::prerun() const
 {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "lsof -p %d 1>&2", getpid());
+  system(buf);
+
   uint64_t num_probes = this->num_probes();
   uint64_t max_probes = config_.get(ConfigKeyInt::max_probes);
   if (num_probes == 0) {

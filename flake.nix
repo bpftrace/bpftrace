@@ -63,6 +63,13 @@
                 };
                 # Seems like these extra tools are needed to build bcc
                 nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.python310Packages.setuptools pkgs.zip ];
+                cmakeFlags = old.cmakeFlags ++ [ "-DCMAKE_BUILD_TYPE=Debug" ];
+                patches = old.patches ++ [
+                  # Need to use pkgs.fetchpatch for remote patches or pkgs.writeText for local ones
+                  (pkgs.writeText "patch1" (builtins.readFile ./0001-XXX-Log-ModulePath-close.patch))
+                  #(pkgs.writeText "patch2" (builtins.readFile ./0001-XXX-FIX.patch))
+                  (pkgs.writeText "patch3" (builtins.readFile ./0001-XXX-enter_ns-debug.patch))
+                ];
               });
             });
 
@@ -133,6 +140,7 @@
                   kmod
                   # For git-clang-format
                   libclang.python
+                  lsof
                   nftables
                   procps
                   python3

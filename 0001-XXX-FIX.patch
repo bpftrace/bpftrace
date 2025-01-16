@@ -1,0 +1,27 @@
+From 02fffe05dec4eca98da053d8f6d4741a758c184d Mon Sep 17 00:00:00 2001
+Message-ID: <02fffe05dec4eca98da053d8f6d4741a758c184d.1737137000.git.dxu@dxuuu.xyz>
+From: Daniel Xu <dxu@dxuuu.xyz>
+Date: Fri, 17 Jan 2025 11:02:55 -0700
+Subject: [PATCH] XXX: FIX
+
+Signed-off-by: Daniel Xu <dxu@dxuuu.xyz>
+---
+ src/cc/syms.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/cc/syms.h b/src/cc/syms.h
+index 415fe28f..b9563e87 100644
+--- a/src/cc/syms.h
++++ b/src/cc/syms.h
+@@ -131,7 +131,7 @@ class ProcSyms : SymbolCache {
+     // process by storing a file descriptor created from openat(2) if possible
+     // if openat fails, falls back to process-dependent path with /proc/.../root
+    private:
+-    int fd_;
++    int fd_ = -1;
+     std::string proc_root_path_;
+     std::string path_;
+ 
+-- 
+2.47.1
+

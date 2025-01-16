@@ -1,0 +1,34 @@
+From e5609182cf0ede7c9bb32bf54670cbfba754a6c0 Mon Sep 17 00:00:00 2001
+Message-ID: <e5609182cf0ede7c9bb32bf54670cbfba754a6c0.1737135820.git.dxu@dxuuu.xyz>
+From: Daniel Xu <dxu@dxuuu.xyz>
+Date: Fri, 17 Jan 2025 10:43:33 -0700
+Subject: [PATCH] XXX: Log ~ModulePath close()
+
+Signed-off-by: Daniel Xu <dxu@dxuuu.xyz>
+---
+ src/cc/syms.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/cc/syms.h b/src/cc/syms.h
+index 3dffdda7..415fe28f 100644
+--- a/src/cc/syms.h
++++ b/src/cc/syms.h
+@@ -16,6 +16,7 @@
+ #pragma once
+ 
+ #include <algorithm>
++#include <iostream>
+ #include <memory>
+ #include <string>
+ #include <sys/types.h>
+@@ -144,6 +145,7 @@ class ProcSyms : SymbolCache {
+       return proc_root_path_.c_str();
+     }
+     ~ModulePath() {
++      std::cerr << "XXX BCC: trying to ~ModulePath() close fd_=" << fd_ << std::endl;
+       if (fd_ > 0)
+         close(fd_);
+     }
+-- 
+2.47.1
+

@@ -17,4 +17,4 @@ echo "bpftrace --info:"
 echo "===================="
 "${BPFTRACE_RUNTIME_TEST_EXECUTABLE}" --info
 
-python3 -u runtime/engine/main.py "$@"
+while python3 -u runtime/engine/main.py "$@"; do :; done
