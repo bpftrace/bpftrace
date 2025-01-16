@@ -268,7 +268,7 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(false))
-      .Times(1);
+      .Times(2);
 
   parse_probe("kprobe:sys_read,kprobe:my_*,kprobe:sys_write{}", *bpftrace);
 
@@ -472,7 +472,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(0, "/bin/sh"))
-      .Times(1);
+      .Times(2);
 
   parse_probe("uprobe:/bin/sh:*open {}", *bpftrace);
 
@@ -524,7 +524,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file_uprobe_multi)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(0, "/bin/*sh"))
-      .Times(1);
+      .Times(2);
 
   parse_probe("uprobe:/bin/*sh:*open {}", *bpftrace);
 

@@ -26,9 +26,13 @@ and this project adheres to
   - [#3704](https://github.com/bpftrace/bpftrace/pull/3704)
 - Fix `pid`, `tid` and `ustack` when running bpftrace in containers with PID namespacing
   - [#3428](https://github.com/bpftrace/bpftrace/pull/3428)
+- Do not generate functions for empty attach points
+  - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
 #### Security
 #### Docs
 #### Tools
+- Fix dcsnoop.bt on newer kernels
+  - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
 
 ## [0.22.0] 2025-01-07
 
