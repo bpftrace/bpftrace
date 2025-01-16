@@ -19,45 +19,54 @@ using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;
 using bpftrace::ast::Probe;
 
-void gen_bytecode(const std::string &input, std::stringstream &out)
+void gen_bytecode(BPFtrace &bpftrace,
+                  const std::string &input,
+                  std::stringstream &out)
 {
-  auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
+  Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, *bpftrace);
+  ast::FieldAnalyser fields(driver.ctx, bpftrace);
   EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
-  clang.parse(driver.ctx.root, *bpftrace);
+  clang.parse(driver.ctx.root, bpftrace);
 
   // Override to mockbpffeature.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
+  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx, *bpftrace);
+  ast::ResourceAnalyser resource_analyser(driver.ctx, bpftrace);
   auto resources_optional = resource_analyser.analyse();
   ASSERT_TRUE(resources_optional.has_value());
   // clang-tidy doesn't recognize ASSERT_*() as execution terminating
   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-  bpftrace->resources = resources_optional.value();
+  bpftrace.resources = resources_optional.value();
 
-  ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
+  ast::CodegenLLVM codegen(driver.ctx, bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
 }
 
-void compare_bytecode(const std::string &input1, const std::string &input2)
+void compare_bytecode(BPFtrace &bpftrace,
+                      const std::string &input1,
+                      const std::string &input2)
 {
   std::stringstream expected_output1;
   std::stringstream expected_output2;
 
-  gen_bytecode(input1, expected_output1);
-  gen_bytecode(input2, expected_output2);
+  gen_bytecode(bpftrace, input1, expected_output1);
+  gen_bytecode(bpftrace, input2, expected_output2);
 
   EXPECT_EQ(expected_output1.str(), expected_output2.str());
+}
+
+void compare_bytecode(const std::string &input1, const std::string &input2)
+{
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  compare_bytecode(*bpftrace, input1, input2);
 }
 
 TEST(probe, short_name)
@@ -77,11 +86,15 @@ class probe_btf : public test_btf {};
 
 TEST_F(probe_btf, short_name)
 {
-  compare_bytecode("fentry:func_1 { 1 }", "f:func_1 { 1 }");
-  compare_bytecode("fexit:func_1 { 1 }", "fr:func_1 { 1 }");
-  compare_bytecode("iter:task { 1 }", "it:task { 1 }");
-  compare_bytecode("iter:task_file { 1 }", "it:task_file { 1 }");
-  compare_bytecode("iter:task_vma { 1 }", "it:task_vma { 1 }");
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
+
+  compare_bytecode(*bpftrace, "fentry:func_1 { 1 }", "f:func_1 { 1 }");
+  compare_bytecode(*bpftrace, "fexit:func_1 { 1 }", "fr:func_1 { 1 }");
+  compare_bytecode(*bpftrace, "iter:task { 1 }", "it:task { 1 }");
+  compare_bytecode(*bpftrace, "iter:task_file { 1 }", "it:task_file { 1 }");
+  compare_bytecode(*bpftrace, "iter:task_vma { 1 }", "it:task_vma { 1 }");
 }
 
 } // namespace bpftrace::test::probe
