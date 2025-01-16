@@ -188,6 +188,12 @@ WILL_FAIL
 # See https://github.com/bpftrace/bpftrace/pull/956
 SKIP_IF_ENV_HAS CI=true
 
+NAME kprobe_multi_mixed_attachpoint
+PROG kprobe:vfs_read,kprobe:nonsense* { printf("SUCCESS\n"); exit(); }
+EXPECT SUCCESS
+REQUIRES_FEATURE kprobe_multi
+AFTER ./testprogs/syscall read
+
 NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
