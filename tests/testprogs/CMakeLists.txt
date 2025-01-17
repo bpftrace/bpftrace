@@ -37,7 +37,7 @@ endforeach()
 
 find_program(GO_EXECUTABLE go)
 if(GO_EXECUTABLE)
-  file(GLOB testprog_go_sources *.go)
+  file(GLOB testprog_go_sources CONFIGURE_DEPENDS *.go)
   foreach(testprog_source ${testprog_go_sources})
     get_filename_component(testprog_name ${testprog_source} NAME_WE)
     add_custom_target(testprog_go_${testprog_name}
@@ -51,7 +51,7 @@ endif()
 
 find_program(RUSTC_EXECUTABLE rustc)
 if(RUSTC_EXECUTABLE)
-  file(GLOB testprog_rust_sources *.rs)
+  file(GLOB testprog_rust_sources CONFIGURE_DEPENDS *.rs)
   foreach(testprog_source ${testprog_rust_sources})
     get_filename_component(testprog_name ${testprog_source} NAME_WE)
     add_custom_target(testprog_rust_${testprog_name}
