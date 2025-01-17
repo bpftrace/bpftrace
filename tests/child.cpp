@@ -1,19 +1,20 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <csignal>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <system_error>
 
-#include <csignal>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+
 #include "child.h"
 #include "childhelper.h"
-#include "filesystem.h"
 #include "utils.h"
 
 namespace bpftrace::test::child {
@@ -209,14 +210,14 @@ TEST(childproc, multi_exec_match)
   ASSERT_NE(::mkdtemp(&tmpdir[0]), nullptr);
 
   // Create fixture directories
-  const auto path = std_filesystem::path(tmpdir);
+  const auto path = std::filesystem::path(tmpdir);
   const auto usr_bin = path / "usr" / "bin";
-  ASSERT_TRUE(std_filesystem::create_directories(usr_bin, ec));
+  ASSERT_TRUE(std::filesystem::create_directories(usr_bin, ec));
   ASSERT_FALSE(ec);
 
   // Create symbolic link: bin -> usr/bin
   const auto symlink_bin = path / "bin";
-  std_filesystem::create_directory_symlink(usr_bin, symlink_bin, ec);
+  std::filesystem::create_directory_symlink(usr_bin, symlink_bin, ec);
   ASSERT_FALSE(ec);
 
   // Copy a 'mysleep' binary and add x permission
@@ -253,7 +254,7 @@ TEST(childproc, multi_exec_match)
 
   // Cleanup
   EXPECT_EQ(::setenv("PATH", old_path, 1), 0);
-  EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
+  EXPECT_GT(std::filesystem::remove_all(tmpdir), 0);
 }
 
 } // namespace bpftrace::test::child

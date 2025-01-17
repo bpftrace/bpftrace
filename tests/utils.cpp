@@ -1,15 +1,15 @@
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+
 #include "utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
-#include <fstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include "filesystem.h"
 
 namespace bpftrace::test::utils {
 
@@ -184,7 +184,7 @@ TEST(utils, resolve_binary_path)
   EXPECT_EQ(resolve_binary_path(path + "/executable*"), paths_all_executables);
   EXPECT_EQ(resolve_binary_path(path + "/*executable*"), paths_all_executables);
 
-  EXPECT_GT(std_filesystem::remove_all(path), 0);
+  EXPECT_GT(std::filesystem::remove_all(path), 0);
 }
 
 TEST(utils, abs_path)
@@ -212,8 +212,8 @@ TEST(utils, abs_path)
   EXPECT_EQ(abs_path(std::string("/proc/1/root/usr/local/bin/usdt_test.so")),
             std::string("/proc/1/root/usr/local/bin/usdt_test.so"));
 
-  EXPECT_TRUE(std_filesystem::remove(rel_file));
-  EXPECT_GT(std_filesystem::remove_all(path), 0);
+  EXPECT_TRUE(std::filesystem::remove(rel_file));
+  EXPECT_GT(std::filesystem::remove_all(path), 0);
 }
 
 TEST(utils, get_cgroup_hierarchy_roots)
@@ -223,8 +223,8 @@ TEST(utils, get_cgroup_hierarchy_roots)
   // Check that each entry is a proper cgroup filesystem
   for (auto root : roots) {
     EXPECT_TRUE(root.first == "cgroup" || root.first == "cgroup2");
-    std_filesystem::path root_path(root.second);
-    EXPECT_TRUE(std_filesystem::exists(root_path / "cgroup.procs"));
+    std::filesystem::path root_path(root.second);
+    EXPECT_TRUE(std::filesystem::exists(root_path / "cgroup.procs"));
   }
 }
 
@@ -236,14 +236,14 @@ TEST(utils, get_cgroup_path_in_hierarchy)
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
-  const std_filesystem::path path(tmpdir);
-  const std_filesystem::path file_1 = path / "file1";
-  const std_filesystem::path subdir = path / "subdir";
-  const std_filesystem::path file_2 = subdir / "file2";
+  const std::filesystem::path path(tmpdir);
+  const std::filesystem::path file_1 = path / "file1";
+  const std::filesystem::path subdir = path / "subdir";
+  const std::filesystem::path file_2 = subdir / "file2";
 
   // Make a few files in the directory to imitate cgroup files and get their
   // inodes
-  if (!std_filesystem::create_directory(subdir)) {
+  if (!std::filesystem::create_directory(subdir)) {
     throw std::runtime_error("creating subdirectory for tests failed");
   }
   static_cast<std::ofstream &&>(std::ofstream(file_1) << "File 1 content")
@@ -263,7 +263,7 @@ TEST(utils, get_cgroup_path_in_hierarchy)
               "/subdir/file2");
   }
 
-  EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
+  EXPECT_GT(std::filesystem::remove_all(tmpdir), 0);
 }
 
 TEST(utils, parse_kconfig)
@@ -326,16 +326,16 @@ TEST(utils, find_in_path)
   ASSERT_TRUE(::mkdtemp(&tmpdir[0]));
 
   // Create some directories
-  const std_filesystem::path path(tmpdir);
-  const std_filesystem::path usr_bin = path / "usr" / "bin";
-  const std_filesystem::path usr_local_bin = path / "usr" / "local" / "bin";
-  ASSERT_TRUE(std_filesystem::create_directories(usr_bin));
-  ASSERT_TRUE(std_filesystem::create_directories(usr_local_bin));
+  const std::filesystem::path path(tmpdir);
+  const std::filesystem::path usr_bin = path / "usr" / "bin";
+  const std::filesystem::path usr_local_bin = path / "usr" / "local" / "bin";
+  ASSERT_TRUE(std::filesystem::create_directories(usr_bin));
+  ASSERT_TRUE(std::filesystem::create_directories(usr_local_bin));
 
   // Create some dummy binaries
-  const std_filesystem::path usr_bin_echo = usr_bin / "echo";
-  const std_filesystem::path usr_local_bin_echo = usr_local_bin / "echo";
-  const std_filesystem::path usr_bin_cat = usr_bin / "cat";
+  const std::filesystem::path usr_bin_echo = usr_bin / "echo";
+  const std::filesystem::path usr_local_bin_echo = usr_local_bin / "echo";
+  const std::filesystem::path usr_bin_cat = usr_bin / "cat";
   {
     std::ofstream(usr_bin_echo) << "zz";
     std::ofstream(usr_local_bin_echo) << "zz";
@@ -376,7 +376,7 @@ TEST(utils, find_in_path)
   });
 
   // Cleanup
-  EXPECT_TRUE(std_filesystem::remove_all(path));
+  EXPECT_TRUE(std::filesystem::remove_all(path));
 }
 
 // These tests are a bit hacky and rely on repository structure.
@@ -392,7 +392,7 @@ TEST(utils, find_near_self)
   // NOLINTBEGIN(bugprone-unchecked-optional-access)
   ASSERT_TRUE(runtime_tests.has_value());
   EXPECT_TRUE(runtime_tests->filename() == "runtime-tests.sh");
-  EXPECT_TRUE(std_filesystem::exists(*runtime_tests));
+  EXPECT_TRUE(std::filesystem::exists(*runtime_tests));
   // NOLINTEND(bugprone-unchecked-optional-access)
 
   EXPECT_FALSE(find_near_self("SHOULD_NOT_EXIST").has_value());
