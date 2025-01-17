@@ -16,7 +16,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "ast/passes/callback_visitor.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -26,8 +25,6 @@
 #include "log.h"
 #include "output.h"
 #include "tracepoint_format_parser.h"
-
-#define DEFAULT_NODE_MAX 200
 
 using namespace bpftrace;
 
@@ -101,20 +98,6 @@ int fuzz_main(const char* data, size_t sz)
   auto err = driver.parse();
   if (err)
     return err;
-
-  // Limit node size
-  uint64_t max_ast_nodes = DEFAULT_NODE_MAX;
-  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
-                          [&](uint64_t x) { max_ast_nodes = x; }))
-    return 1;
-  uint64_t node_count = 0;
-  ast::CallbackVisitor counter(driver.ctx,
-                               [&](ast::Node* node __attribute__((unused))) {
-                                 node_count += 1;
-                               });
-  driver.root->accept(counter);
-  if (node_count > max_ast_nodes)
-    return 1;
 
   // Field Analyzer
   ast::FieldAnalyser fields(driver.ctx, bpftrace, devnull);
