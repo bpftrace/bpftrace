@@ -654,7 +654,7 @@ Args parse_args(int argc, char* argv[])
       args.search = "*:*";
     } else if (optind == argc - 1) {
       std::string_view val(argv[optind]);
-      if (std_filesystem::exists(val)) {
+      if (std::filesystem::exists(val)) {
         args.filename = val;
       } else {
         if (val == "*") {

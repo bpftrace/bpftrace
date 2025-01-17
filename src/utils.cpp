@@ -4,40 +4,40 @@
 #include <climits>
 #include <cmath>
 #include <cstring>
-#include <fcntl.h>
+#include <filesystem>
 #include <fstream>
-#include <gelf.h>
-#include <glob.h>
-#include <libelf.h>
 #include <limits>
-#include <link.h>
 #include <map>
 #include <memory>
 #include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
-#include <sys/auxv.h>
-#include <sys/stat.h>
 #include <system_error>
 #include <tuple>
-#include <unistd.h>
 #include <unordered_set>
 
-#include "bpftrace.h"
-#include "debugfs.h"
-#include "filesystem.h"
-#include "log.h"
-#include "probe_matcher.h"
-#include "tracefs.h"
-#include "utils.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>
 #include <elf.h>
+#include <fcntl.h>
+#include <gelf.h>
+#include <glob.h>
+#include <libelf.h>
+#include <link.h>
+#include <linux/version.h>
+#include <sys/auxv.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <zlib.h>
 
-#include <linux/version.h>
+#include "bpftrace.h"
+#include "debugfs.h"
+#include "log.h"
+#include "probe_matcher.h"
+#include "tracefs.h"
+#include "utils.h"
 
 namespace {
 
@@ -317,7 +317,7 @@ void get_bool_env_var(const ::std::string &str,
   return;
 }
 
-std::optional<std_filesystem::path> find_in_path(std::string_view name)
+std::optional<std::filesystem::path> find_in_path(std::string_view name)
 {
   std::error_code ec;
 
@@ -327,25 +327,25 @@ std::optional<std_filesystem::path> find_in_path(std::string_view name)
 
   auto paths = split_string(path_env, ':', true);
   for (const auto &path : paths) {
-    auto fpath = std_filesystem::path(path) / name;
-    if (std_filesystem::exists(fpath, ec))
+    auto fpath = std::filesystem::path(path) / name;
+    if (std::filesystem::exists(fpath, ec))
       return fpath;
   }
 
   return std::nullopt;
 }
 
-std::optional<std_filesystem::path> find_near_self(std::string_view filename)
+std::optional<std::filesystem::path> find_near_self(std::string_view filename)
 {
   std::error_code ec;
-  auto exe = std_filesystem::read_symlink("/proc/self/exe", ec);
+  auto exe = std::filesystem::read_symlink("/proc/self/exe", ec);
   if (ec) {
     LOG(WARNING) << "Failed to resolve /proc/self/exe: " << ec;
     return std::nullopt;
   }
 
   exe.replace_filename(filename);
-  bool exists = std_filesystem::exists(exe, ec);
+  bool exists = std::filesystem::exists(exe, ec);
   if (!exists) {
     if (ec)
       LOG(WARNING) << "Failed to resolve stat " << exe << ": " << ec;
@@ -358,13 +358,13 @@ std::optional<std_filesystem::path> find_near_self(std::string_view filename)
 std::string get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
-  std_filesystem::path proc_path{ "/proc" };
+  std::filesystem::path proc_path{ "/proc" };
   proc_path /= pid;
   proc_path /= "exe";
 
   try {
-    return std_filesystem::read_symlink(proc_path).string();
-  } catch (const std_filesystem::filesystem_error &e) {
+    return std::filesystem::read_symlink(proc_path).string();
+  } catch (const std::filesystem::filesystem_error &e) {
     auto err = e.code().value();
     if (err == ENOENT || err == EINVAL)
       return {};
@@ -381,11 +381,11 @@ std::string get_pid_exe(pid_t pid)
 std::string get_proc_maps(const std::string &pid)
 {
   std::error_code ec;
-  std_filesystem::path proc_path{ "/proc" };
+  std::filesystem::path proc_path{ "/proc" };
   proc_path /= pid;
   proc_path /= "maps";
 
-  if (!std_filesystem::exists(proc_path, ec))
+  if (!std::filesystem::exists(proc_path, ec))
     return "";
 
   return proc_path.string();
@@ -697,7 +697,7 @@ std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
   }
 
   for (auto &path_iter :
-       std_filesystem::recursive_directory_iterator(base_path)) {
+       std::filesystem::recursive_directory_iterator(base_path)) {
     if (stat(path_iter.path().c_str(), &path_st) < 0)
       return "";
     if (path_st.st_ino == cgroupid) {
@@ -721,7 +721,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots()
   for (std::string line; std::getline(mounts_file, line);) {
     std::smatch match;
     if (std::regex_match(line, match, cgroup_mount_regex)) {
-      if (std_filesystem::is_directory(match[2].str())) {
+      if (std::filesystem::is_directory(match[2].str())) {
         result.push_back({ match[1].str(), match[2].str() });
       }
     }
@@ -742,7 +742,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   // roots and "unified" for cgroupv2 roots
   for (auto &root : roots) {
     if (root.first == "cgroup") {
-      root = { std_filesystem::path(root.second).filename().string(),
+      root = { std::filesystem::path(root.second).filename().string(),
                root.second };
     } else if (root.first == "cgroup2") {
       root = { "unified", root.second };
@@ -809,8 +809,8 @@ bool is_module_loaded(const std::string &module)
 bool is_dir(const std::string &path)
 {
   std::error_code ec;
-  std_filesystem::path buf{ path };
-  return std_filesystem::is_directory(buf, ec);
+  std::filesystem::path buf{ path };
+  return std::filesystem::is_directory(buf, ec);
 }
 
 // get_kernel_dirs fills {ksrc, kobj} - directories for pristine and
@@ -1110,24 +1110,24 @@ static bool pid_in_different_mountns(int pid)
     return false;
 
   std::error_code ec;
-  std_filesystem::path self_path{ "/proc/self/ns/mnt" };
-  std_filesystem::path target_path{ "/proc" };
+  std::filesystem::path self_path{ "/proc/self/ns/mnt" };
+  std::filesystem::path target_path{ "/proc" };
   target_path /= std::to_string(pid);
   target_path /= "ns/mnt";
 
-  if (!std_filesystem::exists(self_path, ec)) {
+  if (!std::filesystem::exists(self_path, ec)) {
     throw MountNSException(
         "Failed to compare mount ns with PID " + std::to_string(pid) +
         ". The error was open (/proc/self/ns/mnt): " + ec.message());
   }
 
-  if (!std_filesystem::exists(target_path, ec)) {
+  if (!std::filesystem::exists(target_path, ec)) {
     throw MountNSException(
         "Failed to compare mount ns with PID " + std::to_string(pid) +
         ". The error was open (/proc/<pid>/ns/mnt): " + ec.message());
   }
 
-  bool result = !std_filesystem::equivalent(self_path, target_path, ec);
+  bool result = !std::filesystem::equivalent(self_path, target_path, ec);
 
   if (ec) {
     throw MountNSException("Failed to compare mount ns with PID " +
@@ -1498,9 +1498,9 @@ std::optional<std::string> abs_path(const std::string &rel_path)
   static auto re = std::regex("^/proc/\\d+/root/.*");
   if (!std::regex_match(rel_path, re)) {
     try {
-      auto p = std_filesystem::path(rel_path);
-      return std_filesystem::canonical(std_filesystem::absolute(p)).string();
-    } catch (std_filesystem::filesystem_error &) {
+      auto p = std::filesystem::path(rel_path);
+      return std::filesystem::canonical(std::filesystem::absolute(p)).string();
+    } catch (std::filesystem::filesystem_error &) {
       return {};
     }
   } else {
@@ -1582,7 +1582,7 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 std::vector<int> get_pids_for_program(const std::string &program)
 {
   std::error_code ec;
-  auto program_abs = std_filesystem::canonical(program, ec);
+  auto program_abs = std::filesystem::canonical(program, ec);
   if (ec) {
     // std::filesystem::canonical will fail if we are attaching to a uprobe that
     // lives in another filesystem namespace. For example,
@@ -1595,12 +1595,12 @@ std::vector<int> get_pids_for_program(const std::string &program)
   }
 
   std::vector<int> pids;
-  for (const auto &process : std_filesystem::directory_iterator("/proc")) {
+  for (const auto &process : std::filesystem::directory_iterator("/proc")) {
     std::string filename = process.path().filename().string();
     if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
       continue;
     std::error_code ec;
-    std_filesystem::path pid_program = std_filesystem::read_symlink(
+    std::filesystem::path pid_program = std::filesystem::read_symlink(
         process.path() / "exe", ec);
     if (!ec && program_abs == pid_program)
       pids.emplace_back(std::stoi(filename));
@@ -1611,7 +1611,7 @@ std::vector<int> get_pids_for_program(const std::string &program)
 std::vector<int> get_all_running_pids()
 {
   std::vector<int> pids;
-  for (const auto &process : std_filesystem::directory_iterator("/proc")) {
+  for (const auto &process : std::filesystem::directory_iterator("/proc")) {
     std::string filename = process.path().filename().string();
     if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
       continue;

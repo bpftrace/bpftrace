@@ -19,7 +19,7 @@ BfdDisasm::BfdDisasm(std::string &path) : size_(0)
 
   if (fd_ >= 0) {
     std::error_code ec;
-    std_filesystem::path fs_path{ path };
+    std::filesystem::path fs_path{ path };
     std::uintmax_t file_size = std::filesystem::file_size(fs_path, ec);
 
     if (file_size != static_cast<std::uintmax_t>(-1)) {

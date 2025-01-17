@@ -393,10 +393,10 @@ bool BPFfeature::has_uprobe_refcnt()
     return *has_uprobe_refcnt_;
 
   std::error_code ec;
-  std_filesystem::path path{
+  std::filesystem::path path{
     "/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset"
   };
-  has_uprobe_refcnt_ = std_filesystem::exists(path, ec);
+  has_uprobe_refcnt_ = std::filesystem::exists(path, ec);
 
   return *has_uprobe_refcnt_;
 }
