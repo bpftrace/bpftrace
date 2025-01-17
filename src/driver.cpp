@@ -60,6 +60,19 @@ int Driver::parse()
     ctx = {};
   }
 
+  // Before proceeding, ensure that the size of the AST isn't past prescribed
+  // limits. This functionality goes back to 80642a994, where it was added in
+  // order to prevent stack overflow during fuzzing. It traveled through the
+  // passes and visitor pattern, and this is a final return to the simplest
+  // possible form. It is not necessary to walk the full AST in order to
+  // determine the number of nodes. This can be done before any passes.
+  auto node_count = ctx.node_count();
+  if (node_count > bpftrace_.max_ast_nodes_) {
+    LOG(ERROR, out_) << "node count (" << node_count << ") exceeds the limit ("
+                     << bpftrace_.max_ast_nodes_ << ")";
+    failed_ = true;
+  }
+
   // Keep track of errors thrown ourselves, since the result of
   // parser_->parse() doesn't take scanner errors into account,
   // only parser errors.

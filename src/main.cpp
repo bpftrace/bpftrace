@@ -18,7 +18,6 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
-#include "ast/passes/node_counter.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
@@ -312,7 +311,6 @@ static void parse_env(BPFtrace& bpftrace)
       exit(1);
   }
 
-  bpftrace.max_ast_nodes_ = std::numeric_limits<uint64_t>::max();
   get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
                      [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
 
@@ -353,17 +351,17 @@ static void parse_env(BPFtrace& bpftrace)
 
   err = driver.parse();
   if (err)
-    return {};
+    return std::nullopt;
 
   bpftrace.parse_btf(driver.list_modules());
 
   ast::FieldAnalyser fields(driver.ctx, bpftrace);
   err = fields.analyse();
   if (err)
-    return {};
+    return std::nullopt;
 
   if (TracepointFormatParser::parse(driver.ctx, bpftrace) == false)
-    return {};
+    return std::nullopt;
 
   // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
   // avoid issues in some versions. Since we're including files in the command
@@ -426,7 +424,6 @@ ast::PassManager CreateDynamicPM()
   ast::PassManager pm;
   pm.AddPass(ast::CreateConfigPass());
   pm.AddPass(ast::CreateSemanticPass());
-  pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
 

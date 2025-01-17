@@ -720,6 +720,11 @@ public:
     return raw_ptr;
   }
 
+  unsigned int node_count()
+  {
+    return nodes_.size();
+  }
+
 private:
   std::vector<std::unique_ptr<Node>> nodes_;
 };

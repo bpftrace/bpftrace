@@ -203,7 +203,7 @@ public:
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
-  uint64_t max_ast_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
+  uint64_t max_ast_nodes_ = std::numeric_limits<uint64_t>::max();
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
