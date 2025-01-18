@@ -50,7 +50,7 @@
             });
 
           # Overlay to specify build should use the specific bcc we want
-          bccVersion = "0.30.0";
+          bccVersion = "0.33.0";
           bccOverlay =
             (self: super: {
               bcc = super.bcc.overridePythonAttrs (old: {
