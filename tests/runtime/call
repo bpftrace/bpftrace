@@ -324,43 +324,24 @@ PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit
 ENV BPFTRACE_STACK_MODE=bpftrace
 EXPECT_REGEX ^\s+uprobeFunction1\+[0-9]+$
 AFTER ./testprogs/uprobe_loop
-# This was debugged as far down as std::cout having badbit [0] set after a
-# write. It's really confusing why. Cannot be reproduced locally. While
-# debugging is ongoing disable in CI. There's a good chance we never figure out
-# why. My current best guess is that somewhere in all the layers of shelling
-# out there's a misbehaving pipe that hangs up too early.
-#
-# See https://github.com/bpftrace/bpftrace/issues/3080.
-#
-# Note that CI is a default environment variable set by GHA [1].
-#
-# [0]: https://en.cppreference.com/w/cpp/io/ios_base/iostate
-# [1]: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
-SKIP_IF_ENV_HAS CI=true
 
 NAME ustack_stack_mode_env_perf
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
 EXPECT_REGEX ^\s+[0-9a-f]+ uprobeFunction1\+[0-9]+ \(.*/uprobe_loop\)$
 AFTER ./testprogs/uprobe_loop
-# See https://github.com/bpftrace/bpftrace/issues/3080
-SKIP_IF_ENV_HAS CI=true
 
 NAME ustack_stack_mode_env_raw
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=raw
 EXPECT_REGEX ^[\da-fA-F]+$
 AFTER ./testprogs/uprobe_loop
-# See https://github.com/bpftrace/bpftrace/issues/3080
-SKIP_IF_ENV_HAS CI=true
 
 NAME ustack_stack_mode_env_override
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(raw, 1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
 EXPECT_REGEX ^[\da-fA-F]+$
 AFTER ./testprogs/uprobe_loop
-# See https://github.com/bpftrace/bpftrace/issues/3080
-SKIP_IF_ENV_HAS CI=true
 
 NAME ustack_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
