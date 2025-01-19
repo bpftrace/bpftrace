@@ -59,7 +59,7 @@
                   owner = "iovisor";
                   repo = "bcc";
                   rev = "v${bccVersion}";
-                  sha256 = "sha256-ngGLGfLv2prnjhgaRPf8ea3oyy4129zGodR0Yz1QtCw=";
+                  sha256 = "sha256-6dT3seLuEVQNKWiYGLK1ajXzW7pb62S/GQ0Lp4JdGjc=";
                 };
                 # Seems like these extra tools are needed to build bcc
                 nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.python310Packages.setuptools pkgs.zip ];
