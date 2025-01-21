@@ -45,8 +45,8 @@ if(GO_EXECUTABLE)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       DEPENDS ${testprog_source}
     )
+    list(APPEND testprogtargets testprog_go_${testprog_name})
   endforeach()
-  list(APPEND testprogtargets testprog_go_${testprog_name})
 endif()
 
 find_program(RUSTC_EXECUTABLE rustc)
@@ -59,8 +59,8 @@ if(RUSTC_EXECUTABLE)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       DEPENDS ${testprog_source}
     )
+    list(APPEND testprogtargets testprog_rust_${testprog_name})
   endforeach()
-  list(APPEND testprogtargets testprog_rust_${testprog_name})
 endif()
 
 add_custom_target(testprogs DEPENDS ${testprogtargets})
