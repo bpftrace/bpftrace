@@ -220,10 +220,14 @@ TEST(utils, get_cgroup_hierarchy_roots)
 {
   auto roots = get_cgroup_hierarchy_roots();
 
-  // Check that each entry is a proper cgroup filesystem
-  for (auto root : roots) {
-    EXPECT_TRUE(root.first == "cgroup" || root.first == "cgroup2");
-    std::filesystem::path root_path(root.second);
+  // Check that each entry is a proper cgroup filesystem. The first set are
+  // cgroupv1 results, and the second set are cgroupv2 results.
+  for (auto root : roots[0]) {
+    std::filesystem::path root_path(root);
+    EXPECT_TRUE(std::filesystem::exists(root_path / "cgroup.procs"));
+  }
+  for (auto root : roots[1]) {
+    std::filesystem::path root_path(root);
     EXPECT_TRUE(std::filesystem::exists(root_path / "cgroup.procs"));
   }
 }

@@ -39,15 +39,16 @@ private:
   std::ostream &out_;
   std::ostringstream err_;
 
-  void set_uint64_config(AssignConfigVarStatement &assignment,
-                         ConfigKeyInt key);
-  void set_bool_config(AssignConfigVarStatement &assignment, ConfigKeyBool key);
-  void set_string_config(AssignConfigVarStatement &assignment,
-                         ConfigKeyString key);
-  void set_stack_mode_config(AssignConfigVarStatement &assignment);
-  void set_user_symbol_cache_type_config(AssignConfigVarStatement &assignment);
-  void set_symbol_source_config(AssignConfigVarStatement &assignment);
-  void set_missing_probes_config(AssignConfigVarStatement &assignment);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyInt key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyBool key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyString key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeyUserSymbolCacheType key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeySymbolSource key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyStackMode key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeyMissingProbes key);
 
   void log_type_error(SizedType &type,
                       Type expected_type,

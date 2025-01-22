@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -711,18 +712,22 @@ std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
   return "";
 }
 
-std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots()
+std::array<std::vector<std::string>, 2> get_cgroup_hierarchy_roots()
 {
   // Get all cgroup mounts and their type (cgroup/cgroup2) from /proc/mounts
   std::ifstream mounts_file("/proc/mounts");
-  std::vector<std::pair<std::string, std::string>> result;
+  std::array<std::vector<std::string>, 2> result;
 
   const std::regex cgroup_mount_regex("(cgroup[2]?) (\\S*)[ ]?.*");
   for (std::string line; std::getline(mounts_file, line);) {
     std::smatch match;
     if (std::regex_match(line, match, cgroup_mount_regex)) {
       if (std::filesystem::is_directory(match[2].str())) {
-        result.push_back({ match[1].str(), match[2].str() });
+        if (match[1].str() == "cgroup") {
+          result[0].push_back(match[2].str());
+        } else if (match[1].str() == "cgroup2") {
+          result[1].push_back(match[2].str());
+        }
       }
     }
   }
@@ -735,55 +740,49 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
     uint64_t cgroupid,
     std::string filter)
 {
-  // TODO: Rewrite using std::views when C++20 support becomes common
   auto roots = get_cgroup_hierarchy_roots();
 
   // Replace cgroup version with cgroup mount point directory name for cgroupv1
   // roots and "unified" for cgroupv2 roots
-  for (auto &root : roots) {
-    if (root.first == "cgroup") {
-      root = { std::filesystem::path(root.second).filename().string(),
-               root.second };
-    } else if (root.first == "cgroup2") {
-      root = { "unified", root.second };
-    }
-  }
+  auto types_v1 = roots[0] |
+                  std::views::transform(
+                      [&](auto &root) -> std::pair<std::string, std::string> {
+                        return {
+                          std::filesystem::path(root).filename().string(), root
+                        };
+                      });
+  auto types_v2 = roots[1] |
+                  std::views::transform(
+                      [&](auto &root) -> std::pair<std::string, std::string> {
+                        return { "unified", root };
+                      });
 
   // Filter roots
   bool start_wildcard, end_wildcard;
   auto tokens = get_wildcard_tokens(filter, start_wildcard, end_wildcard);
-  std::vector<std::pair<std::string, std::string>> filtered_roots;
-  std::copy_if(roots.begin(),
-               roots.end(),
-               std::back_inserter(filtered_roots),
-               [&tokens, &start_wildcard, &end_wildcard](auto &pair) {
-                 return wildcard_match(
-                     pair.first, tokens, start_wildcard, end_wildcard);
-               });
+  auto filter_func = std::views::filter([&](auto pair) -> bool {
+    return wildcard_match(pair.first, tokens, start_wildcard, end_wildcard);
+  });
+  auto filtered_v1 = types_v1 | filter_func;
+  auto filtered_v2 = types_v2 | filter_func;
 
   // Get cgroup path for each root
-  std::vector<std::pair<std::string, std::string>> result;
-  std::transform(filtered_roots.begin(),
-                 filtered_roots.end(),
-                 std::back_inserter(result),
-                 [&cgroupid](auto &pair) {
-                   return std::pair<std::string, std::string>{
-                     pair.first,
-                     get_cgroup_path_in_hierarchy(cgroupid, pair.second)
-                   };
-                 });
+  auto get_path_func = std::views::transform(
+      [&](auto pair) -> std::pair<std::string, std::string> {
+        return { pair.first,
+                 get_cgroup_path_in_hierarchy(cgroupid, pair.second) };
+      });
+  auto paths_v1 = filtered_v1 | get_path_func;
+  auto paths_v2 = filtered_v2 | get_path_func;
 
-  // Sort paths lexically by name (with the exception of unified, which always
-  // comes first)
-  std::sort(result.begin(), result.end(), [](auto &pair1, auto &pair2) {
-    if (pair2.first == "unified")
-      return false;
-    if (pair1.first == "unified")
-      return true;
-    return pair1.first < pair2.first;
-  });
-
-  return result;
+  // Return paths with v2 first, then v2 sorted lexically by name.
+  std::vector<std::pair<std::string, std::string>> sorted(paths_v2.begin(),
+                                                          paths_v2.end());
+  std::vector<std::pair<std::string, std::string>> sorted_v1(paths_v1.begin(),
+                                                             paths_v1.end());
+  std::sort(sorted_v1.begin(), sorted_v1.end());
+  sorted.insert(sorted.end(), sorted_v1.begin(), sorted_v1.end());
+  return sorted;
 }
 
 bool is_module_loaded(const std::string &module)

@@ -22,11 +22,10 @@ public:
   constexpr cstring_view(const char *str) noexcept : std::string_view{ str }
   {
   }
-  // This ctor can be made constexpt in C++20:
-  cstring_view(const std::string &str) noexcept : std::string_view{ str }
+  constexpr cstring_view(const std::string &str) noexcept
+      : std::string_view{ str }
   {
   }
-
   constexpr const char *c_str() const noexcept
   {
     return data();
