@@ -362,7 +362,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 NAME tracepoint_order
 RUN {{BPFTRACE}} runtime/scripts/tracepoint_order.bt
 EXPECT first second
-AFTER ./testprogs/syscall nanosleep 1e8; ./testprogs/syscall nanosleep 1e8
+AFTER ./testprogs/syscall nanosleep 100000001;
 
 NAME tracepoint_expansion
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit\n"); }' -c "./testprogs/syscall nanosleep 1e8"
