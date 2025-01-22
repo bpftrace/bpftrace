@@ -205,7 +205,7 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const KConfig &kconfig);
 std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
                                          std::string base_path);
-std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots();
+std::array<std::vector<std::string>, 2> get_cgroup_hierarchy_roots();
 std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
     uint64_t cgroupid,
     std::string filter);

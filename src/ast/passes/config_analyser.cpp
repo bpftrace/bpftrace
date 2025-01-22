@@ -10,14 +10,6 @@
 
 namespace bpftrace::ast {
 
-template <class... Ts>
-struct overloaded : Ts... {
-  using Ts::operator()...;
-};
-// explicit deduction guide (not needed as of C++20)
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 void ConfigAnalyser::log_type_error(SizedType &type,
                                     Type expected_type,
                                     AssignConfigVarStatement &assignment)
@@ -27,8 +19,8 @@ void ConfigAnalyser::log_type_error(SizedType &type,
       << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
 }
 
-void ConfigAnalyser::set_uint64_config(AssignConfigVarStatement &assignment,
-                                       ConfigKeyInt key)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                ConfigKeyInt key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsIntegerTy()) {
@@ -39,8 +31,8 @@ void ConfigAnalyser::set_uint64_config(AssignConfigVarStatement &assignment,
   config_setter_.set(key, dynamic_cast<Integer *>(assignment.expr)->n);
 }
 
-void ConfigAnalyser::set_bool_config(AssignConfigVarStatement &assignment,
-                                     ConfigKeyBool key)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                ConfigKeyBool key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsIntegerTy()) {
@@ -59,8 +51,8 @@ void ConfigAnalyser::set_bool_config(AssignConfigVarStatement &assignment,
   }
 }
 
-void ConfigAnalyser::set_string_config(AssignConfigVarStatement &assignment,
-                                       ConfigKeyString key)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                [[maybe_unused]] ConfigKeyString key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStringTy()) {
@@ -71,7 +63,8 @@ void ConfigAnalyser::set_string_config(AssignConfigVarStatement &assignment,
   config_setter_.set(key, dynamic_cast<String *>(assignment.expr)->str);
 }
 
-void ConfigAnalyser::set_stack_mode_config(AssignConfigVarStatement &assignment)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                [[maybe_unused]] ConfigKeyStackMode)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStackModeTy()) {
@@ -82,8 +75,9 @@ void ConfigAnalyser::set_stack_mode_config(AssignConfigVarStatement &assignment)
   config_setter_.set(assignTy.stack_type.mode);
 }
 
-void ConfigAnalyser::set_user_symbol_cache_type_config(
-    AssignConfigVarStatement &assignment)
+void ConfigAnalyser::set_config(
+    AssignConfigVarStatement &assignment,
+    [[maybe_unused]] ConfigKeyUserSymbolCacheType key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStringTy()) {
@@ -96,8 +90,8 @@ void ConfigAnalyser::set_user_symbol_cache_type_config(
     LOG(ERROR, assignment.expr->loc, err_);
 }
 
-void ConfigAnalyser::set_symbol_source_config(
-    AssignConfigVarStatement &assignment)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                [[maybe_unused]] ConfigKeySymbolSource key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStringTy()) {
@@ -110,8 +104,8 @@ void ConfigAnalyser::set_symbol_source_config(
     LOG(ERROR, assignment.expr->loc, err_);
 }
 
-void ConfigAnalyser::set_missing_probes_config(
-    AssignConfigVarStatement &assignment)
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                [[maybe_unused]] ConfigKeyMissingProbes key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStringTy()) {
@@ -168,24 +162,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 
   auto configKey = maybeConfigKey.value();
 
-  std::visit(
-      overloaded{
-          [&, this](ConfigKeyBool key) { set_bool_config(assignment, key); },
-          [&, this](ConfigKeyInt key) { set_uint64_config(assignment, key); },
-          [&, this](ConfigKeyString key) {
-            set_string_config(assignment, key);
-          },
-          [&, this](ConfigKeyStackMode) { set_stack_mode_config(assignment); },
-          [&, this](ConfigKeyUserSymbolCacheType) {
-            set_user_symbol_cache_type_config(assignment);
-          },
-          [&, this](ConfigKeySymbolSource) {
-            set_symbol_source_config(assignment);
-          },
-          [&, this](ConfigKeyMissingProbes) {
-            set_missing_probes_config(assignment);
-          } },
-      configKey);
+  std::visit([&](auto key) { set_config(assignment, key); }, configKey);
 }
 
 bool ConfigAnalyser::analyse()
