@@ -1,25 +1,18 @@
-tracepoint:syscalls:sys_exit_nanosleep
+// Check tv_nsec to make sure these are the nanosleeps we issued
+
+tracepoint:syscalls:sys_enter_nanosleep
 {
-  @probe1_ready = 1;
-  if (@go == 1) {
+  $tv_nsecs = (*args.rqtp).tv_nsec;
+  if ($tv_nsecs == 100000001) {
     printf("first");
   }
 }
 
-tracepoint:syscalls:sys_exit_nanosleep
+tracepoint:syscalls:sys_enter_nanosleep
 {
-  @probe2_ready = 1;
-  if (@go == 1) {
+  $tv_nsecs = (*args.rqtp).tv_nsec;
+  if ($tv_nsecs == 100000001) {
     printf(" second\n");
     exit();
-  }
-}
-
-tracepoint:syscalls:sys_exit_nanosleep
-{
-  // Make sure all probes are attached before letting them print anything
-  // so that the output we get is all from the same event.
-  if (@probe1_ready == 1 && @probe2_ready == 1) {
-    @go = 1;
   }
 }
