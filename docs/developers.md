@@ -85,6 +85,32 @@ list of known such tests:
 What usually helps, is restarting the CI. This is simple on your own fork but
 requires one of the maintainers for pull requests.
 
+### Virtual machine tests (vmtests)
+
+In CI we run a subset of runtime tests under a controlled kernel by taking
+advantage of nested virtualization on CI runners. For these tests, we use
+[vmtest](https://github.com/danobi/vmtest) to manage the virtual machine.
+
+The instructions in the above "Debugging CI failures" section also work
+for the vmtest-ed runtime tests. But if you want to manually try something
+quick and dirty in a CI kernel, you can do something like the following:
+
+```bash
+$ nix develop
+
+(nix:nix-shell-env) $ vmtest -k $(nix build --print-out-paths .#kernel-6_12)/bzImage -- ./build/src/bpftrace -V
+=> bzImage
+===> Booting
+===> Setting up VM
+===> Running command
+bpftrace v0.21.0-344-g3acb
+```
+
+While we'll defer to `vmtest` documentation for full details, one neat fact
+worth pointing out is that `vmtest` will map the current running userspace into
+the VM. This means you can run binaries built on your host from inside the
+guest, eg. your development build of bpftrace.
+
 ## Coding guidelines
 
 This is not about the formatting of the source code (we have `clang-format`
