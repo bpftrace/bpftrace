@@ -21,6 +21,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: DeterminateSystems/nix-installer-action@v4
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
       - name: Run clang-tidy
         run: ./scripts/clang_tidy.sh
