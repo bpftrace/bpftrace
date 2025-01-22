@@ -107,7 +107,7 @@ AFTER ./testprogs/syscall read
 NAME kprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kprobe_order.bt
 EXPECT first second
-AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
+AFTER /bin/bash -c "./testprogs/syscall nanosleep 1001";
 
 NAME kprobe_offset
 PROG kprobe:vfs_read+0 { printf("SUCCESS %d\n", pid); exit(); }
@@ -243,7 +243,7 @@ AFTER ./testprogs/syscall read
 NAME kretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt
 EXPECT first second
-AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
+AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000";
 
 NAME kretprobe_wildcard
 PROG kretprobe:vmlinux:vfs_rea* { printf("SUCCESS %d\n", pid); exit(); }
@@ -310,7 +310,7 @@ REQUIRES_FEATURE libpath_resolv
 NAME uprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uprobe_order.bt
 EXPECT first second
-AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
+AFTER /bin/bash -c "echo lala";
 
 NAME uprobe_zero_size
 PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
@@ -347,7 +347,7 @@ AFTER /bin/bash -c "echo lala"
 NAME uretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uretprobe_order.bt
 EXPECT first second
-AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
+AFTER /bin/bash -c "echo lala";
 
 NAME tracepoint
 PROG tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", gid); exit(); }

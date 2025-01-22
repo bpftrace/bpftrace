@@ -163,8 +163,8 @@ TIMEOUT 2
 NAME it lists probes in a given file
 RUN {{BPFTRACE}} -l runtime/scripts/interval_order.bt
 EXPECT interval:ms:
-EXPECT interval:ms:
-EXPECT interval:ms:
+EXPECT interval:s:
+EXPECT interval:us:
 
 NAME warning on non existent file
 RUN {{BPFTRACE}} -l non_existent_file.bt
