@@ -1073,13 +1073,9 @@ Builtins are special variables built into the language.
 Unlike scratch and map variables they don't need a `$` or `@` as prefix (except for the positional parameters).
 The 'Kernel' column indicates the minimum kernel version required and the 'BPF Helper' column indicates the raw BPF helper function used for this builtin.
 
-[%header,cols="~,~,~,~,~"]
+[%header]
 |===
-| Variable
-| Type
-| Kernel
-| BPF Helper
-| Description
+| Variable | Type | Kernel | BPF Helper | Description
 
 | <<builtins-positional-parameters, `$1`, `$2`, `...$n`>>
 | int64
@@ -1295,13 +1291,11 @@ Tracing block I/O sizes > 0 bytes
 
 == Functions
 
-[%header,cols="~,~,~"]
+[%header]
 |===
-| Function Name
-| Description
-| Sync/Async/Compile Time
+| Function Name | Description | Sync/Async/Compile Time
 
-| <<functions-bswap, `bswap(uint[8\|\16\|32\|64] n)`>>
+| <<functions-bswap, `bswap(uint[8\|16\|32\|64] n)`>>
 | Reverse byte order
 | Sync
 
@@ -2009,11 +2003,9 @@ Values are copied and passed by value.
 bpftrace supports all the typical format specifiers like `%llx` and `%hhu`.
 The non-standard ones can be found in the table below:
 
-[%header,cols="~,~,~"]
+[%header]
 |===
-| Specifier
-| Type
-| Description
+| Specifier | Type | Description
 
 | r
 | buffer
@@ -2231,10 +2223,9 @@ interval:s:1 {
 
 bpftrace also supports the following format string extensions:
 
-[%header,cols="~,~"]
+[%header]
 |===
-| Specifier
-| Description
+| Specifier | Description
 
 | `%f`
 | Microsecond as a decimal number, zero-padded on the left
@@ -2487,11 +2478,9 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 
 See <<Advanced Topics>> for more information on <<Map Printing>>.
 
-[%header,cols="~,~,~"]
+[%header]
 |===
-| Function Name
-| Description
-| Sync/async
+| Function Name | Description | Sync/async
 
 | <<map-functions-avg, `avg(int64 n)`>>
 | Calculate the running average of `n` between consecutive calls.
