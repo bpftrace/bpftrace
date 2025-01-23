@@ -67,9 +67,6 @@ BPFtrace::~BPFtrace()
     if (pair.second)
       bcc_free_symcache(pair.second, pair.first);
   }
-
-  if (ksyms_)
-    bcc_free_symcache(ksyms_, -1);
 }
 
 Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
@@ -1664,21 +1661,7 @@ std::string BPFtrace::resolve_buf(const char *buf, size_t size)
 
 std::string BPFtrace::resolve_ksym(uint64_t addr, bool show_offset)
 {
-  struct bcc_symbol ksym;
-  std::ostringstream symbol;
-
-  if (!ksyms_)
-    ksyms_ = bcc_symcache_new(-1, nullptr);
-
-  if (bcc_symcache_resolve(ksyms_, addr, &ksym) == 0) {
-    symbol << ksym.name;
-    if (show_offset)
-      symbol << "+" << ksym.offset;
-  } else {
-    symbol << reinterpret_cast<void *>(addr);
-  }
-
-  return symbol.str();
+  return ksyms_.resolve(addr, show_offset);
 }
 
 uint64_t BPFtrace::resolve_kname(const std::string &name) const
