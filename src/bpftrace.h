@@ -24,6 +24,7 @@
 #include "config.h"
 #include "dwarf_parser.h"
 #include "functions.h"
+#include "ksyms.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -234,7 +235,7 @@ public:
   Config config_;
 
 private:
-  void *ksyms_{ nullptr };
+  Ksyms ksyms_;
   // note: exe_sym_ is used when layout is same for all instances of program
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
   std::map<int, void *> pid_sym_;                         // pid -> cache
