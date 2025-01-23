@@ -57,16 +57,6 @@ volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 BPFtrace::~BPFtrace()
 {
   close_pcaps();
-
-  for (const auto &pair : exe_sym_) {
-    if (pair.second.second)
-      bcc_free_symcache(pair.second.second, pair.second.first);
-  }
-
-  for (const auto &pair : pid_sym_) {
-    if (pair.second)
-      bcc_free_symcache(pair.second, pair.first);
-  }
 }
 
 Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
@@ -212,23 +202,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
   if (resources.probes_using_usym.find(&p) !=
           resources.probes_using_usym.end() &&
       is_exe(ap.target)) {
-    auto user_symbol_cache_type = config_.get(
-        ConfigKeyUserSymbolCacheType::default_);
-    // preload symbol table for executable to make it available even if the
-    // binary is not present at symbol resolution time
-    // note: this only makes sense with ASLR disabled, since with ASLR offsets
-    // might be different
-    if (user_symbol_cache_type == UserSymbolCacheType::per_program &&
-        symbol_table_cache_.find(ap.target) == symbol_table_cache_.end())
-      symbol_table_cache_[ap.target] = get_symbol_table_for_elf(ap.target);
-
-    if (user_symbol_cache_type == UserSymbolCacheType::per_pid)
-      // preload symbol tables from running processes
-      // this allows symbol resolution for processes that are running at probe
-      // attach time, but not at symbol resolution time, even with ASLR
-      // enabled, since BCC symcache records the offsets
-      for (int pid : get_pids_for_program(ap.target))
-        pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
+    usyms_.cache(ap.target);
   }
 
   return 0;
@@ -1795,12 +1769,6 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
                                    bool show_offset,
                                    bool show_module)
 {
-  struct bcc_symbol usym;
-  std::ostringstream symbol;
-  void *psyms = nullptr;
-  auto user_symbol_cache_type = config_.get(
-      ConfigKeyUserSymbolCacheType::default_);
-
   if (resolve_user_symbols_) {
     std::string pid_exe = get_pid_exe(pid);
     if (pid_exe.empty() && probe_id != -1) {
@@ -1819,72 +1787,14 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
         pid_exe = probe_full.substr(start, end - start);
       }
     }
-    if (user_symbol_cache_type == UserSymbolCacheType::per_program) {
-      if (!pid_exe.empty()) {
-        // try to resolve symbol directly from program file
-        // this might work when the process does not exist anymore, but cannot
-        // resolve all symbols, e.g. those in a dynamically linked library
-        std::map<uintptr_t, elf_symbol, std::greater<>> &symbol_table =
-            symbol_table_cache_.find(pid_exe) != symbol_table_cache_.end()
-                ? symbol_table_cache_[pid_exe]
-                : (symbol_table_cache_[pid_exe] = get_symbol_table_for_elf(
-                       pid_exe));
-        auto sym = symbol_table.lower_bound(addr);
-        // address has to be either the start of the symbol (for symbols of
-        // length 0) or in [start, end)
-        if (sym != symbol_table.end() &&
-            (addr == sym->second.start ||
-             (addr >= sym->second.start && addr < sym->second.end))) {
-          symbol << sym->second.name;
-          if (show_offset)
-            symbol << "+" << addr - sym->second.start;
-          if (show_module)
-            symbol << " (" << pid_exe << ")";
-          return symbol.str();
-        }
-      }
-      if (exe_sym_.find(pid_exe) == exe_sym_.end()) {
-        // not cached, create new ProcSyms cache
-        psyms = bcc_symcache_new(pid, &get_symbol_opts());
-        exe_sym_[pid_exe] = std::make_pair(pid, psyms);
-      } else {
-        psyms = exe_sym_[pid_exe].second;
-      }
-    } else if (user_symbol_cache_type == UserSymbolCacheType::per_pid) {
-      // cache user symbols per pid
-      if (pid_sym_.find(pid) == pid_sym_.end()) {
-        // not cached, create new ProcSyms cache
-        psyms = bcc_symcache_new(pid, &get_symbol_opts());
-        pid_sym_[pid] = psyms;
-      } else {
-        psyms = pid_sym_[pid];
-      }
-    } else {
-      // no user symbol caching, create new bcc cache
-      psyms = bcc_symcache_new(pid, &get_symbol_opts());
-    }
-  }
-
-  if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0) {
-    if (config_.get(ConfigKeyBool::cpp_demangle))
-      symbol << usym.demangle_name;
-    else
-      symbol << usym.name;
-    if (show_offset)
-      symbol << "+" << usym.offset;
-    if (show_module)
-      symbol << " (" << usym.module << ")";
+    return usyms_.resolve(addr, pid, pid_exe, show_offset, show_module);
   } else {
+    std::ostringstream symbol;
     symbol << reinterpret_cast<void *>(addr);
     if (show_module)
       symbol << " ([unknown])";
+    return symbol.str();
   }
-
-  if (resolve_user_symbols_ &&
-      user_symbol_cache_type == UserSymbolCacheType::none)
-    bcc_free_symcache(psyms, pid);
-
-  return symbol.str();
 }
 
 std::string BPFtrace::resolve_probe(uint64_t probe_id) const
@@ -2135,18 +2045,6 @@ void BPFtrace::parse_btf(const std::set<std::string> &modules)
 bool BPFtrace::has_btf_data() const
 {
   return btf_ && btf_->has_data();
-}
-
-struct bcc_symbol_option &BPFtrace::get_symbol_opts()
-{
-  static struct bcc_symbol_option symopts = {
-    .use_debug_file = 1,
-    .check_debug_file_crc = 1,
-    .lazy_symbolize = config_.get(ConfigKeyBool::lazy_symbolication) ? 1 : 0,
-    .use_symbol_type = BCC_SYM_ALL_TYPES,
-  };
-
-  return symopts;
 }
 
 /*

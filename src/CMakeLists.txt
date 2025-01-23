@@ -49,6 +49,7 @@ add_library(runtime STATIC
   utils.cpp
   pcap_writer.cpp
   ksyms.cpp
+  usyms.cpp
   ${BFD_DISASM_SRC}
 )
 # Ensure flex+bison outputs are built first

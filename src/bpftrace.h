@@ -33,6 +33,7 @@
 #include "required_resources.h"
 #include "struct.h"
 #include "types.h"
+#include "usyms.h"
 #include "utils.h"
 
 #include <bcc/bcc_syms.h>
@@ -99,7 +100,8 @@ public:
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size()),
         max_cpu_id_(get_max_cpu_id()),
-        config_(config)
+        config_(config),
+        usyms_(config_)
   {
   }
   virtual ~BPFtrace();
@@ -236,11 +238,7 @@ public:
 
 private:
   Ksyms ksyms_;
-  // note: exe_sym_ is used when layout is same for all instances of program
-  std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
-  std::map<int, void *> pid_sym_;                         // pid -> cache
-  std::map<std::string, std::map<uintptr_t, elf_symbol, std::greater<>>>
-      symbol_table_cache_;
+  Usyms usyms_;
   std::vector<std::string> params_;
 
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
