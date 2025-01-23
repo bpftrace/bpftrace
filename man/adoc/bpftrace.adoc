@@ -1293,149 +1293,149 @@ Tracing block I/O sizes > 0 bytes
 
 [%header]
 |===
-| Function Name | Description | Sync/Async/Compile Time
+| Name | Description | Sync/Async/Compile Time
 
-| <<functions-bswap, `bswap(uint[8\|16\|32\|64] n)`>>
+| <<functions-bswap, `bswap`>>
 | Reverse byte order
 | Sync
 
-| <<functions-buf, `buf(void *d [, int length])`>>
+| <<functions-buf, `buf`>>
 | Returns a hex-formatted string of the data pointed to by d
 | Sync
 
-| <<functions-cat, `cat(char *filename)`>>
+| <<functions-cat, `cat`>>
 | Print file content
 | Async
 
-| <<functions-cgroupid, `cgroupid(char *path)`>>
+| <<functions-cgroupid, `cgroupid`>>
 | Resolve cgroup ID
 | Compile Time
 
-| <<functions-cgroup_path, `cgroup_path(int cgroupid, string filter)`>>
+| <<functions-cgroup_path, `cgroup_path`>>
 | Convert cgroup id to cgroup path
 | Sync
 
-| <<functions-exit, `exit([int code])`>>
+| <<functions-exit, `exit`>>
 | Quit bpftrace with an optional exit code
 | Async
 
-| <<functions-join, `join(char *arr[] [, char *delim])`>>
+| <<functions-join, `join`>>
 | Print the array
 | Async
 
-| <<functions-kaddr, `kaddr(char *name)`>>
+| <<functions-kaddr, `kaddr`>>
 | Resolve kernel symbol name
 | Compile Time
 
-| <<functions-kptr, `kptr(void *p)`>>
+| <<functions-kptr, `kptr`>>
 | Annotate as kernelspace pointer
 | Sync
 
-| <<functions-kstack, `kstack([StackMode mode, ][int level])`>>
+| <<functions-kstack, `kstack`>>
 | Kernel stack trace
 | Sync
 
-| <<functions-ksym, `ksym(void *p)`>>
+| <<functions-ksym, `ksym`>>
 | Resolve kernel address
 | Async
 
-| <<functions-macaddr, `macaddr(char[6] addr)`>>
+| <<functions-macaddr, `macaddr`>>
 | Convert MAC address data
 | Sync
 
-| <<functions-nsecs, `nsecs([TimestampMode mode])`>>
+| <<functions-nsecs, `nsecs`>>
 | Timestamps and Time Deltas
 | Sync
 
-| <<functions-ntop, `ntop([int af, ]int\|char[4\|16] addr)`>>
+| <<functions-ntop, `ntop`>>
 | Convert IP address data to text
 | Sync
 
-| <<functions-offsetof, `offsetof(struct, element)`>>
+| <<functions-offsetof, `offsetof`>>
 | Offset of element in structure
 | Compile Time
 
-| <<functions-override, `override(u64 rc)`>>
+| <<functions-override, `override`>>
 | Override return value
 | Sync
 
-| <<functions-path, `path(struct path *path [, int32 size])`>>
+| <<functions-path, `path`>>
 | Return full path
 | Sync
 
-| <<functions-percpu-kaddr, `percpu_kaddr(const string name [, int cpu])`>>
+| <<functions-percpu-kaddr, `percpu_kaddr`>>
 | Resolve percpu kernel symbol name
 | Sync
 
-| <<functions-print, `print(...)`>>
+| <<functions-print, `print`>>
 | Print a non-map value with default formatting
 | Async
 
-| <<functions-printf, `printf(char *fmt, ...)`>>
+| <<functions-printf, `printf`>>
 | Print formatted
 | Async
 
-| <<functions-pton, `pton(const string *addr)`>>
+| <<functions-pton, `pton`>>
 | Convert text IP address to byte array
 | Compile Time
 
-| <<functions-reg, `reg(char *name)`>>
+| <<functions-reg, `reg`>>
 | Returns the value stored in the named register
 | Sync
 
-| <<functions-signal, `signal(char[] signal \| u32 signal)`>>
+| <<functions-signal, `signal`>>
 | Send a signal to the current process
 | Sync
 
-| <<functions-sizeof, `sizeof(...)`>>
+| <<functions-sizeof, `sizeof`>>
 | Return size of a type or expression
 | Sync
 
-| <<functions-skboutput, `skboutput(const string p, struct sk_buff *s, ...)`>>
+| <<functions-skboutput, `skboutput`>>
 | Write skb 's data section into a PCAP file
 | Async
 
-| <<functions-str, `str(char *s [, int length])`>>
+| <<functions-str, `str`>>
 | Returns the string pointed to by s
 | Sync
 
-| <<functions-strcontains, `strcontains(const char *haystack, const char *needle)`>>
+| <<functions-strcontains, `strcontains`>>
 | Compares whether the string haystack contains the string needle.
 | Sync
 
-| <<functions-strerror, `strerror(uint64 error)`>>
+| <<functions-strerror, `strerror`>>
 | Get error message for errno code
 | Sync
 
-| <<functions-strftime, `strftime(char *format, int nsecs)`>>
+| <<functions-strftime, `strftime`>>
 | Return a formatted timestamp
 | Async
 
-| <<functions-strncmp, `strncmp(char *s1, char *s2, int length)`>>
+| <<functions-strncmp, `strncmp`>>
 | Compare first n characters of two strings
 | Sync
 
-| <<functions-system, `system(char *fmt)`>>
+| <<functions-system, `system`>>
 | Execute shell command
 | Async
 
-| <<functions-time, `time(char *fmt)`>>
+| <<functions-time, `time`>>
 | Print formatted time
 | Async
 
-| <<functions-uaddr, `uaddr(char *name)`>>
+| <<functions-uaddr, `uaddr`>>
 | Resolve user-level symbol name
 | Compile Time
 
-| <<functions-uptr, `uptr(void *p)`>>
+| <<functions-uptr, `uptr`>>
 | Annotate as userspace pointer
 | Sync
 
-| <<functions-ustack, `ustack([StackMode mode, ][int level])`>>
+| <<functions-ustack, `ustack`>>
 | User stack trace
 | Sync
 
-| <<functions-usym, `usym(void *p)`>>
+| <<functions-usym, `usym`>>
 | Resolve user space address
 | Async
 
@@ -2480,57 +2480,57 @@ See <<Advanced Topics>> for more information on <<Map Printing>>.
 
 [%header]
 |===
-| Function Name | Description | Sync/async
+| Name | Description | Sync/async
 
-| <<map-functions-avg, `avg(int64 n)`>>
+| <<map-functions-avg, `avg`>>
 | Calculate the running average of `n` between consecutive calls.
 | Sync
 
-| <<map-functions-clear, `clear(map m)`>>
+| <<map-functions-clear, `clear`>>
 | Clear all keys/values from a map.
 | Async
 
-| <<map-functions-count, `count()`>>
+| <<map-functions-count, `count`>>
 | Count how often this function is called.
 | Sync
 
-| <<map-functions-delete, `delete(map m, mapkey k)`>>
+| <<map-functions-delete, `delete`>>
 | Delete a single key from a map.
 | Sync
 
-| <<map-functions-has_key, `has_key(map m, mapkey k)`>>
+| <<map-functions-has_key, `has_key`>>
 | Return true (1) if the key exists in this map. Otherwise return false (0).
 | Sync
 
-| <<map-functions-hist, `hist(int64 n[, int k])`>>
+| <<map-functions-hist, `hist`>>
 | Create a log2 histogram of n using buckets per power of 2, 0 <= k <= 5, defaults to 0.
 | Sync
 
-| <<map-functions-len, `len(map m)`>>
+| <<map-functions-len, `len`>>
 | Return the number of elements in a map.
 | Sync
 
-| <<map-functions-lhist, `lhist(int64 n, int64 min, int64 max, int64 step)`>>
+| <<map-functions-lhist, `lhist`>>
 | Create a linear histogram of n. lhist creates M ((max - min) / step) buckets in the range [min,max) where each bucket is step in size.
 | Sync
 
-| <<map-functions-max, `max(int64 n)`>>
+| <<map-functions-max, `max`>>
 | Update the map with n if n is bigger than the current value held.
 | Sync
 
-| <<map-functions-min, `min(int64 n)`>>
+| <<map-functions-min, `min`>>
 | Update the map with n if n is smaller than the current value held.
 | Sync
 
-| <<map-functions-stats, `stats(int64 n)`>>
+| <<map-functions-stats, `stats`>>
 | Combines the count, avg and sum calls into one.
 | Sync
 
-| <<map-functions-sum, `sum(int64 n)`>>
+| <<map-functions-sum, `sum`>>
 | Calculate the sum of all n passed.
 | Sync
 
-| <<map-functions-zero, `zero(map m)`>>
+| <<map-functions-zero, `zero`>>
 | Set all values for all keys to zero.
 | Async
 
