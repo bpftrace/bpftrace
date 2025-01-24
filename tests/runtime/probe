@@ -213,7 +213,7 @@ WILL_FAIL
 NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT cannot attach kprobe, Invalid argument
-ARCH aarch64
+ARCH aarch64|ppc64le|ppc64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
