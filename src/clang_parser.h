@@ -5,8 +5,6 @@
 #include "bpftrace.h"
 #include <clang-c/Index.h>
 
-#define CLANG_WORKAROUNDS_H "clang_workarounds.h"
-
 namespace bpftrace {
 
 namespace ast {

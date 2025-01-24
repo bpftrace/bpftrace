@@ -384,8 +384,6 @@ static void parse_env(BPFtrace& bpftrace)
     if (found_kernel_headers)
       extra_flags = get_kernel_cflags(
           utsname.machine, ksrc, kobj, bpftrace.kconfig);
-    extra_flags.push_back("-include");
-    extra_flags.push_back("/bpftrace/include/" CLANG_WORKAROUNDS_H);
 
     for (auto dir : include_dirs) {
       extra_flags.push_back("-I");

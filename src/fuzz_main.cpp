@@ -124,8 +124,6 @@ int fuzz_main(const char* data, size_t sz)
       extra_flags = get_kernel_cflags(
           utsname.machine, ksrc, kobj, bpftrace.kconfig);
   }
-  extra_flags.push_back("-include");
-  extra_flags.push_back(CLANG_WORKAROUNDS_H);
   if (!clang.parse(driver.root.get(), bpftrace, extra_flags))
     return 1;
   err = driver.parse();
