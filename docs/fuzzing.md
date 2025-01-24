@@ -1,71 +1,63 @@
 # Fuzzing bpftrace
 
-This document is for bpftrace developers.
+This document is for `bpftrace` developers.
 
 ## Introduction
 
-Fuzzing is a method to find bugs in a program automatically. In fuzzing, a fuzzer generates the program
-input and give it and observes whether the program crashes or not. The most commonly used fuzzing method
-is called gray box fuzzing, which uses coverage (which parts the program executes) information to
+Fuzzing is a method to find bugs in a program automatically. In fuzzing, a
+fuzzer generates the program input and give it and observes whether the program
+crashes or not. The most commonly used fuzzing method is called gray box
+fuzzing, which uses coverage (which parts the program executes) information to
 generate input efficiently.
 
-Fuzzing can be divided into two types according to the target of fuzzing: one that targets the entire
-program for fuzzing, such as AFL, and the other that targets a specific function, such as libFuzzer. In
-the former case, a fuzzer generates and supplies the program's input, so you don't need to modify the
-program. On the other hand, it is not always efficient for large programs, though, in reality, AFL founds
-a lot of bugs in many programs. The latter is efficient for a function to be fuzzed because a fuzzer
-directly targets the function, but we need to write some glue code to connect a fuzzer and the function.
+Fuzzing can be divided into two types according to the target of fuzzing: one
+that targets the entire program for fuzzing, such as AFL, and the other that
+targets a specific function, such as libFuzzer. In the former case, a fuzzer
+generates and supplies the program's input, so you don't need to modify the
+program. This is not always efficient for large programs, but still can find
+many bugs. The latter is efficient for a function to be fuzzed because a fuzzer
+directly targets the function, but we need to write some glue code to connect a
+fuzzer and the function.
 
-## bpftrace options for fuzzing
-bpftrace has several options useful for fuzzing.
+## Options
 
 ### `BPFTRACE_MAX_AST_NODES` environment variable
-When doing fuzzing, it is important to limit the number of AST nodes because otherwise, a fuzzer might
-keep generating a very long program that causes a stack overflow.  `BPFTRACE_MAX_AST_NODES` environment
-variable controls the maximum number of AST nodes.
+
+When doing fuzzing, it is important to limit the number of AST nodes because
+otherwise, a fuzzer might keep generating a very long program that causes a
+stack overflow.  `BPFTRACE_MAX_AST_NODES` environment variable controls the
+maximum number of AST nodes.
 
 ## Fuzzing with AFL
-Here, I briefly describe the way to fuzz bpftrace with AFL. I highly recommend reading the documentation
-in the AFL's repository for further information.
 
-### Install AFL (or AFLPlusPlus)
-Please install [AFL](https://github.com/google/AFL) or [AFLPlusPlus](https://github.com/AFLplusplus/AFLplusplus)
-according to the instructions. I use AFLPlusPlus because it works well in my environment. AFLPlusPlus is
-a forked version of AFL (there was a time when the AFL wasn't updated for a while. Now, AFL is hosted on
-Google's github, and the development is continuing). AFL and AFLPlusPlus have almost the same interface.
+Before starting, it is highly recommended to read the [AFL][AFL] or
+[AFLPlusPlus][AFL++] documentation.
 
-### Compile for fuzzing
-To use AFL, we need to compile the program with the AFL's compiler (it's the wrapper of gcc/clang and do
-some instrumentation for measuring coverage.) Below is an example of a compile.
+### Setup
+
+The fuzzing setup relies on `nix`. See the [nix instructions](./nix.md).
+
+### Compile
+
+To use AFL, we need to compile the program with the AFL compiler. If you are
+using `nix`, you would enter a development shell and build as follows:
 
 ```
-CC=/path/to/AFLplusplus/afl-clang-fast \
-CXX=/path/to/AFLplusplus/afl-clang-fast++ \
-AFL_USE_ASAN=1 \
-cmake .. \
--DBUILD_FUZZ \
--DFUZZ_TARGET=codegen \
--DCMAKE_BUILD_TYPE=Debug \
--DBUILD_TESTING=0 \
--DBUILD_ASAN=1
-```
-then,
-```
-AFL_USE_ASAN=1 make -j$(nproc)
+nix develop #.bpftrace-fuzz
+CC=afl-clang-fast CXX=afl-clang-fast++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Debug -DBUILD_ASAN=1
 ```
 
-Important points:
+then, in order to build the tree:
+```
+cd build-fuzz && AFL_USE_ASAN=1 make -j$(nproc)
+```
 
-- `-DBUILD_FUZZ` option is required to build bpftrace for fuzzing. It adds `-DFUZZ` to compile options.
-- `-DFUZZ_TARGET` is used to let the program stop right after the specified process. The supported value
-  is either "semantic" or "codegen". For example, if `-DFUZZ_TARGET=semantic`, then the program stops
-  after a semantic analysis.
-- AddressSanitizer might take a lot of memory. If you want to fuzz without it, please remove
-  `AFL_USE_ASAN` and `-DBUILD_ASAN`.
+Note that the address sanitizer might take a lot of memory. If you want to fuzz
+without it, please remove `AFL_USE_ASAN` and `-DBUILD_ASAN`.
 
-### Let's Fuzzing
+### Running
 
-First, AFL requires some settings for efficient fuzzing.
+AFL recommends some settings for efficient fuzzing:
 
 ```
 echo core | sudo tee -a /proc/sys/kernel/core_pattern
@@ -73,76 +65,33 @@ cd /sys/devices/system/cpu
 echo performance | sudo tee cpu*/cpufreq/scaling_governor
 ```
 
-Then, start fuzzing! AFL and AddressSanitizer have a lot of settings, so please read each documentation
-for the details. The sample way to run fuzzer is like below:
+Then, fuzz away! AFL and the address sanitizer have a lot of settings, so
+please read documentation for the details. The currently recommended way to run
+the fuzzer is by using the `--test=codegen` mode and providing overrides:
 
 ```
-CPU=0
-FUZZER=/path/to/AFLplusplus/afl-fuzz
-
-sudo AFL_NO_AFFINITY=1 \
-     ASAN_OPTIONS=detect_leaks=0:abort_on_error=1:symbolize=0 \
-     BPFTRACE_MAX_AST_NODES=200 \
-     taskset -c ${CPU} \
-     $FUZZER -M 0 -m none -i ./input -o ./output -t 3000 -- \
-     ./src/bpftrace_fuzz @@
+AFL_NO_AFFINITY=1 \
+ASAN_OPTIONS=abort_on_error=1,symbolize=0 \
+BPFTRACE_BTF= \
+BPFTRACE_MAX_AST_NODES=200 \
+BPFTRACE_AVAILABLE_FUNCTIONS_TEST= \
+afl-fuzz -a text -M 0 -m none -i ./input -o ./output -t 3000 -- \
+     src/bpftrace --test=codegen @@ 2>/dev/null
 ```
 
-I describe several important things:
+In the above, `-i` specifics the input directory, and `-o` specifies the output
+directory. In the input directory, you need to put something to start fuzzing.
+The most simple example is `echo a > input/a`. More sophisticated inputs can be
+created by using sample `bpftrace` programs from the source directory, tests or
+other locations.  If some inputs that cause a program crash is found,
+`output/crashes` contains them.
 
-- `bpftrace_fuzz` is a fuzzer that we built. It's a slightly modified version of bpftrace for fuzzing, and
-  the first argument is the script file name. If the argument is not given, it reads a script from stdin.
-- `-i` is the input directory, and `-o` is the output directory. In the input directory, you need to put
-  something to start fuzzing. The most simple example is `echo a > input/a`. More sophisticated inputs can
-  be created by extracting the bpftrace program from the source code directory (especially from tests
-  directory. See the "Input corpus creation" section below for the details.) If some inputs that cause a
-  program crash is found, `output/crashes` contains them.
-- bpftrace has known that it has several memory leaks. Therefore `ASAN_OPTIONS=detect_leaks=0` is needed.
-  Otherwise, fuzzer thinks each memory leak as a crash and report it. Also,
-  `abort_on_error=1: symbolize=0` is required for fuzzing.
-- `-t 3000` is the timeout value of each execution. Because (especially codegen) sometimes take a long
-  time to process, it is important to have a longer timeout. Otherwise, AFL would stop fuzzing.
-- `@@` will be replaced by the input file generated by the fuzzer.
+The timeout for each execution (in milliseconds) is provided by `-t`.
 
-## Fuzzing with libFuzzer
-[LibFuzzer](https://llvm.org/docs/LibFuzzer.html) is a coverage-guided fuzzer developed with llvm/clang,
-and bpftrace can be fuzzed with it.
-
-### Compile with libFuzzer
-To use the libFuzzer, use clang and compile it as follows.
-
-```
-CC=clang-10 CXX=clang++-10 cmake .. -DBUILD_ASAN=1 -DBUILD_FUZZ=1 -DUSE_LIBFUZZER=1 -DBUILD_TESTING=0
-```
-
-`-DBUILD_FUZZ=1` and `-DUSE_LIBFUZZER=1` is necessary.
-
-### Fuzzing with libFuzzer
-The compiled binary itself is a fuzzer, and fuzzing can be performed with commands like the following.
-
-```
-sudo ASAN_OPTIONS=detect_leaks=0 ./src/bpftrace_fuzz -max_len=1024 input
-```
-
-"input" is a corpus of inputs, just as it is used in AFL. Unlike the AFL, the libFuzzer stops when
-it crashes.
-
-## Input corpus creation
-Here are some examples of creating input corpus.
-
-- Extract scripts from runtime tests (only the ones enclosed in "")
-```sh
-cat ./tests/runtime/scripts/* | grep RUN | grep -- "-e"| \
-sed "s/[^']*'\([^']*\)'.*/\1/" | parallel -N1 "echo {} > input/{#}"`
-```
-
-- Use bpftrace tools but remove comments and blank lines
-```sh
-find ./tools -name "*.bt" | \
-parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 's/^\s\+//g' -e '/^$/d' {} > input/{#}"
-```
+Finally, '@@' will be replaced by the input file generated by the fuzzer.
 
 ## Found bugs
+
 ### AFL
 - [#1623](https://github.com/bpftrace/bpftrace/pull/1623)
 - [#1619](https://github.com/bpftrace/bpftrace/pull/1619)
@@ -166,3 +115,6 @@ parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 
 - [#1650](https://github.com/bpftrace/bpftrace/pull/1650)
 - [#1622](https://github.com/bpftrace/bpftrace/pull/1622)
 - [#1621](https://github.com/bpftrace/bpftrace/pull/1621)
+
+[AFL]: https://github.com/google/AFL
+[AFL++]: https://github.com/AFLplusplus/AFLplusplus
