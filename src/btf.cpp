@@ -416,13 +416,13 @@ BTF::BTFId BTF::parse_anon_btf_name(const std::string &fullname)
   // First, find BTF_ANON_STRUCT_PREFIX
   auto prefix_pos = fullname.find(BTF_ANON_STRUCT_PREFIX);
   if (prefix_pos == std::string::npos)
-    return BTFId{ .btf = nullptr };
+    return BTFId{ .btf = nullptr, .id = 0 };
 
   // After BTF_ANON_STRUCT_PREFIX, should have <id>_<objname>
   auto tail_pos = prefix_pos + BTF_ANON_STRUCT_PREFIX.length();
   auto underscore_pos = fullname.find("_", tail_pos);
   if (underscore_pos == std::string::npos)
-    return BTFId{ .btf = nullptr };
+    return BTFId{ .btf = nullptr, .id = 0 };
 
   std::string idstr = fullname.substr(tail_pos, underscore_pos - tail_pos);
   std::string btf_obj_name = fullname.substr(underscore_pos + 1);
@@ -430,7 +430,7 @@ BTF::BTFId BTF::parse_anon_btf_name(const std::string &fullname)
   try {
     btf_id = std::stoul(idstr);
   } catch (const std::invalid_argument &e) {
-    return BTFId{ .btf = nullptr };
+    return BTFId{ .btf = nullptr, .id = 0 };
   }
 
   for (const auto &btf_obj : btf_objects) {
@@ -441,7 +441,7 @@ BTF::BTFId BTF::parse_anon_btf_name(const std::string &fullname)
     }
   }
 
-  return BTFId{ .btf = nullptr };
+  return BTFId{ .btf = nullptr, .id = 0 };
 }
 
 std::string BTF::create_anon_btf_name(BTFId &btf_id)
