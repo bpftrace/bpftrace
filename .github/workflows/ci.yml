@@ -58,6 +58,11 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm20
           CC: clang
           CXX: clang++
+        - NAME: Fuzzing
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-fuzz
+          CC: afl-clang-fast
+          CXX: afl-clang-fast++
         - NAME: Latest kernel (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
