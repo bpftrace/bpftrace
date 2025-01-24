@@ -4,7 +4,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
 TEST(codegen, intptrcast_call)
 {
   // Casting should work inside a call

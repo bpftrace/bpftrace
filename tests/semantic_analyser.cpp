@@ -349,7 +349,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { pton(\"127.0.0.1\") }");
   test("kprobe:f { pton(\"::1\") }");
   test("kprobe:f { pton(\"0000:0000:0000:0000:0000:0000:0000:0001\") }");
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
   test("kprobe:f { reg(\"ip\") }");
 #endif
   test("kprobe:f { kstack(1) }");
@@ -1415,7 +1415,7 @@ TEST(semantic_analyser, call_cgroupid)
 
 TEST(semantic_analyser, call_reg)
 {
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
   test("kprobe:f { reg(\"ip\"); }");
   test("kprobe:f { @x = reg(\"ip\"); }");
 #endif
@@ -2226,15 +2226,15 @@ TEST(semantic_analyser, rawtracepoint)
   test("rawtracepoint:event { args }", 1);
 }
 
-#if defined(ARCH_X86_64) || defined(ARCH_AARCH64)
+#if defined(__x86_64__) || defined(__aarch64__)
 TEST(semantic_analyser, watchpoint_invalid_modes)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
 
-#ifdef ARCH_X86_64
+#if defined(__x86_64__)
   test(*bpftrace, "watchpoint:0x1234:8:r { 1 }", 1);
-#elif ARCH_AARCH64
+#elif defined(__aarch64__)
   test(*bpftrace, "watchpoint:0x1234:8:r { 1 }");
 #endif
   test(*bpftrace, "watchpoint:0x1234:8:rx { 1 }", 1);
@@ -2285,7 +2285,7 @@ TEST(semantic_analyser, asyncwatchpoint)
   bpftrace->procmon_ = std::make_unique<MockProcMon>(0);
   test(*bpftrace, "watchpoint:func1+arg2:8:rw { 1 }", 1);
 }
-#endif // if defined(ARCH_X86_64) || defined(ARCH_AARCH64)
+#endif // if defined(__x86_64__) || defined(__aarch64__)
 
 TEST(semantic_analyser, args_builtin_wrong_use)
 {
@@ -3341,7 +3341,7 @@ TEST(semantic_analyser, type_ctx)
   var = static_cast<ast::Variable *>(unop->expr);
   EXPECT_TRUE(var->type.IsPtrTy());
 
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
   auto chartype = CreateInt8();
 #else
   auto chartype = CreateUInt8();
@@ -3914,7 +3914,7 @@ fexit:func_1 { $x = args.foo; }
   test("fentry:func_1 { @ = args; }");
   test("fentry:func_1 { @[args] = 1; }");
   // reg() is not available in fentry
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
   test_error("fentry:func_1 { reg(\"ip\") }", R"(
 stdin:1:17-26: ERROR: reg can not be used with "fentry" probes
 fentry:func_1 { reg("ip") }
@@ -4042,7 +4042,7 @@ kretfunc:func_1 { $x = args.foo; }
   test("kfunc:func_1 { @ = args; }");
   test("kfunc:func_1 { @[args] = 1; }");
   // reg() is not available in kfunc
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
   test_error("kfunc:func_1 { reg(\"ip\") }", R"(
 stdin:1:16-25: ERROR: reg can not be used with "fentry" probes
 kfunc:func_1 { reg("ip") }

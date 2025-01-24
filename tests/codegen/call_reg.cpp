@@ -4,7 +4,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-#ifdef ARCH_X86_64
+#ifdef __x86_64__
 TEST(codegen, call_reg) // Identical to builtin_func apart from variable names
 {
   test("kprobe:f { @x = reg(\"ip\") }",
