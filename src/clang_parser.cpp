@@ -57,11 +57,6 @@ const std::vector<CXUnsavedFile> &getDefaultHeaders()
         .Contents = stdint_h.data(),
         .Length = stdint_h.length(),
     },
-    {
-        .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
-        .Contents = clang_workarounds_h.data(),
-        .Length = clang_workarounds_h.length(),
-    },
   };
 
   return unsaved_files;
@@ -623,9 +618,6 @@ bool ClangParser::parse(ast::Program *program,
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>
     args.push_back("-D_LINUX_TYPES_H");
-    // Since we're omitting <linux/types.h> there's no reason to
-    // add the wokarounds for it
-    args.push_back("-D__CLANG_WORKAROUNDS_H");
     // Let script know we have BTF -- this is useful for prewritten tools to
     // conditionally include headers if BTF isn't available.
     args.push_back("-DBPFTRACE_HAVE_BTF");
@@ -654,7 +646,6 @@ bool ClangParser::parse(ast::Program *program,
   if (btf_conflict) {
     // There is a conflict (redefinition) between user-supplied types and types
     // taken from BTF. We cannot use BTF in such a case.
-    args.pop_back();
     args.pop_back();
     args.pop_back();
     input_files.back() = get_empty_btf_generated_header();
