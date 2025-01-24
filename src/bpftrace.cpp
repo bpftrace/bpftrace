@@ -1948,26 +1948,16 @@ const FuncsModulesMap &BPFtrace::get_traceable_funcs() const
 
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
-#ifdef FUZZ
-  (void)func_name;
-  return true;
-#else
   auto &funcs = get_traceable_funcs();
   return funcs.find(func_name) != funcs.end();
-#endif
 }
 
 std::unordered_set<std::string> BPFtrace::get_func_modules(
     const std::string &func_name) const
 {
-#ifdef FUZZ
-  (void)func_name;
-  return {};
-#else
   auto &funcs = get_traceable_funcs();
   auto mod = funcs.find(func_name);
   return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
-#endif
 }
 
 const struct stat &BPFtrace::get_pidns_self_stat() const

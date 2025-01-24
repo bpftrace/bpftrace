@@ -109,9 +109,15 @@ def shell(
     if NIX_TARGET:
         c.append(NIX_TARGET)
 
+    if not env:
+        env = {}
+
+    # Nix needs to know the home dir
+    if "HOME" in os.environ:
+        env["HOME"] = os.environ["HOME"]
+
     c.append("--command")
     if as_root:
-        to_preserve = ",".join([n for n in env]) if env else []
         c += [
             sudo(),
             # We need to preserve path so that default root PATH is not
@@ -125,17 +131,9 @@ def shell(
             # requires further investigation.
             "--preserve-env=PATH",
             "--preserve-env=PYTHONPATH",
-            # Also preserve any caller specified env vars
-            f"--preserve-env={to_preserve}",
+            "--preserve-env=" + ",".join([n for n in env])
         ]
     c += cmd
-
-    if not env:
-        env = {}
-
-    # Nix needs to know the home dir
-    if "HOME" in os.environ:
-        env["HOME"] = os.environ["HOME"]
 
     subprocess.run(
         c,
@@ -176,7 +174,7 @@ def configure():
 def build():
     """Build everything"""
     cpus = multiprocessing.cpu_count()
-    shell(["make", "-C", BUILD_DIR, "-j", str(cpus)])
+    shell(["make", "-C", BUILD_DIR, "-j", str(cpus)], env={"AFL_USE_ASAN": "1"})
 
 
 def test_one(name: str, cond: Callable[[], bool], fn: Callable[[], None]) -> TestResult:
@@ -254,6 +252,59 @@ def run_runtime_tests():
             "VMTEST_NO_UI": "1",
         },
     )
+
+
+def fuzz():
+    """
+    Run a basic fuzz smoke test.
+    """
+    # Make basic inputs and output directories.
+    Path(BUILD_DIR, "inputs").mkdir(exist_ok=True)
+    Path(BUILD_DIR, "outputs").mkdir(exist_ok=True)
+
+    # For now, seed the inputs directly with a trivial program. These can be
+    # codified differently in the future, but this is sufficient for a basic
+    # fuzz smoke test. Actual fuzzing should have a wide variety of inputs.
+    Path(BUILD_DIR, "inputs", "seed.bt").write_text("BEGIN {}")
+
+    results = [
+        test_one(
+            "fuzz",
+            lambda: truthy(RUN_TESTS),
+            lambda: shell(
+            # fmt: off
+                cmd = [
+                    "afl-fuzz",
+                    "-M", "0",
+                    "-m", "none",
+                    "-i", "inputs",
+                    "-o", "outputs",
+                    "-E", "10", # 10 execs, smoke test only.
+                    "-t", "1000",
+                    "--",
+                    "src/bpftrace",
+                    "--test=codegen",
+                    "@@",
+                ],
+                env = {
+                    "AFL_NO_AFFINITY": "1",
+                    "ASAN_OPTIONS": "abort_on_error=1,symbolize=0",
+                    "BPFTRACE_BTF": "",
+                    "BPFTRACE_MAX_AST_NODES": "200",
+                    "BPFTRACE_AVAILABLE_FUNCTIONS_TEST": "",
+                    # This setting [1] is used to skip the core pattern check,
+                    # so crashes may be missed. Since this is just a smoke
+                    # test, we use this rather than change the system state.
+                    # [1] https://github.com/mirrorer/afl/blob/master/docs/env_variables.txt
+                    "AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES": "",
+                },
+                cwd=Path(BUILD_DIR),
+            # fmt: on
+            ),
+        ),
+    ]
+
+    tests_finish(results)
 
 
 def test():
@@ -338,7 +389,10 @@ def test():
 def main():
     configure()
     build()
-    test()
+    if CC.startswith("afl-"):
+        fuzz()
+    else:
+        test()
 
 
 if __name__ == "__main__":

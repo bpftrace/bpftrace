@@ -95,6 +95,14 @@ $ nix develop
 [...]
 ```
 
+### Setup an environment for fuzzing
+
+```
+$ nix develop .#bpftrace-fuzz
+dxu@kashmir bpftrace]$ CC=afl-clang-fast CXX=afl-clang-fast++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Debug -DBUILD_ASAN=1
+[...]
+```
+
 ## Internal examples
 
 This section has a few examples on how to interact with the Nix configuration.
