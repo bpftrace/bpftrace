@@ -1327,9 +1327,6 @@ static bool is_bad_func(std::string &func)
 
 FuncsModulesMap parse_traceable_funcs()
 {
-#ifdef FUZZ
-  return {};
-#else
   // Try to get the list of functions from BPFTRACE_AVAILABLE_FUNCTIONS_TEST env
   const char *path_env = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
   const std::string kprobe_path = path_env
@@ -1365,7 +1362,6 @@ FuncsModulesMap parse_traceable_funcs()
   }
 
   return result;
-#endif
 }
 
 // Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.

@@ -889,17 +889,20 @@ int main(int argc, char* argv[])
     bpftrace.add_param(param);
   }
 
-  check_is_root();
+  // If we are not running anything, then we don't require root.
+  if (args.test_mode != TestMode::CODEGEN) {
+    check_is_root();
 
-  auto lockdown_state = lockdown::detect();
-  if (lockdown_state == lockdown::LockdownState::Confidentiality) {
-    lockdown::emit_warning(std::cerr);
-    return 1;
+    auto lockdown_state = lockdown::detect();
+    if (lockdown_state == lockdown::LockdownState::Confidentiality) {
+      lockdown::emit_warning(std::cerr);
+      return 1;
+    }
+
+    // FIXME (mmarchini): maybe we don't want to always enforce an infinite
+    // rlimit?
+    enforce_infinite_rlimit();
   }
-
-  // FIXME (mmarchini): maybe we don't want to always enforce an infinite
-  // rlimit?
-  enforce_infinite_rlimit();
 
   auto ast_ctx = parse(
       bpftrace, filename, program, args.include_dirs, args.include_files);

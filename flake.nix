@@ -214,6 +214,60 @@
                 # dev builds we do in nix shell, it just causes warning spew.
                 hardeningDisable = [ "all" ];
               };
+
+          # Overlay to override AFL++ package configuration. The default
+          # package is based on Clang14, which has some issues when building
+          # the C++20 code. The manual substitution of the postPatch is
+          # required because the package hard-codes this clang dependency.
+          aflplusplus = pkgs.aflplusplus.overrideAttrs {
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+              pkgs.which
+              pkgs.clang_18
+              pkgs.gcc
+            ];
+            buildInputs = [
+              pkgs.llvmPackages_18.llvm
+              pkgs.llvmPackages_18.bintools
+              pkgs.gmp
+              pkgs.python3
+            ];
+            postPatch = ''
+              # See the original file [1]. This will need to be updated
+              # when this is changed, but maybe a better solution can be
+              # found. Comments are ommited here for brevity, only the
+              # clang packages are changed.
+              # [1] https://github.com/NixOS/nixpkgs/blob/release-24.11/pkgs/tools/security/aflplusplus/default.nix
+              rm Android.bp
+              substituteInPlace src/afl-cc.c \
+                --replace-fail "CLANGPP_BIN" '"${pkgs.clang_18}/bin/clang++"' \
+                --replace-fail "CLANG_BIN" '"${pkgs.clang_18}/bin/clang"' \
+                --replace-fail '"gcc"' '"${pkgs.gcc}/bin/gcc"' \
+                --replace-fail '"g++"' '"${pkgs.gcc}/bin/g++"' \
+                --replace-fail 'getenv("AFL_PATH")' "(getenv(\"AFL_PATH\") ? getenv(\"AFL_PATH\") : \"$out/lib/afl\")"
+              substituteInPlace src/afl-ld-lto.c \
+                --replace-fail 'LLVM_BINDIR' '"/nixpkgs-patched-does-not-exist"'
+              sed -i 's|LLVM_BINDIR = .*|LLVM_BINDIR = |' utils/aflpp_driver/GNUmakefile
+              substituteInPlace utils/aflpp_driver/GNUmakefile \
+                --replace-fail 'LLVM_BINDIR = ' 'LLVM_BINDIR = ${pkgs.clang_18}/bin/'
+              substituteInPlace GNUmakefile.llvm \
+                --replace-fail "\$(LLVM_BINDIR)/clang" "${pkgs.clang_18}/bin/clang"
+            '';
+          };
+
+          # Lambda that can be used for a fuzzing environment. Not part of the default
+          # devshell because aflplusplus is only available for x86_64/amd64.
+          mkBpftraceFuzzShell =
+            shell:
+              with pkgs;
+              pkgs.mkShell {
+                nativeBuildInputs = shell.nativeBuildInputs;
+                buildInputs = shell.buildInputs ++ [aflplusplus];
+
+                # See above.
+                hardeningDisable = [ "all" ];
+            };
+
         in
         {
           # Set formatter for `nix fmt` command
@@ -286,6 +340,11 @@
             bpftrace-llvm18 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm18;
             bpftrace-llvm17 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm17;
             bpftrace-llvm16 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm16;
+
+            # Note that we depend on LLVM18 explicitly for the fuzz shell, and this is
+            # managed separately. The version of LLVM used to build the tool must be the
+            # same as the version linked as a dependency, or strange things happen.
+            bpftrace-fuzz = mkBpftraceFuzzShell self.devShells.${system}."bpftrace-llvm18";
           };
         });
 }
