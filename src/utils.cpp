@@ -775,7 +775,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   auto paths_v1 = filtered_v1 | get_path_func;
   auto paths_v2 = filtered_v2 | get_path_func;
 
-  // Return paths with v2 first, then v2 sorted lexically by name.
+  // Return paths with v2 first, then v1 sorted lexically by name.
   std::vector<std::pair<std::string, std::string>> sorted(paths_v2.begin(),
                                                           paths_v2.end());
   std::vector<std::pair<std::string, std::string>> sorted_v1(paths_v1.begin(),
