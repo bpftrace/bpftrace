@@ -128,6 +128,7 @@ public:
     has_jiffies64_ = std::make_optional<bool>(has_features);
     has_for_each_map_elem_ = std::make_optional<bool>(has_features);
     has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
+    has_map_lookup_percpu_elem_ = std::make_optional<bool>(has_features);
   };
 
   void has_loop(bool has)

@@ -2468,6 +2468,12 @@ void SemanticAnalyser::visit(For &f)
   map.skip_key_validation = true;
   Visit(&map);
 
+  if (map.type.IsCastableMapTy() &&
+      !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
+    LOG(ERROR, f.expr->loc, err_)
+        << "Missing required kernel feature: map_lookup_percpu_elem";
+  }
+
   if (has_error())
     return;
 

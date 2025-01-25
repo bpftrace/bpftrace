@@ -831,6 +831,18 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
 
   const std::string &map_name = map.ident;
 
+  if (!bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
+    /*
+     * Unfortunately detecting this in semantic_analyser would be very ugly &
+     * complicated for all implicit casting, so error here until we drop
+     * support for kernel 5.19
+     */
+    throw FatalUserException("Missing required kernel feature "
+                             "(map_lookup_percpu_elem) to read map: " +
+                             map_name);
+    exit(-1);
+  }
+
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
   AllocaInst *val_1 = CreateAllocaBPF(getInt64Ty(), "val_1");
   // used for min/max/avg

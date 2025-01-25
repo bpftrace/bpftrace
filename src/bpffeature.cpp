@@ -604,6 +604,7 @@ std::string BPFfeature::report()
     { "jiffies64", to_str(has_helper_jiffies64()) },
     { "for_each_map_elem", to_str(has_helper_for_each_map_elem()) },
     { "get_ns_current_pid_tgid", to_str(has_helper_get_ns_current_pid_tgid()) },
+    { "lookup_percpu_elem", to_str(has_helper_map_lookup_percpu_elem()) },
   };
 
   std::vector<std::pair<std::string, std::string>> features = {

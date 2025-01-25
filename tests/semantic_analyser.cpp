@@ -4371,6 +4371,20 @@ BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }
              false);
 }
 
+TEST(semantic_analyser, for_loop_castable_map_missing_feature)
+{
+  test_error("BEGIN { @map = count(); for ($kv : @map) { print($kv); } }",
+             R"(
+stdin:1:25-28: ERROR: Missing required kernel feature: for_each_map_elem
+BEGIN { @map = count(); for ($kv : @map) { print($kv); } }
+                        ~~~
+stdin:1:36-41: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @map = count(); for ($kv : @map) { print($kv); } }
+                                   ~~~~~
+)",
+             false);
+}
+
 TEST(semantic_analyser, for_loop_no_ctx_access)
 {
   test_error("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }",
