@@ -19,6 +19,8 @@ and this project adheres to
   - [#3678](https://github.com/bpftrace/bpftrace/pull/3678)
 - Change max_strlen default from 64 to 1024
   - [#3713](https://github.com/bpftrace/bpftrace/pull/3713)
+- Add feature check for castable map reads
+  - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
 #### Deprecated
 #### Removed
 #### Fixed
