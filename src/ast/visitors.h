@@ -22,7 +22,7 @@ public:
   virtual void visit(StackMode &mode) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Sizeof &szof) = 0;
-  virtual void visit(Offsetof &ofof) = 0;
+  virtual void visit(Offsetof &offof) = 0;
   virtual void visit(Map &map) = 0;
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
@@ -94,7 +94,7 @@ public:
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Sizeof &szof) override;
-  void visit(Offsetof &ofof) override;
+  void visit(Offsetof &offof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;

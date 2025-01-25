@@ -126,22 +126,24 @@ void Printer::visit(Sizeof &szof)
   --depth_;
 }
 
-void Printer::visit(Offsetof &ofof)
+void Printer::visit(Offsetof &offof)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "offsetof: " << type(ofof.type) << std::endl;
+  out_ << indent << "offsetof: " << type(offof.type) << std::endl;
 
   ++depth_;
   std::string indentParam(depth_, ' ');
 
   // Print the args
-  if (ofof.expr) {
-    ofof.expr->accept(*this);
+  if (offof.expr) {
+    offof.expr->accept(*this);
   } else {
-    out_ << indentParam << ofof.record << std::endl;
+    out_ << indentParam << offof.record << std::endl;
   }
 
-  out_ << indentParam << ofof.field << std::endl;
+  for (const auto &field : offof.field) {
+    out_ << indentParam << field << std::endl;
+  }
   --depth_;
 }
 

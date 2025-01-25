@@ -3741,11 +3741,45 @@ TEST(semantic_analyser, call_offsetof)
           long l; \
         } \
         BEGIN { @x = offsetof(struct Ano, a); }");
-  test("struct Foo { int x; long l; char c; } \
-        BEGIN { @x = offsetof(struct Foo, __notexistfield__); }",
-       1);
+  test("struct Foo { struct Bar { int a; } bar; } \
+        BEGIN { @x = offsetof(struct Foo, bar.a); }");
+  test("struct Foo { struct Bar { int *a; } bar; } \
+        BEGIN { @x = offsetof(struct Foo, bar.a); }");
+  test("struct Foo { struct Bar { struct { int a; } anon; } bar; } \
+        BEGIN { @x = offsetof(struct Foo, bar.anon.a); }");
+  test("struct Foo { struct Bar { struct { int a; }; } bar; } \
+        BEGIN { @x = offsetof(struct Foo, bar.a); }");
+
+  // Error tests
+
+  // Bad type
+  test_error("struct Foo { struct Bar { int a; } *bar; } \
+              BEGIN { @x = offsetof(struct Foo, bar.a); }",
+             R"(
+stdin:1:71-99: ERROR: 'struct Bar *' is not a record type.
+struct Foo { struct Bar { int a; } *bar; }               BEGIN { @x = offsetof(struct Foo, bar.a); }
+                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Not exist (sub)field
+  test_error("struct Foo { int x; long l; char c; } \
+              BEGIN { @x = offsetof(struct Foo, __notexistfield__); }",
+             R"(
+stdin:1:66-106: ERROR: 'struct Foo' has no field named '__notexistfield__'
+struct Foo { int x; long l; char c; }               BEGIN { @x = offsetof(struct Foo, __notexistfield__); }
+                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("struct Foo { struct Bar { int a; } bar; } \
+              BEGIN { @x = offsetof(struct Foo, bar.__notexist_subfield__); }",
+             R"(
+stdin:1:70-118: ERROR: 'struct Bar' has no field named '__notexist_subfield__'
+struct Foo { struct Bar { int a; } bar; }               BEGIN { @x = offsetof(struct Foo, bar.__notexist_subfield__); }
+                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Not exist record
   test("BEGIN { @x = offsetof(__passident__, x); }", 1);
+  test("BEGIN { @x = offsetof(__passident__, x.y.z); }", 1);
   test("BEGIN { @x = offsetof(struct __notexiststruct__, x); }", 1);
+  test("BEGIN { @x = offsetof(struct __notexiststruct__, x.y.z); }", 1);
 }
 
 TEST(semantic_analyser, int_ident)

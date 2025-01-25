@@ -41,10 +41,10 @@ void Visitor::visit(Sizeof &szof)
     Visit(*szof.expr);
 }
 
-void Visitor::visit(Offsetof &ofof)
+void Visitor::visit(Offsetof &offof)
 {
-  if (ofof.expr)
-    Visit(*ofof.expr);
+  if (offof.expr)
+    Visit(*offof.expr);
 }
 
 void Visitor::visit(Map &map)

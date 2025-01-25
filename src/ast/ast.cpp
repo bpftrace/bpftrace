@@ -105,12 +105,16 @@ Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
 {
 }
 
-Offsetof::Offsetof(SizedType record, std::string &field, location loc)
+Offsetof::Offsetof(const SizedType &record,
+                   std::vector<std::string> &field,
+                   location loc)
     : Expression(loc), record(record), field(field)
 {
 }
 
-Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
+Offsetof::Offsetof(Expression *expr,
+                   std::vector<std::string> &field,
+                   location loc)
     : Expression(loc), expr(expr), field(field)
 {
 }
