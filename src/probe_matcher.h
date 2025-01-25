@@ -60,25 +60,17 @@ public:
   }
   virtual ~ProbeMatcher() = default;
 
-  /*
-   * Get all matches for attach point containing a wildcard.
-   * The output strings format depends on the probe type.
-   */
+  // Get all matches for attach point containing a wildcard.
+  // The output strings format depends on the probe type.
   std::set<std::string> get_matches_for_ap(
       const ast::AttachPoint &attach_point);
-  /*
-   * Expanding probe type containing a wildcard.
-   */
+  // Expanding probe type containing a wildcard.
   std::set<std::string> expand_probetype_kernel(const std::string &probe_type);
   std::set<std::string> expand_probetype_userspace(
       const std::string &probe_type);
-  /*
-   * Match all probes in prog and print them to stdout.
-   */
+  // Match all probes in prog and print them to stdout.
   void list_probes(ast::Program *prog);
-  /*
-   * Print definitions of structures matching search.
-   */
+  // Print definitions of structures matching search.
   void list_structs(const std::string &search);
 
   const BPFtrace *bpftrace_;

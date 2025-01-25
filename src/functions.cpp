@@ -92,17 +92,15 @@ bool can_implicit_cast(const SizedType &from, const SizedType &to)
 }
 } // namespace
 
-/*
- * Find the best function by name for the given argument types.
- *
- * Returns either a single function or nullptr, when no such function exists.
- *
- * When there are multiple candidate functions with the same name, prefer the
- * non-builtin over the builtin function.
- *
- * Valid functions have the correct name and all arguments can be implicitly
- * casted into all parameter types.
- */
+// Find the best function by name for the given argument types.
+//
+// Returns either a single function or nullptr, when no such function exists.
+//
+// When there are multiple candidate functions with the same name, prefer the
+// non-builtin over the builtin function.
+//
+// Valid functions have the correct name and all arguments can be implicitly
+// casted into all parameter types.
 const Function *FunctionRegistry::get(std::string_view ns,
                                       std::string_view name,
                                       const std::vector<SizedType> &arg_types,

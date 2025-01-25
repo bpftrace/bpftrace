@@ -13,7 +13,7 @@
 
 // Taken from libbpf
 #define BTF_INFO_ENC(kind, kind_flag, vlen)                                    \
-  ((!!(kind_flag) << 31) | ((kind) << 24) | ((vlen)&BTF_MAX_VLEN))
+  ((!!(kind_flag) << 31) | ((kind) << 24) | ((vlen) & BTF_MAX_VLEN))
 #define BTF_TYPE_ENC(name, info, size_or_type) (name), (info), (size_or_type)
 #define BTF_INT_ENC(encoding, bits_offset, nr_bits)                            \
   ((encoding) << 24 | (bits_offset) << 16 | (nr_bits))
@@ -103,11 +103,9 @@ private:
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
   std::unordered_set<std::string> get_all_iters_from_btf(
       const struct btf* btf) const;
-  /*
-   * Similar to btf_type_skip_modifiers this returns the id of the first
-   * type that is not a BTF_KIND_TYPE_TAG while also populating the tags set
-   * with the tag/attribute names from the BTF_KIND_TYPE_TAG types it finds.
-   */
+  // Similar to btf_type_skip_modifiers this returns the id of the first
+  // type that is not a BTF_KIND_TYPE_TAG while also populating the tags set
+  // with the tag/attribute names from the BTF_KIND_TYPE_TAG types it finds.
   __u32 get_type_tags(std::unordered_set<std::string>& tags,
                       const BTFId& btf_id) const;
 

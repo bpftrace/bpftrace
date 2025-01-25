@@ -53,7 +53,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
 libbpf::bpf_prog_type progtype(ProbeType t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case ProbeType::special:    return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     case ProbeType::kprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
@@ -82,7 +82,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
 std::string progtypeName(libbpf::bpf_prog_type t)
 {
   switch (t) {
-    // clang-format off
+      // clang-format off
     case libbpf::BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
     case libbpf::BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
     case libbpf::BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;

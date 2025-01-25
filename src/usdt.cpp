@@ -42,10 +42,8 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
   current_pid_paths.emplace(usdt_probe->bin_path);
 }
 
-/**
- * Move the current pid paths onto the pid_to_paths_cache, and clear
- * current_pid_paths.
- */
+// Move the current pid paths onto the pid_to_paths_cache, and clear
+// current_pid_paths.
 static void cache_current_pid_paths(int pid)
 {
   usdt_pid_to_paths_cache[pid].merge(current_pid_paths);

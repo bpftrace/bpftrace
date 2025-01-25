@@ -150,14 +150,14 @@ public:
   {
     child_pid_ = 1337;
   };
-  ~MockChildProc(){};
+  ~MockChildProc() {};
 
-  void terminate(bool force __attribute__((unused)) = false) override{};
+  void terminate(bool force __attribute__((unused)) = false) override {};
   bool is_alive() override
   {
     return true;
   };
-  void resume(void) override{};
+  void resume(void) override {};
 
   void run(bool pause = false) override
   {

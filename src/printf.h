@@ -40,7 +40,7 @@ enum class ArgumentType {
 
 class IPrintable {
 public:
-  virtual ~IPrintable(){};
+  virtual ~IPrintable() {};
   virtual int print(char* buf,
                     size_t size,
                     const char* fmt,

@@ -268,14 +268,12 @@ void SemanticAnalyser::visit(Identifier &identifier)
 void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
                                                Builtin &builtin)
 {
-  /*
-   * tracepoint wildcard expansion, part 2 of 3. This:
-   * 1. expands the wildcard, then sets args to be the first matched probe.
-   *    This is so that enough of the type information is available to
-   *    survive the later semantic analyser checks.
-   * 2. sets is_tparg so that codegen does the real type setting after
-   *    expansion.
-   */
+  // tracepoint wildcard expansion, part 2 of 3. This:
+  // 1. expands the wildcard, then sets args to be the first matched probe.
+  //    This is so that enough of the type information is available to
+  //    survive the later semantic analyser checks.
+  // 2. sets is_tparg so that codegen does the real type setting after
+  //    expansion.
   auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
   if (!matches.empty()) {
     auto &match = *matches.begin();
@@ -412,9 +410,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
           << "BPF_FUNC_jiffies64 is not available for your kernel version";
     }
   } else if (builtin.ident == "curtask") {
-    /*
-     * Retype curtask to its original type: struct task_struct.
-     */
+    // Retype curtask to its original type: struct task_struct.
     builtin.type = CreatePointer(CreateRecord("struct task_struct",
                                               bpftrace_.structs.Lookup(
                                                   "struct task_struct")),
@@ -2367,89 +2363,87 @@ void SemanticAnalyser::visit(For &f)
         << "Missing required kernel feature: for_each_map_elem";
   }
 
-  /*
-   * For-loops are implemented using the bpf_for_each_map_elem helper function,
-   * which requires them to be rewritten into a callback style.
-   *
-   * Pseudo code for the transformation we apply:
-   *
-   * Before:
-   *     PROBE {
-   *       @map[0] = 1;
-   *       for ($kv : @map) {
-   *         [LOOP BODY]
-   *       }
-   *     }
-   *
-   * After:
-   *     PROBE {
-   *       @map[0] = 1;
-   *       bpf_for_each_map_elem(@map, &map_for_each_cb, 0, 0);
-   *     }
-   *     long map_for_each_cb(bpf_map *map,
-   *                          const void *key,
-   *                          void *value,
-   *                          void *ctx) {
-   *       $kv = ((uint64)key, (uint64)value);
-   *       [LOOP BODY]
-   *     }
-   *
-   *
-   * To allow variables to be shared between the loop callback and the main
-   * program, some extra steps are taken:
-   *
-   * 1. Determine which variables need to be shared with the loop callback
-   * 2. Pack pointers to them into a context struct
-   * 3. Pass pointer to the context struct to the callback function
-   * 4. In the callback, override the shared variables so that they read and
-   *    write through the context pointers instead of directly from their
-   *    original addresses
-   *
-   * Example transformation with context:
-   *
-   * Before:
-   *     PROBE {
-   *       $str = "hello";
-   *       $not_shared = 2;
-   *       $len = 0;
-   *       @map[11, 12] = "c";
-   *       for ($kv : @map) {
-   *         print($str);
-   *         $len++;
-   *       }
-   *       print($len);
-   *       print($not_shared);
-   *     }
-   *
-   * After:
-   *     struct ctx_t {
-   *       string *str;
-   *       uint64 *len;
-   *     };
-   *     PROBE {
-   *       $str = "hello";
-   *       $not_shared = 2;
-   *       $len = 0;
-   *       @map[11, 12] = "c";
-   *
-   *       ctx_t ctx { .str = &$str, .len = &$len };
-   *       bpf_for_each_map_elem(@map, &map_for_each_cb, &ctx, 0);
-   *
-   *       print($len);
-   *       print($not_shared);
-   *     }
-   *     long map_for_each_cb(bpf_map *map,
-   *                          const void *key,
-   *                          void *value,
-   *                          void *ctx) {
-   *       $kv = (((uint64, uint64))key, (string)value);
-   *       $str = ((ctx_t*)ctx)->str;
-   *       $len = ((ctx_t*)ctx)->len;
-   *
-   *       print($str);
-   *       $len++;
-   *     }
-   */
+  // For-loops are implemented using the bpf_for_each_map_elem helper function,
+  // which requires them to be rewritten into a callback style.
+  //
+  // Pseudo code for the transformation we apply:
+  //
+  // Before:
+  //     PROBE {
+  //       @map[0] = 1;
+  //       for ($kv : @map) {
+  //         [LOOP BODY]
+  //       }
+  //     }
+  //
+  // After:
+  //     PROBE {
+  //       @map[0] = 1;
+  //       bpf_for_each_map_elem(@map, &map_for_each_cb, 0, 0);
+  //     }
+  //     long map_for_each_cb(bpf_map *map,
+  //                          const void *key,
+  //                          void *value,
+  //                          void *ctx) {
+  //       $kv = ((uint64)key, (uint64)value);
+  //       [LOOP BODY]
+  //     }
+  //
+  //
+  // To allow variables to be shared between the loop callback and the main
+  // program, some extra steps are taken:
+  //
+  // 1. Determine which variables need to be shared with the loop callback
+  // 2. Pack pointers to them into a context struct
+  // 3. Pass pointer to the context struct to the callback function
+  // 4. In the callback, override the shared variables so that they read and
+  //    write through the context pointers instead of directly from their
+  //    original addresses
+  //
+  // Example transformation with context:
+  //
+  // Before:
+  //     PROBE {
+  //       $str = "hello";
+  //       $not_shared = 2;
+  //       $len = 0;
+  //       @map[11, 12] = "c";
+  //       for ($kv : @map) {
+  //         print($str);
+  //         $len++;
+  //       }
+  //       print($len);
+  //       print($not_shared);
+  //     }
+  //
+  // After:
+  //     struct ctx_t {
+  //       string *str;
+  //       uint64 *len;
+  //     };
+  //     PROBE {
+  //       $str = "hello";
+  //       $not_shared = 2;
+  //       $len = 0;
+  //       @map[11, 12] = "c";
+  //
+  //       ctx_t ctx { .str = &$str, .len = &$len };
+  //       bpf_for_each_map_elem(@map, &map_for_each_cb, &ctx, 0);
+  //
+  //       print($len);
+  //       print($not_shared);
+  //     }
+  //     long map_for_each_cb(bpf_map *map,
+  //                          const void *key,
+  //                          void *value,
+  //                          void *ctx) {
+  //       $kv = (((uint64, uint64))key, (string)value);
+  //       $str = ((ctx_t*)ctx)->str;
+  //       $len = ((ctx_t*)ctx)->len;
+  //
+  //       print($str);
+  //       $len++;
+  //     }
 
   // Validate decl
   const auto &decl_name = f.decl->ident;
@@ -2703,10 +2697,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       if (field.type.IsPtrTy()) {
         const auto &tags = field.type.GetBtfTypeTags();
-        /*
-         * Currently only "rcu" is safe. "percpu", for example, requires special
-         * unwrapping with `bpf_per_cpu_ptr` which is not yet supported.
-         */
+        // Currently only "rcu" is safe. "percpu", for example, requires special
+        // unwrapping with `bpf_per_cpu_ptr` which is not yet supported.
         static const std::string_view allowed_tag = "rcu";
         for (const auto &tag : tags) {
           if (tag != allowed_tag) {
@@ -3625,9 +3617,7 @@ bool SemanticAnalyser::check_assignment(const Call &call,
   return true;
 }
 
-/*
- * Checks the number of arguments passed to a function is correct.
- */
+// Checks the number of arguments passed to a function is correct.
 bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::stringstream err;
@@ -3648,10 +3638,8 @@ bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
   return true;
 }
 
-/*
- * Checks the number of arguments passed to a function is within a specified
- * range.
- */
+// Checks the number of arguments passed to a function is within a specified
+// range.
 bool SemanticAnalyser::check_varargs(const Call &call,
                                      size_t min_nargs,
                                      size_t max_nargs)
@@ -3684,13 +3672,11 @@ bool SemanticAnalyser::check_varargs(const Call &call,
   return true;
 }
 
-/*
- * Checks an argument passed to a function is of the correct type.
- *
- * This function does not check that the function has the correct number of
- * arguments. Either check_nargs() or check_varargs() should be called first to
- * validate this.
- */
+// Checks an argument passed to a function is of the correct type.
+//
+// This function does not check that the function has the correct number of
+// arguments. Either check_nargs() or check_varargs() should be called first to
+// validate this.
 bool SemanticAnalyser::check_arg(const Call &call,
                                  Type type,
                                  int arg_num,
@@ -3840,12 +3826,10 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
   return nullptr;
 }
 
-/*
- * assign_map_type
- *
- *   Semantic analysis for assigning a value of the provided type
- *   to the given map.
- */
+// assign_map_type
+//
+//   Semantic analysis for assigning a value of the provided type
+//   to the given map.
 void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 {
   const std::string &map_ident = map.ident;
