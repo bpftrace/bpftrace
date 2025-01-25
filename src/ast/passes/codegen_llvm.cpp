@@ -1520,10 +1520,15 @@ void CodegenLLVM::visit(Sizeof &szof)
   expr_ = b_.getInt64(szof.argtype.GetSize());
 }
 
-void CodegenLLVM::visit(Offsetof &ofof)
+void CodegenLLVM::visit(Offsetof &offof)
 {
-  auto &field = ofof.record.GetField(ofof.field);
-  expr_ = b_.getInt64(field.offset);
+  ssize_t offset = 0;
+  const SizedType *record = &offof.record;
+  for (const auto &field : offof.field) {
+    offset += record->GetField(field).offset;
+    record = &record->GetField(field).type;
+  }
+  expr_ = b_.getInt64(offset);
 }
 
 void CodegenLLVM::visit(Map &map)

@@ -1782,14 +1782,32 @@ You can also pass the address type (e.g. AF_INET) explicitly as the first parame
 === offsetof
 
 .variants
-* `offsetof(STRUCT, FIELD)`
-* `offsetof(EXPRESSION, FIELD)`
+* `offsetof(STRUCT, FIELD[.SUBFIELD])`
+* `offsetof(EXPRESSION, FIELD[.SUBFIELD])`
 
 *compile time*
 
 Returns offset of the field offset bytes in struct.
 Similar to kernel `offsetof` operator.
-Note that subfields are not yet supported.
+
+Support any number of sub field levels, for example:
+
+----
+struct Foo {
+  struct {
+    struct {
+      struct {
+        int d;
+      } c;
+    } b;
+  } a;
+}
+BEGIN {
+  @x = offsetof(struct Foo, a.b.c.d);
+  exit();
+}
+----
+
 
 [#functions-override]
 === override

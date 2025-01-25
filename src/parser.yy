@@ -132,6 +132,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %type <ast::Operator> unary_op compound_op
 %type <std::string> attach_point_def c_definitions ident keyword external_name
+%type <std::vector<std::string>> struct_field
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList> attach_points
@@ -627,9 +628,9 @@ sizeof_expr:
                 ;
 
 offsetof_expr:
-                OFFSETOF "(" struct_type "," external_name ")"      { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
-/* For example: offsetof(*curtask, comm) */
-        |       OFFSETOF "(" expr "," external_name ")"             { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
+                OFFSETOF "(" struct_type "," struct_field ")"      { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
+                /* For example: offsetof(*curtask, comm) */
+        |       OFFSETOF "(" expr "," struct_field ")"             { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
                 ;
 
 int:
@@ -661,6 +662,11 @@ ident:
         |       CALL_BUILTIN  { $$ = $1; }
         |       STACK_MODE    { $$ = $1; }
                 ;
+
+struct_field:
+                external_name                       { $$.push_back($1); }
+        |       struct_field DOT external_name      { $$ = std::move($1); $$.push_back($3); }
+        ;
 
 external_name:
                 keyword       { $$ = $1; }

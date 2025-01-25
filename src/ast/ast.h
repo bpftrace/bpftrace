@@ -219,12 +219,14 @@ class Offsetof : public Expression {
 public:
   DEFINE_ACCEPT
 
-  Offsetof(SizedType record, std::string &field, location loc);
-  Offsetof(Expression *expr, std::string &field, location loc);
+  Offsetof(const SizedType &record,
+           std::vector<std::string> &field,
+           location loc);
+  Offsetof(Expression *expr, std::vector<std::string> &field, location loc);
 
   SizedType record;
   Expression *expr = nullptr;
-  std::string field;
+  std::vector<std::string> field;
 
 private:
   Offsetof(const Offsetof &other) = default;

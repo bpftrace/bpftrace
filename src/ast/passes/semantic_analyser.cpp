@@ -1610,24 +1610,33 @@ void SemanticAnalyser::visit(Sizeof &szof)
   resolve_struct_type(szof.argtype, szof.loc);
 }
 
-void SemanticAnalyser::visit(Offsetof &ofof)
+void SemanticAnalyser::visit(Offsetof &offof)
 {
-  ofof.type = CreateUInt64();
-  if (ofof.expr) {
-    Visit(ofof.expr);
-    ofof.record = ofof.expr->type;
+  offof.type = CreateUInt64();
+  if (offof.expr) {
+    Visit(offof.expr);
+    offof.record = offof.expr->type;
   }
-  resolve_struct_type(ofof.record, ofof.loc);
 
-  if (!ofof.record.IsRecordTy()) {
-    LOG(ERROR, ofof.loc, err_)
-        << "offsetof() 1st argument is not of a record type.";
-  } else if (!bpftrace_.structs.Has(ofof.record.GetName())) {
-    LOG(ERROR, ofof.loc, err_) << "'" << ofof.record << "' does not exist.";
-  } else if (!ofof.record.HasField(ofof.field)) {
-    LOG(ERROR, ofof.loc, err_) << "'" << ofof.record << "' "
-                               << "has no field named "
-                               << "'" << ofof.field << "'";
+  resolve_struct_type(offof.record, offof.loc);
+
+  // Check if all sub-fields are present.
+  SizedType record = offof.record;
+  for (const auto &field : offof.field) {
+    if (!record.IsRecordTy()) {
+      LOG(ERROR, offof.loc, err_) << "'" << record << "' "
+                                  << "is not a record type.";
+    } else if (!bpftrace_.structs.Has(record.GetName())) {
+      LOG(ERROR, offof.loc, err_)
+          << "'" << record.GetName() << "' does not exist.";
+    } else if (!record.HasField(field)) {
+      LOG(ERROR, offof.loc, err_) << "'" << record.GetName() << "' "
+                                  << "has no field named "
+                                  << "'" << field << "'";
+    } else {
+      // Get next sub-field
+      record = record.GetField(field).type;
+    }
   }
 }
 
