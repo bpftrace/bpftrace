@@ -17,9 +17,7 @@ class Program;
 class SemanticAnalyser;
 class Pass;
 
-/**
-   Result of a pass run
- */
+// Result of a pass run
 class PassResult {
 public:
   static PassResult Error(const std::string &pass);
@@ -43,9 +41,7 @@ public:
     return errcode_;
   }
 
-  /**
-     Return the pass in which the failure occurred
-   */
+  // Return the pass in which the failure occurred
   const std::optional<std::string> GetErrorPass()
   {
     return errpass_;
@@ -81,28 +77,24 @@ private:
   std::optional<std::string> errmsg_;
 };
 
-/**
-   Context/config for passes
-
-   Note: Most state should end up in the BPFtrace class instead of here
-*/
+// Context/config for passes
+//
+// Note: Most state should end up in the BPFtrace class instead of here
 
 struct PassContext {
 public:
-  PassContext(BPFtrace &b, ASTContext &ast_ctx) : b(b), ast_ctx(ast_ctx){};
+  PassContext(BPFtrace &b, ASTContext &ast_ctx) : b(b), ast_ctx(ast_ctx) {};
   BPFtrace &b;
   ASTContext &ast_ctx;
 };
 
 using PassFPtr = std::function<PassResult(PassContext &)>;
 
-/*
-  Base pass
-*/
+// Base pass
 class Pass {
 public:
   Pass() = delete;
-  Pass(std::string name, PassFPtr fn) : fn_(fn), name(name){};
+  Pass(std::string name, PassFPtr fn) : fn_(fn), name(name) {};
 
   virtual ~Pass() = default;
 

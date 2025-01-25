@@ -182,9 +182,7 @@ private:
   }
 
 public:
-  /**
-     Tuple/struct accessors
-  */
+  // Tuple/struct accessors
   std::vector<Field> &GetFields() const;
   bool HasField(const std::string &name) const;
   const Field &GetField(const std::string &name) const;
@@ -192,14 +190,10 @@ public:
   ssize_t GetFieldCount() const;
   std::weak_ptr<const Struct> GetStruct() const;
 
-  /**
-     Required alignment for this type when used inside a tuple
-   */
+  // Required alignment for this type when used inside a tuple
   ssize_t GetInTupleAlignment() const;
 
-  /**
-     Dump the underlying structure for debug purposes
-  */
+  // Dump the underlying structure for debug purposes
   void DumpStructure(std::ostream &os);
 
   AddrSpace GetAS() const

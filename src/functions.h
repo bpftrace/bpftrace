@@ -11,9 +11,7 @@
 
 namespace bpftrace {
 
-/**
- * A parameter for a BpfScript function
- */
+// A parameter for a BpfScript function
 class Param {
 public:
   Param(std::string name, const SizedType &type)
@@ -35,18 +33,14 @@ private:
   SizedType type_;
 };
 
-/**
- * Represents the type of a function which is callable in a BpfScript program.
- *
- * The function's implementation is not contained here.
- */
+// Represents the type of a function which is callable in a BpfScript program.
+//
+// The function's implementation is not contained here.
 class Function {
 public:
-  /**
-   * "Builtin" functions are hardcoded into bpftrace.
-   * "Script" functions are user-defined in BpfScript.
-   * "External" functions are imported from pre-compiled BPF programs.
-   */
+  // "Builtin" functions are hardcoded into bpftrace.
+  // "Script" functions are user-defined in BpfScript.
+  // "External" functions are imported from pre-compiled BPF programs.
   enum class Origin {
     Builtin,
     Script,
@@ -88,12 +82,10 @@ private:
   Origin origin_;
 };
 
-/**
- * Registry of callable functions
- *
- * Non-builtin functions are not allowed to share the same name. When a builtin
- * and a non-builtin function share a name, the non-builtin is preferred.
- */
+// Registry of callable functions
+//
+// Non-builtin functions are not allowed to share the same name. When a builtin
+// and a non-builtin function share a name, the non-builtin is preferred.
 class FunctionRegistry {
 public:
   const Function *add(Function::Origin origin,
@@ -106,9 +98,7 @@ public:
                       const SizedType &return_type,
                       const std::vector<Param> &params);
 
-  /**
-   * Returns the best match for the given function name and arguments
-   */
+  // Returns the best match for the given function name and arguments
   const Function *get(std::string_view ns,
                       std::string_view name,
                       const std::vector<SizedType> &arg_types,

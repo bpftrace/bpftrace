@@ -300,21 +300,20 @@ void ResourceAnalyser::visit(Call &call)
       resources_.str_buffers++;
   }
 
-  /* Aggregation functions like count/sum/max are always called like:
-   *   @ = count()
-   * Thus, we visit AssignMapStatement AST node which visits the map and
-   * assigns a map key buffer. Thus, there is no need to assign another
-   * buffer here.
-   *
-   * The exceptions are:
-   * 1. lhist/hist because the map key buffer includes both the key itself
-   *    and the bucket ID from a call to linear/log2 functions.
-   * 2. has_key/delete because the map key buffer allocation depends on
-   *    arguments to the function e.g.
-   *      delete(@, 2)
-   *    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
-   *    so the map key buffer check in visit(Map &map) doesn't work as is.
-   */
+  // Aggregation functions like count/sum/max are always called like:
+  //   @ = count()
+  // Thus, we visit AssignMapStatement AST node which visits the map and
+  // assigns a map key buffer. Thus, there is no need to assign another
+  // buffer here.
+  //
+  // The exceptions are:
+  // 1. lhist/hist because the map key buffer includes both the key itself
+  //    and the bucket ID from a call to linear/log2 functions.
+  // 2. has_key/delete because the map key buffer allocation depends on
+  //    arguments to the function e.g.
+  //      delete(@, 2)
+  //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
+  //    so the map key buffer check in visit(Map &map) doesn't work as is.
   if (call.func == "lhist" || call.func == "hist") {
     Map &map = *call.map;
     // Allocation is always needed for lhist/hist. But we need to allocate
@@ -401,26 +400,25 @@ void ResourceAnalyser::visit(For &f)
 
 void ResourceAnalyser::visit(AssignMapStatement &assignment)
 {
-  /* CodegenLLVM traverses the AST like:
-   *      AssignmentMapStatement a
-   *        /                    \
-   *    visit(a.expr)        visit(a.map.key_expr)
-   *
-   * CodegenLLVM avoid traversing into the map node via visit(a.map)
-   * to avoid triggering a map lookup.
-   *
-   * However, ResourceAnalyser traverses the AST differently:
-   *      AssignmentMapStatement a
-   *        /                    \
-   *    visit(a.expr)        visit(a.map)
-   *                               \
-   *                           visit(a.map.key_expr)
-   *
-   * Unfortunately, calling ResourceAnalser::visit(a.map) will trigger
-   * an additional read map buffer. Thus to mimic CodegenLLVM, we
-   * skip calling ResourceAnalser::visit(a.map) and do the AST traversal
-   * ourselves.
-   */
+  // CodegenLLVM traverses the AST like:
+  //      AssignmentMapStatement a
+  //        /                    \
+  //    visit(a.expr)        visit(a.map.key_expr)
+  //
+  // CodegenLLVM avoid traversing into the map node via visit(a.map)
+  // to avoid triggering a map lookup.
+  //
+  // However, ResourceAnalyser traverses the AST differently:
+  //      AssignmentMapStatement a
+  //        /                    \
+  //    visit(a.expr)        visit(a.map)
+  //                               \
+  //                           visit(a.map.key_expr)
+  //
+  // Unfortunately, calling ResourceAnalser::visit(a.map) will trigger
+  // an additional read map buffer. Thus to mimic CodegenLLVM, we
+  // skip calling ResourceAnalser::visit(a.map) and do the AST traversal
+  // ourselves.
   visit(assignment.expr);
   visit(assignment.map->key_expr);
 
@@ -453,12 +451,11 @@ void ResourceAnalyser::visit(Ternary &ternary)
 
 void ResourceAnalyser::update_variable_info(Variable &var)
 {
-  /* Note we don't check if a variable has been declared/assigned before.
-   * We do this to simplify the code and make it more robust to changes
-   * in other modules at the expense of memory over-allocation. Otherwise,
-   * we would need to track scopes like SemanticAnalyser and CodegenLLVM
-   * and duplicate scope tracking in a third module.
-   */
+  // Note we don't check if a variable has been declared/assigned before.
+  // We do this to simplify the code and make it more robust to changes
+  // in other modules at the expense of memory over-allocation. Otherwise,
+  // we would need to track scopes like SemanticAnalyser and CodegenLLVM
+  // and duplicate scope tracking in a third module.
   if (exceeds_stack_limit(var.type.GetSize())) {
     resources_.variable_buffers++;
     resources_.max_variable_size = std::max(resources_.max_variable_size,

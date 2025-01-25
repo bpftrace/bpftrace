@@ -9,14 +9,10 @@ public:
   ProcMonBase() = default;
   virtual ~ProcMonBase() = default;
 
-  /**
-     Whether the process is still alive
-  */
+  // Whether the process is still alive
   virtual bool is_alive(void) = 0;
 
-  /**
-     pid of the process being monitored
-  */
+  // pid of the process being monitored
   pid_t pid(void)
   {
     return pid_;

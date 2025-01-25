@@ -209,7 +209,7 @@ private:
 class ConfigSetter {
 public:
   explicit ConfigSetter(Config &config, ConfigSource source)
-      : config_(config), source_(source){};
+      : config_(config), source_(source) {};
 
   bool set(ConfigKeyBool key, bool val)
   {

@@ -2292,11 +2292,9 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
   }
 }
 
-/*
- * createTuple
- *
- * Constructs a tuple on the scratch buffer or stack from the provided values.
- */
+// createTuple
+//
+// Constructs a tuple on the scratch buffer or stack from the provided values.
 Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
     const std::vector<std::pair<llvm::Value *, const location *>> &vals,
@@ -3535,12 +3533,10 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                          const std::string &call_name,
                                          AsyncAction async_action)
 {
-  /*
-   * perf event output has: uint64_t id, vargs
-   * The id maps to bpftrace_.*_args_, and is a way to define the
-   * types and offsets of each of the arguments, and share that between BPF and
-   * user-space for printing.
-   */
+  // perf event output has: uint64_t id, vargs
+  // The id maps to bpftrace_.*_args_, and is a way to define the
+  // types and offsets of each of the arguments, and share that between BPF and
+  // user-space for printing.
   std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
 
   const auto &args = std::get<1>(call_args.at(id));
@@ -4013,13 +4009,11 @@ void CodegenLLVM::optimize()
   PMB.OptLevel = 3;
   legacy::PassManager PM;
   PM.add(createFunctionInliningPass());
-  /*
-   * llvm < 4.0 needs
-   * PM.add(createAlwaysInlinerPass());
-   * llvm >= 4.0 needs
-   * PM.add(createAlwaysInlinerLegacyPass());
-   * use below 'stable' workaround
-   */
+  // llvm < 4.0 needs
+  // PM.add(createAlwaysInlinerPass());
+  // llvm >= 4.0 needs
+  // PM.add(createAlwaysInlinerLegacyPass());
+  // use below 'stable' workaround
   LLVMAddAlwaysInlinerPass(reinterpret_cast<LLVMPassManagerRef>(&PM));
   PMB.populateModulePassManager(PM);
 
@@ -4504,16 +4498,14 @@ llvm::Function *CodegenLLVM::createMapLenCallback()
 llvm::Function *CodegenLLVM::createForEachMapCallback(const For &f,
                                                       llvm::Type *ctx_t)
 {
-  /*
-   * Create a callback function suitable for passing to bpf_for_each_map_elem,
-   * of the form:
-   *
-   *   static int cb(struct map *map, void *key, void *value, void *ctx)
-   *   {
-   *     $decl = (key, value);
-   *     [stmts...]
-   *   }
-   */
+  // Create a callback function suitable for passing to bpf_for_each_map_elem,
+  // of the form:
+  //
+  //   static int cb(struct map *map, void *key, void *value, void *ctx)
+  //   {
+  //     $decl = (key, value);
+  //     [stmts...]
+  //   }
 
   auto saved_ip = b_.saveIP();
 

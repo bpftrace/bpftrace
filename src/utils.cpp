@@ -546,10 +546,8 @@ bool wildcard_match(std::string_view str,
   return true;
 }
 
-/*
- * Splits input string by '*' delimiter and return the individual parts.
- * Sets start_wildcard and end_wildcard if input starts or ends with '*'.
- */
+// Splits input string by '*' delimiter and return the individual parts.
+// Sets start_wildcard and end_wildcard if input starts or ends with '*'.
 std::vector<std::string> get_wildcard_tokens(const std::string &input,
                                              bool &start_wildcard,
                                              bool &end_wildcard)
@@ -936,20 +934,17 @@ std::string exec_system(const char *cmd)
   return result;
 }
 
-/*
-Original resolve_binary_path API defaulting to bpftrace's mount namespace
-*/
+// Original resolve_binary_path API defaulting to bpftrace's mount namespace
 std::vector<std::string> resolve_binary_path(const std::string &cmd)
 {
   const char *env_paths = getenv("PATH");
   return resolve_binary_path(cmd, env_paths, -1);
 }
 
-/*
-If a pid is specified, the binary path is taken relative to its own PATH if
-it is in a different mount namespace. Otherwise, the path is resolved relative
-to the local PATH env var for bpftrace's own mount namespace if it is set
-*/
+// If a pid is specified, the binary path is taken relative to its own PATH if
+// it is in a different mount namespace. Otherwise, the path is resolved
+// relative to the local PATH env var for bpftrace's own mount namespace if it
+// is set
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
 {
   std::string env_paths = "";
@@ -975,11 +970,9 @@ std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
   }
 }
 
-/*
-Check whether 'path' refers to a ELF file. Errors are swallowed silently and
-result in return of 'nullopt'. On success, the ELF type (e.g., ET_DYN) is
-returned.
-*/
+// Check whether 'path' refers to a ELF file. Errors are swallowed silently and
+// result in return of 'nullopt'. On success, the ELF type (e.g., ET_DYN) is
+// returned.
 static std::optional<int> is_elf(const std::string &path)
 {
   int fd;
@@ -1027,9 +1020,7 @@ static bool has_exec_permission(const std::string &path)
   return (perms & perms::owner_exec) != perms::none;
 }
 
-/*
-Check whether 'path' refers to an executable ELF file.
-*/
+// Check whether 'path' refers to an executable ELF file.
 bool is_exe(const std::string &path)
 {
   if (auto e_type = is_elf(path)) {
@@ -1038,10 +1029,9 @@ bool is_exe(const std::string &path)
   return false;
 }
 
-/*
-Private interface to resolve_binary_path, used for the exposed variants above,
-allowing for a PID whose mount namespace should be optionally considered.
-*/
+// Private interface to resolve_binary_path, used for the exposed variants
+// above, allowing for a PID whose mount namespace should be optionally
+// considered.
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
                                                     int pid)
@@ -1092,19 +1082,17 @@ std::string path_for_pid_mountns(int pid, const std::string &path)
   return pid_relative_path.str();
 }
 
-/*
-Determines if the target process is in a different mount namespace from
-bpftrace.
-
-If a process is in a different mount namespace (eg, container) it is very
-likely that any references to local paths will not be valid, and that paths
-need to be made relative to the PID.
-
-If an invalid PID is specified or doesn't exist, it returns false.
-True is only returned if the namespace of the target process could be read and
-it doesn't match that of bpftrace. If there was an error reading either mount
-namespace, it will throw an exception
-*/
+// Determines if the target process is in a different mount namespace from
+// bpftrace.
+//
+// If a process is in a different mount namespace (eg, container) it is very
+// likely that any references to local paths will not be valid, and that paths
+// need to be made relative to the PID.
+//
+// If an invalid PID is specified or doesn't exist, it returns false.
+// True is only returned if the namespace of the target process could be read
+// and it doesn't match that of bpftrace. If there was an error reading either
+// mount namespace, it will throw an exception
 static bool pid_in_different_mountns(int pid)
 {
   if (pid <= 0)
@@ -1302,12 +1290,10 @@ std::string hex_format_buffer(const char *buf,
   return str;
 }
 
-/*
- * Attaching to these kernel functions with fentry/fexit (kfunc/kretfunc)
- * could lead to a recursive loop and kernel crash so we need additional
- * generated BPF code to protect against this if one of these are being
- * attached to.
- */
+// Attaching to these kernel functions with fentry/fexit (kfunc/kretfunc)
+// could lead to a recursive loop and kernel crash so we need additional
+// generated BPF code to protect against this if one of these are being
+// attached to.
 bool is_recursive_func(const std::string &func_name)
 {
   return RECURSIVE_KERNEL_FUNCS.find(func_name) != RECURSIVE_KERNEL_FUNCS.end();
@@ -1315,12 +1301,10 @@ bool is_recursive_func(const std::string &func_name)
 
 static bool is_bad_func(std::string &func)
 {
-  /*
-   * Certain kernel functions are known to cause system stability issues if
-   * traced (but not marked "notrace" in the kernel) so they should be filtered
-   * out as the list is built. The list of functions have been taken from the
-   * bpf kernel selftests (bpf/prog_tests/kprobe_multi_test.c).
-   */
+  // Certain kernel functions are known to cause system stability issues if
+  // traced (but not marked "notrace" in the kernel) so they should be filtered
+  // out as the list is built. The list of functions have been taken from the
+  // bpf kernel selftests (bpf/prog_tests/kprobe_multi_test.c).
   static const std::unordered_set<std::string> bad_funcs = {
     "arch_cpu_idle", "default_idle", "bpf_dispatcher_xdp_func"
   };
@@ -1383,9 +1367,7 @@ FuncsModulesMap parse_traceable_funcs()
 #endif
 }
 
-/**
- * Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
- */
+// Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
 static uint32_t _find_version_note(unsigned long base)
 {
   auto ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
@@ -1459,11 +1441,9 @@ static uint32_t kernel_version_from_khdr()
   return 0;
 }
 
-/**
- * Find a LINUX_VERSION_CODE matching the host kernel. The build-time constant
- * may not match if bpftrace is compiled on a different Linux version than it's
- * used on, e.g. if built with Docker.
- */
+// Find a LINUX_VERSION_CODE matching the host kernel. The build-time constant
+// may not match if bpftrace is compiled on a different Linux version than it's
+// used on, e.g. if built with Docker.
 uint32_t kernel_version(KernelVersionMethod method)
 {
   static std::optional<uint32_t> a0, a1, a2;

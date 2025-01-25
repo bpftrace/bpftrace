@@ -62,9 +62,7 @@ private:
   uint32_t max_entries_;
 };
 
-/**
-   Internal map types
-*/
+// Internal map types
 enum class MapType {
   // Also update to_string
   PerfEvent,
