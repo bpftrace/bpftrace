@@ -671,8 +671,10 @@ void SemanticAnalyser::visit(Call &call)
         // These calls expect just a map reference for the first argument
         if ((call.func == "delete" || call.func == "has_key") && i == 0) {
           map.skip_key_validation = true;
+          map.is_read = false;
         } else if (skip_key_validation(call)) {
           map.skip_key_validation = true;
+          map.is_read = false;
         }
       }
     }
@@ -1759,6 +1761,12 @@ void SemanticAnalyser::visit(Map &map)
   auto search_val = map_val_.find(map.ident);
   if (search_val != map_val_.end()) {
     map.type = search_val->second;
+
+    if (map.is_read && map.type.IsCastableMapTy() &&
+        !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
+      LOG(ERROR, map.loc, err_)
+          << "Missing required kernel feature: map_lookup_percpu_elem";
+    }
   } else {
     // If there is no record of any assignment after the first pass
     // then it's safe to say this map is undefined
@@ -2856,6 +2864,7 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
+  assignment.map->is_read = false;
   Visit(assignment.map);
   Visit(assignment.expr);
 

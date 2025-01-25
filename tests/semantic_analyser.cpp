@@ -4371,6 +4371,72 @@ BEGIN { @map[0] = 1; for ($kv : @map) { print($kv); } }
              false);
 }
 
+TEST(semantic_analyser, for_loop_castable_map_missing_feature)
+{
+  test_error("BEGIN { @map = count(); for ($kv : @map) { print($kv); } }",
+             R"(
+stdin:1:25-28: ERROR: Missing required kernel feature: for_each_map_elem
+BEGIN { @map = count(); for ($kv : @map) { print($kv); } }
+                        ~~~
+stdin:1:36-41: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @map = count(); for ($kv : @map) { print($kv); } }
+                                   ~~~~~
+)",
+             false);
+}
+
+TEST(semantic_analyser, castable_map_missing_feature)
+{
+  MockBPFfeature feature(false);
+  test(feature, "k:f {  @a = count(); }");
+  test(feature, "k:f {  @a = count(); print(@a) }");
+  test(feature, "k:f {  @a = count(); len(@a) }");
+  test(feature, "k:f {  @a = count(); clear(@a) }");
+  test(feature, "k:f {  @a = count(); zero(@a) }");
+  test(feature, "k:f {  @a[1] = count(); delete(@a, 1) }");
+  test(feature, "k:f {  @a[1] = count(); has_key(@a, 1) }");
+
+  test_error("BEGIN { @a = count(); print((uint64)@a) }",
+             R"(
+stdin:1:23-39: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @a = count(); print((uint64)@a) }
+                      ~~~~~~~~~~~~~~~~
+)",
+             false);
+
+  test_error("BEGIN { @a = count(); print((@a, 1)) }",
+             R"(
+stdin:1:23-32: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @a = count(); print((@a, 1)) }
+                      ~~~~~~~~~
+)",
+             false);
+
+  test_error("BEGIN { @a[1] = count(); print(@a[1]) }",
+             R"(
+stdin:1:26-37: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @a[1] = count(); print(@a[1]) }
+                         ~~~~~~~~~~~
+)",
+             false);
+
+  test_error("BEGIN { @a = count(); $b = @a; }",
+             R"(
+stdin:1:28-30: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @a = count(); $b = @a; }
+                           ~~
+)",
+             false);
+
+  test_error("BEGIN { @a = count(); @b = 1; @b = @a; }",
+             R"(
+stdin:1:36-38: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+BEGIN { @a = count(); @b = 1; @b = @a; }
+                                   ~~
+)",
+             false);
+}
+
 TEST(semantic_analyser, for_loop_no_ctx_access)
 {
   test_error("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }",
