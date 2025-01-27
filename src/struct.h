@@ -1,10 +1,19 @@
 #pragma once
 
+#include <cereal/access.hpp>
+#include <cstddef>
+#include <functional>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <optional>
-
-#include <cereal/access.hpp>
+#include <stdint.h>
+#include <string>
+#include <string_view>
+#include <sys/types.h>
+#include <unordered_set>
+#include <variant>
+#include <vector>
 
 #include "ast/ast.h"
 #include "types.h"

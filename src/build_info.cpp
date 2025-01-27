@@ -1,8 +1,8 @@
 #include <llvm/Config/llvm-config.h>
 #include <sstream>
+#include <string_view>
 
 #include "build_info.h"
-
 #include "version.h"
 
 namespace bpftrace {

@@ -1,5 +1,8 @@
 #include "pcap_writer.h"
 
+#include <pcap/dlt.h>
+#include <sys/types.h>
+
 #ifdef HAVE_LIBPCAP
 #include <pcap/pcap.h>
 

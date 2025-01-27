@@ -1,7 +1,11 @@
 #include "portability_analyser.h"
 
 #include <cstdlib>
+#include <optional>
+#include <string>
+#include <vector>
 
+#include "location.hh"
 #include "log.h"
 #include "types.h"
 

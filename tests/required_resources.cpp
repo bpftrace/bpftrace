@@ -3,11 +3,10 @@
 #include <iostream>
 #include <sstream>
 
-#include <gtest/gtest.h>
-
 #include "format_string.h"
 #include "struct.h"
 #include "types.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test {
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdint.h>
+#include <string>
+
 #include "disasm.h"
 
 namespace bpftrace {

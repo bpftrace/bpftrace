@@ -1,5 +1,9 @@
 #pragma once
 
+#include <bpf/libbpf.h>
+#include <stdarg.h>
+
+#include "bpfbytecode.h"
 #include "bpftrace.h"
 
 int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap);

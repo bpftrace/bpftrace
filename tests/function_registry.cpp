@@ -1,11 +1,16 @@
-#include "functions.h"
-
+#include <memory>
 #include <sstream>
+#include <stddef.h>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
+#include "functions.h"
+#include "struct.h"
+#include "types.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include "struct.h"
 
 namespace bpftrace::test::function_registry {
 

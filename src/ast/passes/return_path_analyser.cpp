@@ -1,5 +1,12 @@
 #include "return_path_analyser.h"
+
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "location.hh"
 #include "log.h"
+#include "types.h"
 
 namespace bpftrace::ast {
 

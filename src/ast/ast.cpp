@@ -1,9 +1,11 @@
 #include "ast/ast.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "ast/visitors.h"
 #include "log.h"
+#include "utils.h"
 
 namespace bpftrace::ast {
 

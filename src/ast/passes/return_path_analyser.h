@@ -1,5 +1,9 @@
 #pragma once
 
+#include <iostream>
+#include <sstream>
+
+#include "ast/ast.h"
 #include "ast/pass_manager.h"
 #include "ast/visitors.h"
 

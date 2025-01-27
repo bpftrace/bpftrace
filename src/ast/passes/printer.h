@@ -1,8 +1,11 @@
 #pragma once
 
 #include <ostream>
+#include <string>
 
+#include "ast/ast.h"
 #include "ast/visitors.h"
+#include "types.h"
 
 namespace bpftrace {
 namespace ast {

@@ -1,8 +1,16 @@
 #include "dibuilderbpf.h"
 
-#include <string_view>
-
+#include <assert.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/BitmaskEnum.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Metadata.h>
+#include <stddef.h>
+#include <string_view>
+#include <vector>
 
 #include "libbpf/bpf.h"
 #include "log.h"

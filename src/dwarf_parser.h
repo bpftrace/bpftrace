@@ -1,12 +1,17 @@
 #pragma once
 
-#include "struct.h"
-#include "types.h"
-
+#include <atomic>
+#include <lldb/API/SBType.h>
+#include <lldb/API/SBValueList.h>
 #include <memory>
 #include <optional>
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
 #include <vector>
+
+#include "struct.h"
+#include "types.h"
 
 #ifdef HAVE_LIBLLDB
 #include <lldb/API/SBDebugger.h>

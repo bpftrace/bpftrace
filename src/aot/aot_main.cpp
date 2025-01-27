@@ -1,7 +1,16 @@
+#include <bpf/libbpf.h>
+#include <cstring>
+#include <errno.h>
 #include <filesystem>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <string_view>
+#include <unistd.h>
+#include <utility>
 
 #include "aot.h"
 #include "bpftrace.h"

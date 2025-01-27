@@ -1,12 +1,28 @@
 #pragma once
 
-#include "gmock/gmock.h"
+#include <iosfwd>
+#include <memory>
+#include <optional>
+#include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "child.h"
+#include "kfuncs.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "required_resources.h"
+#include "types.h"
+#include "usdt.h"
+#include "utils.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace {
 namespace test {

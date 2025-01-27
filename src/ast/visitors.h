@@ -1,6 +1,8 @@
 #pragma once
 
+#include <stdexcept>
 #include <string>
+#include <typeinfo>
 
 #include "ast/ast.h"
 #include "ast/vtable.h"

@@ -1,7 +1,9 @@
 #include "container/cstring_view.h"
-#include "gtest/gtest.h"
 
+#include <string.h>
 #include <type_traits>
+
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::cstring_view {
 

@@ -1,9 +1,11 @@
 #include "bpfbytecode.h"
+
+#include <string_view>
+
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/semantic_analyser.h"
 #include "driver.h"
 #include "mocks.h"
-
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::bpfbytecode {

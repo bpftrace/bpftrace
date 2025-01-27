@@ -1,5 +1,7 @@
 #include "ast/visitors.h"
 
+#include <vector>
+
 #include "ast/ast.h"
 
 namespace bpftrace::ast {

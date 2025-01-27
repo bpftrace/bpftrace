@@ -1,5 +1,8 @@
 #include "log.h"
 
+#include <stdlib.h>
+#include <utility>
+
 namespace bpftrace {
 
 std::string logtype_str(LogType t)

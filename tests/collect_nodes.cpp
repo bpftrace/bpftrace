@@ -1,8 +1,11 @@
 #include "ast/passes/collect_nodes.h"
-#include "gtest/gtest.h"
 
 #include <functional>
+#include <stddef.h>
 #include <vector>
+
+#include "location.hh"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::collect_nodes {
 

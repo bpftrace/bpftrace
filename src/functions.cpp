@@ -1,5 +1,8 @@
 #include "functions.h"
 
+#include <assert.h>
+#include <ostream>
+
 #include "log.h"
 
 namespace bpftrace {

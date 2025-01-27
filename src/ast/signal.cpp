@@ -1,7 +1,11 @@
-#include "ast/signal_bt.h"
-
 #include <algorithm>
+#include <ctype.h>
 #include <map>
+#include <signal.h>
+#include <string>
+#include <utility>
+
+#include "ast/signal_bt.h"
 
 namespace bpftrace {
 
