@@ -3,12 +3,12 @@ BEGIN {
 		$x = 1;
 	}
 	
-	if (1) { 
-		let $x; 
+	if (1) {
+		let $x;
 		if (0) {
 			$x = 5;
 		}
 		print($x);
-	} 
-	exit(); 
+	}
+	exit();
 }
