@@ -16,5 +16,5 @@ BEGIN {
 	}
 	print(("c", $x));
 
-	exit(); 
+	exit();
 }

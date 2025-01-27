@@ -6,7 +6,7 @@ that initiated the I/O. This can help explain disk I/O that is not directly
 requested by applications (eg, metadata reads on writes, resilvering, etc).
 For example:
 
-# ./biostacks.bt 
+# ./biostacks.bt
 Attaching 5 probes...
 Tracing block I/O with init stacks. Hit Ctrl-C to end.
 ^C
@@ -26,7 +26,7 @@ Tracing block I/O with init stacks. Hit Ctrl-C to end.
     xfsaild+428
     kthread+289
     ret_from_fork+53
-]: 
+]:
 [64K, 128K)            1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
 [...]
@@ -50,7 +50,7 @@ Tracing block I/O with init stacks. Hit Ctrl-C to end.
     worker_thread+50
     kthread+289
     ret_from_fork+53
-]: 
+]:
 [8K, 16K)            560 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [16K, 32K)           218 |@@@@@@@@@@@@@@@@@@@@                                |
 [32K, 64K)            26 |@@                                                  |

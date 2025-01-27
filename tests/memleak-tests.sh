@@ -57,7 +57,7 @@ program_tests=(
 listing_tests=(
     '"kprobe_seq_*"'
 )
-    
+
 run_tests program_tests "-e" "program"
 run_tests listing_tests "-l" "listing"
 
