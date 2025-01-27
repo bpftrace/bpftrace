@@ -1,11 +1,19 @@
 #include "ast/passes/semantic_analyser.h"
+
+#include <assert.h>
+#include <memory>
+#include <string_view>
+
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
+#include "config.h"
 #include "driver.h"
 #include "mocks.h"
+#include "procmon.h"
+#include "struct.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

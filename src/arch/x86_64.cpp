@@ -1,7 +1,10 @@
-#include "arch.h"
-
 #include <algorithm>
 #include <array>
+#include <iterator>
+#include <string>
+#include <vector>
+
+#include "arch.h"
 
 // SP + 8 points to the first argument that is passed on the stack
 #define ARG0_STACK 8

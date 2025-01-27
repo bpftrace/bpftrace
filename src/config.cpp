@@ -1,6 +1,9 @@
 #include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <errno.h>
 #include <fstream>
+#include <iostream>
 
 #include "config.h"
 #include "log.h"

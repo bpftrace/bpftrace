@@ -1,8 +1,12 @@
 #pragma once
 
 #include <iostream>
+#include <optional>
 #include <sstream>
+#include <stddef.h>
+#include <string>
 
+#include "ast/ast.h"
 #include "ast/pass_manager.h"
 #include "ast/visitors.h"
 #include "required_resources.h"

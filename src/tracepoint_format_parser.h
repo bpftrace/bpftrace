@@ -2,7 +2,9 @@
 
 #include <istream>
 #include <set>
+#include <string>
 
+#include "ast/ast.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
 

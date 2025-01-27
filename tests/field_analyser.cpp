@@ -1,6 +1,16 @@
 #include "ast/passes/field_analyser.h"
+
+#include <algorithm>
+#include <compare>
+#include <memory>
+#include <optional>
+#include <set>
+#include <stdint.h>
+
 #include "driver.h"
 #include "mocks.h"
+#include "struct.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::field_analyser {

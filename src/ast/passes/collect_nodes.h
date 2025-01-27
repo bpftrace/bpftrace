@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 
+#include "ast/ast.h"
 #include "ast/visitors.h"
 
 namespace bpftrace::ast {

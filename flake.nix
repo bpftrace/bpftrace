@@ -140,6 +140,7 @@
                   strace
                   unixtools.ping
                   util-linux
+                  include-what-you-use
                   # For runtime tests
                   rustc
                   go

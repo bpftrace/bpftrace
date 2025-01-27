@@ -1,14 +1,32 @@
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
+#include <memory>
+#include <optional>
+#include <set>
+#include <sstream>
+#include <stddef.h>
+#include <string>
+#include <time.h>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "ast/ast.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
+#include "config.h"
 #include "driver.h"
 #include "mocks.h"
+#include "required_resources.h"
+#include "struct.h"
 #include "tracefs.h"
+#include "types.h"
+#include "usdt.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

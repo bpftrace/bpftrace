@@ -113,6 +113,34 @@ can be used to easily format commits, e.g. `git clang-format upstream/master`
 We want to avoid `fix formatting` commits. Instead every commit should be
 formatted correctly.
 
+### Using 'include-what-you-use'
+
+Occasionally, it may be helpful to run 'include-what-you-use' to ensure that
+headers reflect dependencies accurately, and that you don't have a) many
+transitive dependencies that can break unexpectedly, or b) many unused headers.
+
+The 'include-what-you-use' tool can automatically analyze what is used during
+the build and provide recommendations. This is done by configuring the `cmake`
+build. In an existing build directory, you can run:
+
+```
+CC=clang CXX=clang++ cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE="include-what-you-use;-Xiwyu;--no_comments;-Xiwyu;--quoted_includes_first;-Xiwyu;--no_fwd_decls" --fresh .
+make clean
+make 2>/tmp/iwyu.out
+```
+
+In order to apply the recommendations, you can use the `fix_includes.py` tool
+that also comes with 'include-what-you-use':
+
+```
+fix_includes.py < /tmp/iwyu.out
+```
+
+Note that these recommendations should be checked and not applied blindly.
+Occasionally recommendations might be to include implementation-specific
+headers, e.g. `__stddef_size_t.h` instead of `stddef.h`. However, they
+generally get you 95% of the way there.
+
 ## Merging pull requests
 
 Please squash + rebase all pull requests (with no merge commit). In other words,

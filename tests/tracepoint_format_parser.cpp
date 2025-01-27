@@ -1,7 +1,11 @@
 #include "tracepoint_format_parser.h"
+
+#include <sstream>
+
+#include "driver.h"
 #include "mocks.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <driver.h>
 
 using namespace testing;
 

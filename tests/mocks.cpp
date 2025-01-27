@@ -1,4 +1,10 @@
 #include "mocks.h"
+
+#include <set>
+#include <sstream>
+#include <time.h>
+
+#include "struct.h"
 #include "tracefs.h"
 
 namespace bpftrace::test {

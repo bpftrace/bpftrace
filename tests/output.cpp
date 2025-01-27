@@ -1,11 +1,11 @@
 #include "output.h"
 
-#include <gtest/gtest.h>
 #include <sstream>
 
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "mocks.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::output {
 
@@ -84,7 +84,7 @@ TEST(TextOutput, lhist_suffix)
 
   output.map_hist(bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
 
-  EXPECT_EQ(R"(@mymap: 
+  EXPECT_EQ(R"(@mymap:
 [0, 1K)                1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [1K, 2K)               1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [2K, 3K)               1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|

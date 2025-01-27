@@ -1,7 +1,14 @@
 #include <climits>
+#include <limits>
 #include <sstream>
+#include <stdio.h>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "ast/ast.h"
 #include "ast/passes/printer.h"
+#include "bpftrace.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 

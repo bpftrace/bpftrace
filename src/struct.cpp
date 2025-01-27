@@ -1,7 +1,12 @@
 #include "struct.h"
 
+#include <algorithm>
+#include <assert.h>
 #include <iomanip>
 #include <limits>
+#include <ostream>
+#include <stddef.h>
+#include <utility>
 
 #include "log.h"
 #include "utils.h"

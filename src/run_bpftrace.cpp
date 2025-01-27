@@ -1,5 +1,14 @@
 #include <csignal>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <utility>
 
+#include "child.h"
+#include "config.h"
 #include "log.h"
 #include "run_bpftrace.h"
 

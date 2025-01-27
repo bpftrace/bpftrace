@@ -1,11 +1,20 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <memory>
+#include <sstream>
+#include <string>
+#include <string_view>
 
+#include "ast/ast.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "bpffeature.h"
+#include "bpftrace.h"
 #include "clang_parser.h"
+#include "config.h"
 #include "driver.h"
 #include "mocks.h"
+#include "types.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::config_analyser {
 
