@@ -2,6 +2,7 @@
 #include <cerrno>
 #include <fcntl.h>
 
+#include <sched.h>
 #include <stdexcept>
 #include <string>
 #include <sys/eventfd.h>
