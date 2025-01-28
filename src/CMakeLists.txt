@@ -96,6 +96,7 @@ if (USE_BLAZESYM)
   )
 
   target_compile_definitions(runtime PRIVATE USE_BLAZESYM=${USE_BLAZESYM})
+  target_compile_definitions(${BPFTRACE} PRIVATE USE_BLAZESYM=${USE_BLAZESYM})
   target_include_directories(runtime PRIVATE ${blazesym_SOURCE_DIR}/capi/include)
   target_link_libraries(runtime blazesym_c)
 endif()
