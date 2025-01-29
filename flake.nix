@@ -74,33 +74,39 @@
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
-              with pkgs;
               pkgs.stdenv.mkDerivation rec {
                 name = "bpftrace";
 
                 src = self;
 
-                nativeBuildInputs = [ cmake ninja bison flex gcc clang ];
+                nativeBuildInputs = [
+                  pkgs.bison
+                  pkgs.clang
+                  pkgs.cmake
+                  pkgs.flex
+                  pkgs.gcc
+                  pkgs.ninja
+                ];
 
                 buildInputs = [
-                  asciidoctor
-                  cereal
-                  elfutils
-                  gtest
-                  libbfd
-                  libelf
-                  libffi
-                  libopcodes
-                  libpcap
-                  libsystemtap
+                  overlayedPkgs.bcc
+                  overlayedPkgs.libbpf
+                  pkgs.asciidoctor
+                  pkgs.cereal
+                  pkgs.elfutils
+                  pkgs.gtest
+                  pkgs.libbfd
+                  pkgs.libelf
+                  pkgs.libffi
+                  pkgs.libopcodes
+                  pkgs.libpcap
+                  pkgs.libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
                   pkgs."llvmPackages_${toString llvmVersion}".lldb
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
-                  overlayedPkgs.bcc
-                  overlayedPkgs.libbpf
-                  pahole
-                  xxd
-                  zlib
+                  pkgs.pahole
+                  pkgs.xxd
+                  pkgs.zlib
                 ];
 
                 # Release flags
