@@ -3,9 +3,12 @@
 #include <cstdint>
 #include <string>
 
+namespace bpftrace {
+class Config;
+
 class Ksyms {
 public:
-  Ksyms() = default;
+  Ksyms(const Config &config);
   ~Ksyms();
 
   Ksyms(Ksyms &) = delete;
@@ -14,5 +17,7 @@ public:
   std::string resolve(uint64_t addr, bool show_offset);
 
 private:
+  const Config &config_;
   void *ksyms_{ nullptr };
 };
+} // namespace bpftrace

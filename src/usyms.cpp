@@ -1,5 +1,6 @@
 #include <bcc/bcc_syms.h>
 
+#include "config.h"
 #include "usyms.h"
 
 #include "scopeguard.h"
