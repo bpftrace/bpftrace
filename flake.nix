@@ -100,7 +100,7 @@
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
             llvmVersion:
-              pkgs.stdenv.mkDerivation rec {
+              pkgs.stdenv.mkDerivation {
                 name = "bpftrace";
 
                 src = self;
