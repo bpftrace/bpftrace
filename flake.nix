@@ -38,11 +38,18 @@
               owner = "libbpf";
               repo = "libbpf";
               rev = "v${libbpfVersion}";
-              # If you don't know the hash the first time, set:
-              # hash = "";
+              # Nix uses the hash to do lookups in its cache as well as check that the
+              # download from the internet hasn't changed. Therefore, it's necessary to
+              # update the hash every time you update the source. Failure to update the
+              # hash in a cached environment (warm development host and CI) will cause
+              # nix to use the old source and then fail at some point in the future when
+              # the stale cached content is evicted.
+              #
+              # If you don't know the hash, set:
+              #   sha256 = "";
               # then nix will fail the build with such an error message:
-              # hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
-              # specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+              #   hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
+              #   specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
               # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
               sha256 = "sha256-+L/rbp0a3p4PHq1yTJmuMcNj0gT5sqAPeaNRo3Sh6U8=";
             };
@@ -57,6 +64,7 @@
               owner = "iovisor";
               repo = "bcc";
               rev = "v${bccVersion}";
+              # See above
               sha256 = "sha256-6dT3seLuEVQNKWiYGLK1ajXzW7pb62S/GQ0Lp4JdGjc=";
             };
           };
