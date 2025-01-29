@@ -25,51 +25,41 @@
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ]
       (system:
         let
+          pkgs = import nixpkgs { inherit system; };
+
           # The default LLVM version is the latest supported release
           defaultLlvmVersion = 19;
 
-          # Overlay to specify build should use the specific libbpf we want
+          # Override to specify the libbpf build we want
           libbpfVersion = "1.5.0";
-          libbpfOverlay =
-            (self: super: {
-              libbpf = super.libbpf.overrideAttrs (old: {
-                version = libbpfVersion;
-                src = super.fetchFromGitHub {
-                  owner = "libbpf";
-                  repo = "libbpf";
-                  rev = "v${libbpfVersion}";
-                  # If you don't know the hash the first time, set:
-                  # hash = "";
-                  # then nix will fail the build with such an error message:
-                  # hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
-                  # specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-                  # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
-                  sha256 = "sha256-+L/rbp0a3p4PHq1yTJmuMcNj0gT5sqAPeaNRo3Sh6U8=";
-                };
-              });
-            });
+          libbpf = pkgs.libbpf.overrideAttrs {
+            version = libbpfVersion;
+            src = pkgs.fetchFromGitHub {
+              owner = "libbpf";
+              repo = "libbpf";
+              rev = "v${libbpfVersion}";
+              # If you don't know the hash the first time, set:
+              # hash = "";
+              # then nix will fail the build with such an error message:
+              # hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
+              # specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+              # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
+              sha256 = "sha256-+L/rbp0a3p4PHq1yTJmuMcNj0gT5sqAPeaNRo3Sh6U8=";
+            };
+          };
 
-          # Overlay to specify build should use the specific bcc we want
+          # Override to specify the bcc build we want.
+          # First overrides with the above libbpf and then overrides the rev.
           bccVersion = "0.33.0";
-          bccOverlay =
-            (self: super: {
-              bcc = super.bcc.overridePythonAttrs (old: {
-                version = bccVersion;
-                src = super.fetchFromGitHub {
-                  owner = "iovisor";
-                  repo = "bcc";
-                  rev = "v${bccVersion}";
-                  sha256 = "sha256-6dT3seLuEVQNKWiYGLK1ajXzW7pb62S/GQ0Lp4JdGjc=";
-                };
-                # Seems like these extra tools are needed to build bcc
-                nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.python310Packages.setuptools pkgs.zip ];
-              });
-            });
-
-          # We need to use two overlays so that bcc inherits the our pinned libbpf
-          overlayedPkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay ]; };
-
-          pkgs = import nixpkgs { inherit system; };
+          bcc = (pkgs.bcc.override { libbpf = libbpf; }).overridePythonAttrs {
+            version = bccVersion;
+            src = pkgs.fetchFromGitHub {
+              owner = "iovisor";
+              repo = "bcc";
+              rev = "v${bccVersion}";
+              sha256 = "sha256-6dT3seLuEVQNKWiYGLK1ajXzW7pb62S/GQ0Lp4JdGjc=";
+            };
+          };
 
           # Define lambda that returns a derivation for bpftrace given llvm version as input
           mkBpftrace =
@@ -89,8 +79,8 @@
                 ];
 
                 buildInputs = [
-                  overlayedPkgs.bcc
-                  overlayedPkgs.libbpf
+                  bcc
+                  libbpf
                   pkgs.asciidoctor
                   pkgs.cereal
                   pkgs.elfutils
