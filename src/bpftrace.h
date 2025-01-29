@@ -101,6 +101,7 @@ public:
         ncpus_(get_possible_cpus().size()),
         max_cpu_id_(get_max_cpu_id()),
         config_(config),
+        ksyms_(config_),
         usyms_(config_)
   {
   }

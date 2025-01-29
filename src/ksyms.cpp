@@ -4,6 +4,11 @@
 
 #include "ksyms.h"
 
+namespace bpftrace {
+Ksyms::Ksyms(const Config &config) : config_(config)
+{
+}
+
 std::string Ksyms::resolve(uint64_t addr, bool show_offset)
 {
   struct bcc_symbol ksym;
@@ -28,3 +33,4 @@ Ksyms::~Ksyms()
   if (ksyms_)
     bcc_free_symcache(ksyms_, -1);
 }
+} // namespace bpftrace
