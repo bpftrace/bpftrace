@@ -1,0 +1,29 @@
+name: Sync bpftrace.adoc to website
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [23.x]
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Push
+        run: |
+          git config --global user.name 'pre-release-docs-sync'
+          git config --global user.email ''
+          git clone https://bpftrace:${{ secrets.SYNC_DOCS_WEBSITE }}@github.com/bpftrace/website.git
+          cd website
+          npm install
+          npm run main-docs-sync --adoc=../man/adoc/bpftrace.adoc
+          git add src/pages/docs/pre-release.js
+          git commit -m 'Sync Pre-release docs from main repo' || true
+          git push

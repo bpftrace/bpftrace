@@ -13,6 +13,7 @@ tests/**/*.bc
 [._]ss[a-gi-z]
 [._]sw[a-p]
 *.btaot
+website/
 
 result
 ignored/
