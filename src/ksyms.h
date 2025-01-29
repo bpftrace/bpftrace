@@ -19,5 +19,15 @@ public:
 private:
   const Config &config_;
   void *ksyms_{ nullptr };
+
+#ifdef USE_BLAZESYM
+  struct blaze_symbolizer *symbolizer_{ nullptr };
+
+  std::optional<std::string> resolve_blazesym_int(uint64_t addr,
+                                                  bool show_offset);
+  std::string resolve_blazesym(uint64_t addr, bool show_offset);
+#endif
+
+  std::string resolve_bcc(uint64_t addr, bool show_offset);
 };
 } // namespace bpftrace
