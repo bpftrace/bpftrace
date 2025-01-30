@@ -440,16 +440,16 @@ PROG interval:ms:1 { print(probe); exit();}
 EXPECT interval:ms:1
 
 NAME software
-PROG software:cpu-clock:1 { print("hit"); exit();}
+PROG software:cpu-clock:100000 { print("hit"); exit();}
 EXPECT hit
 
 NAME software_probe_builtin
-PROG software:cpu-clock:1 { print(probe); exit();}
-EXPECT software:cpu-clock:1
+PROG software:cpu-clock:100000 { print(probe); exit();}
+EXPECT software:cpu-clock:100000
 
 NAME software_alias_probe_builtin
-PROG software:cpu:1 { print(probe); exit();}
-EXPECT software:cpu:1
+PROG software:cpu:100000 { print(probe); exit();}
+EXPECT software:cpu:100000
 
 NAME hardware
 REQUIRES ls /sys/devices/cpu/events/cache-misses
@@ -466,8 +466,8 @@ RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction* { if (strconta
 EXPECT uprobe:testprogs/uprobe_test:uprobeFunction2
 
 NAME probe_builtin_scratch_buf
-PROG config = { on_stack_limit = 0 } software:cpu:1 { print(probe); exit(); }
-EXPECT software:cpu:1
+PROG config = { on_stack_limit = 0 } software:cpu:100000 { print(probe); exit(); }
+EXPECT software:cpu:100000
 
 NAME BEGIN
 PROG BEGIN { printf("Hello\n"); exit();}
