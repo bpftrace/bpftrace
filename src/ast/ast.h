@@ -110,9 +110,6 @@ public:
 
   int64_t n;
   bool is_negative;
-
-private:
-  Integer(const Integer &other) = default;
 };
 
 class PositionalParameter : public Expression {
@@ -126,9 +123,6 @@ public:
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
-
-private:
-  PositionalParameter(const PositionalParameter &other) = default;
 };
 
 class String : public Expression {
@@ -138,9 +132,6 @@ public:
   explicit String(const std::string &str, location loc);
 
   std::string str;
-
-private:
-  String(const String &other) = default;
 };
 
 class StackMode : public Expression {
@@ -150,9 +141,6 @@ public:
   explicit StackMode(const std::string &mode, location loc);
 
   std::string mode;
-
-private:
-  StackMode(const StackMode &other) = default;
 };
 
 class Identifier : public Expression {
@@ -162,9 +150,6 @@ public:
   explicit Identifier(const std::string &ident, location loc);
 
   std::string ident;
-
-private:
-  Identifier(const Identifier &other) = default;
 };
 
 class Builtin : public Expression {
@@ -182,9 +167,6 @@ public:
     return !ident.compare(0, 3, "arg") && ident.size() == 4 &&
            ident.at(3) >= '0' && ident.at(3) <= '9';
   }
-
-private:
-  Builtin(const Builtin &other) = default;
 };
 
 class Call : public Expression {
@@ -196,9 +178,6 @@ public:
 
   std::string func;
   ExpressionList vargs;
-
-private:
-  Call(const Call &other) = default;
 };
 
 class Sizeof : public Expression {
@@ -210,9 +189,6 @@ public:
 
   Expression *expr = nullptr;
   SizedType argtype;
-
-private:
-  Sizeof(const Sizeof &other) = default;
 };
 
 class Offsetof : public Expression {
@@ -225,9 +201,6 @@ public:
   SizedType record;
   Expression *expr = nullptr;
   std::string field;
-
-private:
-  Offsetof(const Offsetof &other) = default;
 };
 
 class Map : public Expression {
@@ -241,9 +214,6 @@ public:
   Expression *key_expr = nullptr;
   SizedType key_type;
   bool skip_key_validation = false;
-
-private:
-  Map(const Map &other) = default;
 };
 
 class Variable : public Expression {
@@ -253,9 +223,6 @@ public:
   explicit Variable(const std::string &ident, location loc);
 
   std::string ident;
-
-private:
-  Variable(const Variable &other) = default;
 };
 
 class Binop : public Expression {
@@ -267,9 +234,6 @@ public:
   Expression *left = nullptr;
   Expression *right = nullptr;
   Operator op;
-
-private:
-  Binop(const Binop &other) = default;
 };
 
 class Unop : public Expression {
@@ -285,9 +249,6 @@ public:
   Expression *expr = nullptr;
   Operator op;
   bool is_post_op;
-
-private:
-  Unop(const Unop &other) = default;
 };
 
 class FieldAccess : public Expression {
@@ -301,9 +262,6 @@ public:
   Expression *expr = nullptr;
   std::string field;
   ssize_t index = -1;
-
-private:
-  FieldAccess(const FieldAccess &other) = default;
 };
 
 class ArrayAccess : public Expression {
@@ -315,9 +273,6 @@ public:
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
-
-private:
-  ArrayAccess(const ArrayAccess &other) = default;
 };
 
 class Cast : public Expression {
@@ -327,9 +282,6 @@ public:
   Cast(SizedType type, Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  Cast(const Cast &other) = default;
 };
 
 class Tuple : public Expression {
@@ -339,9 +291,6 @@ public:
   Tuple(ExpressionList &&elems, location loc);
 
   ExpressionList elems;
-
-private:
-  Tuple(const Tuple &other) = default;
 };
 
 class Statement : public Node {
@@ -365,9 +314,6 @@ public:
   explicit ExprStatement(Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  ExprStatement(const ExprStatement &other) = default;
 };
 
 class VarDeclStatement : public Statement {
@@ -379,9 +325,6 @@ public:
 
   Variable *var = nullptr;
   bool set_type = false;
-
-private:
-  VarDeclStatement(const VarDeclStatement &other) = default;
 };
 
 class AssignMapStatement : public Statement {
@@ -392,9 +335,6 @@ public:
 
   Map *map = nullptr;
   Expression *expr = nullptr;
-
-private:
-  AssignMapStatement(const AssignMapStatement &other) = default;
 };
 
 class AssignVarStatement : public Statement {
@@ -411,9 +351,6 @@ public:
   VarDeclStatement *var_decl_stmt = nullptr;
   Variable *var = nullptr;
   Expression *expr = nullptr;
-
-private:
-  AssignVarStatement(const AssignVarStatement &other) = default;
 };
 
 class AssignConfigVarStatement : public Statement {
@@ -426,9 +363,6 @@ public:
 
   std::string config_var;
   Expression *expr = nullptr;
-
-private:
-  AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
 class Block : public Statement {
@@ -438,9 +372,6 @@ public:
   Block(StatementList &&stmts);
 
   StatementList stmts;
-
-private:
-  Block(const Block &other) = default;
 };
 
 class If : public Statement {
@@ -452,9 +383,6 @@ public:
   Expression *cond = nullptr;
   Block *if_block = nullptr;
   Block *else_block = nullptr;
-
-private:
-  If(const If &other) = default;
 };
 
 class Unroll : public Statement {
@@ -466,9 +394,6 @@ public:
   long int var = 0;
   Expression *expr = nullptr;
   Block *block = nullptr;
-
-private:
-  Unroll(const Unroll &other) = default;
 };
 
 class Jump : public Statement {
@@ -486,9 +411,6 @@ public:
 
   JumpType ident = JumpType::INVALID;
   Expression *return_value;
-
-private:
-  Jump(const Jump &other) = default;
 };
 
 class Predicate : public Node {
@@ -498,9 +420,6 @@ public:
   explicit Predicate(Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  Predicate(const Predicate &other) = default;
 };
 
 class Ternary : public Expression {
@@ -525,9 +444,6 @@ public:
 
   Expression *cond = nullptr;
   Block *block = nullptr;
-
-private:
-  While(const While &other) = default;
 };
 
 class For : public Statement {
@@ -543,9 +459,6 @@ public:
   Expression *expr = nullptr;
   StatementList stmts;
   SizedType ctx_type;
-
-private:
-  For(const For &other) = default;
 };
 
 class Config : public Statement {
@@ -557,9 +470,6 @@ public:
   }
 
   StatementList stmts;
-
-private:
-  Config(const Config &other) = default;
 };
 
 class AttachPoint : public Node {
@@ -603,8 +513,6 @@ public:
   void set_index(int index);
 
 private:
-  AttachPoint(const AttachPoint &other) = default;
-
   int index_ = 0;
 };
 using AttachPointList = std::vector<AttachPoint *>;
@@ -631,7 +539,6 @@ public:
   bool has_ap_of_probetype(ProbeType probe_type);
 
 private:
-  Probe(const Probe &other) = default;
   int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
@@ -646,7 +553,6 @@ public:
   SizedType type;
 
 private:
-  SubprogArg(const SubprogArg &other) = default;
   std::string name_;
 };
 using SubprogArgList = std::vector<SubprogArg *>;
@@ -667,7 +573,6 @@ public:
   std::string name() const;
 
 private:
-  Subprog(const Subprog &other) = default;
   std::string name_;
 };
 using SubprogList = std::vector<Subprog *>;
@@ -685,9 +590,6 @@ public:
   Config *config = nullptr;
   SubprogList functions;
   ProbeList probes;
-
-private:
-  Program(const Program &other) = default;
 };
 
 std::string opstr(const Binop &binop);
