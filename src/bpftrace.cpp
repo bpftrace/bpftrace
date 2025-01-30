@@ -185,6 +185,20 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
 
           locations_from_dwarf = true;
         }
+
+        // Check if the function is inlined and warn
+        // the user about missing calls to inlined instances.
+        if (!config_.get(ConfigKeyBool::probe_inline)) {
+          auto inst_count =
+              dwarf->get_function_locations(probe.attach_point, true).size();
+          if (inst_count > 1) {
+            LOG(WARNING) << "Function \"" << probe.attach_point
+                         << "\" is partially inlined, bpftrace will miss calls "
+                            "to inlined instances.";
+            LOG(HINT)
+                << "Set `probe_inline = 1` config to probe all instances.";
+          }
+        }
       }
     }
 

@@ -154,6 +154,7 @@ aot.variable.map nested tuple string resize
 aot.variable.map key nested tuple string resize
 aot.variable.map key tuple with casted ints
 aot.dwarf.uprobe without dwarf
+aot.dwarf.uprobe inline without dwarf
 aot.dwarf.uprobe inlined function - func
 aot.dwarf.uprobe inlined function - probe
 aot.dwarf.uprobe inlined function - ustack

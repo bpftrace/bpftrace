@@ -87,6 +87,8 @@ PROG config = { symbol_source = "symbol_table"; probe_inline = 1; }
      uprobe:./testprogs/inline_function:square { @count++ }
      uretprobe:./testprogs/inline_function:main { exit() }
 EXPECT @count: 1
+EXPECT_NONE WARNING: Function "square" is partially inlined, bpftrace will miss calls to inlined instances.
+EXPECT_NONE HINT: Set `probe_inline = 1` config to probe all instances.
 REQUIRES_FEATURE dwarf
 AFTER ./testprogs/inline_function
 
@@ -95,6 +97,8 @@ PROG config = { probe_inline = 0 }
      uprobe:./testprogs/inline_function:square { @count++ }
      uretprobe:./testprogs/inline_function:main { exit() }
 EXPECT @count: 1
+EXPECT WARNING: Function "square" is partially inlined, bpftrace will miss calls to inlined instances.
+       HINT: Set `probe_inline = 1` config to probe all instances.
 REQUIRES_FEATURE dwarf
 AFTER ./testprogs/inline_function
 
