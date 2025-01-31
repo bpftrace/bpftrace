@@ -102,7 +102,7 @@ static std::map<GlobalVar, int> find_btf_var_offsets(
       vars_and_offsets[*global_var] = member->offset;
   }
 
-  for (const auto [global_var, offset] : vars_and_offsets) {
+  for (const auto &[global_var, offset] : vars_and_offsets) {
     if (offset < 0) {
       LOG(BUG) << "Global variable " << to_string(global_var)
                << " has not been added to the BPF code "
@@ -132,7 +132,7 @@ static void update_global_vars_rodata(
   }
 
   // Update the values for the global vars (using the above offsets)
-  for (const auto [global_var, offset] : vars_and_offsets) {
+  for (const auto &[global_var, offset] : vars_and_offsets) {
     int64_t *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
 
     switch (global_var) {
