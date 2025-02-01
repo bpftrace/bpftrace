@@ -1240,7 +1240,7 @@ I got 42, hello (2 args)
 ello
 ----
 
-Script example, bsize.d:
+Script example, bsize.bt:
 
 ----
 #!/usr/local/bin/bpftrace
