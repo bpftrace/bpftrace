@@ -48,6 +48,7 @@ add_executable(bpftrace_test
   resource_analyser.cpp
   required_resources.cpp
   return_path_analyser.cpp
+  scopeguard.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
   types.cpp
