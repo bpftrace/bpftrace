@@ -42,6 +42,7 @@
 #include "log.h"
 #include "printf.h"
 #include "resolve_cgroupid.h"
+#include "scopeguard.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -918,6 +919,10 @@ int BPFtrace::run(BpfBytecode bytecode)
   err = setup_output();
   if (err)
     return err;
+  SCOPE_EXIT
+  {
+    teardown_output();
+  };
 
   err = create_pcaps();
   if (err) {
@@ -1056,8 +1061,6 @@ int BPFtrace::run(BpfBytecode bytecode)
   }
 
   poll_output(/* drain */ true);
-
-  teardown_output();
 
   return 0;
 }
