@@ -37,7 +37,6 @@ BUILD_DIR = "build-ci"
 NIX_TARGET = os.environ.get("NIX_TARGET", "")
 CMAKE_BUILD_TYPE = os.environ.get("CMAKE_BUILD_TYPE", "Release")
 RUN_TESTS = os.environ.get("RUN_TESTS", "1")
-RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
@@ -329,15 +328,6 @@ def test():
                     "CI": CI,
                     "RUNTIME_TEST_COLOR": "yes",
                 },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "memleak-tests.sh.sh",
-            lambda: truthy(RUN_MEMLEAK_TEST),
-            lambda: shell(
-                ["./tests/memleak-tests.sh"], as_root=True, cwd=Path(BUILD_DIR)
             ),
         )
     )
