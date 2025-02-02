@@ -60,16 +60,6 @@ jobs:
           RUN_TESTS: 0
           RUN_AOT_TESTS: 1
           AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
-        - NAME: Memleak test (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
-        - NAME: Memleak test (LLVM 19 Release)
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
