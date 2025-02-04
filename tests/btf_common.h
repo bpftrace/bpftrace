@@ -56,10 +56,14 @@ protected:
     // clear the environment and remove the temp files
     unsetenv("BPFTRACE_BTF");
     unsetenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
-    if (btf_path_)
+    if (btf_path_) {
       std::remove(btf_path_);
-    if (funcs_path_)
+      ::free(btf_path_);
+    }
+    if (funcs_path_) {
       std::remove(funcs_path_);
+      ::free(funcs_path_);
+    }
   }
 
   char *btf_path_ = nullptr;
@@ -84,8 +88,10 @@ protected:
   {
     // clear the environment and remove the temp files
     unsetenv("BPFTRACE_BTF");
-    if (btf_path_)
+    if (btf_path_) {
       std::remove(btf_path_);
+      ::free(btf_path_);
+    }
   }
 
   char *btf_path_ = nullptr;
