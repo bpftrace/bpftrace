@@ -2,6 +2,8 @@
 
 #include "usyms.h"
 
+#include "scopeguard.h"
+
 namespace bpftrace {
 
 Usyms::Usyms(const Config &config) : config_(config)
@@ -98,6 +100,19 @@ std::string Usyms::resolve(uint64_t addr,
   }
 
   if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0) {
+    SCOPE_EXIT
+    {
+      // This is a horrible hack to work around the fact that
+      // bcc does not tell if you if demangling succeeded.
+      // B/c if demangling failed, it returns a string that
+      // you cannot free.
+      //
+      // This relies on the fact that bcc will not change the
+      // `demangle_name = name` fallback. Since blazesym is
+      // coming (written 2/4/25), this should be fine for now.
+      if (usym.demangle_name != usym.name)
+        ::free(const_cast<char *>(usym.demangle_name));
+    };
     if (config_.get(ConfigKeyBool::cpp_demangle))
       symbol << usym.demangle_name;
     else
