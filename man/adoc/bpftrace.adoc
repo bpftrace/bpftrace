@@ -973,13 +973,6 @@ if ($a == 1) {
 
 If no assignment is specified variables will initialize to 0.
 
-You can also specify the type in the declaration e.g.
-```
-let $x: uint8;
-let $y: uint8 = 7;
-let $a: string = "hiya";
-```
-
 'map' variables use BPF 'maps'.
 These exist for the lifetime of `bpftrace` itself and can be accessed from all action blocks and user-space.
 Map names always start with a `@`, e.g. `@mymap`.
