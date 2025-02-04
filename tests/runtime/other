@@ -42,6 +42,14 @@ NAME ternary_none_type
 PROG i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }
 EXPECT  yes
 
+NAME ternary_buf
+PROG i:ms:1 { $a = nsecs ? buf("hi", 2) : buf("bye", 3); print($a); exit(); }
+EXPECT hi
+
+NAME ternary_tuple
+PROG i:ms:1 { $a = nsecs ? ("hellolongstr", "a") : ("b", "hellolongstr"); print($a); exit(); }
+EXPECT (hellolongstr, a)
+
 NAME unroll
 PROG i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}
 EXPECT a=11

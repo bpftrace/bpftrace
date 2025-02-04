@@ -2253,27 +2253,46 @@ void SemanticAnalyser::visit(Ternary &ternary)
   ternary.right = dereference_if_needed(ternary.right);
 
   const Type &cond = ternary.cond->type.GetTy();
-  const Type &lhs = ternary.left->type.GetTy();
-  const Type &rhs = ternary.right->type.GetTy();
-  if (is_final_pass()) {
-    if (lhs != rhs) {
+  const auto &lhs = ternary.left->type;
+  const auto &rhs = ternary.right->type;
+
+  if (!lhs.IsSameType(rhs)) {
+    if (is_final_pass()) {
       LOG(ERROR, ternary.loc, err_)
           << "Ternary operator must return the same type: "
           << "have '" << lhs << "' and '" << rhs << "'";
     }
-    if (cond != Type::integer && cond != Type::pointer)
-      LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
+    // This assignment is just temporary to prevent errors
+    // before the final pass
+    ternary.type = lhs;
+    return;
   }
-  if (lhs == Type::string) {
+
+  if (ternary.left->type.IsStack() &&
+      ternary.left->type.stack_type != ternary.right->type.stack_type) {
+    // TODO: fix this for different stack types
+    LOG(ERROR, ternary.loc, err_)
+        << "Ternary operator must have the same stack type on the right "
+           "and left sides.";
+    return;
+  }
+
+  if (is_final_pass() && cond != Type::integer && cond != Type::pointer) {
+    LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
+    return;
+  }
+
+  if (lhs.IsIntegerTy()) {
+    ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
+  } else {
     auto lsize = ternary.left->type.GetSize();
     auto rsize = ternary.right->type.GetSize();
-    ternary.type = CreateString(std::max(lsize, rsize));
-  } else if (lhs == Type::integer)
-    ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
-  else if (lhs == Type::none)
-    ternary.type = CreateNone();
-  else {
-    LOG(ERROR, ternary.loc, err_) << "Ternary return type unsupported " << lhs;
+    if (lhs.IsTupleTy()) {
+      ternary.type = create_merged_tuple(ternary.right->type,
+                                         ternary.left->type);
+    } else {
+      ternary.type = lsize > rsize ? ternary.left->type : ternary.right->type;
+    }
   }
 }
 
@@ -3985,6 +4004,28 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
   }
 
   return false;
+}
+
+SizedType SemanticAnalyser::create_merged_tuple(const SizedType &left,
+                                                const SizedType &right)
+{
+  assert(left.IsTupleTy() && right.IsTupleTy() &&
+         (left.GetFieldCount() == right.GetFieldCount()));
+
+  std::vector<SizedType> new_elems;
+  for (ssize_t i = 0; i < left.GetFieldCount(); i++) {
+    const auto &leftTy = left.GetField(i).type;
+    const auto &rightTy = right.GetField(i).type;
+
+    assert(leftTy.GetTy() == rightTy.GetTy());
+    if (leftTy.IsTupleTy()) {
+      new_elems.push_back(create_merged_tuple(leftTy, rightTy));
+    } else {
+      new_elems.push_back(leftTy.GetSize() > rightTy.GetSize() ? leftTy
+                                                               : rightTy);
+    }
+  }
+  return CreateTuple(bpftrace_.structs.AddTuple(new_elems));
 }
 
 void SemanticAnalyser::resolve_struct_type(SizedType &type, const location &loc)

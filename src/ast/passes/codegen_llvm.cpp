@@ -1977,6 +1977,9 @@ void CodegenLLVM::visit(Ternary &ternary)
     buf = b_.CreateGetStrAllocation("buf", ternary.loc);
     uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
+  } else if (!ternary.type.IsIntTy() && !ternary.type.IsNoneTy()) {
+    buf = b_.CreateAllocaBPF(ternary.type);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), ternary.type.GetSize());
   }
 
   auto scoped_del = accept(ternary.cond);
@@ -2007,22 +2010,7 @@ void CodegenLLVM::visit(Ternary &ternary)
     phi->addIncoming(left_expr, left_block);
     phi->addIncoming(right_expr, right_block);
     expr_ = phi;
-  } else if (ternary.type.IsStringTy()) {
-    b_.SetInsertPoint(left_block);
-    auto scoped_del_left = accept(ternary.left);
-    b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(right_block);
-    auto scoped_del_right = accept(ternary.right);
-    b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(done);
-    expr_ = buf;
-    if (dyn_cast<AllocaInst>(buf))
-      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
-  } else {
+  } else if (ternary.type.IsNoneTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
     {
@@ -2036,6 +2024,33 @@ void CodegenLLVM::visit(Ternary &ternary)
     b_.CreateBr(done);
     b_.SetInsertPoint(done);
     expr_ = nullptr;
+  } else {
+    b_.SetInsertPoint(left_block);
+    auto scoped_del_left = accept(ternary.left);
+    if (ternary.type.IsTupleTy()) {
+      createTupleCopy(ternary.left->type, ternary.type, buf, expr_);
+    } else if (needMemcpy(ternary.type)) {
+      b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
+    } else {
+      b_.CreateStore(expr_, buf);
+    }
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(right_block);
+    auto scoped_del_right = accept(ternary.right);
+    if (ternary.type.IsTupleTy()) {
+      createTupleCopy(ternary.right->type, ternary.type, buf, expr_);
+    } else if (needMemcpy(ternary.type)) {
+      b_.CreateMemcpyBPF(buf, expr_, ternary.type.GetSize());
+    } else {
+      b_.CreateStore(expr_, buf);
+    }
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(done);
+    expr_ = buf;
+    if (dyn_cast<AllocaInst>(buf))
+      expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
 }
 

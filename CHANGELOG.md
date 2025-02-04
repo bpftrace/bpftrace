@@ -36,6 +36,8 @@ and this project adheres to
   - [#3428](https://github.com/bpftrace/bpftrace/pull/3428)
 - Do not generate functions for empty attach points
   - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
+- Fix ternary expression to accept all types
+  - [#3765](https://github.com/bpftrace/bpftrace/pull/3765)
 #### Security
 #### Docs
 #### Tools
