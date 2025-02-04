@@ -12,6 +12,7 @@
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "scopeguard.h"
 #include "tracefs.h"
 #include "utils.h"
 
@@ -67,14 +68,16 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
           char* demangled_name = cxxdemangle(fun_line.c_str());
           if (!demangled_name)
             continue;
+          SCOPE_EXIT
+          {
+            ::free(demangled_name);
+          };
 
           // Match against the demanled name.
           std::string match_line = prefix + demangled_name;
           if (truncate_parameters) {
             erase_parameter_list(match_line);
           }
-
-          free(demangled_name);
 
           if (wildcard_match(
                   match_line, tokens, start_wildcard, end_wildcard)) {
@@ -472,6 +475,10 @@ void ProbeMatcher::list_probes(ast::Program* prog)
         if (ap->lang == "cpp") {
           std::string target = erase_prefix(match_print);
           char* demangled_name = cxxdemangle(match_print.c_str());
+          SCOPE_EXIT
+          {
+            ::free(demangled_name);
+          };
 
           // demangled name may contain symbols not accepted by the attach point
           // parser, so surround it with quotes to make the entry directly
