@@ -105,6 +105,7 @@ aot.other.symbolize enum in scratch variable tuple
 aot.other.symbolize enum in tuple map key
 # Enum metadata is not being serialized
 aot.other.symbolize enum in tuple map value
+aot.other.ternary_tuple
 aot.probe.fentry
 aot.probe.fentry args
 aot.probe.fentry args as a pointer

@@ -166,6 +166,8 @@ private:
                         const std::string &map_ident,
                         const location &loc);
   bool update_string_size(SizedType &type, const SizedType &new_type);
+  SizedType create_merged_tuple(const SizedType &blah_type,
+                                const SizedType &prev_type);
   void validate_map_key(const SizedType &key, const location &loc);
   void resolve_struct_type(SizedType &type, const location &loc);
 

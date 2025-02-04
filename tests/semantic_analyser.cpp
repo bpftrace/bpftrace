@@ -496,29 +496,93 @@ kprobe:f / @mymap / { @mymap = "str" }
 
 TEST(semantic_analyser, ternary_expressions)
 {
-  test("kprobe:f { @x = pid < 10000 ? 1 : 2 }");
-  test(R"(kprobe:f { @x = pid < 10000 ? "lo" : "high" })");
+  // There are some supported types left out of this list
+  // as they don't make sense or cause other errors e.g.
+  // map aggregate functions and builtins
+  std::unordered_map<std::string, std::string> supported_types = {
+    { "1", "2" },
+    { "\"lo\"", "\"high\"" },
+    { "(\"hi\", 1)", "(\"bye\", 2)" },
+    { "printf(\"lo\")", "exit()" },
+    { "buf(\"mystr\", 5)", "buf(\"mystr\", 4)" },
+    { "macaddr(arg0)", "macaddr(arg1)" },
+    { "kstack(3)", "kstack(3)" },
+    { "ustack(3)", "ustack(3)" },
+    { "ntop(arg0)", "ntop(arg1)" },
+    { "nsecs(boot)", "nsecs(monotonic)" },
+    { "ksym(arg0)", "ksym(arg1)" },
+    { "usym(arg0)", "usym(arg1)" },
+    { "cgroup_path(1)", "cgroup_path(2)" },
+    { "strerror(1)", "strerror(2)" },
+  };
+
+  for (const auto &[left, right] : supported_types) {
+    test("kprobe:f { curtask ? " + left + " : " + right + " }");
+  }
+
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
-  test("kprobe:f { curtask ? printf(\"lo\") : exit() }");
   test(R"(kprobe:f { @x = pid < 10000 ? printf("lo") : cat("/proc/uptime") })",
        3);
+  test("struct Foo { int x; } kprobe:f { curtask ? (struct Foo)*arg0 : (struct "
+       "Foo)*arg1 }",
+       1);
+  test("struct Foo { int x; } kprobe:f { curtask ? (struct Foo*)arg0 : (struct "
+       "Foo*)arg1 }");
+  test(
+      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })");
+
+  test(
+      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })",
+      R"(
+Program
+ kprobe:f
+  ?: :: [(string[13],string[13])]
+   < :: [uint64]
+    builtin: pid :: [uint32]
+    int: 10000 :: [int64]
+   tuple: :: [(string[2],string[13])]
+    string: a :: [string[2], AS(kernel)]
+    string: hellolongstr :: [string[13], AS(kernel)]
+   tuple: :: [(string[13],string[2])]
+    string: hellolongstr :: [string[13], AS(kernel)]
+    string: b :: [string[2], AS(kernel)]
+)");
+
   // Error location is incorrect: #3063
   test_error("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", R"(
-stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'int' and 'none'
+stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'int64' and 'none'
 kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", R"(
-stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'int' and 'string'
+stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'int64' and 'string[5]'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
   // Error location is incorrect: #3063
   test_error("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", R"(
-stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'int'
+stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string[3]' and 'int64'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", R"(
+stdin:1:17-49: ERROR: Ternary operator must return the same type: have '(int64,int64)' and '(string[2],int64)'
+kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }", R"(
+stdin:1:17-53: ERROR: Ternary operator must have the same stack type on the right and left sides.
+kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  // Error location is incorrect: #3063
+  test_error("kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }", R"(
+stdin:1:17-58: ERROR: Ternary operator must have the same stack type on the right and left sides.
+kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
