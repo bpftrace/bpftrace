@@ -156,7 +156,9 @@ void FieldAnalyser::visit(Unop &unop)
 {
   Visit(*unop.expr);
   if (unop.op == Operator::MUL && sized_type_.IsPtrTy()) {
-    sized_type_ = *sized_type_.GetPointeeTy();
+    // Need a temporary to prevent UAF from self-referential assignment
+    auto tmp = *sized_type_.GetPointeeTy();
+    sized_type_ = std::move(tmp);
     resolve_fields(sized_type_);
   }
 }
