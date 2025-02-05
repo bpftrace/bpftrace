@@ -14,6 +14,8 @@ and this project adheres to
   - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)
 - Pointers may now be used in if conditions, tenary conditions and as operands in logical AND and OR expressions
   - [#3656](https://github.com/bpftrace/bpftrace/pull/3656)
+- `len` now also accepts `ustack` and `kstack` as arguments
+  - [#3769](https://github.com/bpftrace/bpftrace/pull/3769)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
