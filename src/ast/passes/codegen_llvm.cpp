@@ -4587,7 +4587,8 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
     return fun;
 
   std::string err;
-  auto maybe_func_type = bpftrace_.btf_->resolve_args(func_name, true, err);
+  auto maybe_func_type = bpftrace_.btf_->resolve_args(
+      func_name, true, false, err);
   if (!maybe_func_type.has_value()) {
     throw util::FatalUserException(err);
   }
