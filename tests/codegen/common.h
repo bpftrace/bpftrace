@@ -9,6 +9,7 @@
 
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/probe_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 
@@ -68,6 +69,9 @@ static void test(BPFtrace &bpftrace,
   auto resources_optional = resource_analyser.analyse();
   ASSERT_TRUE(resources_optional.has_value());
   bpftrace.resources = resources_optional.value();
+
+  ast::ProbeAnalyser probe_analyser(driver.ctx, bpftrace);
+  probe_analyser.analyse();
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.ctx, bpftrace);

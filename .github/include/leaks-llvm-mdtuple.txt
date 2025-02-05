@@ -1,0 +1,3 @@
+# See leaks.txt for details
+leak:llvm::MDTuple::getImpl
+leak:llvm::MDNode::operator new
