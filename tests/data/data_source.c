@@ -127,6 +127,10 @@ long bpf_map_sum_elem_count(const struct bpf_map *map)
 {
   return 0;
 }
+_Bool bpf_session_is_return()
+{
+  return 1;
+}
 
 // kernel percpu variables
 __attribute__((section(".data..percpu"))) unsigned long process_counts;

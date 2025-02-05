@@ -106,6 +106,7 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.mode = ap.mode;
   probe.async = ap.async;
   probe.pin = ap.pin;
+  probe.is_session = ap.expansion == ast::ExpansionType::SESSION;
   return probe;
 }
 
@@ -129,8 +130,9 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     // (async)watchpoint - generate also the setup probe
     resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
     resources.watchpoint_probes.emplace_back(std::move(probe));
-  } else if (ap.expansion == ast::ExpansionType::MULTI) {
-    // (k|u)probe_multi - do expansion and set probe.funcs
+  } else if (ap.expansion == ast::ExpansionType::MULTI ||
+             ap.expansion == ast::ExpansionType::SESSION) {
+    // (k|u)probe_(multi|session) - do expansion and set probe.funcs
     auto matches = probe_matcher_->get_matches_for_ap(ap);
     if (matches.empty())
       return 1;
