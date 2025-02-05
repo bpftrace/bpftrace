@@ -2741,9 +2741,34 @@ void CodegenLLVM::generateProbe(Probe &probe,
   if (probe.pred)
     visit(*probe.pred);
   variables_.clear();
-  auto scoped_block = visit(*probe.block);
+  if (current_attach_point_->expansion == ExpansionType::SESSION) {
+    BasicBlock *entry_probe = BasicBlock::Create(module_->getContext(),
+                                                 "entry_probe",
+                                                 func);
+    BasicBlock *exit_probe = BasicBlock::Create(module_->getContext(),
+                                                "exit_probe",
+                                                func);
 
-  createRet();
+    Value *is_ret = CreateKernelFuncCall(Kfunc::bpf_session_is_return,
+                                         {},
+                                         "is_return");
+    b_.CreateCondBr(b_.CreateICmpNE(is_ret, b_.GetIntSameSize(0, is_ret)),
+                    exit_probe,
+                    entry_probe);
+
+    // Entry probe
+    b_.SetInsertPoint(entry_probe);
+    auto scoped_block_entry = visit(*probe.block);
+    createRet();
+
+    // Exit probe
+    b_.SetInsertPoint(exit_probe);
+    auto scoped_block_exit = visit(*current_attach_point_->ret_probe->block);
+    createRet();
+  } else {
+    auto scoped_block = visit(*probe.block);
+    createRet();
+  }
 
   if (dummy) {
     func->eraseFromParent();
@@ -2764,9 +2789,16 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 {
   current_attach_point_ = &ap;
   probefull_ = ap.name();
-  if (ap.expansion == ExpansionType::MULTI) {
-    // For non-full expansion (currently only multi), we need to avoid
-    // generating the code as the BPF program would fail to load.
+  if (ap.expansion != ExpansionType::NONE &&
+      ap.expansion != ExpansionType::FULL) {
+    // Do not generate code for kretprobes with session expansion as it will
+    // be a part of the common session probe generated for the entry probe.
+    if (ap.expansion == ExpansionType::SESSION &&
+        probetype(ap.provider) == ProbeType::kretprobe) {
+      return;
+    }
+    // For non-full expansion, we need to avoid generating the code for attach
+    // points with no matches as the BPF program would fail to load.
     if (bpftrace_.probe_matcher_->get_matches_for_ap(ap).empty())
       return;
   }

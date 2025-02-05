@@ -581,11 +581,11 @@ void AttachedProbe::attach_multi_kprobe()
     }
   }
 
-  linkfd_ = bpf_link_create(progfd_,
-                            0,
-                            static_cast<enum ::bpf_attach_type>(
-                                libbpf::BPF_TRACE_KPROBE_MULTI),
-                            &opts);
+  auto attach_type = probe_.is_session ? libbpf::BPF_TRACE_KPROBE_SESSION
+                                       : libbpf::BPF_TRACE_KPROBE_MULTI;
+
+  linkfd_ = bpf_link_create(
+      progfd_, 0, static_cast<enum ::bpf_attach_type>(attach_type), &opts);
   if (linkfd_ < 0) {
     throw util::FatalUserException("Error attaching probe: " + probe_.name);
   }

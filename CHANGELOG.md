@@ -46,6 +46,8 @@ and this project adheres to
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
 - Allow use of variables before they are assigned
   - [#3832](https://github.com/bpftrace/bpftrace/pull/3832)
+- Introduce automatic session probes
+  - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 14 and 15

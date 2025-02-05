@@ -4,6 +4,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/probe_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -52,6 +53,7 @@ static auto parse_probe(const std::string &str,
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
                 .add(ast::CreateSemanticPass())
+                .add(ast::CreateProbePass())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 
@@ -1190,6 +1192,14 @@ void check_probe(Probe &p, ProbeType type, const std::string &name)
   EXPECT_EQ(name, p.name);
 }
 
+void check_kprobe_session(Probe &p,
+                          const std::vector<std::string> &funcs,
+                          const std::string &name)
+{
+  check_kprobe_multi(p, funcs, name, name);
+  EXPECT_TRUE(p.is_session);
+}
+
 TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
@@ -1258,6 +1268,24 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   check_probe(bpftrace->get_probes().at(0), ProbeType::iter, "iter:task_vma");
+}
+
+TEST_F(bpftrace_btf, add_probes_wildcard_kprobe_session)
+{
+  auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
+      .Times(2);
+
+  parse_probe("kprobe:my_*{} kretprobe:my_*{}", *bpftrace);
+
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  check_kprobe_session(bpftrace->get_probes().at(0),
+                       { "my_one", "my_two" },
+                       "kprobe:my_*");
 }
 
 class bpftrace_bad_btf : public test_bad_btf {};

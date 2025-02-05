@@ -665,6 +665,7 @@ struct Probe {
   uint64_t address = 0;
   uint64_t func_offset = 0;
   std::vector<std::string> funcs;
+  bool is_session = false;
 
 private:
   friend class cereal::access;
