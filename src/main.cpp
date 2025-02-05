@@ -561,7 +561,7 @@ Args parse_args(int argc, char* argv[])
       case Options::NO_FEATURE: // --no-feature
         if (args.no_feature.parse(optarg)) {
           LOG(ERROR) << "USAGE: --no-feature can only have values "
-                        "'kprobe_multi,uprobe_multi'.";
+                        "'kprobe_multi,kprobe_session,uprobe_multi'.";
           exit(1);
         }
         break;
