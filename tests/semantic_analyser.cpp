@@ -1106,6 +1106,8 @@ TEST(semantic_analyser, call_len)
   test("kprobe:f { @x[0] = 0; len(@x, 1); }", 1);
   test("kprobe:f { @x[0] = 0; len(@x[2]); }", 1);
   test("kprobe:f { $x = 0; len($x); }", 1);
+  test("kprobe:f { len(ustack) }");
+  test("kprobe:f { len(kstack) }");
 }
 
 TEST(semantic_analyser, call_has_key)
