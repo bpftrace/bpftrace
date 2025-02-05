@@ -20,6 +20,9 @@ RUN unshare --fork --pid --mount-proc bash -c "(./testprogs/uprobe_loop &) && {{
 EXPECT_REGEX         uprobeFunction1\+\d+$
                      spin\+\d+$
                      main\+\d+$
+# The stack output expects prologue to be skipped on uprobes. See kernel:
+# cfa7f3d2c526 ("perf,x86: avoid missing caller address in stack traces captured in uprobe")
+MIN_KERNEL 6.12
 
 # Target inside a PID namespace, bpftrace outside
 NAME ustack_outside
@@ -28,3 +31,5 @@ AFTER unshare --fork --pid --mount-proc bash -c ./testprogs/uprobe_loop
 EXPECT_REGEX         uprobeFunction1\+\d+$
                      spin\+\d+$
                      main\+\d+$
+# See above
+MIN_KERNEL 6.12
