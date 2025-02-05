@@ -1301,7 +1301,23 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
-  } else if (call.func == "len") {
+  } else if (call.func == "len" && call.vargs.at(0)->type.IsStack()) {
+    auto *arg = call.vargs.at(0);
+    auto scoped_del = accept(arg);
+
+    std::vector<llvm::Type *> stack_key_elements = {
+      b_.getInt64Ty(), // stack id
+      b_.getInt32Ty(), // nr_stack_frames
+    };
+    StructType *stack_key_struct = b_.GetStructType("stack_key",
+                                                    stack_key_elements,
+                                                    false);
+    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                          expr_,
+                                          { b_.getInt64(0), b_.getInt32(1) });
+    expr_ = b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+  } else if (call.func == "len" /* && call.vargs.at(0)->is_map */) {
     auto &arg = *call.vargs.at(0);
     auto &map = static_cast<Map &>(arg);
 

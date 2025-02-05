@@ -1332,17 +1332,17 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "len") {
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs.at(0);
-      if (!arg.is_map)
-        LOG(ERROR, call.loc, err_) << "len() expects a map to be provided";
-      else {
+      if (arg.is_map) {
         Map &map = static_cast<Map &>(arg);
         if (map.key_expr) {
           LOG(ERROR, call.loc, err_)
               << "The map passed to " << call.func << "() should not be "
               << "indexed by a key";
         }
-        call.type = CreateInt64();
-      }
+      } else if (!arg.type.IsStack())
+        LOG(ERROR, call.loc, err_)
+            << "len() expects a map or stack to be provided";
+      call.type = CreateInt64();
     }
   } else if (call.func == "time") {
     check_assignment(call, false, false, false);
