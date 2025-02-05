@@ -206,6 +206,7 @@ class TestParser(object):
                     "kernel_dwarf",
                     "aot",
                     "kprobe_multi",
+                    "kprobe_session",
                     "uprobe_multi",
                     "skboutput",
                     "get_tai_ns",

@@ -19,6 +19,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/probe_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -435,6 +436,7 @@ ast::PassManager CreateDynamicPM()
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
+  pm.AddPass(ast::CreateProbePass());
 
   return pm;
 }
@@ -446,6 +448,7 @@ ast::PassManager CreateAotPM()
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
+  pm.AddPass(ast::CreateProbePass());
 
   return pm;
 }
