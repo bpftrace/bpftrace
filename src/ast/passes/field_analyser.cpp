@@ -197,7 +197,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
         if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
           std::string err;
           auto maybe_ap_args = bpftrace_.btf_->resolve_args(
-              func, probe_type == ProbeType::fexit, err);
+              func, probe_type == ProbeType::fexit, true, err);
           if (!maybe_ap_args.has_value()) {
             ap->addWarning() << "fentry:" << ap->func << ": " << err;
             continue;
@@ -224,7 +224,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
         std::string err;
         auto maybe_probe_args = bpftrace_.btf_->resolve_args(
-            ap->func, probe_type == ProbeType::fexit, err);
+            ap->func, probe_type == ProbeType::fexit, true, err);
         if (!maybe_probe_args.has_value()) {
           ap->addError() << "fentry:" << ap->func << ": " << err;
           return;
