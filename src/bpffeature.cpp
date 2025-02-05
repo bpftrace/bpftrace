@@ -30,6 +30,8 @@ int BPFnofeature::parse(const char* str)
   for (auto feat : util::split_string(str, ',')) {
     if (feat == "kprobe_multi") {
       kprobe_multi_ = true;
+    } else if (feat == "kprobe_session") {
+      kprobe_session_ = true;
     } else if (feat == "uprobe_multi") {
       uprobe_multi_ = true;
     } else {
@@ -457,6 +459,30 @@ bool BPFfeature::has_kprobe_multi()
   return *has_kprobe_multi_;
 }
 
+bool BPFfeature::has_kprobe_session()
+{
+  if (has_kprobe_session_.has_value())
+    return *has_kprobe_session_;
+
+  if (no_feature_.kprobe_session_) {
+    has_kprobe_session_ = false;
+    return *has_kprobe_session_;
+  }
+
+  const char* sym = "ksys_read";
+
+  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+  link_opts.kprobe_multi.syms = &sym;
+  link_opts.kprobe_multi.cnt = 1;
+
+  has_kprobe_session_ = try_create_link(libbpf::BPF_PROG_TYPE_KPROBE,
+                                        sym,
+                                        libbpf::BPF_TRACE_KPROBE_SESSION,
+                                        link_opts,
+                                        std::nullopt);
+  return *has_kprobe_session_;
+}
+
 bool BPFfeature::has_uprobe_multi()
 {
   if (has_uprobe_multi_.has_value())
@@ -602,6 +628,7 @@ std::string BPFfeature::report()
     { "fentry", to_str(has_fentry()) },
     { "kprobe_multi", to_str(has_kprobe_multi()) },
     { "uprobe_multi", to_str(has_uprobe_multi()) },
+    { "kprobe_session", to_str(has_kprobe_session()) },
     { "iter", to_str(has_iter("task")) }
   };
 
