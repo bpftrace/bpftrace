@@ -37,6 +37,7 @@
 #include "debugfs.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "scopeguard.h"
 #include "tracefs.h"
 #include "utils.h"
 
@@ -984,37 +985,38 @@ static std::optional<int> is_elf(const std::string &path)
   int fd;
   Elf *elf;
   GElf_Ehdr ehdr;
-  std::optional<int> result = {};
 
   if (elf_version(EV_CURRENT) == EV_NONE) {
-    return result;
+    return std::nullopt;
   }
 
   fd = open(path.c_str(), O_RDONLY, 0);
   if (fd < 0) {
-    return result;
+    return std::nullopt;
   }
+  SCOPE_EXIT
+  {
+    ::close(fd);
+  };
 
   elf = elf_begin(fd, ELF_C_READ, nullptr);
   if (elf == nullptr) {
-    goto err_close;
+    return std::nullopt;
   }
+  SCOPE_EXIT
+  {
+    ::elf_end(elf);
+  };
 
   if (elf_kind(elf) != ELF_K_ELF) {
-    goto err_close;
+    return std::nullopt;
   }
 
   if (!gelf_getehdr(elf, &ehdr)) {
-    goto err_end;
+    return std::nullopt;
   }
 
-  result = ehdr.e_type;
-
-err_end:
-  (void)elf_end(elf);
-err_close:
-  (void)close(fd);
-  return result;
+  return ehdr.e_type;
 }
 
 static bool has_exec_permission(const std::string &path)
