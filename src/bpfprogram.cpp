@@ -40,8 +40,12 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
   // because the BPF_TRACE_KPROBE_MULTI link type does not
   // currently support the `module:function` syntax.
   if ((probe.type == ProbeType::kprobe || probe.type == ProbeType::kretprobe) &&
-      feature.has_kprobe_multi() && !probe.funcs.empty() && probe.path.empty())
-    attach_type = libbpf::BPF_TRACE_KPROBE_MULTI;
+      !probe.funcs.empty() && probe.path.empty()) {
+    if (probe.is_session && feature.has_kprobe_session())
+      attach_type = libbpf::BPF_TRACE_KPROBE_SESSION;
+    else if (feature.has_kprobe_multi())
+      attach_type = libbpf::BPF_TRACE_KPROBE_MULTI;
+  }
 
   if ((probe.type == ProbeType::uprobe || probe.type == ProbeType::uretprobe) &&
       feature.has_uprobe_multi() && !probe.funcs.empty())
