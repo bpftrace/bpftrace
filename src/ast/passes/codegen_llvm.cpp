@@ -1267,42 +1267,44 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
-  } else if (call.func == "len" && call.vargs.at(0)->type.IsStack()) {
-    auto *arg = call.vargs.at(0);
-    auto scoped_del = accept(arg);
+  } else if (call.func == "len") {
+    if (call.vargs.at(0)->type.IsStack()) {
+      auto *arg = call.vargs.at(0);
+      auto scoped_del = accept(arg);
 
-    auto *stack_key_struct = b_.GetStackStructType(arg->type.IsUstackTy());
-    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
-                                          expr_,
-                                          { b_.getInt64(0), b_.getInt32(1) });
-    expr_ = b_.CreateIntCast(b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
-                             b_.getInt64Ty(),
-                             false);
-  } else if (call.func == "len" /* && call.vargs.at(0)->is_map */) {
-    auto &arg = *call.vargs.at(0);
-    auto &map = static_cast<Map &>(arg);
+      auto *stack_key_struct = b_.GetStackStructType(arg->type.IsUstackTy());
+      Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                            expr_,
+                                            { b_.getInt64(0), b_.getInt32(1) });
+      expr_ = b_.CreateIntCast(b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
+                               b_.getInt64Ty(),
+                               false);
+    } else /* call.vargs.at(0)->is_map */ {
+      auto &arg = *call.vargs.at(0);
+      auto &map = static_cast<Map &>(arg);
 
-    // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
-    // implement per-cpu counters and bpf_map_sum_elem_count would always return
-    // 0 for them. In our case, those maps typically have a single element so we
-    // can return 1 straight away.
-    // For the rest, use bpf_map_sum_elem_count if available and map supports
-    // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
-    if (map_has_single_elem(map.type, map.key_type)) {
-      expr_ = b_.getInt64(1);
-    } else if (LLVM_VERSION_MAJOR >= 17 &&
-               bpftrace_.feature_->has_kernel_func(
-                   Kfunc::bpf_map_sum_elem_count) &&
-               !is_array_map(map.type, map.key_type)) {
-      expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
-                                   { b_.GetMapVar(map.ident) },
-                                   "len");
-    } else {
-      if (!map_len_func_)
-        map_len_func_ = createMapLenCallback();
+      // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
+      // implement per-cpu counters and bpf_map_sum_elem_count would always
+      // return 0 for them. In our case, those maps typically have a single
+      // element so we can return 1 straight away.
+      // For the rest, use bpf_map_sum_elem_count if available and map supports
+      // it, otherwise fall back to bpf_for_each_map_elem with a custom callback
+      if (map_has_single_elem(map.type, map.key_type)) {
+        expr_ = b_.getInt64(1);
+      } else if (LLVM_VERSION_MAJOR >= 17 &&
+                 bpftrace_.feature_->has_kernel_func(
+                     Kfunc::bpf_map_sum_elem_count) &&
+                 !is_array_map(map.type, map.key_type)) {
+        expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
+                                     { b_.GetMapVar(map.ident) },
+                                     "len");
+      } else {
+        if (!map_len_func_)
+          map_len_func_ = createMapLenCallback();
 
-      expr_ = b_.CreateForEachMapElem(
-          ctx_, map, map_len_func_, nullptr, call.loc);
+        expr_ = b_.CreateForEachMapElem(
+            ctx_, map, map_len_func_, nullptr, call.loc);
+      }
     }
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
