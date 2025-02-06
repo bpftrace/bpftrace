@@ -78,11 +78,6 @@ jobs:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
     - uses: ./.github/actions/configure_kvm
-    - name: Load kernel modules
-      # nf_tables and xfs are necessary for testing kernel modules BTF support
-      run: |
-        sudo modprobe nf_tables
-        sudo modprobe xfs
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
