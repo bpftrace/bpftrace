@@ -12,8 +12,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.5" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.6" = type { ptr, ptr }
 %"struct map_t.7" = type { ptr, ptr, ptr, ptr }
-%stack_t = type { i64, i32, i32, i32 }
-%stack_key = type { i64, i32 }
+%ustack_key = type { i64, i32, i32, i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -32,21 +31,18 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !97 {
 entry:
   %"@z_key" = alloca i64, align 8
-  %stack_args33 = alloca %stack_t, align 8
-  %lookup_stack_scratch_key22 = alloca i32, align 4
-  %stack_key19 = alloca %stack_key, align 8
+  %lookup_stack_scratch_key21 = alloca i32, align 4
+  %stack_key18 = alloca %ustack_key, align 8
   %"@y_key" = alloca i64, align 8
-  %stack_args15 = alloca %stack_t, align 8
   %lookup_stack_scratch_key5 = alloca i32, align 4
-  %stack_key2 = alloca %stack_key, align 8
+  %stack_key2 = alloca %ustack_key, align 8
   %"@x_key" = alloca i64, align 8
-  %stack_args = alloca %stack_t, align 8
   %lookup_stack_scratch_key = alloca i32, align 4
-  %stack_key = alloca %stack_key, align 8
+  %stack_key = alloca %ustack_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key)
-  %1 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 0
+  %1 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 0
   store i64 0, ptr %1, align 8
-  %2 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 1
+  %2 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 1
   store i32 0, ptr %2, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key)
   store i32 0, ptr %lookup_stack_scratch_key, align 4
@@ -59,32 +55,22 @@ stack_scratch_failure:                            ; preds = %lookup_stack_scratc
   br label %merge_block
 
 merge_block:                                      ; preds = %stack_scratch_failure, %get_stack_success, %get_stack_fail
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_args)
-  %3 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 0
-  %4 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 0
-  %5 = load i64, ptr %3, align 8
-  store i64 %5, ptr %4, align 8
-  %6 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 1
-  %7 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 1
-  %8 = load i32, ptr %6, align 4
-  store i32 %8, ptr %7, align 4
-  %9 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 2
+  %3 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 2
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
-  %10 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %10 to i32
-  store i32 %pid, ptr %9, align 4
-  %11 = getelementptr %stack_t, ptr %stack_args, i64 0, i32 3
-  store i32 0, ptr %11, align 4
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %stack_key)
+  %4 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %4 to i32
+  store i32 %pid, ptr %3, align 4
+  %5 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 3
+  store i32 0, ptr %5, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %stack_args, i64 0)
+  %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %stack_key, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key2)
-  %12 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 0
-  store i64 0, ptr %12, align 8
-  %13 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 1
-  store i32 0, ptr %13, align 4
+  %6 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 0
+  store i64 0, ptr %6, align 8
+  %7 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 1
+  store i32 0, ptr %7, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key5)
   store i32 0, ptr %lookup_stack_scratch_key5, align 4
   %lookup_stack_scratch_map6 = call ptr inttoptr (i64 1 to ptr)(ptr @stack_scratch, ptr %lookup_stack_scratch_key5)
@@ -98,17 +84,17 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
   %get_stack = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256)
-  %14 = icmp sge i32 %get_stack, 0
-  br i1 %14, label %get_stack_success, label %get_stack_fail
+  %8 = icmp sge i32 %get_stack, 0
+  br i1 %8, label %get_stack_success, label %get_stack_fail
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
-  %15 = udiv i32 %get_stack, 8
-  %16 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 1
-  store i32 %15, ptr %16, align 4
-  %17 = trunc i32 %15 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %17, i64 1)
-  %18 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, ptr %18, align 8
+  %9 = udiv i32 %get_stack, 8
+  %10 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 1
+  store i32 %9, ptr %10, align 4
+  %11 = trunc i32 %9 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %11, i64 1)
+  %12 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, ptr %12, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_bpftrace_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
@@ -119,38 +105,28 @@ stack_scratch_failure3:                           ; preds = %lookup_stack_scratc
   br label %merge_block4
 
 merge_block4:                                     ; preds = %stack_scratch_failure3, %get_stack_success10, %get_stack_fail11
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_args15)
-  %19 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 0
-  %20 = getelementptr %stack_t, ptr %stack_args15, i64 0, i32 0
-  %21 = load i64, ptr %19, align 8
-  store i64 %21, ptr %20, align 8
-  %22 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 1
-  %23 = getelementptr %stack_t, ptr %stack_args15, i64 0, i32 1
-  %24 = load i32, ptr %22, align 4
-  store i32 %24, ptr %23, align 4
-  %25 = getelementptr %stack_t, ptr %stack_args15, i64 0, i32 2
-  %get_pid_tgid16 = call i64 inttoptr (i64 14 to ptr)()
-  %26 = lshr i64 %get_pid_tgid16, 32
-  %pid17 = trunc i64 %26 to i32
-  store i32 %pid17, ptr %25, align 4
-  %27 = getelementptr %stack_t, ptr %stack_args15, i64 0, i32 3
-  store i32 0, ptr %27, align 4
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %stack_key2)
+  %13 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 2
+  %get_pid_tgid15 = call i64 inttoptr (i64 14 to ptr)()
+  %14 = lshr i64 %get_pid_tgid15, 32
+  %pid16 = trunc i64 %14 to i32
+  store i32 %pid16, ptr %13, align 4
+  %15 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 3
+  store i32 0, ptr %15, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
-  %update_elem18 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %stack_args15, i64 0)
+  %update_elem17 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %stack_key2, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key19)
-  %28 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 0
-  store i64 0, ptr %28, align 8
-  %29 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 1
-  store i32 0, ptr %29, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key22)
-  store i32 0, ptr %lookup_stack_scratch_key22, align 4
-  %lookup_stack_scratch_map23 = call ptr inttoptr (i64 1 to ptr)(ptr @stack_scratch, ptr %lookup_stack_scratch_key22)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_stack_scratch_key22)
-  %lookup_stack_scratch_cond26 = icmp ne ptr %lookup_stack_scratch_map23, null
-  br i1 %lookup_stack_scratch_cond26, label %lookup_stack_scratch_merge25, label %lookup_stack_scratch_failure24
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key18)
+  %16 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 0
+  store i64 0, ptr %16, align 8
+  %17 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 1
+  store i32 0, ptr %17, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key21)
+  store i32 0, ptr %lookup_stack_scratch_key21, align 4
+  %lookup_stack_scratch_map22 = call ptr inttoptr (i64 1 to ptr)(ptr @stack_scratch, ptr %lookup_stack_scratch_key21)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_stack_scratch_key21)
+  %lookup_stack_scratch_cond25 = icmp ne ptr %lookup_stack_scratch_map22, null
+  br i1 %lookup_stack_scratch_cond25, label %lookup_stack_scratch_merge24, label %lookup_stack_scratch_failure23
 
 lookup_stack_scratch_failure7:                    ; preds = %merge_block
   br label %stack_scratch_failure3
@@ -158,72 +134,62 @@ lookup_stack_scratch_failure7:                    ; preds = %merge_block
 lookup_stack_scratch_merge8:                      ; preds = %merge_block
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_stack_scratch_map6, i8 0, i64 48, i1 false)
   %get_stack12 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 256)
-  %30 = icmp sge i32 %get_stack12, 0
-  br i1 %30, label %get_stack_success10, label %get_stack_fail11
+  %18 = icmp sge i32 %get_stack12, 0
+  br i1 %18, label %get_stack_success10, label %get_stack_fail11
 
 get_stack_success10:                              ; preds = %lookup_stack_scratch_merge8
-  %31 = udiv i32 %get_stack12, 8
-  %32 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 1
-  store i32 %31, ptr %32, align 4
-  %33 = trunc i32 %31 to i8
-  %murmur_hash_213 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map6, i8 %33, i64 1)
-  %34 = getelementptr %stack_key, ptr %stack_key2, i64 0, i32 0
-  store i64 %murmur_hash_213, ptr %34, align 8
+  %19 = udiv i32 %get_stack12, 8
+  %20 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 1
+  store i32 %19, ptr %20, align 4
+  %21 = trunc i32 %19 to i8
+  %murmur_hash_213 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map6, i8 %21, i64 1)
+  %22 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 0
+  store i64 %murmur_hash_213, ptr %22, align 8
   %update_elem14 = call i64 inttoptr (i64 2 to ptr)(ptr @stack_bpftrace_6, ptr %stack_key2, ptr %lookup_stack_scratch_map6, i64 0)
   br label %merge_block4
 
 get_stack_fail11:                                 ; preds = %lookup_stack_scratch_merge8
   br label %merge_block4
 
-stack_scratch_failure20:                          ; preds = %lookup_stack_scratch_failure24
-  br label %merge_block21
+stack_scratch_failure19:                          ; preds = %lookup_stack_scratch_failure23
+  br label %merge_block20
 
-merge_block21:                                    ; preds = %stack_scratch_failure20, %get_stack_success28, %get_stack_fail29
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_args33)
-  %35 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 0
-  %36 = getelementptr %stack_t, ptr %stack_args33, i64 0, i32 0
-  %37 = load i64, ptr %35, align 8
-  store i64 %37, ptr %36, align 8
-  %38 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 1
-  %39 = getelementptr %stack_t, ptr %stack_args33, i64 0, i32 1
-  %40 = load i32, ptr %38, align 4
-  store i32 %40, ptr %39, align 4
-  %41 = getelementptr %stack_t, ptr %stack_args33, i64 0, i32 2
-  %get_pid_tgid34 = call i64 inttoptr (i64 14 to ptr)()
-  %42 = lshr i64 %get_pid_tgid34, 32
-  %pid35 = trunc i64 %42 to i32
-  store i32 %pid35, ptr %41, align 4
-  %43 = getelementptr %stack_t, ptr %stack_args33, i64 0, i32 3
-  store i32 0, ptr %43, align 4
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %stack_key19)
+merge_block20:                                    ; preds = %stack_scratch_failure19, %get_stack_success27, %get_stack_fail28
+  %23 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 2
+  %get_pid_tgid32 = call i64 inttoptr (i64 14 to ptr)()
+  %24 = lshr i64 %get_pid_tgid32, 32
+  %pid33 = trunc i64 %24 to i32
+  store i32 %pid33, ptr %23, align 4
+  %25 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 3
+  store i32 0, ptr %25, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@z_key")
   store i64 0, ptr %"@z_key", align 8
-  %update_elem36 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_z, ptr %"@z_key", ptr %stack_args33, i64 0)
+  %update_elem34 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_z, ptr %"@z_key", ptr %stack_key18, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@z_key")
   ret i64 0
 
-lookup_stack_scratch_failure24:                   ; preds = %merge_block4
-  br label %stack_scratch_failure20
+lookup_stack_scratch_failure23:                   ; preds = %merge_block4
+  br label %stack_scratch_failure19
 
-lookup_stack_scratch_merge25:                     ; preds = %merge_block4
-  %probe_read_kernel27 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map23, i32 1016, ptr null)
-  %get_stack30 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map23, i32 1016, i64 256)
-  %44 = icmp sge i32 %get_stack30, 0
-  br i1 %44, label %get_stack_success28, label %get_stack_fail29
+lookup_stack_scratch_merge24:                     ; preds = %merge_block4
+  %probe_read_kernel26 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map22, i32 1016, ptr null)
+  %get_stack29 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map22, i32 1016, i64 256)
+  %26 = icmp sge i32 %get_stack29, 0
+  br i1 %26, label %get_stack_success27, label %get_stack_fail28
 
-get_stack_success28:                              ; preds = %lookup_stack_scratch_merge25
-  %45 = udiv i32 %get_stack30, 8
-  %46 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 1
-  store i32 %45, ptr %46, align 4
-  %47 = trunc i32 %45 to i8
-  %murmur_hash_231 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map23, i8 %47, i64 1)
-  %48 = getelementptr %stack_key, ptr %stack_key19, i64 0, i32 0
-  store i64 %murmur_hash_231, ptr %48, align 8
-  %update_elem32 = call i64 inttoptr (i64 2 to ptr)(ptr @stack_perf_127, ptr %stack_key19, ptr %lookup_stack_scratch_map23, i64 0)
-  br label %merge_block21
+get_stack_success27:                              ; preds = %lookup_stack_scratch_merge24
+  %27 = udiv i32 %get_stack29, 8
+  %28 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 1
+  store i32 %27, ptr %28, align 4
+  %29 = trunc i32 %27 to i8
+  %murmur_hash_230 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map22, i8 %29, i64 1)
+  %30 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 0
+  store i64 %murmur_hash_230, ptr %30, align 8
+  %update_elem31 = call i64 inttoptr (i64 2 to ptr)(ptr @stack_perf_127, ptr %stack_key18, ptr %lookup_stack_scratch_map22, i64 0)
+  br label %merge_block20
 
-get_stack_fail29:                                 ; preds = %lookup_stack_scratch_merge25
-  br label %merge_block21
+get_stack_fail28:                                 ; preds = %lookup_stack_scratch_merge24
+  br label %merge_block20
 }
 
 ; Function Attrs: alwaysinline

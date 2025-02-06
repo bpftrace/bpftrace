@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
-%stack_key = type { i64, i32 }
+%kstack_key = type { i64, i32 }
 %kstack_count_t__tuple_t = type { [12 x i8], i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -27,11 +27,11 @@ entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %lookup_stack_scratch_key = alloca i32, align 4
-  %stack_key = alloca %stack_key, align 8
+  %stack_key = alloca %kstack_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key)
-  %1 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 0
+  %1 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
   store i64 0, ptr %1, align 8
-  %2 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 1
+  %2 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
   store i32 0, ptr %2, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key)
   store i32 0, ptr %lookup_stack_scratch_key, align 4
@@ -60,11 +60,11 @@ lookup_stack_scratch_merge:                       ; preds = %entry
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
   %4 = udiv i32 %get_stack, 8
-  %5 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 1
+  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
   store i32 %4, ptr %5, align 4
   %6 = trunc i32 %4 to i8
   %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %6, i64 1)
-  %7 = getelementptr %stack_key, ptr %stack_key, i64 0, i32 0
+  %7 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
   store i64 %murmur_hash_2, ptr %7, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_raw_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
