@@ -230,6 +230,7 @@ public:
                              libbpf::bpf_func_id func_id,
                              const location &loc,
                              bool compare_zero = false);
+  StructType *GetStackStructType(bool is_ustack);
   StructType *GetStructType(std::string name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
