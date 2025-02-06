@@ -239,7 +239,7 @@
             };
 
             # Kernels to run runtime tests against
-            kernel-5_4 = mkKernel "5.4.290" "sha256:0nfsx7c2vwj5syaais3y6d2mvngdn89vni652r5yvcqdlmjb13bl";
+            kernel-5_10 = mkKernel "5.10.234" "sha256:0l2396k5qqiqfzvrgqh8z2by1fkmx26rw9v1h8nafqw99q02w0wi";
             kernel-6_12 = mkKernel "6.12.12" "sha256:1inhcvz52n8p73x6iw7m68galqn0xib6xq1hyhf2s6c46my0bm30";
           };
 
