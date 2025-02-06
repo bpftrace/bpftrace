@@ -671,3 +671,13 @@ WILL_FAIL
 NAME clear on scalar map prevents printing
 PROG BEGIN { @xx = 5; clear(@xx); exit() }
 EXPECT_NONE @xx: 5
+
+NAME ustack len
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { $x = ustack(3); @ = len($x); exit(); }
+EXPECT @: 3
+AFTER ./testprogs/uprobe_loop
+
+NAME kstack len
+PROG k:do_nanosleep { @ = len(kstack); exit() }
+EXPECT_REGEX @: \d+$
+AFTER ./testprogs/syscall nanosleep  1e8
