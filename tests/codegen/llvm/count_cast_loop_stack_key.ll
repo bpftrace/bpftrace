@@ -9,7 +9,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.2" = type { ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
 %kstack_key = type { i64, i32 }
-%kstack_count_t__tuple_t = type { [12 x i8], i64 }
+%kstack_count_t__tuple_t = type { %kstack_key, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0

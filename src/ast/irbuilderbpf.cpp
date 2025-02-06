@@ -389,6 +389,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
     ty_name << "_tuple_t";
 
     ty = GetStructType(ty_name.str(), llvm_elems, false);
+  } else if (stype.IsStack()) {
+    ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
     if (emit_codegen_types)
       ty = getInt64Ty();
