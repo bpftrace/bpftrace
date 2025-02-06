@@ -50,6 +50,10 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm19
           CC: clang
           CXX: clang++
+        - NAME: Oldest kernel (LLVM 19 Debug)
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET_KERNEL: .#kernel-5_4
         - NAME: Latest kernel (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
