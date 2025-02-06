@@ -7,16 +7,20 @@ on:
   release:
     types: [published]
 
-permissions:
-  contents: write
-
 jobs:
   build-upload:
     runs-on: ubuntu-latest
+    permissions:
+      # For flakehub cache
+      id-token: write
+      # For artifact upload
+      contents: write
     steps:
     - uses: actions/checkout@v3
-    - uses: DeterminateSystems/nix-installer-action@v11
-
+    - uses: DeterminateSystems/nix-installer-action@v16
+      with:
+        determinate: true
+    - uses: DeterminateSystems/flakehub-cache-action@v1
     - name: Build artifacts
       run: nix develop --command bash -c "OUT=./assets ./scripts/create-assets.sh"
 

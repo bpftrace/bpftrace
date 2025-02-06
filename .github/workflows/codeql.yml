@@ -21,6 +21,8 @@ jobs:
       actions: read
       contents: read
       security-events: write
+      # For flakehub cache
+      id-token: write
 
     strategy:
       fail-fast: false
@@ -33,7 +35,10 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: DeterminateSystems/nix-installer-action@v11
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@v1
 
       - name: Configure (cpp)
         if: ${{ matrix.language == 'cpp' }}
