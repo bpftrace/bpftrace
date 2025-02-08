@@ -58,7 +58,10 @@
           # Override to specify the bcc build we want.
           # First overrides with the above libbpf and then overrides the rev.
           bccVersion = "0.33.0";
-          bcc = (pkgs.bcc.override { libbpf = libbpf; }).overridePythonAttrs {
+          bcc = (pkgs.bcc.override {
+            libbpf = libbpf;
+            llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
+          }).overridePythonAttrs {
             version = bccVersion;
             src = pkgs.fetchFromGitHub {
               owner = "iovisor";
