@@ -1635,7 +1635,7 @@ The pointer type is left unchanged.
 === kstack
 
 .variants
-* `kstack([StackMode mode, ][int limit])`
+* `kstack_t kstack([StackMode mode, ][int limit])`
 
 These are implemented using BPF stack maps.
 
@@ -1753,7 +1753,7 @@ kprobe:arp_create {
 === nsecs
 
 .variants
-* `nsecs([TimestampMode mode])`
+* `timestamp nsecs([TimestampMode mode])`
 
 Returns a timestamp in nanoseconds, as given by the requested kernel clock.
 Defaults to `boot` if no clock is explicitly requested.
@@ -1796,8 +1796,8 @@ You can also pass the address type (e.g. AF_INET) explicitly as the first parame
 === offsetof
 
 .variants
-* `offsetof(STRUCT, FIELD[.SUBFIELD])`
-* `offsetof(EXPRESSION, FIELD[.SUBFIELD])`
+* `uint64 offsetof(STRUCT, FIELD[.SUBFIELD])`
+* `uint64 offsetof(EXPRESSION, FIELD[.SUBFIELD])`
 
 *compile time*
 
@@ -1827,7 +1827,7 @@ BEGIN {
 === override
 
 .variants
-* `override(uint64 rc)`
+* `void override(uint64 rc)`
 
 *unsafe*
 
@@ -2089,7 +2089,7 @@ print("\033[31mRed\t\033[33mYellow\033[0m\n")
 === reg
 
 .variants
-* `reg(const string name)`
+* `uint64 reg(const string name)`
 
 .Supported probes
 * kprobe
@@ -2102,8 +2102,8 @@ Valid names depend on the CPU architecture.
 === signal
 
 .variants
-* `signal(const string sig)`
-* `signal(uint32 signum)`
+* `void signal(const string sig)`
+* `void signal(uint32 signum)`
 
 *unsafe*
 
@@ -2132,8 +2132,8 @@ Trace/breakpoint trap (core dumped)
 === sizeof
 
 .variants
-* `sizeof(TYPE)`
-* `sizeof(EXPRESSION)`
+* `uint64 sizeof(TYPE)`
+* `uint64 sizeof(EXPRESSION)`
 
 *compile time*
 
@@ -2192,7 +2192,7 @@ dropped privs to tcpdump
 === str
 
 .variants
-* `str(char * data [, uint32 length)`
+* `string str(char * data [, uint32 length)`
 
 *Helper* `probe_read_str, probe_read_{kernel,user}_str`
 
@@ -2384,7 +2384,7 @@ The pointer type is left unchanged.
 === ustack
 
 .variants
-* `ustack([StackMode mode, ][int limit])`
+* `ustack_t ustack([StackMode mode, ][int limit])`
 
 These are implemented using BPF stack maps.
 
@@ -2567,7 +2567,7 @@ See <<Advanced Topics>> for more information on <<Map Printing>>.
 === avg
 
 .variants
-* `avg(int64 n)`
+* `avg_t avg(int64 n)`
 
 Calculate the running average of `n` between consecutive calls.
 
@@ -2590,7 +2590,7 @@ cpus to collect and sum BOTH count and total.
 === clear
 
 .variants
-* `clear(map m)`
+* `void clear(map m)`
 
 *async*
 
@@ -2611,7 +2611,7 @@ interval:s:10 {
 === count
 
 .variants
-* `count()`
+* `count_t count()`
 
 Count how often this function is called.
 
@@ -2656,8 +2656,8 @@ interval:s:10 {
 === delete
 
 .variants
-* `delete(map m, mapkey k)`
-* deprecated `delete(mapkey k)`
+* `void delete(map m, mapkey k)`
+* deprecated `void delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
@@ -2715,7 +2715,7 @@ kprobe:dummy {
 === hist
 
 .variants
-* `hist(int64 n[, int k])`
+* `hist_t hist(int64 n[, int k])`
 
 Create a log2 histogram of `n` using $2^k$ buckets per power of 2,
 0 <= k <= 5, defaults to 0.
@@ -2747,7 +2747,7 @@ Prints:
 === len
 
 .variants
-* `len(map m)`
+* `int64 len(map m)`
 
 Return the number of elements in the map.
 
@@ -2755,7 +2755,7 @@ Return the number of elements in the map.
 === lhist
 
 .variants
-* `lhist(int64 n, int64 min, int64 max, int64 step)`
+* `lhist_t lhist(int64 n, int64 min, int64 max, int64 step)`
 
 Create a linear histogram of `n`.
 `lhist` creates `M` (`(max - min) / step`) buckets in the range `[min,max)` where each bucket is `step` in size.
@@ -2791,7 +2791,7 @@ Prints:
 === max
 
 .variants
-* `max(int64 n)`
+* `max_t max(int64 n)`
 
 Update the map with `n` if `n` is bigger than the current value held.
 Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
@@ -2821,7 +2821,7 @@ be returned.
 === min
 
 .variants
-* `min(int64 n)`
+* `min_t min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
 Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
@@ -2832,7 +2832,7 @@ See `max()` above for how this differs from the typical userspace `min()`.
 === stats
 
 .variants
-* `stats(int64 n)`
+* `stats_t stats(int64 n)`
 
 `stats` combines the `count`, `avg` and `sum` calls into one.
 
@@ -2853,7 +2853,7 @@ kprobe:vfs_read {
 === sum
 
 .variants
-* `sum(int64 n)`
+* `sum_t sum(int64 n)`
 
 Calculate the sum of all `n` passed.
 
@@ -2899,7 +2899,7 @@ interval:s:10 {
 === zero
 
 .variants
-* `zero(map m)`
+* `void zero(map m)`
 
 *async*
 
