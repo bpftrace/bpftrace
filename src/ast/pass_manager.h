@@ -89,7 +89,7 @@ private:
 
 struct PassContext {
 public:
-  PassContext(BPFtrace &b, ASTContext &ast_ctx) : b(b), ast_ctx(ast_ctx){};
+  PassContext(BPFtrace &b, ASTContext &ast_ctx) : b(b), ast_ctx(ast_ctx) {};
   BPFtrace &b;
   ASTContext &ast_ctx;
 };
@@ -102,7 +102,7 @@ using PassFPtr = std::function<PassResult(PassContext &)>;
 class Pass {
 public:
   Pass() = delete;
-  Pass(std::string name, PassFPtr fn) : fn_(fn), name(name){};
+  Pass(std::string name, PassFPtr &&fn) : fn_(std::move(fn)), name(name) {};
 
   virtual ~Pass() = default;
 

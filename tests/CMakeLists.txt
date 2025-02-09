@@ -1,5 +1,3 @@
-add_compile_options("-Werror=undef")
-
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
 file(GLOB_RECURSE CODEGEN_SOURCES CONFIGURE_DEPENDS codegen/*.cpp codegen/*.h)

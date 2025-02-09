@@ -185,7 +185,7 @@ Pass CreateConfigPass()
     return PassResult::Success();
   };
 
-  return Pass("ConfigAnalyser", fn);
+  return Pass("ConfigAnalyser", std::move(fn));
 };
 
 } // namespace bpftrace::ast

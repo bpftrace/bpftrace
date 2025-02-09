@@ -122,7 +122,7 @@ Pass CreatePortabilityPass()
     return PassResult::Success();
   };
 
-  return Pass("PortabilityAnalyser", fn);
+  return Pass("PortabilityAnalyser", std::move(fn));
 }
 
 } // namespace bpftrace::ast

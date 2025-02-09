@@ -391,7 +391,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           if (enum_name.empty()) {
             std::ostringstream name;
             name << "enum <anon_" << anon_enum_count << ">";
-            enum_name = std::move(name.str());
+            enum_name = name.str();
           }
           auto variant_name = get_clang_string(clang_getCursorSpelling(c));
           auto variant_value = clang_getEnumConstantDeclValue(c);

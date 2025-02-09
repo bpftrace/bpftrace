@@ -518,7 +518,7 @@ Pass CreateResourcePass()
     return PassResult::Success();
   };
 
-  return Pass("ResourceAnalyser", fn);
+  return Pass("ResourceAnalyser", std::move(fn));
 }
 
 } // namespace bpftrace::ast

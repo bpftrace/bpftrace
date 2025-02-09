@@ -81,7 +81,7 @@ Pass CreateReturnPathPass()
     return PassResult::Success();
   };
 
-  return Pass("ReturnPath", fn);
+  return Pass("ReturnPath", std::move(fn));
 }
 
 } // namespace bpftrace::ast
