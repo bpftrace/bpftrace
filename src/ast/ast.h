@@ -385,11 +385,16 @@ private:
   AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
-class Block : public Statement {
+class Block : public Expression {
 public:
   Block(StatementList &&stmts);
+  Block(StatementList &&stmts, Expression *expr);
 
   StatementList stmts;
+
+  // Depending on how it is parsed, a block can also be evaluated as an
+  // expression.
+  Expression *expr = nullptr;
 
 private:
   Block(const Block &other) = default;

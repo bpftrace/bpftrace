@@ -198,6 +198,7 @@ public:
   R visit(Block &block)
   {
     visitImpl(block.stmts);
+    visitAndReplace(&block.expr);
     return default_value();
   }
   // A default visitor for Macro is not provided, as alone they are not
@@ -363,7 +364,8 @@ private:
                               ArrayAccess *,
                               Cast *,
                               Tuple *,
-                              Ternary *>(expr);
+                              Ternary *,
+                              Block *>(expr);
   }
   R visitAndReplace(Statement **stmt)
   {
@@ -373,7 +375,6 @@ private:
                               AssignMapStatement *,
                               AssignVarStatement *,
                               AssignConfigVarStatement *,
-                              Block *,
                               If *,
                               Unroll *,
                               Jump *,

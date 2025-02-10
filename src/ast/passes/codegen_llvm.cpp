@@ -2806,11 +2806,12 @@ ScopedExpr CodegenLLVM::visit(AttachPoint &)
 ScopedExpr CodegenLLVM::visit(Block &block)
 {
   scope_stack_.push_back(&block);
-  for (Statement *stmt : block.stmts)
-    visit(*stmt);
+  for (Statement *stmt : block.stmts) {
+    auto scoped_del = visit(*stmt);
+  }
+  auto scoped_expr = visit(*block.expr);
   scope_stack_.pop_back();
-
-  return ScopedExpr();
+  return scoped_expr;
 }
 
 void CodegenLLVM::generateProbe(Probe &probe,
