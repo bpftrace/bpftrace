@@ -179,13 +179,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   const bool is_ustack = ident == "ustack";
   const auto uint64_size = sizeof(uint64_t);
 
-  std::vector<llvm::Type *> stack_key_elements = {
-    b_.getInt64Ty(), // stack id
-    b_.getInt32Ty(), // nr_stack_frames
-  };
-  StructType *stack_key_struct = b_.GetStructType("stack_key",
-                                                  stack_key_elements,
-                                                  false);
+  StructType *stack_key_struct = b_.GetStackStructType(is_ustack);
   AllocaInst *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
   b_.CreateStore(b_.getInt64(0),
                  b_.CreateGEP(stack_key_struct,
@@ -271,50 +265,22 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(merge_block);
 
-  // Kernel stacks should not be differentiated by pid, since the kernel
-  // address space is the same between pids (and when aggregating you *want*
-  // to be able to correlate between pids in most cases). User-space stacks
-  // are special because of ASLR, hence we also store the pid; probe id is
-  // stored for cases when only ELF resolution works (e.g. ASLR disabled and
-  // process exited).
+  // ustack keys are special: see IRBuilderBPF::GetStackStructType()
   if (is_ustack) {
-    std::vector<llvm::Type *> elements = {
-      b_.getInt64Ty(), // stack id
-      b_.getInt32Ty(), // nr_stack_frames
-      b_.getInt32Ty(), // pid
-      b_.getInt32Ty(), // probe id
-    };
-    StructType *stack_struct = b_.GetStructType("stack_t", elements, false);
-    AllocaInst *buf = b_.CreateAllocaBPF(stack_struct, "stack_args");
-
-    // store stack id
-    Value *stackid = b_.CreateGEP(stack_key_struct,
-                                  stack_key,
-                                  { b_.getInt64(0), b_.getInt32(0) });
-    b_.CreateStore(
-        b_.CreateLoad(b_.getInt64Ty(), stackid),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
-    // store nr_stack_frames
-    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
-                                          stack_key,
-                                          { b_.getInt64(0), b_.getInt32(1) });
-    b_.CreateStore(
-        b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     // store pid
-    b_.CreateStore(
-        b_.CreateGetPid(ctx_, loc),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
+    b_.CreateStore(b_.CreateGetPid(ctx_, loc),
+                   b_.CreateGEP(stack_key_struct,
+                                stack_key,
+                                { b_.getInt64(0), b_.getInt32(2) }));
     // store probe id
-    b_.CreateStore(
-        b_.GetIntSameSize(get_probe_id(), elements.at(3)),
-        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(3) }));
-
-    expr_ = buf;
-    b_.CreateLifetimeEnd(stack_key);
-  } else {
-    expr_ = stack_key;
+    b_.CreateStore(b_.GetIntSameSize(get_probe_id(),
+                                     stack_key_struct->getTypeAtIndex(3)),
+                   b_.CreateGEP(stack_key_struct,
+                                stack_key,
+                                { b_.getInt64(0), b_.getInt32(3) }));
   }
+
+  expr_ = stack_key;
 }
 
 int CodegenLLVM::get_probe_id()
@@ -1302,30 +1268,43 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   } else if (call.func == "len") {
-    auto &arg = *call.vargs.at(0);
-    auto &map = static_cast<Map &>(arg);
+    if (call.vargs.at(0)->type.IsStack()) {
+      auto *arg = call.vargs.at(0);
+      auto scoped_del = accept(arg);
 
-    // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
-    // implement per-cpu counters and bpf_map_sum_elem_count would always return
-    // 0 for them. In our case, those maps typically have a single element so we
-    // can return 1 straight away.
-    // For the rest, use bpf_map_sum_elem_count if available and map supports
-    // it, otherwise fall back to bpf_for_each_map_elem with a custom callback.
-    if (map_has_single_elem(map.type, map.key_type)) {
-      expr_ = b_.getInt64(1);
-    } else if (LLVM_VERSION_MAJOR >= 17 &&
-               bpftrace_.feature_->has_kernel_func(
-                   Kfunc::bpf_map_sum_elem_count) &&
-               !is_array_map(map.type, map.key_type)) {
-      expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
-                                   { b_.GetMapVar(map.ident) },
-                                   "len");
-    } else {
-      if (!map_len_func_)
-        map_len_func_ = createMapLenCallback();
+      auto *stack_key_struct = b_.GetStackStructType(arg->type.IsUstackTy());
+      Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                            expr_,
+                                            { b_.getInt64(0), b_.getInt32(1) });
+      expr_ = b_.CreateIntCast(b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
+                               b_.getInt64Ty(),
+                               false);
+    } else /* call.vargs.at(0)->is_map */ {
+      auto &arg = *call.vargs.at(0);
+      auto &map = static_cast<Map &>(arg);
 
-      expr_ = b_.CreateForEachMapElem(
-          ctx_, map, map_len_func_, nullptr, call.loc);
+      // Some map types used in bpftrace (BPF_MAP_TYPE_(PERCPU_)ARRAY) do not
+      // implement per-cpu counters and bpf_map_sum_elem_count would always
+      // return 0 for them. In our case, those maps typically have a single
+      // element so we can return 1 straight away.
+      // For the rest, use bpf_map_sum_elem_count if available and map supports
+      // it, otherwise fall back to bpf_for_each_map_elem with a custom callback
+      if (map_has_single_elem(map.type, map.key_type)) {
+        expr_ = b_.getInt64(1);
+      } else if (LLVM_VERSION_MAJOR >= 17 &&
+                 bpftrace_.feature_->has_kernel_func(
+                     Kfunc::bpf_map_sum_elem_count) &&
+                 !is_array_map(map.type, map.key_type)) {
+        expr_ = CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
+                                     { b_.GetMapVar(map.ident) },
+                                     "len");
+      } else {
+        if (!map_len_func_)
+          map_len_func_ = createMapLenCallback();
+
+        expr_ = b_.CreateForEachMapElem(
+            ctx_, map, map_len_func_, nullptr, call.loc);
+      }
     }
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);

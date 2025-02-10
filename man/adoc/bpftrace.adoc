@@ -21,9 +21,9 @@ When _FILENAME_ is "_-_", bpftrace will read program code from stdin.
 
 == Description
 
-bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as 
-a backend to compile scripts to eBPF-bytecode and makes use of libbpf and bcc 
-for interacting with the Linux BPF subsystem, as well as existing Linux 
+bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as
+a backend to compile scripts to eBPF-bytecode and makes use of libbpf and bcc
+for interacting with the Linux BPF subsystem, as well as existing Linux
 tracing capabilities.
 
 == Examples
@@ -1334,6 +1334,10 @@ Tracing block I/O sizes > 0 bytes
 | Resolve kernel address
 | Async
 
+| <<functions-len, `len`>>
+| Count ustack/kstack frames
+| Sync
+
 | <<functions-macaddr, `macaddr`>>
 | Convert MAC address data
 | Sync
@@ -1712,6 +1716,16 @@ kprobe:do_nanosleep
  * do_nanosleep
  */
 ----
+
+[#functions-len]
+=== len
+
+.variants
+* `int64 len(ustack stack)`
+* `int64 len(kstack stack)`
+
+Retrieve the depth (measured in # of frames) of the call stack
+specified by `stack`.
 
 [#functions-macaddr]
 === macaddr

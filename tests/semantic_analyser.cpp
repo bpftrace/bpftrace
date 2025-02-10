@@ -1106,6 +1106,13 @@ TEST(semantic_analyser, call_len)
   test("kprobe:f { @x[0] = 0; len(@x, 1); }", 1);
   test("kprobe:f { @x[0] = 0; len(@x[2]); }", 1);
   test("kprobe:f { $x = 0; len($x); }", 1);
+  test("kprobe:f { len(ustack) }");
+  test("kprobe:f { len(kstack) }");
+  test_error("kprobe:f { len(0) }", R"(
+stdin:1:12-18: ERROR: len() expects a map or stack to be provided
+kprobe:f { len(0) }
+           ~~~~~~
+)");
 }
 
 TEST(semantic_analyser, call_has_key)

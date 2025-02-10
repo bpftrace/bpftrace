@@ -164,7 +164,6 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsByteArray() const
 {
   return type_ == Type::string || type_ == Type::usym_t ||
-         type_ == Type::kstack_t || type_ == Type::ustack_t ||
          type_ == Type::inet || type_ == Type::buffer ||
          type_ == Type::timestamp || type_ == Type::mac_address ||
          type_ == Type::cgroup_path_t;
@@ -172,7 +171,8 @@ bool SizedType::IsByteArray() const
 
 bool SizedType::IsAggregate() const
 {
-  return IsArrayTy() || IsByteArray() || IsTupleTy() || IsRecordTy();
+  return IsArrayTy() || IsByteArray() || IsTupleTy() || IsRecordTy() ||
+         IsStack();
 }
 
 bool SizedType::IsStack() const
@@ -435,7 +435,8 @@ SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
 
 SizedType CreateStack(bool kernel, StackType stack)
 {
-  // These sizes are based on the stack key (see CodegenLLVM::kstack_ustack)
+  // These sizes are based on the stack key (see
+  // IRBuilderBPF::GetStackStructType)
   auto st = SizedType(kernel ? Type::kstack_t : Type::ustack_t,
                       kernel ? 12 : 20);
   st.stack_type = stack;

@@ -147,6 +147,31 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
   return buf;
 }
 
+StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
+{
+  // Kernel stacks should not be differentiated by pid, since the kernel
+  // address space is the same between pids (and when aggregating you *want*
+  // to be able to correlate between pids in most cases). User-space stacks
+  // are special because of ASLR, hence we also store the pid; probe id is
+  // stored for cases when only ELF resolution works (e.g. ASLR disabled and
+  // process exited).
+  if (is_ustack) {
+    std::vector<llvm::Type *> elements{
+      getInt64Ty(), // stack id
+      getInt32Ty(), // nr_stack_frames
+      getInt32Ty(), // pid
+      getInt32Ty(), // probe id
+    };
+    return GetStructType("ustack_key", elements, false);
+  } else {
+    std::vector<llvm::Type *> elements{
+      getInt64Ty(), // stack id
+      getInt32Ty(), // nr_stack_frames
+    };
+    return GetStructType("kstack_key", elements, false);
+  }
+}
+
 StructType *IRBuilderBPF::GetStructType(
     std::string name,
     const std::vector<llvm::Type *> &elements,
@@ -364,6 +389,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
     ty_name << "_tuple_t";
 
     ty = GetStructType(ty_name.str(), llvm_elems, false);
+  } else if (stype.IsStack()) {
+    ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
     if (emit_codegen_types)
       ty = getInt64Ty();
