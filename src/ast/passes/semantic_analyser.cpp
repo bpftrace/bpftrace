@@ -3446,7 +3446,11 @@ void SemanticAnalyser::visit(Block &block)
 {
   scope_stack_.push_back(&block);
   accept_statements(block.stmts);
+  visit(block.expr);
   scope_stack_.pop_back();
+  if (block.expr) {
+    block.type = block.expr->type;
+  }
 }
 
 void SemanticAnalyser::visit(Probe &probe)

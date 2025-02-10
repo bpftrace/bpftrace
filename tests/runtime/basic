@@ -330,3 +330,7 @@ NAME exit code
 PROG BEGIN { exit(69); }
 RETURN_CODE 69
 TIMEOUT 1
+
+NAME block expression
+PROG BEGIN { let $a = { let $b = 1; $b }; print($a); exit(); }
+EXPECT 1

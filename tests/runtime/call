@@ -683,3 +683,7 @@ NAME kstack len
 PROG k:do_nanosleep { @ = len(kstack); exit() }
 EXPECT_REGEX @: \d+$
 AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME block expression with map assignment
+PROG BEGIN { @ = { let $a = 100; avg($a) }; exit(); }
+EXPECT @: 100

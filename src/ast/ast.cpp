@@ -184,7 +184,19 @@ AssignMapStatement::AssignMapStatement(Diagnostics &d,
                                        Location &&loc)
     : Statement(d, std::move(loc)), map(map), expr(expr)
 {
-  expr->map = map;
+  // If this is a block expression, then we skip through that and actually set
+  // the map on the underlying expression. This is done recursively. It is only
+  // done to support functions that need to know the type of the map to which
+  // they are being assigned.
+  Expression *value = expr;
+  while (true) {
+    auto *block = dynamic_cast<Block *>(value);
+    if (block == nullptr) {
+      break;
+    }
+    value = block->expr; // Must be non-null if expression.
+  };
+  value->map = map;
 };
 
 AssignVarStatement::AssignVarStatement(Diagnostics &d,
@@ -251,7 +263,15 @@ AttachPoint::AttachPoint(Diagnostics &d,
 }
 
 Block::Block(Diagnostics &d, StatementList &&stmts, Location &&loc)
-    : Statement(d, std::move(loc)), stmts(std::move(stmts))
+    : Expression(d, std::move(loc)), stmts(std::move(stmts))
+{
+}
+
+Block::Block(Diagnostics &d,
+             StatementList &&stmts,
+             Expression *expr,
+             Location &&loc)
+    : Expression(d, std::move(loc)), stmts(std::move(stmts)), expr(expr)
 {
 }
 
