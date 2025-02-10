@@ -730,6 +730,21 @@ Scratch variables must be initialized before using these operators.
 
 Note `{plus}{plus}`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
 
+==== Block Expressions
+
+A block can be used as expression, as long as the last statement of the block
+is an expression with no trailing semi-colon.
+
+```
+let $a = {
+  let $b = 1;
+  $b
+};
+// $a is 1
+```
+
+This can be used anywhere an expression can be used.
+
 === Preamble
 
 Preprocessor and type definitions take place in the preamble:

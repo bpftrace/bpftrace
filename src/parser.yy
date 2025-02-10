@@ -139,6 +139,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList> attach_points
+%type <ast::Block *> block_expr
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
@@ -512,13 +513,16 @@ tuple_access_expr:
                 postfix_expr DOT INT      { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @3); }
                 ;
 
-
+block_expr:
+                "{" stmt_list expr "}" { $$ = driver.ctx.make_node<ast::Block>(std::move($2), $3, @$); }
+                ;
 
 unary_expr:
                 unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($1, $2, false, @1); }
         |       postfix_expr         { $$ = $1; }
         |       INCREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
         |       DECREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
+        |       block_expr           { $$ = $1; }
 /* errors */
         |       ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
         |       ident INCREMENT      { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
@@ -539,7 +543,6 @@ conditional_expr:
                 logical_or_expr                                  { $$ = $1; }
         |       logical_or_expr QUES expr COLON conditional_expr { $$ = driver.ctx.make_node<ast::Ternary>($1, $3, $5, @$); }
                 ;
-
 
 logical_or_expr:
                 logical_and_expr                     { $$ = $1; }

@@ -29,6 +29,8 @@ and this project adheres to
   - [#3811](https://github.com/bpftrace/bpftrace/pull/3811)
 - Add support for LLVM 20
   - [#3841](https://github.com/bpftrace/bpftrace/pull/3841)
+- Add simple block expressions
+  - [#3780](https://github.com/bpftrace/bpftrace/pull/3780)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)

@@ -2901,4 +2901,61 @@ BEGIN { $x: int8 = 1; }
 )");
 }
 
+TEST(Parser, block_expressions)
+{
+  // Non-legal trailing statement
+  test_parse_failure("BEGIN { $x = { $a = 1; $b = 2 } exit(); }", R"(
+stdin:1:31-32: ERROR: syntax error, unexpected }, expecting ;
+BEGIN { $x = { $a = 1; $b = 2 } exit(); }
+                              ~
+)");
+
+  // No expression, statement with trailing ;
+  test_parse_failure("BEGIN { $x = { $a = 1; $b = 2; } exit(); }", R"(
+stdin:1:32-33: ERROR: syntax error, unexpected }
+BEGIN { $x = { $a = 1; $b = 2; } exit(); }
+                               ~
+)");
+
+  // Missing ; after block expression
+  test_parse_failure("BEGIN { $x = { $a = 1; $a } exit(); }", R"(
+stdin:1:29-33: ERROR: syntax error, unexpected call, expecting ; or }
+BEGIN { $x = { $a = 1; $a } exit(); }
+                            ~~~~
+)");
+
+  // Illegal; no map assignment
+  test_parse_failure("BEGIN { $x = { $a = 1; count() } exit(); }", R"(
+stdin:1:34-38: ERROR: syntax error, unexpected call, expecting ; or }
+BEGIN { $x = { $a = 1; count() } exit(); }
+                                 ~~~~
+)");
+
+  // Good, no map assignment
+  test("BEGIN { $x = { $a = 1; $a }; exit(); }", R"(
+Program
+ BEGIN
+  =
+   variable: $x
+   =
+    variable: $a
+    int: 1
+   variable: $a
+  call: exit
+)");
+
+  // Good, with map assignment
+  test("BEGIN { $x = { $a = 1; count() }; exit(); }", R"(
+Program
+ BEGIN
+  =
+   variable: $x
+   =
+    variable: $a
+    int: 1
+   call: count
+  call: exit
+)");
+}
+
 } // namespace bpftrace::test::parser

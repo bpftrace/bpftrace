@@ -361,11 +361,18 @@ public:
   Expression *expr = nullptr;
 };
 
-class Block : public Statement {
+class Block : public Expression {
 public:
   Block(Diagnostics &d, StatementList &&stmts, Location &&loc);
+  Block(Diagnostics &d,
+        StatementList &&stmts,
+        Expression *expr,
+        Location &&loc);
 
   StatementList stmts;
+  // Depending on how it is parsed, a block can also be evaluated as an
+  // expression. This follows all other statements in the block.
+  Expression *expr = nullptr;
 };
 
 class If : public Statement {
