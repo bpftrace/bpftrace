@@ -195,6 +195,7 @@ public:
   R visit(Block &block)
   {
     visitImpl(block.stmts);
+    visitAndReplace(&block.expr);
     return default_value();
   }
   R visit(Subprog &subprog)
@@ -327,7 +328,8 @@ public:
                               ArrayAccess *,
                               Cast *,
                               Tuple *,
-                              Ternary *>(expr);
+                              Ternary *,
+                              Block *>(expr);
   }
   R visitAndReplace(Statement **stmt)
   {
@@ -337,7 +339,6 @@ public:
                               AssignMapStatement *,
                               AssignVarStatement *,
                               AssignConfigVarStatement *,
-                              Block *,
                               If *,
                               Unroll *,
                               Jump *,
