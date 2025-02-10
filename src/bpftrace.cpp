@@ -987,6 +987,10 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
+  // Attach all external probes once our own probes are attached.
+  // FIXME: This is just lost at this point.
+  bytecode_.attach_external();
+
   for (auto &probe : std::ranges::reverse_view(resources.probes)) {
     if (BPFtrace::exitsig_recv) {
       request_finalize();

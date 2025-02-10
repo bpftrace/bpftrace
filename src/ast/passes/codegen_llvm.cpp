@@ -9,6 +9,10 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <llvm/IR/GlobalValue.h>
 
 #if LLVM_VERSION_MAJOR <= 16
@@ -108,13 +112,20 @@ CodegenLLVM::CodegenLLVM(ASTContext &ctx,
                          "Debug Info Version",
                          llvm::DEBUG_METADATA_VERSION);
 
-  // Set license of BPF programs
-  const std::string license = "GPL";
-  auto license_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-      "LICENSE", ArrayType::get(b_.getInt8Ty(), license.size() + 1)));
-  license_var->setInitializer(
-      ConstantDataArray::getString(module_->getContext(), license.c_str()));
-  license_var->setSection("license");
+  // The unwind table causes problems when linking via libbpf.
+  module_->setUwtable(llvm::UWTableKind::None);
+
+  // Set license of BPF programs.
+  //
+  // FIXME: The BTF information is missing for the license, and therefore it
+  // cannot be linked/merged/dedupped by libbpf.
+  //
+  // const std::string license = "GPL";
+  // auto license_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
+  //     "LICENSE", ArrayType::get(b_.getInt8Ty(), license.size() + 1)));
+  // license_var->setInitializer(
+  //      ConstantDataArray::getString(module_->getContext(), license.c_str()));
+  // license_var->setSection("license");
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -2750,6 +2761,33 @@ void CodegenLLVM::visit(Block &block)
   scope_stack_.pop_back();
 }
 
+std::variant<std::string, CodegenLLVM::LinkTarget> CodegenLLVM::LinkTarget::open(std::filesystem::path &name)
+{
+  const char *s = name.c_str();
+  int fd = ::open(s, O_RDONLY, 0);
+  if (fd < 0) {
+    std::stringstream ss;
+    ss << "Error opening file: " << strerror(errno);
+    return ss.str();
+  }
+  return LinkTarget(name, fd);
+}
+
+void CodegenLLVM::visit(Import &imp)
+{
+  // We only handle BPF programs during this pass.
+  auto path = imp.bpf_import_object();
+  if (path) {
+    auto lt = LinkTarget::open(*path);
+    if (std::holds_alternative<std::string>(lt)) {
+      LOG(ERROR) << "Failed import " << *path << ": " << std::get<std::string>(lt);
+      return;
+    }
+    link_targets_.emplace_back(std::move(std::get<LinkTarget>(lt)));
+    std::cerr << "Successfully imported " << *path << "\n";
+  }
+}
+
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
                                 const std::string &name,
@@ -2770,6 +2808,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(get_section_name(func_name));
+  func->addFnAttr(Attribute::NoUnwind);
   debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
@@ -3006,14 +3045,6 @@ void CodegenLLVM::visit(Probe &probe)
   }
 
   current_attach_point_ = nullptr;
-}
-
-void CodegenLLVM::visit(Program &program)
-{
-  for (Subprog *subprog : program.functions)
-    auto scoped_del = accept(subprog);
-  for (Probe *probe : program.probes)
-    auto scoped_del = accept(probe);
 }
 
 int CodegenLLVM::getNextIndexForProbe()
@@ -3330,6 +3361,7 @@ llvm::Function *CodegenLLVM::createLog2Function()
   auto *log2_func = llvm::Function::Create(
       log2_func_type, llvm::Function::InternalLinkage, "log2", module_.get());
   log2_func->addFnAttr(Attribute::AlwaysInline);
+  log2_func->addFnAttr(Attribute::NoUnwind);
   log2_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
                                          "entry",
@@ -3438,6 +3470,7 @@ llvm::Function *CodegenLLVM::createLinearFunction()
                                              "linear",
                                              module_.get());
   linear_func->addFnAttr(Attribute::AlwaysInline);
+  linear_func->addFnAttr(Attribute::NoUnwind);
   linear_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
                                          "entry",
@@ -3767,7 +3800,8 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
                                       libbpf::bpf_map_type map_type,
                                       uint64_t max_entries,
                                       const SizedType &key_type,
-                                      const SizedType &value_type)
+                                      const SizedType &value_type,
+                                      bool external)
 {
   DIType *di_key_type = debug_.GetMapKeyType(key_type, value_type, map_type);
   map_types_.emplace(name, map_type);
@@ -3787,10 +3821,16 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 
   auto var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(var_name, type));
-  var->setInitializer(ConstantAggregateZero::get(type));
   var->setSection(".maps");
   var->setDSOLocal(true);
   var->addDebugInfo(debuginfo);
+
+  // If the map is external, then don't set the initializer. This will
+  // effectively cause the map to become `extern` to this mdoule, and it will
+  // be resolved at bpf link time.
+  if (!external) {
+    var->setInitializer(ConstantAggregateZero::get(type));
+  }
 }
 
 libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
@@ -3849,13 +3889,23 @@ bool CodegenLLVM::map_has_single_elem(const SizedType &val_type,
 void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                                 const CodegenResources &codegen_resources)
 {
-  // User-defined maps
+  // User-defined maps; internal and external.
   for (const auto &[name, info] : required_resources.maps_info) {
     const auto &val_type = info.value_type;
     const auto &key_type = info.key_type;
 
-    auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
+    // Is this external? If yes, then use those values directly. Note that
+    // these names may not be prefixed by '@' like all others maps, which is
+    // handled by the semantic analyzer in general.
+    if (info.external) {
+      auto map_type = static_cast<libbpf::bpf_map_type>(info.external->map_type);
+      auto max_entries = info.external->max_entries;
+      createMapDefinition(name, map_type, max_entries, key_type, val_type, true);
+      continue;
+    }
+
     auto map_type = get_map_type(val_type, key_type);
+    auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
 
     // hist() and lhist() transparently create additional elements in whatever
     // map they are assigned to. So even if the map looks like it has no keys,
@@ -4045,7 +4095,7 @@ bool CodegenLLVM::verify()
 //
 // Since disassembly is a debugging tool, just shell out to llvm-objdump
 // to keep things simple.
-static void disassemble(const SmallVector<char, 0> &elf)
+static void disassemble(const SmallVectorImpl<char> &elf)
 {
   std::cout << "\nDisassembled bytecode\n";
   std::cout << "---------------------------\n";
@@ -4084,16 +4134,49 @@ BpfBytecode CodegenLLVM::emit(bool dis)
 {
   assert(state_ == State::OPT);
   SmallVector<char, 0> output;
-  raw_svector_ostream os(output);
+  raw_svector_ostream out(output);
+  emit(out);
 
-  emit(os);
-  assert(!output.empty());
-
-  if (dis)
+  // Dump if needed; this is done after all the linking above and should be the
+  // final state of the program, including any external maps and probes.
+  if (dis) {
     disassemble(output);
+  }
+
+  // In order to craft the final output, since we may have external maps and
+  // probes, we delegate the heavy lifting to libbpf. First, we open a new
+  // memfd as output, and add our top-level output to the linker.
+  //
+  // FIXME: This is dumping output to a hard-coded path for now, just to aid in
+  // debugging the resulting object temporarily.
+  struct bpf_linker *linker = bpf_linker__new("linked_output.bpf.o", nullptr);
+  assert(linker != nullptr);
+
+  // Next, we iterate through the link of link targets that we collected from
+  // import statements. These are added to the link target one at a time.
+  for (auto &target : link_targets_) {
+    std::cerr << "linking in target_fd\n";
+    int rc = bpf_linker__add_fd(linker, target.fd(), nullptr);
+    assert(!rc);
+  }
+
+  // Link in our own program.
+  int rc = bpf_linker__add_buf(linker, output.data(), output.size(), nullptr);
+  assert(!rc);
+
+  // Finally, we finalize the linking, and reload our output buffer to be the
+  // final contents of the memfd. At this point, we should have a fully linked
+  // program, and the output should be representative.
+  rc = bpf_linker__finalize(linker);
+  assert(!rc);
+  bpf_linker__free(linker);
+
+  // Reload the final output.
+  std::ifstream file("linked_output.bpf.o", std::ios::binary);
+  std::vector<char> linked(std::istreambuf_iterator<char>(file), {});
 
   state_ = State::DONE;
-  return BpfBytecode{ output };
+  return BpfBytecode{ linked };
 }
 
 BpfBytecode CodegenLLVM::compile()
@@ -4333,6 +4416,7 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
       "murmur_hash_2",
       module_.get());
   callback->addFnAttr(Attribute::AlwaysInline);
+  callback->addFnAttr(Attribute::NoUnwind);
   callback->setSection("helpers");
 
   auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);

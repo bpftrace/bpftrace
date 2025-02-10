@@ -54,6 +54,15 @@ struct MapInfo {
   std::optional<int> hist_bits_arg;
   int id = -1;
 
+  // If external is provided, then we don't generate this var. Instead we
+  // generate an extern reference and the map must be resolved by the linker
+  // within libbpf.
+  struct ExternalInfo {
+    uint64_t map_type;
+    uint64_t max_entries;
+  };
+  std::optional<ExternalInfo> external;
+
 private:
   friend class cereal::access;
   template <typename Archive>

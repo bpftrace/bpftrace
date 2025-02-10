@@ -278,6 +278,17 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
   }
 }
 
+void BpfBytecode::attach_external()
+{
+  for (const auto &prog : programs_) {
+    auto p = prog.second.bpf_prog();
+    if (bpf_program__autoattach(p)) {
+      // FIXME: This is lost at this point.
+      bpf_program__attach(p);
+    }
+  }
+}
+
 bool BpfBytecode::all_progs_loaded()
 {
   for (const auto &prog : programs_) {

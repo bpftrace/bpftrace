@@ -5,6 +5,7 @@
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
 #include "bpftrace.h"
+#include "btf.h"
 #include "globalvars.h"
 #include "log.h"
 #include "struct.h"
@@ -37,6 +38,10 @@ ResourceAnalyser::ResourceAnalyser(ASTContext &ctx,
                                    BPFtrace &bpftrace,
                                    std::ostream &out)
     : Visitor<ResourceAnalyser>(ctx),
+      // The existing resources will be initialized with any set of static
+      // resources that may have been provisioned before this pass. This is
+      // needed to support external imports, e.g. see resolve_imports.cpp.
+      resources_(bpftrace.resources),
       bpftrace_(bpftrace),
       out_(out),
       probe_(nullptr)

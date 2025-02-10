@@ -43,13 +43,6 @@ class BTF {
     std::string name;
   };
 
-  // It is often necessary to store a BTF id along with the BTF data containing
-  // its definition.
-  struct BTFId {
-    struct btf* btf;
-    __u32 id;
-  };
-
 public:
   BTF(const std::set<std::string>& modules);
   BTF(BPFtrace* bpftrace, const std::set<std::string>& modules) : BTF(modules)
@@ -57,6 +50,15 @@ public:
     bpftrace_ = bpftrace;
   };
   ~BTF();
+
+  // It is often necessary to store a BTF id along with the BTF data containing
+  // its definition. This is currently exposed as public via the `get_stype`
+  // API, but should be an implementation detail. At the moment, there is no
+  // way to load additional coherent types into this class.
+  struct BTFId {
+    struct btf* btf;
+    __u32 id;
+  };
 
   bool has_data(void) const;
   size_t objects_cnt() const
@@ -67,6 +69,7 @@ public:
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const BTFId& type_id, const std::string& field);
   SizedType get_stype(const std::string& type_name);
+  SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
   SizedType get_var_type(const std::string& var_name);
 
   std::set<std::string> get_all_structs() const;
@@ -84,7 +87,6 @@ public:
 
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
-  SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
   void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
                                                  const struct btf* btf);

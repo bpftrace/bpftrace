@@ -600,15 +600,42 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Import : public Node {
+public:
+  Import(std::string name);
+
+  const std::string &name() const
+  {
+    return name_;
+  }
+
+  // Importing supports various kinds of cross-cutting functionality, as
+  // documented in the extensibility proposal #3773. For now, only BPF
+  // extensions are supported but we incrementally check and fail if there are
+  // unsupported edges, in order to future proof this functionality.
+  std::optional<std::filesystem::path> host_import_source();
+  std::optional<std::filesystem::path> host_import_module();
+  std::optional<std::filesystem::path> bpftrace_import_source();
+  std::optional<std::filesystem::path> bpf_import_source();
+  std::optional<std::filesystem::path> bpf_import_module();
+  std::optional<std::filesystem::path> bpf_import_object();
+
+private:
+  std::string name_;
+};
+using ImportList = std::vector<Import *>;
+
 class Program : public Node {
 public:
   Program(const std::string &c_definitions,
           Config *config,
+          ImportList &&imports,
           SubprogList &&functions,
           ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
+  ImportList imports;
   SubprogList functions;
   ProbeList probes;
 

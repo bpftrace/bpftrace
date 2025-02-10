@@ -44,6 +44,7 @@ public:
 
   using Visitor<CodegenLLVM>::visit;
   void visit(Integer &integer);
+  void visit(Import &imp);
   void visit(PositionalParameter &param);
   void visit(String &string);
   void visit(Identifier &identifier);
@@ -73,7 +74,6 @@ public:
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(Subprog &subprog);
-  void visit(Program &program);
   void visit(Block &block);
 
   Value *getHistMapKey(Map &map, Value *log2, const location &loc);
@@ -98,7 +98,8 @@ public:
                            libbpf::bpf_map_type map_type,
                            uint64_t max_entries,
                            const SizedType &key_type,
-                           const SizedType &value_type);
+                           const SizedType &value_type,
+                           bool external = false);
   Value *createTuple(
       const SizedType &tuple_type,
       const std::vector<std::pair<llvm::Value *, const location *>> &vals,
@@ -164,6 +165,25 @@ private:
 
   private:
     std::function<void()> deleter_;
+  };
+
+  // LinkTarget is a RAII-style class wrapping a descriptor. This is used
+  // simply to collect all the linker FDs during the regular visit, which are
+  // used at the end of code genereration.
+  class LinkTarget {
+  public:
+    // Returns either an error or a LinkTarget, depending if the file was
+    // opened successfully.
+    static std::variant<std::string, LinkTarget> open(std::filesystem::path &name);
+    ~LinkTarget() { if (fd_ >= 0) { close(fd_); } }
+    LinkTarget(LinkTarget &&other) : name_(other.name_), fd_(other.fd_) {
+      other.fd_ = -1; // Don't close on release.
+    }
+    int fd() const { return fd_; }
+  private:
+    LinkTarget(std::filesystem::path &name, int fd) : name_(name), fd_(fd) {}
+    std::filesystem::path name_;
+    int fd_;
   };
 
   // Generate a probe for `current_attach_point_`
@@ -341,6 +361,7 @@ private:
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
+  std::vector<LinkTarget> link_targets_;
 
   enum class State {
     INIT,

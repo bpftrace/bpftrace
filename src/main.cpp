@@ -20,6 +20,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/resource_analyser.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 
@@ -424,6 +425,7 @@ ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
   pm.AddPass(ast::CreateConfigPass());
+  pm.AddPass(ast::CreateResolveImportsPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
@@ -434,6 +436,7 @@ ast::PassManager CreateDynamicPM()
 ast::PassManager CreateAotPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateResolveImportsPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
@@ -752,7 +755,7 @@ int main(int argc, char* argv[])
       break;
   }
 
-  libbpf_set_print(libbpf_print);
+  // XXX libbpf_set_print(libbpf_print);
 
   Config config = Config(!args.cmd_str.empty());
   BPFtrace bpftrace(std::move(output), args.no_feature, config);

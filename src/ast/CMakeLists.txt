@@ -17,6 +17,7 @@ add_library(ast STATIC
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/resource_analyser.cpp
+  passes/resolve_imports.cpp
   passes/semantic_analyser.cpp
   passes/codegen_llvm.cpp
   passes/return_path_analyser.cpp

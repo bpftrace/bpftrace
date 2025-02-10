@@ -38,39 +38,39 @@ public:
   // visit methods are used to traverse the graph, and are provided a reference
   // to the underlying node. The visit is invoked *before* the replace call,
   // and can directly consume and modify the results of the visit.
-  R visit(Integer &integer __attribute__((__unused__)))
+  R visit([[maybe_unused]] Integer &integer)
   {
     return default_value();
   }
-  R visit(PositionalParameter &integer __attribute__((__unused__)))
+  R visit([[maybe_unused]] PositionalParameter &integer)
   {
     return default_value();
   }
-  R visit(String &string __attribute__((__unused__)))
+  R visit([[maybe_unused]] String &string)
   {
     return default_value();
   }
-  R visit(Builtin &builtin __attribute__((__unused__)))
+  R visit([[maybe_unused]] Builtin &builtin)
   {
     return default_value();
   }
-  R visit(Identifier &identifier __attribute__((__unused__)))
+  R visit([[maybe_unused]] Identifier &identifier)
   {
     return default_value();
   }
-  R visit(StackMode &mode __attribute__((__unused__)))
+  R visit([[maybe_unused]] StackMode &mode)
   {
     return default_value();
   }
-  R visit(Variable &var __attribute__((__unused__)))
+  R visit([[maybe_unused]] Variable &var)
   {
     return default_value();
   }
-  R visit(SubprogArg &subprog_arg __attribute__((__unused__)))
+  R visit([[maybe_unused]] SubprogArg &subprog_arg)
   {
     return default_value();
   }
-  R visit(AttachPoint &ap __attribute__((__unused__)))
+  R visit([[maybe_unused]] AttachPoint &ap)
   {
     return default_value();
   }
@@ -206,8 +206,13 @@ public:
     visitImpl(subprog.stmts);
     return default_value();
   }
+  R visit([[maybe_unused]] Import &imp)
+  {
+    return default_value();
+  }
   R visit(Program &program)
   {
+    visitImpl(program.imports);
     visitImpl(program.functions);
     visitImpl(program.probes);
     visitAndReplace(&program.config);

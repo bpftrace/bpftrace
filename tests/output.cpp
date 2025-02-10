@@ -21,7 +21,8 @@ TEST(TextOutput, lhist_no_suffix)
     SizedType{ Type::lhist_t, 8 },
     LinearHistogramArgs{ 610000, 670000, 10000 },
     {},
-    {}
+    {},
+    std::nullopt
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 
@@ -67,7 +68,8 @@ TEST(TextOutput, lhist_suffix)
     SizedType{ Type::lhist_t, 8 },
     LinearHistogramArgs{ 0, 5 * 1024, 1024 },
     {},
-    {}
+    {},
+    std::nullopt
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 

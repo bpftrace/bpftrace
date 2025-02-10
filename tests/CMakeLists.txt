@@ -69,6 +69,7 @@ target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_link_libraries(bpftrace_test libbpftrace)
+target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
 
 target_compile_definitions(bpftrace_test PRIVATE ${BPFTRACE_FLAGS})
 
