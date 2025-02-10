@@ -1,0 +1,233 @@
+aot.basic.basic while loop
+aot.basic.clear count-map
+aot.basic.clear map
+aot.basic.delete count-map
+aot.basic.delete deprecated
+aot.basic.delete map
+aot.basic.exit code
+aot.basic.has_key exists
+aot.basic.has_key map keys and values
+aot.basic.has_key map value as key
+aot.basic.has_key no_exists
+aot.basic.increment/decrement map
+aot.basic.increment/decrement variable
+aot.basic.map strings are memset
+aot.basic.print large int
+aot.basic.variable strings are memset
+aot.btf.enum_value_reference
+aot.btf.kernel_module_tracepoint
+aot.btf.redefine_btf_type_missing_def
+aot.btf.tracepoint_nested_pointer_type_resolution
+aot.btf.tracepoint_pointer_type_resolution
+aot.btf.user_supplied_c_def_using_btf
+aot.builtin.arg
+aot.builtin.begin probe
+aot.builtin.cat
+aot.builtin.cat "no such file"
+aot.builtin.cat format str
+aot.builtin.cgroup
+aot.builtin.cpu
+aot.builtin.elapsed
+aot.builtin.func_kprobe
+aot.builtin.func_kretprobe
+aot.builtin.func_uprobe
+aot.builtin.func_uretprobe
+aot.builtin.gid
+aot.builtin.jiffies
+aot.builtin.kstack
+aot.builtin.nsecs
+aot.builtin.numaid
+aot.builtin.offsetof
+aot.builtin.pid
+aot.builtin.probe
+aot.builtin.rand
+aot.builtin.retval
+aot.builtin.sizeof_btf
+aot.builtin.sizeof_ints
+aot.builtin.sizeof_ints_pt2
+aot.builtin.tid
+aot.builtin.uid
+aot.builtin.username
+aot.builtin.ustack
+aot.call.avg
+aot.call.buf_hist_map_key
+aot.call.buf_map_key
+aot.call.buf_map_value
+aot.call.buf_no_ascii
+aot.call.buf_no_ascii_no_escaping
+aot.call.cat
+aot.call.cat_more_args
+aot.call.clear on scalar map prevents printing
+aot.call.count
+aot.call.fmt_str_args_scratch_buf
+aot.call.hist
+aot.call.hist_2_values
+aot.call.hist_map_key_scratch_buf
+aot.call.hist_scalar_map_key_scratch_buf
+aot.call.kstack
+aot.call.kstack len
+aot.call.kstack perf mode
+aot.call.ksym
+aot.call.lhist
+aot.call.lhist_map_key_scratch_buf
+aot.call.lhist_scalar_map_key_scratch_buf
+aot.call.map len
+aot.call.map len keyless
+aot.call.map lencmp
+aot.call.map_val_scratch_buf
+aot.call.max
+aot.call.min
+aot.call.nsecs
+aot.call.nsecs_boot
+aot.call.nsecs_monotonic
+aot.call.nsecs_sw_tai
+aot.call.ntop static ip
+aot.call.percpu_kaddr
+aot.call.percpu_kaddr this cpu
+aot.call.print_avg_map_args
+aot.call.print_avg_map_with_large_top
+aot.call.print_hist_with_large_top_arg
+aot.call.print_hist_with_top_arg
+aot.call.print_map_item
+aot.call.print_non_map
+aot.call.printf
+aot.call.printf_argument
+aot.call.printf_char
+aot.call.printf_length_modifiers
+aot.call.printf_llu
+aot.call.printf_long_fmt
+aot.call.printf_more_arguments
+aot.call.pton ipv4
+aot.call.pton ipv6
+aot.call.scalar_map_scratch_buf
+aot.call.stats
+aot.call.str
+aot.call.str_big
+aot.call.str_big_print
+aot.call.str_big_read
+aot.call.str_big_strncmp
+aot.call.str_scratch_buf
+aot.call.sum
+aot.call.time
+aot.call.time_short
+aot.call.ustack
+aot.call.ustack len
+aot.call.ustack_stack_mode_env_bpftrace
+aot.call.ustack_stack_mode_env_override
+aot.call.ustack_stack_mode_env_perf
+aot.call.ustack_stack_mode_env_raw
+aot.call.usym
+aot.call.variable_probe_subprog_scratch_buf
+aot.call.variable_scratch_buf
+aot.for.map create map in body
+aot.for.map nested count
+aot.for.map one key elements
+aot.for.map stack key with a per cpu aggregation
+aot.for.variable context read only
+aot.for.variable context string
+aot.for.variable context update
+aot.other.avg can be cleared
+aot.other.exit exits immediately
+aot.other.hist can be cleared
+aot.other.if_gt
+aot.other.if_lt
+aot.other.ifelse_go_else
+aot.other.ifelse_go_if
+aot.other.ifelseif_go_elseif
+aot.other.ifelseifelse_go_else
+aot.other.lhist can be cleared
+aot.other.per_cpu_map_count_if
+aot.other.per_cpu_map_max_if
+aot.other.per_cpu_map_min_if
+aot.other.stats can be cleared
+aot.other.ternary
+aot.other.ternary_lnot
+aot.other.ternary_none_type
+aot.other.unroll
+aot.other.unroll_max_value
+aot.other.unroll_min_value
+aot.other.unroll_printf
+aot.precedence.operator_precedence_1
+aot.precedence.operator_precedence_2
+aot.precedence.operator_precedence_3
+aot.precedence.operator_precedence_3
+aot.probe.BEGIN
+aot.probe.BEGIN,END
+aot.probe.END_processing_after_exit
+aot.probe.bpf_programs_limit
+aot.probe.interval
+aot.probe.interval_probe_builtin
+aot.probe.interval_short_name
+aot.probe.kprobe
+aot.probe.kprobe_disallow_rcu_functions
+aot.probe.kprobe_func_missing
+aot.probe.kprobe_module
+aot.probe.kprobe_module_missing
+aot.probe.kprobe_module_wildcard
+aot.probe.kprobe_offset
+aot.probe.kprobe_short_name
+aot.probe.kprobe_warn_missing_probes
+aot.probe.kprobe_wildcard
+aot.probe.kretprobe
+aot.probe.kretprobe_short_name
+aot.probe.kretprobe_wildcard
+aot.probe.probe_builtin_scratch_buf
+aot.probe.profile
+aot.probe.profile_probe_builtin
+aot.probe.profile_short_name
+aot.probe.rawtracepoint
+aot.probe.rawtracepoint_missing
+aot.probe.rawtracepoint_short_name
+aot.probe.rawtracepoint_wildcard
+aot.probe.sanitise probe name
+aot.probe.software
+aot.probe.software_alias_probe_builtin
+aot.probe.software_probe_builtin
+aot.probe.tracepoint
+aot.probe.tracepoint args
+aot.probe.tracepoint args as pointer
+aot.probe.tracepoint_data_loc
+aot.probe.tracepoint_missing
+aot.probe.tracepoint_multiattach_missing
+aot.probe.tracepoint_short_name
+aot.probe.uprobe
+aot.probe.uprobe_address_fail_resolve
+aot.probe.uprobe_offset
+aot.probe.uprobe_offset
+aot.probe.uprobe_offset_fail_size
+aot.probe.uprobe_warn_missing_probes
+aot.probe.uprobe_zero_size
+aot.probe.uretprobe
+aot.regression.access ctx struct field twice
+aot.regression.async_id_invalid_probe_expansion
+aot.regression.modulo_operator
+aot.regression.string compare with empty
+aot.regression.string compare with prefix
+aot.regression.strncmp with prefix
+aot.regression.strncmp_checks_for_nul
+aot.regression.strncmp_n_longer_than_buffer
+aot.regression.unaligned key with aligned value
+aot.signed_ints.avg cast negative values
+aot.signed_ints.avg with negative values
+aot.signed_ints.negative map value
+aot.signed_ints.stats with negative values
+aot.signed_ints.sum negative maps
+aot.signed_ints.sum with negative value
+aot.tuples.basic tuple
+aot.uprobe.uprobes - probe function in non-executable library
+aot.variable.32-bit tracepoint arg
+aot.variable.buf_equality
+aot.variable.global_associative_arrays
+aot.variable.global_buf
+aot.variable.global_int
+aot.variable.global_string
+aot.variable.local_buf
+aot.variable.local_int
+aot.variable.local_string
+aot.variable.map key string type resize
+aot.variable.map string type resize
+aot.variable.scratch
+aot.variable.variable declaration
+aot.variable.variable declaration not initialized
+aot.variable.variable declaration with unresolved type
+aot.variable.variable string type resize

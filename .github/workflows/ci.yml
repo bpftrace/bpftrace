@@ -70,7 +70,7 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm19
           RUN_TESTS: 0
           RUN_AOT_TESTS: 1
-          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
+          AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v16

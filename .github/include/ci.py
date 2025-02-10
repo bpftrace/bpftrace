@@ -44,7 +44,7 @@ CI = os.environ.get("CI", "false")
 NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
-AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
+AOT_ALLOWLIST_FILE = os.environ.get("AOT_ALLOWLIST_FILE", "")
 
 
 class TestStatus(Enum):
@@ -316,10 +316,10 @@ def test():
                         "aot.*",
                     ]
                     + [
-                        "--skiplist_file",
-                        f"{root()}/{AOT_SKIPLIST_FILE}",
+                        "--allowlist_file",
+                        f"{root()}/{AOT_ALLOWLIST_FILE}",
                     ]
-                    if AOT_SKIPLIST_FILE
+                    if AOT_ALLOWLIST_FILE
                     else []
                 ),
                 as_root=True,
