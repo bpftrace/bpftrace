@@ -4896,4 +4896,28 @@ TEST(semantic_analyser, no_maximum_passes)
        "@c = @b; @b = @a; } interval:s:1 { @a = 1; }");
 }
 
+TEST(semantic_analyser, block_expressions)
+{
+  // Illegal, check that variable is not available
+  test_error("BEGIN { let $x = { let $y = $x; $y }; print($x) }", R"(
+stdin:1:29-31: ERROR: Undefined or undeclared variable: $x
+BEGIN { let $x = { let $y = $x; $y }; print($x) }
+                            ~~
+)");
+
+  // Good, variable is not shadowed
+  test("BEGIN { let $x = { let $x = 1; $x }; print($x) }", R"(
+Program
+ BEGIN
+  decl
+   variable: $x :: [int64]
+   decl
+    variable: $x :: [int64]
+    int: 1 :: [int64]
+   variable: $x :: [int64]
+  call: print
+   variable: $x :: [int64]
+)");
+}
+
 } // namespace bpftrace::test::semantic_analyser
