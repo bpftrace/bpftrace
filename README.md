@@ -10,7 +10,7 @@ bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as a bac
 - [Manual / Reference Guide](man/adoc/bpftrace.adoc)
 - [Tutorial](docs/tutorial_one_liners.md)
 - [Example One-Liners](#example-one-liners)
-- [Videos](#videos)
+- [Videos](https://bpftrace.org/videos)
 - [Tools](tools/README.md)
 - [Contribute](#contribute)
 - [Development](#development)
@@ -57,19 +57,6 @@ bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/c
 ```
 
 More powerful scripts can easily be constructed. See [Tools](tools/README.md) for examples.
-
-## Videos
-
-Note: some of the content in these videos may be out of date, the current [reference guide](man/adoc/bpftrace.adoc) is the source of truth.
-
-- [Making bpftrace more powerful - 2023](https://www.youtube.com/watch?v=19RZ7b6AZJ0)
-- [Bpftrace Recipes: 5 Real Problems Solved - 2023](https://www.youtube.com/watch?v=wMtArNjRYXU)
-- [Linux tracing made simpler with bpftrace - 2022](https://www.youtube.com/watch?v=gSxntAO2Iys)
-- [Ahead-of-time compiled bpftrace programs - 2021](https://www.youtube.com/watch?v=C2n2i__YCcI)
-- [Getting Started with BPF observability - 2021](https://www.youtube.com/watch?v=bGAVrtb_tFs)
-- [bpftrace internals - 2020](https://www.youtube.com/watch?v=nDY4iC_ekQY&t=1477s)
-- [Using bpftrace with Performance Co-Pilot & Grafana - 2020](https://www.youtube.com/watch?v=ZiGTbItyJyg)
-- [An introduction to bpftrace tracing language - 2020](https://www.youtube.com/watch?v=93aHXYqZmU0)
 
 ## Contribute
 
