@@ -206,6 +206,11 @@ Block::Block(StatementList &&stmts) : stmts(std::move(stmts))
 {
 }
 
+Block::Block(StatementList &&stmts, Expression *expr)
+    : stmts(std::move(stmts)), expr(expr)
+{
+}
+
 If::If(Expression *cond, Block *if_block, Block *else_block)
     : cond(cond), if_block(if_block), else_block(else_block)
 {
