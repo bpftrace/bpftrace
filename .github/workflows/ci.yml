@@ -38,12 +38,15 @@ jobs:
         - NAME: LLVM 14
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm14
+          BUILD_ASAN: 0
         - NAME: LLVM 15
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm15
+          BUILD_ASAN: 0
         - NAME: LLVM 16
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm16
+          BUILD_ASAN: 0
         - NAME: LLVM 17
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm17

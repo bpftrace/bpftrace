@@ -45,6 +45,7 @@ NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_ALLOWLIST_FILE = os.environ.get("AOT_ALLOWLIST_FILE", "")
+BUILD_ASAN = os.environ.get("BUILD_ASAN", "1")
 
 
 class TestStatus(Enum):
@@ -161,12 +162,12 @@ def configure():
         f"-DCMAKE_C_COMPILER={CC}",
         f"-DCMAKE_CXX_COMPILER={CXX}",
         f"-DCMAKE_BUILD_TYPE={CMAKE_BUILD_TYPE}",
+        f"-DBUILD_ASAN={BUILD_ASAN}",
 
         # Static configs
         f"-DCMAKE_VERBOSE_MAKEFILE=1",
         f"-DBUILD_TESTING=1",
         f"-DENABLE_SKB_OUTPUT=1",
-        f"-DBUILD_ASAN=1",
     ]
     # fmt: on
 
