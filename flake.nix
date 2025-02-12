@@ -17,9 +17,18 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
+    naersk = {
+      url = "github:nix-community/naersk";
+      # See above
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    blazesym = {
+      url = "github:libbpf/blazesym/6beb39ebc8e3a604c7b483951c85c831c1bbe0d1";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix-appimage, ... }:
+  outputs = { self, nixpkgs, flake-utils, nix-appimage, naersk, blazesym, ... }:
     # This flake only supports 64-bit linux systems.
     # Note bpftrace support aarch32 but for simplicity we'll omit it for now.
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ]
@@ -89,6 +98,18 @@
             '';
           };
 
+          # Build blazesym
+          blazesym_c = naersk.lib.${system}.buildPackage {
+            root = blazesym;
+            cargoBuildOptions = x: x ++ [ "-p" "blazesym-c" ];
+            copyLibs = true;
+            postInstall = ''
+              # Export C headers
+              mkdir -p $out/include
+              cp capi/include/*.h $out/include/
+            '';
+          };
+
           # Define lambda that returns a derivation for a kernel given kernel version and SHA as input
           mkKernel = kernelVersion: sha256:
             with pkgs;
@@ -127,6 +148,7 @@
 
                 buildInputs = [
                   bcc
+                  blazesym_c
                   libbpf
                   pkgs.asciidoctor
                   pkgs.cereal

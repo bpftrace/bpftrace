@@ -17,6 +17,23 @@
         "type": "github"
       }
     },
+    "blazesym": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739543304,
+        "narHash": "sha256-9kJdqi1lCi+rk/X4/9O0foo+tJf9tcYS4tTKcu/ICFU=",
+        "owner": "libbpf",
+        "repo": "blazesym",
+        "rev": "6beb39ebc8e3a604c7b483951c85c831c1bbe0d1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "libbpf",
+        "repo": "blazesym",
+        "rev": "6beb39ebc8e3a604c7b483951c85c831c1bbe0d1",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -48,6 +65,26 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "naersk": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1736429655,
+        "narHash": "sha256-BwMekRuVlSB9C0QgwKMICiJ5EVbLGjfe4qyueyNQyGI=",
+        "owner": "nix-community",
+        "repo": "naersk",
+        "rev": "0621e47bd95542b8e1ce2ee2d65d6a1f887a13ce",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "naersk",
         "type": "github"
       }
     },
@@ -96,7 +133,9 @@
     },
     "root": {
       "inputs": {
+        "blazesym": "blazesym",
         "flake-utils": "flake-utils",
+        "naersk": "naersk",
         "nix-appimage": "nix-appimage",
         "nixpkgs": "nixpkgs"
       }
