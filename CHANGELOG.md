@@ -16,8 +16,9 @@ and this project adheres to
   - [#3656](https://github.com/bpftrace/bpftrace/pull/3656)
 - `len` now also accepts `ustack` and `kstack` as arguments
   - [#3769](https://github.com/bpftrace/bpftrace/pull/3769)
-- `blazesym` can now be used for kernel address symbolication, if configured & built with `USE_BLAZESYM`
+- `blazesym` will be used for kernel address symbolication if found during build
   - [#3760](https://github.com/bpftrace/bpftrace/pull/3760)
+  - [#3787](https://github.com/bpftrace/bpftrace/pull/3787)
 - Published aarch64 appimage builds from master
   - [#3795](https://github.com/bpftrace/bpftrace/pull/3795)
 #### Changed
