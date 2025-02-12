@@ -371,12 +371,12 @@ RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit\n"); }' -
 EXPECT hit
 
 NAME tracepoint_missing
-PROG t:syscalls:nonsense { printf("hit"); exit(); }
+PROG t:syscalls:nonsense { print("hit"); exit(); }
 EXPECT stdin:1:1-20: ERROR: tracepoint not found: syscalls:nonsense
 WILL_FAIL
 
 NAME tracepoint_multiattach_missing
-PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { printf("hit"); exit(); }
+PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { print("hit"); exit(); }
 EXPECT hit
 AFTER ./testprogs/syscall nanosleep 1e8
 WILL_FAIL
@@ -408,7 +408,7 @@ EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_missing
-PROG rawtracepoint:nonsense { printf("hit"); exit(); }
+PROG rawtracepoint:nonsense { print("hit"); exit(); }
 EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
 WILL_FAIL
 
