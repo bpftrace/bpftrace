@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- Remove '-kk' command line opt, surface some BPF errors by default, and make '-k' surface probe read errors
+  - [#3784](https://github.com/bpftrace/bpftrace/pull/3784)
 #### Added
 - `offsetof()` now supports sub fields e.g. `offsetof(struct Foo, bar.a.b);`
   - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)

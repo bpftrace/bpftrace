@@ -123,9 +123,7 @@ Print detailed information about features supported by the kernel and the bpftra
 
 === *-k*
 
-Errors from bpf-helpers(7) are silently ignored by default which can lead to strange results.
-
-This flag enables the detection of errors (except for errors from 'probe_read_*' BPF helpers).
+This flag enables runtime warnings for errors from 'probe_read_*' and map lookup BPF helpers.
 When errors occur bpftrace will log an error containing the source location and the error code:
 
 ----
@@ -133,10 +131,6 @@ stdin:48-57: WARNING: Failed to probe_read_user_str: Bad address (-14)
 u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
                                                  ~~~~~~~~~
 ----
-
-=== *-kk*
-
-Same as '-k' but also includes the errors from 'probe_read_*'  BPF helpers.
 
 === *-l* [_SEARCH_|_FILENAME_]
 
@@ -3786,7 +3780,7 @@ Colorize the bpftrace log output message. Valid values are auto, always and neve
 
 Kernel and user pointers live in different address spaces which, depending on the CPU architecture, might overlap.
 Trying to read a pointer that is in the wrong address space results in a runtime error.
-This error is hidden by default but can be enabled with the `-kk` flag:
+This error is hidden by default but can be enabled with the `-k` flag:
 
 ----
 stdin:1:9-12: WARNING: Failed to probe_read_user: Bad address (-14)
