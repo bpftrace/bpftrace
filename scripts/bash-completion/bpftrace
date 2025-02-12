@@ -18,7 +18,7 @@ _bpftrace()
   _init_completion -- "$@" || return
 
   local all_args='-B -f -o -e -h --help -I --include -l -p -c
-                  --usdt-file-activation --unsafe -q --info -k -kk
+                  --usdt-file-activation --unsafe -q --info -k
                   -V --version --no-warnings -v --dry-run -d
                   --emit-elf --emit-llvm'
 

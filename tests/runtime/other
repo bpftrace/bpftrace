@@ -252,7 +252,7 @@ EXPECT stdin:1:22-34: WARNING: Can't delete map element because it does not exis
 TIMEOUT 1
 
 NAME runtime_error_check_lookup
-RUN {{BPFTRACE}} -kk -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
+RUN {{BPFTRACE}} -k -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
 EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exist.
        Additional Info - helper: map_lookup_elem, retcode: 0
        i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }
