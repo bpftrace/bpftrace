@@ -19,7 +19,6 @@ set(BUILD_TESTING ON CACHE BOOL "Build test suite")
 set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")
 set(BUILD_FUZZ OFF CACHE BOOL "Build bpftrace for fuzzing")
 set(USE_LIBFUZZER OFF CACHE BOOL "Use libfuzzer for fuzzing")
-set(USE_BLAZESYM OFF CACHE BOOL "Use blazesym for symbolization matters")
 set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 set(ENABLE_SYSTEMD OFF CACHE BOOL "Enable systemd integration")
 set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
@@ -133,6 +132,8 @@ if(ENABLE_SYSTEMD)
   pkg_check_modules(libsystemd REQUIRED IMPORTED_TARGET libsystemd)
 endif()
 
+find_package(LibBlazesym)
+
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
@@ -210,6 +211,10 @@ endif(HAVE_LIBBPF_UPROBE_MULTI)
 
 if(ENABLE_SYSTEMD)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBSYSTEMD)
+endif()
+
+if(LIBBLAZESYM_FOUND)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BLAZESYM)
 endif()
 
 add_subdirectory(src)

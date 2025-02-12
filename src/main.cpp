@@ -339,7 +339,7 @@ static void parse_env(BPFtrace& bpftrace)
   });
 
   get_bool_env_var("BPFTRACE_USE_BLAZESYM", [&](bool x) {
-#ifndef USE_BLAZESYM
+#ifndef HAVE_BLAZESYM
     if (x) {
       LOG(ERROR) << "BPFTRACE_USE_BLAZESYM requires blazesym support enabled "
                     "during build.";

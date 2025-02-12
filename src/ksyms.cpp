@@ -1,7 +1,7 @@
 #include <sstream>
 
 #include <bcc/bcc_syms.h>
-#ifdef USE_BLAZESYM
+#ifdef HAVE_BLAZESYM
 #include <blazesym.h>
 #endif
 
@@ -29,7 +29,7 @@ Ksyms::~Ksyms()
   if (ksyms_)
     bcc_free_symcache(ksyms_, -1);
 
-#ifdef USE_BLAZESYM
+#ifdef HAVE_BLAZESYM
   if (symbolizer_)
     blaze_symbolizer_free(symbolizer_);
 #endif
@@ -52,7 +52,7 @@ std::string Ksyms::resolve_bcc(uint64_t addr, bool show_offset)
   return stringify_addr(addr);
 }
 
-#ifdef USE_BLAZESYM
+#ifdef HAVE_BLAZESYM
 std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
                                                        bool show_offset)
 {
@@ -110,7 +110,7 @@ std::string Ksyms::resolve_blazesym(uint64_t addr, bool show_offset)
 
 std::string Ksyms::resolve(uint64_t addr, bool show_offset)
 {
-#ifdef USE_BLAZESYM
+#ifdef HAVE_BLAZESYM
   if (config_.get(ConfigKeyBool::use_blazesym))
     return resolve_blazesym(addr, show_offset);
 #endif
