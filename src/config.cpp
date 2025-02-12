@@ -15,7 +15,7 @@ Config::Config(bool has_cmd)
     { ConfigKeyBool::lazy_symbolication, { .value = false } },
     { ConfigKeyBool::probe_inline, { .value = false } },
     { ConfigKeyBool::print_maps_on_exit, { .value = true } },
-#ifndef USE_BLAZESYM
+#ifndef HAVE_BLAZESYM
     { ConfigKeyBool::use_blazesym, { .value = false } },
 #else
     { ConfigKeyBool::use_blazesym, { .value = true } },

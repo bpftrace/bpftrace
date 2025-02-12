@@ -20,7 +20,7 @@ private:
   const Config &config_;
   void *ksyms_{ nullptr };
 
-#ifdef USE_BLAZESYM
+#ifdef HAVE_BLAZESYM
   struct blaze_symbolizer *symbolizer_{ nullptr };
 
   std::optional<std::string> resolve_blazesym_int(uint64_t addr,
