@@ -457,7 +457,8 @@ struct Args {
   bool listing = false;
   bool safe_mode = true;
   bool usdt_file_activation = false;
-  int helper_check_level = 0;
+  int helper_check_level = 1;
+  bool no_warnings = false;
   TestMode test_mode = TestMode::UNSET;
   std::string script;
   std::string search;
@@ -537,6 +538,8 @@ Args parse_args(int argc, char* argv[])
         break;
       case Options::NO_WARNING: // --no-warnings
         DISABLE_LOG(WARNING);
+        args.no_warnings = true;
+        args.helper_check_level = 0;
         break;
       case Options::TEST: // --test
         if (std::strcmp(optarg, "codegen") == 0)
@@ -626,10 +629,8 @@ Args parse_args(int argc, char* argv[])
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         exit(0);
       case 'k':
-        args.helper_check_level++;
-        if (args.helper_check_level >= 3) {
-          usage(std::cerr);
-          exit(1);
+        if (!args.no_warnings) {
+          args.helper_check_level = 2;
         }
         break;
       default:
@@ -650,8 +651,9 @@ Args parse_args(int argc, char* argv[])
   }
 
   // Difficult to serialize flex generated types
-  if (args.helper_check_level && args.build_mode == BuildMode::AHEAD_OF_TIME) {
-    LOG(ERROR) << "Cannot use -k[k] with --aot";
+  if (args.helper_check_level == 2 &&
+      args.build_mode == BuildMode::AHEAD_OF_TIME) {
+    LOG(ERROR) << "Cannot use -k with --aot";
     exit(1);
   }
 

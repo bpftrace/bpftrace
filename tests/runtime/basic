@@ -245,7 +245,7 @@ EXPECT 10 12 12 10
 TIMEOUT 1
 
 NAME parallel map access
-RUN {{BPFTRACE}} runtime/scripts/parallel_map_access.bt
+RUN {{BPFTRACE}} runtime/scripts/parallel_map_access.bt --no-warnings
 EXPECT SUCCESS
 TIMEOUT 10
 
