@@ -402,7 +402,7 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
 {
   // CodegenLLVM traverses the AST like:
   //      AssignmentMapStatement a
-  //        /                    \
+  //        |                    |
   //    visit(a.expr)        visit(a.map.key_expr)
   //
   // CodegenLLVM avoid traversing into the map node via visit(a.map)
@@ -410,9 +410,9 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   //
   // However, ResourceAnalyser traverses the AST differently:
   //      AssignmentMapStatement a
-  //        /                    \
+  //        |                    |
   //    visit(a.expr)        visit(a.map)
-  //                               \
+  //                               |
   //                           visit(a.map.key_expr)
   //
   // Unfortunately, calling ResourceAnalser::visit(a.map) will trigger
