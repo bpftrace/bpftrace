@@ -17,12 +17,10 @@ class IRBuilderBPF;
 } // namespace ast
 } // namespace bpftrace
 
-/*
- * The main goal here is to keep the struct definitions close to each other,
- * making it easier to spot type mismatches.
- *
- * If you update a type, remember to update the .cpp too!
- */
+// The main goal here is to keep the struct definitions close to each other,
+// making it easier to spot type mismatches.
+//
+// If you update a type, remember to update the .cpp too!
 
 namespace bpftrace {
 namespace AsyncEvent {

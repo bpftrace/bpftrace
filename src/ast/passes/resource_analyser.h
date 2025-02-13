@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "ast/pass_manager.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "required_resources.h"
 
 namespace bpftrace {
@@ -19,7 +19,7 @@ namespace ast {
 // TODO(danobi): Note that while complete resource collection in this pass is
 // the goal, there are still places where the goal is not yet realized. For
 // example the helper error metadata is still being collected during codegen.
-class ResourceAnalyser : public Visitor {
+class ResourceAnalyser : public Visitor<ResourceAnalyser> {
 public:
   ResourceAnalyser(ASTContext &ctx,
                    BPFtrace &bpftrace,
@@ -27,19 +27,20 @@ public:
 
   std::optional<RequiredResources> analyse();
 
-private:
-  void visit(Probe &probe) override;
-  void visit(Subprog &subprog) override;
-  void visit(Builtin &map) override;
-  void visit(Call &call) override;
-  void visit(Map &map) override;
-  void visit(Tuple &tuple) override;
-  void visit(For &f) override;
-  void visit(Ternary &ternary) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(VarDeclStatement &decl) override;
+  using Visitor<ResourceAnalyser>::visit;
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+  void visit(Builtin &map);
+  void visit(Call &call);
+  void visit(Map &map);
+  void visit(Tuple &tuple);
+  void visit(For &f);
+  void visit(Ternary &ternary);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(VarDeclStatement &decl);
 
+private:
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.
   bool uses_usym_table(const std::string &fun);

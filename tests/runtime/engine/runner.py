@@ -69,7 +69,7 @@ class Runner(object):
     SKIP_FEATURE_REQUIREMENT_UNSATISFIED = 6
     SKIP_AOT_NOT_SUPPORTED = 7
     SKIP_KERNEL_VERSION_MAX = 8
-    SKIP_IN_SKIPLIST = 9
+    SKIP_NOT_IN_ALLOWLIST = 9
 
     @staticmethod
     def failed(status):
@@ -88,7 +88,7 @@ class Runner(object):
             Runner.SKIP_ENVIRONMENT_DISABLED,
             Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
             Runner.SKIP_AOT_NOT_SUPPORTED,
-            Runner.SKIP_IN_SKIPLIST,
+            Runner.SKIP_NOT_IN_ALLOWLIST,
         ]
 
     @staticmethod
@@ -107,8 +107,8 @@ class Runner(object):
             return "disabled by environment variable"
         elif status == Runner.SKIP_AOT_NOT_SUPPORTED:
             return "aot does not yet support this"
-        elif status == Runner.SKIP_IN_SKIPLIST:
-            return "disabled by entry in skiplist file"
+        elif status == Runner.SKIP_NOT_IN_ALLOWLIST:
+            return "disabled by entry not in allowlist file"
         else:
             raise ValueError("Invalid skip reason: %d" % status)
 

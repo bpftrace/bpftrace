@@ -116,19 +116,17 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
 }
 
 namespace {
-/*
- * Searches the verifier's log for err_pattern. If a match is found, extracts
- * the name and ID of the problematic helper and throws a HelperVerifierError.
- *
- * Example verfier log extract:
- *     [...]
- *     36: (b7) r3 = 64                      ; R3_w=64
- *     37: (85) call bpf_d_path#147
- *     helper call is not allowed in probe
- *     [...]
- *
- *  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
- */
+// Searches the verifier's log for err_pattern. If a match is found, extracts
+// the name and ID of the problematic helper and throws a HelperVerifierError.
+//
+// Example verfier log extract:
+//     [...]
+//     36: (b7) r3 = 64                      ; R3_w=64
+//     37: (85) call bpf_d_path#147
+//     helper call is not allowed in probe
+//     [...]
+//
+//  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
 void maybe_throw_helper_verifier_error(std::string_view log,
                                        std::string_view err_pattern,
                                        const std::string &exception_msg_suffix)

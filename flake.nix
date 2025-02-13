@@ -58,7 +58,10 @@
           # Override to specify the bcc build we want.
           # First overrides with the above libbpf and then overrides the rev.
           bccVersion = "0.33.0";
-          bcc = (pkgs.bcc.override { libbpf = libbpf; }).overridePythonAttrs {
+          bcc = (pkgs.bcc.override {
+            libbpf = libbpf;
+            llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
+          }).overridePythonAttrs {
             version = bccVersion;
             src = pkgs.fetchFromGitHub {
               owner = "iovisor";
@@ -136,7 +139,6 @@
                   pkgs.libpcap
                   pkgs.libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
-                  pkgs."llvmPackages_${toString llvmVersion}".lldb
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
                   pkgs.pahole
                   pkgs.xxd
@@ -217,8 +219,7 @@
               #
               # *.a: Static archives are not necessary at runtime
               # *.h: Header files are not necessary at runtime (some ARM headers for clang are large)
-              # *.pyc, *.whl: bpftrace does not use python at runtime (with exception
-              #               of stdlib for unfortunate lldb python bindings)
+              # *.py, *.pyc, *.whl: bpftrace does not use python at runtime
               # libLLVM-11.so: Appimage uses the latest llvm we support, so not llvm11
               #
               # The basic process to identify large and useless files is to:
@@ -232,6 +233,7 @@
               exclude = [
                 "... *.a"
                 "... *.h"
+                "... *.py"
                 "... *.pyc"
                 "... *.whl"
                 "... libLLVM-11.so"

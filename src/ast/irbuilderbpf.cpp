@@ -147,6 +147,31 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
   return buf;
 }
 
+StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
+{
+  // Kernel stacks should not be differentiated by pid, since the kernel
+  // address space is the same between pids (and when aggregating you *want*
+  // to be able to correlate between pids in most cases). User-space stacks
+  // are special because of ASLR, hence we also store the pid; probe id is
+  // stored for cases when only ELF resolution works (e.g. ASLR disabled and
+  // process exited).
+  if (is_ustack) {
+    std::vector<llvm::Type *> elements{
+      getInt64Ty(), // stack id
+      getInt32Ty(), // nr_stack_frames
+      getInt32Ty(), // pid
+      getInt32Ty(), // probe id
+    };
+    return GetStructType("ustack_key", elements, false);
+  } else {
+    std::vector<llvm::Type *> elements{
+      getInt64Ty(), // stack id
+      getInt32Ty(), // nr_stack_frames
+    };
+    return GetStructType("kstack_key", elements, false);
+  }
+}
+
 StructType *IRBuilderBPF::GetStructType(
     std::string name,
     const std::vector<llvm::Type *> &elements,
@@ -364,6 +389,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
     ty_name << "_tuple_t";
 
     ty = GetStructType(ty_name.str(), llvm_elems, false);
+  } else if (stype.IsStack()) {
+    ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
     if (emit_codegen_types)
       ty = getInt64Ty();
@@ -595,10 +622,10 @@ Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
                                                   const std::string &name,
                                                   const location &loc)
 {
-  /* Hoist variable declaration and initialization to entry point of
-   * probe/subprogram. While we technically do not need this as variables
-   * are properly scoped, it eases debugging and is consistent with previous
-   * stack-only variable implementation. */
+  // Hoist variable declaration and initialization to entry point of
+  // probe/subprogram. While we technically do not need this as variables
+  // are properly scoped, it eases debugging and is consistent with previous
+  // stack-only variable implementation.
   Value *alloc;
   hoist([this, &value_type, &name, &loc, &alloc] {
     alloc = createAllocation(bpftrace::globalvars::GlobalVar::VARIABLE_BUFFER,
@@ -678,14 +705,12 @@ Value *IRBuilderBPF::createScratchBuffer(
                    { getInt64(0), bounded_cpu_id, getInt64(key), getInt64(0) });
 }
 
-/*
- * Failure to lookup a scratch map will result in a jump to the
- * failure_callback, if non-null.
- *
- * In practice, a properly constructed percpu lookup will never fail. The only
- * way it can fail is if we have a bug in our code. So a null failure_callback
- * simply causes a blind 0 return. See comment in function for why this is ok.
- */
+// Failure to lookup a scratch map will result in a jump to the
+// failure_callback, if non-null.
+//
+// In practice, a properly constructed percpu lookup will never fail. The only
+// way it can fail is if we have a bug in our code. So a null failure_callback
+// simply causes a blind 0 return. See comment in function for why this is ok.
 CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             const std::string &name,
                                             PointerType *val_ptr_ty,
@@ -718,16 +743,14 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
   if (failure_callback) {
     CreateBr(failure_callback);
   } else {
-    /*
-     * Think of this like an assert(). In practice, we cannot fail to lookup a
-     * percpu array map unless we have a coding error. Rather than have some
-     * kind of complicated fallback path where we provide an error string for
-     * our caller, just indicate to verifier we want to terminate execution.
-     *
-     * Note that we blindly return 0 in contrast to the logic inside
-     * CodegenLLVM::createRet(). That's b/c the return value doesn't matter
-     * if it'll never get executed.
-     */
+    // Think of this like an assert(). In practice, we cannot fail to lookup a
+    // percpu array map unless we have a coding error. Rather than have some
+    // kind of complicated fallback path where we provide an error string for
+    // our caller, just indicate to verifier we want to terminate execution.
+    //
+    // Note that we blindly return 0 in contrast to the logic inside
+    // CodegenLLVM::createRet(). That's b/c the return value doesn't matter
+    // if it'll never get executed.
     CreateRet(getInt64(0));
   }
 
@@ -809,23 +832,21 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Value *ctx,
                                              const SizedType &type,
                                              const location &loc)
 {
-  /*
-   * int ret = 0;
-   * int i = 0;
-   * while (i < nr_cpus) {
-   *   int * cpu_value = map_lookup_percpu_elem(map, key, i);
-   *   if (cpu_value == NULL) {
-   *     if (i == 0)
-   *        log_error("Key not found")
-   *     else
-   *        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
-   *     break;
-   *   }
-   *   // update ret for sum, count, avg, min, max
-   *   i++;
-   * }
-   * return ret;
-   */
+  // int ret = 0;
+  // int i = 0;
+  // while (i < nr_cpus) {
+  //   int * cpu_value = map_lookup_percpu_elem(map, key, i);
+  //   if (cpu_value == NULL) {
+  //     if (i == 0)
+  //        log_error("Key not found")
+  //     else
+  //        debug("No cpu found for cpu id: %lu", i) // Mostly for AOT
+  //     break;
+  //   }
+  //   // update ret for sum, count, avg, min, max
+  //   i++;
+  // }
+  // return ret;
 
   assert(ctx && ctx->getType() == GET_PTR_TY());
 
@@ -1012,21 +1033,19 @@ void IRBuilderBPF::createPerCpuMinMax(AllocaInst *ret,
   Value *is_val_set = CreateLoad(
       getInt64Ty(), CreateGEP(value_type, cast, { getInt64(0), getInt32(1) }));
 
-  /*
-   * (ret, is_ret_set, min_max_val, is_val_set) {
-   * // if the min_max_val is 0, which is the initial map value,
-   * // we need to know if it was explicitly set by user
-   * if (!is_val_set == 1) {
-   *   return;
-   * }
-   * if (!is_ret_set == 1) {
-   *   ret = min_max_val;
-   *   is_ret_set = 1;
-   * } else if (min_max_val > ret) { // or min_max_val < ret if min operation
-   *   ret = min_max_val;
-   *   is_ret_set = 1;
-   * }
-   */
+  // (ret, is_ret_set, min_max_val, is_val_set) {
+  // // if the min_max_val is 0, which is the initial map value,
+  // // we need to know if it was explicitly set by user
+  // if (!is_val_set == 1) {
+  //   return;
+  // }
+  // if (!is_ret_set == 1) {
+  //   ret = min_max_val;
+  //   is_ret_set = 1;
+  // } else if (min_max_val > ret) { // or min_max_val < ret if min operation
+  //   ret = min_max_val;
+  //   is_ret_set = 1;
+  // }
 
   llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *val_set_success = BasicBlock::Create(module_.getContext(),
@@ -1254,12 +1273,10 @@ void IRBuilderBPF::CreateCheckSetRecursion(const location &loc,
   CreateCondBr(set_condition, merge_block, value_is_set_block);
 
   SetInsertPoint(value_is_set_block);
-  /*
-   * The counter is set, we need to exit early from the probe.
-   * Most of the time this will happen for the functions that can lead
-   * to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
-   * for nested probes e.g. "page_fault_user" -> "print".
-   */
+  // The counter is set, we need to exit early from the probe.
+  // Most of the time this will happen for the functions that can lead
+  // to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
+  // for nested probes e.g. "page_fault_user" -> "print".
   CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
                          bpftrace_.event_loss_cnt_key_);
   CreateRet(getInt64(early_exit_ret));
@@ -1558,27 +1575,26 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                    uint64_t n,
                                    bool inverse)
 {
-  /*
-  // This function compares each character of the two string.
-  // It returns true if all are equal and false if any are different
-  // strcmp(String val1, String val2)
-     {
-        for (size_t i = 0; i < n; i++)
-        {
-
-          if (val1[i] != val2[i])
-          {
-            return false;
-          }
-          if (val1[i] == NULL)
-          {
-            return true;
-          }
-        }
-
-        return true;
-     }
-  */
+  // This function compares each character of the two string. It returns true
+  // if all are equal and false if any are different.
+  //
+  //  strcmp(String val1, String val2)
+  //  {
+  //     for (size_t i = 0; i < n; i++)
+  //     {
+  //
+  //       if (val1[i] != val2[i])
+  //       {
+  //         return false;
+  //       }
+  //       if (val1[i] == NULL)
+  //       {
+  //         return true;
+  //       }
+  //     }
+  //
+  //     return true;
+  //  }
 
   // Check if the compared strings are literals.
   // If so, we can avoid storing the literal in memory.
@@ -1659,32 +1675,32 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
                                        uint64_t str2_size,
                                        bool inverse)
 {
-  /*
   // This function compares whether the string val1 contains the string val2.
   // It returns true if val2 is contained by val1, false if not contained.
-  // strcontains(String val1, String val2, int str1_size, int str2_size)
-     {
-        for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size -
-  str2_size); j++)
-        {
-          for (size_t i = 0; i < str2_size; i++)
-          {
-            if (val2[i] == NULL)
-            {
-              return true;
-            }
-            if (val1[i + j] != val2[i])
-            {
-              break;
-            }
-          }
-          if (val1[j] == NULL) {
-            return false;
-          }
-        }
-        return false;
-     }
-  */
+  //
+  //  strcontains(String val1, String val2, int str1_size, int str2_size)
+  //  {
+  //    for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size -
+  //   str2_size); j++)
+  //    {
+  //      for (size_t i = 0; i < str2_size; i++)
+  //      {
+  //        if (val2[i] == NULL)
+  //        {
+  //          return true;
+  //        }
+  //        if (val1[i + j] != val2[i])
+  //        {
+  //          break;
+  //        }
+  //      }
+  //      if (val1[j] == NULL) {
+  //        return false;
+  //      }
+  //    }
+  //    return false;
+  //  }
+
   // Check if the compared strings are literals.
   // If so, we can avoid storing the literal in memory.
   std::optional<std::string> literal1 = ValToString(val1);
@@ -1837,21 +1853,21 @@ Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
                                                    const bool inverse,
                                                    const location &loc)
 {
-  /*
-   // This function compares each character of the two arrays.
-   // It returns true if all are equal and false if any are different
-   // cmp([]char val1, []char val2)
-   {
-      for (size_t i = 0; i < n; i++)
-      {
-        if (val1[i] != val2[i])
-        {
-          return false;
-        }
-      }
-      return true;
-   }
-*/
+  // This function compares each character of the two arrays. It returns true
+  // if all are equal and false if any are different.
+  //
+  //  cmp([]char val1, []char val2)
+  //  {
+  //    for (size_t i = 0; i < n; i++)
+  //    {
+  //      if (val1[i] != val2[i])
+  //      {
+  //        return false;
+  //      }
+  //    }
+  //    return true;
+  //  }
+
   auto elem_type = *val1_type.GetElementTy();
   const size_t num = val1_type.GetNumElements();
 
@@ -1934,21 +1950,21 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
                                            const location &loc,
                                            MDNode *metadata)
 {
-  /*
-   // This function compares each character of the two arrays.
-   // It returns true if all are equal and false if any are different
-   // cmp([]char val1, []char val2)
-   {
-      for (size_t i = 0; i < n; i++)
-      {
-        if (val1[i] != val2[i])
-        {
-          return false;
-        }
-      }
-      return true;
-   }
-*/
+  // This function compares each character of the two arrays.  It returns true
+  // if all are equal and false if any are different.
+  //
+  //  cmp([]char val1, []char val2)
+  //  {
+  //    for (size_t i = 0; i < n; i++)
+  //    {
+  //      if (val1[i] != val2[i])
+  //      {
+  //        return false;
+  //      }
+  //    }
+  //    return true;
+  //  }
+
   auto elem_type = *val1_type.GetElementTy();
   const size_t num = val1_type.GetNumElements();
 
@@ -2653,12 +2669,10 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
 static bool return_zero_if_err(libbpf::bpf_func_id func_id)
 {
   switch (func_id) {
-    /*
-     * When these function fails, bpftrace stores zero as a result.
-     * A user script can check an error by seeing the value.
-     * Therefore error checks of these functions are omitted if
-     * helper_check_level == 1.
-     */
+    // When these function fails, bpftrace stores zero as a result.
+    // A user script can check an error by seeing the value.
+    // Therefore error checks of these functions are omitted if
+    // helper_check_level == 1.
     case libbpf::BPF_FUNC_probe_read:
     case libbpf::BPF_FUNC_probe_read_str:
     case libbpf::BPF_FUNC_probe_read_kernel:

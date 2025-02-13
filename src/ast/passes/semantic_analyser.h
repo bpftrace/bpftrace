@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "collect_nodes.h"
@@ -58,14 +58,14 @@ private:
   int num_passes_ = 1;
 };
 
-class SemanticAnalyser : public Visitor {
+class SemanticAnalyser : public Visitor<SemanticAnalyser> {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
                             std::ostream &out = std::cerr,
                             bool has_child = true,
                             bool listing = false)
-      : Visitor(ctx),
+      : Visitor<SemanticAnalyser>(ctx),
         bpftrace_(bpftrace),
         out_(out),
         listing_(listing),
@@ -86,58 +86,41 @@ public:
   {
   }
 
-  [[deprecated("Use Visit(Node *const &n) instead.")]]
-  virtual inline void Visit(Node &n) override
-  {
-    n.accept(*this);
-  }
-
-  virtual inline void Visit(Node *const &n)
-  {
-    n->accept(*this);
-  }
-
-  virtual inline void Visit(Expression *&expr)
-  {
-    expr->accept(*this);
-    dereference_if_needed(expr);
-  }
-
-  void visit(Integer &integer) override;
-  void visit(PositionalParameter &param) override;
-  void visit(String &string) override;
-  void visit(StackMode &mode) override;
-  void visit(Identifier &identifier) override;
-  void visit(Builtin &builtin) override;
-  void visit(Call &call) override;
-  void visit(Sizeof &szof) override;
-  void visit(Offsetof &ofof) override;
-  void visit(Map &map) override;
-  void visit(Variable &var) override;
-  void visit(Binop &binop) override;
-  void visit(Unop &unop) override;
-  void visit(While &while_block) override;
-  void visit(For &f) override;
-  void visit(Jump &jump) override;
-  void visit(Ternary &ternary) override;
-  void visit(FieldAccess &acc) override;
-  void visit(ArrayAccess &arr) override;
-  void visit(Cast &cast) override;
-  void visit(Tuple &tuple) override;
-  void visit(ExprStatement &expr) override;
-  void visit(AssignMapStatement &assignment) override;
-  void visit(AssignVarStatement &assignment) override;
-  void visit(AssignConfigVarStatement &assignment) override;
-  void visit(VarDeclStatement &decl) override;
-  void visit(If &if_node) override;
-  void visit(Unroll &unroll) override;
-  void visit(Predicate &pred) override;
-  void visit(AttachPoint &ap) override;
-  void visit(Probe &probe) override;
-  void visit(Config &config) override;
-  void visit(Block &block) override;
-  void visit(Subprog &subprog) override;
-  void visit(Program &program) override;
+  using Visitor<SemanticAnalyser>::visit;
+  void visit(Integer &integer);
+  void visit(PositionalParameter &param);
+  void visit(String &string);
+  void visit(StackMode &mode);
+  void visit(Identifier &identifier);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Sizeof &szof);
+  void visit(Offsetof &offof);
+  void visit(Map &map);
+  void visit(Variable &var);
+  void visit(Binop &binop);
+  void visit(Unop &unop);
+  void visit(While &while_block);
+  void visit(For &f);
+  void visit(Jump &jump);
+  void visit(Ternary &ternary);
+  void visit(FieldAccess &acc);
+  void visit(ArrayAccess &arr);
+  void visit(Cast &cast);
+  void visit(Tuple &tuple);
+  void visit(ExprStatement &expr);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(AssignConfigVarStatement &assignment);
+  void visit(VarDeclStatement &decl);
+  void visit(If &if_node);
+  void visit(Unroll &unroll);
+  void visit(Predicate &pred);
+  void visit(AttachPoint &ap);
+  void visit(Probe &probe);
+  void visit(Config &config);
+  void visit(Block &block);
+  void visit(Subprog &subprog);
 
   int analyse();
 
@@ -183,6 +166,8 @@ private:
                         const std::string &map_ident,
                         const location &loc);
   bool update_string_size(SizedType &type, const SizedType &new_type);
+  SizedType create_merged_tuple(const SizedType &blah_type,
+                                const SizedType &prev_type);
   void validate_map_key(const SizedType &key, const location &loc);
   void resolve_struct_type(SizedType &type, const location &loc);
 
@@ -193,7 +178,7 @@ private:
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
   void binop_array(Binop &op);
-  void dereference_if_needed(Expression *&expr);
+  Expression *dereference_if_needed(Expression *expr);
 
   bool has_error() const;
   bool in_loop(void)
@@ -230,5 +215,6 @@ private:
 };
 
 Pass CreateSemanticPass();
+
 } // namespace ast
 } // namespace bpftrace

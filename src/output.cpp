@@ -328,11 +328,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
       return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
     }
     case Type::avg_t: {
-      /*
-       * on this code path, avg is calculated in the kernel while
-       * printing the entire map is handled in a different function
-       * which shouldn't call this
-       */
+      // on this code path, avg is calculated in the kernel while
+      // printing the entire map is handled in a different function
+      // which shouldn't call this
       assert(!is_per_cpu);
       if (type.IsSigned()) {
         return std::to_string(read_data<int64_t>(value.data()) / div);

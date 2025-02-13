@@ -399,10 +399,11 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     // If the target has form "libXXX" then we use BCC to find the correct path
     // to the given library as it may differ across systems.
     auto libname = parts_[1].substr(3);
-    const char *lib_path = bcc_procutils_which_so(libname.c_str(),
-                                                  bpftrace_.pid());
-    if (lib_path)
+    auto lib_path = bcc_procutils_which_so(libname.c_str(), bpftrace_.pid());
+    if (lib_path) {
       ap_->target = lib_path;
+      ::free(lib_path);
+    }
   }
 
   if (ap_->target.empty()) {

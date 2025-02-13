@@ -15,6 +15,11 @@ Config::Config(bool has_cmd)
     { ConfigKeyBool::lazy_symbolication, { .value = false } },
     { ConfigKeyBool::probe_inline, { .value = false } },
     { ConfigKeyBool::print_maps_on_exit, { .value = true } },
+#ifndef USE_BLAZESYM
+    { ConfigKeyBool::use_blazesym, { .value = false } },
+#else
+    { ConfigKeyBool::use_blazesym, { .value = true } },
+#endif
     { ConfigKeyInt::log_size, { .value = static_cast<uint64_t>(1000000) } },
     { ConfigKeyInt::max_bpf_progs, { .value = static_cast<uint64_t>(512) } },
     { ConfigKeyInt::max_cat_bytes, { .value = static_cast<uint64_t>(10240) } },

@@ -356,9 +356,8 @@ enum bpf_attach_type {
 	FN(cgrp_storage_delete),
 
 
-/* integer value in 'imm' field of BPF_CALL instruction selects which helper
- * function eBPF program intends to call
- */
+// integer value in 'imm' field of BPF_CALL instruction selects which helper
+// function eBPF program intends to call
 #define __BPF_ENUM_FN(x) BPF_FUNC_ ## x
 enum bpf_func_id {
 	__BPF_FUNC_MAPPER(__BPF_ENUM_FN)

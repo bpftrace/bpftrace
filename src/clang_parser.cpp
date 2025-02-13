@@ -57,11 +57,6 @@ const std::vector<CXUnsavedFile> &getDefaultHeaders()
         .Contents = stdint_h.data(),
         .Length = stdint_h.length(),
     },
-    {
-        .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
-        .Contents = clang_workarounds_h.data(),
-        .Length = clang_workarounds_h.length(),
-    },
   };
 
   return unsaved_files;
@@ -88,12 +83,10 @@ static std::string get_clang_string(CXString string)
   return str;
 }
 
-/*
- * get_named_parent
- *
- * Find the parent struct of the field pointed to by the cursor.
- * Anonymous structs are skipped.
- */
+// get_named_parent
+//
+// Find the parent struct of the field pointed to by the cursor.
+// Anonymous structs are skipped.
 static CXCursor get_named_parent(CXCursor c)
 {
   CXCursor parent = clang_getCursorSemanticParent(c);
@@ -552,33 +545,31 @@ void ClangParser::resolve_incomplete_types_from_btf(
   }
 }
 
-/*
- * Parse the program using Clang.
- *
- * Type resolution rules:
- *
- * If BTF is available, necessary types are retrieved from there, otherwise we
- * rely on headers and types supplied by the user (we also include linux/types.h
- * in some cases, e.g., for tracepoints).
- *
- * The following types are taken from BTF (if available):
- * 1. Types explicitly used in the program (taken from bpftrace.btf_set_).
- * 2. Types used by some of the defined types (as struct members). This step
- *    is done recursively, however, as it may take long time, there is a
- *    maximal depth set. It is computed as the maximum level of nested field
- *    accesses in the program and can be manually overridden using
- *    the BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable.
- * 3. Typedefs used by some of the defined types. These are also resolved
- *    recursively, however, they must be resolved completely as any unknown
- *    typedef will cause the parser to fail (even if the type is not used in
- *    the program).
- *
- * If any of the above steps retrieves a definition that redefines some existing
- * (user-defined) type, no BTF types are used and all types must be provided.
- * In practice, this means that user may use kernel types without providing
- * their definitions but once he redefines any kernel type, he must provide all
- * necessary definitions.
- */
+// Parse the program using Clang.
+//
+// Type resolution rules:
+//
+// If BTF is available, necessary types are retrieved from there, otherwise we
+// rely on headers and types supplied by the user (we also include linux/types.h
+// in some cases, e.g., for tracepoints).
+//
+// The following types are taken from BTF (if available):
+// 1. Types explicitly used in the program (taken from bpftrace.btf_set_).
+// 2. Types used by some of the defined types (as struct members). This step
+//    is done recursively, however, as it may take long time, there is a
+//    maximal depth set. It is computed as the maximum level of nested field
+//    accesses in the program and can be manually overridden using
+//    the BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable.
+// 3. Typedefs used by some of the defined types. These are also resolved
+//    recursively, however, they must be resolved completely as any unknown
+//    typedef will cause the parser to fail (even if the type is not used in
+//    the program).
+//
+// If any of the above steps retrieves a definition that redefines some existing
+// (user-defined) type, no BTF types are used and all types must be provided.
+// In practice, this means that user may use kernel types without providing
+// their definitions but once he redefines any kernel type, he must provide all
+// necessary definitions.
 bool ClangParser::parse(ast::Program *program,
                         BPFtrace &bpftrace,
                         std::vector<std::string> extra_flags)
@@ -627,9 +618,6 @@ bool ClangParser::parse(ast::Program *program,
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>
     args.push_back("-D_LINUX_TYPES_H");
-    // Since we're omitting <linux/types.h> there's no reason to
-    // add the wokarounds for it
-    args.push_back("-D__CLANG_WORKAROUNDS_H");
     // Let script know we have BTF -- this is useful for prewritten tools to
     // conditionally include headers if BTF isn't available.
     args.push_back("-DBPFTRACE_HAVE_BTF");
@@ -660,7 +648,6 @@ bool ClangParser::parse(ast::Program *program,
     // taken from BTF. We cannot use BTF in such a case.
     args.pop_back();
     args.pop_back();
-    args.pop_back();
     input_files.back() = get_empty_btf_generated_header();
   }
 
@@ -685,12 +672,10 @@ bool ClangParser::parse(ast::Program *program,
   return visit_children(cursor, bpftrace);
 }
 
-/*
- * Parse the given Clang diagnostics message and if it has one of the forms:
- *   unknown type name 'type_t'
- *   use of undeclared identifier 'type_t'
- * return type_t.
- */
+// Parse the given Clang diagnostics message and if it has one of the forms:
+//   unknown type name 'type_t'
+//   use of undeclared identifier 'type_t'
+// return type_t.
 std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
     const std::string &diagnostic_msg)
 {

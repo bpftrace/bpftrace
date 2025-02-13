@@ -10,8 +10,14 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- `offsetof()` now supports sub fields e.g. `offsetof(struct Foo, bar.a.b);`
+  - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)
 - Pointers may now be used in if conditions, tenary conditions and as operands in logical AND and OR expressions
   - [#3656](https://github.com/bpftrace/bpftrace/pull/3656)
+- `len` now also accepts `ustack` and `kstack` as arguments
+  - [#3769](https://github.com/bpftrace/bpftrace/pull/3769)
+- `blazesym` can now be used for kernel address symbolication, if configured & built with `USE_BLAZESYM`
+  - [#3760](https://github.com/bpftrace/bpftrace/pull/3760)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
@@ -32,6 +38,8 @@ and this project adheres to
   - [#3428](https://github.com/bpftrace/bpftrace/pull/3428)
 - Do not generate functions for empty attach points
   - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
+- Fix ternary expression to accept all types
+  - [#3765](https://github.com/bpftrace/bpftrace/pull/3765)
 #### Security
 #### Docs
 #### Tools

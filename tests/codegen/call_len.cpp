@@ -22,6 +22,11 @@ TEST_F(codegen_btf, call_len_map_sum_elem_count)
   test(PROG, NAME);
 }
 
+TEST_F(codegen_btf, call_len_ustack_kstack)
+{
+  test("kprobe:f { @x = len(ustack); @y = len(kstack); }", NAME);
+}
+
 } // namespace call_len
 
 } // namespace codegen

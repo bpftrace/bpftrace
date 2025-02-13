@@ -2,55 +2,10 @@
 
 #include <algorithm>
 
-#include "ast/visitors.h"
+#include "ast/visitor.h"
 #include "log.h"
 
 namespace bpftrace::ast {
-
-#define MAKE_ACCEPT(Ty)                                                        \
-  void Ty::accept(VisitorBase &v)                                              \
-  {                                                                            \
-    v.visit(*this);                                                            \
-  };
-
-MAKE_ACCEPT(Integer)
-MAKE_ACCEPT(String)
-MAKE_ACCEPT(StackMode)
-MAKE_ACCEPT(Builtin)
-MAKE_ACCEPT(Identifier)
-MAKE_ACCEPT(PositionalParameter)
-MAKE_ACCEPT(Call)
-MAKE_ACCEPT(Sizeof)
-MAKE_ACCEPT(Offsetof)
-MAKE_ACCEPT(Map)
-MAKE_ACCEPT(Variable)
-MAKE_ACCEPT(Binop)
-MAKE_ACCEPT(Unop)
-MAKE_ACCEPT(Ternary)
-MAKE_ACCEPT(FieldAccess)
-MAKE_ACCEPT(ArrayAccess)
-MAKE_ACCEPT(Cast)
-MAKE_ACCEPT(Tuple)
-MAKE_ACCEPT(ExprStatement)
-MAKE_ACCEPT(AssignMapStatement)
-MAKE_ACCEPT(AssignVarStatement)
-MAKE_ACCEPT(AssignConfigVarStatement)
-MAKE_ACCEPT(VarDeclStatement)
-MAKE_ACCEPT(Predicate)
-MAKE_ACCEPT(AttachPoint)
-MAKE_ACCEPT(If)
-MAKE_ACCEPT(Unroll)
-MAKE_ACCEPT(While)
-MAKE_ACCEPT(For)
-MAKE_ACCEPT(Config)
-MAKE_ACCEPT(Block)
-MAKE_ACCEPT(Jump)
-MAKE_ACCEPT(Probe)
-MAKE_ACCEPT(SubprogArg)
-MAKE_ACCEPT(Subprog)
-MAKE_ACCEPT(Program)
-
-#undef MAKE_ACCEPT
 
 Integer::Integer(int64_t n, location loc, bool is_negative)
     : Expression(loc), n(n), is_negative(is_negative)
@@ -105,12 +60,16 @@ Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
 {
 }
 
-Offsetof::Offsetof(SizedType record, std::string &field, location loc)
+Offsetof::Offsetof(SizedType record,
+                   std::vector<std::string> &field,
+                   location loc)
     : Expression(loc), record(record), field(field)
 {
 }
 
-Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
+Offsetof::Offsetof(Expression *expr,
+                   std::vector<std::string> &field,
+                   location loc)
     : Expression(loc), expr(expr), field(field)
 {
 }

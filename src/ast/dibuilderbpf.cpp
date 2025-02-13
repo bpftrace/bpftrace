@@ -233,7 +233,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
                             getOrCreateArray({}));
   }
 
-  if (stype.IsByteArray() || stype.IsRecordTy()) {
+  if (stype.IsByteArray() || stype.IsRecordTy() || stype.IsStack()) {
     auto subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
         stype.GetSize() * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));

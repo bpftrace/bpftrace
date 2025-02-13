@@ -139,6 +139,17 @@ can be used to easily format commits, e.g. `git clang-format upstream/master`
 We want to avoid `fix formatting` commits. Instead every commit should be
 formatted correctly.
 
+### Comment style
+
+Strongly prefer C++-style comments for single line and block comments. C-style
+comments are still useable for nested comments within a single line, e.g. to
+leave an annotation on a specific argument or parameter. In the future, there
+may be considerations for automated documentation based on comments, but this
+is not currently done.
+
+`bpftrace` itself supports both C-style and C++-style comment blocks. There is
+currently no decision on recommended comment style, and both are used freely.
+
 ## Merging pull requests
 
 Please squash + rebase all pull requests (with no merge commit). In other words,

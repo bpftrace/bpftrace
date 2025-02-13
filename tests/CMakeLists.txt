@@ -48,6 +48,7 @@ add_executable(bpftrace_test
   resource_analyser.cpp
   required_resources.cpp
   return_path_analyser.cpp
+  scopeguard.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
   types.cpp
@@ -139,11 +140,6 @@ configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
 add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
-
-if (BUILD_ASAN)
-  configure_file(memleak-tests.sh memleak-tests.sh COPYONLY)
-  add_custom_target(memleak-test COMMAND ./memleak-tests.sh)
-endif()
 
 if(ENABLE_TEST_VALIDATE_CODEGEN)
   if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)

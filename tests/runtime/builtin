@@ -174,8 +174,8 @@ EXPECT_REGEX ^size=
 REQUIRES_FEATURE btf
 
 NAME offsetof
-PROG struct Foo { int x; long l; char c; } BEGIN { printf("%ld\n", offsetof(struct Foo, x)); exit(); }
-EXPECT_REGEX ^0$
+PROG struct Foo { int x; struct Bar { int x; } bar; } BEGIN { printf("%ld %ld\n", offsetof(struct Foo, x), offsetof(struct Foo, bar.x)); exit(); }
+EXPECT_REGEX ^0 4$
 
 NAME print args in fentry
 PROG fentry:vfs_open { print(args); exit(); }

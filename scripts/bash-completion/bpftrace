@@ -13,7 +13,7 @@ _bpftrace_filedir()
 
 _bpftrace()
 {
-  local cur prev words
+  local cur prev words argument
 
   _init_completion -- "$@" || return
 
@@ -21,6 +21,10 @@ _bpftrace()
                   --usdt-file-activation --unsafe -q --info -k -kk
                   -V --version --no-warnings -v --dry-run -d
                   --emit-elf --emit-llvm'
+
+  if [[ $cur == -* ]]; then
+    argument=$cur
+  fi
 
   case ${prev} in
   -B)
@@ -57,10 +61,15 @@ _bpftrace()
     ;;
   esac
 
-  # Just drop -e content completion, because it's very complex.
-  if ([[ ${cur} == -* ]] || [[ -z ${cur} ]]) && [[ ${prev} != -e ]]; then
-    COMPREPLY=( $(compgen -W "${all_args}" -- ${cur}) )
-    return
+  # bpftrace directly specifies the script, like: bpftrace a.bt
+  if [[ ! ${argument} ]]; then
+    _bpftrace_filedir
+  else
+    # Just drop -e content completion, because it's very complex.
+    if ([[ ${cur} == -* ]] || [[ -z ${cur} ]]) && [[ ${prev} != -e ]]; then
+      COMPREPLY=( $(compgen -W "${all_args}" -- ${cur}) )
+      return
+    fi
   fi
 }
 

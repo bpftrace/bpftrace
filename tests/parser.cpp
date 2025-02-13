@@ -40,7 +40,7 @@ void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
 
   std::ostringstream out;
   Printer printer(driver.ctx, out);
-  printer.print(driver.ctx.root);
+  printer.print();
   EXPECT_EQ(expected, out.str());
 }
 
@@ -1963,6 +1963,23 @@ TEST(Parser, offsetof_type)
        "  offsetof: \n"
        "   struct Foo\n"
        "   x\n");
+  test("struct Foo { struct Bar { int x; } bar; } "
+       "BEGIN { offsetof(struct Foo, bar.x); }",
+       "struct Foo { struct Bar { int x; } bar; };\n"
+       "\n"
+       "Program\n"
+       " BEGIN\n"
+       "  offsetof: \n"
+       "   struct Foo\n"
+       "   bar\n"
+       "   x\n");
+  test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
+                     "BEGIN { offsetof(struct Foo, bar->x); }",
+                     R"(
+stdin:1:74-79: ERROR: syntax error, unexpected ->, expecting ) or .
+struct Foo { struct Bar { int x; } *bar; } BEGIN { offsetof(struct Foo, bar->x); }
+                                                                         ~~~~~
+)");
 }
 
 TEST(Parser, offsetof_expression)

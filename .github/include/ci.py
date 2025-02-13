@@ -37,7 +37,6 @@ BUILD_DIR = "build-ci"
 NIX_TARGET = os.environ.get("NIX_TARGET", "")
 CMAKE_BUILD_TYPE = os.environ.get("CMAKE_BUILD_TYPE", "Release")
 RUN_TESTS = os.environ.get("RUN_TESTS", "1")
-RUN_MEMLEAK_TEST = os.environ.get("RUN_MEMLEAK_TEST", "0")
 RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
@@ -45,7 +44,7 @@ CI = os.environ.get("CI", "false")
 NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
-AOT_SKIPLIST_FILE = os.environ.get("AOT_SKIPLIST_FILE", "")
+AOT_ALLOWLIST_FILE = os.environ.get("AOT_ALLOWLIST_FILE", "")
 
 
 class TestStatus(Enum):
@@ -162,12 +161,12 @@ def configure():
         f"-DCMAKE_C_COMPILER={CC}",
         f"-DCMAKE_CXX_COMPILER={CXX}",
         f"-DCMAKE_BUILD_TYPE={CMAKE_BUILD_TYPE}",
-        f"-DBUILD_ASAN={RUN_MEMLEAK_TEST}",
 
         # Static configs
         f"-DCMAKE_VERBOSE_MAKEFILE=1",
         f"-DBUILD_TESTING=1",
         f"-DENABLE_SKB_OUTPUT=1",
+        f"-DBUILD_ASAN=1",
     ]
     # fmt: on
 
@@ -317,10 +316,10 @@ def test():
                         "aot.*",
                     ]
                     + [
-                        "--skiplist_file",
-                        f"{root()}/{AOT_SKIPLIST_FILE}",
+                        "--allowlist_file",
+                        f"{root()}/{AOT_ALLOWLIST_FILE}",
                     ]
-                    if AOT_SKIPLIST_FILE
+                    if AOT_ALLOWLIST_FILE
                     else []
                 ),
                 as_root=True,
@@ -329,15 +328,6 @@ def test():
                     "CI": CI,
                     "RUNTIME_TEST_COLOR": "yes",
                 },
-            ),
-        )
-    )
-    results.append(
-        test_one(
-            "memleak-tests.sh.sh",
-            lambda: truthy(RUN_MEMLEAK_TEST),
-            lambda: shell(
-                ["./tests/memleak-tests.sh"], as_root=True, cwd=Path(BUILD_DIR)
             ),
         )
     )

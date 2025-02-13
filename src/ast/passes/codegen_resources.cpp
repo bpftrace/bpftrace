@@ -9,13 +9,13 @@ namespace bpftrace::ast {
 CodegenResourceAnalyser::CodegenResourceAnalyser(
     ASTContext &ctx,
     const ::bpftrace::Config &config)
-    : Visitor(ctx), config_(config)
+    : Visitor<CodegenResourceAnalyser>(ctx), config_(config)
 {
 }
 
 CodegenResources CodegenResourceAnalyser::analyse()
 {
-  Visit(*ctx_.root);
+  visit(ctx_.root);
   return std::move(resources_);
 }
 

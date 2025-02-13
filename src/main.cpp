@@ -337,6 +337,17 @@ static void parse_env(BPFtrace& bpftrace)
                     "BPFTRACE_MAX_MAP_KEYS instead.";
     config_setter.set(ConfigKeyInt::max_map_keys, x);
   });
+
+  get_bool_env_var("BPFTRACE_USE_BLAZESYM", [&](bool x) {
+#ifndef USE_BLAZESYM
+    if (x) {
+      LOG(ERROR) << "BPFTRACE_USE_BLAZESYM requires blazesym support enabled "
+                    "during build.";
+      exit(1);
+    }
+#endif
+    config_setter.set(ConfigKeyBool::use_blazesym, x);
+  });
 }
 
 [[nodiscard]] std::optional<ast::ASTContext> parse(
@@ -385,8 +396,6 @@ static void parse_env(BPFtrace& bpftrace)
     if (found_kernel_headers)
       extra_flags = get_kernel_cflags(
           utsname.machine, ksrc, kobj, bpftrace.kconfig);
-    extra_flags.push_back("-include");
-    extra_flags.push_back("/bpftrace/include/" CLANG_WORKAROUNDS_H);
 
     for (auto dir : include_dirs) {
       extra_flags.push_back("-I");

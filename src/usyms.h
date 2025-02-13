@@ -4,13 +4,13 @@
 #include <map>
 #include <string>
 
-#include "config.h"
 #include "types.h"
 #include "utils.h"
 
 #include <bcc/bcc_syms.h>
 
 namespace bpftrace {
+class Config;
 
 class Usyms {
 public:

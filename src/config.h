@@ -27,6 +27,7 @@ enum class ConfigKeyBool {
   lazy_symbolication,
   probe_inline,
   print_maps_on_exit,
+  use_blazesym,
 };
 
 enum class ConfigKeyInt {
@@ -102,6 +103,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "symbol_source", ConfigKeySymbolSource::default_ },
   { "missing_probes", ConfigKeyMissingProbes::default_ },
   { "print_maps_on_exit", ConfigKeyBool::print_maps_on_exit },
+  { "use_blazesym", ConfigKeyBool::use_blazesym },
 };
 
 // These are not tracked by the config class
@@ -209,7 +211,7 @@ private:
 class ConfigSetter {
 public:
   explicit ConfigSetter(Config &config, ConfigSource source)
-      : config_(config), source_(source){};
+      : config_(config), source_(source) {};
 
   bool set(ConfigKeyBool key, bool val)
   {

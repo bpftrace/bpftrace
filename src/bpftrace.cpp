@@ -42,6 +42,7 @@
 #include "log.h"
 #include "printf.h"
 #include "resolve_cgroupid.h"
+#include "scopeguard.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -918,6 +919,10 @@ int BPFtrace::run(BpfBytecode bytecode)
   err = setup_output();
   if (err)
     return err;
+  SCOPE_EXIT
+  {
+    teardown_output();
+  };
 
   err = create_pcaps();
   if (err) {
@@ -1056,8 +1061,6 @@ int BPFtrace::run(BpfBytecode bytecode)
   }
 
   poll_output(/* drain */ true);
-
-  teardown_output();
 
   return 0;
 }
@@ -2047,20 +2050,18 @@ bool BPFtrace::has_btf_data() const
   return btf_ && btf_->has_data();
 }
 
-/*
- * This prevents an ABBA deadlock when attaching to spin lock internal
- * functions e.g. "fentry:queued_spin_lock_slowpath".
- *
- * Specifically, if there are two hash maps (non percpu) being accessed by
- * two different CPUs by two bpf progs then we can get in a situation where,
- * because there are progs attached to spin lock internals, a lock is taken for
- * one map while a different lock is trying to be acquired for the other map.
- * This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
- * protections against this type of deadlock.
- *
- * Note: it would be better if this was in resource analyzer but we need
- * probe_matcher to get the list of functions for the attach point
- */
+// This prevents an ABBA deadlock when attaching to spin lock internal
+// functions e.g. "fentry:queued_spin_lock_slowpath".
+//
+// Specifically, if there are two hash maps (non percpu) being accessed by
+// two different CPUs by two bpf progs then we can get in a situation where,
+// because there are progs attached to spin lock internals, a lock is taken for
+// one map while a different lock is trying to be acquired for the other map.
+// This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
+// protections against this type of deadlock.
+//
+// Note: it would be better if this was in resource analyzer but we need
+// probe_matcher to get the list of functions for the attach point.
 void BPFtrace::fentry_recursion_check(ast::Program *prog)
 {
   for (auto *probe : prog->probes) {

@@ -10,16 +10,27 @@ concurrency:
 jobs:
   clang-format:
     runs-on: ubuntu-latest
+    # For flakehub cache
+    permissions:
+      id-token: write
+      contents: read
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: DeterminateSystems/nix-installer-action@v11
+    - uses: DeterminateSystems/nix-installer-action@v16
+      with:
+        determinate: true
+    - uses: DeterminateSystems/flakehub-cache-action@v1
     - name: clang-format
       run: nix develop --command git clang-format --diff origin/master
 
   build_test:
     runs-on: ubuntu-latest
+    # For flakehub cache
+    permissions:
+      id-token: write
+      contents: read
     continue-on-error: true
     strategy:
       matrix:
@@ -33,7 +44,10 @@ jobs:
           NIX_TARGET_KERNEL: .#kernel-5_15
     steps:
     - uses: actions/checkout@v2
-    - uses: DeterminateSystems/nix-installer-action@v11
+    - uses: DeterminateSystems/nix-installer-action@v16
+      with:
+        determinate: true
+    - uses: DeterminateSystems/flakehub-cache-action@v1
     - uses: ./.github/actions/configure_kvm
     - name: Build and test
       env: ${{matrix.env}}
