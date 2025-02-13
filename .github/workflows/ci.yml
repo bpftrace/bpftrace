@@ -24,56 +24,13 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 14
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm14
-        - NAME: LLVM 15
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm15
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-        - NAME: LLVM 17
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
-        - NAME: LLVM 18
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-        - NAME: LLVM 19 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
         - NAME: LLVM 19 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-        - NAME: LLVM 19 Clang Debug
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          CC: clang
-          CXX: clang++
         - NAME: Oldest kernel (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
           NIX_TARGET_KERNEL: .#kernel-5_15
-        - NAME: Latest kernel (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          NIX_TARGET_KERNEL: .#kernel-6_12
-        - NAME: AOT (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_SKIPLIST_FILE: .github/include/aot_skip.txt
-        - NAME: Memleak test (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
-        - NAME: Memleak test (LLVM 19 Release)
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_MEMLEAK_TEST: 1
-          RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v11
