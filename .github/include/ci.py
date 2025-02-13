@@ -45,6 +45,7 @@ NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_ALLOWLIST_FILE = os.environ.get("AOT_ALLOWLIST_FILE", "")
+LEAK_SUPPRESS = os.environ.get("LEAK_SUPPRESS", "")
 
 
 class TestStatus(Enum):
@@ -86,6 +87,25 @@ def nix() -> Path:
 def sudo() -> Path:
     """Return the absolute path of sudo binary in host env"""
     return _which("sudo")
+
+
+@lru_cache(maxsize=1)
+def lsan_options() -> str:
+    """
+    Returns leak sanitizer environment variable options.
+
+    Creates a single suppressions file from the global file (leaks.txt) and
+    additional files passed via LEAK_SUPPRESS.
+    """
+    suppressions = os.path.join(BUILD_DIR, "leaks.txt")
+    shutil.copyfile(f"{root()}/.github/include/leaks.txt", suppressions)
+    if LEAK_SUPPRESS:
+        with open(suppressions, "a") as main_file:
+            for f in LEAK_SUPPRESS.split(","):
+                with open(os.path.join(root(), f), "r") as file:
+                    shutil.copyfileobj(file, main_file)
+
+    return "suppressions=leaks.txt,print_suppressions=0"
 
 
 def shell(
@@ -252,6 +272,7 @@ def run_runtime_tests():
             "RUNTIME_TEST_COLOR": "yes",
             # Disable UI to make CI and manual runs behave identically
             "VMTEST_NO_UI": "1",
+            "LSAN_OPTIONS": lsan_options(),
         },
     )
 
@@ -275,7 +296,10 @@ def test():
             lambda: shell(
                 ["./tests/bpftrace_test"],
                 cwd=Path(BUILD_DIR),
-                env={"GTEST_COLOR": "yes"},
+                env={
+                    "GTEST_COLOR": "yes",
+                    "LSAN_OPTIONS": lsan_options(),
+                },
             ),
         )
     )
@@ -299,6 +323,7 @@ def test():
                 env={
                     "TOOLS_TEST_OLDVERSION": TOOLS_TEST_OLDVERSION,
                     "TOOLS_TEST_DISABLE": TOOLS_TEST_DISABLE,
+                    "LSAN_OPTIONS": lsan_options(),
                 },
             ),
         )
@@ -327,6 +352,7 @@ def test():
                 env={
                     "CI": CI,
                     "RUNTIME_TEST_COLOR": "yes",
+                    "LSAN_OPTIONS": lsan_options(),
                 },
             ),
         )
