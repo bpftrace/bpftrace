@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ast/diagnostic.h"
+#include "ast/pass_manager.h"
 
 namespace bpftrace {
 
@@ -42,7 +43,7 @@ private:
 // Nodes allocated by an ASTContext will be kept alive for the duration of the
 // owning ASTContext object. The ASTContext also owns the canonical instance of
 // the ASTSource, which is used by the Diagnostics to contextualize errors.
-class ASTContext {
+class ASTContext : public ast::State<"ast"> {
 public:
   ASTContext(std::string &&filename, std::string &&contents);
   ASTContext(const std::string &filename, const std::string &contents);
