@@ -39,19 +39,19 @@ bool probe_needs_pid_filter(AttachPoint *ap)
   return false;
 }
 
-static Statement *create_pid_filter(ASTContext &ctx,
+static Statement *create_pid_filter(ASTContext &ast,
                                     int pid,
                                     const Location &loc)
 {
-  return ctx.make_node<If>(
-      ctx.make_node<Binop>(ctx.make_node<Builtin>("pid", Location(loc)),
+  return ast.make_node<If>(
+      ast.make_node<Binop>(ast.make_node<Builtin>("pid", Location(loc)),
                            Operator::NE,
-                           ctx.make_node<Integer>(pid, Location(loc)),
+                           ast.make_node<Integer>(pid, Location(loc)),
                            Location(loc)),
-      ctx.make_node<Block>(std::vector<Statement *>{ ctx.make_node<Jump>(
+      ast.make_node<Block>(std::vector<Statement *>{ ast.make_node<Jump>(
                                JumpType::RETURN, Location(loc)) },
                            Location(loc)),
-      ctx.make_node<Block>(std::vector<Statement *>{}, Location(loc)),
+      ast.make_node<Block>(std::vector<Statement *>{}, Location(loc)),
       Location(loc));
 }
 
@@ -73,12 +73,10 @@ void PidFilterPass::visit(Probe &probe)
 
 Pass CreatePidFilterPass()
 {
-  auto fn = [](PassContext &ctx) {
-    auto pid_filter = PidFilterPass(ctx.ast_ctx, ctx.b);
-    pid_filter.visit(ctx.ast_ctx.root);
-  };
-
-  return { "PidFilter", fn };
+  return Pass::create("PidFilter", [](ASTContext &ast, BPFtrace &b) {
+    auto pid_filter = PidFilterPass(ast, b);
+    pid_filter.visit(ast.root);
+  });
 };
 
 } // namespace bpftrace::ast

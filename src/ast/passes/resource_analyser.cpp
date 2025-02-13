@@ -491,13 +491,13 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map)
 
 Pass CreateResourcePass()
 {
-  auto fn = [](PassContext &ctx) {
-    ResourceAnalyser analyser(ctx.b);
-    analyser.visit(ctx.ast_ctx.root);
-    ctx.b.resources = analyser.resources();
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    ResourceAnalyser analyser(b);
+    analyser.visit(ast.root);
+    b.resources = analyser.resources();
   };
 
-  return { "ResourceAnalyser", fn };
+  return Pass::create("ResourceAnalyser", fn);
 }
 
 } // namespace bpftrace::ast

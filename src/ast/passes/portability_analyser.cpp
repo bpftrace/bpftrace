@@ -87,17 +87,17 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
 
 Pass CreatePortabilityPass()
 {
-  auto fn = [](PassContext &ctx) {
+  auto fn = [](ASTContext &ast) {
     PortabilityAnalyser analyser;
-    analyser.visit(ctx.ast_ctx.root);
-    if (!ctx.ast_ctx.diagnostics().ok()) {
+    analyser.visit(ast.root);
+    if (!ast.diagnostics().ok()) {
       // Used by runtime test framework to know when to skip an AOT test
       if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))
         std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED" << std::endl;
     }
   };
 
-  return { "PortabilityAnalyser", fn };
+  return Pass::create("PortabilityAnalyser", fn);
 }
 
 } // namespace bpftrace::ast

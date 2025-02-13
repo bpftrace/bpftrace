@@ -4004,12 +4004,12 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
 
 Pass CreateSemanticPass()
 {
-  auto fn = [](PassContext &ctx) {
-    SemanticAnalyser semantics(ctx.ast_ctx, ctx.b, !ctx.b.cmd_.empty());
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    SemanticAnalyser semantics(ast, b, !b.cmd_.empty());
     semantics.analyse();
   };
 
-  return { "Semantic", fn };
+  return Pass::create("Semantic", fn);
 };
 
 Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
