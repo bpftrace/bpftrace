@@ -12,8 +12,8 @@ bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as a bac
 - [Example One-Liners](#example-one-liners)
 - [Videos](https://bpftrace.org/videos)
 - [Tools](tools/README.md)
-- [Contribute](#contribute)
-- [Development](#development)
+- [Contribute](CONTRIBUTING.md)
+- [Development](CONTRIBUTING.md#development)
 - [Support](#support)
 - [Migration guide](docs/migration_guide.md)
 - [Probe types](#probe-types)
@@ -58,25 +58,6 @@ bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/c
 
 More powerful scripts can easily be constructed. See [Tools](tools/README.md) for examples.
 
-## Contribute
-
-Contributions are welcome! Please see the [development section](#development) below for more information. For new bpftrace tools, please add them to the new [user-tools repository](https://github.com/bpftrace/user-tools/blob/master/CONTRIBUTING.md). The tools that exist in this repository are a small collection curated by the bpftrace maintainers.
-
-* Bug reports and feature requests: [Issue Tracker](https://github.com/bpftrace/bpftrace/issues)
-
-* Development IRC: #bpftrace at irc.oftc.net
-
-* [Good first issues](https://github.com/bpftrace/bpftrace/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-
-## Development
-
-* [Coding Guidelines](docs/coding_guidelines.md)
-* [Development Guide](docs/developers.md)
-* [Development Roadmap](https://docs.google.com/document/d/17729Rlyo1xzlJObzHpFLDzeCVgvwRh0ktAmMEJLK-EU/edit)
-* [Fuzzing](docs/fuzzing.md)
-* [Nix](docs/nix.md)
-* [Release Process](docs/release_process.md)
-* [Tests](tests/README.md)
 
 ## Support
 
