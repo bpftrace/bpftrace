@@ -30,7 +30,7 @@ void test(BPFtrace &bpftrace,
   semantics.analyse();
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
-  ast::ConfigAnalyser config_analyser(driver.ctx, bpftrace);
+  ast::ConfigAnalyser config_analyser(bpftrace);
   config_analyser.visit(driver.ctx.root);
   ASSERT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
 

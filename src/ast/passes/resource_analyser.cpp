@@ -33,15 +33,13 @@ std::string get_literal_string(Expression &expr)
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(ASTContext &ctx, BPFtrace &bpftrace)
-    : Visitor<ResourceAnalyser>(ctx), bpftrace_(bpftrace), probe_(nullptr)
+ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace)
+    : bpftrace_(bpftrace), probe_(nullptr)
 {
 }
 
-RequiredResources ResourceAnalyser::analyse()
+RequiredResources ResourceAnalyser::resources()
 {
-  visit(ctx_.root);
-
   if (resources_.max_fmtstring_args_size > 0) {
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER);
@@ -497,8 +495,9 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map)
 Pass CreateResourcePass()
 {
   auto fn = [](PassContext &ctx) {
-    ResourceAnalyser analyser(ctx.ast_ctx, ctx.b);
-    ctx.b.resources = analyser.analyse();
+    ResourceAnalyser analyser(ctx.b);
+    analyser.visit(ctx.ast_ctx.root);
+    ctx.b.resources = analyser.resources();
   };
 
   return Pass("ResourceAnalyser", fn);

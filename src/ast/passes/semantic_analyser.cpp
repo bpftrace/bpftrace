@@ -2455,7 +2455,7 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate body
   // This could be relaxed in the future:
-  CollectNodes<Jump> jumps(ctx_);
+  CollectNodes<Jump> jumps;
   jumps.visit(f.stmts);
   for (const Jump &n : jumps.nodes()) {
     n.addError() << "'" << opstr(n)
@@ -2487,7 +2487,7 @@ void SemanticAnalyser::visit(For &f)
       // inside the for loop to get the types of the referenced variables but
       // only after we have the map's key/value type so we can also check
       // the usages of the created $kv tuple variable.
-      auto [iter, _] = for_vars_referenced_.try_emplace(&f, ctx_);
+      auto [iter, _] = for_vars_referenced_.try_emplace(&f);
       auto &collector = iter->second;
       collector.visit(stmt, [this, &found_vars](const auto &var) {
         if (found_vars.find(var.ident) != found_vars.end())
@@ -2534,7 +2534,7 @@ void SemanticAnalyser::visit(For &f)
 
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
-  CollectNodes<Builtin> builtins(ctx_);
+  CollectNodes<Builtin> builtins;
   builtins.visit(f.stmts);
   for (const Builtin &builtin : builtins.nodes()) {
     if (builtin.type.IsCtxAccess() || builtin.is_argx() ||
@@ -2548,7 +2548,7 @@ void SemanticAnalyser::visit(For &f)
   // have been visited.
   std::vector<SizedType> ctx_types;
   std::vector<std::string_view> ctx_idents;
-  auto [iter, _] = for_vars_referenced_.try_emplace(&f, ctx_);
+  auto [iter, _] = for_vars_referenced_.try_emplace(&f);
   auto &collector = iter->second;
   for (const Variable &var : collector.nodes()) {
     ctx_types.push_back(CreatePointer(var.type, AddrSpace::bpf));
