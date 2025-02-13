@@ -10,13 +10,6 @@
 
 namespace bpftrace::ast {
 
-void Printer::print()
-{
-  ++depth_;
-  visit(ctx_.root);
-  --depth_;
-}
-
 std::string Printer::type(const SizedType &ty)
 {
   if (ty.IsNoneTy())

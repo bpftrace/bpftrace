@@ -19,8 +19,9 @@ TEST(codegen, regression_957)
   semantics.analyse();
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx, *bpftrace);
-  bpftrace->resources = resource_analyser.analyse();
+  ast::ResourceAnalyser resource_analyser(*bpftrace);
+  resource_analyser.visit(driver.ctx.root);
+  bpftrace->resources = resource_analyser.resources();
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ast::CodegenLLVM codegen(driver.ctx, *bpftrace);

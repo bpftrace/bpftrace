@@ -3,11 +3,6 @@
 
 namespace bpftrace::ast {
 
-ReturnPathAnalyser::ReturnPathAnalyser(ASTContext &ctx)
-    : Visitor<ReturnPathAnalyser, bool>(ctx)
-{
-}
-
 bool ReturnPathAnalyser::visit(Program &prog)
 {
   for (Subprog *subprog : prog.functions) {
@@ -60,7 +55,7 @@ bool ReturnPathAnalyser::visit(If &if_node)
 Pass CreateReturnPathPass()
 {
   auto fn = [](PassContext &ctx) {
-    auto return_path = ReturnPathAnalyser(ctx.ast_ctx);
+    ReturnPathAnalyser return_path;
     return_path.visit(ctx.ast_ctx.root);
   };
 

@@ -6,11 +6,6 @@
 
 namespace bpftrace::ast {
 
-PortabilityAnalyser::PortabilityAnalyser(ASTContext &ctx)
-    : Visitor<PortabilityAnalyser>(ctx)
-{
-}
-
 void PortabilityAnalyser::visit(PositionalParameter &param)
 {
   // Positional params are only known at runtime. Currently, codegen directly
@@ -93,7 +88,7 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
 Pass CreatePortabilityPass()
 {
   auto fn = [](PassContext &ctx) {
-    PortabilityAnalyser analyser(ctx.ast_ctx);
+    PortabilityAnalyser analyser;
     analyser.visit(ctx.ast_ctx.root);
     if (!ctx.ast_ctx.diagnostics().ok()) {
       // Used by runtime test framework to know when to skip an AOT test

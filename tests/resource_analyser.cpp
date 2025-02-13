@@ -24,7 +24,7 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
+  ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
   ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
@@ -36,8 +36,9 @@ void test(BPFtrace &bpftrace,
   semantics.analyse();
   ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx, bpftrace);
-  auto r = resource_analyser.analyse();
+  ast::ResourceAnalyser resource_analyser(bpftrace);
+  resource_analyser.visit(driver.ctx.root);
+  auto r = resource_analyser.resources();
   ASSERT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
 
   if (out_p)

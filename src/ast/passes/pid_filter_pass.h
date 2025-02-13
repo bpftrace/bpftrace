@@ -9,17 +9,16 @@ namespace ast {
 
 class PidFilterPass : public Visitor<PidFilterPass> {
 public:
-  explicit PidFilterPass(ASTContext &ctx, BPFtrace &bpftrace)
-      : Visitor<PidFilterPass>(ctx), bpftrace_(bpftrace)
+  explicit PidFilterPass(ASTContext &ast, BPFtrace &bpftrace)
+      : ast_(ast), bpftrace_(bpftrace)
   {
   }
 
   using Visitor<PidFilterPass>::visit;
   void visit(Probe &probe);
 
-  void analyse();
-
 private:
+  ASTContext &ast_;
   BPFtrace &bpftrace_;
 };
 
