@@ -324,7 +324,7 @@ void FieldAnalyser::visit(Subprog &subprog)
 Pass CreateFieldAnalyserPass()
 {
   auto fn = [](PassContext &ctx) {
-    FieldAnalyser analyser(ctx.ast_ctx, ctx.b);
+    FieldAnalyser analyser(ctx.b);
     analyser.visit(ctx.ast_ctx.root);
   };
 

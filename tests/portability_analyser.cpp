@@ -18,13 +18,12 @@ using ::testing::_;
 void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 {
   Driver driver(bpftrace);
-  std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
+  ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
   ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
@@ -36,7 +35,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   semantics.analyse();
   ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
-  ast::PortabilityAnalyser portability(driver.ctx);
+  ast::PortabilityAnalyser portability;
   portability.visit(driver.ctx.root);
   ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result) << msg.str();
 }

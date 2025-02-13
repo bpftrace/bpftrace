@@ -168,7 +168,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 Pass CreateConfigPass()
 {
   auto fn = [](PassContext &ctx) {
-    auto configs = ConfigAnalyser(ctx.ast_ctx, ctx.b);
+    auto configs = ConfigAnalyser(ctx.b);
     configs.visit(ctx.ast_ctx.root);
   };
 

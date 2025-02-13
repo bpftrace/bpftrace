@@ -16,10 +16,8 @@ namespace ast {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
-  explicit FieldAnalyser(ASTContext &ctx, BPFtrace &bpftrace)
-      : Visitor<FieldAnalyser>(ctx),
-        bpftrace_(bpftrace),
-        prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC)
+  explicit FieldAnalyser(BPFtrace &bpftrace)
+      : bpftrace_(bpftrace), prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC)
   {
   }
 

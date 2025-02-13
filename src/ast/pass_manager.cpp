@@ -12,8 +12,8 @@ void print(PassContext &ctx, const std::string &name, std::ostream &out)
 {
   out << "\nAST after: " << name << std::endl;
   out << "-------------------\n";
-  ast::Printer printer(ctx.ast_ctx, out);
-  printer.print();
+  ast::Printer printer(out);
+  printer.visit(ctx.ast_ctx.root);
   out << std::endl;
 }
 } // namespace
