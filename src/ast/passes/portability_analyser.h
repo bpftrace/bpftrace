@@ -13,8 +13,6 @@ namespace ast {
 // features.
 class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
 public:
-  PortabilityAnalyser(ASTContext &ctx);
-
   using Visitor<PortabilityAnalyser>::visit;
   void visit(PositionalParameter &param);
   void visit(Builtin &builtin);

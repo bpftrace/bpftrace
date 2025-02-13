@@ -14,9 +14,7 @@ namespace bpftrace::ast {
 template <typename NodeT>
 class CollectNodes : public Visitor<CollectNodes<NodeT>> {
 public:
-  explicit CollectNodes(ASTContext &ctx)
-      : Visitor<CollectNodes<NodeT>>(ctx),
-        pred_([](const auto &) { return true; })
+  explicit CollectNodes() : pred_([](const auto &) { return true; })
   {
   }
 

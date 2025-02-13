@@ -71,7 +71,7 @@ void test(BPFtrace &bpftrace,
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
+  ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
   ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
@@ -215,8 +215,8 @@ void test(BPFtrace &bpftrace,
     expected_ast.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
-  ast::Printer printer(driver.ctx, out);
-  printer.print();
+  ast::Printer printer(out);
+  printer.visit(driver.ctx.root);
 
   if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
     // Remove globs from beginning and end

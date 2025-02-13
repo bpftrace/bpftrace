@@ -14,9 +14,8 @@ namespace ast {
 
 class ConfigAnalyser : public Visitor<ConfigAnalyser> {
 public:
-  explicit ConfigAnalyser(ASTContext &ctx, BPFtrace &bpftrace)
-      : Visitor<ConfigAnalyser>(ctx),
-        bpftrace_(bpftrace),
+  explicit ConfigAnalyser(BPFtrace &bpftrace)
+      : bpftrace_(bpftrace),
         config_setter_(ConfigSetter(*bpftrace.config_, ConfigSource::script))
   {
   }
@@ -48,5 +47,6 @@ private:
 };
 
 Pass CreateConfigPass();
+
 } // namespace ast
 } // namespace bpftrace
