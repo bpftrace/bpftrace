@@ -53,7 +53,7 @@ static void test(BPFtrace &bpftrace,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
+  ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
@@ -66,8 +66,9 @@ static void test(BPFtrace &bpftrace,
   semantics.analyse();
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx, bpftrace);
-  bpftrace.resources = resource_analyser.analyse();
+  ast::ResourceAnalyser resource_analyser(bpftrace);
+  resource_analyser.visit(driver.ctx.root);
+  bpftrace.resources = resource_analyser.resources();
   ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   std::stringstream out;

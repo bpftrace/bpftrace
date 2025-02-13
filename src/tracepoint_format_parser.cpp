@@ -27,7 +27,7 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
   if (probes_with_tracepoint.empty())
     return true;
 
-  ast::TracepointArgsVisitor n(ctx);
+  ast::TracepointArgsVisitor n;
   if (!bpftrace.has_btf_data())
     program->c_definitions += "#include <linux/types.h>\n";
   for (ast::Probe *probe : probes_with_tracepoint) {

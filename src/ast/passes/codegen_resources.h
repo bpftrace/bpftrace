@@ -22,8 +22,8 @@ struct CodegenResources {
 // logic makes things easier to understand and maintain.
 class CodegenResourceAnalyser : public Visitor<CodegenResourceAnalyser> {
 public:
-  CodegenResourceAnalyser(ASTContext &ctx, const ::bpftrace::Config &config);
-  CodegenResources analyse();
+  CodegenResourceAnalyser(const ::bpftrace::Config &config);
+  CodegenResources analyse(Program &program);
 
   using Visitor<CodegenResourceAnalyser>::visit;
   void visit(Builtin &map);

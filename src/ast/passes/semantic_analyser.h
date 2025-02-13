@@ -62,10 +62,7 @@ public:
                             BPFtrace &bpftrace,
                             bool has_child = true,
                             bool listing = false)
-      : Visitor<SemanticAnalyser>(ctx),
-        bpftrace_(bpftrace),
-        listing_(listing),
-        has_child_(has_child)
+      : ctx_(ctx), bpftrace_(bpftrace), listing_(listing), has_child_(has_child)
   {
   }
 
@@ -108,6 +105,7 @@ public:
   void visit(Subprog &subprog);
 
 private:
+  ASTContext &ctx_;
   PassTracker pass_tracker_;
   BPFtrace &bpftrace_;
   bool listing_;
