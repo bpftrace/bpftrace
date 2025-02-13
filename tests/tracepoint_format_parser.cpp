@@ -261,7 +261,8 @@ TEST(tracepoint_format_parser, args_field_access)
   // Test computing the level of nested structs accessed from tracepoint args
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  ast::TracepointArgsVisitor visitor(driver.ctx);
+  ast::TracepointArgsVisitor visitor;
+  visitor.visit(driver.ctx.root);
 
   EXPECT_EQ(driver.parse_str("BEGIN { args.f1->f2->f3 }"), 0);
   visitor.visit(*driver.ctx.root->probes.at(0));

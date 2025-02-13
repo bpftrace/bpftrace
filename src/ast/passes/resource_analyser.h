@@ -18,9 +18,7 @@ namespace ast {
 // example the helper error metadata is still being collected during codegen.
 class ResourceAnalyser : public Visitor<ResourceAnalyser> {
 public:
-  ResourceAnalyser(ASTContext &ctx, BPFtrace &bpftrace);
-
-  RequiredResources analyse();
+  ResourceAnalyser(BPFtrace &bpftrace);
 
   using Visitor<ResourceAnalyser>::visit;
   void visit(Probe &probe);
@@ -34,6 +32,10 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
+
+  // This will move the compute resources value, it should be called only
+  // after the top-level visit.
+  RequiredResources resources();
 
 private:
   // Determines whether the given function uses userspace symbol resolution.

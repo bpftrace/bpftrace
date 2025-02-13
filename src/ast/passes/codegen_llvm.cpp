@@ -54,7 +54,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace)
 CodegenLLVM::CodegenLLVM(ASTContext &ctx,
                          BPFtrace &bpftrace,
                          std::unique_ptr<USDTHelper> usdt_helper)
-    : Visitor<CodegenLLVM, ScopedExpr>(ctx),
+    : astctx_(ctx),
       bpftrace_(bpftrace),
       usdt_helper_(std::move(usdt_helper)),
       context_(std::make_unique<LLVMContext>()),
@@ -2794,12 +2794,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
       std::string full_func_id = name + "_loc" + std::to_string(i);
       generateProbe(probe, full_func_id, probefull_, func_type, i);
-      bpftrace_.add_probe(Visitor::ctx_, ap, probe, i);
+      bpftrace_.add_probe(astctx_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, name, probefull_, func_type);
-    bpftrace_.add_probe(Visitor::ctx_, ap, probe);
+    bpftrace_.add_probe(astctx_, ap, probe);
   }
   current_attach_point_ = nullptr;
 }
@@ -2948,8 +2948,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
         if (attach_point->index() == 0)
           attach_point->set_index(getNextIndexForProbe());
 
-        auto &match_ap = attach_point->create_expansion_copy(Visitor::ctx_,
-                                                             match);
+        auto &match_ap = attach_point->create_expansion_copy(astctx_, match);
         add_probe(match_ap, probe, match, func_type);
         generated = true;
       }
@@ -3716,13 +3715,13 @@ void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
 
-  auto analyser = CodegenResourceAnalyser(Visitor::ctx_, *bpftrace_.config_);
-  auto codegen_resources = analyser.analyse();
+  auto analyser = CodegenResourceAnalyser(*bpftrace_.config_);
+  auto codegen_resources = analyser.analyse(*astctx_.root);
 
   generate_maps(bpftrace_.resources, codegen_resources);
   generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
 
-  auto scoped_del = visit(Visitor::ctx_.root);
+  auto scoped_del = visit(astctx_.root);
   debug_.finalize();
   state_ = State::IR;
 }

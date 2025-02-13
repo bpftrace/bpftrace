@@ -12,11 +12,6 @@ namespace ast {
 
 class TracepointArgsVisitor : public Visitor<TracepointArgsVisitor> {
 public:
-  explicit TracepointArgsVisitor(ASTContext &ctx)
-      : Visitor<TracepointArgsVisitor>(ctx)
-  {
-  }
-
   using Visitor<TracepointArgsVisitor>::visit;
   void visit(Builtin &builtin)
   {

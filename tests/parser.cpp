@@ -39,8 +39,8 @@ void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
     expected.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
-  Printer printer(driver.ctx, out);
-  printer.print();
+  Printer printer(out);
+  printer.visit(driver.ctx.root);
   EXPECT_EQ(expected, out.str());
 }
 
