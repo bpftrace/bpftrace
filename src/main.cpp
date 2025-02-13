@@ -23,6 +23,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/printer.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -431,22 +432,33 @@ void parse(ast::ASTContext& ast,
   ap_parser.parse();
 }
 
-void CreateDynamicPasses(ast::PassManager& pm)
+void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
-  pm.AddPass(ast::CreateConfigPass());
-  pm.AddPass(ast::CreatePidFilterPass());
-  pm.AddPass(ast::CreateSemanticPass());
-  pm.AddPass(ast::CreateResourcePass());
-  pm.AddPass(ast::CreateReturnPathPass());
+  add(ast::CreateConfigPass());
+  add(ast::CreatePidFilterPass());
+  add(ast::CreateSemanticPass());
+  add(ast::CreateResourcePass());
+  add(ast::CreateReturnPathPass());
 }
 
-void CreateAotPasses(ast::PassManager& pm)
+void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
 {
-  pm.AddPass(ast::CreateSemanticPass());
-  pm.AddPass(ast::CreatePortabilityPass());
-  pm.AddPass(ast::CreateResourcePass());
-  pm.AddPass(ast::CreateReturnPathPass());
+  add(ast::CreateSemanticPass());
+  add(ast::CreatePortabilityPass());
+  add(ast::CreateResourcePass());
+  add(ast::CreateReturnPathPass());
 }
+
+ast::Pass printPass(const std::string& name)
+{
+  return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
+    std::cerr << "AST after: " << name << std::endl;
+    std::cerr << "-------------------" << std::endl;
+    ast::Printer printer(std::cerr);
+    printer.visit(ast.root);
+    std::cerr << std::endl;
+  });
+};
 
 struct Args {
   std::string pid_str;
@@ -919,11 +931,32 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  ast::PassContext ctx(bpftrace, ast);
+  // Temporarily, we make the full `BPFTrace` object available via the pass
+  // manager (and objects are temporarily mutable). As passes are refactored
+  // into lighter-weight components, the `BPFTrace` object should be decomposed
+  // into its meaningful parts. Furthermore, the codegen and field analysis
+  // passes will be rolled into the pass manager as regular passes; the final
+  // binary is merely one of the outputs that can be extracted.
   ast::PassManager pm;
+  pm.put(bpftrace);
+
+  // Wrap all added passes in passes that dump the intermediate state. These
+  // could dump intermediate objects from the context as well, but preserve
+  // existing behavior for now.
+  auto addPass = [&pm](ast::Pass&& pass) {
+    auto name = pass.name();
+    pm.add(std::move(pass));
+    if (bt_debug.find(DebugStage::Ast) != bt_debug.end()) {
+      pm.add(printPass(name));
+    }
+  };
+  if (bt_debug.find(DebugStage::Ast) != bt_debug.end()) {
+    pm.add(printPass("parser"));
+  }
+
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
-      CreateDynamicPasses(pm);
+      CreateDynamicPasses(addPass);
       break;
     case BuildMode::AHEAD_OF_TIME:
       if (bpftrace.has_dwarf_data()) {
@@ -933,15 +966,17 @@ int main(int argc, char* argv[])
           std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"
                     << std::endl;
       }
-      CreateAotPasses(pm);
+      CreateAotPasses(addPass);
       break;
   }
 
   bpftrace.fentry_recursion_check(ast.root);
 
-  auto pmresult = pm.Run(ctx);
-  if (pmresult)
+  auto pmresult = pm.run(*ast);
+  if (!pmresult || !ast->diagnostics().ok()) {
+    ast->diagnostics().emit(std::cerr);
     return 1;
+  }
 
   ast::CodegenLLVM llvm(ast, bpftrace);
   BpfBytecode bytecode;

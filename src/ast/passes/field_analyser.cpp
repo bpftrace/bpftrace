@@ -323,12 +323,12 @@ void FieldAnalyser::visit(Subprog &subprog)
 
 Pass CreateFieldAnalyserPass()
 {
-  auto fn = [](PassContext &ctx) {
-    FieldAnalyser analyser(ctx.b);
-    analyser.visit(ctx.ast_ctx.root);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    FieldAnalyser analyser(b);
+    analyser.visit(ast.root);
   };
 
-  return Pass("FieldAnalyser", fn);
+  return Pass::create("FieldAnalyser", fn);
 };
 
 } // namespace bpftrace::ast
