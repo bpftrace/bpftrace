@@ -14,6 +14,7 @@
 
 #include "ast/ast.h"
 #include "ast/location.h"
+#include "ast/pass_manager.h"
 #include "attached_probe.h"
 #include "bpfbytecode.h"
 #include "bpffeature.h"
@@ -93,7 +94,7 @@ private:
   std::string msg_;
 };
 
-class BPFtrace {
+class BPFtrace : public ast::State<"bpftrace"> {
 public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout),
            BPFnofeature no_feature = BPFnofeature(),
@@ -108,7 +109,7 @@ public:
         usyms_(*config_)
   {
   }
-  virtual ~BPFtrace();
+  ~BPFtrace() override;
   virtual int add_probe(ast::ASTContext &ctx,
                         const ast::AttachPoint &ap,
                         const ast::Probe &p,
