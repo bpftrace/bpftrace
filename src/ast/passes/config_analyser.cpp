@@ -166,12 +166,12 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 
 Pass CreateConfigPass()
 {
-  auto fn = [](PassContext &ctx) {
-    auto configs = ConfigAnalyser(ctx.b);
-    configs.visit(ctx.ast_ctx.root);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    auto configs = ConfigAnalyser(b);
+    configs.visit(ast.root);
   };
 
-  return { "ConfigAnalyser", fn };
+  return Pass::create("ConfigAnalyser", fn);
 };
 
 } // namespace bpftrace::ast

@@ -53,12 +53,12 @@ bool ReturnPathAnalyser::visit(If &if_node)
 
 Pass CreateReturnPathPass()
 {
-  auto fn = [](PassContext &ctx) {
+  auto fn = [](ASTContext &ast) {
     ReturnPathAnalyser return_path;
-    return_path.visit(ctx.ast_ctx.root);
+    return_path.visit(ast.root);
   };
 
-  return { "ReturnPath", fn };
+  return Pass::create("ReturnPath", fn);
 }
 
 } // namespace bpftrace::ast

@@ -46,6 +46,7 @@ add_executable(bpftrace_test
   procmon.cpp
   probe.cpp
   config_analyser.cpp
+  pass_manager.cpp
   pid_filter_pass.cpp
   resource_analyser.cpp
   result.cpp
