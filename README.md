@@ -82,9 +82,9 @@ bpftrace has several plugins/definitions, integrating the syntax into your edito
 
 ## License
 
-Copyright 2019 Alastair Robertson
+bpftrace is a registered trademark of Alastair Robertson
 
-Licensed under the Apache License, Version 2.0 (the "License");
+The code is licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
