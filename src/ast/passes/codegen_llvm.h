@@ -310,6 +310,7 @@ private:
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
 
+  ASTContext &astctx_;
   BPFtrace &bpftrace_;
   std::unique_ptr<USDTHelper> usdt_helper_;
   std::unique_ptr<LLVMContext> context_;
