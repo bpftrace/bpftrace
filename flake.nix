@@ -2,10 +2,10 @@
   description = "High-level tracing language for Linux";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
-      # We're maintaining a fork b/c upstream is missing support for 24.11
+      # We're maintaining a fork b/c upstream is missing support for unstable
       # and has also dropped the following feature we depend on:
       #   https://github.com/ralismark/nix-appimage/pull/9
       #
