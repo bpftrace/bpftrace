@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sys/resource.h>
 #include <sys/utsname.h>
@@ -252,7 +253,7 @@ static std::optional<struct timespec> get_delta_taitime()
 
 static void parse_env(BPFtrace& bpftrace)
 {
-  ConfigSetter config_setter(bpftrace.config_, ConfigSource::env_var);
+  ConfigSetter config_setter(*bpftrace.config_, ConfigSource::env_var);
   get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_strlen, x);
   });
@@ -772,8 +773,8 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  Config config = Config(!args.cmd_str.empty());
-  BPFtrace bpftrace(std::move(output), args.no_feature, config);
+  auto config = std::make_unique<Config>(!args.cmd_str.empty());
+  BPFtrace bpftrace(std::move(output), args.no_feature, std::move(config));
 
   parse_env(bpftrace);
 

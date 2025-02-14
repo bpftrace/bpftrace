@@ -761,7 +761,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                   "has_key");
     return ScopedExpr(expr);
   } else if (call.func == "str") {
-    uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    uint64_t max_strlen = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
     // Largest read we'll allow = our global string buffer size
     Value *strlen = b_.getInt64(max_strlen);
     if (call.vargs.size() > 1) {
@@ -793,7 +793,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
     return ScopedExpr(buf);
   } else if (call.func == "buf") {
-    const uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    const uint64_t max_strlen = bpftrace_.config_->get(
+        ConfigKeyInt::max_strlen);
     // Subtract out metadata headroom
     uint64_t fixed_buffer_length = max_strlen - sizeof(AsyncEvent::Buf);
     Value *max_length = b_.getInt64(fixed_buffer_length);
@@ -856,8 +857,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *buf = b_.CreateGetStrAllocation("path", call.loc);
     b_.CreateMemsetBPF(buf,
                        b_.getInt8(0),
-                       bpftrace_.config_.get(ConfigKeyInt::max_strlen));
-    const uint64_t max_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+                       bpftrace_.config_->get(ConfigKeyInt::max_strlen));
+    const uint64_t max_size = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
     Value *sz;
     if (call.vargs.size() > 1) {
       auto scoped_arg = visit(call.vargs.at(1));
@@ -1906,7 +1907,7 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
   Value *buf = nullptr;
   if (ternary.type.IsStringTy()) {
     buf = b_.CreateGetStrAllocation("buf", ternary.loc);
-    uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    uint64_t max_strlen = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!ternary.type.IsIntTy() && !ternary.type.IsNoneTy()) {
     buf = b_.CreateAllocaBPF(ternary.type);
@@ -2929,7 +2930,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
           *attach_point);
 
       probe_count_ += matches.size();
-      uint64_t max_bpf_progs = bpftrace_.config_.get(
+      uint64_t max_bpf_progs = bpftrace_.config_->get(
           ConfigKeyInt::max_bpf_progs);
       if (probe_count_ > max_bpf_progs) {
         throw FatalUserException(
@@ -3714,11 +3715,11 @@ void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
 
-  auto analyser = CodegenResourceAnalyser(Visitor::ctx_, bpftrace_.config_);
+  auto analyser = CodegenResourceAnalyser(Visitor::ctx_, *bpftrace_.config_);
   auto codegen_resources = analyser.analyse();
 
   generate_maps(bpftrace_.resources, codegen_resources);
-  generate_global_vars(bpftrace_.resources, bpftrace_.config_);
+  generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
 
   auto scoped_del = visit(Visitor::ctx_.root);
   debug_.finalize();
@@ -3816,7 +3817,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     const auto &val_type = info.value_type;
     const auto &key_type = info.key_type;
 
-    auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
+    auto max_entries = bpftrace_.config_->get(ConfigKeyInt::max_map_keys);
     auto map_type = get_map_type(val_type, key_type);
 
     // hist() and lhist() transparently create additional elements in whatever
@@ -3885,7 +3886,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   if (bpftrace_.feature_->has_map_ringbuf()) {
-    auto entries = bpftrace_.config_.get(ConfigKeyInt::perf_rb_pages) * 4096;
+    auto entries = bpftrace_.config_->get(ConfigKeyInt::perf_rb_pages) * 4096;
     createMapDefinition(to_string(MapType::Ringbuf),
                         libbpf::BPF_MAP_TYPE_RINGBUF,
                         entries,

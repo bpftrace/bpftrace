@@ -212,7 +212,7 @@ void SemanticAnalyser::visit(String &string)
   if (func_ == "printf" && func_arg_idx_ == 0)
     return;
 
-  auto str_len = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+  auto str_len = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
   if (!is_compile_time_func(func_) && string.str.size() > str_len - 1) {
     LOG(ERROR, string.loc, err_)
         << "String is too long (over " << str_len << " bytes): " << string.str;
@@ -443,11 +443,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type.SetAS(find_addrspace(type));
   } else if (builtin.ident == "kstack") {
     builtin.type = CreateStack(true,
-                               StackType{ .mode = bpftrace_.config_.get(
+                               StackType{ .mode = bpftrace_.config_->get(
                                               ConfigKeyStackMode::default_) });
   } else if (builtin.ident == "ustack") {
     builtin.type = CreateStack(false,
-                               StackType{ .mode = bpftrace_.config_.get(
+                               StackType{ .mode = bpftrace_.config_->get(
                                               ConfigKeyStackMode::default_) });
   } else if (builtin.ident == "comm") {
     builtin.type = CreateString(COMM_SIZE);
@@ -492,7 +492,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type == ProbeType::uprobe &&
-          bpftrace_.config_.get(ConfigKeyBool::probe_inline))
+          bpftrace_.config_->get(ConfigKeyBool::probe_inline))
         LOG(ERROR, builtin.loc, err_)
             << "The " + builtin.ident + " builtin can only be used when "
             << "the probe_inline config is disabled.";
@@ -523,7 +523,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << "The " + builtin.ident
             << " builtin can only be used with 'kprobes' and 'uprobes' probes";
       if (type == ProbeType::uprobe &&
-          bpftrace_.config_.get(ConfigKeyBool::probe_inline))
+          bpftrace_.config_->get(ConfigKeyBool::probe_inline))
         LOG(ERROR, builtin.loc, err_)
             << "The " + builtin.ident + " builtin can only be used when "
             << "the probe_inline config is disabled.";
@@ -590,7 +590,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
                type == ProbeType::uprobe) {
       if (type == ProbeType::uprobe &&
-          bpftrace_.config_.get(ConfigKeyBool::probe_inline))
+          bpftrace_.config_->get(ConfigKeyBool::probe_inline))
         LOG(ERROR, builtin.loc, err_)
             << "The args builtin can only be used when "
             << "the probe_inline config is disabled.";
@@ -892,7 +892,7 @@ void SemanticAnalyser::visit(Call &call)
             << "argument (" << t << " provided)";
       }
 
-      auto strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+      auto strlen = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
 
       if (call.vargs.size() == 2 && check_arg(call, Type::integer, 1, false)) {
         auto &size_arg = *call.vargs.at(1);
@@ -938,7 +938,8 @@ void SemanticAnalyser::visit(Call &call)
     }
     has_pos_param_ = false;
   } else if (call.func == "buf") {
-    const uint64_t max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+    const uint64_t max_strlen = bpftrace_.config_->get(
+        ConfigKeyInt::max_strlen);
     if (max_strlen >
         std::numeric_limits<decltype(AsyncEvent::Buf::length)>::max()) {
       LOG(ERROR, call.loc, err_)
@@ -1424,7 +1425,7 @@ void SemanticAnalyser::visit(Call &call)
             << arg.type.GetTy() << " provided)";
       }
 
-      auto call_type_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+      auto call_type_size = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
       if (call.vargs.size() == 2) {
         if (check_arg(call, Type::integer, 1, true)) {
           auto size = bpftrace_.get_int_literal(call.vargs.at(1));
@@ -1664,7 +1665,7 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   }
 
   StackType stack_type;
-  stack_type.mode = bpftrace_.config_.get(ConfigKeyStackMode::default_);
+  stack_type.mode = bpftrace_.config_->get(ConfigKeyStackMode::default_);
 
   switch (call.vargs.size()) {
     case 0:
@@ -3257,7 +3258,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_) << "kprobes should be attached to a function";
     if (is_final_pass()) {
       // Warn if user tries to attach to a non-traceable function
-      if (bpftrace_.config_.get(ConfigKeyMissingProbes::default_) !=
+      if (bpftrace_.config_->get(ConfigKeyMissingProbes::default_) !=
               ConfigMissingProbes::ignore &&
           !has_wildcard(ap.func) && !bpftrace_.is_traceable_func(ap.func)) {
         LOG(WARNING, ap.loc, out_)

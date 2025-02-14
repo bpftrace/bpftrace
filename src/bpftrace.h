@@ -94,15 +94,15 @@ class BPFtrace {
 public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout),
            BPFnofeature no_feature = BPFnofeature(),
-           Config config = Config())
+           std::unique_ptr<Config> config = std::make_unique<Config>())
       : out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>(no_feature)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size()),
         max_cpu_id_(get_max_cpu_id()),
-        config_(config),
-        ksyms_(config_),
-        usyms_(config_)
+        config_(std::move(config)),
+        ksyms_(*config_),
+        usyms_(*config_)
   {
   }
   virtual ~BPFtrace();
@@ -236,7 +236,7 @@ public:
   int ncpus_;
   int online_cpus_;
   int max_cpu_id_;
-  Config config_;
+  std::unique_ptr<Config> config_;
 
 private:
   Ksyms ksyms_;
