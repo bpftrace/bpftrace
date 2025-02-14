@@ -158,7 +158,7 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
 
 static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
 
-static std::vector<std::string> UPROBE_LANGS = { "cpp" };
+static std::vector<std::string> UPROBE_LANGS = { "cpp", "rust" };
 
 static const std::set<std::string> RECURSIVE_KERNEL_FUNCS = {
   "vmlinux:_raw_spin_lock",
@@ -230,6 +230,7 @@ std::string str_join(const std::vector<std::string> &list,
 std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
     const std::string &s);
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
+bool symbol_has_rust_mangled_signature(const std::string &sym_name);
 std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
 std::string hex_format_buffer(const char *buf,
                               size_t size,

@@ -1,0 +1,2 @@
+add_library(rustdemangler_stdlib STATIC rustdemangler_stdlib.cpp)
+add_library(rustdemangler_llvm STATIC rustdemangler_llvm.cpp)
