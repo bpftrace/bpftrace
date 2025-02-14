@@ -10,160 +10,194 @@ namespace bpftrace::ast {
 
 static constexpr std::string_view ENUM = "enum ";
 
-Integer::Integer(int64_t n, location loc, bool is_negative)
-    : Expression(loc), n(n), is_negative(is_negative)
+Integer::Integer(Diagnostics &d, int64_t n, location loc, bool is_negative)
+    : Expression(d, loc), n(n), is_negative(is_negative)
 {
   is_literal = true;
 }
 
-String::String(const std::string &str, location loc) : Expression(loc), str(str)
+String::String(Diagnostics &d, const std::string &str, location loc)
+    : Expression(d, loc), str(str)
 {
   is_literal = true;
 }
 
-StackMode::StackMode(const std::string &mode, location loc)
-    : Expression(loc), mode(mode)
+StackMode::StackMode(Diagnostics &d, const std::string &mode, location loc)
+    : Expression(d, loc), mode(mode)
 {
   is_literal = true;
 }
 
-Builtin::Builtin(const std::string &ident, location loc)
-    : Expression(loc), ident(is_deprecated(ident))
+Builtin::Builtin(Diagnostics &d, const std::string &ident, location loc)
+    : Expression(d, loc), ident(is_deprecated(ident))
 {
 }
 
-Identifier::Identifier(const std::string &ident, location loc)
-    : Expression(loc), ident(ident)
+Identifier::Identifier(Diagnostics &d, const std::string &ident, location loc)
+    : Expression(d, loc), ident(ident)
 {
 }
 
-PositionalParameter::PositionalParameter(PositionalParameterType ptype,
+PositionalParameter::PositionalParameter(Diagnostics &d,
+                                         PositionalParameterType ptype,
                                          long n,
                                          location loc)
-    : Expression(loc), ptype(ptype), n(n)
+    : Expression(d, loc), ptype(ptype), n(n)
 {
   is_literal = true;
 }
 
-Call::Call(const std::string &func, location loc)
-    : Expression(loc), func(is_deprecated(func))
+Call::Call(Diagnostics &d, const std::string &func, location loc)
+    : Expression(d, loc), func(is_deprecated(func))
 {
 }
 
-Call::Call(const std::string &func, ExpressionList &&vargs, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(std::move(vargs))
+Call::Call(Diagnostics &d,
+           const std::string &func,
+           ExpressionList &&vargs,
+           location loc)
+    : Expression(d, loc), func(is_deprecated(func)), vargs(std::move(vargs))
 {
 }
 
-Sizeof::Sizeof(SizedType type, location loc) : Expression(loc), argtype(type)
+Sizeof::Sizeof(Diagnostics &d, SizedType type, location loc)
+    : Expression(d, loc), argtype(type)
 {
 }
 
-Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
+Sizeof::Sizeof(Diagnostics &d, Expression *expr, location loc)
+    : Expression(d, loc), expr(expr)
 {
 }
 
-Offsetof::Offsetof(SizedType record,
+Offsetof::Offsetof(Diagnostics &d,
+                   SizedType record,
                    std::vector<std::string> &field,
                    location loc)
-    : Expression(loc), record(record), field(field)
+    : Expression(d, loc), record(record), field(field)
 {
 }
 
-Offsetof::Offsetof(Expression *expr,
+Offsetof::Offsetof(Diagnostics &d,
+                   Expression *expr,
                    std::vector<std::string> &field,
                    location loc)
-    : Expression(loc), expr(expr), field(field)
+    : Expression(d, loc), expr(expr), field(field)
 {
 }
 
-Map::Map(const std::string &ident, location loc) : Expression(loc), ident(ident)
+Map::Map(Diagnostics &d, const std::string &ident, location loc)
+    : Expression(d, loc), ident(ident)
 {
   is_map = true;
 }
 
-Map::Map(const std::string &ident, Expression &expr, location loc)
-    : Expression(loc), ident(ident), key_expr(&expr)
+Map::Map(Diagnostics &d,
+         const std::string &ident,
+         Expression &expr,
+         location loc)
+    : Expression(d, loc), ident(ident), key_expr(&expr)
 {
   is_map = true;
   key_expr->key_for_map = this;
 }
 
-Variable::Variable(const std::string &ident, location loc)
-    : Expression(loc), ident(ident)
+Variable::Variable(Diagnostics &d, const std::string &ident, location loc)
+    : Expression(d, loc), ident(ident)
 {
   is_variable = true;
 }
 
-Binop::Binop(Expression *left, Operator op, Expression *right, location loc)
-    : Expression(loc), left(left), right(right), op(op)
+Binop::Binop(Diagnostics &d,
+             Expression *left,
+             Operator op,
+             Expression *right,
+             location loc)
+    : Expression(d, loc), left(left), right(right), op(op)
 {
 }
 
-Unop::Unop(Operator op, Expression *expr, bool is_post_op, location loc)
-    : Expression(loc), expr(expr), op(op), is_post_op(is_post_op)
+Unop::Unop(Diagnostics &d,
+           Operator op,
+           Expression *expr,
+           bool is_post_op,
+           location loc)
+    : Expression(d, loc), expr(expr), op(op), is_post_op(is_post_op)
 {
 }
 
-Ternary::Ternary(Expression *cond,
+Ternary::Ternary(Diagnostics &d,
+                 Expression *cond,
                  Expression *left,
                  Expression *right,
                  location loc)
-    : Expression(loc), cond(cond), left(left), right(right)
+    : Expression(d, loc), cond(cond), left(left), right(right)
 {
 }
 
-FieldAccess::FieldAccess(Expression *expr,
+FieldAccess::FieldAccess(Diagnostics &d,
+                         Expression *expr,
                          const std::string &field,
                          location loc)
-    : Expression(loc), expr(expr), field(field)
+    : Expression(d, loc), expr(expr), field(field)
 {
 }
 
-FieldAccess::FieldAccess(Expression *expr, ssize_t index, location loc)
-    : Expression(loc), expr(expr), index(index)
+FieldAccess::FieldAccess(Diagnostics &d,
+                         Expression *expr,
+                         ssize_t index,
+                         location loc)
+    : Expression(d, loc), expr(expr), index(index)
 {
 }
 
-ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
-    : Expression(loc), expr(expr), indexpr(indexpr)
+ArrayAccess::ArrayAccess(Diagnostics &d,
+                         Expression *expr,
+                         Expression *indexpr,
+                         location loc)
+    : Expression(d, loc), expr(expr), indexpr(indexpr)
 {
 }
 
-Cast::Cast(SizedType cast_type, Expression *expr, location loc)
-    : Expression(loc), expr(expr)
+Cast::Cast(Diagnostics &d, SizedType cast_type, Expression *expr, location loc)
+    : Expression(d, loc), expr(expr)
 {
   type = cast_type;
 }
 
-Tuple::Tuple(ExpressionList &&elems, location loc)
-    : Expression(loc), elems(std::move(elems))
+Tuple::Tuple(Diagnostics &d, ExpressionList &&elems, location loc)
+    : Expression(d, loc), elems(std::move(elems))
 {
 }
 
-ExprStatement::ExprStatement(Expression *expr, location loc)
-    : Statement(loc), expr(expr)
+ExprStatement::ExprStatement(Diagnostics &d, Expression *expr, location loc)
+    : Statement(d, loc), expr(expr)
 {
 }
 
-AssignMapStatement::AssignMapStatement(Map *map, Expression *expr, location loc)
-    : Statement(loc), map(map), expr(expr)
+AssignMapStatement::AssignMapStatement(Diagnostics &d,
+                                       Map *map,
+                                       Expression *expr,
+                                       location loc)
+    : Statement(d, loc), map(map), expr(expr)
 {
   expr->map = map;
 };
 
-AssignVarStatement::AssignVarStatement(Variable *var,
+AssignVarStatement::AssignVarStatement(Diagnostics &d,
+                                       Variable *var,
                                        Expression *expr,
                                        location loc)
-    : Statement(loc), var(var), expr(expr)
+    : Statement(d, loc), var(var), expr(expr)
 {
   expr->var = var;
 }
 
-AssignVarStatement::AssignVarStatement(VarDeclStatement *var_decl_stmt,
+AssignVarStatement::AssignVarStatement(Diagnostics &d,
+                                       VarDeclStatement *var_decl_stmt,
                                        Expression *expr,
                                        location loc)
-    : Statement(loc),
+    : Statement(d, loc),
       var_decl_stmt(var_decl_stmt),
       var(var_decl_stmt->var),
       expr(expr)
@@ -172,64 +206,78 @@ AssignVarStatement::AssignVarStatement(VarDeclStatement *var_decl_stmt,
 }
 
 AssignConfigVarStatement::AssignConfigVarStatement(
+    Diagnostics &d,
     const std::string &config_var,
     Expression *expr,
     location loc)
-    : Statement(loc), config_var(config_var), expr(expr)
+    : Statement(d, loc), config_var(config_var), expr(expr)
 {
 }
 
-VarDeclStatement::VarDeclStatement(Variable *var, SizedType type, location loc)
-    : Statement(loc), var(var), set_type(true)
+VarDeclStatement::VarDeclStatement(Diagnostics &d,
+                                   Variable *var,
+                                   SizedType type,
+                                   location loc)
+    : Statement(d, loc), var(var), set_type(true)
 {
   var->type = std::move(type);
 }
 
-VarDeclStatement::VarDeclStatement(Variable *var, location loc)
-    : Statement(loc), var(var)
+VarDeclStatement::VarDeclStatement(Diagnostics &d, Variable *var, location loc)
+    : Statement(d, loc), var(var)
 {
   var->type = CreateNone();
 }
 
-Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
+Predicate::Predicate(Diagnostics &d, Expression *expr, location loc)
+    : Node(d, loc), expr(expr)
 {
 }
 
-AttachPoint::AttachPoint(const std::string &raw_input,
+AttachPoint::AttachPoint(Diagnostics &d,
+                         const std::string &raw_input,
                          bool ignore_invalid,
                          location loc)
-    : Node(loc), raw_input(raw_input), ignore_invalid(ignore_invalid)
+    : Node(d, loc), raw_input(raw_input), ignore_invalid(ignore_invalid)
 {
 }
 
-Block::Block(StatementList &&stmts, location loc)
-    : Statement(loc), stmts(std::move(stmts))
+Block::Block(Diagnostics &d, StatementList &&stmts, location loc)
+    : Statement(d, loc), stmts(std::move(stmts))
 {
 }
 
-If::If(Expression *cond, Block *if_block, Block *else_block, location loc)
-    : Statement(loc), cond(cond), if_block(if_block), else_block(else_block)
+If::If(Diagnostics &d,
+       Expression *cond,
+       Block *if_block,
+       Block *else_block,
+       location loc)
+    : Statement(d, loc), cond(cond), if_block(if_block), else_block(else_block)
 {
 }
 
-Unroll::Unroll(Expression *expr, Block *block, location loc)
-    : Statement(loc), expr(expr), block(block)
+Unroll::Unroll(Diagnostics &d, Expression *expr, Block *block, location loc)
+    : Statement(d, loc), expr(expr), block(block)
 {
 }
 
-Probe::Probe(AttachPointList &&attach_points,
+Probe::Probe(Diagnostics &d,
+             AttachPointList &&attach_points,
              Predicate *pred,
              Block *block,
              location loc)
-    : Node(loc),
+    : Node(d, loc),
       attach_points(std::move(attach_points)),
       pred(pred),
       block(block)
 {
 }
 
-SubprogArg::SubprogArg(std::string name, SizedType type, location loc)
-    : Node(loc), type(std::move(type)), name_(std::move(name))
+SubprogArg::SubprogArg(Diagnostics &d,
+                       std::string name,
+                       SizedType type,
+                       location loc)
+    : Node(d, loc), type(std::move(type)), name_(std::move(name))
 {
 }
 
@@ -238,12 +286,13 @@ std::string SubprogArg::name() const
   return name_;
 }
 
-Subprog::Subprog(std::string name,
+Subprog::Subprog(Diagnostics &d,
+                 std::string name,
                  SizedType return_type,
                  SubprogArgList &&args,
                  StatementList &&stmts,
                  location loc)
-    : Node(loc),
+    : Node(d, loc),
       args(std::move(args)),
       return_type(std::move(return_type)),
       stmts(std::move(stmts)),
@@ -251,12 +300,13 @@ Subprog::Subprog(std::string name,
 {
 }
 
-Program::Program(const std::string &c_definitions,
+Program::Program(Diagnostics &d,
+                 const std::string &c_definitions,
                  Config *config,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  location loc)
-    : Node(loc),
+    : Node(d, loc),
       c_definitions(c_definitions),
       config(config),
       functions(std::move(functions)),
