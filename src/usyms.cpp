@@ -2,11 +2,49 @@
 #include <bcc/bcc_syms.h>
 #include <sstream>
 
+#ifdef HAVE_BLAZESYM
+#include <blazesym.h>
+#endif
+
 #include "config.h"
 #include "scopeguard.h"
 #include "usyms.h"
 #include "util/symbols.h"
 #include "util/system.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+namespace {
+#ifdef HAVE_BLAZESYM
+std::string stringify_addr(uint64_t addr, bool show_module)
+{
+  std::ostringstream symbol;
+  symbol << reinterpret_cast<void *>(addr);
+  if (show_module)
+    symbol << " ([unknown])";
+  return symbol.str();
+}
+
+std::string stringify_sym(const blaze_sym *sym,
+                          uint64_t addr,
+                          bool show_offset,
+                          bool show_module)
+{
+  std::ostringstream symbol;
+  symbol << sym->name;
+  if (show_offset)
+    symbol << "+" << addr - sym->addr;
+  if (show_module) {
+    if (sym->module != nullptr)
+      symbol << " (" << sym->module << ")";
+    else
+      symbol << " ([unknown])";
+  }
+  return symbol.str();
+}
+#endif
+} // namespace
 
 namespace bpftrace {
 
@@ -25,6 +63,11 @@ Usyms::~Usyms()
     if (pair.second)
       bcc_free_symcache(pair.second, pair.first);
   }
+
+#ifdef HAVE_BLAZESYM
+  if (symbolizer_)
+    blaze_symbolizer_free(symbolizer_);
+#endif
 }
 
 void Usyms::cache_bcc(const std::string &elf_file)
@@ -47,8 +90,61 @@ void Usyms::cache_bcc(const std::string &elf_file)
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
 }
 
+#ifdef HAVE_BLAZESYM
+struct blaze_symbolizer *Usyms::create_symbolizer() const
+{
+  blaze_symbolizer_opts opts = {
+    .type_size = sizeof(opts),
+    .demangle = config_.get(ConfigKeyBool::cpp_demangle),
+  };
+  return blaze_symbolizer_new_opts(&opts);
+}
+
+void Usyms::cache_blazesym(const std::string &elf_file)
+{
+  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  if (cache_type == UserSymbolCacheType::none)
+    return;
+
+  if (symbolizer_ == nullptr) {
+    symbolizer_ = create_symbolizer();
+    if (symbolizer_ == nullptr)
+      return;
+  }
+
+  // preload symbol table for executable to make it available even if the
+  // binary is not present at symbol resolution time
+  // note: this only makes sense with ASLR disabled, since with ASLR offsets
+  // might be different
+  if (cache_type == UserSymbolCacheType::per_program) {
+    blaze_cache_src_elf cache = {
+      .type_size = sizeof(cache),
+      .path = elf_file.c_str(),
+    };
+
+    blaze_symbolize_cache_elf(symbolizer_, &cache);
+  }
+
+  if (cache_type == UserSymbolCacheType::per_pid) {
+    for (int pid : util::get_pids_for_program(elf_file)) {
+      blaze_cache_src_process cache = {
+        .type_size = sizeof(cache),
+        .pid = static_cast<uint32_t>(pid),
+        .cache_vmas = true,
+      };
+
+      blaze_symbolize_cache_process(symbolizer_, &cache);
+    }
+  }
+}
+#endif
+
 void Usyms::cache(const std::string &elf_file)
 {
+#ifdef HAVE_BLAZESYM
+  if (config_.get(ConfigKeyBool::use_blazesym))
+    return cache_blazesym(elf_file);
+#endif
   return cache_bcc(elf_file);
 }
 
@@ -142,12 +238,101 @@ std::string Usyms::resolve_bcc(uint64_t addr,
   return symbol.str();
 }
 
+#ifdef HAVE_BLAZESYM
+std::optional<std::string> Usyms::resolve_blazesym_impl(
+    uint64_t addr,
+    int32_t pid,
+    const std::string &pid_exe,
+    bool show_offset,
+    bool show_module)
+{
+  if (symbolizer_ == nullptr) {
+    symbolizer_ = create_symbolizer();
+    if (symbolizer_ == nullptr)
+      return std::nullopt;
+  }
+
+  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  SCOPE_EXIT
+  {
+    if (cache_type == UserSymbolCacheType::none) {
+      blaze_symbolizer_free(symbolizer_);
+      symbolizer_ = nullptr;
+    }
+  };
+
+  if (cache_type == UserSymbolCacheType::per_program) {
+    if (!pid_exe.empty()) {
+      blaze_symbolize_src_elf src = {
+        .type_size = sizeof(src),
+        .path = pid_exe.c_str(),
+        // TODO: Enable usage of debug symbols at some point.
+        .debug_syms = false,
+      };
+      const blaze_syms *syms = blaze_symbolize_elf_virt_offsets(
+          symbolizer_, &src, &addr, 1);
+      if (syms != nullptr) {
+        SCOPE_EXIT
+        {
+          blaze_syms_free(syms);
+        };
+
+        const blaze_sym *sym = &syms->syms[0];
+        if (sym->name != nullptr)
+          return stringify_sym(sym, addr, show_offset, show_module);
+      }
+    }
+  }
+
+  blaze_symbolize_src_process src = {
+    .type_size = sizeof(src),
+    .pid = static_cast<uint32_t>(pid),
+    // TODO: Enable usage of debug symbols at some point.
+    .debug_syms = false,
+    .perf_map = true,
+    .map_files = true,
+  };
+
+  const blaze_syms *syms = blaze_symbolize_process_abs_addrs(
+      symbolizer_, &src, &addr, 1);
+  if (syms == nullptr)
+    return std::nullopt;
+  SCOPE_EXIT
+  {
+    blaze_syms_free(syms);
+  };
+
+  const blaze_sym *sym = &syms->syms[0];
+  if (sym->name == nullptr)
+    return std::nullopt;
+
+  return stringify_sym(sym, addr, show_offset, show_module);
+}
+
+std::string Usyms::resolve_blazesym(uint64_t addr,
+                                    int32_t pid,
+                                    const std::string &pid_exe,
+                                    bool show_offset,
+                                    bool show_module)
+{
+  if (auto sym = resolve_blazesym_impl(
+          addr, pid, pid_exe, show_offset, show_module)) {
+    return *sym;
+  }
+  return stringify_addr(addr, show_module);
+}
+#endif
+
 std::string Usyms::resolve(uint64_t addr,
                            int32_t pid,
                            const std::string &pid_exe,
                            bool show_offset,
                            bool show_module)
 {
+#ifdef HAVE_BLAZESYM
+  if (config_.get(ConfigKeyBool::use_blazesym))
+    return resolve_blazesym(addr, pid, pid_exe, show_offset, show_module);
+#endif
   return resolve_bcc(addr, pid, pid_exe, show_offset, show_module);
 }
 
@@ -164,3 +349,5 @@ struct bcc_symbol_option &Usyms::get_symbol_opts()
 }
 
 } // namespace bpftrace
+
+#pragma GCC diagnostic pop
