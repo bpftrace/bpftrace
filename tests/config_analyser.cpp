@@ -106,39 +106,39 @@ TEST(config_analyser, config_setting)
 {
   auto bpftrace = get_mock_bpftrace();
 
-  EXPECT_NE(bpftrace->config_.get(ConfigKeyInt::max_map_keys), 9);
+  EXPECT_NE(bpftrace->config_->get(ConfigKeyInt::max_map_keys), 9);
   test(*bpftrace, "config = { BPFTRACE_MAX_MAP_KEYS=9 } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::max_map_keys), 9);
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeyInt::max_map_keys), 9);
 
-  EXPECT_NE(bpftrace->config_.get(ConfigKeyStackMode::default_),
+  EXPECT_NE(bpftrace->config_->get(ConfigKeyStackMode::default_),
             StackMode::perf);
   test(*bpftrace, "config = { stack_mode=perf } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeyStackMode::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeyStackMode::default_),
             StackMode::perf);
 
-  EXPECT_NE(bpftrace->config_.get(ConfigKeyUserSymbolCacheType::default_),
+  EXPECT_NE(bpftrace->config_->get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);
-  EXPECT_NE(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
+  EXPECT_NE(bpftrace->config_->get(ConfigKeyInt::log_size), 150);
   test(*bpftrace,
        "config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\"; log_size=150 "
        "} BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeyUserSymbolCacheType::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::log_size), 150);
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeyInt::log_size), 150);
 
   // When liblldb is present, the default config for symbol_source is "dwarf",
   // otherwise the default is "symbol_table".
 #ifdef HAVE_LIBLLDB
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::dwarf);
   test(*bpftrace, "config = { symbol_source = \"symbol_table\" } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::symbol_table);
 #else
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::symbol_table);
   test(*bpftrace, "config = { symbol_source = \"dwarf\" } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeySymbolSource::default_),
+  EXPECT_EQ(bpftrace->config_->get(ConfigKeySymbolSource::default_),
             ConfigSymbolSource::dwarf);
 #endif
 }
