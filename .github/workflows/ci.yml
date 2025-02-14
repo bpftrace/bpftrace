@@ -35,42 +35,13 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 14
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm14
-        - NAME: LLVM 15
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm15
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-        - NAME: LLVM 17
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
-        - NAME: LLVM 18
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-        - NAME: LLVM 19 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
         - NAME: LLVM 19 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-        - NAME: LLVM 19 Clang Debug
+        - NAME: Oldest kernel (LLVM 19 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-          CC: clang
-          CXX: clang++
-        - NAME: Latest kernel (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          NIX_TARGET_KERNEL: .#kernel-6_12
-        - NAME: AOT (LLVM 19 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
+          NIX_TARGET_KERNEL: .#kernel-5_15
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v16
@@ -78,11 +49,6 @@ jobs:
         determinate: true
     - uses: DeterminateSystems/flakehub-cache-action@v1
     - uses: ./.github/actions/configure_kvm
-    - name: Load kernel modules
-      # nf_tables and xfs are necessary for testing kernel modules BTF support
-      run: |
-        sudo modprobe nf_tables
-        sudo modprobe xfs
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py

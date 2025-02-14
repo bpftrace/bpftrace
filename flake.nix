@@ -240,15 +240,9 @@
               ];
             };
 
-            # Kernels to run runtime tests against.
-            #
-            # Right now these just mirror the published kernels at
-            # https://github.com/bpftrace/kernels. Over time we'll firm up our
-            # kernel test policy.
-            kernel-5_15 = mkKernel "5.15" "sha256:05awbz25mbiy47zl7xvaf9c37zb6z71sk12flbqli7yppi7ryd13";
-            kernel-6_1 = mkKernel "6.1" "sha256:1b7bal1l8zy2fkr1dbp0jxsrzjas4yna78psj9bwwbs9qzrcf5m9";
-            kernel-6_6 = mkKernel "6.6" "sha256:19chnfwv84mc0anyf263vgg2x7sczypx8rangd34nf3sywb5cv5y";
-            kernel-6_12 = mkKernel "6.12" "sha256:1va2jx3w70gaiqxa8mfl3db7axk2viys8qf65l9qyjy024vn26ib";
+            # Kernels to run runtime tests against
+            kernel-5_15 = mkKernel "5.15.177" "sha256:0mp08m8m9fsck5asc1a2c09hv95dkfx3p1hq5qgxzixgzckp13q8";
+            kernel-6_12 = mkKernel "6.12.12" "sha256:1inhcvz52n8p73x6iw7m68galqn0xib6xq1hyhf2s6c46my0bm30";
           };
 
           # Define apps that can be run with `nix run`
