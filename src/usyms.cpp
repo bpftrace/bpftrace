@@ -27,7 +27,7 @@ Usyms::~Usyms()
   }
 }
 
-void Usyms::cache(const std::string &elf_file)
+void Usyms::cache_bcc(const std::string &elf_file)
 {
   auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
   // preload symbol table for executable to make it available even if the
@@ -47,11 +47,16 @@ void Usyms::cache(const std::string &elf_file)
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
 }
 
-std::string Usyms::resolve(uint64_t addr,
-                           int32_t pid,
-                           const std::string &pid_exe,
-                           bool show_offset,
-                           bool show_module)
+void Usyms::cache(const std::string &elf_file)
+{
+  return cache_bcc(elf_file);
+}
+
+std::string Usyms::resolve_bcc(uint64_t addr,
+                               int32_t pid,
+                               const std::string &pid_exe,
+                               bool show_offset,
+                               bool show_module)
 {
   auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
   struct bcc_symbol usym;
@@ -135,6 +140,15 @@ std::string Usyms::resolve(uint64_t addr,
     bcc_free_symcache(psyms, pid);
 
   return symbol.str();
+}
+
+std::string Usyms::resolve(uint64_t addr,
+                           int32_t pid,
+                           const std::string &pid_exe,
+                           bool show_offset,
+                           bool show_module)
+{
+  return resolve_bcc(addr, pid, pid_exe, show_offset, show_module);
 }
 
 struct bcc_symbol_option &Usyms::get_symbol_opts()
