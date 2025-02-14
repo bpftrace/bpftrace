@@ -102,6 +102,7 @@ if (USE_BLAZESYM)
 endif()
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
+target_compile_definitions(${BPFTRACE} PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(${BPFTRACE} libbpftrace)
 
 if (BUILD_FUZZ)
