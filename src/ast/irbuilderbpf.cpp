@@ -561,7 +561,7 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
 Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
                                             const location &loc)
 {
-  const auto max_strlen = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
+  const auto max_strlen = bpftrace_.config_->get(ConfigKeyInt::max_strlen);
   const auto str_type = CreateArray(max_strlen, CreateInt8());
   return createAllocation(bpftrace::globalvars::GlobalVar::GET_STR_BUFFER,
                           GetType(str_type),
@@ -659,7 +659,7 @@ Value *IRBuilderBPF::createAllocation(
     std::optional<std::function<size_t(AsyncIds &)>> gen_async_id_cb)
 {
   const auto obj_size = module_.getDataLayout().getTypeAllocSize(obj_type);
-  const auto on_stack_limit = bpftrace_.config_.get(
+  const auto on_stack_limit = bpftrace_.config_->get(
       ConfigKeyInt::on_stack_limit);
   if (obj_size > on_stack_limit) {
     return createScratchBuffer(
@@ -677,7 +677,7 @@ Value *IRBuilderBPF::createScratchBuffer(
   // ValueType var[MAX_CPU_ID + 1][num_elements]
   auto type = globalvars::get_type(globalvar,
                                    bpftrace_.resources,
-                                   bpftrace_.config_);
+                                   *bpftrace_.config_);
 
   // Get CPU ID
   auto cpu_id = CreateGetCpuId(loc);
