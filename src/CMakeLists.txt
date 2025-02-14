@@ -47,6 +47,7 @@ add_library(runtime STATIC
   debugfs.cpp
   usdt.cpp
   utils.cpp
+  util/result.cpp
   pcap_writer.cpp
   ksyms.cpp
   usyms.cpp
