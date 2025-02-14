@@ -18,6 +18,8 @@ and this project adheres to
   - [#3769](https://github.com/bpftrace/bpftrace/pull/3769)
 - `blazesym` can now be used for kernel address symbolication, if configured & built with `USE_BLAZESYM`
   - [#3760](https://github.com/bpftrace/bpftrace/pull/3760)
+- Published aarch64 appimage builds from master
+  - [#3795](https://github.com/bpftrace/bpftrace/pull/3795)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)

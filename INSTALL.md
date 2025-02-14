@@ -160,7 +160,7 @@ To download the official release artifacts, see the
 
 To download the bleeding edge AppImage, go to the
 [workflow page](https://github.com/bpftrace/bpftrace/actions/workflows/binary.yml)
-and select the latest run. You should find an uploaded artifact like below:
+and select the latest run. You should find an uploaded artifact(s) like below:
 
 <img src="./images/ci_appimage_artifact.png" width="40%" height="40%">
 
