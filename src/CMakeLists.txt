@@ -85,7 +85,7 @@ if (USE_BLAZESYM)
   FetchContent_Declare(
     blazesym
     GIT_REPOSITORY https://github.com/libbpf/blazesym.git
-    GIT_TAG ccc02c14cc79b86018d2f56764448fb86a984a2a
+    GIT_TAG 6beb39ebc8e3a604c7b483951c85c831c1bbe0d1
   )
   FetchContent_MakeAvailable(blazesym)
 

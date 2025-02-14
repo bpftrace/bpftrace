@@ -69,10 +69,10 @@ std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
     .type_size = sizeof(src),
     // Use default system-wide kallsyms file.
     .kallsyms = NULL,
-    // Disable discovery and usage of kernel image.
+    // Disable discovery and usage of a vmlinux file.
     // TODO: We should eventually support that, incorporating discovery logic
     //       from find_vmlinux().
-    .kernel_image = "",
+    .vmlinux = "",
   };
 #pragma GCC diagnostic pop
   uint64_t addrs[1] = { addr };
