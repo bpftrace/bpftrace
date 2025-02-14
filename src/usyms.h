@@ -37,6 +37,12 @@ private:
   std::map<std::string, std::map<uintptr_t, elf_symbol, std::greater<>>>
       symbol_table_cache_;
 
+  void cache_bcc(const std::string& elf_file);
+  std::string resolve_bcc(uint64_t addr,
+                          int32_t pid,
+                          const std::string& pid_exe,
+                          bool show_offset,
+                          bool show_module);
   struct bcc_symbol_option& get_symbol_opts();
 };
 
