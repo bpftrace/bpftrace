@@ -82,7 +82,7 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.path = ap.target;
   probe.attach_point = ap.func;
   probe.type = probetype(ap.provider);
-  probe.log_size = config_.get(ConfigKeyInt::log_size);
+  probe.log_size = config_->get(ConfigKeyInt::log_size);
   probe.orig_name = p.name();
   probe.ns = ap.ns;
   probe.name = ap.name();
@@ -157,7 +157,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
 
     // Don't set the DWARF target when the user wants to use the symbol table.
     std::optional<std::string> target;
-    if (config_.get(ConfigKeySymbolSource::default_) ==
+    if (config_->get(ConfigKeySymbolSource::default_) ==
         ConfigSymbolSource::dwarf) {
       if (probetype(ap.provider) == ProbeType::uprobe) {
         target = probe.path;
@@ -165,7 +165,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
         // Only use the DWARF information of the Kernel,
         // if the user wants to to probe inlined kprobes.
         // Otherwise, fall back to using the symbol table.
-        if (config_.get(ConfigKeyBool::probe_inline))
+        if (config_->get(ConfigKeyBool::probe_inline))
           target = find_vmlinux();
       }
     }
@@ -177,7 +177,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
       // prologue and also returns locations of inlined function calls.
       if (auto *dwarf = get_dwarf(target.value())) {
         const auto locations = dwarf->get_function_locations(
-            probe.attach_point, config_.get(ConfigKeyBool::probe_inline));
+            probe.attach_point, config_->get(ConfigKeyBool::probe_inline));
         for (const auto loc : locations) {
           // Clear the attach point, so the address will be used instead
           Probe probe_copy = probe;
@@ -297,7 +297,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::time)) {
-    char timestr[64]; // not respecting config_.get(ConfigKeyInt::max_strlen)
+    char timestr[64]; // not respecting config_->get(ConfigKeyInt::max_strlen)
     time_t t;
     struct tm tmp;
     t = time(nullptr);
@@ -456,7 +456,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     std::stringstream buf;
     cat_file(fmt.format_str(arg_values).c_str(),
-             bpftrace->config_.get(ConfigKeyInt::max_cat_bytes),
+             bpftrace->config_->get(ConfigKeyInt::max_cat_bytes),
              buf);
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
@@ -559,8 +559,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         auto p = reinterpret_cast<char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
             std::string(p, strnlen(p, arg.type.GetSize())),
-            config_.get(ConfigKeyInt::max_strlen),
-            config_.get(ConfigKeyString::str_trunc_trailer).c_str()));
+            config_->get(ConfigKeyInt::max_strlen),
+            config_->get(ConfigKeyString::str_trunc_trailer).c_str()));
         break;
       }
       case Type::buffer: {
@@ -876,7 +876,7 @@ int BPFtrace::run_iter()
 int BPFtrace::prerun() const
 {
   uint64_t num_probes = this->num_probes();
-  uint64_t max_probes = config_.get(ConfigKeyInt::max_probes);
+  uint64_t max_probes = config_->get(ConfigKeyInt::max_probes);
   if (num_probes == 0) {
     if (!bt_quiet)
       std::cout << "No probes to attach" << std::endl;
@@ -906,7 +906,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   bytecode_.update_global_vars(*this);
 
   try {
-    bytecode_.load_progs(resources, *btf_, *feature_, config_);
+    bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   } catch (const HelperVerifierError &e) {
     if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
       LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
@@ -1098,7 +1098,7 @@ int BPFtrace::setup_perf_events()
                                         this,
                                         -1,
                                         cpu,
-                                        config_.get(
+                                        config_->get(
                                             ConfigKeyInt::perf_rb_pages));
     if (reader == nullptr) {
       LOG(ERROR) << "Failed to open perf buffer";
@@ -1620,7 +1620,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
-  uint64_t timestr_size = config_.get(ConfigKeyInt::max_strlen);
+  uint64_t timestr_size = config_->get(ConfigKeyInt::max_strlen);
   std::string timestr(timestr_size, '\0');
   size_t timestr_len = strftime(
       timestr.data(), timestr_size, fmt.c_str(), &tmp);

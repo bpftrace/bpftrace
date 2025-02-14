@@ -21,7 +21,7 @@ public:
                           std::ostream &out = std::cerr)
       : Visitor<ConfigAnalyser>(ctx),
         bpftrace_(bpftrace),
-        config_setter_(ConfigSetter(bpftrace.config_, ConfigSource::script)),
+        config_setter_(ConfigSetter(*bpftrace.config_, ConfigSource::script)),
         out_(out)
   {
   }

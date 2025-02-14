@@ -60,7 +60,7 @@ int run_bpftrace(BPFtrace &bpftrace, BpfBytecode &bytecode)
   std::cout << "\n\n";
 
   // Print maps if needed (true by default).
-  if (bpftrace.config_.get(ConfigKeyBool::print_maps_on_exit))
+  if (bpftrace.config_->get(ConfigKeyBool::print_maps_on_exit))
     err = bpftrace.print_maps();
 
   if (bpftrace.child_) {
