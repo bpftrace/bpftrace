@@ -12,7 +12,10 @@ on:
 
 jobs:
   build-and-upload:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
 
     # For flakehub cache
     permissions:
@@ -34,5 +37,5 @@ jobs:
     - name: Upload appimage
       uses: actions/upload-artifact@v4
       with:
-        name: bpftrace
+        name: bpftrace-${{ runner.arch }}
         path: ./bpftrace
