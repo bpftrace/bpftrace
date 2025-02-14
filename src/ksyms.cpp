@@ -68,7 +68,7 @@ std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
   blaze_symbolize_src_kernel src = {
     .type_size = sizeof(src),
     // Use default system-wide kallsyms file.
-    .kallsyms = NULL,
+    .kallsyms = nullptr,
     // Disable discovery and usage of a vmlinux file.
     // TODO: We should eventually support that, incorporating discovery logic
     //       from find_vmlinux().
@@ -79,7 +79,7 @@ std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
 
   const blaze_syms *syms = blaze_symbolize_kernel_abs_addrs(
       symbolizer_, &src, addrs, ARRAY_SIZE(addrs));
-  if (syms == NULL)
+  if (syms == nullptr)
     return std::nullopt;
   SCOPE_EXIT
   {
