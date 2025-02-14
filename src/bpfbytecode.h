@@ -38,6 +38,7 @@ public:
                   const BTF &btf,
                   BPFfeature &feature,
                   const Config &config);
+  void attach_external();
 
   const BpfProgram &getProgramForProbe(const Probe &probe) const;
   BpfProgram &getProgramForProbe(const Probe &probe);

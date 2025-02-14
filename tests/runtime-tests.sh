@@ -9,7 +9,7 @@ set -e;
 
 pushd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1
 
-BPFTRACE_RUNTIME_TEST_EXECUTABLE=${BPFTRACE_RUNTIME_TEST_EXECUTABLE:-@CMAKE_BINARY_DIR@/src/bpftrace};
+BPFTRACE_RUNTIME_TEST_EXECUTABLE=${BPFTRACE_RUNTIME_TEST_EXECUTABLE:-/home/amscanne/bpftrace/src/bpftrace};
 export BPFTRACE_RUNTIME_TEST_EXECUTABLE;
 
 echo "===================="

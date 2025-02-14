@@ -88,6 +88,7 @@ TEST(required_resources, round_trip_map_info)
               .step = 33,
           },
       .hist_bits_arg = 1,
+      .external = std::nullopt,
     };
     info.key_type = CreateInt32();
     RequiredResources r;

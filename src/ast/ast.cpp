@@ -242,12 +242,39 @@ Subprog::Subprog(std::string name,
 {
 }
 
+Import::Import(std::string name) : name_(std::move(name))
+{
+}
+
+static std::optional<std::filesystem::path> if_exists(std::string &&name)
+{
+  std::filesystem::path path(name);
+  if (std::filesystem::exists(path)) {
+    return path;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::filesystem::path> Import::host_import_source() { return if_exists(name_ + ".c"); }
+
+std::optional<std::filesystem::path> Import::host_import_module() { return if_exists(name_ + ".bc"); }
+
+std::optional<std::filesystem::path> Import::bpftrace_import_source() { return if_exists(name_ + ".bt"); }
+
+std::optional<std::filesystem::path> Import::bpf_import_source() { return if_exists(name_ + ".bpf.c"); }
+
+std::optional<std::filesystem::path> Import::bpf_import_module() { return if_exists(name_ + ".bpf.bc"); }
+
+std::optional<std::filesystem::path> Import::bpf_import_object() { return if_exists(name_ + ".bpf.o"); }
+
 Program::Program(const std::string &c_definitions,
                  Config *config,
+                 ImportList &&imports,
                  SubprogList &&functions,
                  ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
+      imports(imports),
       functions(std::move(functions)),
       probes(std::move(probes))
 {

@@ -103,6 +103,7 @@ endif()
 
 install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
+target_link_libraries(${BPFTRACE} ${LIBBPF_LIBRARIES})
 
 if (BUILD_FUZZ)
   target_compile_options(${BPFTRACE} PUBLIC "-DFUZZ")

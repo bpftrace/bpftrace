@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <unordered_set>
 
@@ -71,6 +72,12 @@ public:
         listing_(listing),
         has_child_(has_child)
   {
+    // Pull in all the pre-defined maps into our sets below.
+    for (const auto &[map_name, map_info] : bpftrace.resources.maps_info) {
+      map_key_[map_name] = map_info.key_type;
+      map_val_[map_name] = map_info.value_type;
+      std::cerr << "SemanticAnalyser imported map: " << map_name << "\n";
+    }
   }
 
   explicit SemanticAnalyser(ASTContext &ctx, BPFtrace &bpftrace, bool has_child)

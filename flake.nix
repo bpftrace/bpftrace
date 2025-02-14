@@ -31,13 +31,15 @@
           defaultLlvmVersion = 19;
 
           # Override to specify the libbpf build we want
-          libbpfVersion = "1.5.0";
+          # FIXME: The latest libbpf does not yet support the required APIs for
+          # in-memory linking, which were submitted upstream only recently.
+          libbpfVersion = "d4a841a32b04d69194ab5bdac359a51938a206ce";
           libbpf = pkgs.libbpf.overrideAttrs {
             version = libbpfVersion;
             src = pkgs.fetchFromGitHub {
               owner = "libbpf";
               repo = "libbpf";
-              rev = "v${libbpfVersion}";
+              rev = "${libbpfVersion}";
               # Nix uses the hash to do lookups in its cache as well as check that the
               # download from the internet hasn't changed. Therefore, it's necessary to
               # update the hash every time you update the source. Failure to update the
@@ -51,7 +53,7 @@
               #   hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
               #   specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
               # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
-              sha256 = "sha256-+L/rbp0a3p4PHq1yTJmuMcNj0gT5sqAPeaNRo3Sh6U8=";
+              sha256 = "sha256-iOgBbZdGH3mAazFv7HHGwwjmnYZbzueYklHAwf76eZw=";
             };
           };
 
