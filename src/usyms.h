@@ -44,6 +44,23 @@ private:
                           bool show_offset,
                           bool show_module);
   struct bcc_symbol_option& get_symbol_opts();
+
+#ifdef HAVE_BLAZESYM
+  struct blaze_symbolizer* symbolizer_{ nullptr };
+
+  struct blaze_symbolizer* create_symbolizer() const;
+  void cache_blazesym(const std::string& elf_file);
+  std::optional<std::string> resolve_blazesym_impl(uint64_t addr,
+                                                   int32_t pid,
+                                                   const std::string& pid_exe,
+                                                   bool show_offset,
+                                                   bool show_module);
+  std::string resolve_blazesym(uint64_t addr,
+                               int32_t pid,
+                               const std::string& pid_exe,
+                               bool show_offset,
+                               bool show_module);
+#endif
 };
 
 } // namespace bpftrace
