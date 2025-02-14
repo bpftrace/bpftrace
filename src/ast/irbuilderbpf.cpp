@@ -1707,7 +1707,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   std::optional<std::string> literal2 = ValToString(val2);
 
   if (literal1 && literal2) {
-    std::string s1 = literal1.value();
+    const std::string &s1 = literal1.value();
     std::string s2 = literal2.value();
     s2 = s2.substr(0, s2.size() - 1);
     std::size_t position = s1.find(s2);
