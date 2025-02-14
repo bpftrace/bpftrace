@@ -5,6 +5,7 @@ add_library(ast STATIC
   async_event_types.cpp
   attachpoint_parser.cpp
   codegen_helper.cpp
+  diagnostic.cpp
   dibuilderbpf.cpp
   int_parser.cpp
   irbuilderbpf.cpp
