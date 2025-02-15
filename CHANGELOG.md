@@ -38,6 +38,8 @@ and this project adheres to
   - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
 - Increase default values for max_bpf_progs and max_probes
   - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
+- `-p` CLI flag now applies to all probes (except BEGIN/END)
+  - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 14 and 15

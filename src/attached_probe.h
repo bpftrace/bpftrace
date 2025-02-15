@@ -22,7 +22,6 @@ std::string progtypeName(libbpf::bpf_prog_type t);
 
 class AttachedProbe {
 public:
-  AttachedProbe(Probe &probe, const BpfProgram &prog, BPFtrace &bpftrace);
   AttachedProbe(Probe &probe,
                 const BpfProgram &prog,
                 int pid,
@@ -61,14 +60,14 @@ private:
   void attach_usdt(int pid, BPFfeature &feature);
 
   void attach_tracepoint();
-  void attach_profile();
-  void attach_interval();
-  void attach_software();
-  void attach_hardware();
+  void attach_profile(int pid);
+  void attach_interval(int pid);
+  void attach_software(int pid);
+  void attach_hardware(int pid);
   void attach_watchpoint(int pid, const std::string &mode);
   void attach_fentry(void);
   int detach_fentry(void);
-  void attach_iter(void);
+  void attach_iter(int pid);
   int detach_iter(void);
   void attach_raw_tracepoint(void);
   int detach_raw_tracepoint(void);

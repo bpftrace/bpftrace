@@ -110,13 +110,28 @@ int AttachedProbe::detach_fentry()
   return 0;
 }
 
-void AttachedProbe::attach_iter()
+void AttachedProbe::attach_iter(int pid)
 {
-  linkfd_ = bpf_link_create(progfd_,
-                            0,
-                            static_cast<enum ::bpf_attach_type>(
-                                libbpf::BPF_TRACE_ITER),
-                            nullptr);
+  if (pid == 0) {
+    linkfd_ = bpf_link_create(progfd_,
+                              0,
+                              static_cast<enum ::bpf_attach_type>(
+                                  libbpf::BPF_TRACE_ITER),
+                              nullptr);
+  } else {
+    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+    union bpf_iter_link_info linfo;
+    memset(&linfo, 0, sizeof(linfo));
+    linfo.task.pid = pid;
+    opts.iter_info = &linfo;
+    opts.iter_info_len = sizeof(linfo);
+    linkfd_ = bpf_link_create(progfd_,
+                              0,
+                              static_cast<enum ::bpf_attach_type>(
+                                  libbpf::BPF_TRACE_ITER),
+                              &opts);
+  }
+
   if (linkfd_ < 0) {
     throw FatalUserException("Error attaching probe: " + probe_.name);
   }
@@ -151,7 +166,9 @@ int AttachedProbe::detach_raw_tracepoint()
 
 AttachedProbe::AttachedProbe(Probe &probe,
                              const BpfProgram &prog,
-                             BPFtrace &bpftrace)
+                             int pid,
+                             BPFtrace &bpftrace,
+                             bool safe_mode)
     : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
 {
   LOG(V1) << "Attaching " << probe_.orig_name;
@@ -166,40 +183,27 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_tracepoint();
       break;
     case ProbeType::profile:
-      attach_profile();
+      attach_profile(pid);
       break;
     case ProbeType::interval:
-      attach_interval();
+      attach_interval(pid);
       break;
     case ProbeType::software:
-      attach_software();
+      attach_software(pid);
       break;
     case ProbeType::hardware:
-      attach_hardware();
+      attach_hardware(pid);
       break;
     case ProbeType::fentry:
     case ProbeType::fexit:
       attach_fentry();
       break;
     case ProbeType::iter:
-      attach_iter();
+      attach_iter(pid);
       break;
     case ProbeType::rawtracepoint:
       attach_raw_tracepoint();
       break;
-    default:
-      LOG(BUG) << "invalid attached probe type \"" << probe_.type << "\"";
-  }
-}
-
-AttachedProbe::AttachedProbe(Probe &probe,
-                             const BpfProgram &prog,
-                             int pid,
-                             BPFtrace &bpftrace,
-                             bool safe_mode)
-    : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
-{
-  switch (probe_.type) {
     case ProbeType::usdt:
       attach_usdt(pid, *bpftrace_.feature_);
       break;
@@ -1000,9 +1004,8 @@ void AttachedProbe::attach_tracepoint()
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_profile()
+void AttachedProbe::attach_profile(int pid)
 {
-  int pid = -1;
   int group_fd = -1;
 
   uint64_t period, freq;
@@ -1029,7 +1032,7 @@ void AttachedProbe::attach_profile()
                                               PERF_COUNT_SW_CPU_CLOCK,
                                               period,
                                               freq,
-                                              pid,
+                                              pid == 0 ? -1 : pid,
                                               cpu,
                                               group_fd);
 
@@ -1041,9 +1044,8 @@ void AttachedProbe::attach_profile()
   }
 }
 
-void AttachedProbe::attach_interval()
+void AttachedProbe::attach_interval(int pid)
 {
-  int pid = -1;
   int group_fd = -1;
   int cpu = 0;
 
@@ -1065,7 +1067,7 @@ void AttachedProbe::attach_interval()
                                             PERF_COUNT_SW_CPU_CLOCK,
                                             period,
                                             freq,
-                                            pid,
+                                            pid == 0 ? -1 : pid,
                                             cpu,
                                             group_fd);
 
@@ -1076,9 +1078,8 @@ void AttachedProbe::attach_interval()
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_software()
+void AttachedProbe::attach_software(int pid)
 {
-  int pid = -1;
   int group_fd = -1;
 
   uint64_t period = probe_.freq;
@@ -1099,8 +1100,14 @@ void AttachedProbe::attach_software()
 
   std::vector<int> cpus = get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(
-        progfd_, PERF_TYPE_SOFTWARE, type, period, 0, pid, cpu, group_fd);
+    int perf_event_fd = bpf_attach_perf_event(progfd_,
+                                              PERF_TYPE_SOFTWARE,
+                                              type,
+                                              period,
+                                              0,
+                                              pid == 0 ? -1 : pid,
+                                              cpu,
+                                              group_fd);
 
     if (perf_event_fd < 0) {
       throw FatalUserException("Error attaching probe: " + probe_.name);
@@ -1110,9 +1117,8 @@ void AttachedProbe::attach_software()
   }
 }
 
-void AttachedProbe::attach_hardware()
+void AttachedProbe::attach_hardware(int pid)
 {
-  int pid = -1;
   int group_fd = -1;
 
   uint64_t period = probe_.freq;
@@ -1133,8 +1139,14 @@ void AttachedProbe::attach_hardware()
 
   std::vector<int> cpus = get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(
-        progfd_, PERF_TYPE_HARDWARE, type, period, 0, pid, cpu, group_fd);
+    int perf_event_fd = bpf_attach_perf_event(progfd_,
+                                              PERF_TYPE_HARDWARE,
+                                              type,
+                                              period,
+                                              0,
+                                              pid == 0 ? -1 : pid,
+                                              cpu,
+                                              group_fd);
 
     if (perf_event_fd < 0) {
       throw FatalUserException("Error attaching probe: " + probe_.name);
