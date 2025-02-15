@@ -967,9 +967,9 @@ kprobe:f { @[delete(@x)] = 1; }
 )");
 
   test_error("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", R"(
-stdin:1:1-1: ERROR: Invalid condition in if(): none
+stdin:1:20-42: ERROR: Invalid condition in if(): none
 kprobe:f { @x = 1; if(delete(@x)) { 123 } }
-
+                   ~~~~~~~~~~~~~~~~~~~~~~
 )");
 
   test_error("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", R"(
