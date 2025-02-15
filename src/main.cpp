@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "aot/aot.h"
+#include "ast/diagnostic.h"
 #include "ast/pass_manager.h"
 
 #include "ast/passes/codegen_llvm.h"
@@ -367,9 +368,11 @@ static void parse_env(BPFtrace& bpftrace)
   bpftrace.parse_btf(driver.list_modules());
 
   ast::FieldAnalyser fields(driver.ctx, bpftrace);
-  err = fields.analyse();
-  if (err)
+  fields.visit(driver.ctx.root);
+  if (!driver.ctx.diagnostics().ok()) {
+    driver.ctx.diagnostics().emit(std::cerr);
     return std::nullopt;
+  }
 
   if (TracepointFormatParser::parse(driver.ctx, bpftrace) == false)
     return std::nullopt;
@@ -428,26 +431,20 @@ static void parse_env(BPFtrace& bpftrace)
   return std::move(driver.ctx);
 }
 
-ast::PassManager CreateDynamicPM()
+void CreateDynamicPasses(ast::PassManager& pm)
 {
-  ast::PassManager pm;
   pm.AddPass(ast::CreateConfigPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
-
-  return pm;
 }
 
-ast::PassManager CreateAotPM()
+void CreateAotPasses(ast::PassManager& pm)
 {
-  ast::PassManager pm;
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
-
-  return pm;
 }
 
 struct Args {
@@ -839,8 +836,10 @@ int main(int argc, char* argv[])
 
     ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
     err = semantics.analyse();
-    if (err)
-      return err;
+    if (!driver.ctx.diagnostics().ok()) {
+      driver.ctx.diagnostics().emit(std::cerr);
+      return 1;
+    }
 
     bpftrace.probe_matcher_->list_probes(driver.ctx.root);
     return 0;
@@ -912,7 +911,7 @@ int main(int argc, char* argv[])
   ast::PassManager pm;
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
-      pm = CreateDynamicPM();
+      CreateDynamicPasses(pm);
       break;
     case BuildMode::AHEAD_OF_TIME:
       if (bpftrace.has_dwarf_data()) {
@@ -922,14 +921,14 @@ int main(int argc, char* argv[])
           std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"
                     << std::endl;
       }
-      pm = CreateAotPM();
+      CreateAotPasses(pm);
       break;
   }
 
   bpftrace.fentry_recursion_check(ast_ctx->root);
 
   auto pmresult = pm.Run(ctx);
-  if (!pmresult.Ok())
+  if (pmresult)
     return 1;
 
   ast::CodegenLLVM llvm(ctx.ast_ctx, bpftrace);
