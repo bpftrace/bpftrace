@@ -499,3 +499,16 @@ NAME sanitise probe name
 PROG uprobe:./testprogs/uprobe_namesan:fn* { printf("ok\n"); exit(); }
 EXPECT ok
 AFTER ./testprogs/uprobe_namesan
+
+NAME pid filter software
+RUN {{BPFTRACE}} -e 'software:cpu-clock:10000000 { @[pid] = count(); if (len(@) != 1) { print("bad"); } }' -p {{BEFORE_PID}}
+EXPECT_NONE bad
+BEFORE ./testprogs/work_loop
+TIMEOUT 2
+
+NAME pid filter kprobe
+RUN {{BPFTRACE}} -e 'kprobe:do_nanosleep { @[pid] = count(); if (len(@) != 1) { print("bad"); } }' -p {{BEFORE_PID}}
+EXPECT_NONE bad
+BEFORE ./testprogs/nanosleep_loop
+BEFORE ./testprogs/nanosleep_loop
+TIMEOUT 2

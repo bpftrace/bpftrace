@@ -20,6 +20,7 @@ add_library(ast STATIC
   passes/semantic_analyser.cpp
   passes/codegen_llvm.cpp
   passes/return_path_analyser.cpp
+  passes/pid_filter_pass.cpp
 )
 
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})

@@ -18,6 +18,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
@@ -100,7 +101,7 @@ void usage(std::ostream& out)
   out << "    --include FILE add an #include file before preprocessing" << std::endl;
   out << "    -l [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
-  out << "    -p PID         enable USDT probes on PID" << std::endl;
+  out << "    -p PID         filter actions and enable USDT probes on PID" << std::endl;
   out << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   out << "    --usdt-file-activation" << std::endl;
   out << "                   activate usdt semaphores based on file path" << std::endl;
@@ -432,6 +433,7 @@ ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
   pm.AddPass(ast::CreateConfigPass());
+  pm.AddPass(ast::CreatePidFilterPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
