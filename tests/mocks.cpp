@@ -83,7 +83,6 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 {
   bpftrace.delta_taitime_ = timespec{};
 
-  bpftrace.parse_btf({ "vmlinux" });
   // Fill in some default tracepoint struct definitions
   bpftrace.structs.Add("struct _tracepoint_sched_sched_one", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one")
