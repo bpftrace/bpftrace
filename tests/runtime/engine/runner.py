@@ -394,8 +394,6 @@ class Runner(object):
                 if test.new_pidns:
                     # This can be fixed in the future if needed
                     raise ValueError(f"BEFORE_PID cannot be used with NEW_PIDNS")
-                if len(test.befores) > 1:
-                    raise ValueError(f"test has {len(test.befores)} BEFORE clauses but BEFORE_PID usage requires exactly one")
 
                 child_name = test.befores[0].strip().split()[-1]
                 child_name = os.path.basename(child_name)

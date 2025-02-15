@@ -9,6 +9,7 @@
 
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 
@@ -60,6 +61,9 @@ static void test(BPFtrace &bpftrace,
   clang.parse(driver.ctx.root, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
+  pid_filter.analyse();
 
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
