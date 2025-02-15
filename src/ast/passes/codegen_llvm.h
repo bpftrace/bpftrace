@@ -1,9 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <iostream>
 #include <optional>
-#include <ostream>
 #include <tuple>
 
 #include <llvm/ADT/FunctionExtras.h>

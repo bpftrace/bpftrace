@@ -14,9 +14,9 @@ void ConfigAnalyser::log_type_error(SizedType &type,
                                     Type expected_type,
                                     AssignConfigVarStatement &assignment)
 {
-  LOG(ERROR, assignment.loc, err_)
-      << "Invalid type for " << assignment.config_var
-      << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
+  assignment.addError() << "Invalid type for " << assignment.config_var
+                        << ". Type: " << type.GetTy()
+                        << ". Expected Type: " << expected_type;
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -46,8 +46,8 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
   } else if (val == 1) {
     config_setter_.set(key, true);
   } else {
-    LOG(ERROR) << "Invalid value for " << assignment.config_var
-               << ". Needs to be 0 or 1. Value: " << val;
+    assignment.addError() << "Invalid value for " << assignment.config_var
+                          << ". Needs to be 0 or 1. Value: " << val;
   }
 }
 
@@ -87,7 +87,7 @@ void ConfigAnalyser::set_config(
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_user_symbol_cache_type(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -101,7 +101,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_symbol_source_config(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -115,7 +115,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_missing_probes_config(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::visit(Integer &integer)
@@ -136,7 +136,7 @@ void ConfigAnalyser::visit(StackMode &mode)
     mode.type.stack_type.mode = stack_mode.value();
   } else {
     mode.type = CreateNone();
-    LOG(ERROR, mode.loc, err_) << "Unknown stack mode: '" + mode.mode + "'";
+    mode.addError() << "Unknown stack mode: '" + mode.mode + "'";
   }
 }
 
@@ -150,13 +150,13 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
                                                                 err_msg);
 
   if (!maybeConfigKey.has_value()) {
-    LOG(ERROR, assignment.loc, err_) << err_msg;
+    assignment.addError() << err_msg;
     return;
   }
 
   if (!assignment.expr->is_literal) {
-    LOG(ERROR, assignment.loc, err_)
-        << "Assignment for " << assignment.config_var << " must be literal.";
+    assignment.addError() << "Assignment for " << assignment.config_var
+                          << " must be literal.";
     return;
   }
 
@@ -165,24 +165,11 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   std::visit([&](auto key) { set_config(assignment, key); }, configKey);
 }
 
-bool ConfigAnalyser::analyse()
-{
-  visit(ctx_.root);
-  std::string errors = err_.str();
-  if (!errors.empty()) {
-    out_ << errors;
-    return false;
-  }
-  return true;
-}
-
 Pass CreateConfigPass()
 {
   auto fn = [](PassContext &ctx) {
     auto configs = ConfigAnalyser(ctx.ast_ctx, ctx.b);
-    if (!configs.analyse())
-      return PassResult::Error("Config");
-    return PassResult::Success();
+    configs.visit(ctx.ast_ctx.root);
   };
 
   return Pass("ConfigAnalyser", fn);

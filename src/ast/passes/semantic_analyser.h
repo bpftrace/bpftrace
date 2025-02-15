@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <sstream>
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
@@ -62,29 +60,16 @@ class SemanticAnalyser : public Visitor<SemanticAnalyser> {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
-                            std::ostream &out = std::cerr,
                             bool has_child = true,
                             bool listing = false)
       : Visitor<SemanticAnalyser>(ctx),
         bpftrace_(bpftrace),
-        out_(out),
         listing_(listing),
         has_child_(has_child)
   {
   }
 
-  explicit SemanticAnalyser(ASTContext &ctx, BPFtrace &bpftrace, bool has_child)
-      : SemanticAnalyser(ctx, bpftrace, std::cerr, has_child)
-  {
-  }
-
-  explicit SemanticAnalyser(ASTContext &ctx,
-                            BPFtrace &bpftrace,
-                            bool has_child,
-                            bool listing)
-      : SemanticAnalyser(ctx, bpftrace, std::cerr, has_child, listing)
-  {
-  }
+  int analyse();
 
   using Visitor<SemanticAnalyser>::visit;
   void visit(Integer &integer);
@@ -122,13 +107,9 @@ public:
   void visit(Block &block);
   void visit(Subprog &subprog);
 
-  int analyse();
-
 private:
   PassTracker pass_tracker_;
   BPFtrace &bpftrace_;
-  std::ostream &out_;
-  std::ostringstream err_;
   bool listing_;
 
   bool is_final_pass() const;
@@ -152,24 +133,24 @@ private:
 
   void check_stack_call(Call &call, bool kernel);
 
-  Probe *get_probe(const location &loc, std::string name = "");
+  Probe *get_probe(Node &node, std::string = "");
 
   bool is_valid_assignment(const Expression *target, const Expression *expr);
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
-  SizedType create_key_type(const SizedType &expr_type, const location &loc);
+  SizedType create_key_type(const SizedType &expr_type, Node &node);
   void update_current_key(SizedType &current_key_type,
                           const SizedType &new_key_type);
   void validate_new_key(const SizedType &current_key_type,
                         const SizedType &new_key_type,
                         const std::string &map_ident,
-                        const location &loc);
+                        const Node &node);
   bool update_string_size(SizedType &type, const SizedType &new_type);
   SizedType create_merged_tuple(const SizedType &blah_type,
                                 const SizedType &prev_type);
-  void validate_map_key(const SizedType &key, const location &loc);
-  void resolve_struct_type(SizedType &type, const location &loc);
+  void validate_map_key(const SizedType &key, Node &node);
+  void resolve_struct_type(SizedType &type, Node &node);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(Probe *probe);
@@ -202,7 +183,7 @@ private:
   Node *find_variable_scope(const std::string &var_ident);
 
   std::map<Node *, std::map<std::string, variable>> variables_;
-  std::map<Node *, std::map<std::string, location>> variable_decls_;
+  std::map<Node *, std::map<std::string, VarDeclStatement &>> variable_decls_;
   std::map<Node *, CollectNodes<Variable>> for_vars_referenced_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;

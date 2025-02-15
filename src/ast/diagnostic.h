@@ -93,6 +93,12 @@ public:
     }
   }
 
+  // ok is the recommended short-hand for `has(Severity::Error)`.
+  bool ok() const
+  {
+    return !has(Severity::Error);
+  }
+
   // emit implements a default formatter of all diagnostics to a given stream.
   // The use of `emit` should be generally discouraged, especially by tests,
   // who should use more structured checks and avoid matching against the

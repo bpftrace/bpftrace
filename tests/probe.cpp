@@ -27,20 +27,19 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ast::FieldAnalyser fields(driver.ctx, *bpftrace);
-  EXPECT_EQ(fields.analyse(), 0);
+  fields.visit(driver.ctx.root);
+  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
+  semantics.analyse();
+  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(driver.ctx, *bpftrace);
-  auto resources_optional = resource_analyser.analyse();
-  ASSERT_TRUE(resources_optional.has_value());
-  // clang-tidy doesn't recognize ASSERT_*() as execution terminating
-  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-  bpftrace->resources = resources_optional.value();
+  bpftrace->resources = resource_analyser.analyse();
+  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
   codegen.generate_ir();
