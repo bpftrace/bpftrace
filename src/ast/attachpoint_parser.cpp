@@ -54,9 +54,8 @@ std::optional<int64_t> AttachPointParser::stoll(const std::string &str)
 
 AttachPointParser::AttachPointParser(ASTContext &ctx,
                                      BPFtrace &bpftrace,
-                                     std::ostream &sink,
                                      bool listing)
-    : ctx_(ctx), bpftrace_(bpftrace), sink_(sink), listing_(listing)
+    : ctx_(ctx), bpftrace_(bpftrace), listing_(listing)
 {
 }
 
@@ -75,7 +74,7 @@ int AttachPointParser::parse()
       State s = parse_attachpoint(ap);
       if (s == INVALID) {
         ++failed;
-        LOG(ERROR, ap.loc, sink_) << errs_.str();
+        ap.addError() << errs_.str();
       } else if (s == SKIP || s == NEW_APS) {
         // Remove the current attach point
         probe->attach_points.erase(probe->attach_points.begin() + i);
@@ -101,7 +100,7 @@ int AttachPointParser::parse()
     probe->attach_points.erase(new_end, probe->attach_points.end());
 
     if (probe->attach_points.empty()) {
-      LOG(ERROR, probe->loc, sink_) << "No attach points for probe";
+      probe->addError() << "No attach points for probe";
       failed++;
     }
   }

@@ -33,24 +33,14 @@ std::string get_literal_string(Expression &expr)
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(ASTContext &ctx,
-                                   BPFtrace &bpftrace,
-                                   std::ostream &out)
-    : Visitor<ResourceAnalyser>(ctx),
-      bpftrace_(bpftrace),
-      out_(out),
-      probe_(nullptr)
+ResourceAnalyser::ResourceAnalyser(ASTContext &ctx, BPFtrace &bpftrace)
+    : Visitor<ResourceAnalyser>(ctx), bpftrace_(bpftrace), probe_(nullptr)
 {
 }
 
-std::optional<RequiredResources> ResourceAnalyser::analyse()
+RequiredResources ResourceAnalyser::analyse()
 {
   visit(ctx_.root);
-
-  if (!err_.str().empty()) {
-    out_ << err_.str();
-    return std::nullopt;
-  }
 
   if (resources_.max_fmtstring_args_size > 0) {
     resources_.needed_global_vars.insert(
@@ -105,7 +95,7 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
 
-  return std::optional{ std::move(resources_) };
+  return std::move(resources_);
 }
 
 void ResourceAnalyser::visit(Probe &probe)
@@ -203,8 +193,8 @@ void ResourceAnalyser::visit(Call &call)
     int bits = static_cast<Integer *>(call.vargs.at(1))->n;
 
     if (map_info.hist_bits_arg.has_value() && *map_info.hist_bits_arg != bits) {
-      LOG(ERROR, call.loc, err_) << "Different bits in a single hist, had "
-                                 << *map_info.hist_bits_arg << " now " << bits;
+      call.addError() << "Different bits in a single hist, had "
+                      << *map_info.hist_bits_arg << " now " << bits;
     } else {
       map_info.hist_bits_arg = bits;
     }
@@ -225,8 +215,7 @@ void ResourceAnalyser::visit(Call &call)
     auto &map_info = resources_.maps_info[call.map->ident];
 
     if (map_info.lhist_args.has_value() && *map_info.lhist_args != args) {
-      LOG(ERROR, call.loc, err_)
-          << "Different lhist bounds in a single map unsupported";
+      call.addError() << "Different lhist bounds in a single map unsupported";
     } else {
       map_info.lhist_args = args;
     }
@@ -509,13 +498,7 @@ Pass CreateResourcePass()
 {
   auto fn = [](PassContext &ctx) {
     ResourceAnalyser analyser(ctx.ast_ctx, ctx.b);
-    auto pass_result = analyser.analyse();
-
-    if (!pass_result.has_value())
-      return PassResult::Error("Resource", 1);
-    ctx.b.resources = pass_result.value();
-
-    return PassResult::Success();
+    ctx.b.resources = analyser.analyse();
   };
 
   return Pass("ResourceAnalyser", fn);

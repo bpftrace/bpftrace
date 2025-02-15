@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <sstream>
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
@@ -16,13 +14,10 @@ namespace ast {
 
 class ConfigAnalyser : public Visitor<ConfigAnalyser> {
 public:
-  explicit ConfigAnalyser(ASTContext &ctx,
-                          BPFtrace &bpftrace,
-                          std::ostream &out = std::cerr)
+  explicit ConfigAnalyser(ASTContext &ctx, BPFtrace &bpftrace)
       : Visitor<ConfigAnalyser>(ctx),
         bpftrace_(bpftrace),
-        config_setter_(ConfigSetter(*bpftrace.config_, ConfigSource::script)),
-        out_(out)
+        config_setter_(ConfigSetter(*bpftrace.config_, ConfigSource::script))
   {
   }
 
@@ -32,13 +27,9 @@ public:
   void visit(StackMode &mode);
   void visit(AssignConfigVarStatement &assignment);
 
-  bool analyse();
-
 private:
   BPFtrace &bpftrace_;
   ConfigSetter config_setter_;
-  std::ostream &out_;
-  std::ostringstream err_;
 
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyInt key);
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyBool key);
