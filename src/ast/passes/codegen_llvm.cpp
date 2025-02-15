@@ -2898,12 +2898,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
       std::string full_func_id = name + "_loc" + std::to_string(i);
       generateProbe(probe, full_func_id, probefull_, func_type, i);
-      bpftrace_.add_probe(ap, probe, i);
+      bpftrace_.add_probe(Visitor::ctx_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, name, probefull_, func_type);
-    bpftrace_.add_probe(ap, probe);
+    bpftrace_.add_probe(Visitor::ctx_, ap, probe);
   }
   current_attach_point_ = nullptr;
 }
@@ -3052,7 +3052,8 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
         if (attach_point->index() == 0)
           attach_point->set_index(getNextIndexForProbe());
 
-        auto match_ap = attach_point->create_expansion_copy(match);
+        auto &match_ap = attach_point->create_expansion_copy(Visitor::ctx_,
+                                                             match);
         add_probe(match_ap, probe, match, func_type);
         generated = true;
       }

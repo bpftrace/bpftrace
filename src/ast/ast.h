@@ -11,8 +11,9 @@
 #include "utils.h"
 
 namespace bpftrace {
-
 namespace ast {
+
+class ASTContext;
 
 enum class JumpType {
   INVALID = 0,
@@ -61,11 +62,10 @@ enum class ExpansionType {
 
 class Node {
 public:
-  Node() = default;
   Node(location loc) : loc(loc) {};
   virtual ~Node() = default;
 
-  Node(const Node &) = default;
+  Node(const Node &) = delete;
   Node &operator=(const Node &) = delete;
   Node(Node &&) = delete;
   Node &operator=(Node &&) = delete;
@@ -77,14 +77,7 @@ class Map;
 class Variable;
 class Expression : public Node {
 public:
-  Expression() = default;
   Expression(location loc) : Node(loc) {};
-  virtual ~Expression() = default;
-
-  Expression(const Expression &) = default;
-  Expression &operator=(const Expression &) = delete;
-  Expression(Expression &&) = delete;
-  Expression &operator=(Expression &&) = delete;
 
   SizedType type;
   Map *key_for_map = nullptr;
@@ -102,9 +95,6 @@ public:
 
   int64_t n;
   bool is_negative;
-
-private:
-  Integer(const Integer &other) = default;
 };
 
 class PositionalParameter : public Expression {
@@ -116,9 +106,6 @@ public:
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
-
-private:
-  PositionalParameter(const PositionalParameter &other) = default;
 };
 
 class String : public Expression {
@@ -126,9 +113,6 @@ public:
   explicit String(const std::string &str, location loc);
 
   std::string str;
-
-private:
-  String(const String &other) = default;
 };
 
 class StackMode : public Expression {
@@ -136,9 +120,6 @@ public:
   explicit StackMode(const std::string &mode, location loc);
 
   std::string mode;
-
-private:
-  StackMode(const StackMode &other) = default;
 };
 
 class Identifier : public Expression {
@@ -146,9 +127,6 @@ public:
   explicit Identifier(const std::string &ident, location loc);
 
   std::string ident;
-
-private:
-  Identifier(const Identifier &other) = default;
 };
 
 class Builtin : public Expression {
@@ -164,9 +142,6 @@ public:
     return !ident.compare(0, 3, "arg") && ident.size() == 4 &&
            ident.at(3) >= '0' && ident.at(3) <= '9';
   }
-
-private:
-  Builtin(const Builtin &other) = default;
 };
 
 class Call : public Expression {
@@ -176,9 +151,6 @@ public:
 
   std::string func;
   ExpressionList vargs;
-
-private:
-  Call(const Call &other) = default;
 };
 
 class Sizeof : public Expression {
@@ -188,9 +160,6 @@ public:
 
   Expression *expr = nullptr;
   SizedType argtype;
-
-private:
-  Sizeof(const Sizeof &other) = default;
 };
 
 class Offsetof : public Expression {
@@ -201,9 +170,6 @@ public:
   SizedType record;
   Expression *expr = nullptr;
   std::vector<std::string> field;
-
-private:
-  Offsetof(const Offsetof &other) = default;
 };
 
 class Map : public Expression {
@@ -219,9 +185,6 @@ public:
   // which involve calling map_lookup_percpu_elem
   // https://github.com/bpftrace/bpftrace/issues/3755
   bool is_read = true;
-
-private:
-  Map(const Map &other) = default;
 };
 
 class Variable : public Expression {
@@ -229,9 +192,6 @@ public:
   explicit Variable(const std::string &ident, location loc);
 
   std::string ident;
-
-private:
-  Variable(const Variable &other) = default;
 };
 
 class Binop : public Expression {
@@ -241,25 +201,15 @@ public:
   Expression *left = nullptr;
   Expression *right = nullptr;
   Operator op;
-
-private:
-  Binop(const Binop &other) = default;
 };
 
 class Unop : public Expression {
 public:
-  Unop(Operator op, Expression *expr, location loc = location());
-  Unop(Operator op,
-       Expression *expr,
-       bool is_post_op = false,
-       location loc = location());
+  Unop(Operator op, Expression *expr, bool is_post_op, location loc);
 
   Expression *expr = nullptr;
   Operator op;
   bool is_post_op;
-
-private:
-  Unop(const Unop &other) = default;
 };
 
 class FieldAccess : public Expression {
@@ -271,9 +221,6 @@ public:
   Expression *expr = nullptr;
   std::string field;
   ssize_t index = -1;
-
-private:
-  FieldAccess(const FieldAccess &other) = default;
 };
 
 class ArrayAccess : public Expression {
@@ -283,9 +230,6 @@ public:
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
-
-private:
-  ArrayAccess(const ArrayAccess &other) = default;
 };
 
 class Cast : public Expression {
@@ -293,9 +237,6 @@ public:
   Cast(SizedType type, Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  Cast(const Cast &other) = default;
 };
 
 class Tuple : public Expression {
@@ -303,21 +244,11 @@ public:
   Tuple(ExpressionList &&elems, location loc);
 
   ExpressionList elems;
-
-private:
-  Tuple(const Tuple &other) = default;
 };
 
 class Statement : public Node {
 public:
-  Statement() = default;
   Statement(location loc) : Node(loc) {};
-  virtual ~Statement() = default;
-
-  Statement(const Statement &) = default;
-  Statement &operator=(const Statement &) = delete;
-  Statement(Statement &&) = delete;
-  Statement &operator=(Statement &&) = delete;
 };
 
 using StatementList = std::vector<Statement *>;
@@ -327,84 +258,61 @@ public:
   explicit ExprStatement(Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  ExprStatement(const ExprStatement &other) = default;
 };
 
 class VarDeclStatement : public Statement {
 public:
-  VarDeclStatement(Variable *var, SizedType type, location loc = location());
-  VarDeclStatement(Variable *var, location loc = location());
+  VarDeclStatement(Variable *var, SizedType type, location loc);
+  VarDeclStatement(Variable *var, location loc);
 
   Variable *var = nullptr;
   bool set_type = false;
-
-private:
-  VarDeclStatement(const VarDeclStatement &other) = default;
 };
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr, location loc = location());
+  AssignMapStatement(Map *map, Expression *expr, location loc);
 
   Map *map = nullptr;
   Expression *expr = nullptr;
-
-private:
-  AssignMapStatement(const AssignMapStatement &other) = default;
 };
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var,
-                     Expression *expr,
-                     location loc = location());
+  AssignVarStatement(Variable *var, Expression *expr, location loc);
   AssignVarStatement(VarDeclStatement *var_decl_stmt,
                      Expression *expr,
-                     location loc = location());
+                     location loc);
 
   VarDeclStatement *var_decl_stmt = nullptr;
   Variable *var = nullptr;
   Expression *expr = nullptr;
-
-private:
-  AssignVarStatement(const AssignVarStatement &other) = default;
 };
 
 class AssignConfigVarStatement : public Statement {
 public:
   AssignConfigVarStatement(const std::string &config_var,
                            Expression *expr,
-                           location loc = location());
+                           location loc);
 
   std::string config_var;
   Expression *expr = nullptr;
-
-private:
-  AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
 class Block : public Statement {
 public:
-  Block(StatementList &&stmts);
+  Block(StatementList &&stmts, location loc);
 
   StatementList stmts;
-
-private:
-  Block(const Block &other) = default;
 };
 
 class If : public Statement {
 public:
-  If(Expression *cond, Block *if_block, Block *else_block);
+  If(Expression *cond, Block *if_block, Block *else_block, location loc);
 
   Expression *cond = nullptr;
   Block *if_block = nullptr;
   Block *else_block = nullptr;
-
-private:
-  If(const If &other) = default;
 };
 
 class Unroll : public Statement {
@@ -414,27 +322,21 @@ public:
   long int var = 0;
   Expression *expr = nullptr;
   Block *block = nullptr;
-
-private:
-  Unroll(const Unroll &other) = default;
 };
 
 class Jump : public Statement {
 public:
-  Jump(JumpType ident, Expression *return_value, location loc = location())
+  Jump(JumpType ident, Expression *return_value, location loc)
       : Statement(loc), ident(ident), return_value(return_value)
   {
   }
-  Jump(JumpType ident, location loc = location())
+  Jump(JumpType ident, location loc)
       : Statement(loc), ident(ident), return_value(nullptr)
   {
   }
 
   JumpType ident = JumpType::INVALID;
   Expression *return_value;
-
-private:
-  Jump(const Jump &other) = default;
 };
 
 class Predicate : public Node {
@@ -442,9 +344,6 @@ public:
   explicit Predicate(Expression *expr, location loc);
 
   Expression *expr = nullptr;
-
-private:
-  Predicate(const Predicate &other) = default;
 };
 
 class Ternary : public Expression {
@@ -465,9 +364,6 @@ public:
 
   Expression *cond = nullptr;
   Block *block = nullptr;
-
-private:
-  While(const While &other) = default;
 };
 
 class For : public Statement {
@@ -481,31 +377,26 @@ public:
   Expression *expr = nullptr;
   StatementList stmts;
   SizedType ctx_type;
-
-private:
-  For(const For &other) = default;
 };
 
 class Config : public Statement {
 public:
-  Config(StatementList &&stmts) : stmts(std::move(stmts))
-  {
-  }
+  Config(StatementList &&stmts, location loc)
+      : Statement(loc), stmts(std::move(stmts)) {};
 
   StatementList stmts;
-
-private:
-  Config(const Config &other) = default;
 };
 
 class AttachPoint : public Node {
 public:
-  explicit AttachPoint(const std::string &raw_input, location loc = location());
-  AttachPoint(const std::string &raw_input, bool ignore_invalid)
-      : AttachPoint(raw_input)
-  {
-    this->ignore_invalid = ignore_invalid;
-  }
+  AttachPoint(const std::string &raw_input, bool ignore_invalid, location loc);
+
+  // Currently, the AST node itself is used to store metadata related to probe
+  // expansion and attachment. This is done through `create_expansion_copy`
+  // below.  Since the nodes are not currently copyable by default (this is
+  // currently fraught, as nodes may have backreferences that are not updated
+  // in these cases), these fields are copied manually. *Until this is fixed,
+  // if you are adding new fields, be sure to update `create_expansion_copy`.
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
   std::string raw_input;
@@ -531,21 +422,23 @@ public:
 
   std::string name() const;
 
-  AttachPoint create_expansion_copy(const std::string &match) const;
+  AttachPoint &create_expansion_copy(ASTContext &ctx,
+                                     const std::string &match) const;
 
   int index() const;
   void set_index(int index);
 
 private:
-  AttachPoint(const AttachPoint &other) = default;
-
   int index_ = 0;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
 class Probe : public Node {
 public:
-  Probe(AttachPointList &&attach_points, Predicate *pred, Block *block);
+  Probe(AttachPointList &&attach_points,
+        Predicate *pred,
+        Block *block,
+        location loc);
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
@@ -563,20 +456,18 @@ public:
   bool has_ap_of_probetype(ProbeType probe_type);
 
 private:
-  Probe(const Probe &other) = default;
   int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
 
 class SubprogArg : public Node {
 public:
-  SubprogArg(std::string name, SizedType type);
+  SubprogArg(std::string name, SizedType type, location loc);
 
   std::string name() const;
   SizedType type;
 
 private:
-  SubprogArg(const SubprogArg &other) = default;
   std::string name_;
 };
 using SubprogArgList = std::vector<SubprogArg *>;
@@ -586,7 +477,8 @@ public:
   Subprog(std::string name,
           SizedType return_type,
           SubprogArgList &&args,
-          StatementList &&stmts);
+          StatementList &&stmts,
+          location loc);
 
   SubprogArgList args;
   SizedType return_type;
@@ -595,7 +487,6 @@ public:
   std::string name() const;
 
 private:
-  Subprog(const Subprog &other) = default;
   std::string name_;
 };
 using SubprogList = std::vector<Subprog *>;
@@ -605,15 +496,13 @@ public:
   Program(const std::string &c_definitions,
           Config *config,
           SubprogList &&functions,
-          ProbeList &&probes);
+          ProbeList &&probes,
+          location loc);
 
   std::string c_definitions;
   Config *config = nullptr;
   SubprogList functions;
   ProbeList probes;
-
-private:
-  Program(const Program &other) = default;
 };
 
 std::string opstr(const Binop &binop);

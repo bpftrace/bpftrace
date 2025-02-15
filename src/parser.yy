@@ -181,7 +181,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 program:
                 c_definitions config probes_and_subprogs END {
-                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3.second), std::move($3.first));
+                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3.second), std::move($3.first), @$);
                 }
                 ;
 
@@ -272,7 +272,7 @@ struct_type:
                 ;
 
 config:
-                CONFIG ASSIGN config_block     { $$ = driver.ctx.make_node<ast::Config>(std::move($3)); }
+                CONFIG ASSIGN config_block     { $$ = driver.ctx.make_node<ast::Config>(std::move($3), @$); }
         |        %empty                        { $$ = nullptr; }
                 ;
 
@@ -294,10 +294,10 @@ config_assign_stmt:
 
 subprog:
                 SUBPROG IDENT "(" subprog_args ")" ":" type block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8));
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8), @$);
                 }
         |       SUBPROG IDENT "(" ")" ":" type block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7));
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7), @$);
                 }
                 ;
 
@@ -307,7 +307,7 @@ subprog_args:
                 ;
 
 subprog_arg:
-                VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3); }
+                VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
                 ;
 
 probes_and_subprogs:
@@ -321,7 +321,7 @@ probe:
                 attach_points pred block
                 {
                   if (!driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3)));
+                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3), @3), @$);
                   else
                   {
                     error(@$, "unexpected listing query format");
@@ -331,7 +331,7 @@ probe:
         |       attach_points END
                 {
                   if (driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), nullptr, driver.ctx.make_node<ast::Block>(ast::StatementList()));
+                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), nullptr, driver.ctx.make_node<ast::Block>(ast::StatementList(), @$), @$);
                   else
                   {
                     error(@$, "unexpected end of file, expected {");
@@ -346,7 +346,7 @@ attach_points:
                 ;
 
 attach_point:
-                attach_point_def                { $$ = driver.ctx.make_node<ast::AttachPoint>($1, @$); }
+                attach_point_def                { $$ = driver.ctx.make_node<ast::AttachPoint>($1, false, @$); }
                 ;
 
 attach_point_def:
@@ -438,9 +438,9 @@ jump_stmt:
                 ;
 
 loop_stmt:
-                UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1 + @4); }
-        |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1 + @4); }
-        |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5)), @1); }
+                UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
+        |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
+        |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1); }
                 ;
 
 for_stmt:
@@ -448,8 +448,8 @@ for_stmt:
                 ;
 
 if_stmt:
-                IF "(" expr ")" block                  { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5)), driver.ctx.make_node<ast::Block>(ast::StatementList())); }
-        |       IF "(" expr ")" block ELSE block_or_if { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5)), driver.ctx.make_node<ast::Block>(std::move($7))); }
+                IF "(" expr ")" block                  { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), driver.ctx.make_node<ast::Block>(ast::StatementList(), @1), @$); }
+        |       IF "(" expr ")" block ELSE block_or_if { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), driver.ctx.make_node<ast::Block>(std::move($7), @7), @$); }
                 ;
 
 block_or_if:
@@ -505,7 +505,7 @@ postfix_expr:
                 primary_expr                   { $$ = $1; }
 /* pointer  */
         |       postfix_expr DOT external_name { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @2); }
-        |       postfix_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>(driver.ctx.make_node<ast::Unop>(ast::Operator::MUL, $1, @2), $3, @$); }
+        |       postfix_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>(driver.ctx.make_node<ast::Unop>(ast::Operator::MUL, $1, false, @2), $3, @$); }
 /* tuple  */
         |       tuple_access_expr              { $$ = $1; }
 /* array  */
@@ -528,10 +528,10 @@ tuple_access_expr:
 
 
 unary_expr:
-                unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($1, $2, @1); }
+                unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($1, $2, false, @1); }
         |       postfix_expr         { $$ = $1; }
-        |       INCREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, @1); }
-        |       DECREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, @1); }
+        |       INCREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
+        |       DECREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
 /* errors */
         |       ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
         |       ident INCREMENT      { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }

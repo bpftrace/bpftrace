@@ -99,11 +99,6 @@ Binop::Binop(Expression *left, Operator op, Expression *right, location loc)
 {
 }
 
-Unop::Unop(Operator op, Expression *expr, location loc)
-    : Expression(loc), expr(expr), op(op), is_post_op(false)
-{
-}
-
 Unop::Unop(Operator op, Expression *expr, bool is_post_op, location loc)
     : Expression(loc), expr(expr), op(op), is_post_op(is_post_op)
 {
@@ -199,17 +194,20 @@ Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
 {
 }
 
-AttachPoint::AttachPoint(const std::string &raw_input, location loc)
-    : Node(loc), raw_input(raw_input)
+AttachPoint::AttachPoint(const std::string &raw_input,
+                         bool ignore_invalid,
+                         location loc)
+    : Node(loc), raw_input(raw_input), ignore_invalid(ignore_invalid)
 {
 }
 
-Block::Block(StatementList &&stmts) : stmts(std::move(stmts))
+Block::Block(StatementList &&stmts, location loc)
+    : Statement(loc), stmts(std::move(stmts))
 {
 }
 
-If::If(Expression *cond, Block *if_block, Block *else_block)
-    : cond(cond), if_block(if_block), else_block(else_block)
+If::If(Expression *cond, Block *if_block, Block *else_block, location loc)
+    : Statement(loc), cond(cond), if_block(if_block), else_block(else_block)
 {
 }
 
@@ -218,13 +216,19 @@ Unroll::Unroll(Expression *expr, Block *block, location loc)
 {
 }
 
-Probe::Probe(AttachPointList &&attach_points, Predicate *pred, Block *block)
-    : attach_points(std::move(attach_points)), pred(pred), block(block)
+Probe::Probe(AttachPointList &&attach_points,
+             Predicate *pred,
+             Block *block,
+             location loc)
+    : Node(loc),
+      attach_points(std::move(attach_points)),
+      pred(pred),
+      block(block)
 {
 }
 
-SubprogArg::SubprogArg(std::string name, SizedType type)
-    : type(std::move(type)), name_(std::move(name))
+SubprogArg::SubprogArg(std::string name, SizedType type, location loc)
+    : Node(loc), type(std::move(type)), name_(std::move(name))
 {
 }
 
@@ -236,8 +240,10 @@ std::string SubprogArg::name() const
 Subprog::Subprog(std::string name,
                  SizedType return_type,
                  SubprogArgList &&args,
-                 StatementList &&stmts)
-    : args(std::move(args)),
+                 StatementList &&stmts,
+                 location loc)
+    : Node(loc),
+      args(std::move(args)),
       return_type(std::move(return_type)),
       stmts(std::move(stmts)),
       name_(std::move(name))
@@ -247,8 +253,10 @@ Subprog::Subprog(std::string name,
 Program::Program(const std::string &c_definitions,
                  Config *config,
                  SubprogList &&functions,
-                 ProbeList &&probes)
-    : c_definitions(c_definitions),
+                 ProbeList &&probes,
+                 location loc)
+    : Node(loc),
+      c_definitions(c_definitions),
       config(config),
       functions(std::move(functions)),
       probes(std::move(probes))
@@ -343,9 +351,29 @@ std::string opstr(const Unop &unop)
   return {}; // unreached
 }
 
-AttachPoint AttachPoint::create_expansion_copy(const std::string &match) const
+AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
+                                                const std::string &match) const
 {
-  AttachPoint ap = *this; // copy here
+  // Create a new node with the same raw tracepoint. We initialize all the
+  // information about the attach point, and then override/reset values
+  // depending on the specific probe type.
+  auto &ap = *ctx.make_node<AttachPoint>(raw_input, ignore_invalid, loc);
+  ap.index_ = index_;
+  ap.provider = provider;
+  ap.target = target;
+  ap.lang = lang;
+  ap.ns = ns;
+  ap.func = func;
+  ap.pin = pin;
+  ap.usdt = usdt;
+  ap.freq = freq;
+  ap.len = len;
+  ap.mode = mode;
+  ap.async = async;
+  ap.expansion = expansion;
+  ap.address = address;
+  ap.func_offset = func_offset;
+
   switch (probetype(ap.provider)) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:

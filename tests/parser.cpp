@@ -284,9 +284,9 @@ TEST(Parser, positional_param_attachpoint)
 stdin:1:1-12: ERROR: Found trailing text 'a' in positional parameter index. Try quoting the trailing text.
 uprobe:$1a { 1 }
 ~~~~~~~~~~~
-stdin:1:1-1: ERROR: No attach points for probe
+stdin:1:1-18: ERROR: No attach points for probe
 uprobe:$1a { 1 }
-
+~~~~~~~~~~~~~~~~
 )");
 
   test_parse_failure(bpftrace, R"(uprobe:$a { 1 })", R"(
@@ -2326,9 +2326,9 @@ TEST(Parser, long_param_overflow)
 TEST(Parser, empty_arguments)
 {
   test_parse_failure("::k::vfs_open:: { 1 }", R"(
-stdin:1:1-1: ERROR: No attach points for probe
+stdin:1:1-26: ERROR: No attach points for probe
 ::k::vfs_open:: { 1 }
-
+~~~~~~~~~~~~~~~~~~~~~
 )");
 
   // Error location is incorrect: #3063
@@ -2339,9 +2339,9 @@ k:vfs_open:: { 1 }
 )");
 
   test_parse_failure(":w:0x10000000:8:rw { 1 }", R"(
-stdin:1:1-1: ERROR: No attach points for probe
+stdin:1:1-25: ERROR: No attach points for probe
 :w:0x10000000:8:rw { 1 }
-
+~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
