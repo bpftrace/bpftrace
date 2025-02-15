@@ -1920,9 +1920,8 @@ std::optional<int64_t> BPFtrace::get_int_literal(
         auto param_str = get_param(pos_param->n, false);
         auto param_int = get_int_from_str(param_str);
         if (!param_int.has_value()) {
-          LOG(ERROR, pos_param->loc)
-              << "$" << pos_param->n << " used numerically but given \""
-              << param_str << "\"";
+          // This case has to be handled at a higher layer, and it is also
+          // duplicated exactly in the semantic analyzer.
           return std::nullopt;
         }
         if (std::holds_alternative<int64_t>(*param_int)) {

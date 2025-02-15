@@ -53,22 +53,6 @@ Statement *create_pid_filter(ASTContext &ctx, int pid, const location &loc)
       loc);
 }
 
-Pass CreatePidFilterPass()
-{
-  auto fn = [](PassContext &ctx) {
-    auto pid_filter = PidFilterPass(ctx.ast_ctx, ctx.b);
-    pid_filter.analyse();
-    return PassResult::Success();
-  };
-
-  return Pass("PidFilter", fn);
-};
-
-void PidFilterPass::analyse()
-{
-  visit(ctx_.root);
-}
-
 void PidFilterPass::visit(Probe &probe)
 {
   const auto pid = bpftrace_.pid();
@@ -84,5 +68,20 @@ void PidFilterPass::visit(Probe &probe)
     }
   }
 }
+
+void PidFilterPass::analyse()
+{
+  visit(ctx_.root);
+}
+
+Pass CreatePidFilterPass()
+{
+  auto fn = [](PassContext &ctx) {
+    auto pid_filter = PidFilterPass(ctx.ast_ctx, ctx.b);
+    pid_filter.analyse();
+  };
+
+  return Pass("PidFilter", fn);
+};
 
 } // namespace bpftrace::ast

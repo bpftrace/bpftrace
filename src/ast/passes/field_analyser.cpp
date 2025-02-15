@@ -179,7 +179,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
       try {
         matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
       } catch (const WildcardException &e) {
-        LOG(ERROR) << e.what();
+        probe.addError() << e.what();
         return;
       }
 
@@ -200,7 +200,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
           auto maybe_ap_args = bpftrace_.btf_->resolve_args(
               func, probe_type == ProbeType::fexit, err);
           if (!maybe_ap_args.has_value()) {
-            LOG(WARNING) << "fentry:" << ap->func << ": " << err;
+            ap->addWarning() << "fentry:" << ap->func << ": " << err;
             continue;
           }
           ap_args = std::move(*maybe_ap_args);
@@ -210,14 +210,13 @@ void FieldAnalyser::resolve_args(Probe &probe)
           if (dwarf)
             ap_args = dwarf->resolve_args(func);
           else
-            LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << target;
+            ap->addWarning() << "No debuginfo found for " << target;
         }
 
         if (probe_args.size == -1)
           probe_args = ap_args;
         else if (ap_args != probe_args) {
-          LOG(ERROR, ap->loc, err_)
-              << "Probe has attach points with mixed arguments";
+          ap->addError() << "Probe has attach points with mixed arguments";
           break;
         }
       }
@@ -228,7 +227,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
         auto maybe_probe_args = bpftrace_.btf_->resolve_args(
             ap->func, probe_type == ProbeType::fexit, err);
         if (!maybe_probe_args.has_value()) {
-          LOG(ERROR, ap->loc, err_) << "fentry:" << ap->func << ": " << err;
+          ap->addError() << "fentry:" << ap->func << ": " << err;
           return;
         }
         probe_args = std::move(*maybe_probe_args);
@@ -238,13 +237,12 @@ void FieldAnalyser::resolve_args(Probe &probe)
         if (dwarf)
           probe_args = dwarf->resolve_args(ap->func);
         else {
-          LOG(WARNING, ap->loc, err_)
-              << "No debuginfo found for " << ap->target;
+          ap->addWarning() << "No debuginfo found for " << ap->target;
         }
         if (static_cast<int>(probe_args.fields.size()) >
             (arch::max_arg() + 1)) {
-          LOG(ERROR, ap->loc, err_) << "\'args\' builtin is not supported for "
-                                       "probes with stack-passed arguments.";
+          ap->addError() << "\'args\' builtin is not supported for "
+                         << "probes with stack-passed arguments.";
         }
       }
     }
@@ -253,8 +251,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
     auto args = bpftrace_.structs.Lookup(probe.args_typename()).lock();
     if (args && *args != probe_args) {
       // we did, and it's different...trigger the error
-      LOG(ERROR, ap->loc, err_)
-          << "Probe has attach points with mixed arguments";
+      ap->addError() << "Probe has attach points with mixed arguments";
     } else {
       // store/save args for each ap for later processing
       bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
@@ -324,17 +321,14 @@ void FieldAnalyser::visit(Subprog &subprog)
   visit(subprog.stmts);
 }
 
-int FieldAnalyser::analyse()
+Pass CreateFieldAnalyserPass()
 {
-  visit(ctx_.root);
+  auto fn = [](PassContext &ctx) {
+    FieldAnalyser analyser(ctx.ast_ctx, ctx.b);
+    analyser.visit(ctx.ast_ctx.root);
+  };
 
-  std::string errors = err_.str();
-  if (!errors.empty()) {
-    out_ << errors;
-    return 1;
-  }
-
-  return 0;
-}
+  return Pass("FieldAnalyser", fn);
+};
 
 } // namespace bpftrace::ast
