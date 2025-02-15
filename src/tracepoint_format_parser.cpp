@@ -47,17 +47,16 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
           int ret = glob(format_file_path.c_str(), 0, nullptr, &glob_result);
           if (ret != 0) {
             if (ret == GLOB_NOMATCH) {
-              LOG(ERROR, ap->loc, std::cerr)
-                  << "tracepoints not found: " << category << ":" << event_name;
+              auto &err = ap->addError();
+              err << "tracepoints not found: " << category << ":" << event_name;
               // helper message:
               if (category == "syscall")
-                LOG(ERROR, ap->loc, std::cerr)
-                    << "Did you mean syscalls:" << event_name << "?";
-              LOG(V1) << strerror(errno) << ": " << format_file_path;
+                err.addHint() << "Did you mean syscalls:" << event_name << "?";
               return false;
             } else {
               // unexpected error
-              LOG(ERROR, ap->loc, std::cerr) << std::string(strerror(errno));
+              ap->addError()
+                  << "unexpected error: " << std::string(strerror(errno));
               return false;
             }
           }
@@ -100,20 +99,24 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
             // (at least one of them could succeed)
             bool fail = probe->attach_points.size() == 1;
             auto msg = "tracepoint not found: " + category + ":" + event_name;
-            if (fail)
-              LOG(ERROR, ap->loc, std::cerr) << msg;
-            else
-              LOG(WARNING, ap->loc, std::cerr) << msg;
+            auto select = [&]() -> ast::Diagnostic & {
+              if (fail)
+                return ap->addError();
+              else
+                return ap->addWarning();
+            };
+            auto &err = select();
+            err << msg;
 
             // helper message:
             if (category == "syscall")
-              LOG(WARNING, ap->loc, std::cerr)
-                  << "Did you mean syscalls:" << event_name << "?";
+              err.addHint() << "Did you mean syscalls:" << event_name << "?";
 
             if (fail && bt_verbose) {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
-              LOG(ERROR) << strerror(saved_errno) << ": " << format_file_path;
+              ap->addError()
+                  << strerror(saved_errno) << ": " << format_file_path;
             }
             if (fail)
               return false;

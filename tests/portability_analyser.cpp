@@ -4,6 +4,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
@@ -23,19 +24,21 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace, out);
-  ASSERT_EQ(fields.analyse(), 0) << msg.str() << out.str();
+  ast::FieldAnalyser fields(driver.ctx, bpftrace);
+  fields.visit(driver.ctx.root);
+  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  out.str("");
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
-  ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
+  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false);
+  semantics.analyse();
+  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
 
-  ast::PortabilityAnalyser portability(driver.ctx, out);
-  EXPECT_EQ(portability.analyse(), expected_result) << msg.str() << out.str();
+  ast::PortabilityAnalyser portability(driver.ctx);
+  portability.visit(driver.ctx.root);
+  ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)

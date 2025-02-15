@@ -13,10 +13,7 @@ namespace ast {
 
 class AttachPointParser {
 public:
-  AttachPointParser(ASTContext &ctx,
-                    BPFtrace &bpftrace,
-                    std::ostream &sink,
-                    bool listing);
+  AttachPointParser(ASTContext &ctx, BPFtrace &bpftrace, bool listing);
   ~AttachPointParser() = default;
   int parse();
 
@@ -59,7 +56,6 @@ private:
 
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
-  std::ostream &sink_;
   AttachPoint *ap_{ nullptr }; // Non-owning pointer
   std::stringstream errs_;
   std::vector<std::string> parts_;

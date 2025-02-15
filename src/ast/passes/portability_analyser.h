@@ -1,8 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <sstream>
-
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 
@@ -16,8 +13,7 @@ namespace ast {
 // features.
 class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
 public:
-  PortabilityAnalyser(ASTContext &ctx, std::ostream &out = std::cerr);
-  int analyse();
+  PortabilityAnalyser(ASTContext &ctx);
 
   using Visitor<PortabilityAnalyser>::visit;
   void visit(PositionalParameter &param);
@@ -25,10 +21,6 @@ public:
   void visit(Call &call);
   void visit(Cast &cast);
   void visit(AttachPoint &ap);
-
-private:
-  std::ostream &out_;
-  std::ostringstream err_;
 };
 
 Pass CreatePortabilityPass();
