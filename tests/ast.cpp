@@ -10,126 +10,126 @@ using bpftrace::ast::Probe;
 
 TEST(ast, probe_name_special)
 {
-  AttachPoint ap1{ "" };
+  AttachPoint ap1("", false, location());
   ap1.provider = "BEGIN";
-  Probe begin({ &ap1 }, nullptr, {});
+  Probe begin({ &ap1 }, nullptr, {}, location());
   EXPECT_EQ(begin.name(), "BEGIN");
 
-  AttachPoint ap2{ "" };
+  AttachPoint ap2("", false, location());
   ap2.provider = "END";
-  Probe end({ &ap2 }, nullptr, {});
+  Probe end({ &ap2 }, nullptr, {}, location());
   EXPECT_EQ(end.name(), "END");
 }
 
 TEST(ast, probe_name_kprobe)
 {
-  AttachPoint ap1{ "" };
+  AttachPoint ap1("", false, location());
   ap1.provider = "kprobe";
   ap1.func = "sys_read";
 
-  AttachPoint ap2{ "" };
+  AttachPoint ap2("", false, location());
   ap2.provider = "kprobe";
   ap2.func = "sys_write";
 
-  AttachPoint ap3{ "" };
+  AttachPoint ap3("", false, location());
   ap3.provider = "kprobe";
   ap3.func = "sys_read";
   ap3.func_offset = 10;
 
-  Probe kprobe1({ &ap1 }, nullptr, {});
+  Probe kprobe1({ &ap1 }, nullptr, {}, location());
   EXPECT_EQ(kprobe1.name(), "kprobe:sys_read");
 
-  Probe kprobe2({ &ap1, &ap2 }, nullptr, {});
+  Probe kprobe2({ &ap1, &ap2 }, nullptr, {}, location());
   EXPECT_EQ(kprobe2.name(), "kprobe:sys_read,kprobe:sys_write");
 
-  Probe kprobe3({ &ap1, &ap2, &ap3 }, nullptr, {});
+  Probe kprobe3({ &ap1, &ap2, &ap3 }, nullptr, {}, location());
   EXPECT_EQ(kprobe3.name(),
             "kprobe:sys_read,kprobe:sys_write,kprobe:sys_read+10");
 }
 
 TEST(ast, probe_name_uprobe)
 {
-  AttachPoint ap1{ "" };
+  AttachPoint ap1("", false, location());
   ap1.provider = "uprobe";
   ap1.target = "/bin/sh";
   ap1.func = "readline";
-  Probe uprobe1({ &ap1 }, nullptr, {});
+  Probe uprobe1({ &ap1 }, nullptr, {}, location());
   EXPECT_EQ(uprobe1.name(), "uprobe:/bin/sh:readline");
 
-  AttachPoint ap2{ "" };
+  AttachPoint ap2("", false, location());
   ap2.provider = "uprobe";
   ap2.target = "/bin/sh";
   ap2.func = "somefunc";
-  Probe uprobe2({ &ap1, &ap2 }, nullptr, {});
+  Probe uprobe2({ &ap1, &ap2 }, nullptr, {}, location());
   EXPECT_EQ(uprobe2.name(), "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc");
 
-  AttachPoint ap3{ "" };
+  AttachPoint ap3("", false, location());
   ap3.provider = "uprobe";
   ap3.target = "/bin/sh";
   ap3.address = 1000;
-  Probe uprobe3({ &ap1, &ap2, &ap3 }, nullptr, {});
+  Probe uprobe3({ &ap1, &ap2, &ap3 }, nullptr, {}, location());
   EXPECT_EQ(
       uprobe3.name(),
       "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/sh:1000");
 
-  AttachPoint ap4{ "" };
+  AttachPoint ap4("", false, location());
   ap4.provider = "uprobe";
   ap4.target = "/bin/sh";
   ap4.func = "somefunc";
   ap4.func_offset = 10;
-  Probe uprobe4({ &ap1, &ap2, &ap3, &ap4 }, nullptr, {});
+  Probe uprobe4({ &ap1, &ap2, &ap3, &ap4 }, nullptr, {}, location());
   EXPECT_EQ(uprobe4.name(),
             "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/"
             "sh:1000,uprobe:/bin/sh:somefunc+10");
 
-  AttachPoint ap5{ "" };
+  AttachPoint ap5("", false, location());
   ap5.provider = "uprobe";
   ap5.target = "/bin/sh";
   ap5.address = 10;
-  Probe uprobe5({ &ap5 }, nullptr, {});
+  Probe uprobe5({ &ap5 }, nullptr, {}, location());
   EXPECT_EQ(uprobe5.name(), "uprobe:/bin/sh:10");
 
-  AttachPoint ap6{ "" };
+  AttachPoint ap6("", false, location());
   ap6.provider = "uretprobe";
   ap6.target = "/bin/sh";
   ap6.address = 10;
-  Probe uprobe6({ &ap6 }, nullptr, {});
+  Probe uprobe6({ &ap6 }, nullptr, {}, location());
   EXPECT_EQ(uprobe6.name(), "uretprobe:/bin/sh:10");
 }
 
 TEST(ast, probe_name_usdt)
 {
-  AttachPoint ap1{ "" };
+  AttachPoint ap1("", false, location());
   ap1.provider = "usdt";
   ap1.target = "/bin/sh";
   ap1.func = "probe1";
-  Probe usdt1({ &ap1 }, nullptr, {});
+  Probe usdt1({ &ap1 }, nullptr, {}, location());
   EXPECT_EQ(usdt1.name(), "usdt:/bin/sh:probe1");
 
-  AttachPoint ap2{ "" };
+  AttachPoint ap2("", false, location());
   ap2.provider = "usdt";
   ap2.target = "/bin/sh";
   ap2.func = "probe2";
-  Probe usdt2({ &ap1, &ap2 }, nullptr, {});
+  Probe usdt2({ &ap1, &ap2 }, nullptr, {}, location());
   EXPECT_EQ(usdt2.name(), "usdt:/bin/sh:probe1,usdt:/bin/sh:probe2");
 }
 
 TEST(ast, attach_point_name)
 {
-  AttachPoint ap1{ "" };
+  AttachPoint ap1("", false, location());
   ap1.provider = "kprobe";
   ap1.func = "sys_read";
-  AttachPoint ap2{ "" };
+  AttachPoint ap2("", false, location());
   ap2.provider = "kprobe";
   ap2.func = "sys_thisone";
-  AttachPoint ap3{ "" };
+  AttachPoint ap3("", false, location());
   ap3.provider = "uprobe";
   ap3.target = "/bin/sh";
   ap3.func = "readline";
-  Probe kprobe({ &ap1, &ap2, &ap3 }, nullptr, {});
+  Probe kprobe({ &ap1, &ap2, &ap3 }, nullptr, {}, location());
   EXPECT_EQ(ap2.name(), "kprobe:sys_thisone");
 
-  Probe uprobe({ &ap1, &ap2, &ap3 }, nullptr, {});
+  Probe uprobe({ &ap1, &ap2, &ap3 }, nullptr, {}, location());
   EXPECT_EQ(ap3.name(), "uprobe:/bin/sh:readline");
 }
 

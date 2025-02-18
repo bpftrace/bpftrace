@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include "common.h"
+#include "ast/ast.h"
 
 namespace bpftrace {
 namespace test {
@@ -15,8 +16,9 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD3(add_probe,
-               int(const ast::AttachPoint &, const ast::Probe &, int));
+  MOCK_METHOD3(
+      add_probe,
+      int(ASTContext &, const ast::AttachPoint &, const ast::Probe &, int));
 #pragma GCC diagnostic pop
 
   int resolve_uname(const std::string &name,
@@ -106,7 +108,7 @@ TEST(codegen, printf_offsets)
 TEST(codegen, probe_count)
 {
   MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_, _, _)).Times(2);
+  EXPECT_CALL(bpftrace, add_probe(_, _, _, _)).Times(2);
 
   Driver driver(bpftrace);
 

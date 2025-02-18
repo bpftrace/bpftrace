@@ -163,8 +163,9 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       raw_input = probe_type + ":" + raw_input;
       // New attach points have ignore_invalid set to true - probe types for
       // which raw_input has invalid number of parts will be ignored (instead
-      // of throwing an error)
-      new_attach_points.push_back(ctx_.make_node<AttachPoint>(raw_input, true));
+      // of throwing an error). These will have the same associated location.
+      new_attach_points.push_back(
+          ctx_.make_node<AttachPoint>(raw_input, true, ap.loc));
     }
     return NEW_APS;
   }
