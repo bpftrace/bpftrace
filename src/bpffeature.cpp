@@ -365,7 +365,7 @@ bool BPFfeature::has_d_path()
     return *has_d_path_;
 
   struct bpf_insn insns[] = {
-    BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_1, 0),
+    BPF_LDX_MEM(BPF_DW, BPF_REG_1, BPF_REG_1, 0),
     BPF_MOV64_REG(BPF_REG_2, BPF_REG_10),
     BPF_ALU64_IMM(BPF_ADD, BPF_REG_2, -8),
     BPF_MOV64_IMM(BPF_REG_6, 0),
@@ -538,7 +538,7 @@ bool BPFfeature::has_skb_output()
     return false;
 
   struct bpf_insn insns[] = {
-    BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_1, 0),
+    BPF_LDX_MEM(BPF_DW, BPF_REG_1, BPF_REG_1, 0),
     BPF_LD_MAP_FD(BPF_REG_2, map_fd),
     BPF_MOV64_IMM(BPF_REG_3, 0),
     BPF_MOV64_REG(BPF_REG_4, BPF_REG_10),
