@@ -43,6 +43,8 @@ and this project adheres to
   - [#3715](https://github.com/bpftrace/bpftrace/pull/3715)
 - Fix ternary expression to accept all types
   - [#3765](https://github.com/bpftrace/bpftrace/pull/3765)
+- Fix feature detection for tracing program types
+  - [#3805](https://github.com/bpftrace/bpftrace/pull/3805)
 #### Security
 #### Docs
 #### Tools
