@@ -3701,7 +3701,7 @@ Log size in bytes.
 
 === max_bpf_progs
 
-Default: 512
+Default: 1024
 
 This is the maximum number of BPF programs (functions) that bpftrace can generate.
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
@@ -3723,7 +3723,7 @@ There are some cases where you will want to, for example: sampling stack traces,
 
 === max_probes
 
-Default: 512
+Default: 1024
 
 This is the maximum number of probes that bpftrace can attach to.
 Increasing the value will consume more memory, increase startup times, and can incur high performance overhead or even freeze/crash the

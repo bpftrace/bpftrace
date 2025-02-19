@@ -30,6 +30,8 @@ and this project adheres to
   - [#3713](https://github.com/bpftrace/bpftrace/pull/3713)
 - Add feature check for castable map reads
   - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
+- Increase default values for max_bpf_progs and max_probes
+  - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
 #### Deprecated
 #### Removed
 #### Fixed

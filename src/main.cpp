@@ -130,10 +130,10 @@ void usage(std::ostream& out)
   out << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
   out << "    BPFTRACE_LAZY_SYMBOLICATION       [default: 0] symbolicate lazily/on-demand" << std::endl;
   out << "    BPFTRACE_LOG_SIZE                 [default: 1000000] log size in bytes" << std::endl;
-  out << "    BPFTRACE_MAX_BPF_PROGS            [default: 512] max number of generated BPF programs" << std::endl;
+  out << "    BPFTRACE_MAX_BPF_PROGS            [default: 1024] max number of generated BPF programs" << std::endl;
   out << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
   out << "    BPFTRACE_MAX_MAP_KEYS             [default: 4096] max keys in a map" << std::endl;
-  out << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
+  out << "    BPFTRACE_MAX_PROBES               [default: 1024] max number of probes" << std::endl;
   out << "    BPFTRACE_MAX_STRLEN               [default: 1024] bytes on BPF stack per str()" << std::endl;
   out << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
   out << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;

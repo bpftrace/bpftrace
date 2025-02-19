@@ -21,10 +21,10 @@ Config::Config(bool has_cmd)
     { ConfigKeyBool::use_blazesym, { .value = true } },
 #endif
     { ConfigKeyInt::log_size, { .value = static_cast<uint64_t>(1000000) } },
-    { ConfigKeyInt::max_bpf_progs, { .value = static_cast<uint64_t>(512) } },
+    { ConfigKeyInt::max_bpf_progs, { .value = static_cast<uint64_t>(1024) } },
     { ConfigKeyInt::max_cat_bytes, { .value = static_cast<uint64_t>(10240) } },
     { ConfigKeyInt::max_map_keys, { .value = static_cast<uint64_t>(4096) } },
-    { ConfigKeyInt::max_probes, { .value = static_cast<uint64_t>(512) } },
+    { ConfigKeyInt::max_probes, { .value = static_cast<uint64_t>(1024) } },
     { ConfigKeyInt::max_strlen, { .value = static_cast<uint64_t>(1024) } },
     { ConfigKeyInt::max_type_res_iterations,
       { .value = static_cast<uint64_t>(0) } },
