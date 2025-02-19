@@ -19,6 +19,9 @@ bpftrace - a high-level tracing language
 
 When _FILENAME_ is "_-_", bpftrace will read program code from stdin.
 
+A program will continue running until Ctrl-C is hit, or an `exit` function is called.
+When a program exits, all populated maps are printed (more details below).
+
 == Description
 
 bpftrace is a high-level tracing language for Linux. bpftrace uses LLVM as
@@ -47,10 +50,6 @@ List all the probes attached in the program::
 ----
 # bpftrace -l -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
 ----
-
-== Supported architectures
-
-x86_64, arm64, s390x, arm32, loongarch64, mips64, ppc64, riscv64
 
 == Options
 
@@ -193,115 +192,21 @@ Print bpftrace version information.
 Enable verbose messages.
 For more details see the <<Verbose Output>> section.
 
-== Terminology
-
-[cols="~,~"]
-|===
-
-| BPF
-| Berkeley Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions).
-
-| BPF map
-| A BPF memory object, which is used by bpftrace to create many higher-level objects.
-
-| BTF
-| BPF Type Format: the metadata format which encodes the debug info related to BPF program/map.
-
-| dynamic tracing
-| Also known as dynamic instrumentation, this is a technology that can instrument any software event, such as function calls and returns, by live modification of instruction text. Target software usually does not need special capabilities to support dynamic tracing, other than a symbol table that bpftrace can read. Since this instruments all software text, it is not considered a stable API, and the target functions may not be documented outside of their source code.
-
-| eBPF
-| Enhanced BPF: a kernel technology that extends BPF so that it can execute more generic programs on any events, such as the bpftrace programs listed below. It makes use of the BPF sandboxed virtual machine environment. Also note that eBPF is often just referred to as BPF.
-
-| kprobes
-| A Linux kernel technology for providing dynamic tracing of kernel functions.
-
-| probe
-| An instrumentation point in software or hardware, that generates events that can execute bpftrace programs.
-
-| static tracing
-| Hard-coded instrumentation points in code. Since these are fixed, they may be provided as part of a stable API, and documented.
-
-| tracepoints
-| A Linux kernel technology for providing static tracing.
-
-| uprobes
-| A Linux kernel technology for providing dynamic tracing of user-level functions.
-
-| USDT
-| User Statically-Defined Tracing: static tracing points for user-level software. Some applications support USDT.
-
-|===
-
-== Program Files
-
-Programs saved as files are often called scripts and can be executed by specifying their file name.
-We use a `.bt` file extension, short for bpftrace, but the extension is not required.
-
-For example, listing the sleepers.bt file using `cat`:
-
-----
-# cat sleepers.bt
-
-tracepoint:syscalls:sys_enter_nanosleep {
-  printf("%s is sleeping.\n", comm);
-}
-----
-
-And then calling it:
-
-----
-# bpftrace sleepers.bt
-
-Attaching 1 probe...
-iscsid is sleeping.
-iscsid is sleeping.
-----
-
-It can also be made executable to run stand-alone.
-Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
-
-----
-#!/usr/local/bin/bpftrace
-
-tracepoint:syscalls:sys_enter_nanosleep {
-  printf("%s is sleeping.\n", comm);
-}
-----
-
-Then make it executable:
-
-----
-# chmod 755 sleepers.bt
-# ./sleepers.bt
-
-Attaching 1 probe...
-iscsid is sleeping.
-iscsid is sleeping.
-----
-
-== bpftrace Language
+== The Language
 
 The `bpftrace` (`bt`) language is inspired by the D language used by `dtrace` and uses the same program structure.
-Each script consists of a preamble and one or more action blocks.
+Each script consists of a <<Preamble>>, an optional <<Config Block>>, and one or more <<Action Block>>s.
 
 ----
 preamble
+
+config
 
 actionblock1
 actionblock2
 ----
 
-Preprocessor and type definitions take place in the preamble:
-
-----
-#include <linux/socket.h>
-#define RED "\033[31m"
-
-struct S {
-  int x;
-}
-----
+=== Action Block
 
 Each action block consists of three parts:
 
@@ -321,9 +226,6 @@ Predicate::
 Action::
   Actions are the programs that run when an event fires (and the predicate is met).
 An action is a semicolon (`;`) separated list of statements and always enclosed by brackets `{}`.
-
-A program will continue running until Ctrl-C is hit, or an `exit` function is called.
-When a program exits, all populated maps are printed (this behavior and maps are explained in later sections).
 
 A basic script that traces the `open(2)` and `openat(2)` system calls can be written as follows:
 
@@ -415,7 +317,7 @@ if (condition) {
 === Config Block
 
 To improve script portability, you can set bpftrace <<Config Variables>> via the config block,
-which can only be placed at the top of the script before any probes (even `BEGIN`).
+which can only be placed at the top of the script before any action blocks (even `BEGIN`).
 
 ----
 config = {
@@ -483,7 +385,7 @@ BEGIN { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
  */
 ----
 
-=== Filtering
+=== Filters/Predicates
 
 Filters (also known as predicates) can be added after probe names.
 The probe still fires, but it will skip the action unless the filter is true.
@@ -833,6 +735,19 @@ Scratch variables must be initialized before using these operators.
 
 Note `{plus}{plus}`/`--` on a shared global variable can lose updates. See <<map-functions-count, `count()`>> for more details.
 
+=== Preamble
+
+Preprocessor and type definitions take place in the preamble:
+
+----
+#include <linux/socket.h>
+#define RED "\033[31m"
+
+struct S {
+  int x;
+}
+----
+
 === Pointers
 
 Pointers in bpftrace are similar to those found in `C`.
@@ -1060,6 +975,765 @@ tracepoint:syscalls:sys_exit_wait4
     printf("got usage ...", ...);
   }
 }
+----
+
+== Probes
+
+bpftrace supports various probe types which allow the user to attach BPF programs to different types of events.
+Each probe starts with a provider (e.g. `kprobe`) followed by a colon (`:`) separated list of options.
+The amount of options and their meaning depend on the provider and are detailed below.
+The valid values for options can depend on the system or binary being traced, e.g. for uprobes it depends on the binary.
+Also see <<Listing Probes>>.
+
+It is possible to associate multiple probes with a single action as long as the action is valid for all specified probes.
+Multiple probes can be specified as a comma (`,`) separated list:
+
+----
+kprobe:tcp_reset,kprobe:tcp_v4_rcv {
+  printf("Entered: %s\n", probe);
+}
+----
+
+Wildcards are supported too:
+
+----
+kprobe:tcp_* {
+  printf("Entered: %s\n", probe);
+}
+----
+
+Both can be combined:
+
+----
+kprobe:tcp_reset,kprobe:*socket* {
+  printf("Entered: %s\n", probe);
+}
+----
+
+Most providers also support a short name which can be used instead of the full name, e.g. `kprobe:f` and `k:f` are identical.
+
+[cols="~,~,~,~"]
+|===
+|*Probe Name*
+|*Short Name*
+|*Description*
+|*Kernel/User Level*
+
+| <<probes-begin-end, `BEGIN/END`>>
+| -
+| Built-in events
+| Kernel/User
+
+| <<probes-self, `self`>>
+| -
+| Built-in events
+| Kernel/User
+
+| <<probes-hardware, `hardware`>>
+| `h`
+| Processor-level events
+| Kernel
+
+| <<probes-interval, `interval`>>
+| `i`
+| Timed output
+| Kernel/User
+
+| <<probes-iterator, `iter`>>
+| `it`
+| Iterators tracing
+| Kernel
+
+| <<probes-fentry, `fentry/fexit`>>
+| `f`/`fr`
+| Kernel functions tracing with BTF support
+| Kernel
+
+| <<probes-kprobe, `kprobe/kretprobe`>>
+| `k`/`kr`
+| Kernel function start/return
+| Kernel
+
+| <<probes-profile, `profile`>>
+| `p`
+| Timed sampling
+| Kernel/User
+
+| <<probes-rawtracepoint, `rawtracepoint`>>
+| `rt`
+| Kernel static tracepoints with raw arguments
+| Kernel
+
+| <<probes-software, `software`>>
+| `s`
+| Kernel software events
+| Kernel
+
+| <<probes-tracepoint, `tracepoint`>>
+| `t`
+| Kernel static tracepoints
+| Kernel
+
+| <<probes-uprobe, `uprobe/uretprobe`>>
+| `u`/`ur`
+| User-level function start/return
+| User
+
+| <<probes-usdt, `usdt`>>
+| `U`
+| User-level static tracepoints
+| User
+
+| <<probes-watchpoint, `watchpoint/asyncwatchpoint`>>
+| `w`/`aw`
+| Memory watchpoints
+| Kernel
+|===
+
+[#probes-begin-end]
+=== BEGIN/END
+
+These are special built-in events provided by the bpftrace runtime.
+`BEGIN` is triggered before all other probes are attached.
+`END` is triggered after all other probes are detached.
+
+Note that specifying an `END` probe doesn't override the printing of 'non-empty' maps at exit.
+To prevent printing all used maps need be cleared in the `END` probe:
+
+----
+END {
+    clear(@map1);
+    clear(@map2);
+}
+----
+
+[#probes-self]
+=== self
+
+.variants
+* `self:signal:SIGUSR1`
+
+These are special built-in events provided by the bpftrace runtime.
+The trigger function is called by the bpftrace runtime when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
+When multiple signal handlers are attached to the same signal, only the first one is used.
+
+----
+self:signal:SIGUSR1 {
+  print("abc");
+}
+----
+
+[#probes-hardware]
+=== hardware
+
+.variants
+* `hardware:event_name:`
+* `hardware:event_name:count`
+
+.short name
+* `h`
+
+These are the pre-defined hardware events provided by the Linux kernel, as commonly traced by the perf utility.
+They are implemented using performance monitoring counters (PMCs): hardware resources on the processor.
+There are about ten of these, and they are documented in the perf_event_open(2) man page.
+The event names are:
+
+- `cpu-cycles` or `cycles`
+- `instructions`
+- `cache-references`
+- `cache-misses`
+- `branch-instructions` or `branches`
+- `branch-misses`
+- `bus-cycles`
+- `frontend-stalls`
+- `backend-stalls`
+- `ref-cycles`
+
+The `count` option specifies how many events must happen before the probe fires (sampling interval).
+If `count` is left unspecified a default value is used.
+
+This will fire once for every 1,000,000 cache misses.
+
+----
+hardware:cache-misses:1e6 { @[pid] = count(); }
+----
+
+[#probes-interval]
+=== interval
+
+.variants
+* `interval:us:count`
+* `interval:ms:count`
+* `interval:s:count`
+* `interval:hz:rate`
+
+.short name
+* `i`
+
+The interval probe fires at a fixed interval as specified by its time spec.
+Interval fires on one CPU at a time, unlike <<probes-profile>> probes.
+
+This prints the rate of syscalls per second.
+
+----
+tracepoint:raw_syscalls:sys_enter { @syscalls = count(); }
+interval:s:1 { print(@syscalls); clear(@syscalls); }
+----
+
+[#probes-iterator]
+=== iterator
+
+.variants
+* `iter:task`
+* `iter:task:pin`
+* `iter:task_file`
+* `iter:task_file:pin`
+* `iter:task_vma`
+* `iter:task_vma:pin`
+
+.short name
+* `it`
+
+**Warning** this feature is experimental and may be subject to interface changes.
+
+These are eBPF iterator probes that allow iteration over kernel objects.
+Iterator probe can't be mixed with any other probe, not even another iterator.
+Each iterator probe provides a set of fields that could be accessed with the
+ctx pointer. Users can display the set of available fields for each iterator via
+-lv options as described below.
+
+----
+iter:task { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }
+
+/*
+ * Sample output:
+ * systemd:1
+ * kthreadd:2
+ * rcu_gp:3
+ * rcu_par_gp:4
+ * kworker/0:0H:6
+ * mm_percpu_wq:8
+ */
+----
+
+----
+iter:task_file {
+  printf("%s:%d %d:%s\n", ctx->task->comm, ctx->task->pid, ctx->fd, path(ctx->file->f_path));
+}
+
+/*
+ * Sample output:
+ * systemd:1 1:/dev/null
+ * systemd:1 3:/dev/kmsg
+ * ...
+ * su:1622 2:/dev/pts/1
+ * ...
+ * bpftrace:1892 2:/dev/pts/1
+ * bpftrace:1892 6:anon_inode:bpf-prog
+ */
+----
+
+----
+iter:task_vma {
+  printf("%s %d %lx-%lx\n", comm, pid, ctx->vma->vm_start, ctx->vma->vm_end);
+}
+
+/*
+ * Sample output:
+ * bpftrace 119480 55b92c380000-55b92c386000
+ * ...
+ * bpftrace 119480 7ffd55dde000-7ffd55de2000
+ */
+----
+
+It's possible to pin an iterator by specifying the optional probe ':pin' part, that defines the pin file.
+It can be specified as an absolute or relative path to /sys/fs/bpf.
+
+.relative pin
+----
+iter:task:list { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }
+
+/*
+ * Sample output:
+ * Program pinned to /sys/fs/bpf/list
+ */
+----
+
+.absolute pin
+----
+iter:task_file:/sys/fs/bpf/files {
+  printf("%s:%d %s\n", ctx->task->comm, ctx->task->pid, path(ctx->file->f_path));
+}
+
+/*
+ * Sample output:
+ * Program pinned to /sys/fs/bpf/files
+ */
+----
+
+[#probes-fentry]
+=== fentry and fexit
+
+.variants
+* `fentry[:module]:fn`
+* `fexit[:module]:fn`
+
+.short names
+* `f` (`fentry`)
+* `fr` (`fexit`)
+
+.requires (`--info`)
+* Kernel features:BTF
+* Probe types:fentry
+
+``fentry``/``fexit`` probes attach to kernel functions similar to <<probes-kprobe>>.
+They make use of eBPF trampolines which allow kernel code to call into BPF programs with near zero overhead.
+Originally, these were called `kfunc` and `kretfunc` but were later renamed to `fentry` and `fexit` to match
+how these are referenced in the kernel and to prevent confusion with https://docs.kernel.org/bpf/kfuncs.html[BPF Kernel Functions].
+The original names are still supported for backwards compatibility.
+
+``fentry``/``fexit`` probes make use of BTF type information to derive the type of function arguments at compile time.
+This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
+The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see <<Listing Probes>>).
+These arguments are also available in the return probe (`fexit`), unlike `kretprobe`.
+
+----
+# bpftrace -lv 'fentry:tcp_reset'
+
+fentry:tcp_reset
+    struct sock * sk
+    struct sk_buff * skb
+----
+
+----
+fentry:x86_pmu_stop {
+  printf("pmu %s stop\n", str(args.event->pmu->name));
+}
+----
+
+The fget function takes one argument as file descriptor and you can access it via args.fd and the return value is accessible via retval:
+
+----
+fexit:fget {
+  printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));
+}
+
+/*
+ * Sample output:
+ * fd 3 name ld.so.cache
+ * fd 3 name libselinux.so.1
+ */
+----
+
+[#probes-kprobe]
+=== kprobe and kretprobe
+
+.variants
+* `kprobe[:module]:fn`
+* `kprobe[:module]:fn+offset`
+* `kretprobe[:module]:fn`
+
+.short names
+* `k`
+* `kr`
+
+``kprobe``s allow for dynamic instrumentation of kernel functions.
+Each time the specified kernel function is executed the attached BPF programs are ran.
+
+----
+kprobe:tcp_reset {
+  @tcp_resets = count()
+}
+----
+
+Function arguments are available through the `argN` for register args. Arguments passed on stack are available using the stack pointer, e.g. `$stack_arg0 = *(int64*)reg("sp") + 16`.
+Whether arguments passed on stack or in a register depends on the architecture and the number or arguments used, e.g. on x86_64 the first 6 non-floating point arguments are passed in registers and all following arguments are passed on the stack.
+Note that floating point arguments are typically passed in special registers which don't count as `argN` arguments which can cause confusion.
+Consider a function with the following signature:
+
+----
+void func(int a, double d, int x)
+----
+
+Due to `d` being a floating point, `x` is accessed through `arg1` where one might expect `arg2`.
+
+bpftrace does not detect the function signature so it is not aware of the argument count or their type.
+It is up to the user to perform <<Type conversion>> when needed, e.g.
+
+----
+#include <linux/path.h>
+#include <linux/dcache.h>
+
+kprobe:vfs_open
+{
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
+}
+----
+
+Here arg0 was cast as a (struct path *), since that is the first argument to vfs_open.
+The struct support is the same as bcc and based on available kernel headers.
+This means that many, but not all, structs will be available, and you may need to manually define structs.
+
+If the kernel has BTF (BPF Type Format) data, all kernel structs are always available without defining them. For example:
+
+----
+kprobe:vfs_open {
+  printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
+}
+----
+
+You can optionally specify a kernel module, either to include BTF data from that module, or to specify that the traced function should come from that module.
+
+----
+kprobe:kvm:x86_emulate_insn
+{
+  $ctxt = (struct x86_emulate_ctxt *) arg0;
+  printf("eip = 0x%lx\n", $ctxt->eip);
+}
+----
+
+See <<BTF Support>> for more details.
+
+`kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function.
+
+`kretprobe` s trigger on the return from a kernel function.
+Return probes do not have access to the function (input) arguments, only to the return value (through `retval`).
+A common pattern to work around this is by storing the arguments in a map on function entry and retrieving in the return probe:
+
+----
+kprobe:d_lookup
+{
+	$name = (struct qstr *)arg1;
+	@fname[tid] = $name->name;
+}
+
+kretprobe:d_lookup
+/@fname[tid]/
+{
+	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
+	    str(@fname[tid]));
+}
+----
+
+[#probes-profile]
+=== profile
+
+.variants
+* `profile:us:count`
+* `profile:ms:count`
+* `profile:s:count`
+* `profile:hz:rate`
+
+.short name
+* `p`
+
+Profile probes fire on each CPU on the specified interval.
+These operate using perf_events (a Linux kernel facility, which is also used by the perf command).
+
+----
+profile:hz:99 { @[tid] = count(); }
+----
+
+[#probes-rawtracepoint]
+=== rawtracepoint
+
+.variants
+* `rawtracepoint:event`
+
+.short name
+* `rt`
+
+The hook point triggered by `tracepoint` and `rawtracepoint` is the same.
+`tracepoint` and `rawtracepoint` are nearly identical in terms of functionality.
+The only difference is in the program context.
+`rawtracepoint` offers raw arguments to the tracepoint while `tracepoint` applies further processing to the raw arguments.
+The additional processing is defined inside the kernel.
+
+----
+rawtracepoint:block_rq_insert {
+  printf("%llx %llx\n", arg0, arg1);
+}
+----
+
+Tracepoint arguments are available via the `argN` builtins.
+Each arg is a 64-bit integer.
+The available arguments can be found in the relative path of the kernel source code `include/trace/events/`. For example:
+
+----
+include/trace/events/block.h
+DEFINE_EVENT(block_rq, block_rq_insert,
+	TP_PROTO(struct request_queue *q, struct request *rq),
+	TP_ARGS(q, rq)
+);
+----
+
+[#probes-software]
+=== software
+
+.variants
+* `software:event:`
+* `software:event:count`
+
+.short name
+* `s`
+
+These are the pre-defined software events provided by the Linux kernel, as commonly traced via the perf utility.
+They are similar to tracepoints, but there is only about a dozen of these, and they are documented in the perf_event_open(2) man page.
+If the count is not provided, a default is used.
+
+The event names are:
+
+- `cpu-clock` or `cpu`
+- `task-clock`
+- `page-faults` or `faults`
+- `context-switches` or `cs`
+- `cpu-migrations`
+- `minor-faults`
+- `major-faults`
+- `alignment-faults`
+- `emulation-faults`
+- `dummy`
+- `bpf-output`
+
+----
+software:faults:100 { @[comm] = count(); }
+----
+
+This roughly counts who is causing page faults, by sampling the process name for every one in one hundred faults.
+
+[#probes-tracepoint]
+=== tracepoint
+
+.variants
+* `tracepoint:subsys:event`
+
+.short name
+* `t`
+
+Tracepoints are hooks into events in the kernel.
+Tracepoints are defined in the kernel source and compiled into the kernel binary which makes them a form of static tracing.
+Unlike `kprobe` s, new tracepoints cannot be added without modifying the kernel.
+
+The advantage of tracepoints is that they generally provide a more stable interface than `kprobe` s do, they do not depend on the existence of a kernel function.
+
+----
+tracepoint:syscalls:sys_enter_openat {
+  printf("%s %s\n", comm, str(args.filename));
+}
+----
+
+Tracepoint arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
+
+----
+# bpftrace -lv "tracepoint:*"
+
+tracepoint:xhci-hcd:xhci_setup_device_slot
+  u32 info
+  u32 info2
+  u32 tt_info
+  u32 state
+...
+----
+
+Alternatively members for each tracepoint can be listed from their /format file in /sys.
+
+Apart from the filename member, we can also print flags, mode, and more.
+After the "common" members listed first, the members are specific to the tracepoint.
+
+.Additional information
+* https://www.kernel.org/doc/html/latest/trace/tracepoints.html
+
+[#probes-uprobe]
+=== uprobe, uretprobe
+
+.variants
+* `uprobe:binary:func`
+* `uprobe:binary:func+offset`
+* `uprobe:binary:offset`
+* `uretprobe:binary:func`
+
+.short names
+* `u`
+* `ur`
+
+`uprobe` s or user-space probes are the user-space equivalent of `kprobe` s.
+The same limitations that apply <<probes-kprobe>> also apply to `uprobe` s and `uretprobe` s, namely: arguments are available via the `argN` and `sargN` builtins and can only be accessed with a uprobe (`sargN` is more common for older versions of golang).
+retval is the return value for the instrumented function and can only be accessed with a uretprobe.
+
+----
+uprobe:/bin/bash:readline { printf("arg0: %d\n", arg0); }
+----
+
+What does arg0 of readline() in /bin/bash contain?
+I don't know, so I'll need to look at the bash source code to find out what its arguments are.
+
+When tracing libraries, it is sufficient to specify the library name instead of
+a full path. The path will be then automatically resolved using `/etc/ld.so.cache`:
+
+----
+uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }
+----
+
+If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
+
+----
+# bpftrace -lv 'uprobe:/bin/bash:rl_set_prompt'
+
+uprobe:/bin/bash:rl_set_prompt
+    const char* prompt
+----
+
+When tracing C{plus}{plus} programs, it's possible to turn on automatic symbol demangling by using the `:cpp` prefix:
+
+----
+# bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { ... }
+----
+
+It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
+This can cause issues with languages that have their own runtime like Golang:
+
+.example.go
+----
+func myprint(s string) {
+  fmt.Printf("Input: %s\n", s)
+}
+
+func main() {
+  ss := []string{"a", "b", "c"}
+  for _, s := range ss {
+    go myprint(s)
+  }
+  time.Sleep(1*time.Second)
+}
+----
+
+.bpftrace
+----
+# bpftrace -e 'uretprobe:./test:main.myprint { @=count(); }' -c ./test
+runtime: unexpected return pc for main.myprint called from 0x7fffffffe000
+stack: frame={sp:0xc00008cf60, fp:0xc00008cfd0} stack=[0xc00008c000,0xc00008d000)
+fatal error: unknown caller pc
+----
+
+[#probes-usdt]
+=== usdt
+
+.variants
+* `usdt:binary_path:probe_name`
+* `usdt:binary_path:[probe_namespace]:probe_name`
+* `usdt:library_path:probe_name`
+* `usdt:library_path:[probe_namespace]:probe_name`
+
+.short name
+* `U`
+
+Where probe_namespace is optional if probe_name is unique within the binary.
+
+You can target the entire host (or an entire process's address space by using the `-p` arg) by using a single wildcard in place of the binary_path/library_path:
+
+----
+usdt:*:loop { printf("hi\n"); }
+----
+
+Please note that if you use wildcards for the probe_name or probe_namespace and end up targeting multiple USDTs for the same probe you might get errors if you also utilize the USDT argument builtin (e.g. arg0) as they could be of different types.
+
+Arguments are available via the `argN` builtins:
+
+----
+usdt:/root/tick:loop { printf("%s: %d\n", str(arg0), arg1); }
+----
+
+bpftrace also supports USDT semaphores.
+If both your environment and bpftrace support uprobe refcounts, then USDT semaphores are automatically activated for all processes upon probe attachment (and --usdt-file-activation becomes a noop).
+You can check if your system supports uprobe refcounts by running:
+
+----
+# bpftrace --info 2>&1 | grep "uprobe refcount"
+bcc bpf_attach_uprobe refcount: yes
+  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes
+----
+
+If your system does not support uprobe refcounts, you may activate semaphores by passing in -p $PID or --usdt-file-activation.
+--usdt-file-activation looks through /proc to find processes that have your probe's binary mapped with executable permissions into their address space and then tries to attach your probe.
+Note that file activation occurs only once (during attach time).
+In other words, if later during your tracing session a new process with your executable is spawned, your current tracing session will not activate the new process.
+Also note that --usdt-file-activation matches based on file path.
+This means that if bpftrace runs from the root host, things may not work as expected if there are processes execved from private mount namespaces or bind mounted directories.
+One workaround is to run bpftrace inside the appropriate namespaces (i.e. the container).
+
+[#probes-watchpoint]
+=== watchpoint and asyncwatchpoint
+
+.variants
+* `watchpoint:absolute_address:length:mode`
+* `watchpoint:function+argN:length:mode`
+
+.short names
+* `w`
+* `aw`
+
+This feature is experimental and may be subject to interface changes.
+Memory watchpoints are also architecture dependent.
+
+These are memory watchpoints provided by the kernel.
+Whenever a memory address is written to (`w`), read
+from (`r`), or executed (`x`), the kernel can generate an event.
+
+In the first form, an absolute address is monitored.
+If a pid (`-p`) or a command (`-c`) is provided, bpftrace takes the address as a userspace address and monitors the appropriate process.
+If not, bpftrace takes the address as a kernel space address.
+
+In the second form, the address present in `argN` when `function` is entered is
+monitored.
+A pid or command must be provided for this form.
+If synchronous (`watchpoint`), a `SIGSTOP` is sent to the tracee upon function entry.
+The tracee will be ``SIGCONT``ed after the watchpoint is attached.
+This is to ensure events are not missed.
+If you want to avoid the `SIGSTOP` + `SIGCONT` use `asyncwatchpoint`.
+
+Note that on most architectures you may not monitor for execution while monitoring read or write.
+
+----
+# bpftrace -e 'watchpoint:0x10000000:8:rw { printf("hit!\n"); }' -c ./testprogs/watchpoint
+----
+
+Print the call stack every time the `jiffies` variable is updated:
+
+----
+watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {
+  @[kstack] = count();
+}
+----
+
+"hit" and exit when the memory pointed to by `arg1` of `increment` is written to:
+
+[,C]
+----
+# cat wpfunc.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+__attribute__((noinline))
+void increment(__attribute__((unused)) int _, int *i)
+{
+  (*i)++;
+}
+
+int main()
+{
+  int *i = malloc(sizeof(int));
+  while (1)
+  {
+    increment(0, i);
+    (*i)++;
+    usleep(1000);
+  }
+}
+----
+
+----
+# bpftrace -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./wpfunc
 ----
 
 == Builtins
@@ -2905,771 +3579,17 @@ interval:s:10 {
 
 Set all values for all keys to zero.
 
-== Probes
+== Configuration
 
-bpftrace supports various probe types which allow the user to attach BPF programs to different types of events.
-Each probe starts with a provider (e.g. `kprobe`) followed by a colon (`:`) separated list of options.
-The amount of options and their meaning depend on the provider and are detailed below.
-The valid values for options can depend on the system or binary being traced, e.g. for uprobes it depends on the binary.
-Also see <<Listing Probes>>.
+- <<Config Variables>>
+- <<Environment Variables>>
 
-It is possible to associate multiple probes with a single action as long as the action is valid for all specified probes.
-Multiple probes can be specified as a comma (`,`) separated list:
-
-----
-kprobe:tcp_reset,kprobe:tcp_v4_rcv {
-  printf("Entered: %s\n", probe);
-}
-----
-
-Wildcards are supported too:
-
-----
-kprobe:tcp_* {
-  printf("Entered: %s\n", probe);
-}
-----
-
-Both can be combined:
-
-----
-kprobe:tcp_reset,kprobe:*socket* {
-  printf("Entered: %s\n", probe);
-}
-----
-
-Most providers also support a short name which can be used instead of the full name, e.g. `kprobe:f` and `k:f` are identical.
-
-[cols="~,~,~,~"]
-|===
-|*Probe Name*
-|*Short Name*
-|*Description*
-|*Kernel/User Level*
-
-| <<probes-begin-end, `BEGIN/END`>>
-| -
-| Built-in events
-| Kernel/User
-
-| <<probes-self, `self`>>
-| -
-| Built-in events
-| Kernel/User
-
-| <<probes-hardware, `hardware`>>
-| `h`
-| Processor-level events
-| Kernel
-
-| <<probes-interval, `interval`>>
-| `i`
-| Timed output
-| Kernel/User
-
-| <<probes-iterator, `iter`>>
-| `it`
-| Iterators tracing
-| Kernel
-
-| <<probes-fentry, `fentry/fexit`>>
-| `f`/`fr`
-| Kernel functions tracing with BTF support
-| Kernel
-
-| <<probes-kprobe, `kprobe/kretprobe`>>
-| `k`/`kr`
-| Kernel function start/return
-| Kernel
-
-| <<probes-profile, `profile`>>
-| `p`
-| Timed sampling
-| Kernel/User
-
-| <<probes-rawtracepoint, `rawtracepoint`>>
-| `rt`
-| Kernel static tracepoints with raw arguments
-| Kernel
-
-| <<probes-software, `software`>>
-| `s`
-| Kernel software events
-| Kernel
-
-| <<probes-tracepoint, `tracepoint`>>
-| `t`
-| Kernel static tracepoints
-| Kernel
-
-| <<probes-uprobe, `uprobe/uretprobe`>>
-| `u`/`ur`
-| User-level function start/return
-| User
-
-| <<probes-usdt, `usdt`>>
-| `U`
-| User-level static tracepoints
-| User
-
-| <<probes-watchpoint, `watchpoint/asyncwatchpoint`>>
-| `w`/`aw`
-| Memory watchpoints
-| Kernel
-|===
-
-[#probes-begin-end]
-=== BEGIN/END
-
-These are special built-in events provided by the bpftrace runtime.
-`BEGIN` is triggered before all other probes are attached.
-`END` is triggered after all other probes are detached.
-
-Note that specifying an `END` probe doesn't override the printing of 'non-empty' maps at exit.
-To prevent printing all used maps need be cleared in the `END` probe:
-
-----
-END {
-    clear(@map1);
-    clear(@map2);
-}
-----
-
-[#probes-self]
-=== self
-
-.variants
-* `self:signal:SIGUSR1`
-
-These are special built-in events provided by the bpftrace runtime.
-The trigger function is called by the bpftrace runtime when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
-When multiple signal handlers are attached to the same signal, only the first one is used.
-
-----
-self:signal:SIGUSR1 {
-  print("abc");
-}
-----
-
-[#probes-hardware]
-=== hardware
-
-.variants
-* `hardware:event_name:`
-* `hardware:event_name:count`
-
-.short name
-* `h`
-
-These are the pre-defined hardware events provided by the Linux kernel, as commonly traced by the perf utility.
-They are implemented using performance monitoring counters (PMCs): hardware resources on the processor.
-There are about ten of these, and they are documented in the perf_event_open(2) man page.
-The event names are:
-
-- `cpu-cycles` or `cycles`
-- `instructions`
-- `cache-references`
-- `cache-misses`
-- `branch-instructions` or `branches`
-- `branch-misses`
-- `bus-cycles`
-- `frontend-stalls`
-- `backend-stalls`
-- `ref-cycles`
-
-The `count` option specifies how many events must happen before the probe fires (sampling interval).
-If `count` is left unspecified a default value is used.
-
-This will fire once for every 1,000,000 cache misses.
-
-----
-hardware:cache-misses:1e6 { @[pid] = count(); }
-----
-
-[#probes-interval]
-=== interval
-
-.variants
-* `interval:us:count`
-* `interval:ms:count`
-* `interval:s:count`
-* `interval:hz:rate`
-
-.short name
-* `i`
-
-The interval probe fires at a fixed interval as specified by its time spec.
-Interval fires on one CPU at a time, unlike <<probes-profile>> probes.
-
-This prints the rate of syscalls per second.
-
-----
-tracepoint:raw_syscalls:sys_enter { @syscalls = count(); }
-interval:s:1 { print(@syscalls); clear(@syscalls); }
-----
-
-[#probes-iterator]
-=== iterator
-
-.variants
-* `iter:task`
-* `iter:task:pin`
-* `iter:task_file`
-* `iter:task_file:pin`
-* `iter:task_vma`
-* `iter:task_vma:pin`
-
-.short name
-* `it`
-
-**Warning** this feature is experimental and may be subject to interface changes.
-
-These are eBPF iterator probes that allow iteration over kernel objects.
-Iterator probe can't be mixed with any other probe, not even another iterator.
-Each iterator probe provides a set of fields that could be accessed with the
-ctx pointer. Users can display the set of available fields for each iterator via
--lv options as described below.
-
-----
-iter:task { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }
-
-/*
- * Sample output:
- * systemd:1
- * kthreadd:2
- * rcu_gp:3
- * rcu_par_gp:4
- * kworker/0:0H:6
- * mm_percpu_wq:8
- */
-----
-
-----
-iter:task_file {
-  printf("%s:%d %d:%s\n", ctx->task->comm, ctx->task->pid, ctx->fd, path(ctx->file->f_path));
-}
-
-/*
- * Sample output:
- * systemd:1 1:/dev/null
- * systemd:1 3:/dev/kmsg
- * ...
- * su:1622 2:/dev/pts/1
- * ...
- * bpftrace:1892 2:/dev/pts/1
- * bpftrace:1892 6:anon_inode:bpf-prog
- */
-----
-
-----
-iter:task_vma {
-  printf("%s %d %lx-%lx\n", comm, pid, ctx->vma->vm_start, ctx->vma->vm_end);
-}
-
-/*
- * Sample output:
- * bpftrace 119480 55b92c380000-55b92c386000
- * ...
- * bpftrace 119480 7ffd55dde000-7ffd55de2000
- */
-----
-
-It's possible to pin an iterator by specifying the optional probe ':pin' part, that defines the pin file.
-It can be specified as an absolute or relative path to /sys/fs/bpf.
-
-.relative pin
-----
-iter:task:list { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }
-
-/*
- * Sample output:
- * Program pinned to /sys/fs/bpf/list
- */
-----
-
-.absolute pin
-----
-iter:task_file:/sys/fs/bpf/files {
-  printf("%s:%d %s\n", ctx->task->comm, ctx->task->pid, path(ctx->file->f_path));
-}
-
-/*
- * Sample output:
- * Program pinned to /sys/fs/bpf/files
- */
-----
-
-[#probes-fentry]
-=== fentry and fexit
-
-.variants
-* `fentry[:module]:fn`
-* `fexit[:module]:fn`
-
-.short names
-* `f` (`fentry`)
-* `fr` (`fexit`)
-
-.requires (`--info`)
-* Kernel features:BTF
-* Probe types:fentry
-
-``fentry``/``fexit`` probes attach to kernel functions similar to <<probes-kprobe>>.
-They make use of eBPF trampolines which allow kernel code to call into BPF programs with near zero overhead.
-Originally, these were called `kfunc` and `kretfunc` but were later renamed to `fentry` and `fexit` to match
-how these are referenced in the kernel and to prevent confusion with https://docs.kernel.org/bpf/kfuncs.html[BPF Kernel Functions].
-The original names are still supported for backwards compatibility.
-
-``fentry``/``fexit`` probes make use of BTF type information to derive the type of function arguments at compile time.
-This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
-The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see <<Listing Probes>>).
-These arguments are also available in the return probe (`fexit`), unlike `kretprobe`.
-
-----
-# bpftrace -lv 'fentry:tcp_reset'
-
-fentry:tcp_reset
-    struct sock * sk
-    struct sk_buff * skb
-----
-
-----
-fentry:x86_pmu_stop {
-  printf("pmu %s stop\n", str(args.event->pmu->name));
-}
-----
-
-The fget function takes one argument as file descriptor and you can access it via args.fd and the return value is accessible via retval:
-
-----
-fexit:fget {
-  printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));
-}
-
-/*
- * Sample output:
- * fd 3 name ld.so.cache
- * fd 3 name libselinux.so.1
- */
-----
-
-[#probes-kprobe]
-=== kprobe and kretprobe
-
-.variants
-* `kprobe[:module]:fn`
-* `kprobe[:module]:fn+offset`
-* `kretprobe[:module]:fn`
-
-.short names
-* `k`
-* `kr`
-
-``kprobe``s allow for dynamic instrumentation of kernel functions.
-Each time the specified kernel function is executed the attached BPF programs are ran.
-
-----
-kprobe:tcp_reset {
-  @tcp_resets = count()
-}
-----
-
-Function arguments are available through the `argN` for register args. Arguments passed on stack are available using the stack pointer, e.g. `$stack_arg0 = *(int64*)reg("sp") + 16`.
-Whether arguments passed on stack or in a register depends on the architecture and the number or arguments used, e.g. on x86_64 the first 6 non-floating point arguments are passed in registers and all following arguments are passed on the stack.
-Note that floating point arguments are typically passed in special registers which don't count as `argN` arguments which can cause confusion.
-Consider a function with the following signature:
-
-----
-void func(int a, double d, int x)
-----
-
-Due to `d` being a floating point, `x` is accessed through `arg1` where one might expect `arg2`.
-
-bpftrace does not detect the function signature so it is not aware of the argument count or their type.
-It is up to the user to perform <<Type conversion>> when needed, e.g.
-
-----
-#include <linux/path.h>
-#include <linux/dcache.h>
-
-kprobe:vfs_open
-{
-	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
-}
-----
-
-Here arg0 was cast as a (struct path *), since that is the first argument to vfs_open.
-The struct support is the same as bcc and based on available kernel headers.
-This means that many, but not all, structs will be available, and you may need to manually define structs.
-
-If the kernel has BTF (BPF Type Format) data, all kernel structs are always available without defining them. For example:
-
-----
-kprobe:vfs_open {
-  printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
-}
-----
-
-You can optionally specify a kernel module, either to include BTF data from that module, or to specify that the traced function should come from that module.
-
-----
-kprobe:kvm:x86_emulate_insn
-{
-  $ctxt = (struct x86_emulate_ctxt *) arg0;
-  printf("eip = 0x%lx\n", $ctxt->eip);
-}
-----
-
-See <<BTF Support>> for more details.
-
-`kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function.
-
-`kretprobe` s trigger on the return from a kernel function.
-Return probes do not have access to the function (input) arguments, only to the return value (through `retval`).
-A common pattern to work around this is by storing the arguments in a map on function entry and retrieving in the return probe:
-
-----
-kprobe:d_lookup
-{
-	$name = (struct qstr *)arg1;
-	@fname[tid] = $name->name;
-}
-
-kretprobe:d_lookup
-/@fname[tid]/
-{
-	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
-	    str(@fname[tid]));
-}
-----
-
-[#probes-profile]
-=== profile
-
-.variants
-* `profile:us:count`
-* `profile:ms:count`
-* `profile:s:count`
-* `profile:hz:rate`
-
-.short name
-* `p`
-
-Profile probes fire on each CPU on the specified interval.
-These operate using perf_events (a Linux kernel facility, which is also used by the perf command).
-
-----
-profile:hz:99 { @[tid] = count(); }
-----
-
-[#probes-rawtracepoint]
-=== rawtracepoint
-
-.variants
-* `rawtracepoint:event`
-
-.short name
-* `rt`
-
-The hook point triggered by `tracepoint` and `rawtracepoint` is the same.
-`tracepoint` and `rawtracepoint` are nearly identical in terms of functionality.
-The only difference is in the program context.
-`rawtracepoint` offers raw arguments to the tracepoint while `tracepoint` applies further processing to the raw arguments.
-The additional processing is defined inside the kernel.
-
-----
-rawtracepoint:block_rq_insert {
-  printf("%llx %llx\n", arg0, arg1);
-}
-----
-
-Tracepoint arguments are available via the `argN` builtins.
-Each arg is a 64-bit integer.
-The available arguments can be found in the relative path of the kernel source code `include/trace/events/`. For example:
-
-----
-include/trace/events/block.h
-DEFINE_EVENT(block_rq, block_rq_insert,
-	TP_PROTO(struct request_queue *q, struct request *rq),
-	TP_ARGS(q, rq)
-);
-----
-
-[#probes-software]
-=== software
-
-.variants
-* `software:event:`
-* `software:event:count`
-
-.short name
-* `s`
-
-These are the pre-defined software events provided by the Linux kernel, as commonly traced via the perf utility.
-They are similar to tracepoints, but there is only about a dozen of these, and they are documented in the perf_event_open(2) man page.
-If the count is not provided, a default is used.
-
-The event names are:
-
-- `cpu-clock` or `cpu`
-- `task-clock`
-- `page-faults` or `faults`
-- `context-switches` or `cs`
-- `cpu-migrations`
-- `minor-faults`
-- `major-faults`
-- `alignment-faults`
-- `emulation-faults`
-- `dummy`
-- `bpf-output`
-
-----
-software:faults:100 { @[comm] = count(); }
-----
-
-This roughly counts who is causing page faults, by sampling the process name for every one in one hundred faults.
-
-[#probes-tracepoint]
-=== tracepoint
-
-.variants
-* `tracepoint:subsys:event`
-
-.short name
-* `t`
-
-Tracepoints are hooks into events in the kernel.
-Tracepoints are defined in the kernel source and compiled into the kernel binary which makes them a form of static tracing.
-Unlike `kprobe` s, new tracepoints cannot be added without modifying the kernel.
-
-The advantage of tracepoints is that they generally provide a more stable interface than `kprobe` s do, they do not depend on the existence of a kernel function.
-
-----
-tracepoint:syscalls:sys_enter_openat {
-  printf("%s %s\n", comm, str(args.filename));
-}
-----
-
-Tracepoint arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
-
-----
-# bpftrace -lv "tracepoint:*"
-
-tracepoint:xhci-hcd:xhci_setup_device_slot
-  u32 info
-  u32 info2
-  u32 tt_info
-  u32 state
-...
-----
-
-Alternatively members for each tracepoint can be listed from their /format file in /sys.
-
-Apart from the filename member, we can also print flags, mode, and more.
-After the "common" members listed first, the members are specific to the tracepoint.
-
-.Additional information
-* https://www.kernel.org/doc/html/latest/trace/tracepoints.html
-
-[#probes-uprobe]
-=== uprobe, uretprobe
-
-.variants
-* `uprobe:binary:func`
-* `uprobe:binary:func+offset`
-* `uprobe:binary:offset`
-* `uretprobe:binary:func`
-
-.short names
-* `u`
-* `ur`
-
-`uprobe` s or user-space probes are the user-space equivalent of `kprobe` s.
-The same limitations that apply <<probes-kprobe>> also apply to `uprobe` s and `uretprobe` s, namely: arguments are available via the `argN` and `sargN` builtins and can only be accessed with a uprobe (`sargN` is more common for older versions of golang).
-retval is the return value for the instrumented function and can only be accessed with a uretprobe.
-
-----
-uprobe:/bin/bash:readline { printf("arg0: %d\n", arg0); }
-----
-
-What does arg0 of readline() in /bin/bash contain?
-I don't know, so I'll need to look at the bash source code to find out what its arguments are.
-
-When tracing libraries, it is sufficient to specify the library name instead of
-a full path. The path will be then automatically resolved using `/etc/ld.so.cache`:
-
-----
-uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }
-----
-
-If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
-
-----
-# bpftrace -lv 'uprobe:/bin/bash:rl_set_prompt'
-
-uprobe:/bin/bash:rl_set_prompt
-    const char* prompt
-----
-
-When tracing C{plus}{plus} programs, it's possible to turn on automatic symbol demangling by using the `:cpp` prefix:
-
-----
-# bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { ... }
-----
-
-It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
-This can cause issues with languages that have their own runtime like Golang:
-
-.example.go
-----
-func myprint(s string) {
-  fmt.Printf("Input: %s\n", s)
-}
-
-func main() {
-  ss := []string{"a", "b", "c"}
-  for _, s := range ss {
-    go myprint(s)
-  }
-  time.Sleep(1*time.Second)
-}
-----
-
-.bpftrace
-----
-# bpftrace -e 'uretprobe:./test:main.myprint { @=count(); }' -c ./test
-runtime: unexpected return pc for main.myprint called from 0x7fffffffe000
-stack: frame={sp:0xc00008cf60, fp:0xc00008cfd0} stack=[0xc00008c000,0xc00008d000)
-fatal error: unknown caller pc
-----
-
-[#probes-usdt]
-=== usdt
-
-.variants
-* `usdt:binary_path:probe_name`
-* `usdt:binary_path:[probe_namespace]:probe_name`
-* `usdt:library_path:probe_name`
-* `usdt:library_path:[probe_namespace]:probe_name`
-
-.short name
-* `U`
-
-Where probe_namespace is optional if probe_name is unique within the binary.
-
-You can target the entire host (or an entire process's address space by using the `-p` arg) by using a single wildcard in place of the binary_path/library_path:
-
-----
-usdt:*:loop { printf("hi\n"); }
-----
-
-Please note that if you use wildcards for the probe_name or probe_namespace and end up targeting multiple USDTs for the same probe you might get errors if you also utilize the USDT argument builtin (e.g. arg0) as they could be of different types.
-
-Arguments are available via the `argN` builtins:
-
-----
-usdt:/root/tick:loop { printf("%s: %d\n", str(arg0), arg1); }
-----
-
-bpftrace also supports USDT semaphores.
-If both your environment and bpftrace support uprobe refcounts, then USDT semaphores are automatically activated for all processes upon probe attachment (and --usdt-file-activation becomes a noop).
-You can check if your system supports uprobe refcounts by running:
-
-----
-# bpftrace --info 2>&1 | grep "uprobe refcount"
-bcc bpf_attach_uprobe refcount: yes
-  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes
-----
-
-If your system does not support uprobe refcounts, you may activate semaphores by passing in -p $PID or --usdt-file-activation.
---usdt-file-activation looks through /proc to find processes that have your probe's binary mapped with executable permissions into their address space and then tries to attach your probe.
-Note that file activation occurs only once (during attach time).
-In other words, if later during your tracing session a new process with your executable is spawned, your current tracing session will not activate the new process.
-Also note that --usdt-file-activation matches based on file path.
-This means that if bpftrace runs from the root host, things may not work as expected if there are processes execved from private mount namespaces or bind mounted directories.
-One workaround is to run bpftrace inside the appropriate namespaces (i.e. the container).
-
-[#probes-watchpoint]
-=== watchpoint and asyncwatchpoint
-
-.variants
-* `watchpoint:absolute_address:length:mode`
-* `watchpoint:function+argN:length:mode`
-
-.short names
-* `w`
-* `aw`
-
-This feature is experimental and may be subject to interface changes.
-Memory watchpoints are also architecture dependent.
-
-These are memory watchpoints provided by the kernel.
-Whenever a memory address is written to (`w`), read
-from (`r`), or executed (`x`), the kernel can generate an event.
-
-In the first form, an absolute address is monitored.
-If a pid (`-p`) or a command (`-c`) is provided, bpftrace takes the address as a userspace address and monitors the appropriate process.
-If not, bpftrace takes the address as a kernel space address.
-
-In the second form, the address present in `argN` when `function` is entered is
-monitored.
-A pid or command must be provided for this form.
-If synchronous (`watchpoint`), a `SIGSTOP` is sent to the tracee upon function entry.
-The tracee will be ``SIGCONT``ed after the watchpoint is attached.
-This is to ensure events are not missed.
-If you want to avoid the `SIGSTOP` + `SIGCONT` use `asyncwatchpoint`.
-
-Note that on most architectures you may not monitor for execution while monitoring read or write.
-
-----
-# bpftrace -e 'watchpoint:0x10000000:8:rw { printf("hit!\n"); }' -c ./testprogs/watchpoint
-----
-
-Print the call stack every time the `jiffies` variable is updated:
-
-----
-watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {
-  @[kstack] = count();
-}
-----
-
-"hit" and exit when the memory pointed to by `arg1` of `increment` is written to:
-
-[,C]
-----
-# cat wpfunc.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-__attribute__((noinline))
-void increment(__attribute__((unused)) int _, int *i)
-{
-  (*i)++;
-}
-
-int main()
-{
-  int *i = malloc(sizeof(int));
-  while (1)
-  {
-    increment(0, i);
-    (*i)++;
-    usleep(1000);
-  }
-}
-----
-
-----
-# bpftrace -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./wpfunc
-----
-
-== Config Variables
+=== Config Variables
 
 Some behavior can only be controlled through config variables, which are listed here.
 These can be set via the <<Config Block>> directly in a script (before any probes) or via their environment variable equivalent, which is upper case and includes the `BPFTRACE_` prefix e.g. ``stack_mode``'s environment variable would be `BPFTRACE_STACK_MODE`.
 
-=== cache_user_symbols
+==== cache_user_symbols
 
 Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 
@@ -3679,7 +3599,7 @@ me.
 If there are many processes running, it will consume a lot of a memory.
 - NONE - caching disabled. This saves the most memory, but at the cost of speed.
 
-=== cpp_demangle
+==== cpp_demangle
 
 Default: 1
 
@@ -3687,19 +3607,19 @@ C++ symbol demangling in userspace stack traces is enabled by default.
 
 This feature can be turned off by setting the value of this environment variable to `0`.
 
-=== lazy_symbolication
+==== lazy_symbolication
 
 Default: 0
 
 For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
 
-=== log_size
+==== log_size
 
 Default: 1000000
 
 Log size in bytes.
 
-=== max_bpf_progs
+==== max_bpf_progs
 
 Default: 1024
 
@@ -3707,13 +3627,13 @@ This is the maximum number of BPF programs (functions) that bpftrace can generat
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
 takes a lot of resources (and it should not happen often).
 
-=== max_cat_bytes
+==== max_cat_bytes
 
 Default: 10000
 
 Maximum bytes read by cat builtin.
 
-=== max_map_keys
+==== max_map_keys
 
 Default: 4096
 
@@ -3721,7 +3641,7 @@ This is the maximum number of keys that can be stored in a map.
 Increasing the value will consume more memory and increase startup times.
 There are some cases where you will want to, for example: sampling stack traces, recording timestamps for each page, etc.
 
-=== max_probes
+==== max_probes
 
 Default: 1024
 
@@ -3729,7 +3649,7 @@ This is the maximum number of probes that bpftrace can attach to.
 Increasing the value will consume more memory, increase startup times, and can incur high performance overhead or even freeze/crash the
 system.
 
-=== max_strlen
+==== max_strlen
 
 Default: 1024
 
@@ -3738,14 +3658,14 @@ The maximum length (in bytes) for values created by `str()`, `buf()` and `path()
 This limit is necessary because BPF requires the size of all dynamically-read strings (and similar) to be declared up front. This is the size for all strings (and similar) in bpftrace unless specified at the call site.
 There is no artificial limit on what you can tune this to. But you may be wasting resources (memory and cpu) if you make this too high.
 
-=== max_type_res_iterations
+==== max_type_res_iterations
 
 Default: 0
 
 Maximum number of levels of nested field accesses for tracepoint args.
 0 is unlimited.
 
-=== missing_probes
+==== missing_probes
 
 Default: `warn`
 
@@ -3758,7 +3678,7 @@ The possible options are:
 - `warn` - print a warning but continue execution
 - `ignore` - silently ignore missing probes
 
-=== on_stack_limit
+==== on_stack_limit
 
 Default: 32
 
@@ -3766,7 +3686,7 @@ The maximum size (in bytes) of individual objects that will be stored on the BPF
 
 This exists because the BPF stack is limited to 512 bytes and large objects make it more likely that we'll run out of space. bpftrace can store objects that are larger than the `on_stack_limit` in pre-allocated memory to prevent this stack error. However, storing in pre-allocated memory may be less memory efficient. Lower this default number if you are still seeing a stack memory error or increase it if you're worried about memory consumption.
 
-=== perf_rb_pages
+==== perf_rb_pages
 
 Default: 64
 
@@ -3776,7 +3696,7 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 
-=== stack_mode
+==== stack_mode
 
 Default: bpftrace
 
@@ -3789,20 +3709,20 @@ Available modes/formats:
 
 This can be overwritten at the call site.
 
-=== str_trunc_trailer
+==== str_trunc_trailer
 
 Default: `..`
 
 Trailer to add to strings that were truncated.
 Set to empty string to disable truncation trailers.
 
-=== print_maps_on_exit
+==== print_maps_on_exit
 
 Default: 1
 
 Controls whether maps are printed on exit. Set to `0` in order to change the default behavior and not automatically print maps at program exit.
 
-=== symbol_source
+==== symbol_source
 
 Default: `dwarf` if `bpftrace` is compiled with LLDB, `symbol_table` otherwise
 
@@ -3816,37 +3736,37 @@ Available options:
 If the DebugInfo was rewritten by a post-linkage optimisation tool (like BOLT or AutoFDO), it might yield an incorrect address for a probe location.
 This config can force using the Symbol Table, for when the DebugInfo returns invalid addresses.
 
-== Environment Variables
+=== Environment Variables
 
 These are not available as part of the standard set of <<Config Variables>> and can only be set as environment variables.
 
-=== BPFTRACE_BTF
+==== BPFTRACE_BTF
 
 Default: None
 
 The path to a BTF file. By default, bpftrace searches several locations to find a BTF file.
 See src/btf.cpp for the details.
 
-=== BPFTRACE_DEBUG_OUTPUT
+==== BPFTRACE_DEBUG_OUTPUT
 
 Default: 0
 
 Outputs bpftrace's runtime debug messages to the trace_pipe. This feature can be turned on by setting
 the value of this environment variable to `1`.
 
-=== BPFTRACE_KERNEL_BUILD
+==== BPFTRACE_KERNEL_BUILD
 
 Default: `/lib/modules/$(uname -r)`
 
 Only used with `BPFTRACE_KERNEL_SOURCE` if it is out-of-tree Linux kernel build.
 
-=== BPFTRACE_KERNEL_SOURCE
+==== BPFTRACE_KERNEL_SOURCE
 
 Default: `/lib/modules/$(uname -r)`
 
 bpftrace requires kernel headers for certain features, which are searched for in this directory.
 
-=== BPFTRACE_VMLINUX
+==== BPFTRACE_VMLINUX
 
 Default: None
 
@@ -3854,159 +3774,11 @@ This specifies the vmlinux path used for kernel symbol resolution when attaching
 If this value is not given, bpftrace searches vmlinux from pre defined locations.
 See src/attached_probe.cpp:find_vmlinux() for details.
 
-=== BPFTRACE_COLOR
+==== BPFTRACE_COLOR
 
 Default: auto
 
 Colorize the bpftrace log output message. Valid values are auto, always and never.
-
-== Options Expanded
-
-=== Debug Output
-
-The `-d STAGE` option produces debug output. It prints the output of the
-bpftrace execution stage given by the _STAGE_ argument. The option can be used
-multiple times (with different stage names) and the special value `all` prints
-the output of all the supported stages. The option also takes multiple stages
-in one invocation as comma separated values.
-
-Note: This is primarily used for bpftrace developers.
-
-The supported options are:
-
-[cols="~,~"]
-|===
-
-| `ast`
-| Prints the Abstract Syntax Tree (AST) after every pass.
-
-| `codegen`
-| Prints the unoptimized LLVM IR as produced by `CodegenLLVM`.
-
-| `codegen-opt`
-| Prints the optimized LLVM IR, i.e. the code which will be compiled into BPF
-bytecode.
-
-| `dis`
-| Disassembles and prints out the generated bytecode that `libbpf` will see.
-Only available in debug builds.
-
-| `libbpf`
-| Captures and prints libbpf log for all libbpf operations that bpftrace uses.
-
-| `verifier`
-| Captures and prints the BPF verifier log.
-
-| `all`
-| Prints the output of all of the above stages.
-
-|===
-
-=== Listing Probes
-
-Probe listing is the method to discover which probes are supported by the current system.
-Listing supports the same syntax as normal attachment does and alternatively can be
-combined with `-e` or filename args to see all the probes that a program would attach to.
-
-----
-# bpftrace -l 'kprobe:*'
-# bpftrace -l 't:syscalls:*openat*
-# bpftrace -l 'kprobe:tcp*,trace
-# bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
-# bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
-# bpftrace -l my_script.bt
-# bpftrace -lv 'enum cpu_usage_stat'
-----
-
-The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
-
-----
-# bpftrace -l 'fexit:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
-fexit:tcp_reset
-    struct sock * sk
-    struct sk_buff * skb
-tracepoint:syscalls:sys_enter_openat
-    int __syscall_nr
-    int dfd
-    const char * filename
-    int flags
-    umode_t mode
-
-# bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
-uprobe:/bin/bash:rl_set_prompt
-    const char *prompt
-
-# bpftrace -lv 'struct css_task_iter'
-struct css_task_iter {
-        struct cgroup_subsys *ss;
-        unsigned int flags;
-        struct list_head *cset_pos;
-        struct list_head *cset_head;
-        struct list_head *tcset_pos;
-        struct list_head *tcset_head;
-        struct list_head *task_pos;
-        struct list_head *cur_tasks_head;
-        struct css_set *cur_cset;
-        struct css_set *cur_dcset;
-        struct task_struct *cur_task;
-        struct list_head iters_node;
-};
-----
-
-=== Preprocessor Options
-
-The `-I` option can be used to add directories to the list of directories that bpftrace uses to look for headers.
-Can be defined multiple times.
-
-----
-# cat program.bt
-#include <foo.h>
-
-BEGIN { @ = FOO }
-
-# bpftrace program.bt
-
-definitions.h:1:10: fatal error: 'foo.h' file not found
-
-# /tmp/include
-foo.h
-
-# bpftrace -I /tmp/include program.bt
-
-Attaching 1 probe...
-----
-
-The `--include` option can be used to include headers by default.
-Can be defined multiple times.
-Headers are included in the order they are defined, and they are included before any other include in the program being executed.
-
-----
-# bpftrace --include linux/path.h --include linux/dcache.h \
-    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
-
-Attaching 1 probe...
-open path: .com.google.Chrome.ASsbu2
-open path: .com.google.Chrome.gimc10
-open path: .com.google.Chrome.R1234s
-----
-
-=== Verbose Output
-
-The `-v` option prints more information about the program as it is run:
-
-----
-# bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
-AST node count: 7
-Attaching 1 probe...
-
-load tracepoint:syscalls:sys_enter_nanosleep, with BTF, with func_infos: Success
-
-Program ID: 111
-Attaching tracepoint:syscalls:sys_enter_nanosleep
-iscsid is sleeping.
-iscsid is sleeping.
-[...]
-----
 
 == Advanced Topics
 
@@ -4200,6 +3972,154 @@ END {
 }
 ```
 
+=== Options Expanded
+
+==== Debug Output
+
+The `-d STAGE` option produces debug output. It prints the output of the
+bpftrace execution stage given by the _STAGE_ argument. The option can be used
+multiple times (with different stage names) and the special value `all` prints
+the output of all the supported stages. The option also takes multiple stages
+in one invocation as comma separated values.
+
+Note: This is primarily used for bpftrace developers.
+
+The supported options are:
+
+[cols="~,~"]
+|===
+
+| `ast`
+| Prints the Abstract Syntax Tree (AST) after every pass.
+
+| `codegen`
+| Prints the unoptimized LLVM IR as produced by `CodegenLLVM`.
+
+| `codegen-opt`
+| Prints the optimized LLVM IR, i.e. the code which will be compiled into BPF
+bytecode.
+
+| `dis`
+| Disassembles and prints out the generated bytecode that `libbpf` will see.
+Only available in debug builds.
+
+| `libbpf`
+| Captures and prints libbpf log for all libbpf operations that bpftrace uses.
+
+| `verifier`
+| Captures and prints the BPF verifier log.
+
+| `all`
+| Prints the output of all of the above stages.
+
+|===
+
+==== Listing Probes
+
+Probe listing is the method to discover which probes are supported by the current system.
+Listing supports the same syntax as normal attachment does and alternatively can be
+combined with `-e` or filename args to see all the probes that a program would attach to.
+
+----
+# bpftrace -l 'kprobe:*'
+# bpftrace -l 't:syscalls:*openat*
+# bpftrace -l 'kprobe:tcp*,trace
+# bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
+# bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
+# bpftrace -l my_script.bt
+# bpftrace -lv 'enum cpu_usage_stat'
+----
+
+The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
+
+----
+# bpftrace -l 'fexit:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
+fexit:tcp_reset
+    struct sock * sk
+    struct sk_buff * skb
+tracepoint:syscalls:sys_enter_openat
+    int __syscall_nr
+    int dfd
+    const char * filename
+    int flags
+    umode_t mode
+
+# bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
+uprobe:/bin/bash:rl_set_prompt
+    const char *prompt
+
+# bpftrace -lv 'struct css_task_iter'
+struct css_task_iter {
+        struct cgroup_subsys *ss;
+        unsigned int flags;
+        struct list_head *cset_pos;
+        struct list_head *cset_head;
+        struct list_head *tcset_pos;
+        struct list_head *tcset_head;
+        struct list_head *task_pos;
+        struct list_head *cur_tasks_head;
+        struct css_set *cur_cset;
+        struct css_set *cur_dcset;
+        struct task_struct *cur_task;
+        struct list_head iters_node;
+};
+----
+
+==== Preprocessor Options
+
+The `-I` option can be used to add directories to the list of directories that bpftrace uses to look for headers.
+Can be defined multiple times.
+
+----
+# cat program.bt
+#include <foo.h>
+
+BEGIN { @ = FOO }
+
+# bpftrace program.bt
+
+definitions.h:1:10: fatal error: 'foo.h' file not found
+
+# /tmp/include
+foo.h
+
+# bpftrace -I /tmp/include program.bt
+
+Attaching 1 probe...
+----
+
+The `--include` option can be used to include headers by default.
+Can be defined multiple times.
+Headers are included in the order they are defined, and they are included before any other include in the program being executed.
+
+----
+# bpftrace --include linux/path.h --include linux/dcache.h \
+    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
+
+Attaching 1 probe...
+open path: .com.google.Chrome.ASsbu2
+open path: .com.google.Chrome.gimc10
+open path: .com.google.Chrome.R1234s
+----
+
+==== Verbose Output
+
+The `-v` option prints more information about the program as it is run:
+
+----
+# bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+AST node count: 7
+Attaching 1 probe...
+
+load tracepoint:syscalls:sys_enter_nanosleep, with BTF, with func_infos: Success
+
+Program ID: 111
+Attaching tracepoint:syscalls:sys_enter_nanosleep
+iscsid is sleeping.
+iscsid is sleeping.
+[...]
+----
+
 === Systemd support
 
 To run bpftrace in the background using systemd::
@@ -4245,4 +4165,95 @@ BEGIN {
     printf("%d %d\n", (int64)@c, (int64)@s);  // Coerces @c and @s and prints "1 12"
   }
 }
+----
+
+== Terminology
+
+[cols="~,~"]
+|===
+
+| BPF
+| Berkeley Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions).
+
+| BPF map
+| A BPF memory object, which is used by bpftrace to create many higher-level objects.
+
+| BTF
+| BPF Type Format: the metadata format which encodes the debug info related to BPF program/map.
+
+| dynamic tracing
+| Also known as dynamic instrumentation, this is a technology that can instrument any software event, such as function calls and returns, by live modification of instruction text. Target software usually does not need special capabilities to support dynamic tracing, other than a symbol table that bpftrace can read. Since this instruments all software text, it is not considered a stable API, and the target functions may not be documented outside of their source code.
+
+| eBPF
+| Enhanced BPF: a kernel technology that extends BPF so that it can execute more generic programs on any events, such as the bpftrace programs listed below. It makes use of the BPF sandboxed virtual machine environment. Also note that eBPF is often just referred to as BPF.
+
+| kprobes
+| A Linux kernel technology for providing dynamic tracing of kernel functions.
+
+| probe
+| An instrumentation point in software or hardware, that generates events that can execute bpftrace programs.
+
+| static tracing
+| Hard-coded instrumentation points in code. Since these are fixed, they may be provided as part of a stable API, and documented.
+
+| tracepoints
+| A Linux kernel technology for providing static tracing.
+
+| uprobes
+| A Linux kernel technology for providing dynamic tracing of user-level functions.
+
+| USDT
+| User Statically-Defined Tracing: static tracing points for user-level software. Some applications support USDT.
+
+|===
+
+== Supported architectures
+
+x86_64, arm64, s390x, arm32, loongarch64, mips64, ppc64, riscv64
+
+== Program Files
+
+Programs saved as files are often called scripts and can be executed by specifying their file name.
+It is convention to use the `.bt` file extension but it is not required.
+
+For example, listing the sleepers.bt file using `cat`:
+
+----
+# cat sleepers.bt
+
+tracepoint:syscalls:sys_enter_nanosleep {
+  printf("%s is sleeping.\n", comm);
+}
+----
+
+And then calling it:
+
+----
+# bpftrace sleepers.bt
+
+Attaching 1 probe...
+iscsid is sleeping.
+iscsid is sleeping.
+----
+
+It can also be made executable to run stand-alone.
+Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
+
+----
+#!/usr/local/bin/bpftrace
+
+tracepoint:syscalls:sys_enter_nanosleep {
+  printf("%s is sleeping.\n", comm);
+}
+----
+
+Then make it executable:
+
+----
+# chmod 755 sleepers.bt
+# ./sleepers.bt
+
+Attaching 1 probe...
+iscsid is sleeping.
+iscsid is sleeping.
 ----
