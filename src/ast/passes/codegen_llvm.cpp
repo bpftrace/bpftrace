@@ -1329,9 +1329,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                  bpftrace_.feature_->has_kernel_func(
                      Kfunc::bpf_map_sum_elem_count) &&
                  !is_array_map(map.type, map.key_type)) {
-        return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
-                                               { b_.GetMapVar(map.ident) },
-                                               "len"));
+        return ScopedExpr(CreateKernelFuncCall(
+            Kfunc::bpf_map_sum_elem_count,
+            { b_.CreatePointerCast(b_.GetMapVar(map.ident),
+                                   b_.getInt8Ty()->getPointerTo()) },
+            "len"));
       } else {
         if (!map_len_func_)
           map_len_func_ = createMapLenCallback();
