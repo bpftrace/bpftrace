@@ -418,6 +418,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 
 std::optional<Struct> BTF::resolve_args(const std::string &func,
                                         bool ret,
+                                        bool check_traceable,
                                         std::string &err)
 {
   if (!has_data()) {
@@ -438,15 +439,17 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     return std::nullopt;
   }
 
-  if (bpftrace_ && !bpftrace_->is_traceable_func(func)) {
-    if (bpftrace_->get_traceable_funcs().empty()) {
-      err = "could not read traceable functions from " +
-            tracefs::available_filter_functions() + " (is tracefs mounted?)";
-    } else {
-      err = "function not traceable (probably it is "
-            "inlined or marked as \"notrace\")";
+  if (check_traceable) {
+    if (bpftrace_ && !bpftrace_->is_traceable_func(func)) {
+      if (bpftrace_->get_traceable_funcs().empty()) {
+        err = "could not read traceable functions from " +
+              tracefs::available_filter_functions() + " (is tracefs mounted?)";
+      } else {
+        err = "function not traceable (probably it is "
+              "inlined or marked as \"notrace\")";
+      }
+      return std::nullopt;
     }
-    return std::nullopt;
   }
 
   const struct btf_param *p = btf_params(t);

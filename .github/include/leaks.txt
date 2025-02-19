@@ -1,0 +1,13 @@
+# Unfortunately, some external components that we use may contain memory leaks.
+# This may be the case especially for older LLVM releases.
+#
+# This file allows to specify patterns in the form "leak:<pattern>" where
+# the pattern will be substring-matched against the symbolized stack trace of
+# the leak [1].
+#
+# The patterns can be specified either directly here (to apply globally) or in
+# different files passed to the CI via the LEAK_SUPPRESS env variable.
+# ci.py will append contents of those files to this one which mainly allows to
+# suppress leaks specific to certain LLVM versions.
+#
+# [1] https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer

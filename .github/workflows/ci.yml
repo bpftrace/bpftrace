@@ -38,12 +38,15 @@ jobs:
         - NAME: LLVM 14
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm14
+          LEAK_SUPPRESS: .github/include/leaks-llvm-mdtuple.txt
         - NAME: LLVM 15
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm15
+          LEAK_SUPPRESS: .github/include/leaks-llvm-mdtuple.txt
         - NAME: LLVM 16
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm16
+          LEAK_SUPPRESS: .github/include/leaks-llvm-mdtuple.txt
         - NAME: LLVM 17
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm17

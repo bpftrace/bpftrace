@@ -278,6 +278,22 @@ REQUIRES bpftool
 REQUIRES_FEATURE uprobe_multi
 BEFORE ./testprogs/uprobe_test
 
+# We need to check multiple things for session probes:
+# - both entry and exit are hit
+# - there is just one BPF program created
+# - there is just one BPF link created
+# This case combines all of the above by getting the number of progs from the
+# entry probe and the number of links from the exit probe and checking for both.
+# Note that getting the number of progs/links requires to call bpftool via
+# system() call, hence we need --unsafe.
+NAME kprobe_session
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @entry = 1; printf("progs: "); system("bpftool prog | grep kprobe | grep ksys_ | wc -l"); } kretprobe:ksys_* { printf("links: "); system("bpftool link | grep kprobe_multi | wc -l"); if (@entry == 1) { exit() } }'
+AFTER ./testprogs/syscall read
+EXPECT progs: 1
+EXPECT links: 1
+REQUIRES bpftool
+REQUIRES_FEATURE kprobe_session
+
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*

@@ -158,6 +158,7 @@ class Runner(object):
         bpffeature["dwarf"] = output.find("liblldb (DWARF support): yes") != -1
         bpffeature["kernel_dwarf"] = output.find("Kernel DWARF: yes") != -1
         bpffeature["kprobe_multi"] = output.find("kprobe_multi: yes") != -1
+        bpffeature["kprobe_session"] = output.find("kprobe_session: yes") != -1
         bpffeature["uprobe_multi"] = output.find("uprobe_multi: yes") != -1
         bpffeature["aot"] = cmake_vars.LIBBCC_BPF_CONTAINS_RUNTIME
         bpffeature["skboutput"] = output.find("skboutput: yes") != -1
@@ -408,6 +409,7 @@ class Runner(object):
                 '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED': '1',
                 'BPFTRACE_VERIFY_LLVM_IR': '1',
                 'PATH': os.environ.get('PATH', ''),
+                'LSAN_OPTIONS': os.environ.get('LSAN_OPTIONS', ''),
             }
             env.update(test.env)
             p = subprocess.Popen(

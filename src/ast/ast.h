@@ -53,10 +53,15 @@ enum class Operator {
 // - multi expansion - one LLVM function and BPF program is generated for all
 //                     matches, the list of expanded functions is attached to
 //                     the BPF program using the k(u)probe.multi mechanism
+// - session expansion - extension of the multi expansion when a single BPF
+//                       program is shared for both the entry and the exit probe
+//                       (when they are both attached to the same attach points)
+//                       using the kprobe.session mechanism
 enum class ExpansionType {
   NONE,
   FULL,
   MULTI,
+  SESSION,
 };
 
 class Node {
@@ -498,6 +503,7 @@ private:
   Config(const Config &other) = default;
 };
 
+class Probe;
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &raw_input, location loc = location());
@@ -524,6 +530,7 @@ public:
   bool async = false; // for watchpoint probes, if it's an async watchpoint
 
   ExpansionType expansion = ExpansionType::NONE;
+  Probe *ret_probe = nullptr; // for session probes
 
   uint64_t address = 0;
   uint64_t func_offset = 0;

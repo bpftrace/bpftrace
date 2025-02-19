@@ -30,6 +30,8 @@ and this project adheres to
   - [#3713](https://github.com/bpftrace/bpftrace/pull/3713)
 - Add feature check for castable map reads
   - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
+- Introduce automatic session probes
+  - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
 #### Deprecated
 #### Removed
 #### Fixed
