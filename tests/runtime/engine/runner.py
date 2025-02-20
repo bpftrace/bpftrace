@@ -406,9 +406,10 @@ class Runner(object):
                 'test': test.name,
                 '__BPFTRACE_NOTIFY_PROBES_ATTACHED': '1',
                 '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED': '1',
-                'BPFTRACE_VERIFY_LLVM_IR': '1',
                 'PATH': os.environ.get('PATH', ''),
             }
+            if test.skip_verify_llvm_ir is None or str(cmake_vars.LLVM_VERSION) not in test.skip_verify_llvm_ir:
+                env.update({'BPFTRACE_VERIFY_LLVM_IR': '1'})
             env.update(test.env)
             p = subprocess.Popen(
                 bpf_call,

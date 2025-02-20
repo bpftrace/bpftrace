@@ -46,6 +46,7 @@ TestStruct = namedtuple(
         'will_fail',
         'new_pidns',
         'skip_if_env_has',
+        'skip_verify_llvm_ir',
         'return_code',
     ],
 )
@@ -127,6 +128,7 @@ class TestParser(object):
         will_fail = False
         new_pidns = False
         skip_if_env_has = None
+        skip_verify_llvm_ir = None
         return_code = None
         prev_item_name = ''
 
@@ -230,6 +232,8 @@ class TestParser(object):
             elif item_name == "SKIP_IF_ENV_HAS":
                 parts = line.split("=")
                 skip_if_env_has = (parts[0], parts[1])
+            elif item_name == "SKIP_VERIFY_LLVM_IR":
+                skip_verify_llvm_ir = line.split(",")
             elif item_name == "RETURN_CODE":
                 return_code = int(line.strip(' '))
             else:
@@ -273,5 +277,6 @@ class TestParser(object):
             will_fail,
             new_pidns,
             skip_if_env_has,
+            skip_verify_llvm_ir,
             return_code,
         )
