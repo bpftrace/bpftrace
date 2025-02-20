@@ -3505,7 +3505,19 @@ void SemanticAnalyser::visit(Probe &probe)
   auto aps = probe.attach_points.size();
   top_level_node_ = &probe;
 
+  bool needs_pid_filter = false;
+
   for (AttachPoint *ap : probe.attach_points) {
+    if (!listing_) {
+      if (aps > 1 && ap->provider == "iter") {
+        LOG(ERROR, ap->loc, err_)
+            << "Only single iter attach point is allowed.";
+        return;
+      }
+      if (bpftrace_.pid() > 0 && probe_needs_pid_filter(ap)) {
+        needs_pid_filter = true;
+      }
+    }
     if (!listing_ && aps > 1 && ap->provider == "iter") {
       LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
       return;
@@ -3513,6 +3525,12 @@ void SemanticAnalyser::visit(Probe &probe)
     visit(ap);
   }
   visit(probe.pred);
+
+  if (needs_pid_filter) {
+    probe.block->stmts.insert(probe.block->stmts.begin(),
+                              add_pid_filter(probe.loc));
+  }
+
   visit(probe.block);
 }
 
@@ -4091,6 +4109,50 @@ Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
     return deref_expr;
   }
   return expr;
+}
+
+// If the probe can't filter by pid when attaching
+bool SemanticAnalyser::probe_needs_pid_filter(AttachPoint *ap)
+{
+  ProbeType type = probetype(ap->provider);
+
+  switch (type) {
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe:
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+    case ProbeType::tracepoint:
+    case ProbeType::rawtracepoint:
+      return true;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+    case ProbeType::profile:
+    case ProbeType::interval:
+    case ProbeType::software:
+    case ProbeType::hardware:
+    case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
+    case ProbeType::invalid:
+    case ProbeType::iter:
+    // We don't filter by pid for BEGIN/END probes
+    case ProbeType::special:
+      return false;
+  }
+
+  return false;
+}
+
+Statement *SemanticAnalyser::add_pid_filter(const location &loc)
+{
+  return ctx_.make_node<If>(
+      ctx_.make_node<Binop>(ctx_.make_node<Builtin>("pid", loc),
+                            Operator::NE,
+                            ctx_.make_node<Integer>(bpftrace_.pid(), loc),
+                            loc),
+      ctx_.make_node<Block>(std::vector<Statement *>{
+          ctx_.make_node<Jump>(JumpType::RETURN, loc) }),
+      ctx_.make_node<Block>(std::vector<Statement *>{}));
 }
 
 variable *SemanticAnalyser::find_variable(const std::string &var_ident)

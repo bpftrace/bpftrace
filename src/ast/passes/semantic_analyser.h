@@ -179,6 +179,8 @@ private:
   void binop_int(Binop &op);
   void binop_array(Binop &op);
   Expression *dereference_if_needed(Expression *expr);
+  bool probe_needs_pid_filter(AttachPoint *attach_point);
+  Statement *add_pid_filter(const location &loc);
 
   bool has_error() const;
   bool in_loop(void)
