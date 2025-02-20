@@ -8,7 +8,7 @@ TEST(codegen, runtime_error_check)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  bpftrace->helper_check_level_ = 1;
+  bpftrace->helper_check_level_ = 0;
 
   test(*bpftrace, "kprobe:f { @++; }", NAME);
 }

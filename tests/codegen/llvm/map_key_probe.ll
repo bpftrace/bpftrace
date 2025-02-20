@@ -6,6 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
+%helper_error_t = type <{ i64, i64, i32 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -19,6 +20,8 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @tracepoint_sched_sched_one_1(ptr %0) section "s_tracepoint_sched_sched_one_1" !dbg !53 {
 entry:
+  %key = alloca i32, align 4
+  %helper_error_t = alloca %helper_error_t, align 8
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr @"tracepoint:sched:sched_one")
@@ -42,8 +45,47 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 %3, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr @"tracepoint:sched:sched_one", ptr %"@x_val", i64 0)
+  %4 = trunc i64 %update_elem to i32
+  %5 = icmp sge i32 %4, 0
+  br i1 %5, label %helper_merge, label %helper_failure
+
+helper_failure:                                   ; preds = %lookup_merge
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %helper_error_t)
+  %6 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 0
+  store i64 30006, ptr %6, align 8
+  %7 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
+  store i64 0, ptr %7, align 8
+  %8 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
+  store i32 %4, ptr %8, align 4
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+helper_merge:                                     ; preds = %counter_merge, %lookup_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   ret i64 1
+
+event_loss_counter:                               ; preds = %helper_failure
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
+  store i32 0, ptr %key, align 4
+  %lookup_elem1 = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key)
+  %map_lookup_cond5 = icmp ne ptr %lookup_elem1, null
+  br i1 %map_lookup_cond5, label %lookup_success2, label %lookup_failure3
+
+counter_merge:                                    ; preds = %lookup_merge4, %helper_failure
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %helper_error_t)
+  br label %helper_merge
+
+lookup_success2:                                  ; preds = %event_loss_counter
+  %9 = atomicrmw add ptr %lookup_elem1, i64 1 seq_cst, align 8
+  br label %lookup_merge4
+
+lookup_failure3:                                  ; preds = %event_loss_counter
+  br label %lookup_merge4
+
+lookup_merge4:                                    ; preds = %lookup_failure3, %lookup_success2
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
+  br label %counter_merge
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -54,6 +96,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 define i64 @tracepoint_sched_sched_two_2(ptr %0) section "s_tracepoint_sched_sched_two_2" !dbg !59 {
 entry:
+  %key = alloca i32, align 4
+  %helper_error_t = alloca %helper_error_t, align 8
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr @"tracepoint:sched:sched_two")
@@ -77,8 +121,47 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 %3, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr @"tracepoint:sched:sched_two", ptr %"@x_val", i64 0)
+  %4 = trunc i64 %update_elem to i32
+  %5 = icmp sge i32 %4, 0
+  br i1 %5, label %helper_merge, label %helper_failure
+
+helper_failure:                                   ; preds = %lookup_merge
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %helper_error_t)
+  %6 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 0
+  store i64 30006, ptr %6, align 8
+  %7 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
+  store i64 0, ptr %7, align 8
+  %8 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
+  store i32 %4, ptr %8, align 4
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+helper_merge:                                     ; preds = %counter_merge, %lookup_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   ret i64 1
+
+event_loss_counter:                               ; preds = %helper_failure
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
+  store i32 0, ptr %key, align 4
+  %lookup_elem1 = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key)
+  %map_lookup_cond5 = icmp ne ptr %lookup_elem1, null
+  br i1 %map_lookup_cond5, label %lookup_success2, label %lookup_failure3
+
+counter_merge:                                    ; preds = %lookup_merge4, %helper_failure
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %helper_error_t)
+  br label %helper_merge
+
+lookup_success2:                                  ; preds = %event_loss_counter
+  %9 = atomicrmw add ptr %lookup_elem1, i64 1 seq_cst, align 8
+  br label %lookup_merge4
+
+lookup_failure3:                                  ; preds = %event_loss_counter
+  br label %lookup_merge4
+
+lookup_merge4:                                    ; preds = %lookup_failure3, %lookup_success2
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
+  br label %counter_merge
 }
 
 attributes #0 = { nounwind }
