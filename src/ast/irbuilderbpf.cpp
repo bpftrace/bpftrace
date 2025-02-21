@@ -1653,31 +1653,60 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
   // needle. It returns true if needle is contained by haystack, false if not
   // contained.
   //
-  //  strcontains(String haystack, String needle, int haystack_sz, int
-  //  needle_sz)
-  //  {
-  //    for (size_t j = 0; (haystack_sz >= needle_sz) && (j <= haystack_sz -
-  //   needle_sz); j++)
-  //    {
-  //      for (size_t i = 0; i < needle_sz; i++)
-  //      {
-  //        if (needle[i] == NULL)
-  //        {
-  //          return true;
-  //        }
-  //        if (haystack[i + j] != needle[i])
-  //        {
-  //          break;
-  //        }
-  //      }
-  //      if (haystack[j] == NULL) {
-  //        return false;
-  //      }
-  //    }
-  //    return false;
-  //  }
+  // clang-format off
+  //
+  // bool strcontains(char *haystack, size_t haystack_sz, char *needle, size_t needle_sz) {
+  //   // Explicit check needed for haystack="", needle="" case
+  //   if (needle[0] == '\0')
+  //     return true;
+  //
+  //   for (u64 i = 0; i < haystack_sz && haystack[i] != '\0'; i++) {
+  //     u64 j;
+  //     for (j = 0; j < needle_sz; j++) {
+  //       if (needle[j] == '\0')
+  //         return true;
+  //
+  //       if ((i+j) >= haystack_sz || haystack[i+j] != needle[j])
+  //         break;
+  //     }
+  //   }
+  //
+  //   return false;
+  // }
+  //
+  // clang-format on
 
   llvm::Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *empty_check = BasicBlock::Create(module_.getContext(),
+                                               "strcontains.empty.check",
+                                               parent);
+  BasicBlock *outer_cond = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.cond",
+                                              parent);
+  BasicBlock *outer_cond_cmp = BasicBlock::Create(module_.getContext(),
+                                                  "strcontains.outer.cond.cmp",
+                                                  parent);
+  BasicBlock *outer_body = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.body",
+                                              parent);
+  BasicBlock *inner_cond = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.cond",
+                                              parent);
+  BasicBlock *inner_body = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.body",
+                                              parent);
+  BasicBlock *inner_notnull = BasicBlock::Create(module_.getContext(),
+                                                 "strcontains.inner.notnull",
+                                                 parent);
+  BasicBlock *inner_cmp = BasicBlock::Create(module_.getContext(),
+                                             "strcontains.inner.cmp",
+                                             parent);
+  BasicBlock *inner_incr = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.incr",
+                                              parent);
+  BasicBlock *outer_incr = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.incr",
+                                              parent);
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
                                              "strcontains.true",
                                              parent);
@@ -1688,59 +1717,66 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
                                         "strcontains.done",
                                         parent);
 
+  AllocaInst *i = CreateAllocaBPF(getInt64Ty(), "strcontains.i");
+  CreateStore(getInt64(0), i);
+  AllocaInst *j = CreateAllocaBPF(getInt64Ty(), "strcontains.j");
+  needle = CreatePointerCast(needle, getInt8Ty()->getPointerTo());
+  haystack = CreatePointerCast(haystack, getInt8Ty()->getPointerTo());
   Value *null_byte = getInt8(0);
 
-  for (size_t j = 0;
-       (haystack_sz >= needle_sz) && (j <= haystack_sz - needle_sz);
-       j++) {
-    BasicBlock *first_loop = BasicBlock::Create(module_.getContext(),
-                                                "strcontains.firstloop",
-                                                parent);
+  CreateBr(empty_check);
+  SetInsertPoint(empty_check);
+  Value *needle_first = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), needle, { getInt64(0) }));
+  Value *needle_first_null = CreateICmpEQ(needle_first, null_byte);
+  CreateCondBr(needle_first_null, done_true, outer_cond);
 
-    auto *ptr_str = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(haystack,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(j) });
-    Value *str_c = CreateLoad(getInt8Ty(), ptr_str);
+  SetInsertPoint(outer_cond);
+  Value *i_val = CreateLoad(getInt64Ty(), i);
+  Value *haystack_inbounds = CreateICmpULT(i_val, getInt64(haystack_sz));
+  CreateCondBr(haystack_inbounds, outer_cond_cmp, done_false);
 
-    for (size_t i = 0; i < needle_sz; i++) {
-      BasicBlock *second_loop = BasicBlock::Create(module_.getContext(),
-                                                   "strcontains.secondloop",
-                                                   parent);
-      BasicBlock *cmp_char = BasicBlock::Create(module_.getContext(),
-                                                "strcontains.cmp_char",
-                                                parent);
+  SetInsertPoint(outer_cond_cmp);
+  Value *haystack_char = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), haystack, { i_val }));
+  Value *haystack_valid = CreateICmpNE(haystack_char, null_byte);
+  CreateCondBr(haystack_valid, outer_body, done_false);
 
-      Value *l;
-      auto *ptr_l = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(haystack,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i + j) });
-      l = CreateLoad(getInt8Ty(), ptr_l);
+  SetInsertPoint(outer_body);
+  CreateStore(getInt64(0), j);
+  CreateBr(inner_cond);
 
-      auto *ptr_r = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(needle,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i) });
-      Value *r = CreateLoad(getInt8Ty(), ptr_r);
+  SetInsertPoint(inner_cond);
+  Value *j_val = CreateLoad(getInt64Ty(), j);
+  Value *needle_inbounds = CreateICmpULT(j_val, getInt64(needle_sz));
+  CreateCondBr(needle_inbounds, inner_body, outer_incr);
 
-      Value *cmp_null = CreateICmpEQ(r, null_byte, "strcontains.cmp_null");
-      CreateCondBr(cmp_null, done_true, cmp_char);
+  SetInsertPoint(inner_body);
+  Value *needle_char = CreateLoad(getInt8Ty(),
+                                  CreateGEP(getInt8Ty(), needle, { j_val }));
+  Value *needle_null = CreateICmpEQ(needle_char, null_byte);
+  CreateCondBr(needle_null, done_true, inner_notnull);
 
-      SetInsertPoint(cmp_char);
+  SetInsertPoint(inner_notnull);
+  Value *haystack_cmp_idx = CreateAdd(i_val, j_val);
+  Value *haystack_cmp_outbounds = CreateICmpUGE(haystack_cmp_idx,
+                                                getInt64(haystack_sz));
+  CreateCondBr(haystack_cmp_outbounds, outer_incr, inner_cmp);
 
-      Value *cmp = CreateICmpNE(l, r, "strcontains.cmp");
-      CreateCondBr(cmp, first_loop, second_loop);
+  // Inner conditional matching haystack char with needle char
+  SetInsertPoint(inner_cmp);
+  Value *haystack_cmp_char = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), haystack, { haystack_cmp_idx }));
+  Value *haystack_cmp_needle = CreateICmpNE(haystack_cmp_char, needle_char);
+  CreateCondBr(haystack_cmp_needle, outer_incr, inner_incr);
 
-      SetInsertPoint(second_loop);
-    }
-    Value *cmp_null = CreateICmpEQ(str_c, null_byte, "strcontains.cmp_null");
-    CreateCondBr(cmp_null, done_false, first_loop);
+  SetInsertPoint(inner_incr);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), j), getInt64(1)), j);
+  CreateBr(inner_cond);
 
-    SetInsertPoint(first_loop);
-  }
-
-  CreateBr(done_false);
+  SetInsertPoint(outer_incr);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), i), getInt64(1)), i);
+  CreateBr(outer_cond);
 
   SetInsertPoint(done_false);
   CreateBr(done);
@@ -1752,6 +1788,8 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
   auto phi = CreatePHI(getInt1Ty(), 2, "result");
   phi->addIncoming(getInt1(false), done_false);
   phi->addIncoming(getInt1(true), done_true);
+  CreateLifetimeEnd(j);
+  CreateLifetimeEnd(i);
 
   return CreateIntCast(phi, getInt64Ty(), false);
 }
