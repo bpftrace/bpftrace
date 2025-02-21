@@ -1676,15 +1676,16 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   //  }
 
   llvm::Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
                                              "strcontains.true",
                                              parent);
   BasicBlock *done_false = BasicBlock::Create(module_.getContext(),
                                               "strcontains.false",
                                               parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "strcontains.done",
+                                        parent);
 
-  CreateStore(getInt1(true), store);
   Value *null_byte = getInt8(0);
 
   for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size - str2_size);
@@ -1735,19 +1736,21 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
 
     SetInsertPoint(first_loop);
   }
+
   CreateBr(done_false);
+
   SetInsertPoint(done_false);
-  CreateStore(getInt1(false), store);
+  CreateBr(done);
 
-  CreateBr(done_true);
   SetInsertPoint(done_true);
+  CreateBr(done);
 
-  // store is a pointer to bool (i1 *)
-  Value *result = CreateLoad(getInt1Ty(), store);
-  CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), false);
+  SetInsertPoint(done);
+  auto phi = CreatePHI(getInt1Ty(), 2, "result");
+  phi->addIncoming(getInt1(false), done_false);
+  phi->addIncoming(getInt1(true), done_true);
 
-  return result;
+  return CreateIntCast(phi, getInt64Ty(), false);
 }
 
 CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
