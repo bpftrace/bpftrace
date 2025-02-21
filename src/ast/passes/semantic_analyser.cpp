@@ -2366,12 +2366,6 @@ void SemanticAnalyser::visit(Jump &jump)
 
 void SemanticAnalyser::visit(While &while_block)
 {
-  if (is_final_pass() && !bpftrace_.feature_->has_loop()) {
-    LOG(WARNING, while_block.loc, out_)
-        << "Kernel does not support bounded loops. Depending"
-           " on LLVMs loop unroll to generate loadable code.";
-  }
-
   while_block.cond = dereference_if_needed(while_block.cond);
 
   loop_depth_++;
