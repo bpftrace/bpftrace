@@ -1647,8 +1647,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
 Value *IRBuilderBPF::CreateStrcontains(Value *val1,
                                        uint64_t str1_size,
                                        Value *val2,
-                                       uint64_t str2_size,
-                                       bool inverse)
+                                       uint64_t str2_size)
 {
   // This function compares whether the string val1 contains the string val2.
   // It returns true if val2 is contained by val1, false if not contained.
@@ -1685,7 +1684,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
                                               "strcontains.false",
                                               parent);
 
-  CreateStore(getInt1(!inverse), store);
+  CreateStore(getInt1(true), store);
   Value *null_byte = getInt8(0);
 
   for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size - str2_size);
@@ -1738,7 +1737,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   }
   CreateBr(done_false);
   SetInsertPoint(done_false);
-  CreateStore(getInt1(inverse), store);
+  CreateStore(getInt1(false), store);
 
   CreateBr(done_true);
   SetInsertPoint(done_true);

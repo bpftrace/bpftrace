@@ -1427,8 +1427,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(b_.CreateStrcontains(left_string.value(),
                                            left_arg.type.GetSize(),
                                            right_string.value(),
-                                           right_arg.type.GetSize(),
-                                           false));
+                                           right_arg.type.GetSize()));
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0

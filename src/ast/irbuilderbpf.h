@@ -129,8 +129,7 @@ public:
   Value *CreateStrcontains(Value *val1,
                            uint64_t str1_size,
                            Value *val2,
-                           uint64_t str2_size,
-                           bool inverse);
+                           uint64_t str2_size);
   Value *CreateIntegerArrayCmp(Value *ctx,
                                Value *val1,
                                Value *val2,
