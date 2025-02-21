@@ -1639,24 +1639,14 @@ ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
   assert(left_array_ty.GetElementTy()->GetSize() ==
          right_array_ty.GetElementTy()->GetSize());
 
-  if (bpftrace_.feature_->has_loop()) {
-    return ScopedExpr(b_.CreateIntegerArrayCmp(ctx_,
-                                               left_array_val,
-                                               right_array_val,
-                                               left_array_ty,
-                                               right_array_ty,
-                                               inverse,
-                                               binop.loc,
-                                               createLoopMetadata()));
-  } else {
-    return ScopedExpr(b_.CreateIntegerArrayCmpUnrolled(ctx_,
-                                                       left_array_val,
-                                                       right_array_val,
-                                                       left_array_ty,
-                                                       right_array_ty,
-                                                       inverse,
-                                                       binop.loc));
-  }
+  return ScopedExpr(b_.CreateIntegerArrayCmp(ctx_,
+                                             left_array_val,
+                                             right_array_val,
+                                             left_array_ty,
+                                             right_array_ty,
+                                             inverse,
+                                             binop.loc,
+                                             createLoopMetadata()));
 }
 
 ScopedExpr CodegenLLVM::binop_buf(Binop &binop)

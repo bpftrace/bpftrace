@@ -232,24 +232,6 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
   return map_fd >= 0;
 }
 
-bool BPFfeature::has_loop()
-{
-  if (has_loop_.has_value())
-    return *has_loop_;
-
-  struct bpf_insn insns[] = {
-    BPF_MOV64_IMM(BPF_REG_0, 0),
-    BPF_ALU64_IMM(BPF_ADD, BPF_REG_0, 1),
-    BPF_JMP_IMM(BPF_JLT, BPF_REG_0, 4, -2),
-    BPF_EXIT_INSN(),
-  };
-
-  has_loop_ = std::make_optional<bool>(
-      try_load(libbpf::BPF_PROG_TYPE_TRACEPOINT, insns, ARRAY_SIZE(insns)));
-
-  return has_loop();
-}
-
 bool BPFfeature::has_btf()
 {
   return btf_.has_data();
@@ -607,7 +589,6 @@ std::string BPFfeature::report()
 
   std::vector<std::pair<std::string, std::string>> features = {
     { "Instruction limit", std::to_string(instruction_limit()) },
-    { "Loop support", to_str(has_loop()) },
     { "btf", to_str(has_btf()) },
     { "module btf", to_str(has_module_btf()) },
     { "Kernel DWARF", to_str(has_kernel_dwarf()) },
