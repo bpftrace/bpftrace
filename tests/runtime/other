@@ -326,3 +326,11 @@ EXPECT FOO
 NAME symbolize enum in scratch variable tuple
 PROG enum { FOO = 333, BAR }; BEGIN { $t = (FOO, BAR); print($t); exit(); }
 EXPECT (FOO, BAR)
+
+NAME symbolize int cast to enum
+PROG enum BAZ { FOO = 333, BAR }; BEGIN { print((enum BAZ)333); exit(); }
+EXPECT FOO
+
+NAME no symbolize int cast to unknown enum variant
+PROG enum BAZ { FOO = 333, BAR }; BEGIN { $x = 444; print((enum BAZ)$x); exit(); }
+EXPECT 444

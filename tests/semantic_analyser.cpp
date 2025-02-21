@@ -2856,6 +2856,33 @@ kprobe:f { $x = (uint8)1; printf("%s", $x) }
 )");
 }
 
+TEST(semantic_analyser, enum_casts)
+{
+  test("enum named { a = 1, b } kprobe:f { print((enum named)1); }");
+  // We can't detect this issue because the cast expr is not a literal
+  test("enum named { a = 1, b } kprobe:f { $x = 3; print((enum named)$x); }");
+
+  test_error("enum named { a = 1, b } kprobe:f { print((enum named)3); }", R"(
+stdin:1:36-56: ERROR: Enum: named doesn't contain a variant value of 3
+enum named { a = 1, b } kprobe:f { print((enum named)3); }
+                                   ~~~~~~~~~~~~~~~~~~~~
+)");
+
+  test_error("enum Foo { a = 1, b } kprobe:f { print((enum Bar)1); }", R"(
+stdin:1:34-51: ERROR: Unknown enum: Bar
+enum Foo { a = 1, b } kprobe:f { print((enum Bar)1); }
+                                 ~~~~~~~~~~~~~~~~~
+)");
+
+  test_error("enum named { a = 1, b } kprobe:f { $a = \"str\"; print((enum "
+             "named)$a); }",
+             R"(
+stdin:1:48-67: ERROR: Cannot cast from "string[4]" to "enum named"
+enum named { a = 1, b } kprobe:f { $a = "str"; print((enum named)$a); }
+                                               ~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 TEST(semantic_analyser, signed_int_comparison_warnings)
 {
   bool invert = true;

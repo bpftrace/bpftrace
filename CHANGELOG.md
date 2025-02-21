@@ -21,6 +21,8 @@ and this project adheres to
   - [#3787](https://github.com/bpftrace/bpftrace/pull/3787)
 - Published aarch64 appimage builds from master
   - [#3795](https://github.com/bpftrace/bpftrace/pull/3795)
+- Add ability to cast int to an enum
+  - [#3812](https://github.com/bpftrace/bpftrace/pull/3812)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)

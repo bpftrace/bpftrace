@@ -40,6 +40,9 @@ std::string typestr(const SizedType &type)
 {
   switch (type.GetTy()) {
     case Type::integer:
+      if (type.IsEnumTy()) {
+        return "enum " + type.GetName();
+      }
       return (type.is_signed_ ? "int" : "uint") +
              std::to_string(8 * type.GetSize());
     case Type::inet:
