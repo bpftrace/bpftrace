@@ -1403,29 +1403,31 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "strerror") {
     return visit(call.vargs.front());
   } else if (call.func == "strncmp") {
+    auto &left_arg = *call.vargs.at(0);
+    auto &right_arg = *call.vargs.at(1);
     auto size_opt = bpftrace_.get_int_literal(call.vargs.at(2));
     if (!size_opt.has_value())
       LOG(BUG) << "Int literal should have been checked in semantic analysis";
-    uint64_t size = static_cast<uint64_t>(*size_opt);
-    auto &left_arg = *call.vargs.at(0);
-    auto &right_arg = *call.vargs.at(1);
+    uint64_t size = std::min({ static_cast<uint64_t>(*size_opt),
+                               left_arg.type.GetSize(),
+                               right_arg.type.GetSize() });
 
-    auto left_string = getString(left_arg);
-    auto right_string = getString(right_arg);
+    auto left_string = visit(&left_arg);
+    auto right_string = visit(&right_arg);
 
     return ScopedExpr(b_.CreateStrncmp(
-        left_string.first.value(), right_string.first.value(), size, false));
+        left_string.value(), right_string.value(), size, false));
   } else if (call.func == "strcontains") {
     auto &left_arg = *call.vargs.at(0);
     auto &right_arg = *call.vargs.at(1);
 
-    auto left_string = getString(left_arg);
-    auto right_string = getString(right_arg);
+    auto left_string = visit(left_arg);
+    auto right_string = visit(right_arg);
 
-    return ScopedExpr(b_.CreateStrcontains(left_string.first.value(),
-                                           left_string.second,
-                                           right_string.first.value(),
-                                           right_string.second,
+    return ScopedExpr(b_.CreateStrcontains(left_string.value(),
+                                           left_arg.type.GetSize(),
+                                           right_string.value(),
+                                           right_arg.type.GetSize(),
                                            false));
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
@@ -1586,39 +1588,22 @@ ScopedExpr CodegenLLVM::visit(Variable &var)
   }
 }
 
-std::pair<ScopedExpr, uint64_t> CodegenLLVM::getString(Expression &expr)
-{
-  std::pair<ScopedExpr, uint64_t> result;
-  if (expr.is_literal) {
-    auto str = bpftrace_.get_string_literal(&expr);
-    result.first = ScopedExpr(
-        ConstantDataArray::getString(module_->getContext(), str));
-    result.second = str.size() + 1;
-  } else {
-    result.first = visit(expr);
-    result.second = expr.type.GetSize();
-  }
-
-  return result;
-}
-
 ScopedExpr CodegenLLVM::binop_string(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
     LOG(BUG) << "missing codegen to string operator \"" << opstr(binop) << "\"";
   }
 
-  std::string string_literal;
-
   // strcmp returns 0 when strings are equal
   bool inverse = binop.op == Operator::EQ;
 
-  auto left_string = getString(*binop.left);
-  auto right_string = getString(*binop.right);
+  auto left_string = visit(binop.left);
+  auto right_string = visit(binop.right);
 
-  size_t len = std::min(left_string.second, right_string.second);
+  size_t len = std::min(binop.left->type.GetSize(),
+                        binop.right->type.GetSize());
   return ScopedExpr(b_.CreateStrncmp(
-      left_string.first.value(), right_string.first.value(), len, inverse));
+      left_string.value(), right_string.value(), len, inverse));
 }
 
 ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
@@ -1654,8 +1639,6 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
     LOG(BUG) << "missing codegen to buffer operator \"" << opstr(binop) << "\"";
   }
-
-  std::string string_literal("");
 
   // strcmp returns 0 when strings are equal
   bool inverse = binop.op == Operator::EQ;
