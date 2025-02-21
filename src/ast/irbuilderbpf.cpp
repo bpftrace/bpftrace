@@ -1558,18 +1558,6 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   return result;
 }
 
-std::optional<std::string> ValToString(Value *val)
-{
-  std::optional<std::string> literal;
-  if (auto constString2 = dyn_cast<ConstantDataArray>(val))
-    literal = constString2->getAsString();
-  else if (isa<ConstantAggregateZero>(val))
-    literal = "";
-  else
-    literal = std::nullopt;
-  return literal;
-}
-
 Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                    Value *str2,
                                    uint64_t n,
@@ -1596,11 +1584,6 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   //     return true;
   //  }
 
-  // Check if the compared strings are literals.
-  // If so, we can avoid storing the literal in memory.
-  std::optional<std::string> literal1 = ValToString(str1);
-  std::optional<std::string> literal2 = ValToString(str2);
-
   llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
@@ -1622,26 +1605,18 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                                      parent);
 
     Value *l;
-    if (literal1)
-      l = getInt8(literal1->c_str()[i]);
-    else {
-      auto *ptr_l = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(str1,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i) });
-      l = CreateLoad(getInt8Ty(), ptr_l);
-    }
+    auto *ptr_l = CreateGEP(getInt8Ty(),
+                            CreatePointerCast(str1,
+                                              getInt8Ty()->getPointerTo()),
+                            { getInt32(i) });
+    l = CreateLoad(getInt8Ty(), ptr_l);
 
     Value *r;
-    if (literal2)
-      r = getInt8(literal2->c_str()[i]);
-    else {
-      auto *ptr_r = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(str2,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i) });
-      r = CreateLoad(getInt8Ty(), ptr_r);
-    }
+    auto *ptr_r = CreateGEP(getInt8Ty(),
+                            CreatePointerCast(str2,
+                                              getInt8Ty()->getPointerTo()),
+                            { getInt32(i) });
+    r = CreateLoad(getInt8Ty(), ptr_r);
 
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, loop_null_check);
@@ -1701,24 +1676,6 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   //    return false;
   //  }
 
-  // Check if the compared strings are literals.
-  // If so, we can avoid storing the literal in memory.
-  std::optional<std::string> literal1 = ValToString(val1);
-  std::optional<std::string> literal2 = ValToString(val2);
-
-  if (literal1 && literal2) {
-    const std::string &s1 = literal1.value();
-    std::string s2 = literal2.value();
-    s2 = s2.substr(0, s2.size() - 1);
-    std::size_t position = s1.find(s2);
-
-    if (position != std::string::npos) {
-      return getInt64(1);
-    } else {
-      return getInt64(0);
-    }
-  }
-
   llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
@@ -1737,16 +1694,11 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
                                                 "strcontains.firstloop",
                                                 parent);
 
-    Value *str_c;
-    if (literal1)
-      str_c = getInt8(literal1->c_str()[j]);
-    else {
-      auto *ptr_str = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val1,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(j) });
-      str_c = CreateLoad(getInt8Ty(), ptr_str);
-    }
+    auto *ptr_str = CreateGEP(getInt8Ty(),
+                              CreatePointerCast(val1,
+                                                getInt8Ty()->getPointerTo()),
+                              { getInt32(j) });
+    Value *str_c = CreateLoad(getInt8Ty(), ptr_str);
 
     for (size_t i = 0; i < str2_size; i++) {
       BasicBlock *second_loop = BasicBlock::Create(module_.getContext(),
@@ -1757,26 +1709,17 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
                                                 parent);
 
       Value *l;
-      if (literal1)
-        l = getInt8(literal1->c_str()[i + j]);
-      else {
-        auto *ptr_l = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val1,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(i + j) });
-        l = CreateLoad(getInt8Ty(), ptr_l);
-      }
+      auto *ptr_l = CreateGEP(getInt8Ty(),
+                              CreatePointerCast(val1,
+                                                getInt8Ty()->getPointerTo()),
+                              { getInt32(i + j) });
+      l = CreateLoad(getInt8Ty(), ptr_l);
 
-      Value *r;
-      if (literal2)
-        r = getInt8(literal2->c_str()[i]);
-      else {
-        auto *ptr_r = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val2,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(i) });
-        r = CreateLoad(getInt8Ty(), ptr_r);
-      }
+      auto *ptr_r = CreateGEP(getInt8Ty(),
+                              CreatePointerCast(val2,
+                                                getInt8Ty()->getPointerTo()),
+                              { getInt32(i) });
+      Value *r = CreateLoad(getInt8Ty(), ptr_r);
 
       Value *cmp_null = CreateICmpEQ(r, null_byte, "strcontains.cmp_null");
       CreateCondBr(cmp_null, done_true, cmp_char);
