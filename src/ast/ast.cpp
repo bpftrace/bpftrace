@@ -7,6 +7,8 @@
 
 namespace bpftrace::ast {
 
+static constexpr std::string_view ENUM = "enum ";
+
 Integer::Integer(int64_t n, location loc, bool is_negative)
     : Expression(loc), n(n), is_negative(is_negative)
 {
@@ -473,6 +475,21 @@ SizedType ident_to_record(const std::string &ident, int pointer_level)
   for (int i = 0; i < pointer_level; i++)
     result = CreatePointer(result);
   return result;
+}
+
+SizedType ident_to_sized_type(const std::string &ident)
+{
+  if (ident.starts_with(ENUM)) {
+    auto enum_name = ident.substr(ENUM.size());
+    // This is an automatic promotion to a uint64
+    // even though it's possible that highest variant value of that enum
+    // fits into a smaller int. This will also affect casts from a smaller
+    // int and cause an ERROR: Integer size mismatch.
+    // This could potentially be revisited or the cast relaxed
+    // if we check the variant values during semantic analysis.
+    return CreateEnum(64, enum_name);
+  }
+  return ident_to_record(ident);
 }
 
 } // namespace bpftrace::ast

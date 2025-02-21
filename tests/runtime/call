@@ -52,6 +52,14 @@ EXPECT_REGEX ^\d+ [A-Z_]+$
 AFTER ping localhost -c 5
 TIMEOUT 5
 
+NAME printf_enum_symbolize_cast
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s\n", ONE, (enum Foo)1); exit() }
+EXPECT 1 ONE
+
+NAME printf_invalid_enum_symbolize_cast
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { $x = 100; printf("%d %s\n", ONE, (enum Foo)$x); exit() }
+EXPECT 1 100
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*:[0-9]*:[0-9]*

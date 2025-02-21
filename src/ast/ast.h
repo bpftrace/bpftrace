@@ -621,6 +621,7 @@ std::string opstr(const Unop &unop);
 std::string opstr(const Jump &jump);
 
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
+SizedType ident_to_sized_type(const std::string &ident);
 
 template <typename T>
 concept NodeType = std::derived_from<T, Node>;

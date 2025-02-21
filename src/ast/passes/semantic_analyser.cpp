@@ -2814,6 +2814,22 @@ void SemanticAnalyser::visit(Cast &cast)
       cast.type.is_internal = true;
   }
 
+  if (cast.type.IsEnumTy()) {
+    if (bpftrace_.enum_defs_.count(cast.type.GetName()) == 0) {
+      LOG(ERROR, cast.loc, err_) << "Unknown enum: " << cast.type.GetName();
+    } else {
+      if (rhs.IsIntTy() && cast.expr->is_literal) {
+        auto integer = static_cast<Integer *>(cast.expr);
+
+        if (bpftrace_.enum_defs_[cast.type.GetName()].count(integer->n) == 0) {
+          LOG(ERROR, cast.expr->loc, err_)
+              << "Enum: " << cast.type.GetName()
+              << " doesn't contain a variant value of " << integer->n;
+        }
+      }
+    }
+  }
+
   if ((cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
        !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
       // casting from/to int arrays must respect the size

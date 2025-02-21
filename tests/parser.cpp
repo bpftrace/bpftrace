@@ -1936,6 +1936,17 @@ TEST(Parser, cast_precedence)
        "   int: 123\n");
 }
 
+TEST(Parser, cast_enum)
+{
+  test("enum Foo { ONE = 1 } kprobe:sys_read { (enum Foo)1; }",
+       "enum Foo { ONE = 1 };\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (enum Foo)\n"
+       "   int: 1\n");
+}
+
 TEST(Parser, sizeof_expression)
 {
   test("kprobe:sys_read { sizeof(arg0); }",

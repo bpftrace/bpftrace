@@ -268,7 +268,7 @@ pointer_type:
                 type "*" { $$ = CreatePointer($1); }
                 ;
 struct_type:
-                STRUCT IDENT { $$ = ast::ident_to_record($2); }
+                STRUCT IDENT { $$ = ast::ident_to_sized_type($2); }
                 ;
 
 config:
