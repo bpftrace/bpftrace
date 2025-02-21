@@ -3514,7 +3514,7 @@ uprobe:/bin/bash:rl_set_prompt
 When tracing C{plus}{plus} programs, it's possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 
 ----
-# bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { ... }
+# bpftrace -l "u:/usr/local/my_cpp_prog:cpp:*" 
 ----
 
 It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
