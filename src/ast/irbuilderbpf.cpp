@@ -1644,31 +1644,33 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   return result;
 }
 
-Value *IRBuilderBPF::CreateStrcontains(Value *val1,
-                                       uint64_t str1_size,
-                                       Value *val2,
-                                       uint64_t str2_size)
+Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
+                                       uint64_t haystack_sz,
+                                       Value *needle,
+                                       uint64_t needle_sz)
 {
-  // This function compares whether the string val1 contains the string val2.
-  // It returns true if val2 is contained by val1, false if not contained.
+  // This function compares whether the string haystack contains the string
+  // needle. It returns true if needle is contained by haystack, false if not
+  // contained.
   //
-  //  strcontains(String val1, String val2, int str1_size, int str2_size)
+  //  strcontains(String haystack, String needle, int haystack_sz, int
+  //  needle_sz)
   //  {
-  //    for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size -
-  //   str2_size); j++)
+  //    for (size_t j = 0; (haystack_sz >= needle_sz) && (j <= haystack_sz -
+  //   needle_sz); j++)
   //    {
-  //      for (size_t i = 0; i < str2_size; i++)
+  //      for (size_t i = 0; i < needle_sz; i++)
   //      {
-  //        if (val2[i] == NULL)
+  //        if (needle[i] == NULL)
   //        {
   //          return true;
   //        }
-  //        if (val1[i + j] != val2[i])
+  //        if (haystack[i + j] != needle[i])
   //        {
   //          break;
   //        }
   //      }
-  //      if (val1[j] == NULL) {
+  //      if (haystack[j] == NULL) {
   //        return false;
   //      }
   //    }
@@ -1688,19 +1690,20 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
 
   Value *null_byte = getInt8(0);
 
-  for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size - str2_size);
+  for (size_t j = 0;
+       (haystack_sz >= needle_sz) && (j <= haystack_sz - needle_sz);
        j++) {
     BasicBlock *first_loop = BasicBlock::Create(module_.getContext(),
                                                 "strcontains.firstloop",
                                                 parent);
 
     auto *ptr_str = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(val1,
+                              CreatePointerCast(haystack,
                                                 getInt8Ty()->getPointerTo()),
                               { getInt32(j) });
     Value *str_c = CreateLoad(getInt8Ty(), ptr_str);
 
-    for (size_t i = 0; i < str2_size; i++) {
+    for (size_t i = 0; i < needle_sz; i++) {
       BasicBlock *second_loop = BasicBlock::Create(module_.getContext(),
                                                    "strcontains.secondloop",
                                                    parent);
@@ -1710,13 +1713,13 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
 
       Value *l;
       auto *ptr_l = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(val1,
+                              CreatePointerCast(haystack,
                                                 getInt8Ty()->getPointerTo()),
                               { getInt32(i + j) });
       l = CreateLoad(getInt8Ty(), ptr_l);
 
       auto *ptr_r = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(val2,
+                              CreatePointerCast(needle,
                                                 getInt8Ty()->getPointerTo()),
                               { getInt32(i) });
       Value *r = CreateLoad(getInt8Ty(), ptr_r);
