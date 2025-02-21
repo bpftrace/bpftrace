@@ -1,0 +1,7 @@
+NAME strcontains no literals
+PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1]), str(args.argv[2]))); exit(); }
+AFTER ./testprogs/true zztest test
+EXPECT 1
+TIMEOUT 1
+# Clamping is done to not blow verifier complexity limits
+ENV BPFTRACE_MAX_STRLEN=64
