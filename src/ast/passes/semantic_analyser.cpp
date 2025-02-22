@@ -1469,9 +1469,25 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   } else if (call.func == "strcontains") {
+    static constexpr auto warning = R"(
+strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.
+
+If you're seeing errors, try clamping the string sizes. For example:
+* `str($ptr, 16)`
+* `path($ptr, 16)`
+)";
+
     if (check_nargs(call, 2)) {
       check_arg(call, Type::string, 0);
       check_arg(call, Type::string, 1);
+
+      if (is_final_pass()) {
+        auto arg0_sz = call.vargs.at(0)->type.GetSize();
+        auto arg1_sz = call.vargs.at(1)->type.GetSize();
+        if (arg0_sz * arg1_sz > 2000) {
+          LOG(WARNING, call.loc, out_) << warning;
+        }
+      }
     }
     call.type = CreateUInt64();
   } else if (call.func == "override") {
