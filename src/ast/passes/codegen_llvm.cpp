@@ -317,7 +317,49 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
     return kstack_ustack(builtin.ident, builtin.type.stack_type, builtin.loc);
   } else if (builtin.ident == "pid") {
-    return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    if (probetype(current_attach_point_->provider) == ProbeType::iter) {
+      // For iter:task, ctx->task points to the current task_struct
+    
+      // First preserve static offset for ctx
+      Value *preserved_ctx = b_.CreateCall(llvm::Intrinsic::getDeclaration(
+        module_.get(), llvm::Intrinsic::preserve_static_offset), {ctx_});
+    
+      // Get task pointer from ctx with preserved offset
+      Value *task_ptr = b_.CreateGEP(b_.getInt8Ty(), preserved_ctx, b_.getInt64(8));
+      Value *task = b_.CreateLoad(b_.getInt64Ty(), task_ptr, true);
+
+      // Add null pointer check
+      BasicBlock *pred_false = BasicBlock::Create(module_->getContext(), "pred_false", b_.GetInsertBlock()->getParent());
+      BasicBlock *pred_true = BasicBlock::Create(module_->getContext(), "pred_true", b_.GetInsertBlock()->getParent());
+      
+      Value *predcond = b_.CreateICmpEQ(task, b_.getInt64(0), "predcond");
+      b_.CreateCondBr(predcond, pred_false, pred_true);
+      
+      // Handle null pointer case
+      b_.SetInsertPoint(pred_false);
+      b_.CreateRet(b_.getInt64(0));
+
+      // Cast task pointer to proper type and preserve its offset
+      b_.SetInsertPoint(pred_true);
+      Value *task_cast = b_.CreateIntToPtr(task, b_.GET_PTR_TY());
+      Value *preserved_task = b_.CreateCall(llvm::Intrinsic::getDeclaration(
+          module_.get(), llvm::Intrinsic::preserve_static_offset), {task_cast});
+
+      // Get task_struct type info from BTF
+      auto stype = bpftrace_.btf_->get_stype("task_struct");
+      auto pid_field = stype.GetField("pid");
+
+      // Read pid field directly using GEP and volatile load
+      Value *pid_ptr = b_.CreateGEP(b_.getInt8Ty(),
+            preserved_task,
+            b_.getInt64(pid_field.offset));
+      Value *pid = b_.CreateLoad(b_.getInt32Ty(), pid_ptr, true);
+
+      return ScopedExpr(b_.CreateZExt(pid, b_.getInt64Ty()));
+
+    } else {
+      return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    }
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(ctx_, builtin.loc));
   } else if (builtin.ident == "cgroup") {
