@@ -18,6 +18,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
@@ -431,6 +432,7 @@ static void parse_env(BPFtrace& bpftrace)
 ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateMacroExpansionPass());
   pm.AddPass(ast::CreateConfigPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
@@ -442,6 +444,7 @@ ast::PassManager CreateDynamicPM()
 ast::PassManager CreateAotPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateMacroExpansionPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
