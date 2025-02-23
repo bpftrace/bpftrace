@@ -12,7 +12,7 @@ namespace bpftrace::ast {
 // for a single visitor to be dispatched dynamically. The implementation may
 // optionally provide individual `visit` methods (matching either pointers or
 // references, the latter preferred), or `replace` methods (matching just the
-// relevant pointer types and returning the same) which can return new nodes
+// relevant pointer types and returning the same/similar) which can return new nodes
 // when replacement is required. This makes it simple to write self-contained
 // passes that rewrite part of the AST.
 //
@@ -29,8 +29,8 @@ public:
   }
 
   // See above; specific replace methods may be defined.
-  template <typename T>
-  T *replace(T *node, [[maybe_unused]] R *result)
+  template <typename T, typename U = T>
+  U *replace(T *node, [[maybe_unused]] R *result)
   {
     return node;
   }
@@ -302,6 +302,22 @@ private:
       return default_value();
     }
   }
+  // Similiar to visitAndReplace, except this is used when Node has derived
+  // classes, and we want to swap from one derived class to another.
+  template <typename Node, typename Derived>
+  R visitAndReplaceNode(Node **orig, Derived *t)
+  {
+    Impl *impl = static_cast<Impl *>(this);
+    if constexpr (!std::is_void_v<R>) {
+      auto rval = impl->visit(t);
+      *orig = impl->replace(t, &rval);
+      return rval;
+    } else {
+      impl->visit(t);
+      *orig = impl->replace(t, nullptr);
+      return default_value();
+    }
+  }
   R default_value()
   {
     if constexpr (!std::is_void_v<R>) {
@@ -317,12 +333,9 @@ private:
   {
     if (auto *t = dynamic_cast<T>(*node)) {
       if constexpr (!std::is_void_v<R>) {
-        auto rval = visitAndReplace(&t);
-        *node = static_cast<Orig *>(t); // Copy the modification.
-        return rval;
+        return visitAndReplaceNode(node, t);
       } else {
-        visitAndReplace(&t);
-        *node = static_cast<Orig *>(t); // See above.
+        visitAndReplaceNode(node, t);
         return;
       }
     } else if constexpr (sizeof...(Ts) != 0) {
