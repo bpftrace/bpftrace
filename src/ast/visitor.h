@@ -207,6 +207,11 @@ public:
     visitAndReplace(&block.expr);
     return default_value();
   }
+  // A default visitor for Macro is not provided, as alone they are not
+  // valid code - they must be expanded in their callsites. Thus, Macro
+  // visitation should be specially handled by the macro expansion pass.
+  //
+  // R visit(Macro &macro) { .. }
   R visit(Subprog &subprog)
   {
     visitImpl(subprog.args);
@@ -216,6 +221,9 @@ public:
   R visit(Program &program)
   {
     // This order is important
+
+    // See above.
+    // visitImpl(program.macros);
     visitImpl(program.functions);
     visitAndReplace(&program.config);
     visitImpl(program.map_decls);
