@@ -1172,16 +1172,10 @@ TEST(Parser, call)
 
 TEST(Parser, call_unknown_function)
 {
-  test_parse_failure("kprobe:sys_open { myfunc() }", R"(
-stdin:1:19-25: ERROR: Unknown function: myfunc
-kprobe:sys_open { myfunc() }
-                  ~~~~~~
-)");
-
-  test_parse_failure("k:f { probe(); }", R"(
-stdin:1:7-12: ERROR: Unknown function: probe
-k:f { probe(); }
-      ~~~~~
+  test("kprobe:sys_open { myfunc() }", R"(
+Program
+ kprobe:sys_open
+  call: myfunc
 )");
 }
 
