@@ -21,6 +21,7 @@ add_library(ast STATIC
   passes/config_analyser.cpp
   passes/deprecated.cpp
   passes/field_analyser.cpp
+  passes/macro_expansion.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/probe_analyser.cpp
