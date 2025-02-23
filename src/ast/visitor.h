@@ -209,6 +209,13 @@ public:
     visitImpl(block.expr);
     return default_value();
   }
+  R visit([[maybe_unused]] Macro &macro)
+  {
+    // In general because macros are expanded in an early pass (macro_expansion)
+    // later passes shouldn't visit any macros; visitation should be specially
+    // handled by the macro_expansion pass.
+    return default_value();
+  }
   R visit(Subprog &subprog)
   {
     visitImpl(subprog.args);
@@ -224,6 +231,7 @@ public:
     // This order is important.
     visitImpl(program.config);
     visitImpl(program.imports);
+    visitImpl(program.macros);
     visitImpl(program.functions);
     visitImpl(program.map_decls);
     visitImpl(program.probes);

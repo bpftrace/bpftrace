@@ -39,6 +39,7 @@ add_executable(bpftrace_test
   function_registry.cpp
   location.cpp
   log.cpp
+  macro_expansion.cpp
   main.cpp
   mocks.cpp
   output.cpp

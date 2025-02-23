@@ -978,6 +978,91 @@ The following snippets create a map with key signature `(int64, string[16])` and
 @[(pid, comm)]++
 ----
 
+==== Macros
+
+bpftrace macros (as opposed to C macros) provide a way for you to structure your script.
+They can be useful when you want to factor out code into smaller, more understandable parts.
+Or if you want to share code between probes.
+
+At a high level, macros can be thought of as semantic aware text replacement.
+They accept (optional) variable, map, and some expression arguments.
+The body of the macro may only access maps and external variables passed in through the arguments, which is why these are often referred to as "hygienic macros".
+The body of the macro is exactly one block expression.
+
+For example, these are valid usages of macros:
+
+----
+config = {
+  unstable_macro=1;
+}
+
+macro one() {
+  1
+}
+
+macro add_one($other_name) {
+  $other_name + 1
+}
+
+macro add_one_to_each($a, @b) {
+  $a += 1;
+  @b += 1;
+  $a + @b
+}
+
+macro side_effect($x) {
+  print($x)
+}
+
+macro add_two($x) {
+  add_one($x) + 1
+}
+
+BEGIN {
+  print(one());                   // prints 1
+
+  $a = 42;
+  print(add_one($a));             // prints 43
+
+  @b = 3;
+  print(add_one_to_each($a, @b)); // prints 47
+
+  side_effect(5)                  // prints 5
+
+  print(add_two(1));              // prints 3
+}
+----
+
+Some examples of invalid macro usage:
+
+----
+config = {
+  unstable_macro=1;
+}
+
+macro not_expression() {
+  $var = 1;                    // BAD: Not an expression
+}
+
+macro unhygienic_access() {
+  @x++                         // BAD: @x not passed in
+}
+
+macro wrong_parameter_type($x) {
+  $x++
+}
+
+BEGIN {
+  @x = 1;
+  unhygienic_access();
+
+  wrong_parameter_type(@x);    // BAD: macro expects a scratch variable
+}
+----
+
+**Warning** this feature is experimental and may be subject to changes.
+It also requires the 'unstable_macro' config being set to 1.
+
 ==== Per-Thread Variables
 
 These can be implemented as a map keyed on the thread ID. For example, `@start[tid]`:

@@ -33,6 +33,8 @@ and this project adheres to
   - [#3944](https://github.com/bpftrace/bpftrace/pull/3944)
 - Add 'show_debug_info' config for blazesym
   - [#3999](https://github.com/bpftrace/bpftrace/pull/3999)
+- Add hygienic macros (behind an "unstable" config flag)
+  - [#4037](https://github.com/bpftrace/bpftrace/pull/4037)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

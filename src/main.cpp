@@ -664,6 +664,7 @@ static ast::ASTContext buildListProgram(const std::string& search)
                                          nullptr,
                                          ast::ImportList(),
                                          ast::MapDeclList(),
+                                         ast::MacroList(),
                                          ast::SubprogList(),
                                          ast::ProbeList({ probe }),
                                          location());

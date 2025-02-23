@@ -1175,6 +1175,29 @@ public:
 };
 using ImportList = std::vector<Import *>;
 
+class Macro : public Node {
+public:
+  Macro(ASTContext &ctx,
+        std::string name,
+        ExpressionList &&vargs,
+        Block *block,
+        Location &&loc)
+      : Node(ctx, std::move(loc)),
+        name(std::move(name)),
+        vargs(std::move(vargs)),
+        block(block) {};
+  explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        name(other.name),
+        vargs(clone(ctx, other.vargs, loc)),
+        block(clone(ctx, other.block, loc)) {};
+
+  std::string name;
+  ExpressionList vargs;
+  Block *block;
+};
+using MacroList = std::vector<Macro *>;
+
 class Program : public Node {
 public:
   explicit Program(ASTContext &ctx,
@@ -1182,6 +1205,7 @@ public:
                    Config *config,
                    ImportList &&imports,
                    MapDeclList &&map_decls,
+                   MacroList &&macros,
                    SubprogList &&functions,
                    ProbeList &&probes,
                    Location &&loc)
@@ -1190,6 +1214,7 @@ public:
         config(config),
         imports(std::move(imports)),
         map_decls(std::move(map_decls)),
+        macros(std::move(macros)),
         functions(std::move(functions)),
         probes(std::move(probes)) {};
   explicit Program(ASTContext &ctx, const Program &other, const Location &loc)
@@ -1198,6 +1223,7 @@ public:
         config(clone(ctx, other.config, loc)),
         imports(clone(ctx, other.imports, loc)),
         map_decls(clone(ctx, other.map_decls, loc)),
+        macros(clone(ctx, other.macros, loc)),
         functions(clone(ctx, other.functions, loc)),
         probes(clone(ctx, other.probes, loc)) {};
 
@@ -1205,6 +1231,7 @@ public:
   Config *config = nullptr;
   ImportList imports;
   MapDeclList map_decls;
+  MacroList macros;
   SubprogList functions;
   ProbeList probes;
 };
