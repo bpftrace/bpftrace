@@ -600,15 +600,28 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Macro : public Node {
+public:
+  Macro(std::string name, ExpressionList &&args, Expression *expr);
+  Macro(std::string name, Expression *expr);
+
+  std::string name;
+  ExpressionList args;
+  Expression *expr;
+};
+using MacroList = std::vector<Macro *>;
+
 class Program : public Node {
 public:
   Program(const std::string &c_definitions,
           Config *config,
+          MacroList &&macros,
           SubprogList &&functions,
           ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
+  MacroList macros;
   SubprogList functions;
   ProbeList probes;
 

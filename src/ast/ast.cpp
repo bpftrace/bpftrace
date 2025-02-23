@@ -244,12 +244,24 @@ Subprog::Subprog(std::string name,
 {
 }
 
+Macro::Macro(std::string name, ExpressionList &&args, Expression *expr)
+    : name(std::move(name)), args(std::move(args)), expr(expr)
+{
+}
+
+Macro::Macro(std::string name, Expression *expr)
+    : name(std::move(name)), expr(expr)
+{
+}
+
 Program::Program(const std::string &c_definitions,
                  Config *config,
+                 MacroList &&macros,
                  SubprogList &&functions,
                  ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
+      macros(std::move(macros)),
       functions(std::move(functions)),
       probes(std::move(probes))
 {

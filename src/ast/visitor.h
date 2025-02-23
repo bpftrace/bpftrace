@@ -200,6 +200,11 @@ public:
     visitImpl(block.stmts);
     return default_value();
   }
+  // A default visitor for Macro is not provided, as alone they are not
+  // valid code - they must be expanded in their callsites. Thus, Macro
+  // visitation should be specially handled by the macro expansion pass.
+  //
+  // R visit(Macro &macro) { .. }
   R visit(Subprog &subprog)
   {
     visitImpl(subprog.args);
@@ -208,6 +213,8 @@ public:
   }
   R visit(Program &program)
   {
+    // See above.
+    // visitImpl(program.macros);
     visitImpl(program.functions);
     visitImpl(program.probes);
     visitAndReplace(&program.config);
