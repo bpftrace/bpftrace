@@ -35,12 +35,6 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 14
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm14
-        - NAME: LLVM 15
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm15
         - NAME: LLVM 16
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm16
