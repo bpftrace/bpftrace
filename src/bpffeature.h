@@ -89,7 +89,6 @@ public:
   BPFfeature& operator=(BPFfeature&&) = delete;
 
   int instruction_limit();
-  bool has_loop();
   bool has_btf();
   bool has_btf_func_global();
   bool has_map_batch();
@@ -135,7 +134,6 @@ public:
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
 
 protected:
-  std::optional<bool> has_loop_;
   std::optional<bool> has_d_path_;
   std::optional<int> insns_limit_;
   std::optional<bool> has_map_batch_;

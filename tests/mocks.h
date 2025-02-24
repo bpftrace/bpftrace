@@ -114,7 +114,6 @@ public:
     has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);
     has_override_return_ = std::make_optional<bool>(has_features);
     has_prog_fentry_ = std::make_optional<bool>(has_features);
-    has_loop_ = std::make_optional<bool>(has_features);
     has_probe_read_kernel_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
@@ -130,11 +129,6 @@ public:
     has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
     has_map_lookup_percpu_elem_ = std::make_optional<bool>(has_features);
   };
-
-  void has_loop(bool has)
-  {
-    has_loop_ = std::make_optional<bool>(has);
-  }
 
   void mock_missing_kernel_func(Kfunc kfunc)
   {

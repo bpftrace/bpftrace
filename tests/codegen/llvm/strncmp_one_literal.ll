@@ -11,6 +11,7 @@ target triple = "bpf-pc-linux"
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !34
+@sshd = global [5 x i8] c"sshd\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -28,16 +29,17 @@ entry:
   store i1 true, ptr %strcmp.result, align 1
   %1 = getelementptr i8, ptr %comm, i32 0
   %2 = load i8, ptr %1, align 1
-  %strcmp.cmp = icmp ne i8 %2, 115
+  %3 = load i8, ptr @sshd, align 1
+  %strcmp.cmp = icmp ne i8 %2, %3
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop, %entry
-  %3 = load i1, ptr %strcmp.result, align 1
+  %4 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
-  %4 = zext i1 %3 to i64
+  %5 = zext i1 %4 to i64
   call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  store i64 %4, ptr %"@_key", align 8
+  store i64 %5, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
@@ -50,9 +52,10 @@ strcmp.done:                                      ; preds = %strcmp.loop1, %strc
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %5 = getelementptr i8, ptr %comm, i32 1
-  %6 = load i8, ptr %5, align 1
-  %strcmp.cmp3 = icmp ne i8 %6, 115
+  %6 = getelementptr i8, ptr %comm, i32 1
+  %7 = load i8, ptr %6, align 1
+  %8 = load i8, ptr getelementptr (i8, ptr @sshd, i32 1), align 1
+  %strcmp.cmp3 = icmp ne i8 %7, %8
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
 strcmp.loop_null_cmp:                             ; preds = %entry
@@ -63,7 +66,7 @@ strcmp.loop1:                                     ; preds = %strcmp.loop_null_cm
   br label %strcmp.done
 
 strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
-  %strcmp.cmp_null4 = icmp eq i8 %6, 0
+  %strcmp.cmp_null4 = icmp eq i8 %7, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 }
 
