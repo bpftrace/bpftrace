@@ -778,7 +778,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
           std::make_unique<AttachedProbe>(probe, program, pid, *this));
       return ret;
     } else {
-      ret.emplace_back(std::make_unique<AttachedProbe>(probe, program, *this));
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, program, pid, *this));
       return ret;
     }
   } catch (const EnospcException &e) {
