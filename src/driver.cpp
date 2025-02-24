@@ -7,8 +7,12 @@
 
 struct yy_buffer_state;
 
-extern struct yy_buffer_state *yy_scan_string(const char *yy_str,
-                                              yyscan_t yyscanner);
+#ifndef YY_BUF_SIZE
+#define YY_BUF_SIZE 16384
+#endif
+extern struct yy_buffer_state *yy_scan_string_with_size(const char *yystr,
+                                                        size_t size,
+                                                        yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy(yyscan_t yyscanner);
 extern bpftrace::location loc;
@@ -46,7 +50,11 @@ int Driver::parse()
   if (debug_) {
     parser.set_debug_level(1);
   }
-  yy_scan_string(Log::get().get_source().c_str(), scanner);
+  auto &source = Log::get().get_source();
+  yy_scan_string_with_size(source.c_str(),
+                           std::max(source.size(),
+                                    static_cast<size_t>(YY_BUF_SIZE)),
+                           scanner);
   parser.parse();
   yylex_destroy(scanner);
 
