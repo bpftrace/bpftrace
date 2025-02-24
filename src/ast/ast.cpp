@@ -208,6 +208,11 @@ Block::Block(StatementList &&stmts) : stmts(std::move(stmts))
 {
 }
 
+Block::Block(StatementList &&stmts, Expression *expr)
+    : stmts(std::move(stmts)), expr(expr)
+{
+}
+
 If::If(Expression *cond, Block *if_block, Block *else_block)
     : cond(cond), if_block(if_block), else_block(else_block)
 {
@@ -244,12 +249,24 @@ Subprog::Subprog(std::string name,
 {
 }
 
+Macro::Macro(std::string name, ExpressionList &&args, Expression *expr)
+    : name(std::move(name)), args(std::move(args)), expr(expr)
+{
+}
+
+Macro::Macro(std::string name, Expression *expr)
+    : name(std::move(name)), expr(expr)
+{
+}
+
 Program::Program(const std::string &c_definitions,
                  Config *config,
+                 MacroList &&macros,
                  SubprogList &&functions,
                  ProbeList &&probes)
     : c_definitions(c_definitions),
       config(config),
+      macros(std::move(macros)),
       functions(std::move(functions)),
       probes(std::move(probes))
 {

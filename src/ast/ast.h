@@ -385,11 +385,16 @@ private:
   AssignConfigVarStatement(const AssignConfigVarStatement &other) = default;
 };
 
-class Block : public Statement {
+class Block : public Expression {
 public:
   Block(StatementList &&stmts);
+  Block(StatementList &&stmts, Expression *expr);
 
   StatementList stmts;
+
+  // Depending on how it is parsed, a block can also be evaluated as an
+  // expression.
+  Expression *expr = nullptr;
 
 private:
   Block(const Block &other) = default;
@@ -600,15 +605,28 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Macro : public Node {
+public:
+  Macro(std::string name, ExpressionList &&args, Expression *expr);
+  Macro(std::string name, Expression *expr);
+
+  std::string name;
+  ExpressionList args;
+  Expression *expr;
+};
+using MacroList = std::vector<Macro *>;
+
 class Program : public Node {
 public:
   Program(const std::string &c_definitions,
           Config *config,
+          MacroList &&macros,
           SubprogList &&functions,
           ProbeList &&probes);
 
   std::string c_definitions;
   Config *config = nullptr;
+  MacroList macros;
   SubprogList functions;
   ProbeList probes;
 
