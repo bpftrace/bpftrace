@@ -16,6 +16,8 @@ public:
   MacroSpecializer(ASTContext &ast);
 
   using Visitor<MacroSpecializer>::visit;
+  void visit(AssignVarStatement &assignment);
+  void visit(VarDeclStatement &statement);
   void visit(Variable &var);
   void visit(Map &map);
 
@@ -47,6 +49,23 @@ private:
 
 MacroSpecializer::MacroSpecializer(ASTContext &ast) : ast_(ast)
 {
+}
+
+// This can only occur in a block expression
+void MacroSpecializer::visit(AssignVarStatement &assignment)
+{
+  std::string ident = assignment.var->ident;
+  vars_[ident] = ident;
+
+  Visitor<MacroSpecializer>::visit(assignment);
+}
+
+void MacroSpecializer::visit(VarDeclStatement &statement)
+{
+  std::string ident = statement.var->ident;
+  vars_[ident] = ident;
+
+  Visitor<MacroSpecializer>::visit(statement);
 }
 
 void MacroSpecializer::visit(Variable &var)
