@@ -4,6 +4,7 @@
 #include "ast/passes/printer.h"
 
 #include "ast/attachpoint_parser.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 
@@ -36,6 +37,38 @@ void test_parse_failure(const std::string &input,
 {
   BPFtrace bpftrace;
   test_parse_failure(bpftrace, input, expected_error);
+}
+
+void test_macro_parse_failure(BPFtrace &bpftrace,
+                              const std::string &input,
+                              std::string_view expected_error)
+{
+  std::stringstream out;
+  ast::ASTContext ast("stdin", input);
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(CreateClangPass())
+                .add(CreateParsePass())
+                .run();
+  ASSERT_TRUE(bool(ok));
+
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
+
+  if (expected_error.data()) {
+    if (!expected_error.empty() && expected_error[0] == '\n')
+      expected_error.remove_prefix(1); // Remove initial '\n'
+    EXPECT_EQ(expected_error, out.str());
+  }
+}
+
+void test_macro_parse_failure(const std::string &input,
+                              std::string_view expected_error)
+{
+  BPFtrace bpftrace;
+  test_macro_parse_failure(bpftrace, input, expected_error);
 }
 
 void test(BPFtrace &bpftrace,
@@ -2991,6 +3024,36 @@ stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
 stdin:1:10-16: ERROR: syntax error, unexpected ), expecting integer
 let @a = hash(); BEGIN { $x; }
          ~~~~~~
+)");
+}
+
+TEST(Parser, macro_expansion_error)
+{
+  // A recursive macro expansion
+  test_macro_parse_failure("#define M M+1\n"
+                           "BEGIN { M; }",
+                           R"(
+stdin:2:9-343: ERROR: Macro recursion limit reached: M, M+1
+BEGIN { M; }
+        ~~~~
+stdin:2:9-343: ERROR: syntax error, unexpected end of file
+BEGIN { M; }
+        ~~~~
+)");
+
+  // Large source code doesn't cause any problem
+  std::string padding(16384 * 2, 'p'); // Twice the default value of YY_BUF_SIZE
+  test_macro_parse_failure("#define M M+1\n"
+                           "BEGIN { M; }\n"
+                           "END { printf(\"" +
+                               padding + "\"); }",
+                           R"(
+stdin:2:9-343: ERROR: Macro recursion limit reached: M, M+1
+BEGIN { M; }
+        ~~~~
+stdin:2:9-343: ERROR: syntax error, unexpected end of file
+BEGIN { M; }
+        ~~~~
 )");
 }
 

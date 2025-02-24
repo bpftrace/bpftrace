@@ -18,6 +18,18 @@ static std::string buffer;
 #define yyterminate() return bpftrace::Parser::make_END(loc)
 
 using namespace bpftrace;
+
+// Since `YY_INPUT` cannot access the `driver` variable, `source` and `curr` 
+// are defined as global variables. They are marked as thread_local to 
+// ensure thread safety during lexical analysis.
+static thread_local const std::string *source;
+static thread_local size_t curr;
+
+void set_source_string(const std::string *s);
+static int read_from_source(char* buf, size_t max_size);
+
+#define YY_INPUT(buf,result,max_size) \
+  result = read_from_source(buf, max_size);
 %}
 
 /* https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal */
@@ -266,18 +278,16 @@ struct|union|enum       {
                             }
                             else
                             {
-                              int leng = YY_BUF_SIZE;
                               std::string original_s(s);
                               std::string original_yytext(yytext);
-                              for (z=strlen(s) - 1; z >= 0; z--){
-                                if (unput_count >= 1000 || leng <= 0) {
+                              for (z=strlen(s) - 1; z >= 0; z--) {
+                                if (unput_count >= 1000) {
                                   driver.error(loc, std::string("Macro recursion limit reached: ")
                                                     + original_yytext + ", " + original_s);
                                   yyterminate();
                                 }
                                 unput(s[z]);
                                 unput_count++;
-                                leng--;
                               }
                             }
                           } else {
@@ -290,3 +300,21 @@ struct|union|enum       {
                                             std::string(yytext) + std::string("'")); }
 
 %%
+
+void set_source_string(const std::string *s) {
+  source = s;
+  curr = 0;
+}
+
+// Here we replaced the original YY_INPUT with the read_from_source() function,
+// allowing flex to read the source code from a string rather than a file. In
+// this case, flex uses a buffer size of YY_BUF_SIZE (16384) and reads up to
+// YY_READ_BUF_SIZE (8192) at a time. This gives us enough space for macro
+// expansion. Additionally, just like reading from a file, flex's internal
+// buffer management can handle cases where the string size exceeds YY_BUF_SIZE.
+int read_from_source(char* buf, size_t max_size) {
+  size_t num_to_copy = std::min(source->size() - curr, max_size);
+  source->copy(buf, num_to_copy, curr);
+  curr += num_to_copy;
+  return num_to_copy;
+}
