@@ -11,6 +11,15 @@ MacroSpecializer::MacroSpecializer(ASTContext &ctx, std::ostream &out)
 {
 }
 
+// This can only occur in a block expression
+void MacroSpecializer::visit(AssignVarStatement &assignment)
+{
+  std::string ident = assignment.var->ident;
+  vars_[ident] = ident;
+
+  Visitor<MacroSpecializer>::visit(assignment);
+}
+
 void MacroSpecializer::visit(Variable &var)
 {
   if (auto it = vars_.find(var.ident); it != vars_.end()) {

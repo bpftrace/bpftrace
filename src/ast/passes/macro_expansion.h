@@ -18,6 +18,7 @@ public:
   MacroSpecializer(ASTContext &ctx, std::ostream &out);
 
   using Visitor<MacroSpecializer>::visit;
+  void visit(AssignVarStatement &assignment);
   void visit(Variable &var);
   void visit(Map &map);
 
