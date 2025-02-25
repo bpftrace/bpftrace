@@ -15,7 +15,6 @@ TEST(codegen, regression_957)
   Driver driver(*bpftrace);
 
   ASSERT_EQ(driver.parse_str("t:sched:sched_one* { cat(\"%s\", probe); }"), 0);
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 

@@ -44,7 +44,7 @@ void test(BPFtrace &bpftrace,
 void test(const std::string &input, bool expected_result)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   test(*bpftrace, input, {}, expected_result);
 }
 
@@ -53,7 +53,7 @@ void test(const std::string &input,
           bool expected_result)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   test(*bpftrace, input, expected_error, expected_result);
 }
 

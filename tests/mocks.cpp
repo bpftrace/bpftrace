@@ -149,6 +149,8 @@ std::unique_ptr<MockBPFtrace> get_mock_bpftrace()
   setup_mock_probe_matcher(*probe_matcher);
   bpftrace->set_mock_probe_matcher(std::move(probe_matcher));
 
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   return bpftrace;
 }
 
@@ -161,6 +163,8 @@ std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
       bpftrace.get());
   setup_mock_probe_matcher(*probe_matcher);
   bpftrace->set_mock_probe_matcher(std::move(probe_matcher));
+
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
 
   return bpftrace;
 }
