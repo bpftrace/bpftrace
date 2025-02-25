@@ -40,6 +40,8 @@ and this project adheres to
   - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
 #### Deprecated
 #### Removed
+- Drop support for LLVM 14 and 15
+  - [#3825](https://github.com/bpftrace/bpftrace/pull/3825)
 #### Fixed
 - Fix json output for none type
   - [#3692](https://github.com/bpftrace/bpftrace/pull/3692)

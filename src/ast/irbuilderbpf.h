@@ -15,12 +15,6 @@
 #define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
   CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))
 
-#if LLVM_VERSION_MAJOR >= 15
-#define GET_PTR_TY() getPtrTy()
-#else
-#define GET_PTR_TY() getInt8PtrTy()
-#endif
-
 namespace bpftrace {
 namespace ast {
 

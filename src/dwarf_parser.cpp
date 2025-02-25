@@ -48,11 +48,6 @@ Dwarf::Dwarf(BPFtrace *bpftrace, std::string file_path)
 
 bool Dwarf::has_debug_info()
 {
-#if LLVM_VERSION_MAJOR <= 13
-  // LLVM 13 statistics does not contain a field for the DebugInfo size.
-  // So we can't verify the presence of DebugInfo and we assume it is present.
-  return true;
-#else
   // Verify that the target contains DebugInfo.
   if (auto stats = target_.GetStatistics())
     if (auto modules = stats.GetValueForKey("modules"))
@@ -60,8 +55,6 @@ bool Dwarf::has_debug_info()
         if (auto hasDebugInfo = module.GetValueForKey("debugInfoByteSize"))
           if (hasDebugInfo.GetIntegerValue() > 0)
             return true;
-#endif
-
   return false;
 }
 
@@ -182,9 +175,7 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
         case lldb::eBasicTypeSignedChar:
         case lldb::eBasicTypeWChar:
         case lldb::eBasicTypeSignedWChar:
-#if LLVM_VERSION_MAJOR >= 15
         case lldb::eBasicTypeChar8:
-#endif
         case lldb::eBasicTypeChar16:
         case lldb::eBasicTypeChar32:
         case lldb::eBasicTypeShort:
@@ -230,9 +221,7 @@ SizedType Dwarf::get_stype(lldb::SBType type, bool resolve_structs)
         case lldb::eBasicTypeChar:
         case lldb::eBasicTypeSignedChar:
         case lldb::eBasicTypeUnsignedChar:
-#if LLVM_VERSION_MAJOR >= 15
         case lldb::eBasicTypeChar8:
-#endif
           return CreateString(length);
         default:
           return CreateArray(length, inner_stype);
