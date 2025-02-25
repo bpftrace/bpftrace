@@ -1807,8 +1807,7 @@ TEST(semantic_analyser, array_in_map)
        "    @a[1] = ((struct MyStruct *)arg0)->y; "
        "}",
        1);
-  test("#include <stdint.h>\n"
-       "struct MyStruct { uint8_t x[8]; uint32_t y[2]; }"
+  test("struct MyStruct { uint8 x[8]; uint32 y[2]; }"
        "kprobe:f { "
        "    @a[0] = ((struct MyStruct *)arg0)->x; "
        "    @a[1] = ((struct MyStruct *)arg0)->y; "

@@ -1175,6 +1175,7 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
   parse_probe("fentry:func_1,fexit:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
@@ -1191,6 +1192,7 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   StrictMock<MockBPFtrace> bpftrace;
+  bpftrace.parse_btf({});
   parse_probe("kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}",
               bpftrace);
 
@@ -1209,6 +1211,7 @@ TEST_F(bpftrace_btf, add_probes_iter_task)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
   parse_probe("iter:task {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1221,6 +1224,7 @@ TEST_F(bpftrace_btf, add_probes_iter_task_file)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
   parse_probe("iter:task_file {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1233,6 +1237,7 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
   parse_probe("iter:task_vma {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());

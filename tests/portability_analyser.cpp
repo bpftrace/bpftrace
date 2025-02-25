@@ -63,12 +63,17 @@ class portability_analyser_btf : public test_btf {};
 
 TEST_F(portability_analyser_btf, fentry_field_access)
 {
-  test("fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }",
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->parse_btf({});
+
+  test(*bpftrace,
+       "fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }",
        0);
-  test("fentry:func_2 { args.foo1 }", 0);
-  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", 0);
+  test(*bpftrace, "fentry:func_2 { args.foo1 }", 0);
+  test(*bpftrace, "fentry:func_2, fentry:func_3 { $x = args.foo1; }", 0);
   // Backwards compatibility
-  test("fentry:func_2 { args->foo1 }", 0);
+  test(*bpftrace, "fentry:func_2 { args->foo1 }", 0);
 }
 
 TEST(portability_analyser, positional_params_disabled)
