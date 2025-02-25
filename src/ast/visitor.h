@@ -35,39 +35,39 @@ public:
   // visit methods are used to traverse the graph, and are provided a reference
   // to the underlying node. The visit is invoked *before* the replace call,
   // and can directly consume and modify the results of the visit.
-  R visit(Integer &integer __attribute__((__unused__)))
+  R visit([[maybe_unused]] Integer &integer)
   {
     return default_value();
   }
-  R visit(PositionalParameter &integer __attribute__((__unused__)))
+  R visit([[maybe_unused]] PositionalParameter &integer)
   {
     return default_value();
   }
-  R visit(String &string __attribute__((__unused__)))
+  R visit([[maybe_unused]] String &string)
   {
     return default_value();
   }
-  R visit(Builtin &builtin __attribute__((__unused__)))
+  R visit([[maybe_unused]] Builtin &builtin)
   {
     return default_value();
   }
-  R visit(Identifier &identifier __attribute__((__unused__)))
+  R visit([[maybe_unused]] Identifier &identifier)
   {
     return default_value();
   }
-  R visit(StackMode &mode __attribute__((__unused__)))
+  R visit([[maybe_unused]] StackMode &mode)
   {
     return default_value();
   }
-  R visit(Variable &var __attribute__((__unused__)))
+  R visit([[maybe_unused]] Variable &var)
   {
     return default_value();
   }
-  R visit(SubprogArg &subprog_arg __attribute__((__unused__)))
+  R visit([[maybe_unused]] SubprogArg &subprog_arg)
   {
     return default_value();
   }
-  R visit(AttachPoint &ap __attribute__((__unused__)))
+  R visit([[maybe_unused]] AttachPoint &ap)
   {
     return default_value();
   }
@@ -238,7 +238,7 @@ public:
   // function, which could e.g. return the replacement pointer, but this would
   // be a single specialized pass for this case.
   template <typename... Ts>
-  R visit(std::variant<Ts *...> var)
+  R visit(std::variant<Ts *...> &var)
   {
     return std::visit(
         [this](auto &value) -> R { return visitAndReplace(&value); }, var);
@@ -260,6 +260,18 @@ public:
     return default_value();
   }
 
+  // Support for dispatching expressions and statements. This just dispatches
+  // directly to the variant. If replacement is required, then users should
+  // override `visit(Expression*)` and replace as needed.
+  R visit(Expression &expr)
+  {
+    return visit(expr.value());
+  }
+  R visit(Statement &stmt)
+  {
+    return visit(stmt.value());
+  }
+
   // This is a convenience for dispatching directly from a pointer type, it
   // does not allow for replacement of this specific instance.
   template <typename T>
@@ -269,9 +281,14 @@ public:
       return visitImpl(*ptr);
     return default_value();
   }
+  template <typename T>
+  R visit(std::reference_wrapper<T> ref)
+  {
+    return visitImpl(ref.get());
+  }
 
   template <typename T>
-  R visitAndReplace(T **t)
+  R visitAndReplace(T *t)
   {
     auto orig = *t; // Prior to replacement.
     Impl *impl = static_cast<Impl *>(this);
@@ -284,66 +301,6 @@ public:
       *t = impl->replace(orig, nullptr);
       return default_value();
     }
-  }
-
-  // These are the runtime-type adaptors that are currently required for
-  // Expression and Statement, but can be removed by encoding this type
-  // information into the AST directly.
-  template <typename Orig, typename T, typename... Ts>
-  R tryVisitAndReplace(Orig **node)
-  {
-    if (auto *t = dynamic_cast<T>(*node)) {
-      if constexpr (!std::is_void_v<R>) {
-        auto rval = visitAndReplace(&t);
-        *node = static_cast<Orig *>(t); // Copy the modification.
-        return rval;
-      } else {
-        visitAndReplace(&t);
-        *node = static_cast<Orig *>(t); // See above.
-        return;
-      }
-    } else if constexpr (sizeof...(Ts) != 0) {
-      return tryVisitAndReplace<Orig, Ts...>(node);
-    }
-    return default_value();
-  }
-  R visitAndReplace(Expression **expr)
-  {
-    return tryVisitAndReplace<Expression,
-                              Integer *,
-                              PositionalParameter *,
-                              String *,
-                              StackMode *,
-                              Identifier *,
-                              Builtin *,
-                              Call *,
-                              Sizeof *,
-                              Offsetof *,
-                              Map *,
-                              Variable *,
-                              Binop *,
-                              Unop *,
-                              FieldAccess *,
-                              ArrayAccess *,
-                              Cast *,
-                              Tuple *,
-                              Ternary *>(expr);
-  }
-  R visitAndReplace(Statement **stmt)
-  {
-    return tryVisitAndReplace<Statement,
-                              ExprStatement *,
-                              VarDeclStatement *,
-                              AssignMapStatement *,
-                              AssignVarStatement *,
-                              AssignConfigVarStatement *,
-                              Block *,
-                              If *,
-                              Unroll *,
-                              Jump *,
-                              While *,
-                              For *,
-                              Config *>(stmt);
   }
 
 private:

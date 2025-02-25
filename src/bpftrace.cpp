@@ -1895,49 +1895,49 @@ void BPFtrace::sort_by_key(
   }
 }
 
-std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
+std::string BPFtrace::get_string_literal(const ast::Expression expr) const
 {
-  if (expr->is_literal) {
-    if (auto *string = dynamic_cast<const ast::String *>(expr))
-      return string->str;
-    else if (auto *str_call = dynamic_cast<const ast::Call *>(expr)) {
-      // Positional parameters in the form str($1) can be used as literals
-      if (str_call->func == "str") {
-        if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                str_call->vargs.at(0)))
-          return get_param(pos_param->n, true);
+  if (expr.is<ast::String>()) {
+    auto &string = expr.as<ast::String>();
+    return string.str;
+  } else if (expr.is<ast::Call>()) {
+    // Positional parameters in the form str($1) can be used as literals
+    auto &str_call = expr.as<ast::Call>();
+    if (str_call.func == "str") {
+      if (str_call.at(0).is<ast::PositionalParameter>()) {
+        auto &pp = str_call.vargs.at(0).as<ast::PositionalParameter>();
+        return get_param(pp.n, true);
       }
     }
   }
 
-  LOG(ERROR) << "Expected string literal, got " << expr->type;
+  LOG(ERROR) << "Expected string literal, got " << expr.type();
   return "";
 }
 
 std::optional<int64_t> BPFtrace::get_int_literal(
-    const ast::Expression *expr) const
+    const ast::Expression expr) const
 {
-  if (expr->is_literal) {
-    if (auto *integer = dynamic_cast<const ast::Integer *>(expr))
-      return integer->n;
-    else if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                 expr)) {
-      if (pos_param->ptype == PositionalParameterType::positional) {
-        auto param_str = get_param(pos_param->n, false);
-        auto param_int = get_int_from_str(param_str);
-        if (!param_int.has_value()) {
-          // This case has to be handled at a higher layer, and it is also
-          // duplicated exactly in the semantic analyzer.
-          return std::nullopt;
-        }
-        if (std::holds_alternative<int64_t>(*param_int)) {
-          return std::get<int64_t>(*param_int);
-        } else {
-          return static_cast<int64_t>(std::get<uint64_t>(*param_int));
-        }
-      } else
-        return static_cast<int64_t>(num_params());
-    }
+  if (expr.is<ast::Integer>()) {
+    auto &integer = expr.as<ast::Integer>();
+    return integer.n;
+  } else if (expr.is<ast::PositionalParameter>()) {
+    auto &pp = expr.as<ast::PositionalParameter>();
+    if (pp.ptype == PositionalParameterType::positional) {
+      auto param_str = get_param(pp.n, false);
+      auto param_int = get_int_from_str(param_str);
+      if (!param_int.has_value()) {
+        // This case has to be handled at a higher layer, and it is also
+        // duplicated exactly in the semantic analyzer.
+        return std::nullopt;
+      }
+      if (std::holds_alternative<int64_t>(*param_int)) {
+        return std::get<int64_t>(*param_int);
+      } else {
+        return static_cast<int64_t>(std::get<uint64_t>(*param_int));
+      }
+    } else
+      return static_cast<int64_t>(num_params());
   }
 
   return std::nullopt;
@@ -2072,10 +2072,10 @@ bool BPFtrace::has_btf_data() const
 //
 // Note: it would be better if this was in resource analyzer but we need
 // probe_matcher to get the list of functions for the attach point.
-void BPFtrace::fentry_recursion_check(ast::Program *prog)
+void BPFtrace::fentry_recursion_check(const ast::Program &prog)
 {
-  for (auto *probe : prog->probes) {
-    for (auto *ap : probe->attach_points) {
+  for (const auto &probe : prog.probes) {
+    for (const auto &ap : probe.attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
         auto matches = probe_matcher_->get_matches_for_ap(*ap);

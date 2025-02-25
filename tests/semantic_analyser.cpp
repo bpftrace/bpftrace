@@ -2834,7 +2834,6 @@ TEST(semantic_analyser, positional_parameters)
       ast.root->probes.at(0)->block->stmts.at(0));
   auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
   EXPECT_EQ(CreateUInt64(), pp->type);
-  EXPECT_TRUE(pp->is_literal);
 
   bpftrace.add_param("0999");
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 2);
@@ -3914,31 +3913,31 @@ TEST(semantic_analyser, string_size)
   // Size of the variable should be the size of the larger string (incl. null)
   BPFtrace bpftrace;
   auto ast = test(bpftrace, true, R"_(BEGIN { $x = "hi"; $x = "hello"; })_", 0);
-  auto stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
-  ASSERT_TRUE(var_assign->var->type.IsStringTy());
-  ASSERT_EQ(var_assign->var->type.GetSize(), 6UL);
+  auto &stmt = ast.root.probes.at(0).block.stmts.at(0);
+  auto &var_assign = stmt.as<ast::AsssignVarStatement>();
+  ASSERT_TRUE(var_assign.var.type.IsStringTy());
+  ASSERT_EQ(var_assign.var.type.GetSize(), 6UL);
 
   ast = test(bpftrace, true, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
-  ASSERT_TRUE(map_assign->map->type.IsStringTy());
-  ASSERT_EQ(map_assign->map->type.GetSize(), 6UL);
+  stmt = ast.root.probes.at(0).block.stmts.at(0);
+  auto &map_assign = stmt.as<ast::AssignMapStatement>();
+  ASSERT_TRUE(map_assign.map.type.IsStringTy());
+  ASSERT_EQ(map_assign.map.type.GetSize(), 6UL);
 
   ast = test(
       bpftrace, true, R"_(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})_", 0);
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
-  ASSERT_TRUE(map_assign->map->key_expr->type.IsStringTy());
-  ASSERT_EQ(map_assign->map->key_expr->type.GetSize(), 3UL);
-  ASSERT_EQ(map_assign->map->key_type.GetSize(), 6UL);
+  auto &stmt2 = ast.root.probes.at(0).block.stmts.at(0);
+  auto &map_assign2 = stmt2.as<ast::AssignMapStatement>();
+  ASSERT_TRUE(map_assign2.map.key_expr->type.IsStringTy());
+  ASSERT_EQ(map_assign2.map.key_expr->type.GetSize(), 3UL);
+  ASSERT_EQ(map_assign2.map.key_type.GetSize(), 6UL);
 
   ast = test(bpftrace,
              true,
              R"_(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})_",
              0);
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
+  auto &stmt3 = ast.root.probes.at(0).block.stmts.at(0);
+  map_assign = stmt.as<ast::AssignMapStatement>()
   ASSERT_TRUE(map_assign->map->key_expr->type.IsTupleTy());
   ASSERT_TRUE(map_assign->map->key_expr->type.GetField(0).type.IsStringTy());
   ASSERT_EQ(map_assign->map->key_expr->type.GetField(0).type.GetSize(), 3UL);

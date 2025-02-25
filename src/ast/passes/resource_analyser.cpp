@@ -187,7 +187,8 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
-    auto &map_info = resources_.maps_info[call.map->ident];
+    auto &assignment = *map_assignments_[&call];
+    auto &map_info = resources_.maps_info[assignment.map->ident];
     int bits = static_cast<Integer *>(call.vargs.at(1))->n;
 
     if (map_info.hist_bits_arg.has_value() && *map_info.hist_bits_arg != bits) {
@@ -210,7 +211,8 @@ void ResourceAnalyser::visit(Call &call)
       .step = step.n,
     };
 
-    auto &map_info = resources_.maps_info[call.map->ident];
+    auto &assignment = *map_assignments_[&call];
+    auto &map_info = resources_.maps_info[assignment.map->ident];
 
     if (map_info.lhist_args.has_value() && *map_info.lhist_args != args) {
       call.addError() << "Different lhist bounds in a single map unsupported";
@@ -302,7 +304,7 @@ void ResourceAnalyser::visit(Call &call)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
   if (call.func == "lhist" || call.func == "hist") {
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
     // Allocation is always needed for lhist/hist. But we need to allocate
     // space for both map key and the bucket ID from a call to linear/log2
     // functions.
@@ -406,6 +408,7 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   // an additional read map buffer. Thus to mimic CodegenLLVM, we
   // skip calling ResourceAnalser::visit(a.map) and do the AST traversal
   // ourselves.
+  map_assignments_[assignment.expr] = &assignment;
   visit(assignment.expr);
   visit(assignment.map->key_expr);
 

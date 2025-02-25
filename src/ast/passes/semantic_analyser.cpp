@@ -140,7 +140,8 @@ bool SemanticAnalyser::is_valid_assignment(const Expression *target,
     if (expr->type.IsMultiOutputMapTy())
       return false;
     // Prevent declaring a map copying another aggregate map.
-    if (auto *target_map = dynamic_cast<const Map *>(target)) {
+    if (target->is<Map>()) {
+      auto *target_map = target->as<Map>();
       bool map_has_type = get_map_type(*target_map);
       if (expr->type.IsCastableMapTy() && map_has_type == false)
         return false;
@@ -675,7 +676,8 @@ void SemanticAnalyser::visit(Call &call)
     call.vargs[i] = dereference_if_needed(call.vargs[i]);
   }
 
-  if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
+  if (top_level_node_->is<Probe>()) {
+    auto probe = top_level_node_->as<Probe>();
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
         call.addError() << call.func << " can not be used with \""
@@ -1726,6 +1728,7 @@ void SemanticAnalyser::visit(Map &map)
   bool key_is_map = false;
   if (map.key_expr) {
     map.key_expr = dereference_if_needed(map.key_expr);
+    map_keys_[map.key_expr] = &map;
     key_is_map = map.key_expr->is_map;
     new_key_type = create_key_type(map.key_expr->type, *map.key_expr);
   }
@@ -2316,6 +2319,7 @@ void SemanticAnalyser::visit(Jump &jump)
         jump.return_value = dereference_if_needed(jump.return_value);
       }
       if (auto subprog = dynamic_cast<Subprog *>(top_level_node_)) {
+        auto subprog = top_level_node_->as<Subprog>();
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
             (jump.return_value &&
@@ -2860,6 +2864,7 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
+  map_assignments_[assignment.expr] = &assignment;
   assignment.map->is_read = false;
   visit(assignment.map);
   assignment.expr = dereference_if_needed(assignment.expr);
@@ -2964,6 +2969,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
+  var_assignments_[assignment.expr] = &assignment;
   assignment.expr = dereference_if_needed(assignment.expr);
   if (assignment.var_decl_stmt) {
     visit(assignment.var_decl_stmt);
@@ -3534,50 +3540,53 @@ bool SemanticAnalyser::check_assignment(const Call &call,
                                         bool want_var,
                                         bool want_map_key)
 {
+  bool call_map = map_assignments_.contains(&call);
+  bool call_var = var_assignments_.contains(&call);
+  bool call_map_key = map_keys_.contains(&call);
   if (want_map && want_var && want_map_key) {
-    if (!call.map && !call.var && !call.key_for_map) {
+    if (!call_map && !call_var && !call_map_key) {
       call.addError() << call.func
                       << "() should be assigned to a map or a "
                          "variable, or be used as a map key";
       return false;
     }
   } else if (want_map && want_var) {
-    if (!call.map && !call.var) {
+    if (!call_map && !call_var) {
       call.addError() << call.func
                       << "() should be assigned to a map or a variable";
       return false;
     }
   } else if (want_map && want_map_key) {
-    if (!call.map && !call.key_for_map) {
+    if (!call_map && !call_map_key) {
       call.addError()
           << call.func
           << "() should be assigned to a map or be used as a map key";
       return false;
     }
   } else if (want_var && want_map_key) {
-    if (!call.var && !call.key_for_map) {
+    if (!call_var && !call_map_key) {
       call.addError()
           << call.func
           << "() should be assigned to a variable or be used as a map key";
       return false;
     }
   } else if (want_map) {
-    if (!call.map) {
+    if (!call_map) {
       call.addError() << call.func << "() should be directly assigned to a map";
       return false;
     }
   } else if (want_var) {
-    if (!call.var) {
+    if (!call_var) {
       call.addError() << call.func << "() should be assigned to a variable";
       return false;
     }
   } else if (want_map_key) {
-    if (!call.key_for_map) {
+    if (!call_map_key) {
       call.addError() << call.func << "() should be used as a map key";
       return false;
     }
   } else {
-    if (call.map || call.var || call.key_for_map) {
+    if (call_map || call_var || call_map_key) {
       call.addError()
           << call.func
           << "() should not be used in an assignment or as a map key";
@@ -3661,10 +3670,11 @@ bool SemanticAnalyser::check_arg(const Call &call,
       if (type == Type::string) {
         // If the call requires a string literal and a positional parameter is
         // given, tell user to use str()
-        auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
-        if (pos_param)
+        if (arg.is<PositionalParameter>()) {
+          auto &pp = arg.as<PositionalParameter>();
           pos_param->addError() << "Use str($" << pos_param->n << ") to treat $"
                                 << pos_param->n << " as a string";
+        }
       }
     }
     return false;
@@ -3841,8 +3851,8 @@ void SemanticAnalyser::accept_statements(StatementList &stmts)
     auto stmt = stmts.at(i);
 
     if (is_final_pass()) {
-      auto *jump = dynamic_cast<Jump *>(stmt);
-      if (jump && i < (stmts.size() - 1)) {
+      if (stmt.is<Jump> && i < (stmts.size() - 1)) {
+        auto &jump = stmt.as<Jump>();
         jump->addWarning() << "All code after a '" << opstr(*jump)
                            << "' is unreachable.";
       }

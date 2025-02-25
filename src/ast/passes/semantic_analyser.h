@@ -186,6 +186,10 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
 
+  std::map<const Expression *, AssignVarStatement *> var_assignments_;
+  std::map<const Expression *, AssignMapStatement *> map_assignments_;
+  std::map<const Expression *, Map *> map_keys_;
+
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;

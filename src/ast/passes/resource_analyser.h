@@ -1,5 +1,9 @@
 #pragma once
 
+#include <iostream>
+#include <sstream>
+#include <unordered_set>
+
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 #include "required_resources.h"
@@ -53,6 +57,10 @@ private:
   BPFtrace &bpftrace_;
   // Current probe we're analysing
   Probe *probe_;
+
+  // Should be split into a separate pass potentially, simple lookaside
+  // value to record expressions as they are assign to maps.
+  std::map<const Expression *, AssignMapStatement *> map_assignments_;
 
   int next_map_id_ = 0;
 };

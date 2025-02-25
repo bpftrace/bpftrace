@@ -45,13 +45,13 @@ public:
 
   // Creates and returns a pointer to an AST node.
   template <NodeType T, typename... Args>
-  T *make_node(Args &&...args)
+  T &make_node(Args &&...args)
   {
-    auto uniq_ptr = std::make_unique<T>(*diagnostics_.get(),
-                                        std::forward<Args>(args)...);
-    auto *raw_ptr = uniq_ptr.get();
-    nodes_.push_back(std::move(uniq_ptr));
-    return raw_ptr;
+    auto ptr = std::make_unique<T>(*diagnostics_.get(),
+                                   std::forward<Args>(args)...);
+    auto &ref = *ptr.get();
+    nodes_.emplace_back(std::move(ptr));
+    return ref;
   }
 
   unsigned int node_count()
@@ -64,7 +64,9 @@ public:
     return *diagnostics_.get();
   }
 
-  Program *root = nullptr;
+  // The root is the program which is set after parsing. If this is not set,
+  // then parsing was not successfully.
+  std::optional<std::reference_wrapper<Program>> root;
 
 private:
   std::vector<std::unique_ptr<Node>> nodes_;

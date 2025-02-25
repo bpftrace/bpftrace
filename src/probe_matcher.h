@@ -69,7 +69,7 @@ public:
   std::set<std::string> expand_probetype_userspace(
       const std::string &probe_type);
   // Match all probes in prog and print them to stdout.
-  void list_probes(ast::Program *prog);
+  void list_probes(const ast::Program &prog);
   // Print definitions of structures matching search.
   void list_structs(const std::string &search);
 

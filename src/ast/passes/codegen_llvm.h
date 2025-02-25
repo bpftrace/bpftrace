@@ -358,6 +358,10 @@ private:
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
 
+  // Should be split into a separate pass potentially, simple lookaside
+  // value to record expressions as they are assign to maps.
+  std::map<const Expression *, AssignMapStatement *> map_assignments_;
+
   enum class State {
     INIT,
     IR,

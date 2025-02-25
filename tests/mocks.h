@@ -95,8 +95,8 @@ public:
 
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
   {
+    mock_probe_matcher = probe_matcher.get();
     probe_matcher_ = std::move(probe_matcher);
-    mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
   }
 
   MockProbeMatcher *mock_probe_matcher;

@@ -459,14 +459,14 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 ScopedExpr CodegenLLVM::visit(Call &call)
 {
   if (call.func == "count") {
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
     auto scoped_key = getMapKey(map);
     b_.CreateMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
   } else if (call.func == "sum") {
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
     ScopedExpr scoped_key = getMapKey(map);
     ScopedExpr scoped_expr = visit(*call.vargs.front());
     // promote int to 64-bit
@@ -478,7 +478,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
   } else if (call.func == "max" || call.func == "min") {
     bool is_max = call.func == "max";
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
 
     ScopedExpr scoped_key = getMapKey(map);
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
@@ -582,7 +582,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr();
 
   } else if (call.func == "avg" || call.func == "stats") {
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
 
     ScopedExpr scoped_key = getMapKey(map);
 
@@ -667,7 +667,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!log2_func_)
       log2_func_ = createLog2Function();
 
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
     // There is only one log2_func_ so the second argument must be passed
     // as an argument even though it is a constant 0..5
     // Possible optimization is create one function per different value
@@ -691,7 +691,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!linear_func_)
       linear_func_ = createLinearFunction();
 
-    Map &map = *call.map;
+    Map &map = *(map_assignments_[&call]->map);
 
     // prepare arguments
     auto *value_arg = call.vargs.at(0);
@@ -2334,6 +2334,7 @@ ScopedExpr CodegenLLVM::visit(ExprStatement &expr)
 
 ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 {
+  map_assignments_[assignment.expr] = &assignment;
   Map &map = *assignment.map;
   auto scoped_expr = visit(*assignment.expr);
   Value *expr = scoped_expr.value();

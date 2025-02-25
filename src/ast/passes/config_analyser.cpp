@@ -22,13 +22,13 @@ void ConfigAnalyser::log_type_error(SizedType &type,
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
                                 ConfigKeyInt key)
 {
-  auto &assignTy = assignment.expr->type;
+  auto &assignTy = assignment.expr->type();
   if (!assignTy.IsIntegerTy()) {
     log_type_error(assignTy, Type::integer, assignment);
     return;
   }
 
-  config_setter_.set(key, dynamic_cast<Integer *>(assignment.expr)->n);
+  config_setter_.set(key, assignment.expr->as<Integer>()->n);
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -40,7 +40,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
     return;
   }
 
-  auto val = dynamic_cast<Integer *>(assignment.expr)->n;
+  auto val = assignment.expr->as<Integer>()->n;
   if (val == 0) {
     config_setter_.set(key, false);
   } else if (val == 1) {
@@ -60,7 +60,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
     return;
   }
 
-  config_setter_.set(key, dynamic_cast<String *>(assignment.expr)->str);
+  config_setter_.set(key, assignment.expr->as<String>()->str);
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -85,7 +85,7 @@ void ConfigAnalyser::set_config(
     return;
   }
 
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  auto val = assignment.expr->as<String>()->str;
   if (!config_setter_.set_user_symbol_cache_type(val))
     assignment.expr->addError();
 }
@@ -99,7 +99,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
     return;
   }
 
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  auto val = assignment.expr->as<String>()->str;
   if (!config_setter_.set_symbol_source_config(val))
     assignment.expr->addError();
 }
@@ -113,7 +113,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
     return;
   }
 
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
+  auto val = assignment.expr->as<String>()->str;
   if (!config_setter_.set_missing_probes_config(val))
     assignment.expr->addError();
 }
