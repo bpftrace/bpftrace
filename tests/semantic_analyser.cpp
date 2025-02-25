@@ -31,8 +31,6 @@ void test_for_warning(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out);
   semantics.analyse();
   if (invert)

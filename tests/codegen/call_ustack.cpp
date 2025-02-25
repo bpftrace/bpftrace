@@ -25,8 +25,6 @@ TEST(codegen, call_ustack_mapids)
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
-  // Override to mockbpffeature.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
@@ -61,8 +59,6 @@ TEST(codegen, call_ustack_modes_mapids)
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
-  // Override to mockbpffeature.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 

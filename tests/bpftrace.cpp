@@ -265,7 +265,6 @@ TEST(bpftrace, add_probes_wildcard)
 TEST(bpftrace, add_probes_wildcard_kprobe_multi)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(false))
       .Times(2);
@@ -307,7 +306,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
 TEST(bpftrace, add_probes_wildcard_no_matches_kprobe_multi)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(false))
       .Times(1);
@@ -357,7 +356,7 @@ TEST(bpftrace, add_probes_kernel_module_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   // We enable kprobe_multi here but it doesn't support the module:function
   // syntax so full expansion should be done anyways.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(true))
       .Times(1);
@@ -390,7 +389,7 @@ TEST(bpftrace, add_probes_kernel_module_function_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   // We enable kprobe_multi here but it doesn't support the module:function
   // syntax so full expansion should be done anyways.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(true))
       .Times(1);
@@ -469,7 +468,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
 TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(0, "/bin/sh"))
       .Times(2);
@@ -521,7 +520,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file)
 TEST(bpftrace, add_probes_uprobe_wildcard_file_uprobe_multi)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(0, "/bin/*sh"))
       .Times(2);
@@ -561,7 +560,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches_multi)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(0, "/bin/sh"))
       .Times(1);
@@ -1174,7 +1173,7 @@ void check_probe(Probe &p, ProbeType type, const std::string &name)
 TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   parse_probe("fentry:func_1,fexit:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
@@ -1208,7 +1207,7 @@ TEST_F(bpftrace_btf, add_probes_kprobe)
 TEST_F(bpftrace_btf, add_probes_iter_task)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   parse_probe("iter:task {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1220,7 +1219,7 @@ TEST_F(bpftrace_btf, add_probes_iter_task)
 TEST_F(bpftrace_btf, add_probes_iter_task_file)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   parse_probe("iter:task_file {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1232,7 +1231,7 @@ TEST_F(bpftrace_btf, add_probes_iter_task_file)
 TEST_F(bpftrace_btf, add_probes_iter_task_vma)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
   parse_probe("iter:task_vma {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
