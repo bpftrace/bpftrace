@@ -94,4 +94,10 @@ TEST(pid_filter_pass, no_add_filter)
   }
 }
 
+TEST(pid_filter_pass, mixed_probes)
+{
+  test("kprobe:f, uprobe:/bin/sh:f { 1 }", true, true);
+  test("usdt:sh:probe, uprobe:/bin/sh:f, profile:ms:1 { 1 }", true, false);
+}
+
 } // namespace bpftrace::test::pid_filter_pass

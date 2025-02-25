@@ -21,8 +21,6 @@ public:
 
 private:
   BPFtrace &bpftrace_;
-  bool probe_needs_pid_filter(AttachPoint *attach_point);
-  Statement *add_pid_filter(const location &loc);
 };
 
 Pass CreatePidFilterPass();
