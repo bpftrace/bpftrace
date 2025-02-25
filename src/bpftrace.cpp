@@ -1073,9 +1073,11 @@ int BPFtrace::setup_output()
   if (is_ringbuf_enabled()) {
     setup_ringbuf();
   }
-  int err = setup_event_loss();
-  if (err)
-    return err;
+  if (needs_event_loss_map()) {
+    int err = setup_event_loss();
+    if (err)
+      return err;
+  }
   if (is_perf_event_enabled()) {
     return setup_perf_events();
   }
@@ -1243,6 +1245,9 @@ int BPFtrace::poll_perf_events()
 
 void BPFtrace::handle_event_loss()
 {
+  if (!needs_event_loss_map()) {
+    return;
+  }
   uint64_t current_value = 0;
   if (bpf_lookup_elem(bytecode_.getMap(MapType::EventLossCounter).fd(),
                       const_cast<uint32_t *>(&event_loss_cnt_key_),
@@ -2085,6 +2090,11 @@ void BPFtrace::fentry_recursion_check(ast::Program *prog)
       }
     }
   }
+}
+
+bool BPFtrace::needs_event_loss_map()
+{
+  return resources.needs_event_loss_map || need_recursion_check_;
 }
 
 } // namespace bpftrace

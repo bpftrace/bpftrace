@@ -177,6 +177,7 @@ public:
     return !dwarves_.empty();
   }
   void fentry_recursion_check(ast::Program *prog);
+  bool needs_event_loss_map();
 
   std::string cmd_;
   bool finalize_ = false;

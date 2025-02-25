@@ -146,6 +146,8 @@ public:
   // List of probes using userspace symbol resolution
   std::unordered_set<const ast::Probe *> probes_using_usym;
 
+  bool needs_event_loss_map = false;
+
 private:
   friend class cereal::access;
   template <typename Archive>

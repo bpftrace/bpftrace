@@ -2153,13 +2153,14 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
 void IRBuilderBPF::CreateOutput(Value *ctx,
                                 Value *data,
                                 size_t size,
-                                const location *loc)
+                                const location *loc,
+                                bool update_event_loss_cnt)
 {
   assert(ctx && ctx->getType() == getPtrTy());
   assert(data && data->getType()->isPointerTy());
 
   if (bpftrace_.feature_->has_map_ringbuf()) {
-    CreateRingbufOutput(data, size, loc);
+    CreateRingbufOutput(data, size, update_event_loss_cnt, loc);
   } else {
     CreatePerfEventOutput(ctx, data, size, loc);
   }
@@ -2167,6 +2168,7 @@ void IRBuilderBPF::CreateOutput(Value *ctx,
 
 void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                        size_t size,
+                                       bool update_event_loss_cnt,
                                        const location *loc)
 {
   Value *map_ptr = GetMapVar(to_string(MapType::Ringbuf));
@@ -2183,22 +2185,24 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                 "ringbuf_output",
                                 loc);
 
-  llvm::Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *loss_block = BasicBlock::Create(module_.getContext(),
-                                              "event_loss_counter",
-                                              parent);
-  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
-                                               "counter_merge",
-                                               parent);
-  Value *condition = CreateICmpSLT(ret, getInt64(0), "ringbuf_loss");
-  CreateCondBr(condition, loss_block, merge_block);
+  if (update_event_loss_cnt) {
+    llvm::Function *parent = GetInsertBlock()->getParent();
+    BasicBlock *loss_block = BasicBlock::Create(module_.getContext(),
+                                                "event_loss_counter",
+                                                parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                                 "counter_merge",
+                                                 parent);
+    Value *condition = CreateICmpSLT(ret, getInt64(0), "ringbuf_loss");
+    CreateCondBr(condition, loss_block, merge_block);
 
-  SetInsertPoint(loss_block);
-  CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
-                         bpftrace_.event_loss_cnt_key_);
-  CreateBr(merge_block);
+    SetInsertPoint(loss_block);
+    CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
+                           bpftrace_.event_loss_cnt_key_);
+    CreateBr(merge_block);
 
-  SetInsertPoint(merge_block);
+    SetInsertPoint(merge_block);
+  }
 }
 
 void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
@@ -2582,7 +2586,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
 
   auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(helper_error_struct);
-  CreateOutput(ctx, buf, struct_size, &loc);
+  CreateOutput(ctx, buf, struct_size, &loc, false);
   CreateLifetimeEnd(buf);
 }
 

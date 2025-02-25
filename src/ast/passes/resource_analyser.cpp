@@ -112,6 +112,11 @@ void ResourceAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
   Visitor<ResourceAnalyser>::visit(probe);
+
+  auto pt = single_provider_type_postsema(probe_);
+  if (pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) {
+    resources_.needs_event_loss_map = true;
+  }
 }
 
 void ResourceAnalyser::visit(Subprog &subprog)
@@ -358,6 +363,13 @@ void ResourceAnalyser::visit(Call &call)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
+  }
+
+  if (call.func == "print" || call.func == "printf" || call.func == "time" ||
+      call.func == "unwatch" || call.func == "join" || call.func == "exit" ||
+      call.func == "clear" || call.func == "zero" || call.func == "system" ||
+      call.func == "cat") {
+    resources_.needs_event_loss_map = true;
   }
 }
 

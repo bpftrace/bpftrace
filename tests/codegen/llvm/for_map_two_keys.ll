@@ -6,7 +6,6 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr }
-%"struct map_t.2" = type { ptr, ptr, ptr, ptr }
 %int64_int64__tuple_t = type { i64, i64 }
 %"(int64,int64)_int64__tuple_t" = type { %int64_int64__tuple_t, i64 }
 
@@ -14,12 +13,11 @@ target triple = "bpf-pc-linux"
 @AT_map = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
 @AT_x = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !25
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !37
-@event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !51
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !66 {
+define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !54 {
 entry:
   %"@map_val" = alloca i64, align 8
   %tuple = alloca %int64_int64__tuple_t, align 8
@@ -47,7 +45,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 i
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !73 {
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !61 {
   %"@x_key" = alloca i64, align 8
   %"$kv" = alloca %"(int64,int64)_int64__tuple_t", align 8
   %val = load i64, ptr %2, align 8
@@ -72,8 +70,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!63}
-!llvm.module.flags = !{!65}
+!llvm.dbg.cu = !{!51}
+!llvm.module.flags = !{!53}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_map", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -126,33 +124,21 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 8388608, elements: !49)
 !49 = !{!50}
 !50 = !DISubrange(count: 262144, lowerBound: 0)
-!51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
-!52 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
-!53 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !54)
-!54 = !{!55, !29, !60, !23}
-!55 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !56, size: 64)
-!56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !57, size: 64)
-!57 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !58)
-!58 = !{!59}
-!59 = !DISubrange(count: 2, lowerBound: 0)
-!60 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !61, size: 64, offset: 128)
-!61 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !62, size: 64)
-!62 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!63 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !64)
-!64 = !{!0, !25, !37, !51}
-!65 = !{i32 2, !"Debug Info Version", i32 3}
-!66 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !63, retainedNodes: !71)
-!67 = !DISubroutineType(types: !68)
-!68 = !{!21, !69}
-!69 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !70, size: 64)
-!70 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!71 = !{!72}
-!72 = !DILocalVariable(name: "ctx", arg: 1, scope: !66, file: !2, type: !69)
-!73 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !74, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !63, retainedNodes: !76)
-!74 = !DISubroutineType(types: !75)
-!75 = !{!21, !69, !69, !69, !69}
-!76 = !{!77, !78, !79, !80}
-!77 = !DILocalVariable(name: "map", arg: 1, scope: !73, file: !2, type: !69)
-!78 = !DILocalVariable(name: "key", arg: 2, scope: !73, file: !2, type: !69)
-!79 = !DILocalVariable(name: "value", arg: 3, scope: !73, file: !2, type: !69)
-!80 = !DILocalVariable(name: "ctx", arg: 4, scope: !73, file: !2, type: !69)
+!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !52)
+!52 = !{!0, !25, !37}
+!53 = !{i32 2, !"Debug Info Version", i32 3}
+!54 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !55, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!55 = !DISubroutineType(types: !56)
+!56 = !{!21, !57}
+!57 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !58, size: 64)
+!58 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !54, file: !2, type: !57)
+!61 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !51, retainedNodes: !64)
+!62 = !DISubroutineType(types: !63)
+!63 = !{!21, !57, !57, !57, !57}
+!64 = !{!65, !66, !67, !68}
+!65 = !DILocalVariable(name: "map", arg: 1, scope: !61, file: !2, type: !57)
+!66 = !DILocalVariable(name: "key", arg: 2, scope: !61, file: !2, type: !57)
+!67 = !DILocalVariable(name: "value", arg: 3, scope: !61, file: !2, type: !57)
+!68 = !DILocalVariable(name: "ctx", arg: 4, scope: !61, file: !2, type: !57)
