@@ -495,17 +495,6 @@ EXPECT OK
 REQUIRES_FEATURE dpath fentry
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
-NAME strcontains
-RUN {{BPFTRACE}} -e 'fentry:security_file_open { if (strcontains(path(args.file->f_path), "tmp")) { printf("OK\n"); exit(); } }'
-EXPECT OK
-REQUIRES_FEATURE dpath fentry
-AFTER TMPDIR=/tmp ./testprogs/syscall open
-
-NAME strcontains literals
-RUN {{BPFTRACE}} -e 'BEGIN { if (strcontains("abc", "a")) { printf("OK\n"); exit(); } }'
-EXPECT OK
-TIMEOUT 1
-
 # The extra prints are here to confirm that we report on the correct helper, not
 # just the first or the last one.
 NAME path_in_unsupported_fentry

@@ -102,7 +102,10 @@ Each runtime testcase consists of multiple directives. In no particular order:
   cleanup command to free resources after test completes.
 * `MIN_KERNEL`: Skip the test unless the host's kernel version is >= the
   provided kernel version. Try not to use this directive as kernel versions may
-  be misleading (backported kernel features, for example)
+  be misleading (backported kernel features, for example).
+ `MAX_KERNEL`: Skip the test unless the host's kernel version is <= the
+  provided kernel version. Try not to use this directive as kernel versions may
+  be misleading (backported kernel features, for example).
 * `REQUIRES`: Run a command in a shell. If it succeeds, run the testcase.
   Else, skip the testcase.
 * `ENV`: Run bpftrace invocation with additional environment variables. Must be

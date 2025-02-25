@@ -548,9 +548,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
       auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
           *attach_point);
       for (const auto &match : matches) {
-        str_size = std::max(
-            str_size,
-            attach_point->create_expansion_copy(match).name().length());
+        // No need to preserve this node, as we are just expanding to see the
+        // size of the name. This could be refactored into a separate pass.
+        ASTContext dummyctx;
+        str_size = std::max(str_size,
+                            attach_point->create_expansion_copy(dummyctx, match)
+                                .name()
+                                .length());
       }
     }
     builtin.type = CreateString(str_size + 1);
@@ -1465,9 +1469,25 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   } else if (call.func == "strcontains") {
+    static constexpr auto warning = R"(
+strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.
+
+If you're seeing errors, try clamping the string sizes. For example:
+* `str($ptr, 16)`
+* `path($ptr, 16)`
+)";
+
     if (check_nargs(call, 2)) {
       check_arg(call, Type::string, 0);
       check_arg(call, Type::string, 1);
+
+      if (is_final_pass()) {
+        auto arg0_sz = call.vargs.at(0)->type.GetSize();
+        auto arg1_sz = call.vargs.at(1)->type.GetSize();
+        if (arg0_sz * arg1_sz > 2000) {
+          LOG(WARNING, call.loc, out_) << warning;
+        }
+      }
     }
     call.type = CreateUInt64();
   } else if (call.func == "override") {
@@ -2362,12 +2382,6 @@ void SemanticAnalyser::visit(Jump &jump)
 
 void SemanticAnalyser::visit(While &while_block)
 {
-  if (is_final_pass() && !bpftrace_.feature_->has_loop()) {
-    LOG(WARNING, while_block.loc, out_)
-        << "Kernel does not support bounded loops. Depending"
-           " on LLVMs loop unroll to generate loadable code.";
-  }
-
   while_block.cond = dereference_if_needed(while_block.cond);
 
   loop_depth_++;
@@ -4096,9 +4110,8 @@ Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
     const SizedType &ptr_type = expr->type;
     Expression *ptr_expr = expr;
 
-    Unop *deref_expr = ctx_.make_node<Unop>(Operator::MUL,
-                                            ptr_expr,
-                                            ptr_expr->loc);
+    Unop *deref_expr = ctx_.make_node<Unop>(
+        Operator::MUL, ptr_expr, false, ptr_expr->loc);
     deref_expr->type = *ptr_type.GetPointeeTy();
     deref_expr->type.is_internal = ptr_type.is_internal;
     deref_expr->type.SetAS(ptr_type.GetAS());

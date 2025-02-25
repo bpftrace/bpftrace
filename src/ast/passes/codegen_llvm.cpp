@@ -1325,8 +1325,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       // it, otherwise fall back to bpf_for_each_map_elem with a custom callback
       if (map_has_single_elem(map.type, map.key_type)) {
         return ScopedExpr(b_.getInt64(1));
-      } else if (LLVM_VERSION_MAJOR >= 17 &&
-                 bpftrace_.feature_->has_kernel_func(
+      } else if (bpftrace_.feature_->has_kernel_func(
                      Kfunc::bpf_map_sum_elem_count) &&
                  !is_array_map(map.type, map.key_type)) {
         return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
@@ -1404,30 +1403,31 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "strerror") {
     return visit(call.vargs.front());
   } else if (call.func == "strncmp") {
+    auto &left_arg = *call.vargs.at(0);
+    auto &right_arg = *call.vargs.at(1);
     auto size_opt = bpftrace_.get_int_literal(call.vargs.at(2));
     if (!size_opt.has_value())
       LOG(BUG) << "Int literal should have been checked in semantic analysis";
-    uint64_t size = static_cast<uint64_t>(*size_opt);
-    auto &left_arg = *call.vargs.at(0);
-    auto &right_arg = *call.vargs.at(1);
+    uint64_t size = std::min({ static_cast<uint64_t>(*size_opt),
+                               left_arg.type.GetSize(),
+                               right_arg.type.GetSize() });
 
-    auto left_string = getString(left_arg);
-    auto right_string = getString(right_arg);
+    auto left_string = visit(&left_arg);
+    auto right_string = visit(&right_arg);
 
     return ScopedExpr(b_.CreateStrncmp(
-        left_string.first.value(), right_string.first.value(), size, false));
+        left_string.value(), right_string.value(), size, false));
   } else if (call.func == "strcontains") {
     auto &left_arg = *call.vargs.at(0);
     auto &right_arg = *call.vargs.at(1);
 
-    auto left_string = getString(left_arg);
-    auto right_string = getString(right_arg);
+    auto left_string = visit(left_arg);
+    auto right_string = visit(right_arg);
 
-    return ScopedExpr(b_.CreateStrcontains(left_string.first.value(),
-                                           left_string.second,
-                                           right_string.first.value(),
-                                           right_string.second,
-                                           false));
+    return ScopedExpr(b_.CreateStrcontains(left_string.value(),
+                                           left_arg.type.GetSize(),
+                                           right_string.value(),
+                                           right_arg.type.GetSize()));
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
@@ -1587,39 +1587,22 @@ ScopedExpr CodegenLLVM::visit(Variable &var)
   }
 }
 
-std::pair<ScopedExpr, uint64_t> CodegenLLVM::getString(Expression &expr)
-{
-  std::pair<ScopedExpr, uint64_t> result;
-  if (expr.is_literal) {
-    auto str = bpftrace_.get_string_literal(&expr);
-    result.first = ScopedExpr(
-        ConstantDataArray::getString(module_->getContext(), str));
-    result.second = str.size() + 1;
-  } else {
-    result.first = visit(expr);
-    result.second = expr.type.GetSize();
-  }
-
-  return result;
-}
-
 ScopedExpr CodegenLLVM::binop_string(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
     LOG(BUG) << "missing codegen to string operator \"" << opstr(binop) << "\"";
   }
 
-  std::string string_literal;
-
   // strcmp returns 0 when strings are equal
   bool inverse = binop.op == Operator::EQ;
 
-  auto left_string = getString(*binop.left);
-  auto right_string = getString(*binop.right);
+  auto left_string = visit(binop.left);
+  auto right_string = visit(binop.right);
 
-  size_t len = std::min(left_string.second, right_string.second);
+  size_t len = std::min(binop.left->type.GetSize(),
+                        binop.right->type.GetSize());
   return ScopedExpr(b_.CreateStrncmp(
-      left_string.first.value(), right_string.first.value(), len, inverse));
+      left_string.value(), right_string.value(), len, inverse));
 }
 
 ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
@@ -1640,24 +1623,14 @@ ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
   assert(left_array_ty.GetElementTy()->GetSize() ==
          right_array_ty.GetElementTy()->GetSize());
 
-  if (bpftrace_.feature_->has_loop()) {
-    return ScopedExpr(b_.CreateIntegerArrayCmp(ctx_,
-                                               left_array_val,
-                                               right_array_val,
-                                               left_array_ty,
-                                               right_array_ty,
-                                               inverse,
-                                               binop.loc,
-                                               createLoopMetadata()));
-  } else {
-    return ScopedExpr(b_.CreateIntegerArrayCmpUnrolled(ctx_,
-                                                       left_array_val,
-                                                       right_array_val,
-                                                       left_array_ty,
-                                                       right_array_ty,
-                                                       inverse,
-                                                       binop.loc));
-  }
+  return ScopedExpr(b_.CreateIntegerArrayCmp(ctx_,
+                                             left_array_val,
+                                             right_array_val,
+                                             left_array_ty,
+                                             right_array_ty,
+                                             inverse,
+                                             binop.loc,
+                                             createLoopMetadata()));
 }
 
 ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
@@ -1665,8 +1638,6 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
     LOG(BUG) << "missing codegen to buffer operator \"" << opstr(binop) << "\"";
   }
-
-  std::string string_literal("");
 
   // strcmp returns 0 when strings are equal
   bool inverse = binop.op == Operator::EQ;
@@ -2899,12 +2870,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
       std::string full_func_id = name + "_loc" + std::to_string(i);
       generateProbe(probe, full_func_id, probefull_, func_type, i);
-      bpftrace_.add_probe(ap, probe, i);
+      bpftrace_.add_probe(Visitor::ctx_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, name, probefull_, func_type);
-    bpftrace_.add_probe(ap, probe);
+    bpftrace_.add_probe(Visitor::ctx_, ap, probe);
   }
   current_attach_point_ = nullptr;
 }
@@ -3053,7 +3024,8 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
         if (attach_point->index() == 0)
           attach_point->set_index(getNextIndexForProbe());
 
-        auto match_ap = attach_point->create_expansion_copy(match);
+        auto &match_ap = attach_point->create_expansion_copy(Visitor::ctx_,
+                                                             match);
         add_probe(match_ap, probe, match, func_type);
         generated = true;
       }

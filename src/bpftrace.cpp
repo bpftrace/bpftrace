@@ -100,7 +100,8 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   return probe;
 }
 
-int BPFtrace::add_probe(const ast::AttachPoint &ap,
+int BPFtrace::add_probe(ast::ASTContext &ctx,
+                        const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         int usdt_location_idx)
 {
@@ -131,7 +132,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
       assert(type == ProbeType::uprobe || type == ProbeType::uretprobe);
       std::unordered_map<std::string, Probe> target_map;
       for (const auto &func : matches) {
-        ast::AttachPoint match_ap = ap.create_expansion_copy(func);
+        ast::AttachPoint &match_ap = ap.create_expansion_copy(ctx, func);
         // Use the original (possibly wildcarded) function name
         match_ap.func = ap.func;
         auto found = target_map.find(match_ap.target);

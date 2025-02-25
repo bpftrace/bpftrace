@@ -31,8 +31,6 @@ void test_for_warning(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out);
   semantics.analyse();
   if (invert)
@@ -967,9 +965,9 @@ kprobe:f { @[delete(@x)] = 1; }
 )");
 
   test_error("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", R"(
-stdin:1:1-1: ERROR: Invalid condition in if(): none
+stdin:1:20-42: ERROR: Invalid condition in if(): none
 kprobe:f { @x = 1; if(delete(@x)) { 123 } }
-
+                   ~~~~~~~~~~~~~~~~~~~~~~
 )");
 
   test_error("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", R"(
@@ -3270,7 +3268,7 @@ TEST(semantic_analyser, strncmp_posparam)
   test(bpftrace, R"(i:s:1 { strncmp("foo", "bar", $2) })", 1);
 }
 
-TEST(semantic_analyser, strconrtains)
+TEST(semantic_analyser, strcontains)
 {
   // Test strcontains builtin
   test(R"(i:s:1 { $a = "bar"; strcontains("foo", $a) })");
@@ -3278,6 +3276,27 @@ TEST(semantic_analyser, strconrtains)
   test("i:s:1 { strcontains(1) }", 1);
   test("i:s:1 { strcontains(1,1) }", 2);
   test("i:s:1 { strcontains(\"a\",1) }", 2);
+}
+
+TEST(semantic_analyser, strcontains_large_warnings)
+{
+  test_for_warning(
+      "k:f { $s1 = str(arg0); $s2 = str(arg1); strcontains($s1, $s2) }",
+      "both string sizes is larger");
+
+  test_for_warning(
+      "k:f { $s1 = str(arg0, 64); $s2 = str(arg1, 16); strcontains($s1, $s2) }",
+      "both string sizes is larger",
+      /* invert= */ true);
+
+  auto bpftrace = get_mock_bpftrace();
+  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  configs.set(ConfigKeyInt::max_strlen, 16);
+  test_for_warning(
+      *bpftrace,
+      "k:f { $s1 = str(arg0); $s2 = str(arg1); strcontains($s1, $s2) }",
+      "both string sizes is larger",
+      /* invert= */ true);
 }
 
 TEST(semantic_analyser, strcontains_posparam)

@@ -1558,18 +1558,6 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   return result;
 }
 
-std::optional<std::string> ValToString(Value *val)
-{
-  std::optional<std::string> literal;
-  if (auto constString2 = dyn_cast<ConstantDataArray>(val))
-    literal = constString2->getAsString();
-  else if (isa<ConstantAggregateZero>(val))
-    literal = "";
-  else
-    literal = std::nullopt;
-  return literal;
-}
-
 Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                    Value *str2,
                                    uint64_t n,
@@ -1596,11 +1584,6 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   //     return true;
   //  }
 
-  // Check if the compared strings are literals.
-  // If so, we can avoid storing the literal in memory.
-  std::optional<std::string> literal1 = ValToString(str1);
-  std::optional<std::string> literal2 = ValToString(str2);
-
   llvm::Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
@@ -1622,26 +1605,18 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                                      parent);
 
     Value *l;
-    if (literal1)
-      l = getInt8(literal1->c_str()[i]);
-    else {
-      auto *ptr_l = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(str1,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i) });
-      l = CreateLoad(getInt8Ty(), ptr_l);
-    }
+    auto *ptr_l = CreateGEP(getInt8Ty(),
+                            CreatePointerCast(str1,
+                                              getInt8Ty()->getPointerTo()),
+                            { getInt32(i) });
+    l = CreateLoad(getInt8Ty(), ptr_l);
 
     Value *r;
-    if (literal2)
-      r = getInt8(literal2->c_str()[i]);
-    else {
-      auto *ptr_r = CreateGEP(getInt8Ty(),
-                              CreatePointerCast(str2,
-                                                getInt8Ty()->getPointerTo()),
-                              { getInt32(i) });
-      r = CreateLoad(getInt8Ty(), ptr_r);
-    }
+    auto *ptr_r = CreateGEP(getInt8Ty(),
+                            CreatePointerCast(str2,
+                                              getInt8Ty()->getPointerTo()),
+                            { getInt32(i) });
+    r = CreateLoad(getInt8Ty(), ptr_r);
 
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, loop_null_check);
@@ -1669,143 +1644,154 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   return result;
 }
 
-Value *IRBuilderBPF::CreateStrcontains(Value *val1,
-                                       uint64_t str1_size,
-                                       Value *val2,
-                                       uint64_t str2_size,
-                                       bool inverse)
+Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
+                                       uint64_t haystack_sz,
+                                       Value *needle,
+                                       uint64_t needle_sz)
 {
-  // This function compares whether the string val1 contains the string val2.
-  // It returns true if val2 is contained by val1, false if not contained.
+  // This function compares whether the string haystack contains the string
+  // needle. It returns true if needle is contained by haystack, false if not
+  // contained.
   //
-  //  strcontains(String val1, String val2, int str1_size, int str2_size)
-  //  {
-  //    for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size -
-  //   str2_size); j++)
-  //    {
-  //      for (size_t i = 0; i < str2_size; i++)
-  //      {
-  //        if (val2[i] == NULL)
-  //        {
-  //          return true;
-  //        }
-  //        if (val1[i + j] != val2[i])
-  //        {
-  //          break;
-  //        }
-  //      }
-  //      if (val1[j] == NULL) {
-  //        return false;
-  //      }
-  //    }
-  //    return false;
-  //  }
-
-  // Check if the compared strings are literals.
-  // If so, we can avoid storing the literal in memory.
-  std::optional<std::string> literal1 = ValToString(val1);
-  std::optional<std::string> literal2 = ValToString(val2);
-
-  if (literal1 && literal2) {
-    const std::string &s1 = literal1.value();
-    std::string s2 = literal2.value();
-    s2 = s2.substr(0, s2.size() - 1);
-    std::size_t position = s1.find(s2);
-
-    if (position != std::string::npos) {
-      return getInt64(1);
-    } else {
-      return getInt64(0);
-    }
-  }
+  // clang-format off
+  //
+  // bool strcontains(char *haystack, size_t haystack_sz, char *needle, size_t needle_sz) {
+  //   // Explicit check needed for haystack="", needle="" case
+  //   if (needle[0] == '\0')
+  //     return true;
+  //
+  //   for (u64 i = 0; i < haystack_sz && haystack[i] != '\0'; i++) {
+  //     u64 j;
+  //     for (j = 0; j < needle_sz; j++) {
+  //       if (needle[j] == '\0')
+  //         return true;
+  //
+  //       if ((i+j) >= haystack_sz || haystack[i+j] != needle[j])
+  //         break;
+  //     }
+  //   }
+  //
+  //   return false;
+  // }
+  //
+  // clang-format on
 
   llvm::Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
+  BasicBlock *empty_check = BasicBlock::Create(module_.getContext(),
+                                               "strcontains.empty.check",
+                                               parent);
+  BasicBlock *outer_cond = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.cond",
+                                              parent);
+  BasicBlock *outer_cond_cmp = BasicBlock::Create(module_.getContext(),
+                                                  "strcontains.outer.cond.cmp",
+                                                  parent);
+  BasicBlock *outer_body = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.body",
+                                              parent);
+  BasicBlock *inner_cond = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.cond",
+                                              parent);
+  BasicBlock *inner_body = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.body",
+                                              parent);
+  BasicBlock *inner_notnull = BasicBlock::Create(module_.getContext(),
+                                                 "strcontains.inner.notnull",
+                                                 parent);
+  BasicBlock *inner_cmp = BasicBlock::Create(module_.getContext(),
+                                             "strcontains.inner.cmp",
+                                             parent);
+  BasicBlock *inner_incr = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.inner.incr",
+                                              parent);
+  BasicBlock *outer_incr = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.outer.incr",
+                                              parent);
   BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
                                              "strcontains.true",
                                              parent);
   BasicBlock *done_false = BasicBlock::Create(module_.getContext(),
                                               "strcontains.false",
                                               parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "strcontains.done",
+                                        parent);
 
-  CreateStore(getInt1(!inverse), store);
+  AllocaInst *i = CreateAllocaBPF(getInt64Ty(), "strcontains.i");
+  CreateStore(getInt64(0), i);
+  AllocaInst *j = CreateAllocaBPF(getInt64Ty(), "strcontains.j");
+  needle = CreatePointerCast(needle, getInt8Ty()->getPointerTo());
+  haystack = CreatePointerCast(haystack, getInt8Ty()->getPointerTo());
   Value *null_byte = getInt8(0);
 
-  for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size - str2_size);
-       j++) {
-    BasicBlock *first_loop = BasicBlock::Create(module_.getContext(),
-                                                "strcontains.firstloop",
-                                                parent);
+  CreateBr(empty_check);
+  SetInsertPoint(empty_check);
+  Value *needle_first = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), needle, { getInt64(0) }));
+  Value *needle_first_null = CreateICmpEQ(needle_first, null_byte);
+  CreateCondBr(needle_first_null, done_true, outer_cond);
 
-    Value *str_c;
-    if (literal1)
-      str_c = getInt8(literal1->c_str()[j]);
-    else {
-      auto *ptr_str = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val1,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(j) });
-      str_c = CreateLoad(getInt8Ty(), ptr_str);
-    }
+  SetInsertPoint(outer_cond);
+  Value *i_val = CreateLoad(getInt64Ty(), i);
+  Value *haystack_inbounds = CreateICmpULT(i_val, getInt64(haystack_sz));
+  CreateCondBr(haystack_inbounds, outer_cond_cmp, done_false);
 
-    for (size_t i = 0; i < str2_size; i++) {
-      BasicBlock *second_loop = BasicBlock::Create(module_.getContext(),
-                                                   "strcontains.secondloop",
-                                                   parent);
-      BasicBlock *cmp_char = BasicBlock::Create(module_.getContext(),
-                                                "strcontains.cmp_char",
-                                                parent);
+  SetInsertPoint(outer_cond_cmp);
+  Value *haystack_char = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), haystack, { i_val }));
+  Value *haystack_valid = CreateICmpNE(haystack_char, null_byte);
+  CreateCondBr(haystack_valid, outer_body, done_false);
 
-      Value *l;
-      if (literal1)
-        l = getInt8(literal1->c_str()[i + j]);
-      else {
-        auto *ptr_l = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val1,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(i + j) });
-        l = CreateLoad(getInt8Ty(), ptr_l);
-      }
+  SetInsertPoint(outer_body);
+  CreateStore(getInt64(0), j);
+  CreateBr(inner_cond);
 
-      Value *r;
-      if (literal2)
-        r = getInt8(literal2->c_str()[i]);
-      else {
-        auto *ptr_r = CreateGEP(getInt8Ty(),
-                                CreatePointerCast(val2,
-                                                  getInt8Ty()->getPointerTo()),
-                                { getInt32(i) });
-        r = CreateLoad(getInt8Ty(), ptr_r);
-      }
+  SetInsertPoint(inner_cond);
+  Value *j_val = CreateLoad(getInt64Ty(), j);
+  Value *needle_inbounds = CreateICmpULT(j_val, getInt64(needle_sz));
+  CreateCondBr(needle_inbounds, inner_body, outer_incr);
 
-      Value *cmp_null = CreateICmpEQ(r, null_byte, "strcontains.cmp_null");
-      CreateCondBr(cmp_null, done_true, cmp_char);
+  SetInsertPoint(inner_body);
+  Value *needle_char = CreateLoad(getInt8Ty(),
+                                  CreateGEP(getInt8Ty(), needle, { j_val }));
+  Value *needle_null = CreateICmpEQ(needle_char, null_byte);
+  CreateCondBr(needle_null, done_true, inner_notnull);
 
-      SetInsertPoint(cmp_char);
+  SetInsertPoint(inner_notnull);
+  Value *haystack_cmp_idx = CreateAdd(i_val, j_val);
+  Value *haystack_cmp_outbounds = CreateICmpUGE(haystack_cmp_idx,
+                                                getInt64(haystack_sz));
+  CreateCondBr(haystack_cmp_outbounds, outer_incr, inner_cmp);
 
-      Value *cmp = CreateICmpNE(l, r, "strcontains.cmp");
-      CreateCondBr(cmp, first_loop, second_loop);
+  // Inner conditional matching haystack char with needle char
+  SetInsertPoint(inner_cmp);
+  Value *haystack_cmp_char = CreateLoad(
+      getInt8Ty(), CreateGEP(getInt8Ty(), haystack, { haystack_cmp_idx }));
+  Value *haystack_cmp_needle = CreateICmpNE(haystack_cmp_char, needle_char);
+  CreateCondBr(haystack_cmp_needle, outer_incr, inner_incr);
 
-      SetInsertPoint(second_loop);
-    }
-    Value *cmp_null = CreateICmpEQ(str_c, null_byte, "strcontains.cmp_null");
-    CreateCondBr(cmp_null, done_false, first_loop);
+  SetInsertPoint(inner_incr);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), j), getInt64(1)), j);
+  CreateBr(inner_cond);
 
-    SetInsertPoint(first_loop);
-  }
-  CreateBr(done_false);
+  SetInsertPoint(outer_incr);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), i), getInt64(1)), i);
+  CreateBr(outer_cond);
+
   SetInsertPoint(done_false);
-  CreateStore(getInt1(inverse), store);
+  CreateBr(done);
 
-  CreateBr(done_true);
   SetInsertPoint(done_true);
+  CreateBr(done);
 
-  // store is a pointer to bool (i1 *)
-  Value *result = CreateLoad(getInt1Ty(), store);
-  CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), false);
+  SetInsertPoint(done);
+  auto phi = CreatePHI(getInt1Ty(), 2, "result");
+  phi->addIncoming(getInt1(false), done_false);
+  phi->addIncoming(getInt1(true), done_true);
+  CreateLifetimeEnd(j);
+  CreateLifetimeEnd(i);
 
-  return result;
+  return CreateIntCast(phi, getInt64Ty(), false);
 }
 
 CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
@@ -1843,102 +1829,6 @@ CallInst *IRBuilderBPF::CreateJiffies64(const location &loc)
   FunctionType *jiffies64_func_type = FunctionType::get(getInt64Ty(), false);
   return CreateHelperCall(
       libbpf::BPF_FUNC_jiffies64, jiffies64_func_type, {}, "jiffies64", &loc);
-}
-
-Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
-                                                   Value *val1,
-                                                   Value *val2,
-                                                   const SizedType &val1_type,
-                                                   const SizedType &val2_type,
-                                                   const bool inverse,
-                                                   const location &loc)
-{
-  // This function compares each character of the two arrays. It returns true
-  // if all are equal and false if any are different.
-  //
-  //  cmp([]char val1, []char val2)
-  //  {
-  //    for (size_t i = 0; i < n; i++)
-  //    {
-  //      if (val1[i] != val2[i])
-  //      {
-  //        return false;
-  //      }
-  //    }
-  //    return true;
-  //  }
-
-  auto elem_type = *val1_type.GetElementTy();
-  const size_t num = val1_type.GetNumElements();
-
-  Value *val1_elem_i, *val2_elem_i, *cmp;
-  AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
-  AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
-
-  llvm::Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
-  CreateStore(getInt1(inverse), store);
-  BasicBlock *arr_ne = BasicBlock::Create(module_.getContext(),
-                                          "arraycmp.false",
-                                          parent);
-  BasicBlock *done = BasicBlock::Create(module_.getContext(),
-                                        "arraycmp.done",
-                                        parent);
-
-  Value *ptr_val1 = CreateIntToPtr(val1, GetType(val1_type)->getPointerTo());
-  Value *ptr_val2 = CreateIntToPtr(val2, GetType(val2_type)->getPointerTo());
-
-  for (size_t i = 0; i < num; i++) {
-    BasicBlock *arr_eq = BasicBlock::Create(module_.getContext(),
-                                            "arraycmp.loop",
-                                            parent);
-    auto *ptr_val1_elem_i = CreateGEP(GetType(val1_type),
-                                      ptr_val1,
-                                      { getInt32(0), getInt32(i) });
-    if (inBpfMemory(val1_type)) {
-      val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
-    } else {
-      CreateProbeRead(ctx,
-                      v1,
-                      getInt32(elem_type.GetSize()),
-                      ptr_val1_elem_i,
-                      val1_type.GetAS(),
-                      loc);
-      val1_elem_i = CreateLoad(GetType(elem_type), v1);
-    }
-
-    auto *ptr_val2_elem_i = CreateGEP(GetType(val2_type),
-                                      ptr_val2,
-                                      { getInt32(0), getInt32(i) });
-    if (inBpfMemory(val2_type)) {
-      val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
-    } else {
-      CreateProbeRead(ctx,
-                      v2,
-                      getInt32(elem_type.GetSize()),
-                      ptr_val2_elem_i,
-                      val2_type.GetAS(),
-                      loc);
-      val2_elem_i = CreateLoad(GetType(elem_type), v2);
-    }
-    cmp = CreateICmpNE(val1_elem_i, val2_elem_i, "arraycmp.cmp");
-
-    CreateCondBr(cmp, arr_ne, arr_eq);
-    SetInsertPoint(arr_eq);
-  }
-  CreateBr(done);
-
-  SetInsertPoint(arr_ne);
-  CreateStore(getInt1(!inverse), store);
-  CreateBr(done);
-
-  SetInsertPoint(done);
-  Value *result = CreateLoad(getInt1Ty(), store);
-  CreateLifetimeEnd(store);
-  CreateLifetimeEnd(v1);
-  CreateLifetimeEnd(v2);
-  result = CreateIntCast(result, getInt64Ty(), false);
-  return result;
 }
 
 Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,

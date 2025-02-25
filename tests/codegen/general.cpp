@@ -1,6 +1,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "ast/ast.h"
 #include "common.h"
 
 namespace bpftrace {
@@ -15,8 +16,11 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD3(add_probe,
-               int(const ast::AttachPoint &, const ast::Probe &, int));
+  MOCK_METHOD4(add_probe,
+               int(ast::ASTContext &,
+                   const ast::AttachPoint &,
+                   const ast::Probe &,
+                   int));
 #pragma GCC diagnostic pop
 
   int resolve_uname(const std::string &name,
@@ -40,11 +44,6 @@ public:
   {
     return feature_->has_kprobe_multi();
   }
-
-  bool has_loop(void)
-  {
-    return feature_->has_loop();
-  }
 };
 
 TEST(codegen, printf_offsets)
@@ -63,8 +62,6 @@ TEST(codegen, printf_offsets)
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
-  // Override to mockbpffeature.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
@@ -106,7 +103,7 @@ TEST(codegen, printf_offsets)
 TEST(codegen, probe_count)
 {
   MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_, _, _)).Times(2);
+  EXPECT_CALL(bpftrace, add_probe(_, _, _, _)).Times(2);
 
   Driver driver(bpftrace);
 

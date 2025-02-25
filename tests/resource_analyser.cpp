@@ -50,7 +50,6 @@ void test(const std::string &input,
           std::optional<uint64_t> on_stack_limit = std::nullopt)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   auto configs = ConfigSetter(bpftrace->config_, ConfigSource::script);
   configs.set(ConfigKeyInt::on_stack_limit, on_stack_limit.value_or(0));
   return test(*bpftrace, input, expected_result, out);
