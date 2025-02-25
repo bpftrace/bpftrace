@@ -1499,7 +1499,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                                             int usdt_location_index,
                                             int arg_num,
                                             Builtin &builtin,
-                                            pid_t pid,
+                                            std::optional<pid_t> pid,
                                             AddrSpace as,
                                             const location &loc)
 {
@@ -1508,9 +1508,9 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
 
   void *usdt;
 
-  if (pid) {
+  if (pid.has_value()) {
     // FIXME use attach_point->target when iovisor/bcc#2064 is merged
-    usdt = bcc_usdt_new_frompid(pid, nullptr);
+    usdt = bcc_usdt_new_frompid(*pid, nullptr);
   } else {
     usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
   }

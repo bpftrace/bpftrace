@@ -222,7 +222,8 @@ bool is_type_name(std::string_view str);
 std::string exec_system(const char *cmd);
 bool is_exe(const std::string &path);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
-std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);
+std::vector<std::string> resolve_binary_path(const std::string &cmd,
+                                             std::optional<int> pid);
 std::string path_for_pid_mountns(int pid, const std::string &path);
 void cat_file(const char *filename, size_t, std::ostream &);
 std::string str_join(const std::vector<std::string> &list,

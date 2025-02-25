@@ -93,10 +93,10 @@ private:
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
-      int pid,
+      std::optional<int> pid,
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
-      int pid,
+      std::optional<int> pid,
       const std::string &target) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;

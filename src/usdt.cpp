@@ -50,15 +50,15 @@ static void cache_current_pid_paths(int pid)
   current_pid_paths.clear();
 }
 
-std::optional<usdt_probe_entry> USDTHelper::find(int pid,
+std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
                                                  const std::string &target,
                                                  const std::string &provider,
                                                  const std::string &name)
 {
   usdt_probe_list probes;
-  if (pid > 0) {
-    read_probes_for_pid(pid);
-    for (auto const &path : usdt_pid_to_paths_cache[pid]) {
+  if (pid.has_value()) {
+    read_probes_for_pid(*pid);
+    for (auto const &path : usdt_pid_to_paths_cache[*pid]) {
       probes.insert(probes.end(),
                     usdt_provider_cache[path][provider].begin(),
                     usdt_provider_cache[path][provider].end());
@@ -124,26 +124,22 @@ void USDTHelper::read_probes_for_pid(int pid, bool print_error)
   if (pid_cache.count(pid))
     return;
 
-  if (pid > 0) {
-    void *ctx = bcc_usdt_new_frompid(pid, nullptr);
-    if (ctx == nullptr) {
-      if (print_error) {
-        LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
+  void *ctx = bcc_usdt_new_frompid(pid, nullptr);
+  if (ctx == nullptr) {
+    if (print_error) {
+      LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
 
-        if (kill(pid, 0) == -1 && errno == ESRCH)
-          LOG(ERROR) << "hint: process not running";
-      }
-
-      return;
+      if (kill(pid, 0) == -1 && errno == ESRCH)
+        LOG(ERROR) << "hint: process not running";
     }
-    bcc_usdt_foreach(ctx, usdt_probe_each);
-    bcc_usdt_close(ctx);
-    cache_current_pid_paths(pid);
 
-    pid_cache.emplace(pid);
-  } else {
-    LOG(ERROR) << "a pid must be specified to list USDT probes by PID";
+    return;
   }
+  bcc_usdt_foreach(ctx, usdt_probe_each);
+  bcc_usdt_close(ctx);
+  cache_current_pid_paths(pid);
+
+  pid_cache.emplace(pid);
 }
 
 void USDTHelper::read_probes_for_path(const std::string &path)

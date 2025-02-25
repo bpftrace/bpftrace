@@ -110,9 +110,9 @@ int AttachedProbe::detach_fentry()
   return 0;
 }
 
-void AttachedProbe::attach_iter(int pid)
+void AttachedProbe::attach_iter(std::optional<int> pid)
 {
-  if (pid == 0) {
+  if (!pid.has_value()) {
     linkfd_ = bpf_link_create(progfd_,
                               0,
                               static_cast<enum ::bpf_attach_type>(
@@ -122,7 +122,7 @@ void AttachedProbe::attach_iter(int pid)
     BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
     union bpf_iter_link_info linfo;
     memset(&linfo, 0, sizeof(linfo));
-    linfo.task.pid = pid;
+    linfo.task.pid = *pid;
     opts.iter_info = &linfo;
     opts.iter_info_len = sizeof(linfo);
     linkfd_ = bpf_link_create(progfd_,
@@ -166,7 +166,7 @@ int AttachedProbe::detach_raw_tracepoint()
 
 AttachedProbe::AttachedProbe(Probe &probe,
                              const BpfProgram &prog,
-                             int pid,
+                             std::optional<int> pid,
                              BPFtrace &bpftrace,
                              bool safe_mode)
     : probe_(probe), progfd_(prog.fd()), bpftrace_(bpftrace)
@@ -759,7 +759,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   }
 }
 
-void AttachedProbe::attach_multi_uprobe(int pid)
+void AttachedProbe::attach_multi_uprobe(std::optional<int> pid)
 {
   std::vector<std::string> syms;
   std::vector<unsigned long> offsets;
@@ -778,8 +778,8 @@ void AttachedProbe::attach_multi_uprobe(int pid)
   opts.uprobe_multi.flags = probe_.type == ProbeType::uretprobe
                                 ? BPF_F_UPROBE_MULTI_RETURN
                                 : 0;
-  if (pid != 0) {
-    opts.uprobe_multi.pid = pid;
+  if (pid.has_value()) {
+    opts.uprobe_multi.pid = *pid;
   }
 
   if (bt_verbose) {
@@ -804,7 +804,7 @@ void AttachedProbe::attach_multi_uprobe(int)
 }
 #endif // HAVE_LIBBPF_UPROBE_MULTI
 
-void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
+void AttachedProbe::attach_uprobe(std::optional<int> pid, bool safe_mode)
 {
   if (!probe_.funcs.empty()) {
     attach_multi_uprobe(pid);
@@ -819,7 +819,7 @@ void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
                                         eventname().c_str(),
                                         probe_.path.c_str(),
                                         offset_,
-                                        pid == 0 ? -1 : pid,
+                                        pid.has_value() ? *pid : -1,
                                         0);
 
   if (perf_event_fd < 0) {
@@ -913,7 +913,7 @@ int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
   return usdt_sem_up_manual_addsem(pid, fn_name, ctx);
 }
 
-void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
+void AttachedProbe::attach_usdt(std::optional<int> pid, BPFfeature &feature)
 {
   struct bcc_usdt_location loc = {};
   int err;
@@ -922,13 +922,13 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
   // probe:
   std::string fn_name = "probe_" + probe_.attach_point + "_1";
 
-  if (pid) {
+  if (pid.has_value()) {
     // FIXME when iovisor/bcc#2064 is merged, optionally pass probe_.path
-    ctx = bcc_usdt_new_frompid(pid, nullptr);
+    ctx = bcc_usdt_new_frompid(*pid, nullptr);
     if (!ctx)
       throw FatalUserException(
           "Error initializing context for probe: " + probe_.name +
-          ", for PID: " + std::to_string(pid));
+          ", for PID: " + std::to_string(*pid));
   } else {
     ctx = bcc_usdt_new_frompath(probe_.path.c_str());
     if (!ctx)
@@ -964,7 +964,7 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
   //
   // NB: Do *not* use `ctx` after this call. It may either be open or closed,
   // depending on which path was taken.
-  err = usdt_sem_up(feature, pid, fn_name, ctx);
+  err = usdt_sem_up(feature, pid.value_or(0), fn_name, ctx);
 
   if (err) {
     throw FatalUserException(
@@ -977,13 +977,13 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
                                         eventname().c_str(),
                                         probe_.path.c_str(),
                                         offset_,
-                                        pid == 0 ? -1 : pid,
+                                        pid.has_value() ? *pid : -1,
                                         semaphore_offset);
 
   if (perf_event_fd < 0) {
-    if (pid)
+    if (pid.has_value())
       throw FatalUserException("Error attaching probe: " + probe_.name +
-                               ", to PID: " + std::to_string(pid));
+                               ", to PID: " + std::to_string(*pid));
     else
       throw FatalUserException("Error attaching probe: " + probe_.name);
   }
@@ -1004,7 +1004,7 @@ void AttachedProbe::attach_tracepoint()
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_profile(int pid)
+void AttachedProbe::attach_profile(std::optional<int> pid)
 {
   int group_fd = -1;
 
@@ -1032,7 +1032,7 @@ void AttachedProbe::attach_profile(int pid)
                                               PERF_COUNT_SW_CPU_CLOCK,
                                               period,
                                               freq,
-                                              pid == 0 ? -1 : pid,
+                                              pid.has_value() ? *pid : -1,
                                               cpu,
                                               group_fd);
 
@@ -1044,7 +1044,7 @@ void AttachedProbe::attach_profile(int pid)
   }
 }
 
-void AttachedProbe::attach_interval(int pid)
+void AttachedProbe::attach_interval(std::optional<int> pid)
 {
   int group_fd = -1;
   int cpu = 0;
@@ -1067,7 +1067,7 @@ void AttachedProbe::attach_interval(int pid)
                                             PERF_COUNT_SW_CPU_CLOCK,
                                             period,
                                             freq,
-                                            pid == 0 ? -1 : pid,
+                                            pid.has_value() ? *pid : -1,
                                             cpu,
                                             group_fd);
 
@@ -1078,7 +1078,7 @@ void AttachedProbe::attach_interval(int pid)
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_software(int pid)
+void AttachedProbe::attach_software(std::optional<int> pid)
 {
   int group_fd = -1;
 
@@ -1105,7 +1105,7 @@ void AttachedProbe::attach_software(int pid)
                                               type,
                                               period,
                                               0,
-                                              pid == 0 ? -1 : pid,
+                                              pid.has_value() ? *pid : -1,
                                               cpu,
                                               group_fd);
 
@@ -1117,7 +1117,7 @@ void AttachedProbe::attach_software(int pid)
   }
 }
 
-void AttachedProbe::attach_hardware(int pid)
+void AttachedProbe::attach_hardware(std::optional<int> pid)
 {
   int group_fd = -1;
 
@@ -1144,7 +1144,7 @@ void AttachedProbe::attach_hardware(int pid)
                                               type,
                                               period,
                                               0,
-                                              pid == 0 ? -1 : pid,
+                                              pid.has_value() ? *pid : -1,
                                               cpu,
                                               group_fd);
 
@@ -1156,7 +1156,8 @@ void AttachedProbe::attach_hardware(int pid)
   }
 }
 
-void AttachedProbe::attach_watchpoint(int pid, const std::string &mode)
+void AttachedProbe::attach_watchpoint(std::optional<int> pid,
+                                      const std::string &mode)
 {
   struct perf_event_attr attr = {};
   attr.type = PERF_TYPE_BREAKPOINT;
@@ -1179,19 +1180,22 @@ void AttachedProbe::attach_watchpoint(int pid, const std::string &mode)
   attr.sample_period = 1;
 
   std::vector<int> cpus;
-  if (pid >= 1) {
+  if (pid.has_value()) {
     cpus = { -1 };
   } else {
     cpus = get_online_cpus();
-    pid = -1;
   }
 
   for (int cpu : cpus) {
     // We copy paste the code from bcc's bpf_attach_perf_event_raw here
     // because we need to know the exact error codes (and also we don't
     // want bcc's noisy error messages).
-    int perf_event_fd = syscall(
-        __NR_perf_event_open, &attr, pid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
+    int perf_event_fd = syscall(__NR_perf_event_open,
+                                &attr,
+                                pid.has_value() ? *pid : -1,
+                                cpu,
+                                -1,
+                                PERF_FLAG_FD_CLOEXEC);
     if (perf_event_fd < 0) {
       if (errno == ENOSPC)
         throw EnospcException("No more HW registers left");
