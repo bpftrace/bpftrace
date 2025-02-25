@@ -25,7 +25,7 @@ void PidFilterPass::visit(Probe &probe)
   bool needs_pid_filter = false;
 
   for (AttachPoint *ap : probe.attach_points) {
-    if (bpftrace_.pid() > 0 && probe_needs_pid_filter(ap)) {
+    if (bpftrace_.pid().has_value() && probe_needs_pid_filter(ap)) {
       needs_pid_filter = true;
     }
   }
@@ -76,7 +76,8 @@ Statement *PidFilterPass::add_pid_filter(const location &loc)
   return ctx_.make_node<If>(
       ctx_.make_node<Binop>(ctx_.make_node<Builtin>("pid", loc),
                             Operator::NE,
-                            ctx_.make_node<Integer>(bpftrace_.pid(), loc),
+                            ctx_.make_node<Integer>(bpftrace_.pid().value_or(0),
+                                                    loc),
                             loc),
       ctx_.make_node<Block>(std::vector<Statement *>{ ctx_.make_node<Jump>(
                                 JumpType::RETURN, loc) },

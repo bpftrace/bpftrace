@@ -180,7 +180,7 @@ std::optional<std::string> find_vmlinux(struct symbol *sym)
 static bool pid_in_different_mountns(int pid);
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
-                                                    int pid);
+                                                    std::optional<int> pid);
 
 void StdioSilencer::silence()
 {
@@ -938,20 +938,21 @@ std::string exec_system(const char *cmd)
 std::vector<std::string> resolve_binary_path(const std::string &cmd)
 {
   const char *env_paths = getenv("PATH");
-  return resolve_binary_path(cmd, env_paths, -1);
+  return resolve_binary_path(cmd, env_paths, std::nullopt);
 }
 
 // If a pid is specified, the binary path is taken relative to its own PATH if
 // it is in a different mount namespace. Otherwise, the path is resolved
 // relative to the local PATH env var for bpftrace's own mount namespace if it
 // is set
-std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
+std::vector<std::string> resolve_binary_path(const std::string &cmd,
+                                             std::optional<int> pid)
 {
   std::string env_paths = "";
   std::ostringstream pid_environ_path;
 
-  if (pid > 0 && pid_in_different_mountns(pid)) {
-    pid_environ_path << "/proc/" << pid << "/environ";
+  if (pid.has_value() && pid_in_different_mountns(*pid)) {
+    pid_environ_path << "/proc/" << *pid << "/environ";
     std::ifstream environ(pid_environ_path.str());
 
     if (environ) {
@@ -1034,7 +1035,7 @@ bool is_exe(const std::string &path)
 // considered.
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
-                                                    int pid)
+                                                    std::optional<int> pid)
 {
   std::vector<std::string> candidate_paths = { cmd };
 
@@ -1048,8 +1049,8 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
   std::vector<std::string> valid_executable_paths;
   for (const auto &path : candidate_paths) {
     std::string rel_path;
-    if (pid > 0 && pid_in_different_mountns(pid))
-      rel_path = path_for_pid_mountns(pid, path);
+    if (pid.has_value() && pid_in_different_mountns(*pid))
+      rel_path = path_for_pid_mountns(*pid, path);
     else
       rel_path = path;
 

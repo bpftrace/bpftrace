@@ -2334,7 +2334,7 @@ TEST(semantic_analyser, watchpoint_function)
   test(*bpftrace, "w:func1.one_two+arg2:8:rw { 1 }");
   test(*bpftrace, "watchpoint:func1+arg99999:8:rw { 1 }", 1);
 
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(0);
+  bpftrace->procmon_ = nullptr;
   test(*bpftrace, "watchpoint:func1+arg2:8:rw { 1 }", 1);
 }
 
@@ -2351,7 +2351,7 @@ TEST(semantic_analyser, asyncwatchpoint)
   // asyncwatchpoint's may not use absolute addresses
   test(*bpftrace, "asyncwatchpoint:0x1234:8:rw { 1 }", 1);
 
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(0);
+  bpftrace->procmon_ = nullptr;
   test(*bpftrace, "watchpoint:func1+arg2:8:rw { 1 }", 1);
 }
 #endif // if defined(__x86_64__) || defined(__aarch64__)

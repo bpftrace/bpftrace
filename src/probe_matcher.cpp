@@ -239,7 +239,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
-    int pid,
+    std::optional<int> pid,
     const std::string& path) const
 {
   if (path.empty())
@@ -247,8 +247,8 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
 
   std::vector<std::string> real_paths;
   if (path == "*") {
-    if (pid > 0)
-      real_paths = get_mapped_paths_for_pid(pid);
+    if (pid.has_value())
+      real_paths = get_mapped_paths_for_pid(*pid);
     else
       real_paths = get_mapped_paths_for_running_pids();
   } else if (path.find('*') != std::string::npos)
@@ -280,14 +280,14 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
-    int pid,
+    std::optional<int> pid,
     const std::string& target) const
 {
   std::string probes;
   usdt_probe_list usdt_probes;
 
-  if (pid > 0)
-    usdt_probes = USDTHelper::probes_for_pid(pid);
+  if (pid.has_value())
+    usdt_probes = USDTHelper::probes_for_pid(*pid);
   else if (target == "*")
     usdt_probes = USDTHelper::probes_for_all_pids();
   else if (!target.empty()) {
@@ -535,7 +535,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       // If PID is specified, targets in symbol_stream will have the
       // "/proc/<PID>/root" prefix followed by an absolute path, so we make the
       // target absolute and add a leading wildcard.
-      if (bpftrace_->pid() > 0) {
+      if (bpftrace_->pid().has_value()) {
         if (!target.empty()) {
           if (auto abs_target = abs_path(target))
             target = "*" + abs_target.value();

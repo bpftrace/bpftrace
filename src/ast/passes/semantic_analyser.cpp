@@ -3270,13 +3270,14 @@ void SemanticAnalyser::visit(AttachPoint &ap)
           << "uretprobes can not be attached to a function offset";
 
     std::vector<std::string> paths;
+    const auto pid = bpftrace_.pid();
     if (ap.target == "*") {
-      if (bpftrace_.pid() > 0)
-        paths = get_mapped_paths_for_pid(bpftrace_.pid());
+      if (pid.has_value())
+        paths = get_mapped_paths_for_pid(*pid);
       else
         paths = get_mapped_paths_for_running_pids();
     } else {
-      paths = resolve_binary_path(ap.target, bpftrace_.pid());
+      paths = resolve_binary_path(ap.target, pid);
     }
     switch (paths.size()) {
       case 0:
@@ -3308,7 +3309,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "usdt probe must have a target function or wildcard";
 
-    if (ap.target != "" && !(bpftrace_.pid() > 0 && has_wildcard(ap.target))) {
+    if (ap.target != "" &&
+        !(bpftrace_.pid().has_value() && has_wildcard(ap.target))) {
       auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
       switch (paths.size()) {
         case 0:
@@ -3332,8 +3334,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
 
-    if (bpftrace_.pid() > 0) {
-      USDTHelper::probes_for_pid(bpftrace_.pid());
+    const auto pid = bpftrace_.pid();
+    if (pid.has_value()) {
+      USDTHelper::probes_for_pid(*pid);
     } else if (ap.target == "*") {
       USDTHelper::probes_for_all_pids();
     } else if (ap.target != "") {
@@ -3410,7 +3413,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_) << "software count should be a positive integer";
   } else if (ap.provider == "watchpoint" || ap.provider == "asyncwatchpoint") {
     if (ap.func.size()) {
-      if (bpftrace_.pid() <= 0 && !has_child_)
+      if (!bpftrace_.pid().has_value() && !has_child_)
         LOG(ERROR, ap.loc, err_) << "-p PID or -c CMD required for watchpoint";
 
       if (ap.address > static_cast<uint64_t>(arch::max_arg()))
