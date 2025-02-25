@@ -678,7 +678,7 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     Probe &probe,
     const BpfProgram &program,
-    int pid,
+    std::optional<int> pid,
     bool file_activation)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
@@ -759,7 +759,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
   try {
     auto &program = bytecode.getProgramForProbe(probe);
-    pid_t pid = child_ ? child_->pid() : this->pid();
+    std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
+                                      : this->pid();
 
     if (probe.type == ProbeType::usdt) {
       auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
@@ -1494,8 +1495,8 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
     auto args = split_string(cmd_, ' ', /* remove_empty */ true);
     assert(!args.empty());
     return resolve_binary_path(args[0]).front();
-  } else if (pid())
-    return "/proc/" + std::to_string(pid()) + "/exe";
+  } else if (pid().has_value())
+    return "/proc/" + std::to_string(pid().value_or(0)) + "/exe";
   else {
     return std::nullopt;
   }

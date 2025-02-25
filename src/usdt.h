@@ -21,7 +21,7 @@ class USDTHelper {
 public:
   virtual ~USDTHelper() = default;
 
-  virtual std::optional<usdt_probe_entry> find(int pid,
+  virtual std::optional<usdt_probe_entry> find(std::optional<int> pid,
                                                const std::string &target,
                                                const std::string &provider,
                                                const std::string &name);

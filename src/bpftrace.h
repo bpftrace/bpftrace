@@ -229,9 +229,12 @@ public:
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
-  pid_t pid(void) const
+  std::optional<pid_t> pid(void) const
   {
-    return procmon_ ? procmon_->pid() : 0;
+    if (procmon_) {
+      return procmon_->pid();
+    }
+    return std::nullopt;
   }
   int ncpus_;
   int online_cpus_;
@@ -249,7 +252,7 @@ private:
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
       const BpfProgram &program,
-      int pid,
+      std::optional<int> pid,
       bool file_activation);
   int create_pcaps();
   void close_pcaps();

@@ -21,6 +21,8 @@ using ::testing::StrictMock;
 
 static const int STRING_SIZE = 64;
 
+static const std::optional<int> no_pid = std::nullopt;
+
 static const std::string kprobe_name(const std::string &attach_point,
                                      const std::string &target,
                                      uint64_t func_offset)
@@ -444,7 +446,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/sh:*open {}", *bpftrace);
@@ -470,7 +472,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
   auto bpftrace = get_strict_mock_bpftrace();
 
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(2);
 
   parse_probe("uprobe:/bin/sh:*open {}", *bpftrace);
@@ -491,7 +493,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/*sh"))
+              get_func_symbols_from_file(no_pid, "/bin/*sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/*sh:*open {}", *bpftrace);
@@ -522,7 +524,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file_uprobe_multi)
   auto bpftrace = get_strict_mock_bpftrace();
 
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/*sh"))
+              get_func_symbols_from_file(no_pid, "/bin/*sh"))
       .Times(2);
 
   parse_probe("uprobe:/bin/*sh:*open {}", *bpftrace);
@@ -548,7 +550,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/sh:foo* {}", *bpftrace);
@@ -562,7 +564,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_no_matches_multi)
   auto bpftrace = get_strict_mock_bpftrace();
 
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/sh:foo* {}", *bpftrace);
@@ -608,7 +610,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
     auto bpftrace = get_strict_mock_bpftrace();
     bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
     EXPECT_CALL(*bpftrace->mock_probe_matcher,
-                get_func_symbols_from_file(0, "/bin/sh"))
+                get_func_symbols_from_file(no_pid, "/bin/sh"))
         .Times(1);
 
     std::string prog = provider + ":/bin/sh:cpp:cpp_mangled{}";
@@ -639,7 +641,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/sh:cpp:\"cpp_mangled(int)\"{}", *bpftrace);
@@ -658,7 +660,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("uprobe:/bin/sh:cpp:cpp_man*{}", *bpftrace);
@@ -692,7 +694,7 @@ TEST(bpftrace, add_probes_uprobe_no_demangling)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(0, "/bin/sh"))
+              get_func_symbols_from_file(no_pid, "/bin/sh"))
       .Times(0);
 
   // Without the :cpp prefix, only look for non-mangled "cpp_mangled" symbol
@@ -765,7 +767,7 @@ TEST(bpftrace, add_probes_usdt_wildcard)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(0, "/bin/*sh"))
+              get_symbols_from_usdt(no_pid, "/bin/*sh"))
       .Times(1);
 
   parse_probe("usdt:/bin/*sh:prov*:tp* {}", *bpftrace, 1);
@@ -787,7 +789,7 @@ TEST(bpftrace, add_probes_usdt_empty_namespace)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(0, "/bin/sh"))
+              get_symbols_from_usdt(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("usdt:/bin/sh:tp1 {}", *bpftrace, 1);
@@ -805,7 +807,7 @@ TEST(bpftrace, add_probes_usdt_empty_namespace_conflict)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(0, "/bin/sh"))
+              get_symbols_from_usdt(no_pid, "/bin/sh"))
       .Times(1);
 
   parse_probe("usdt:/bin/sh:tp {}", *bpftrace, 1);

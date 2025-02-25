@@ -136,7 +136,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     // If PID is specified or the second part of the attach point is a path
     // (contains '/'), use userspace probe types.
     // Otherwise, use kernel probe types.
-    if (bpftrace_.pid() > 0 ||
+    if (bpftrace_.pid().has_value() ||
         (parts_.size() >= 2 && parts_[1].find('/') != std::string::npos)) {
       probe_types = bpftrace_.probe_matcher_->expand_probetype_userspace(
           probetype_query);
@@ -372,15 +372,16 @@ AttachPointParser::State AttachPointParser::kretprobe_parser()
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
                                                           bool allow_abs_addr)
 {
-  if (bpftrace_.pid() > 0 &&
+  const auto pid = bpftrace_.pid();
+  if (pid.has_value() &&
       (parts_.size() == 2 ||
        (parts_.size() == 3 && is_supported_lang(parts_[1])))) {
     // For PID, the target may be skipped
     if (parts_.size() == 2)
       parts_.insert(parts_.begin() + 1, "");
 
-    auto target = get_pid_exe(bpftrace_.pid());
-    parts_[1] = path_for_pid_mountns(bpftrace_.pid(), target);
+    auto target = get_pid_exe(*pid);
+    parts_[1] = path_for_pid_mountns(*pid, target);
   }
 
   if (parts_.size() != 3 && parts_.size() != 4) {
@@ -400,7 +401,8 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     // If the target has form "libXXX" then we use BCC to find the correct path
     // to the given library as it may differ across systems.
     auto libname = parts_[1].substr(3);
-    auto lib_path = bcc_procutils_which_so(libname.c_str(), bpftrace_.pid());
+    auto lib_path = bcc_procutils_which_so(libname.c_str(),
+                                           bpftrace_.pid().value_or(0));
     if (lib_path) {
       ap_->target = lib_path;
       ::free(lib_path);
@@ -480,7 +482,7 @@ AttachPointParser::State AttachPointParser::uretprobe_parser()
 
 AttachPointParser::State AttachPointParser::usdt_parser()
 {
-  if (bpftrace_.pid() > 0) {
+  if (bpftrace_.pid().has_value()) {
     // For PID, the target can be skipped
     if (parts_.size() == 2) {
       parts_.push_back(parts_[1]);
@@ -505,7 +507,7 @@ AttachPointParser::State AttachPointParser::usdt_parser()
 
   // Always fully expand USDT probes as they may access args
   if (has_wildcard(ap_->target) || has_wildcard(ap_->ns) || ap_->ns.empty() ||
-      has_wildcard(ap_->func) || bpftrace_.pid())
+      has_wildcard(ap_->func) || bpftrace_.pid().has_value())
     ap_->expansion = ExpansionType::FULL;
 
   return OK;

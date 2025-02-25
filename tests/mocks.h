@@ -25,10 +25,10 @@ public:
   MOCK_CONST_METHOD1(get_symbols_from_traceable_funcs,
                      std::unique_ptr<std::istream>(bool with_modules));
   MOCK_CONST_METHOD2(get_symbols_from_usdt,
-                     std::unique_ptr<std::istream>(int pid,
+                     std::unique_ptr<std::istream>(std::optional<int> pid,
                                                    const std::string &target));
   MOCK_CONST_METHOD2(get_func_symbols_from_file,
-                     std::unique_ptr<std::istream>(int pid,
+                     std::unique_ptr<std::istream>(std::optional<int> pid,
                                                    const std::string &path));
 #pragma GCC diagnostic pop
 };
@@ -187,7 +187,7 @@ public:
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
   MOCK_METHOD4(find,
-               std::optional<usdt_probe_entry>(int pid,
+               std::optional<usdt_probe_entry>(std::optional<int> pid,
                                                const std::string &target,
                                                const std::string &provider,
                                                const std::string &name));

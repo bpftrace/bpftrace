@@ -116,7 +116,7 @@ public:
                                 int usdt_location_index,
                                 int arg_name,
                                 Builtin &builtin,
-                                pid_t pid,
+                                std::optional<pid_t> pid,
                                 AddrSpace as,
                                 const location &loc);
   Value *CreateStrncmp(Value *str1, Value *str2, uint64_t n, bool inverse);
