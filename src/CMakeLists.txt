@@ -100,10 +100,6 @@ target_link_libraries(runtime debugfs tracefs util)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
 target_link_libraries(libbpftrace parser resources runtime aot ast arch util cxxdemangler_llvm)
 
-if(LLDB_FOUND)
-  target_link_libraries(runtime LLDB)
-endif(LLDB_FOUND)
-
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
 endif(LIBPCAP_FOUND)
