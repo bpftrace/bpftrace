@@ -306,7 +306,12 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
     return kstack_ustack(builtin.ident, builtin.type.stack_type, builtin.loc);
   } else if (builtin.ident == "pid") {
-    return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    if (probetype(current_attach_point_->provider) == ProbeType::iter){
+      //Retrieve pid from ctx->task->pid
+      return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    } else {
+      return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    }
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(ctx_, builtin.loc));
   } else if (builtin.ident == "cgroup") {
