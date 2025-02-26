@@ -1,6 +1,7 @@
 #include "ast/attachpoint_parser.h"
 
-#include "ast.h"
+#include "ast/ast.h"
+#include "ast/context.h"
 #include "ast/int_parser.h"
 #include "log.h"
 #include "types.h"

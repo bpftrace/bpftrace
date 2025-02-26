@@ -1,4 +1,5 @@
 #include "ast/passes/collect_nodes.h"
+#include "ast/context.h"
 #include "gtest/gtest.h"
 
 #include <functional>

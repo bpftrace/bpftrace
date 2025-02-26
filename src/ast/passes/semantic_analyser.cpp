@@ -10,6 +10,7 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
+#include "ast/context.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"

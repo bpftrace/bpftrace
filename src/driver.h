@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "ast/ast.h"
+#include "ast/context.h"
 #include "bpftrace.h"
 
 typedef void *yyscan_t;

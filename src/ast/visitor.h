@@ -3,6 +3,7 @@
 #include <string>
 
 #include "ast/ast.h"
+#include "ast/context.h"
 
 namespace bpftrace::ast {
 
