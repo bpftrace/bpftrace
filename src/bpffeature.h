@@ -59,13 +59,15 @@ class BPFfeature;
 
 class BPFnofeature {
 public:
-  BPFnofeature() : kprobe_multi_(false), uprobe_multi_(false)
+  BPFnofeature()
+      : kprobe_multi_(false), kprobe_session_(false), uprobe_multi_(false)
   {
   }
   int parse(const char* optarg);
 
 protected:
   bool kprobe_multi_;
+  bool kprobe_session_;
   bool uprobe_multi_;
   friend class BPFfeature;
 };
@@ -95,6 +97,7 @@ public:
   bool has_d_path();
   bool has_uprobe_refcnt();
   bool has_kprobe_multi();
+  bool has_kprobe_session();
   bool has_uprobe_multi();
   bool has_fentry();
   bool has_skb_output();
@@ -139,6 +142,7 @@ protected:
   std::optional<bool> has_map_batch_;
   std::optional<bool> has_uprobe_refcnt_;
   std::optional<bool> has_kprobe_multi_;
+  std::optional<bool> has_kprobe_session_;
   std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_prog_fentry_;
