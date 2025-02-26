@@ -4,7 +4,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "clang_parser.h"
+#include "passes/passes.h"
 #include "driver.h"
 #include "mocks.h"
 
@@ -29,17 +29,10 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(bpftrace)
                 .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateClangPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
                 .run(ast);
-  ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str();
-
-  ClangParser clang;
-  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
-
-  ok = ast::PassManager()
-           .put(bpftrace)
-           .add(ast::CreateSemanticPass())
-           .add(ast::CreateResourcePass())
-           .run(ast);
   ASSERT_TRUE(bool(ok)) << msg.str();
   EXPECT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 

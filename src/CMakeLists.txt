@@ -58,13 +58,13 @@ add_dependencies(runtime parser)
 
 add_library(libbpftrace STATIC
   build_info.cpp
-  clang_parser.cpp
   driver.cpp
   lockdown.cpp
   tracepoint_format_parser.cpp
 )
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")
+add_dependencies(libbpftrace passes)
 
 add_executable(${BPFTRACE}
   ${MAIN_SRC}
@@ -107,11 +107,6 @@ if (KERNEL_HEADERS_DIR)
   MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
 endif()
 target_compile_definitions(runtime PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
-
-if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
-  MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
-endif()
-target_compile_definitions(runtime PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE_PATHS}")
 
 # This is run on every build to ensure the version string is always up-to-date
 add_custom_target(version_h
@@ -247,5 +242,6 @@ unset(BPFTRACE)
 add_subdirectory(aot)
 add_subdirectory(arch)
 add_subdirectory(ast)
+add_subdirectory(passes)
 add_subdirectory(cxxdemangler)
 add_subdirectory(resources)

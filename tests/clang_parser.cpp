@@ -7,6 +7,7 @@
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
 #include "driver.h"
+#include "passes/passes.h"
 #include "struct.h"
 #include "gtest/gtest.h"
 #include <llvm/Config/llvm-config.h>
@@ -34,11 +35,9 @@ static void parse(const std::string &input,
   auto ok = ast::PassManager()
                 .put(bpftrace)
                 .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateClangPass())
                 .run(ast);
-  ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ClangParser clang;
-  ASSERT_EQ(clang.parse(ast.root, bpftrace), result);
+  ASSERT_EQ(ok && ast.diagnostics().ok(), result);
 }
 
 TEST(clang_parser, integers)

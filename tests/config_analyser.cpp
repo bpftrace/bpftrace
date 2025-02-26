@@ -35,6 +35,7 @@ void test(BPFtrace &bpftrace,
 
   auto ok = ast::PassManager()
                 .put(bpftrace)
+                .add(ast::CreateClangPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateConfigPass())
                 .run(ast);
