@@ -39,14 +39,20 @@ static auto parse_probe(const std::string &str,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(str), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
-  ASSERT_EQ(fields.analyse(), 0);
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
+  ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;

@@ -17,7 +17,6 @@ void test(BPFtrace &bpftrace,
           bool expected_result)
 {
   Driver driver(bpftrace);
-  std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
@@ -27,16 +26,22 @@ void test(BPFtrace &bpftrace,
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  out.str("");
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
-  ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ConfigAnalyser config_analyser(driver.ctx, bpftrace, out);
-  EXPECT_EQ(config_analyser.analyse(), expected_result)
-      << msg.str() << out.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateConfigPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
+
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
+
+    // Reproduce the full string.
+    std::stringstream out;
+    driver.ctx.diagnostics().emit(out);
     EXPECT_EQ(out.str(), expected_error);
   }
 }

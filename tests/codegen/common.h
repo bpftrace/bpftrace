@@ -53,21 +53,23 @@ static void test(BPFtrace &bpftrace,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace);
-  ASSERT_EQ(fields.analyse(), 0);
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
-
-  ast::ResourceAnalyser resource_analyser(driver.ctx, bpftrace);
-  auto resources_optional = resource_analyser.analyse();
-  ASSERT_TRUE(resources_optional.has_value());
-  bpftrace.resources = resources_optional.value();
+  ok = ast::PassManager()
+            .put(bpftrace)
+            .add(ast::CreateSemanticPass())
+            .add(ast::CreateResourcePass())
+            .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.ctx, bpftrace);

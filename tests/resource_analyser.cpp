@@ -24,24 +24,27 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace, out);
-  ASSERT_EQ(fields.analyse(), 0) << msg.str() << out.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  out.str("");
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, false);
-  ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::ResourceAnalyser resource_analyser(driver.ctx, bpftrace, out);
-  auto resources_optional = resource_analyser.analyse();
-  EXPECT_EQ(resources_optional.has_value(), expected_result)
-      << msg.str() << out.str();
+  ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
 
-  if (out_p && resources_optional)
-    *out_p = *resources_optional;
+  if (out_p)
+    *out_p = std::move(bpftrace.resources);
 }
 
 void test(const std::string &input,

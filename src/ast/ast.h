@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "location.hh"
+#include "diagnostic.h"
 #include "types.h"
 #include "usdt.h"
 #include "utils.h"
@@ -60,9 +60,13 @@ enum class ExpansionType {
   MULTI,
 };
 
+class Node;
+template <typename T>
+concept NodeType = std::derived_from<T, Node>;
+
 class Node {
 public:
-  Node(location loc) : loc(loc) {};
+  Node(Diagnostics &d, location loc) : diagnostics_(d), loc(loc) {};
   virtual ~Node() = default;
 
   Node(const Node &) = delete;
@@ -70,6 +74,32 @@ public:
   Node(Node &&) = delete;
   Node &operator=(Node &&) = delete;
 
+  template <NodeType... Args>
+  Diagnostic &addError(Args &...args) const
+  {
+    if constexpr (sizeof...(Args) == 0) {
+      return diagnostics_.addError(loc);
+    } else {
+      return diagnostics_.addError(loc + (args.loc + ...));
+    }
+  }
+  template <NodeType... Args>
+  Diagnostic &addWarning(Args &...args) const
+  {
+    if constexpr (sizeof...(Args) == 0) {
+      return diagnostics_.addWarning(loc);
+    } else {
+      return diagnostics_.addWarning(loc + (args.loc + ...));
+    }
+  }
+
+private:
+  Diagnostics &diagnostics_;
+
+public:
+  // This is temporarily accessible by other classes because we don't have a
+  // clear `clone` operation at this time. Eventually this should be made
+  // private and we should rely on a clear model for cloning nodes.
   location loc;
 };
 
@@ -77,7 +107,8 @@ class Map;
 class Variable;
 class Expression : public Node {
 public:
-  Expression(location loc) : Node(loc) {};
+  Expression(Diagnostics &d, location loc) : Node(d, loc) {};
+  virtual ~Expression() = default;
 
   SizedType type;
   Map *key_for_map = nullptr;
@@ -91,7 +122,10 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(int64_t n, location loc, bool is_negative = true);
+  explicit Integer(Diagnostics &d,
+                   int64_t n,
+                   location loc,
+                   bool is_negative = true);
 
   int64_t n;
   bool is_negative;
@@ -99,7 +133,8 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(PositionalParameterType ptype,
+  explicit PositionalParameter(Diagnostics &d,
+                               PositionalParameterType ptype,
                                long n,
                                location loc);
 
@@ -110,28 +145,28 @@ public:
 
 class String : public Expression {
 public:
-  explicit String(const std::string &str, location loc);
+  explicit String(Diagnostics &d, const std::string &str, location loc);
 
   std::string str;
 };
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(const std::string &mode, location loc);
+  explicit StackMode(Diagnostics &d, const std::string &mode, location loc);
 
   std::string mode;
 };
 
 class Identifier : public Expression {
 public:
-  explicit Identifier(const std::string &ident, location loc);
+  explicit Identifier(Diagnostics &d, const std::string &ident, location loc);
 
   std::string ident;
 };
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(const std::string &ident, location loc);
+  explicit Builtin(Diagnostics &d, const std::string &ident, location loc);
 
   std::string ident;
   int probe_id;
@@ -146,8 +181,11 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList &&vargs, location loc);
+  explicit Call(Diagnostics &d, const std::string &func, location loc);
+  Call(Diagnostics &d,
+       const std::string &func,
+       ExpressionList &&vargs,
+       location loc);
 
   std::string func;
   ExpressionList vargs;
@@ -155,8 +193,8 @@ public:
 
 class Sizeof : public Expression {
 public:
-  Sizeof(SizedType type, location loc);
-  Sizeof(Expression *expr, location loc);
+  Sizeof(Diagnostics &d, SizedType type, location loc);
+  Sizeof(Diagnostics &d, Expression *expr, location loc);
 
   Expression *expr = nullptr;
   SizedType argtype;
@@ -164,8 +202,14 @@ public:
 
 class Offsetof : public Expression {
 public:
-  Offsetof(SizedType record, std::vector<std::string> &field, location loc);
-  Offsetof(Expression *expr, std::vector<std::string> &field, location loc);
+  Offsetof(Diagnostics &d,
+           SizedType record,
+           std::vector<std::string> &field,
+           location loc);
+  Offsetof(Diagnostics &d,
+           Expression *expr,
+           std::vector<std::string> &field,
+           location loc);
 
   SizedType record;
   Expression *expr = nullptr;
@@ -174,8 +218,8 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, Expression &expr, location loc);
+  explicit Map(Diagnostics &d, const std::string &ident, location loc);
+  Map(Diagnostics &d, const std::string &ident, Expression &expr, location loc);
 
   std::string ident;
   Expression *key_expr = nullptr;
@@ -189,14 +233,18 @@ public:
 
 class Variable : public Expression {
 public:
-  explicit Variable(const std::string &ident, location loc);
+  explicit Variable(Diagnostics &d, const std::string &ident, location loc);
 
   std::string ident;
 };
 
 class Binop : public Expression {
 public:
-  Binop(Expression *left, Operator op, Expression *right, location loc);
+  Binop(Diagnostics &d,
+        Expression *left,
+        Operator op,
+        Expression *right,
+        location loc);
 
   Expression *left = nullptr;
   Expression *right = nullptr;
@@ -205,7 +253,11 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(Operator op, Expression *expr, bool is_post_op, location loc);
+  Unop(Diagnostics &d,
+       Operator op,
+       Expression *expr,
+       bool is_post_op,
+       location loc);
 
   Expression *expr = nullptr;
   Operator op;
@@ -214,9 +266,12 @@ public:
 
 class FieldAccess : public Expression {
 public:
-  FieldAccess(Expression *expr, const std::string &field);
-  FieldAccess(Expression *expr, const std::string &field, location loc);
-  FieldAccess(Expression *expr, ssize_t index, location loc);
+  FieldAccess(Diagnostics &d, Expression *expr, const std::string &field);
+  FieldAccess(Diagnostics &d,
+              Expression *expr,
+              const std::string &field,
+              location loc);
+  FieldAccess(Diagnostics &d, Expression *expr, ssize_t index, location loc);
 
   Expression *expr = nullptr;
   std::string field;
@@ -225,8 +280,11 @@ public:
 
 class ArrayAccess : public Expression {
 public:
-  ArrayAccess(Expression *expr, Expression *indexpr);
-  ArrayAccess(Expression *expr, Expression *indexpr, location loc);
+  ArrayAccess(Diagnostics &d, Expression *expr, Expression *indexpr);
+  ArrayAccess(Diagnostics &d,
+              Expression *expr,
+              Expression *indexpr,
+              location loc);
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
@@ -234,36 +292,36 @@ public:
 
 class Cast : public Expression {
 public:
-  Cast(SizedType type, Expression *expr, location loc);
+  Cast(Diagnostics &d, SizedType type, Expression *expr, location loc);
 
   Expression *expr = nullptr;
 };
 
 class Tuple : public Expression {
 public:
-  Tuple(ExpressionList &&elems, location loc);
+  Tuple(Diagnostics &d, ExpressionList &&elems, location loc);
 
   ExpressionList elems;
 };
 
 class Statement : public Node {
 public:
-  Statement(location loc) : Node(loc) {};
+  Statement(Diagnostics &d, location loc) : Node(d, loc) {};
 };
 
 using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
-  explicit ExprStatement(Expression *expr, location loc);
+  explicit ExprStatement(Diagnostics &d, Expression *expr, location loc);
 
   Expression *expr = nullptr;
 };
 
 class VarDeclStatement : public Statement {
 public:
-  VarDeclStatement(Variable *var, SizedType type, location loc);
-  VarDeclStatement(Variable *var, location loc);
+  VarDeclStatement(Diagnostics &d, Variable *var, SizedType type, location loc);
+  VarDeclStatement(Diagnostics &d, Variable *var, location loc);
 
   Variable *var = nullptr;
   bool set_type = false;
@@ -271,7 +329,7 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr, location loc);
+  AssignMapStatement(Diagnostics &d, Map *map, Expression *expr, location loc);
 
   Map *map = nullptr;
   Expression *expr = nullptr;
@@ -279,8 +337,12 @@ public:
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var, Expression *expr, location loc);
-  AssignVarStatement(VarDeclStatement *var_decl_stmt,
+  AssignVarStatement(Diagnostics &d,
+                     Variable *var,
+                     Expression *expr,
+                     location loc);
+  AssignVarStatement(Diagnostics &d,
+                     VarDeclStatement *var_decl_stmt,
                      Expression *expr,
                      location loc);
 
@@ -291,7 +353,8 @@ public:
 
 class AssignConfigVarStatement : public Statement {
 public:
-  AssignConfigVarStatement(const std::string &config_var,
+  AssignConfigVarStatement(Diagnostics &d,
+                           const std::string &config_var,
                            Expression *expr,
                            location loc);
 
@@ -301,14 +364,18 @@ public:
 
 class Block : public Statement {
 public:
-  Block(StatementList &&stmts, location loc);
+  Block(Diagnostics &d, StatementList &&stmts, location loc);
 
   StatementList stmts;
 };
 
 class If : public Statement {
 public:
-  If(Expression *cond, Block *if_block, Block *else_block, location loc);
+  If(Diagnostics &d,
+     Expression *cond,
+     Block *if_block,
+     Block *else_block,
+     location loc);
 
   Expression *cond = nullptr;
   Block *if_block = nullptr;
@@ -317,7 +384,7 @@ public:
 
 class Unroll : public Statement {
 public:
-  Unroll(Expression *expr, Block *block, location loc);
+  Unroll(Diagnostics &d, Expression *expr, Block *block, location loc);
 
   long int var = 0;
   Expression *expr = nullptr;
@@ -326,12 +393,12 @@ public:
 
 class Jump : public Statement {
 public:
-  Jump(JumpType ident, Expression *return_value, location loc)
-      : Statement(loc), ident(ident), return_value(return_value)
+  Jump(Diagnostics &d, JumpType ident, Expression *return_value, location loc)
+      : Statement(d, loc), ident(ident), return_value(return_value)
   {
   }
-  Jump(JumpType ident, location loc)
-      : Statement(loc), ident(ident), return_value(nullptr)
+  Jump(Diagnostics &d, JumpType ident, location loc)
+      : Statement(d, loc), ident(ident), return_value(nullptr)
   {
   }
 
@@ -341,14 +408,18 @@ public:
 
 class Predicate : public Node {
 public:
-  explicit Predicate(Expression *expr, location loc);
+  explicit Predicate(Diagnostics &d, Expression *expr, location loc);
 
   Expression *expr = nullptr;
 };
 
 class Ternary : public Expression {
 public:
-  Ternary(Expression *cond, Expression *left, Expression *right, location loc);
+  Ternary(Diagnostics &d,
+          Expression *cond,
+          Expression *left,
+          Expression *right,
+          location loc);
 
   Expression *cond = nullptr;
   Expression *left = nullptr;
@@ -357,8 +428,8 @@ public:
 
 class While : public Statement {
 public:
-  While(Expression *cond, Block *block, location loc)
-      : Statement(loc), cond(cond), block(block)
+  While(Diagnostics &d, Expression *cond, Block *block, location loc)
+      : Statement(d, loc), cond(cond), block(block)
   {
   }
 
@@ -368,8 +439,12 @@ public:
 
 class For : public Statement {
 public:
-  For(Variable *decl, Expression *expr, StatementList &&stmts, location loc)
-      : Statement(loc), decl(decl), expr(expr), stmts(std::move(stmts))
+  For(Diagnostics &d,
+      Variable *decl,
+      Expression *expr,
+      StatementList &&stmts,
+      location loc)
+      : Statement(d, loc), decl(decl), expr(expr), stmts(std::move(stmts))
   {
   }
 
@@ -381,15 +456,20 @@ public:
 
 class Config : public Statement {
 public:
-  Config(StatementList &&stmts, location loc)
-      : Statement(loc), stmts(std::move(stmts)) {};
+  Config(Diagnostics &d, StatementList &&stmts, location loc)
+      : Statement(d, loc), stmts(std::move(stmts))
+  {
+  }
 
   StatementList stmts;
 };
 
 class AttachPoint : public Node {
 public:
-  AttachPoint(const std::string &raw_input, bool ignore_invalid, location loc);
+  AttachPoint(Diagnostics &d,
+              const std::string &raw_input,
+              bool ignore_invalid,
+              location loc);
 
   // Currently, the AST node itself is used to store metadata related to probe
   // expansion and attachment. This is done through `create_expansion_copy`
@@ -435,7 +515,8 @@ using AttachPointList = std::vector<AttachPoint *>;
 
 class Probe : public Node {
 public:
-  Probe(AttachPointList &&attach_points,
+  Probe(Diagnostics &d,
+        AttachPointList &&attach_points,
         Predicate *pred,
         Block *block,
         location loc);
@@ -462,7 +543,7 @@ using ProbeList = std::vector<Probe *>;
 
 class SubprogArg : public Node {
 public:
-  SubprogArg(std::string name, SizedType type, location loc);
+  SubprogArg(Diagnostics &d, std::string name, SizedType type, location loc);
 
   std::string name() const;
   SizedType type;
@@ -474,7 +555,8 @@ using SubprogArgList = std::vector<SubprogArg *>;
 
 class Subprog : public Node {
 public:
-  Subprog(std::string name,
+  Subprog(Diagnostics &d,
+          std::string name,
           SizedType return_type,
           SubprogArgList &&args,
           StatementList &&stmts,
@@ -493,7 +575,8 @@ using SubprogList = std::vector<Subprog *>;
 
 class Program : public Node {
 public:
-  Program(const std::string &c_definitions,
+  Program(Diagnostics &d,
+          const std::string &c_definitions,
           Config *config,
           SubprogList &&functions,
           ProbeList &&probes,
@@ -512,22 +595,20 @@ std::string opstr(const Jump &jump);
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);
 
-template <typename T>
-concept NodeType = std::derived_from<T, Node>;
-
 // Manages the lifetime of AST nodes.
 //
 // Nodes allocated by an ASTContext will be kept alive for the duration of the
 // owning ASTContext object.
 class ASTContext {
 public:
-  Program *root = nullptr;
+  ASTContext() : diagnostics_(std::make_unique<Diagnostics>()) {};
 
   // Creates and returns a pointer to an AST node.
   template <NodeType T, typename... Args>
   T *make_node(Args &&...args)
   {
-    auto uniq_ptr = std::make_unique<T>(std::forward<Args>(args)...);
+    auto uniq_ptr = std::make_unique<T>(*diagnostics_.get(),
+                                        std::forward<Args>(args)...);
     auto *raw_ptr = uniq_ptr.get();
     nodes_.push_back(std::move(uniq_ptr));
     return raw_ptr;
@@ -538,8 +619,19 @@ public:
     return nodes_.size();
   }
 
+  Program *root = nullptr;
+
+  // Callers should avoid mutating diagnostics through this method. It is
+  // non-const to allow for tests to clear the set, but this should be avoided
+  // except in the context of a test.
+  Diagnostics &diagnostics() const
+  {
+    return *diagnostics_.get();
+  }
+
 private:
   std::vector<std::unique_ptr<Node>> nodes_;
+  std::unique_ptr<Diagnostics> diagnostics_;
 };
 
 } // namespace ast

@@ -25,13 +25,12 @@ TEST(codegen, call_kstack_mapids)
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
-
-  ast::ResourceAnalyser resource_analyser(driver.ctx, *bpftrace);
-  auto resources_optional = resource_analyser.analyse();
-  ASSERT_TRUE(resources_optional.has_value());
-  bpftrace->resources = resources_optional.value();
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
@@ -59,13 +58,12 @@ TEST(codegen, call_kstack_modes_mapids)
   ClangParser clang;
   clang.parse(driver.ctx.root, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
-
-  ast::ResourceAnalyser resource_analyser(driver.ctx, *bpftrace);
-  auto resources_optional = resource_analyser.analyse();
-  ASSERT_TRUE(resources_optional.has_value());
-  bpftrace->resources = resources_optional.value();
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run(driver.ctx);
+  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();

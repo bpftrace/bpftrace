@@ -2,21 +2,63 @@
 
 #include <cstring>
 #include <string>
+#include <unordered_set>
 
 #include "ast/ast.h"
+#include "ast/visitor.h"
+#include "bpffeature.h"
+#include "bpftrace.h"
 #include "config.h"
 #include "log.h"
 #include "types.h"
 
 namespace bpftrace::ast {
 
+namespace {
+
+class ConfigAnalyser : public Visitor<ConfigAnalyser> {
+public:
+  explicit ConfigAnalyser(BPFtrace &bpftrace)
+      : bpftrace_(bpftrace),
+        config_setter_(ConfigSetter(bpftrace.config_, ConfigSource::script))
+  {
+  }
+
+  using Visitor<ConfigAnalyser>::visit;
+  void visit(Integer &integer);
+  void visit(String &string);
+  void visit(StackMode &mode);
+  void visit(AssignConfigVarStatement &assignment);
+
+private:
+  BPFtrace &bpftrace_;
+  ConfigSetter config_setter_;
+
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyInt key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyBool key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyString key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeyUserSymbolCacheType key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeySymbolSource key);
+  void set_config(AssignConfigVarStatement &assignment, ConfigKeyStackMode key);
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeyMissingProbes key);
+
+  void log_type_error(SizedType &type,
+                      Type expected_type,
+                      AssignConfigVarStatement &assignment);
+};
+
+} // namespace
+
 void ConfigAnalyser::log_type_error(SizedType &type,
                                     Type expected_type,
                                     AssignConfigVarStatement &assignment)
 {
-  LOG(ERROR, assignment.loc, err_)
-      << "Invalid type for " << assignment.config_var
-      << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
+  assignment.addError() << "Invalid type for " << assignment.config_var
+                        << ". Type: " << type.GetTy()
+                        << ". Expected Type: " << expected_type;
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -46,8 +88,8 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
   } else if (val == 1) {
     config_setter_.set(key, true);
   } else {
-    LOG(ERROR) << "Invalid value for " << assignment.config_var
-               << ". Needs to be 0 or 1. Value: " << val;
+    assignment.addError() << "Invalid value for " << assignment.config_var
+                          << ". Needs to be 0 or 1. Value: " << val;
   }
 }
 
@@ -87,7 +129,7 @@ void ConfigAnalyser::set_config(
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_user_symbol_cache_type(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -101,7 +143,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_symbol_source_config(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -115,7 +157,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_missing_probes_config(val))
-    LOG(ERROR, assignment.expr->loc, err_);
+    assignment.expr->addError();
 }
 
 void ConfigAnalyser::visit(Integer &integer)
@@ -136,7 +178,7 @@ void ConfigAnalyser::visit(StackMode &mode)
     mode.type.stack_type.mode = stack_mode.value();
   } else {
     mode.type = CreateNone();
-    LOG(ERROR, mode.loc, err_) << "Unknown stack mode: '" + mode.mode + "'";
+    mode.addError() << "Unknown stack mode: '" + mode.mode + "'";
   }
 }
 
@@ -150,13 +192,13 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
                                                                err_msg);
 
   if (!maybeConfigKey.has_value()) {
-    LOG(ERROR, assignment.loc, err_) << err_msg;
+    assignment.addError() << err_msg;
     return;
   }
 
   if (!assignment.expr->is_literal) {
-    LOG(ERROR, assignment.loc, err_)
-        << "Assignment for " << assignment.config_var << " must be literal.";
+    assignment.addError() << "Assignment for " << assignment.config_var
+                          << " must be literal.";
     return;
   }
 
@@ -165,27 +207,14 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   std::visit([&](auto key) { set_config(assignment, key); }, configKey);
 }
 
-bool ConfigAnalyser::analyse()
-{
-  visit(ctx_.root);
-  std::string errors = err_.str();
-  if (!errors.empty()) {
-    out_ << errors;
-    return false;
-  }
-  return true;
-}
-
 Pass CreateConfigPass()
 {
-  auto fn = [](PassContext &ctx) {
-    auto configs = ConfigAnalyser(ctx.ast_ctx, ctx.b);
-    if (!configs.analyse())
-      return PassResult::Error("Config");
-    return PassResult::Success();
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    auto configs = ConfigAnalyser(b);
+    configs.visit(ast.root);
   };
 
-  return Pass("ConfigAnalyser", fn);
+  return Pass::create("ConfigAnalyser", fn);
 };
 
 } // namespace bpftrace::ast

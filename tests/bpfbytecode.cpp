@@ -15,8 +15,11 @@ BpfBytecode codegen(std::string_view input)
   Driver driver(*bpftrace);
   EXPECT_EQ(driver.parse_str(input), 0);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
-  EXPECT_EQ(semantics.analyse(), 0);
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(driver.ctx);
+  EXPECT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
   return codegen.compile();

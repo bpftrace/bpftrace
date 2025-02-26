@@ -24,10 +24,6 @@ namespace bpftrace::ast {
 template <typename Impl, typename R = void>
 class Visitor {
 public:
-  Visitor(ASTContext &ctx) : ctx_(ctx)
-  {
-  }
-
   // See above; specific replace methods may be defined.
   template <typename T>
   T *replace(T *node, [[maybe_unused]] R *result)
@@ -273,13 +269,6 @@ public:
     return default_value();
   }
 
-private:
-  template <typename T>
-  R visitImpl(T &t)
-  {
-    Impl *impl = static_cast<Impl *>(this);
-    return impl->visit(t);
-  }
   template <typename T>
   R visitAndReplace(T **t)
   {
@@ -293,12 +282,6 @@ private:
       impl->visit(orig);
       *t = impl->replace(orig, nullptr);
       return default_value();
-    }
-  }
-  R default_value()
-  {
-    if constexpr (!std::is_void_v<R>) {
-      return R();
     }
   }
 
@@ -362,8 +345,19 @@ private:
                               Config *>(stmt);
   }
 
-protected:
-  ASTContext &ctx_;
+private:
+  template <typename T>
+  R visitImpl(T &t)
+  {
+    Impl *impl = static_cast<Impl *>(this);
+    return impl->visit(t);
+  }
+  R default_value()
+  {
+    if constexpr (!std::is_void_v<R>) {
+      return R();
+    }
+  }
 };
 
 } // namespace bpftrace::ast

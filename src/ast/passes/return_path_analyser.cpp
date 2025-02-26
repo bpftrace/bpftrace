@@ -1,12 +1,24 @@
 #include "return_path_analyser.h"
+
 #include "log.h"
+#include "ast/visitor.h"
 
 namespace bpftrace::ast {
 
-ReturnPathAnalyser::ReturnPathAnalyser(ASTContext &ctx, std::ostream &out)
-    : Visitor<ReturnPathAnalyser, bool>(ctx), out_(out)
-{
-}
+namespace {
+
+class ReturnPathAnalyser : public Visitor<ReturnPathAnalyser, bool> {
+public:
+  // visit methods return true iff all return paths of the analyzed code
+  // (represented by the given node) return a value.
+  using Visitor<ReturnPathAnalyser, bool>::visit;
+  bool visit(Program &prog);
+  bool visit(Subprog &subprog);
+  bool visit(Jump &jump);
+  bool visit(If &if_stmt);
+};
+
+} // namespace
 
 bool ReturnPathAnalyser::visit(Program &prog)
 {
@@ -26,7 +38,7 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
     if (visit(*stmt))
       return true;
   }
-  LOG(ERROR, subprog.loc, err_) << "Not all code paths returned a value";
+  subprog.addError() << "Not all code paths returned a value";
   return false;
 }
 
@@ -57,25 +69,14 @@ bool ReturnPathAnalyser::visit(If &if_node)
   return false;
 }
 
-int ReturnPathAnalyser::analyse()
-{
-  int result = visit(ctx_.root) ? 0 : 1;
-  if (result)
-    out_ << err_.str();
-  return result;
-}
-
 Pass CreateReturnPathPass()
 {
-  auto fn = [](PassContext &ctx) {
-    auto return_path = ReturnPathAnalyser(ctx.ast_ctx);
-    int err = return_path.analyse();
-    if (err)
-      return PassResult::Error("ReturnPath");
-    return PassResult::Success();
+  auto fn = [](ASTContext &ast) {
+    ReturnPathAnalyser return_path;
+    return_path.visit(ast.root);
   };
 
-  return Pass("ReturnPath", fn);
+  return Pass::create("ReturnPath", fn);
 }
 
 } // namespace bpftrace::ast

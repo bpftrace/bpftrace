@@ -22,17 +22,26 @@ void test_for_warning(BPFtrace &bpftrace,
                       bool invert = false,
                       bool safe_mode = true)
 {
-  Driver driver(bpftrace);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   bpftrace.safe_mode_ = safe_mode;
+
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok));
+
   std::stringstream out;
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out);
-  semantics.analyse();
+  driver.ctx.diagnostics().emit(out);
   if (invert)
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
   else
@@ -60,34 +69,53 @@ void test(BPFtrace &bpftrace,
   if (!input.empty() && input[0] == '\n')
     input.remove_prefix(1); // Remove initial '\n'
 
-  std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
+  driver.ctx.diagnostics().clear();
 
+  // Override to mockbpffeature.
+  bpftrace.cmd_ = has_child ? "not-empty" : "";
   bpftrace.safe_mode_ = safe_mode;
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
+
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.ctx, bpftrace, out);
-  ASSERT_EQ(fields.analyse(), 0) << msg.str() + out.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
+  driver.ctx.diagnostics().clear();
   ASSERT_EQ(driver.parse_str(input), 0);
-  out.str("");
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, out, has_child);
-  if (expected_result == -1) {
-    // Accept any failure result
-    EXPECT_NE(0, semantics.analyse()) << msg.str() + out.str();
+
+  ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+
+  if (expected_result != 0) {
+    // Accept any failure result.
+    EXPECT_FALSE(driver.ctx.diagnostics().ok()) << msg.str();
   } else {
-    EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
+    // Accept no errors.
+    std::stringstream out;
+    driver.ctx.diagnostics().emit(out);
+    EXPECT_TRUE(driver.ctx.diagnostics().ok()) << msg.str() << out.str();
   }
+
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
-    EXPECT_EQ(expected_error, out.str());
+
+    // Reproduce the full string.
+    std::stringstream out;
+    driver.ctx.diagnostics().emit(out);
+    EXPECT_EQ(out.str(), expected_error);
   }
 }
 
@@ -198,8 +226,8 @@ void test(BPFtrace &bpftrace,
     expected_ast.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
-  ast::Printer printer(driver.ctx, out);
-  printer.print();
+  ast::Printer printer(out);
+  printer.visit(driver.ctx.root);
 
   if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
     // Remove globs from beginning and end
@@ -2564,9 +2592,7 @@ BEGIN { (char)cpu }
 stdin:1:9-15: ERROR: Cannot cast to "char"
 BEGIN { (char)cpu }
         ~~~~~~
-stdin:1:9-15: HINT: Did you mean "int8"?
-BEGIN { (char)cpu }
-        ~~~~~~
+HINT: Did you mean "int8"?
 )");
   test_error("BEGIN { (short)cpu }", R"(
 stdin:1:9-16: ERROR: Cannot resolve unknown type "short"
@@ -2575,9 +2601,7 @@ BEGIN { (short)cpu }
 stdin:1:9-16: ERROR: Cannot cast to "short"
 BEGIN { (short)cpu }
         ~~~~~~~
-stdin:1:9-16: HINT: Did you mean "int16"?
-BEGIN { (short)cpu }
-        ~~~~~~~
+HINT: Did you mean "int16"?
 )");
   test_error("BEGIN { (int)cpu }", R"(
 stdin:1:9-14: ERROR: Cannot resolve unknown type "int"
@@ -2586,9 +2610,7 @@ BEGIN { (int)cpu }
 stdin:1:9-14: ERROR: Cannot cast to "int"
 BEGIN { (int)cpu }
         ~~~~~
-stdin:1:9-14: HINT: Did you mean "int32"?
-BEGIN { (int)cpu }
-        ~~~~~
+HINT: Did you mean "int32"?
 )");
   test_error("BEGIN { (long)cpu }", R"(
 stdin:1:9-15: ERROR: Cannot resolve unknown type "long"
@@ -2597,9 +2619,7 @@ BEGIN { (long)cpu }
 stdin:1:9-15: ERROR: Cannot cast to "long"
 BEGIN { (long)cpu }
         ~~~~~~
-stdin:1:9-15: HINT: Did you mean "int64"?
-BEGIN { (long)cpu }
-        ~~~~~~
+HINT: Did you mean "int64"?
 )");
 }
 
@@ -4656,7 +4676,7 @@ TEST(semantic_analyser, variable_declarations)
 stdin:1:17-23: ERROR: Variable $a was already declared. Variable shadowing is not allowed.
 BEGIN { let $a; let $a; }
                 ~~~~~~
-stdin:1:9-15: ERROR: Initial declaration
+stdin:1:9-15: WARNING: This is the initial declaration.
 BEGIN { let $a; let $a; }
         ~~~~~~
 )");
