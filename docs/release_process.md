@@ -35,6 +35,14 @@ Overview of the release cadence is as follows:
 | LLVM release           | usually second Tuesday of Mar/Sep   | [LLVM release schedule](https://llvm.org/docs/HowToReleaseLLVM.html) |
 | bpftrace release       | **2 weeks after the LLVM release**  | [Tagging a release](#tagging-a-release)                              |
 
+## Preparing for a release
+
+Once the release dates are clarified (approximately 6 weeks before the release),
+do the following steps to track the release in a public manner:
+
+1. Update the release dates at the top of this document and on the [bpftrace website](https://github.com/bpftrace/website/blob/master/src/pages/release-schedule.md).
+1. Create a new tracker issue in GitHub from the "Release tracker" template.
+
 ## Creating a release branch
 
 A release branch should be created four weeks before the planned bpftrace
