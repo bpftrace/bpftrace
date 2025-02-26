@@ -4639,6 +4639,8 @@ TEST(semantic_analyser, variable_declarations)
   test("BEGIN { let $a: int16 = 1; }");
   test(R"(BEGIN { let $a: string; $a = "hiya"; })");
   test(R"(BEGIN { let $a: string[5] = "hiya"; })");
+  test("BEGIN { let $a: int16; print($a); }");
+  test("BEGIN { let $a; print($a); $a = 1; }");
   // If the type is specified it's strict in that future assignments
   // need to fit into that type
   test(R"(BEGIN { let $a: string[5] = "hiya"; $a = "bye"; })");
@@ -4651,6 +4653,10 @@ TEST(semantic_analyser, variable_declarations)
   test("BEGIN { let $a: struct Foo[10]; }");
   test("BEGIN { if (1) { let $x; } $x = 2; }");
   test("BEGIN { if (1) { let $x; } else { let $x; } let $x; }");
+
+  // https://github.com/bpftrace/bpftrace/pull/3668#issuecomment-2596432923
+  test_for_warning("BEGIN { let $a; print($a); $a = 1; }",
+                   "Variable used before it was assigned:");
 
   test_error("BEGIN { let $a; let $a; }", R"(
 stdin:1:17-23: ERROR: Variable $a was already declared. Variable shadowing is not allowed.
@@ -4695,12 +4701,6 @@ BEGIN { let $a: uint16 = -1; }
 stdin:1:38-54: ERROR: Type mismatch for $a: trying to assign value of type 'string[10]' when variable already contains a value of type 'string[5]'
 BEGIN { let $a: string[5] = "hiya"; $a = "longerstr"; }
                                      ~~~~~~~~~~~~~~~~
-)");
-
-  test_error(R"(BEGIN { let $a; print(($a)); $a = 1; })", R"(
-stdin:1:17-26: ERROR: Variable used before it was assigned: $a
-BEGIN { let $a; print(($a)); $a = 1; }
-                ~~~~~~~~~
 )");
 
   test_error(R"(BEGIN { let $a: sum_t; })", R"(
