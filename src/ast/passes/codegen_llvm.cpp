@@ -2170,7 +2170,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
           cast.expr->type.is_btftype) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
-          array = b_.CreateIntToPtr(array, int_ty->getPointerTo());
+          array = b_.CreateIntToPtr(array, b_.getPtrTy());
       } else {
         // array is in memory - need to proberead
         auto buf = b_.CreateAllocaBPF(cast.type);
@@ -3739,11 +3739,10 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 
   // It's sufficient that the global variable has the correct size (struct with
   // one pointer per field). The actual inner types are defined in debug info.
-  SmallVector<llvm::Type *, 4> elems = { b_.getInt8Ty()->getPointerTo(),
-                                         b_.getInt8Ty()->getPointerTo() };
+  SmallVector<llvm::Type *, 4> elems = { b_.getPtrTy(), b_.getPtrTy() };
   if (!value_type.IsNoneTy()) {
-    elems.push_back(b_.getInt8Ty()->getPointerTo());
-    elems.push_back(b_.getInt8Ty()->getPointerTo());
+    elems.push_back(b_.getPtrTy());
+    elems.push_back(b_.getPtrTy());
   }
   auto type = StructType::create(elems, "struct map_t", false);
 
@@ -4084,7 +4083,7 @@ ScopedExpr CodegenLLVM::readDatastructElemFromStack(ScopedExpr &&scoped_src,
   // internally represented as an integer and then we need to cast it
   Value *src_data = scoped_src.value();
   if (src_data->getType()->isIntegerTy())
-    src_data = b_.CreateIntToPtr(src_data, data_type->getPointerTo());
+    src_data = b_.CreateIntToPtr(src_data, b_.getPtrTy());
 
   Value *src = b_.CreateGEP(data_type, src_data, { b_.getInt32(0), index });
 
