@@ -40,6 +40,8 @@ and this project adheres to
   - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
 - Increase default values for max_bpf_progs and max_probes
   - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
+- Allow use of variables before they are assigned
+  - [#3832](https://github.com/bpftrace/bpftrace/pull/3832)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 14 and 15

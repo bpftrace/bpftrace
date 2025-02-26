@@ -1813,12 +1813,10 @@ void SemanticAnalyser::visit(Map &map)
 void SemanticAnalyser::visit(Variable &var)
 {
   if (auto *found = find_variable(var.ident)) {
-    if (found->was_assigned) {
-      var.type = found->type;
-    } else {
-      LOG(ERROR, var.loc, err_)
+    var.type = found->type;
+    if (!found->was_assigned) {
+      LOG(WARNING, var.loc, out_)
           << "Variable used before it was assigned: " << var.ident;
-      var.type = CreateNone();
     }
     return;
   }
