@@ -369,10 +369,14 @@ void parse(ast::ASTContext& ast,
 
   bpftrace.parse_btf(bpftrace.list_modules(ast));
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  if (!ast.diagnostics().ok())
-    return;
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  if (!ok || !ast.diagnostics().ok()) {
+    ast.diagnostics().emit(std::cerr);
+    return std::nullopt;
+  }
 
   if (TracepointFormatParser::parse(ast, bpftrace) == false)
     return;
@@ -864,9 +868,11 @@ int main(int argc, char* argv[])
 
     bpftrace.parse_btf(bpftrace.list_modules(ast));
 
-    ast::SemanticAnalyser semantics(ast, bpftrace, false, true);
-    semantics.analyse();
-    if (!ast.diagnostics().ok()) {
+    auto ok = ast::PassManager()
+                  .put(bpftrace)
+                  .add(ast::CreateSemanticPass(true))
+                  .run(ast);
+    if (!ok || !ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
       return 1;
     }

@@ -33,16 +33,13 @@ void test(BPFtrace &bpftrace,
   ClangParser clang;
   ASSERT_TRUE(clang.parse(ast.root, bpftrace));
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::SemanticAnalyser semantics(ast, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ConfigAnalyser config_analyser(bpftrace);
-  config_analyser.visit(ast.root);
-  ASSERT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateConfigPass())
+                .run(ast);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')

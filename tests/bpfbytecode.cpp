@@ -24,11 +24,13 @@ BpfBytecode codegen(const std::string &input)
   }
 
   ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
+  EXPECT_TRUE(ap_parser.parse());
 
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  EXPECT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(ast);
+  EXPECT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   return codegen.compile();

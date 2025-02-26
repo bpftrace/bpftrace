@@ -31,9 +31,11 @@ static void parse(const std::string &input,
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ClangParser clang;
   ASSERT_EQ(clang.parse(ast.root, bpftrace), result);

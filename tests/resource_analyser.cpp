@@ -26,27 +26,25 @@ void test(BPFtrace &bpftrace,
   driver.parse();
   ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(ast.root, bpftrace));
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::SemanticAnalyser semantics(ast, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(ast.root);
-  auto r = resource_analyser.resources();
-  ASSERT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreateSemanticPass())
+           .add(ast::CreateResourcePass())
+           .run(ast);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 
   if (out_p)
-    *out_p = std::move(r);
+    *out_p = std::move(bpftrace.resources);
 }
 
 void test(const std::string &input,

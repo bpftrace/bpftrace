@@ -30,9 +30,11 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(ast.root, bpftrace));
@@ -43,13 +45,13 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
-  ast::SemanticAnalyser semantics(ast, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::PortabilityAnalyser portability;
-  portability.visit(ast.root);
-  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreateSemanticPass())
+           .add(ast::CreatePortabilityPass())
+           .run(ast);
+  ASSERT_TRUE(bool(ok));
+  EXPECT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)

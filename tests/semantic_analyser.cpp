@@ -26,7 +26,11 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
 {
   ast::ASTContext ast("stdin", input);
   Driver driver(ast, bpftrace);
+
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   bpftrace.safe_mode_ = safe_mode;
+
   driver.parse();
   bool parse_ok = ast.diagnostics().ok();
   EXPECT_TRUE(parse_ok);
@@ -48,8 +52,6 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
   ap_parser.parse();
   EXPECT_TRUE(ast.diagnostics().ok());
 
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(ast, bpftrace);
   semantics.analyse();
 
@@ -89,9 +91,12 @@ ast::ASTContext test(BPFtrace &bpftrace,
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
+  // Override to mockbpffeature.
+  bpftrace.cmd_ = has_child ? "not-empty" : "";
   bpftrace.safe_mode_ = safe_mode;
-  driver.parse();
-  bool parse_ok = ast.diagnostics().ok();
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
+
+  bool parse_ok = driver.parse() == 0;
   EXPECT_TRUE(parse_ok) << msg.str();
   if (!parse_ok) {
     return ast;
@@ -121,8 +126,6 @@ ast::ASTContext test(BPFtrace &bpftrace,
   ap_parser.parse();
   EXPECT_TRUE(ast.diagnostics().ok());
 
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
   ast::SemanticAnalyser semantics(ast, bpftrace, has_child);
   if (expected_result == -1) {
     // Accept any failure result.
@@ -130,7 +133,6 @@ ast::ASTContext test(BPFtrace &bpftrace,
     EXPECT_FALSE(ast.diagnostics().ok()) << msg.str();
   } else if (expected_result == 0) {
     // Accept no errors.
-    semantics.analyse();
     std::stringstream out;
     ast.diagnostics().emit(out);
     EXPECT_TRUE(ast.diagnostics().ok()) << msg.str() << out.str();

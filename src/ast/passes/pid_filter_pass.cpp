@@ -1,14 +1,35 @@
 #include "pid_filter_pass.h"
 
 #include "ast/ast.h"
+#include "ast/visitor.h"
+#include "bpftrace.h"
 
 namespace bpftrace::ast {
+
+namespace {
+
+class PidFilterPass : public Visitor<PidFilterPass> {
+public:
+  explicit PidFilterPass(ASTContext &ast, BPFtrace &bpftrace)
+      : ast_(ast), bpftrace_(bpftrace)
+  {
+  }
+
+  using Visitor<PidFilterPass>::visit;
+  void visit(Probe &probe);
+
+private:
+  ASTContext &ast_;
+  BPFtrace &bpftrace_;
+};
+
+} // namespace
 
 // If the probe can't filter by pid when attaching
 // then we inject custom AST to filter by pid.
 // Note: this doesn't work for AOT as the code has already
 // been generated
-bool probe_needs_pid_filter(AttachPoint *ap)
+static bool probe_needs_pid_filter(AttachPoint *ap)
 {
   ProbeType type = probetype(ap->provider);
 
@@ -73,12 +94,10 @@ void PidFilterPass::visit(Probe &probe)
 
 Pass CreatePidFilterPass()
 {
-  auto fn = [](PassContext &ctx) {
-    auto pid_filter = PidFilterPass(ctx.ast_ctx, ctx.b);
-    pid_filter.visit(ctx.ast_ctx.root);
-  };
-
-  return Pass("PidFilter", fn);
+  return Pass::create("PidFilter", [](ASTContext &ast, BPFtrace &b) {
+    auto pid_filter = PidFilterPass(ast, b);
+    pid_filter.visit(ast.root);
+  });
 };
 
 } // namespace bpftrace::ast

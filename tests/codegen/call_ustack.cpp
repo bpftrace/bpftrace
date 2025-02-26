@@ -30,17 +30,12 @@ kprobe:f {
   ClangParser clang;
   clang.parse(ast.root, *bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
@@ -73,17 +68,12 @@ kprobe:f {
   ClangParser clang;
   clang.parse(ast.root, *bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(*bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();

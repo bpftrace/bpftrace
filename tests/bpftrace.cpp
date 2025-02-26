@@ -50,16 +50,20 @@ static auto parse_probe(const std::string &str,
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(ast.root, bpftrace);
 
-  ast::SemanticAnalyser semantics(ast, bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreateSemanticPass())
+           .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;

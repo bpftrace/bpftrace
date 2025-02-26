@@ -30,12 +30,10 @@ void test(const std::string& input, bool has_pid, bool has_filter)
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(ast.root, bpftrace));
+  ASSERT_EQ(driver.parse_str(input), 0);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::PidFilterPass pid_filter(ast, bpftrace);
-  pid_filter.visit(ast.root);
+  auto ok = ast::PassManager().add(ast::CreatePidFilterPass()).run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   std::string_view expected_ast = R"(
   if

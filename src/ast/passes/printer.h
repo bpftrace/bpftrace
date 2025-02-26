@@ -7,6 +7,9 @@
 namespace bpftrace {
 namespace ast {
 
+// Printer is a visitor that emits a structured version of the AST to the given
+// output. This does not have a standardized path, and users can instantiate
+// and use the Visitor directly.
 class Printer : public Visitor<Printer> {
 public:
   explicit Printer(std::ostream &out) : out_(out)

@@ -1,7 +1,24 @@
 #include "return_path_analyser.h"
+
+#include "ast/visitor.h"
 #include "log.h"
 
 namespace bpftrace::ast {
+
+namespace {
+
+class ReturnPathAnalyser : public Visitor<ReturnPathAnalyser, bool> {
+public:
+  // visit methods return true iff all return paths of the analyzed code
+  // (represented by the given node) return a value.
+  using Visitor<ReturnPathAnalyser, bool>::visit;
+  bool visit(Program &prog);
+  bool visit(Subprog &subprog);
+  bool visit(Jump &jump);
+  bool visit(If &if_stmt);
+};
+
+} // namespace
 
 bool ReturnPathAnalyser::visit(Program &prog)
 {

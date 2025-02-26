@@ -63,9 +63,11 @@ static void test(BPFtrace &bpftrace,
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(ast.root, bpftrace);
@@ -73,17 +75,13 @@ static void test(BPFtrace &bpftrace,
   driver.parse();
   ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::PidFilterPass pid_filter(ast, bpftrace);
-  pid_filter.visit(ast.root);
-
-  ast::SemanticAnalyser semantics(ast, bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace.resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreatePidFilterPass())
+           .add(ast::CreateSemanticPass())
+           .add(ast::CreateResourcePass())
+           .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   std::stringstream out;
   ast::CodegenLLVM codegen(ast, bpftrace);

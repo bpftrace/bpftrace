@@ -25,9 +25,12 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   ap_parser.parse();
   ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(int(!ast.diagnostics().ok()), expected_result);
 }
 
 void test(const std::string &input, int expected_result = 0)
