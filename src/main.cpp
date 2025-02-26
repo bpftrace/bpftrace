@@ -368,9 +368,8 @@ static void parse_env(BPFtrace& bpftrace)
 
   bpftrace.parse_btf(driver.list_modules());
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  if (!driver.ctx.diagnostics().ok()) {
+  auto ok = ast::PassManager().put(bpftrace).add(ast::CreateFieldAnalyserPass()).run(driver.ctx);
+  if (!ok || !driver.ctx.diagnostics().ok()) {
     driver.ctx.diagnostics().emit(std::cerr);
     return std::nullopt;
   }
@@ -846,9 +845,8 @@ int main(int argc, char* argv[])
 
     bpftrace.parse_btf(driver.list_modules());
 
-    ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
-    err = semantics.analyse();
-    if (!driver.ctx.diagnostics().ok()) {
+    auto ok = ast::PassManager().put(bpftrace).add(ast::CreateSemanticPass(true)).run(driver.ctx);
+    if (!ok || !driver.ctx.diagnostics().ok()) {
       driver.ctx.diagnostics().emit(std::cerr);
       return 1;
     }

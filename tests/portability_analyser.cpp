@@ -23,21 +23,22 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
-  ASSERT_EQ(driver.parse_str(input), 0);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
-
-  ast::PortabilityAnalyser portability;
-  portability.visit(driver.ctx.root);
-  ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result) << msg.str();
+  ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreatePortabilityPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok));
+  EXPECT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)

@@ -17,9 +17,12 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   Driver driver(bpftrace);
   EXPECT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result);
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result);
 }
 
 void test(const std::string &input, int expected_result = 0)
