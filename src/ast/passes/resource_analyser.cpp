@@ -115,7 +115,32 @@ void ResourceAnalyser::visit(Probe &probe)
 
   auto pt = single_provider_type_postsema(probe_);
   if (pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) {
-    resources_.needs_event_loss_map = true;
+    resources_.set_needs_event_loss_map();
+  }
+
+  // This prevents an ABBA deadlock when attaching to spin lock internal
+  // functions e.g. "fentry:queued_spin_lock_slowpath".
+  //
+  // Specifically, if there are two hash maps (non percpu) being accessed by
+  // two different CPUs by two bpf progs then we can get in a situation where,
+  // because there are progs attached to spin lock internals, a lock is taken
+  // for one map while a different lock is trying to be acquired for the other
+  // map. This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have
+  // kernel protections against this type of deadlock.
+  for (auto *ap : probe.attach_points) {
+    if (pt == ProbeType::fentry || pt == ProbeType::fexit) {
+      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+      for (const auto &match : matches) {
+        if (is_recursive_func(match)) {
+          LOG(WARNING)
+              << "Attaching to dangerous function: " << match
+              << ". bpftrace has added mitigations to prevent a kernel "
+                 "deadlock but they may result in some lost events.";
+          resources_.need_recursion_check = true;
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -369,7 +394,7 @@ void ResourceAnalyser::visit(Call &call)
       call.func == "unwatch" || call.func == "join" || call.func == "exit" ||
       call.func == "clear" || call.func == "zero" || call.func == "system" ||
       call.func == "cat") {
-    resources_.needs_event_loss_map = true;
+    resources_.set_needs_event_loss_map();
   }
 }
 

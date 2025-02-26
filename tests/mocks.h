@@ -72,7 +72,12 @@ public:
   std::unordered_set<std::string> get_func_modules(
       const std::string &__attribute__((unused))) const override
   {
-    return { "mock_vmlinux" };
+    return func_modules;
+  }
+
+  void set_func_modules(std::unordered_set<std::string> fm)
+  {
+    func_modules = fm;
   }
 
   const struct stat &get_pidns_self_stat() const override
@@ -101,6 +106,7 @@ public:
 
   MockProbeMatcher *mock_probe_matcher;
   bool mock_in_init_pid_ns = true;
+  std::unordered_set<std::string> func_modules = { "mock_vmlinux" };
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();

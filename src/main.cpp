@@ -927,8 +927,6 @@ int main(int argc, char* argv[])
       break;
   }
 
-  bpftrace.fentry_recursion_check(ast_ctx->root);
-
   auto pmresult = pm.Run(ctx);
   if (!pmresult.Ok())
     return 1;

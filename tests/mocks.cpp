@@ -23,7 +23,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
   ON_CALL(matcher, get_symbols_from_traceable_funcs(true)).WillByDefault([]() {
     std::string ksyms = "kernel_mod:func_in_mod\n"
                         "kernel_mod:other_func_in_mod\n"
-                        "other_kernel_mod:func_in_mod\n";
+                        "other_kernel_mod:func_in_mod\n"
+                        "vmlinux:queued_spin_lock_slowpath\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
   });

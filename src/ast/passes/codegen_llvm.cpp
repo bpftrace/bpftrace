@@ -2735,7 +2735,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   // check: do the following 8 lines need to be in the wildcard loop?
   ctx_ = func->arg_begin();
 
-  if (bpftrace_.need_recursion_check_) {
+  if (bpftrace_.resources.need_recursion_check) {
     b_.CreateCheckSetRecursion(current_attach_point_->loc,
                                getReturnValueForProbe(probe_type));
   }
@@ -2857,7 +2857,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 
 void CodegenLLVM::createRet(Value *value)
 {
-  if (bpftrace_.need_recursion_check_) {
+  if (bpftrace_.resources.need_recursion_check) {
     b_.CreateUnSetRecursion(current_attach_point_->loc);
   }
 
@@ -3868,7 +3868,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateUInt64());
   }
 
-  if (bpftrace_.need_recursion_check_) {
+  if (bpftrace_.resources.need_recursion_check) {
     createMapDefinition(to_string(MapType::RecursionPrevention),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
@@ -3894,7 +3894,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateNone());
   }
 
-  if (bpftrace_.needs_event_loss_map()) {
+  if (required_resources.needs_event_loss_map()) {
     int loss_cnt_key_size = sizeof(bpftrace_.event_loss_cnt_key_) * 8;
     int loss_cnt_val_size = sizeof(bpftrace_.event_loss_cnt_val_) * 8;
     createMapDefinition(to_string(MapType::EventLossCounter),

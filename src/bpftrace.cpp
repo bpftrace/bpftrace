@@ -1073,7 +1073,7 @@ int BPFtrace::setup_output()
   if (is_ringbuf_enabled()) {
     setup_ringbuf();
   }
-  if (needs_event_loss_map()) {
+  if (resources.needs_event_loss_map()) {
     int err = setup_event_loss();
     if (err)
       return err;
@@ -1193,8 +1193,10 @@ void BPFtrace::poll_output(bool drain)
       }
     }
 
-    // print loss events
-    handle_event_loss();
+    if (resources.needs_event_loss_map()) {
+      // print loss events
+      handle_event_loss();
+    }
 
     if (do_poll_ringbuf) {
       ready = ring_buffer__poll(ringbuf_, timeout_ms);
@@ -1245,9 +1247,6 @@ int BPFtrace::poll_perf_events()
 
 void BPFtrace::handle_event_loss()
 {
-  if (!needs_event_loss_map()) {
-    return;
-  }
   uint64_t current_value = 0;
   if (bpf_lookup_elem(bytecode_.getMap(MapType::EventLossCounter).fd(),
                       const_cast<uint32_t *>(&event_loss_cnt_key_),
@@ -2056,45 +2055,6 @@ void BPFtrace::parse_btf(const std::set<std::string> &modules)
 bool BPFtrace::has_btf_data() const
 {
   return btf_ && btf_->has_data();
-}
-
-// This prevents an ABBA deadlock when attaching to spin lock internal
-// functions e.g. "fentry:queued_spin_lock_slowpath".
-//
-// Specifically, if there are two hash maps (non percpu) being accessed by
-// two different CPUs by two bpf progs then we can get in a situation where,
-// because there are progs attached to spin lock internals, a lock is taken for
-// one map while a different lock is trying to be acquired for the other map.
-// This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
-// protections against this type of deadlock.
-//
-// Note: it would be better if this was in resource analyzer but we need
-// probe_matcher to get the list of functions for the attach point.
-void BPFtrace::fentry_recursion_check(ast::Program *prog)
-{
-  for (auto *probe : prog->probes) {
-    for (auto *ap : probe->attach_points) {
-      auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        auto matches = probe_matcher_->get_matches_for_ap(*ap);
-        for (const auto &match : matches) {
-          if (is_recursive_func(match)) {
-            LOG(WARNING)
-                << "Attaching to dangerous function: " << match
-                << ". bpftrace has added mitigations to prevent a kernel "
-                   "deadlock but they may result in some lost events.";
-            need_recursion_check_ = true;
-            return;
-          }
-        }
-      }
-    }
-  }
-}
-
-bool BPFtrace::needs_event_loss_map()
-{
-  return resources.needs_event_loss_map || need_recursion_check_;
 }
 
 } // namespace bpftrace

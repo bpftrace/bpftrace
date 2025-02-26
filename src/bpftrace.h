@@ -176,8 +176,6 @@ public:
   {
     return !dwarves_.empty();
   }
-  void fentry_recursion_check(ast::Program *prog);
-  bool needs_event_loss_map();
 
   std::string cmd_;
   bool finalize_ = false;
@@ -217,7 +215,6 @@ public:
   std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t event_loss_cnt_key_ = 0;
   static constexpr uint64_t event_loss_cnt_val_ = 0;
-  bool need_recursion_check_ = false;
 
   static void sort_by_key(
       const SizedType &key,
