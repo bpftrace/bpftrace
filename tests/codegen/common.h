@@ -54,26 +54,24 @@ static void test(BPFtrace &bpftrace,
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
-  pid_filter.visit(driver.ctx.root);
-
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(driver.ctx.root);
-  bpftrace.resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreatePidFilterPass())
+           .add(ast::CreateSemanticPass())
+           .add(ast::CreateResourcePass())
+           .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.ctx, bpftrace);

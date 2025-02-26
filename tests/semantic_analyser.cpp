@@ -22,18 +22,23 @@ void test_for_warning(BPFtrace &bpftrace,
                       bool invert = false,
                       bool safe_mode = true)
 {
-  Driver driver(bpftrace);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   bpftrace.safe_mode_ = safe_mode;
+
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
-  semantics.analyse();
+
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok));
 
   std::stringstream out;
   driver.ctx.diagnostics().emit(out);
@@ -68,12 +73,18 @@ void test(BPFtrace &bpftrace,
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
   driver.ctx.diagnostics().clear();
 
+  // Override to mockbpffeature.
+  bpftrace.cmd_ = has_child ? "not-empty" : "";
   bpftrace.safe_mode_ = safe_mode;
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
+
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateFieldAnalyserPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
@@ -81,22 +92,22 @@ void test(BPFtrace &bpftrace,
   driver.ctx.diagnostics().clear();
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, has_child);
-  if (expected_result == -1) {
+  ok = ast::PassManager()
+           .put(bpftrace)
+           .add(ast::CreateSemanticPass())
+           .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+
+  if (expected_result != 0) {
     // Accept any failure result.
-    semantics.analyse();
     EXPECT_FALSE(driver.ctx.diagnostics().ok()) << msg.str();
-  } else if (expected_result == 0) {
+  } else {
     // Accept no errors.
-    semantics.analyse();
     std::stringstream out;
     driver.ctx.diagnostics().emit(out);
     EXPECT_TRUE(driver.ctx.diagnostics().ok()) << msg.str() << out.str();
-  } else {
-    EXPECT_EQ(expected_result, semantics.analyse()) << msg.str();
   }
+
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'

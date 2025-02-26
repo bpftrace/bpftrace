@@ -28,10 +28,10 @@ void test(std::string_view input, bool has_pid, bool has_filter)
 
   ClangParser clang;
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
-
   ASSERT_EQ(driver.parse_str(input), 0);
-  ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
-  pid_filter.visit(driver.ctx.root);
+
+  auto ok = ast::PassManager().add(ast::CreatePidFilterPass()).run(driver.ctx);
+  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok());
 
   std::string_view expected_ast = R"(
   if

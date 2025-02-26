@@ -7,9 +7,8 @@
 
 namespace bpftrace::ast {
 
-// CollectNodes
-//
-// Recurses into the provided node and builds a list of all descendants of the
+// CollectNodes is a utility visitor which other passes may use directly. It
+// recurses into the provided node and builds a list of all descendants of the
 // requested type which match a predicate.
 template <typename NodeT>
 class CollectNodes : public Visitor<CollectNodes<NodeT>> {

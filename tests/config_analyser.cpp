@@ -26,13 +26,14 @@ void test(BPFtrace &bpftrace,
   ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
-  ast::ConfigAnalyser config_analyser(bpftrace);
-  config_analyser.visit(driver.ctx.root);
-  ASSERT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateConfigPass())
+                .run(driver.ctx);
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
 
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')

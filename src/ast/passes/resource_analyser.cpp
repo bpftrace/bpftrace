@@ -4,19 +4,73 @@
 
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
+#include "required_resources.h"
 #include "struct.h"
 
 namespace bpftrace::ast {
 
 namespace {
 
+// Resource analysis pass on AST
+//
+// This pass collects information on what runtime resources a script needs.
+// For example, how many maps to create, what sizes the keys and values are,
+// all the async printf argument types, etc.
+//
+// TODO(danobi): Note that while complete resource collection in this pass is
+// the goal, there are still places where the goal is not yet realized. For
+// example the helper error metadata is still being collected during codegen.
+class ResourceAnalyser : public Visitor<ResourceAnalyser> {
+public:
+  ResourceAnalyser(BPFtrace &bpftrace);
+
+  using Visitor<ResourceAnalyser>::visit;
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+  void visit(Builtin &map);
+  void visit(Call &call);
+  void visit(Map &map);
+  void visit(Tuple &tuple);
+  void visit(For &f);
+  void visit(Ternary &ternary);
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(VarDeclStatement &decl);
+
+  // This will move the compute resources value, it should be called only
+  // after the top-level visit.
+  RequiredResources resources();
+
+private:
+  // Determines whether the given function uses userspace symbol resolution.
+  // This is used later for loading the symbol table into memory.
+  bool uses_usym_table(const std::string &fun);
+
+  bool exceeds_stack_limit(size_t size);
+
+  void maybe_allocate_map_key_buffer(const Map &map);
+
+  void update_map_info(Map &map);
+  void update_variable_info(Variable &var);
+
+  RequiredResources resources_;
+  BPFtrace &bpftrace_;
+  // Current probe we're analysing
+  Probe *probe_;
+
+  int next_map_id_ = 0;
+};
+
+} // namespace
+
 // This helper differs from SemanticAnalyser::single_provider_type() in that
 // for situations where a single probetype is required we assume the AST is
 // well formed.
-ProbeType single_provider_type_postsema(Probe *probe)
+static ProbeType single_provider_type_postsema(Probe *probe)
 {
   if (!probe->attach_points.empty()) {
     return probetype(probe->attach_points.at(0)->provider);
@@ -25,13 +79,11 @@ ProbeType single_provider_type_postsema(Probe *probe)
   return ProbeType::invalid;
 }
 
-std::string get_literal_string(Expression &expr)
+static std::string get_literal_string(Expression &expr)
 {
   String &str = static_cast<String &>(expr);
   return str.str;
 }
-
-} // namespace
 
 ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace)
     : bpftrace_(bpftrace), probe_(nullptr)
