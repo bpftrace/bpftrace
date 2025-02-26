@@ -487,21 +487,13 @@ CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
                                         Value *key,
                                         const std::string &name)
 {
-  return createMapLookup(map_name, key, getPtrTy(), name);
-}
-
-CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
-                                        Value *key,
-                                        PointerType *val_ptr_ty,
-                                        const std::string &name)
-{
   Value *map_ptr = GetMapVar(map_name);
   // void *map_lookup_elem(struct bpf_map * map, void * key)
   // Return: Map value or NULL
 
   assert(key->getType()->isPointerTy());
   FunctionType *lookup_func_type = FunctionType::get(
-      val_ptr_ty, { map_ptr->getType(), key->getType() }, false);
+      getPtrTy(), { map_ptr->getType(), key->getType() }, false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -515,22 +507,13 @@ CallInst *IRBuilderBPF::createPerCpuMapLookup(const std::string &map_name,
                                               Value *cpu,
                                               const std::string &name)
 {
-  return createPerCpuMapLookup(map_name, key, cpu, getPtrTy(), name);
-}
-
-CallInst *IRBuilderBPF::createPerCpuMapLookup(const std::string &map_name,
-                                              Value *key,
-                                              Value *cpu,
-                                              PointerType *val_ptr_ty,
-                                              const std::string &name)
-{
   Value *map_ptr = GetMapVar(map_name);
   // void *map_lookup_percpu_elem(struct bpf_map * map, void * key, u32 cpu)
   // Return: Map value or NULL
 
   assert(key->getType()->isPointerTy());
   FunctionType *lookup_func_type = FunctionType::get(
-      val_ptr_ty, { map_ptr->getType(), key->getType(), getInt32Ty() }, false);
+      getPtrTy(), { map_ptr->getType(), key->getType(), getInt32Ty() }, false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -543,7 +526,7 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
                                          const location &loc)
 {
   return createGetScratchMap(
-      to_string(MapType::Join), "join", getPtrTy(), loc, failure_callback);
+      to_string(MapType::Join), "join", loc, failure_callback);
 }
 
 CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
@@ -553,7 +536,6 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
   SizedType value_type = CreateArray(stack_type.limit, CreateUInt64());
   return createGetScratchMap(StackType::scratch_name(),
                              StackType::scratch_name(),
-                             GetType(value_type)->getPointerTo(),
                              loc,
                              failure_callback);
 }
@@ -706,7 +688,6 @@ Value *IRBuilderBPF::createScratchBuffer(
 // simply causes a blind 0 return. See comment in function for why this is ok.
 CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             const std::string &name,
-                                            PointerType *val_ptr_ty,
                                             const location &loc,
                                             BasicBlock *failure_callback,
                                             int key)
@@ -715,8 +696,9 @@ CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                          "lookup_" + name + "_key");
   CreateStore(getInt32(key), keyAlloc);
 
-  CallInst *call = createMapLookup(
-      map_name, keyAlloc, val_ptr_ty, "lookup_" + name + "_map");
+  CallInst *call = createMapLookup(map_name,
+                                   keyAlloc,
+                                   "lookup_" + name + "_map");
   CreateLifetimeEnd(keyAlloc);
 
   llvm::Function *parent = GetInsertBlock()->getParent();
@@ -1854,8 +1836,8 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
                                         "arraycmp.done",
                                         parent);
 
-  Value *ptr_val1 = CreateIntToPtr(val1, GetType(val1_type)->getPointerTo());
-  Value *ptr_val2 = CreateIntToPtr(val2, GetType(val2_type)->getPointerTo());
+  Value *ptr_val1 = CreateIntToPtr(val1, getPtrTy());
+  Value *ptr_val2 = CreateIntToPtr(val2, getPtrTy());
   AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
   AllocaInst *n = CreateAllocaBPF(getInt32Ty(), "n");
   CreateStore(getInt32(0), i);
@@ -1949,15 +1931,14 @@ void IRBuilderBPF::CreateGetNsPidTgid(Value *ctx,
   auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(BpfPidnsInfoType());
 
-  FunctionType *getnspidtgid_func_type = FunctionType::get(
-      getInt64Ty(),
-      {
-          getInt64Ty(),
-          getInt64Ty(),
-          BpfPidnsInfoType()->getPointerTo(),
-          getInt32Ty(),
-      },
-      false);
+  FunctionType *getnspidtgid_func_type = FunctionType::get(getInt64Ty(),
+                                                           {
+                                                               getInt64Ty(),
+                                                               getInt64Ty(),
+                                                               getPtrTy(),
+                                                               getInt32Ty(),
+                                                           },
+                                                           false);
   CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_ns_current_pid_tgid,
                                     getnspidtgid_func_type,
                                     { dev, ino, ret, getInt32(struct_size) },
@@ -2661,7 +2642,7 @@ void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
       getInt64(libbpf::BPF_FUNC_seq_printf),
       seq_printf_func_ptr_type);
 
-  LoadInst *meta = CreateLoad(getInt64Ty()->getPointerTo(),
+  LoadInst *meta = CreateLoad(getPtrTy(),
                               CreateSafeGEP(getInt64Ty(), ctx, getInt64(0)),
                               "meta");
   meta->setVolatile(true);
@@ -2755,7 +2736,7 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
 {
   if (!ptr->getType()->isPointerTy()) {
     assert(ptr->getType()->isIntegerTy());
-    ptr = CreateIntToPtr(ptr, ty->getPointerTo());
+    ptr = CreateIntToPtr(ptr, getPtrTy());
   }
 
 #if LLVM_VERSION_MAJOR >= 18
