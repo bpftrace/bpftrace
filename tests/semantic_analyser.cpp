@@ -3290,7 +3290,7 @@ TEST(semantic_analyser, strcontains_large_warnings)
       /* invert= */ true);
 
   auto bpftrace = get_mock_bpftrace();
-  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  ConfigSetter configs{ *bpftrace->config_, ConfigSource::script };
   configs.set(ConfigKeyInt::max_strlen, 16);
   test_for_warning(
       *bpftrace,
