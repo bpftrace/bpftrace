@@ -32,6 +32,7 @@ class Node;
 } // namespace ast
 } // namespace bpftrace
 #include "ast/ast.h"
+#include "ast/context.h"
 }
 
 %{

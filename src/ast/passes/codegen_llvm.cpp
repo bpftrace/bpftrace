@@ -34,6 +34,7 @@
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "ast/context.h"
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
 #include "collect_nodes.h"

@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include "ast/ast.h"
+#include "ast/context.h"
 #include "common.h"
 
 namespace bpftrace {
