@@ -304,10 +304,6 @@ private:
   CallInst *createMapLookup(const std::string &map_name,
                             Value *key,
                             const std::string &name = "lookup_elem");
-  CallInst *createMapLookup(const std::string &map_name,
-                            Value *key,
-                            PointerType *val_ptr_ty,
-                            const std::string &name = "lookup_elem");
   CallInst *createPerCpuMapLookup(
       const std::string &map_name,
       Value *key,
@@ -321,7 +317,6 @@ private:
       const std::string &name = "lookup_percpu_elem");
   CallInst *createGetScratchMap(const std::string &map_name,
                                 const std::string &name,
-                                PointerType *val_ptr_ty,
                                 const location &loc,
                                 BasicBlock *failure_callback,
                                 int key = 0);
