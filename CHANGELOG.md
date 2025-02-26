@@ -42,6 +42,8 @@ and this project adheres to
   - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
+- Allow use of variables before they are assigned
+  - [#3832](https://github.com/bpftrace/bpftrace/pull/3832)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 14 and 15
