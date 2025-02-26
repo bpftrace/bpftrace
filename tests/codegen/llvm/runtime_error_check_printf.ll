@@ -17,7 +17,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @iter_task_file_1(ptr %0) section "s_iter_task_file_1" !dbg !39 {
 entry:
-  %key = alloca i32, align 4
   %helper_error_t = alloca %helper_error_t, align 8
   %data = alloca [1 x i64], align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %data)
@@ -43,33 +42,11 @@ helper_failure:                                   ; preds = %entry
   %9 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
   store i32 %5, ptr %9, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
-  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
-  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
-
-helper_merge:                                     ; preds = %counter_merge, %entry
-  ret i64 0
-
-event_loss_counter:                               ; preds = %helper_failure
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
-  store i32 0, ptr %key, align 4
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key)
-  %map_lookup_cond = icmp ne ptr %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
-
-counter_merge:                                    ; preds = %lookup_merge, %helper_failure
   call void @llvm.lifetime.end.p0(i64 -1, ptr %helper_error_t)
   br label %helper_merge
 
-lookup_success:                                   ; preds = %event_loss_counter
-  %10 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
-  br label %lookup_merge
-
-lookup_failure:                                   ; preds = %event_loss_counter
-  br label %lookup_merge
-
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
-  br label %counter_merge
+helper_merge:                                     ; preds = %helper_failure, %entry
+  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)

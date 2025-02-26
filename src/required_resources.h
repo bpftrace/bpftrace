@@ -146,6 +146,18 @@ public:
   // List of probes using userspace symbol resolution
   std::unordered_set<const ast::Probe *> probes_using_usym;
 
+  bool need_recursion_check = false;
+
+  void set_needs_event_loss_map()
+  {
+    need_event_loss_map_ = true;
+  }
+
+  bool needs_event_loss_map() const
+  {
+    return need_event_loss_map_ || need_recursion_check;
+  }
+
 private:
   friend class cereal::access;
   template <typename Archive>
@@ -168,6 +180,8 @@ private:
             probes,
             special_probes);
   }
+
+  bool need_event_loss_map_ = false;
 };
 
 } // namespace bpftrace

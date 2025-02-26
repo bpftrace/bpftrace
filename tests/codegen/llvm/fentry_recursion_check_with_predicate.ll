@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @fentry_mock_vmlinux_queued_spin_lock_slowpath_1(ptr %0) section "s_fentry_mock_vmlinux_queued_spin_lock_slowpath_1" !dbg !48 {
+define i64 @fentry_vmlinux_queued_spin_lock_slowpath_1(ptr %0) section "s_fentry_vmlinux_queued_spin_lock_slowpath_1" !dbg !48 {
 entry:
   %lookup_key13 = alloca i32, align 4
   %lookup_key6 = alloca i32, align 4
@@ -164,7 +164,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !45 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !46)
 !46 = !{!0, !22, !36}
 !47 = !{i32 2, !"Debug Info Version", i32 3}
-!48 = distinct !DISubprogram(name: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", linkageName: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !45, retainedNodes: !53)
+!48 = distinct !DISubprogram(name: "fentry_vmlinux_queued_spin_lock_slowpath_1", linkageName: "fentry_vmlinux_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !45, retainedNodes: !53)
 !49 = !DISubroutineType(types: !50)
 !50 = !{!21, !51}
 !51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !52, size: 64)

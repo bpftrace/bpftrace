@@ -186,7 +186,8 @@ public:
   void CreateOutput(Value *ctx,
                     Value *data,
                     size_t size,
-                    const location *loc = nullptr);
+                    const location *loc = nullptr,
+                    bool update_event_loss_cnt = true);
   void CreateAtomicIncCounter(const std::string &map_name, uint32_t idx);
   void CreateMapElemInit(Value *ctx,
                          Map &map,
@@ -344,7 +345,8 @@ private:
   llvm::Type *getUserPointerStorageTy();
   void CreateRingbufOutput(Value *data,
                            size_t size,
-                           const location *loc = nullptr);
+                           bool update_event_loss_cnt,
+                           const location *loc);
   void CreatePerfEventOutput(Value *ctx,
                              Value *data,
                              size_t size,
