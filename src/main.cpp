@@ -353,21 +353,20 @@ static void parse_env(BPFtrace& bpftrace)
 }
 
 [[nodiscard]] std::optional<ast::ASTContext> parse(
+    ASTContext &ast,
     BPFtrace& bpftrace,
-    const std::string& name,
-    const std::string& program,
     const std::vector<std::string>& include_dirs,
     const std::vector<std::string>& include_files)
 {
-  Driver driver(bpftrace);
-  driver.source(name, program);
-  int err;
+  Driver driver(ast,
+                bpftrace,
+                /*debug=*/bt_debug.find(DebugStage::Parse) != bt_debug.end());
 
   err = driver.parse();
   if (err)
     return std::nullopt;
 
-  bpftrace.parse_btf(driver.list_modules());
+  bpftrace.parse_btf(bpftrace.list_modules());
 
   ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
@@ -431,6 +430,11 @@ static void parse_env(BPFtrace& bpftrace)
   err = driver.parse();
   if (err)
     return {};
+
+  if (ast.diagnostics().ok()) {
+    ast::AttachPointParser ap_parser(ctx, bpftrace, false);
+    ap_parser.parse();
+  }
 
   return std::move(driver.ctx);
 }
@@ -810,7 +814,12 @@ int main(int argc, char* argv[])
     }
   }
 
-  // Listing probes when there is no program
+  // This is our primary program AST context. Initially it is empty, not
+  // filename set or source file. The way we set it up depends on the mode of
+  // execution below, and we expect that it will be reinitialized.
+  ASTContext ast("", "");
+
+  // Listing probes when there is no program.
   if (args.listing && args.script.empty() && args.filename.empty()) {
     check_is_root();
 
@@ -829,15 +838,27 @@ int main(int argc, char* argv[])
           << args.search << "\' as a search pattern.";
     }
 
-    Driver driver(bpftrace);
-    driver.listing_ = true;
-    driver.source("stdin", args.search);
+    // To list tracepoints, we construct a synthetic AST and then expand the
+    // probe. The raw contents of the program are the initial search provided.
+    ast = ASTContext("listing", args.search);
+    ast.root = ast.make_node<Program>(
+        /*c_definitions=*/"",
+        /*config=*/nullptr,
+        /*functions=*/SubprogList(),
+        /*probes=*/
+        { ctx.make_node<Probe>(
+            /*attach_points=*/{ ctx.make_node<AttachPoint>(
+                args.search, /*ignore_invalid=*/true, /*loc=*/location()) },
+            /*pred=*/pred,
+            /*block=*/block,
+            /*loc=*/location()) },
+        /*loc=*/location());
 
-    int err = driver.parse();
-    if (err)
-      return err;
+    // Parse and expand all the attachpoints.
+    ast::AttachPointParser ap_parser(ctx, bpftrace, true);
+    ap_parser.parse();
 
-    bpftrace.parse_btf(driver.list_modules());
+    bpftrace.parse_btf(bpftrace.list_modules());
 
     ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
     err = semantics.analyse();
@@ -849,9 +870,6 @@ int main(int argc, char* argv[])
     bpftrace.probe_matcher_->list_probes(driver.ctx.root);
     return 0;
   }
-
-  std::string filename;
-  std::string program;
 
   if (!args.filename.empty()) {
     std::stringstream buf;
@@ -865,8 +883,7 @@ int main(int argc, char* argv[])
         buf << line << std::endl;
       }
 
-      filename = "stdin";
-      program = buf.str();
+      ast = ASTContext("stdin", buf.str());
     } else {
       std::ifstream file(args.filename);
       if (file.fail()) {
@@ -875,15 +892,12 @@ int main(int argc, char* argv[])
         exit(1);
       }
 
-      filename = args.filename;
-      program = buf.str();
       buf << file.rdbuf();
-      program = buf.str();
+      ast = ASTContext(args.filename, buf.str());
     }
   } else {
-    // Script is provided as a command line argument
-    filename = "stdin";
-    program = args.script;
+    // Script is provided as a command line argument.
+    ast = ASTContext("stdin", args.script);
   }
 
   for (const auto& param : args.params) {
@@ -902,8 +916,7 @@ int main(int argc, char* argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  auto ast_ctx = parse(
-      bpftrace, filename, program, args.include_dirs, args.include_files);
+  auto ast_ctx = parse(ast, bpftrace, args.include_dirs, args.include_files);
   if (!ast_ctx)
     return 1;
 

@@ -446,11 +446,10 @@ CallInst *IRBuilderBPF::CreateHelperCall(libbpf::bpf_func_id func_id,
                                          FunctionType *helper_type,
                                          ArrayRef<Value *> args,
                                          const Twine &Name,
-                                         const location *loc)
+                                         const location &loc)
 {
-  if (loc && bpftrace_.helper_use_loc_.find(func_id) ==
-                 bpftrace_.helper_use_loc_.end())
-    bpftrace_.helper_use_loc_[func_id] = *loc;
+  bpftrace_.helper_use_loc_[func_id].emplace_back(
+      HelperErrorInfo(func_id, *loc.begin.filename, loc.begin.line, loc.begin.column));
   PointerType *helper_ptr_type = PointerType::get(helper_type, 0);
   Constant *helper_func = ConstantExpr::getCast(Instruction::IntToPtr,
                                                 getInt64(func_id),
@@ -1795,7 +1794,7 @@ CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
   // u64 ktime_get_*ns()
   // Return: current ktime
   FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
+  return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", loc);
 }
 
 CallInst *IRBuilderBPF::CreateJiffies64(const location &loc)
@@ -1804,7 +1803,7 @@ CallInst *IRBuilderBPF::CreateJiffies64(const location &loc)
   // Return: jiffies (BITS_PER_LONG == 64) or jiffies_64 (otherwise)
   FunctionType *jiffies64_func_type = FunctionType::get(getInt64Ty(), false);
   return CreateHelperCall(
-      libbpf::BPF_FUNC_jiffies64, jiffies64_func_type, {}, "jiffies64", &loc);
+      libbpf::BPF_FUNC_jiffies64, jiffies64_func_type, {}, "jiffies64", loc);
 }
 
 Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
@@ -1934,7 +1933,7 @@ CallInst *IRBuilderBPF::CreateGetPidTgid(const location &loc)
                           getpidtgid_func_type,
                           {},
                           "get_pid_tgid",
-                          &loc);
+                          loc);
 }
 
 void IRBuilderBPF::CreateGetNsPidTgid(Value *ctx,
@@ -1962,7 +1961,7 @@ void IRBuilderBPF::CreateGetNsPidTgid(Value *ctx,
                                     getnspidtgid_func_type,
                                     { dev, ino, ret, getInt32(struct_size) },
                                     "get_ns_pid_tgid",
-                                    &loc);
+                                    loc);
   CreateHelperErrorCond(
       ctx, call, libbpf::BPF_FUNC_get_ns_current_pid_tgid, loc);
 }
@@ -1986,7 +1985,7 @@ CallInst *IRBuilderBPF::CreateGetCurrentCgroupId(const location &loc)
                           getcgroupid_func_type,
                           {},
                           "get_cgroup_id",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetUidGid(const location &loc)
@@ -1998,7 +1997,7 @@ CallInst *IRBuilderBPF::CreateGetUidGid(const location &loc)
                           getuidgid_func_type,
                           {},
                           "get_uid_gid",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetNumaId(const location &loc)
@@ -2010,7 +2009,7 @@ CallInst *IRBuilderBPF::CreateGetNumaId(const location &loc)
                           numaid_func_type,
                           {},
                           "get_numa_id",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetCpuId(const location &loc)
@@ -2022,7 +2021,7 @@ CallInst *IRBuilderBPF::CreateGetCpuId(const location &loc)
                           getcpuid_func_type,
                           {},
                           "get_cpu_id",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetCurrentTask(const location &loc)
@@ -2034,7 +2033,7 @@ CallInst *IRBuilderBPF::CreateGetCurrentTask(const location &loc)
                           getcurtask_func_type,
                           {},
                           "get_cur_task",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetRandom(const location &loc)
@@ -2046,7 +2045,7 @@ CallInst *IRBuilderBPF::CreateGetRandom(const location &loc)
                           getrandom_func_type,
                           {},
                           "get_random",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
@@ -2074,7 +2073,7 @@ CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
                                     getstack_func_type,
                                     { ctx, buf, stack_size, flags_val },
                                     "get_stack",
-                                    &loc);
+                                    loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_stack, loc);
   return call;
 }
@@ -2093,7 +2092,7 @@ CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const location &loc)
                           getfuncip_func_type,
                           { ctx },
                           "get_func_ip",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
@@ -2110,7 +2109,7 @@ CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
                           percpuptr_func_type,
                           { var, cpu },
                           "per_cpu_ptr",
-                          &loc);
+                          loc);
 }
 
 CallInst *IRBuilderBPF::CreateThisCpuPtr(Value *var, const location &loc)
@@ -2126,7 +2125,7 @@ CallInst *IRBuilderBPF::CreateThisCpuPtr(Value *var, const location &loc)
                           percpuptr_func_type,
                           { var },
                           "this_cpu_ptr",
-                          &loc);
+                          loc);
 }
 
 void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
@@ -2146,14 +2145,14 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
                                     getcomm_func_type,
                                     { buf, getInt64(size) },
                                     "get_comm",
-                                    &loc);
+                                    loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_current_comm, loc);
 }
 
 void IRBuilderBPF::CreateOutput(Value *ctx,
                                 Value *data,
                                 size_t size,
-                                const location *loc)
+                                const location &loc)
 {
   assert(ctx && ctx->getType() == getPtrTy());
   assert(data && data->getType()->isPointerTy());
@@ -2167,7 +2166,7 @@ void IRBuilderBPF::CreateOutput(Value *ctx,
 
 void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                        size_t size,
-                                       const location *loc)
+                                       const location &loc)
 {
   Value *map_ptr = GetMapVar(to_string(MapType::Ringbuf));
 
@@ -2301,7 +2300,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
                                          Value *data,
                                          size_t size,
-                                         const location *loc)
+                                         const location &loc)
 {
   Value *map_ptr = GetMapVar(to_string(MapType::PerfEvent));
 
@@ -2359,7 +2358,7 @@ void IRBuilderBPF::CreateTracePrintk(Value *fmt_ptr,
                    traceprintk_func_type,
                    args,
                    "trace_printk",
-                   &loc);
+                   loc);
 }
 
 void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
@@ -2562,8 +2561,8 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
     return;
 
   int error_id = async_ids_.helper_error();
-  bpftrace_.resources.helper_error_info[error_id] = { .func_id = func_id,
-                                                      .loc = loc };
+  bpftrace_.resources.helper_error_info.try_emplace(
+      error_id, HelperErrorInfo(func_id, *loc.begin.filename, loc.begin.line, loc.begin.column));
 
   auto elements = AsyncEvent::HelperError().asLLVMType(*this);
   StructType *helper_error_struct = GetStructType("helper_error_t",
@@ -2582,7 +2581,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
 
   auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(helper_error_struct);
-  CreateOutput(ctx, buf, struct_size, &loc);
+  CreateOutput(ctx, buf, struct_size, loc);
   CreateLifetimeEnd(buf);
 }
 
@@ -2636,7 +2635,7 @@ void IRBuilderBPF::CreatePath(Value *ctx,
                                     d_path_func_type,
                                     { path, buf, sz },
                                     "d_path",
-                                    &loc);
+                                    loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);
 }
 

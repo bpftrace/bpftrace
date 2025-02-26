@@ -546,7 +546,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       for (const auto &match : matches) {
         // No need to preserve this node, as we are just expanding to see the
         // size of the name. This could be refactored into a separate pass.
-        ASTContext dummyctx;
+        ASTContext dummyctx("", "");
         str_size = std::max(str_size,
                             attach_point->create_expansion_copy(dummyctx, match)
                                 .name()

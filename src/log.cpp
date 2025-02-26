@@ -2,7 +2,7 @@
 
 namespace bpftrace {
 
-std::string logtype_str(LogType t)
+static std::string logtype_str(LogType t)
 {
   switch (t) {
       // clang-format off
@@ -16,6 +16,22 @@ std::string logtype_str(LogType t)
   }
 
   return {}; // unreached
+}
+
+static const std::string get_source_line(const std::string& src, unsigned int n)
+{
+  // Get the Nth source line (N is 0-based). Return an empty string if it
+  // doesn't exist.
+  std::string line;
+  std::stringstream ss(src);
+  for (unsigned int idx = 0; idx <= n; idx++) {
+    std::getline(ss, line);
+    if (ss.eof() && idx == n)
+      return line;
+    if (!ss)
+      return "";
+  }
+  return line;
 }
 
 Log::Log()
@@ -34,29 +50,9 @@ Log& Log::get()
   return log;
 }
 
-void Log::take_input(LogType type,
-                     const std::optional<location>& loc,
-                     std::ostream& out,
-                     std::string&& input)
+void Log::take_input(LogType type, std::ostream& out, std::string&& input)
 {
-  if (loc) {
-    if (src_.empty()) {
-      std::cerr << "Log: cannot resolve location before calling set_source()."
-                << std::endl;
-      out << log_format_output(type, std::move(input));
-    } else if (loc->begin.line == 0) {
-      std::cerr << "Log: invalid location." << std::endl;
-      out << log_format_output(type, std::move(input));
-    } else if (loc->begin.line > loc->end.line) {
-      std::cerr << "Log: loc.begin > loc.end: " << loc->begin << ":" << loc->end
-                << std::endl;
-      out << log_format_output(type, std::move(input));
-    } else {
-      log_with_location(type, loc.value(), out, input);
-    }
-  } else {
-    out << log_format_output(type, std::move(input));
-  }
+  out << log_format_output(type, std::move(input));
 }
 
 std::string Log::log_format_output(LogType type, std::string&& input)
@@ -78,27 +74,16 @@ std::string Log::log_format_output(LogType type, std::string&& input)
   return color + logtype_str(type) + std::move(input) + LogColor::RESET + '\n';
 }
 
-const std::string Log::get_source_line(unsigned int n)
+void Log::take_input(LogType type,
+                     const std::string& src_filename,
+                     const std::string& src_contents,
+                     const location& loc,
+                     std::ostream& out,
+                     std::string&& msg)
 {
-  // Get the Nth source line (N is 0-based). Return an empty string if it
-  // doesn't exist
-  std::string line;
-  std::stringstream ss(src_);
-  for (unsigned int idx = 0; idx <= n; idx++) {
-    std::getline(ss, line);
-    if (ss.eof() && idx == n)
-      return line;
-    if (!ss)
-      return "";
-  }
-  return line;
-}
+  assert(loc.begin.line > 0);
+  assert(loc.begin.line <= loc.end.line);
 
-void Log::log_with_location(LogType type,
-                            const location& l,
-                            std::ostream& out,
-                            const std::string& m)
-{
   const char* color_begin = LogColor::DEFAULT;
   const char* color_end = LogColor::DEFAULT;
   if (is_colorize_) {
@@ -116,11 +101,10 @@ void Log::log_with_location(LogType type,
     }
   }
   out << color_begin;
-  if (filename_.size()) {
-    out << filename_ << ":";
+  if (src_filename.size()) {
+    out << src_filename << ":";
   }
 
-  std::string msg(m);
   const std::string& typestr = logtype_str(type);
 
   if (!msg.empty() && msg.back() == '\n') {
@@ -129,8 +113,8 @@ void Log::log_with_location(LogType type,
 
   // For a multi line error only the line range is printed:
   //     <filename>:<start_line>-<end_line>: ERROR: <message>
-  if (l.begin.line < l.end.line) {
-    out << l.begin.line << "-" << l.end.line << ": " << typestr << msg
+  if (loc.begin.line < loc.end.line) {
+    out << loc.begin.line << "-" << loc.end.line << ": " << typestr << msg
         << std::endl
         << color_end;
     return;
@@ -147,11 +131,11 @@ void Log::log_with_location(LogType type,
   // file.bt:1:10-20: error: <message>
   // i:s:1   /1 < "str"/
   //         ~~~~~~~~~~
-  out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
+  out << loc.begin.line << ":" << loc.begin.column << "-" << loc.end.column;
   out << ": " << typestr << msg << std::endl << color_end;
 
   // for bpftrace::position, valid line# starts from 1
-  std::string srcline = get_source_line(l.begin.line - 1);
+  std::string srcline = get_source_line(src_contents, loc.begin.line - 1);
 
   if (srcline == "") {
     return;
@@ -166,11 +150,11 @@ void Log::log_with_location(LogType type,
   }
   out << std::endl;
 
-  for (unsigned int x = 0;
-       x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
+  for (unsigned int x = 0; x < srcline.size() &&
+                           x < (static_cast<unsigned int>(loc.end.column) - 1);
        x++) {
-    char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
-                                                                        : '~';
+    char marker = (x < (static_cast<unsigned int>(loc.begin.column) - 1)) ? ' '
+                                                                          : '~';
     if (srcline[x] == '\t') {
       out << std::string(4, marker);
     } else {
@@ -184,60 +168,65 @@ LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
                      std::ostream& out)
-    : sink_(Log::get()),
-      type_(type),
-      loc_(std::nullopt),
-      out_(out),
-      log_file_(file),
-      log_line_(line)
+    : file_(file), line_(line), type_(type), out_(out)
 {
 }
 
 LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
-                     std::optional<location> loc,
+                     const std::string& src_filename,
+                     const std::string& src_contents,
+                     const location& loc,
                      std::ostream& out)
-    : sink_(Log::get()),
+    : file_(file),
+      line_(line),
       type_(type),
-      loc_(loc),
-      out_(out),
-      log_file_(file),
-      log_line_(line)
+      src_filename_(std::ref(src_filename)),
+      src_contents_(std::ref(src_contents)),
+      loc_(std::ref(loc)),
+      out_(out)
 {
 }
 
 LogStream::~LogStream()
 {
+  auto& sink = Log::get();
 #ifdef FUZZ
   // When fuzzing, we don't want to output error messages. However, some
   // function uses a error message length to determine whether if an error
   // occur. So, we cannot simply DISABLE_LOG(ERROR). Instead, here, we don't
   // output error messages to stderr.
-  if (sink_.is_enabled(type_) &&
+  if (sink.is_enabled(type_) &&
       (type_ != LogType::ERROR ||
        (&out_ != &std::cout && &out_ != &std::cerr))) {
 #else
-  if (sink_.is_enabled(type_)) {
+  if (sink.is_enabled(type_)) {
 #endif
     auto msg = buf_.str();
     if (type_ == LogType::DEBUG)
       msg = internal_location() + msg;
 
-    sink_.take_input(type_, loc_, out_, std::move(msg));
+    if (src_filename_ && src_contents_ && loc_) {
+      sink.take_input(
+          type_, *src_filename_, *src_contents_, *loc_, out_, std::move(msg));
+    } else {
+      sink.take_input(type_, out_, std::move(msg));
+    }
   }
 }
 
 std::string LogStream::internal_location()
 {
   std::ostringstream ss;
-  ss << "[" << log_file_ << ":" << log_line_ << "] ";
+  ss << "[" << file_ << ":" << line_ << "] ";
   return ss.str();
 }
 
 [[noreturn]] LogStreamBug::~LogStreamBug()
 {
-  sink_.take_input(type_, loc_, out_, internal_location() + buf_.str());
+  auto& sink = Log::get();
+  sink.take_input(type_, out_, internal_location() + buf_.str());
   abort();
 }
 

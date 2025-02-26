@@ -36,6 +36,7 @@
 #endif
 
 #include "ast/async_event_types.h"
+#include "ast/context.h"
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
@@ -331,8 +332,9 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto helpererror = static_cast<AsyncEvent::HelperError *>(data);
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
-    auto &info = bpftrace->resources.helper_error_info[error_id];
-    bpftrace->out_->helper_error(info.func_id, return_value, info.loc);
+    auto &info = bpftrace->resources.helper_error_info.find(error_id)->second;
+    bpftrace->out_->helper_error(
+        info.func_id, return_value, info.filename, info.line, info.column);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach)) {
     bool abort = false;
@@ -910,10 +912,14 @@ int BPFtrace::run(BpfBytecode bytecode)
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   } catch (const HelperVerifierError &e) {
-    if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
-      LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
-    } else {
-      LOG(ERROR) << e.what();
+    // We can extract which helper may been causing issues here, but can't say
+    // exactly why. To provide the most useful diagnostics possible, list all
+    // the possible callsites.
+    LOG(ERROR) << e.what();
+    LOG(HINT) << "Possible callsites:";
+    for (const auto &info : helper_use_loc_[e.func_id]) {
+      LOG(HINT) << "- " << info.filename << ":" << info.line << ":"
+                << info.column;
     }
     return -1;
   } catch (const std::runtime_error &e) {
@@ -2086,6 +2092,39 @@ void BPFtrace::fentry_recursion_check(ast::Program *prog)
       }
     }
   }
+}
+
+// Retrieves the list of kernel modules for all attachpoints. Will be used to
+// identify modules whose BTF we need to parse.
+// Currently, this is useful for fentry/fexit, k(ret)probes, and tracepoints.
+std::set<std::string> BPFtrace::list_modules(ast::ASTContext &ctx)
+{
+  std::set<std::string> modules;
+  for (auto &probe : ctx.root->probes) {
+    for (auto &ap : probe->attach_points) {
+      auto probe_type = probetype(ap->provider);
+      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
+          ((probe_type == ProbeType::kprobe ||
+            probe_type == ProbeType::kretprobe) &&
+           !ap->target.empty())) {
+        if (ap->expansion != ast::ExpansionType::NONE) {
+          for (auto &match : probe_matcher_->get_matches_for_ap(*ap)) {
+            std::string func = match;
+            erase_prefix(func);
+            auto match_modules = get_func_modules(func);
+            modules.insert(match_modules.begin(), match_modules.end());
+          }
+        } else
+          modules.insert(ap->target);
+      } else if (probe_type == ProbeType::tracepoint) {
+        // For now, we support this for a single target only since tracepoints
+        // need dumping of C definitions BTF and that is not available for
+        // multiple modules at once.
+        modules.insert(ap->target);
+      }
+    }
+  }
+  return modules;
 }
 
 } // namespace bpftrace

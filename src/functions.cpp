@@ -113,7 +113,7 @@ const Function *FunctionRegistry::get(std::string_view ns,
   };
   auto it = funcs_by_fq_name_.find(fq_name);
   if (it == funcs_by_fq_name_.end()) {
-    LOG(ERROR, loc, out) << "Function not found: '" << name << "'";
+    // XXX LOG(ERROR, loc, out) << "Function not found: '" << name << "'";
     return nullptr;
   }
 
@@ -151,11 +151,11 @@ const Function *FunctionRegistry::get(std::string_view ns,
       return candidate;
   }
 
-  LOG(ERROR, loc, out) << "Cannot call function '" << name
-                       << "' using argument types: "
-                       << arg_types_str(arg_types);
-  LOG(HINT, out) << "Candidate function:\n  " << candidate->name()
-                 << param_types_str(candidate->params());
+  // XXX LOG(ERROR, loc, out) << "Cannot call function '" << name
+  // XXX                      << "' using argument types: "
+  // XXX                      << arg_types_str(arg_types);
+  // XXX LOG(HINT, out) << "Candidate function:\n  " << candidate->name()
+  // XXX                << param_types_str(candidate->params());
 
   return nullptr;
 }
