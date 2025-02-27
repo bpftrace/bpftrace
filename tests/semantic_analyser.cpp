@@ -16,11 +16,11 @@ namespace bpftrace::test::semantic_analyser {
 using ::testing::_;
 using ::testing::HasSubstr;
 
-void test_for_warning(BPFtrace &bpftrace,
-                      const std::string &input,
-                      const std::string &warning,
-                      bool invert = false,
-                      bool safe_mode = true)
+ast::ASTContext test_for_warning(BPFtrace &bpftrace,
+                                 const std::string &input,
+                                 const std::string &warning,
+                                 bool invert = false,
+                                 bool safe_mode = true)
 {
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
@@ -32,13 +32,20 @@ void test_for_warning(BPFtrace &bpftrace,
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  bool parse_ok = driver.parse_str(input) == 0;
+  EXPECT_TRUE(parse_ok);
+  if (!parse_ok) {
+    return ast::ASTContext();
+  }
 
   auto ok = ast::PassManager()
                 .put(bpftrace)
                 .add(ast::CreateSemanticPass())
                 .run(driver.ctx);
-  ASSERT_TRUE(bool(ok));
+  EXPECT_TRUE(bool(ok));
+  if (!ok) {
+    return ast::ASTContext();
+  }
 
   std::stringstream out;
   driver.ctx.diagnostics().emit(out);
@@ -46,57 +53,70 @@ void test_for_warning(BPFtrace &bpftrace,
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
   else
     EXPECT_THAT(out.str(), HasSubstr(warning));
+
+  return std::move(driver.ctx);
 }
 
-void test_for_warning(const std::string &input,
-                      const std::string &warning,
-                      bool invert = false,
-                      bool safe_mode = true)
+ast::ASTContext test_for_warning(const std::string &input,
+                                 const std::string &warning,
+                                 bool invert = false,
+                                 bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  test_for_warning(*bpftrace, input, warning, invert, safe_mode);
+  return test_for_warning(*bpftrace, input, warning, invert, safe_mode);
 }
 
-void test(BPFtrace &bpftrace,
-          bool mock_has_features,
-          Driver &driver,
-          std::string_view input,
-          int expected_result,
-          std::string_view expected_error = {},
-          bool safe_mode = true,
-          bool has_child = false)
+ast::ASTContext test(BPFtrace &bpftrace,
+                     bool mock_has_features,
+                     std::string_view input,
+                     int expected_result,
+                     std::string_view expected_error = {},
+                     bool safe_mode = true,
+                     bool has_child = false)
 {
+  Driver driver(bpftrace);
+
   if (!input.empty() && input[0] == '\n')
     input.remove_prefix(1); // Remove initial '\n'
 
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
-  driver.ctx.diagnostics().clear();
 
   // Override to mockbpffeature.
   bpftrace.cmd_ = has_child ? "not-empty" : "";
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  bool parse_ok = driver.parse_str(input) == 0;
+  EXPECT_TRUE(parse_ok) << msg.str();
+  if (!parse_ok) {
+    return ast::ASTContext();
+  }
 
   auto ok = ast::PassManager()
                 .put(bpftrace)
                 .add(ast::CreateFieldAnalyserPass())
                 .run(driver.ctx);
-  ASSERT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
+  EXPECT_TRUE(ok && driver.ctx.diagnostics().ok()) << msg.str();
+  return ast::ASTContext();
+}
 
   ClangParser clang;
   clang.parse(driver.ctx.root, bpftrace);
-
-  driver.ctx.diagnostics().clear();
-  ASSERT_EQ(driver.parse_str(input), 0);
+  parse_ok = driver.parse_str(input) == 0;
+  EXPECT_TRUE(parse_ok) << msg.str();
+  if (!parse_ok) {
+    return ast::ASTContext();
+  }
 
   ok = ast::PassManager()
            .put(bpftrace)
            .add(ast::CreateSemanticPass())
            .run(driver.ctx);
-  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_TRUE(bool(ok)) << msg.str();
+  if (!ok) {
+    return ast::ASTContext();
+  }
 
   if (expected_result != 0) {
     // Accept any failure result.
@@ -117,117 +137,106 @@ void test(BPFtrace &bpftrace,
     driver.ctx.diagnostics().emit(out);
     EXPECT_EQ(out.str(), expected_error);
   }
+
+  return std::move(driver.ctx);
 }
 
-void test(BPFtrace &bpftrace, std::string_view input, bool safe_mode = true)
+ast::ASTContext test(BPFtrace &bpftrace,
+                     std::string_view input,
+                     bool safe_mode = true)
 {
-  Driver driver(bpftrace);
-  test(bpftrace, true, driver, input, 0, {}, safe_mode, false);
+  return test(bpftrace, true, input, 0, {}, safe_mode, false);
 }
 
-void test(BPFtrace &bpftrace,
-          std::string_view input,
-          int expected_result,
-          bool safe_mode = true)
+ast::ASTContext test(BPFtrace &bpftrace,
+                     std::string_view input,
+                     int expected_result,
+                     bool safe_mode = true)
 {
   // This function will eventually be deprecated in favour of test_error()
   assert(expected_result != 0 &&
          "Use test(BPFtrace&, std::string_view) for expected successes");
-  Driver driver(bpftrace);
-  test(bpftrace, true, driver, input, expected_result, {}, safe_mode, false);
+  return test(bpftrace, true, input, expected_result, {}, safe_mode, false);
 }
 
-void test(Driver &driver, std::string_view input)
+ast::ASTContext test(std::string_view input)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, true, driver, input, 0, {}, true, false);
+  return test(*bpftrace, true, input, 0, {}, true, false);
 }
 
-void test(Driver &driver, std::string_view input, int expected_result)
+ast::ASTContext test(std::string_view input, int expected_result)
 {
   // This function will eventually be deprecated in favour of test_error()
   assert(expected_result != 0 &&
          "Use test(Driver&, std::string_view) for expected successes");
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, true, driver, input, expected_result, {}, true, false);
+  return test(*bpftrace, true, input, expected_result, {}, true, false);
 }
 
-void test(MockBPFfeature &feature, std::string_view input)
+ast::ASTContext test(MockBPFfeature &feature, std::string_view input)
 {
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
   bool mock_has_features = feature.has_features_;
-  test(*bpftrace, mock_has_features, driver, input, 0, {}, true, false);
+  return test(*bpftrace, mock_has_features, input, 0, {}, true, false);
 }
 
-void test(MockBPFfeature &feature,
-          std::string_view input,
-          int expected_result,
-          bool safe_mode = true)
+ast::ASTContext test(MockBPFfeature &feature,
+                     std::string_view input,
+                     int expected_result,
+                     bool safe_mode = true)
 {
   // This function will eventually be deprecated in favour of test_error()
   assert(expected_result != 0 &&
          "Use test(MockBPFfeature&, std::string_view) for expected successes");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
   bool mock_has_features = feature.has_features_;
-  test(*bpftrace,
-       mock_has_features,
-       driver,
-       input,
-       expected_result,
-       {},
-       safe_mode,
-       false);
+  return test(*bpftrace,
+              mock_has_features,
+              input,
+              expected_result,
+              {},
+              safe_mode,
+              false);
 }
 
-void test(std::string_view input,
-          int expected_result,
-          bool safe_mode,
-          bool has_child = false)
+ast::ASTContext test(std::string_view input,
+                     int expected_result,
+                     bool safe_mode,
+                     bool has_child = false)
 {
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace,
-       true,
-       driver,
-       input,
-       expected_result,
-       {},
-       safe_mode,
-       has_child);
+  return test(
+      *bpftrace, true, input, expected_result, {}, safe_mode, has_child);
 }
 
-void test(std::string_view input, int expected_result)
+ast::ASTContext test(std::string_view input, int expected_result)
 {
   // This function will eventually be deprecated in favour of test_error()
   assert(expected_result != 0 &&
          "Use test(std::string_view) for expected successes");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace, true, driver, input, expected_result, {}, true, false);
+  return test(*bpftrace, true, input, expected_result, {}, true, false);
 }
 
-void test(std::string_view input)
+ast::ASTContext test(std::string_view input)
 {
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace, true, driver, input, 0, {}, true, false);
+  return test(*bpftrace, true, input, 0, {}, true, false);
 }
 
-void test(BPFtrace &bpftrace,
-          std::string_view input,
-          std::string_view expected_ast)
+ast::ASTContext test(BPFtrace &bpftrace,
+                     std::string_view input,
+                     std::string_view expected_ast)
 {
-  Driver driver(bpftrace);
-  test(bpftrace, true, driver, input, 0, {}, true, false);
+  auto ast = test(bpftrace, true, input, 0, {}, true, false);
 
   if (expected_ast[0] == '\n')
     expected_ast.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
   ast::Printer printer(out);
-  printer.visit(driver.ctx.root);
+  printer.visit(ast.root);
 
   if (expected_ast[0] == '*' && expected_ast[expected_ast.size() - 1] == '*') {
     // Remove globs from beginning and end
@@ -238,29 +247,29 @@ void test(BPFtrace &bpftrace,
   }
 
   EXPECT_EQ(expected_ast, out.str());
+  return ast;
 }
 
-void test(std::string_view input, std::string_view expected_ast)
+ast::ASTContext test(std::string_view input, std::string_view expected_ast)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, input, expected_ast);
+  return test(*bpftrace, input, expected_ast);
 }
 
-void test_error(BPFtrace &bpftrace,
-                std::string_view input,
-                std::string_view expected_error,
-                bool has_features = true)
+ast::ASTContext test_error(BPFtrace &bpftrace,
+                           std::string_view input,
+                           std::string_view expected_error,
+                           bool has_features = true)
 {
-  Driver driver(bpftrace);
-  test(bpftrace, has_features, driver, input, -1, expected_error, true, false);
+  return test(bpftrace, has_features, input, -1, expected_error, true, false);
 }
 
-void test_error(std::string_view input,
-                std::string_view expected_error,
-                bool has_features = true)
+ast::ASTContext test_error(std::string_view input,
+                           std::string_view expected_error,
+                           bool has_features = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  test_error(*bpftrace, input, expected_error, has_features);
+  return test_error(*bpftrace, input, expected_error, has_features);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -1325,11 +1334,10 @@ TEST(semantic_analyser, call_str_2_lit)
 
   // Check the string size
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $x = str(arg0, 3); }");
+  auto ast = test("kprobe:f { $x = str(arg0, 3); }");
 
   auto x = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateString(3), x->var->type);
 }
 
@@ -1477,7 +1485,6 @@ TEST(semantic_analyser, call_uaddr)
 
   // The C struct parser should set the is_signed flag on signed types
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   std::string prog = "uprobe:/bin/sh:main {"
                      "$a = uaddr(\"12345_1\");"
                      "$b = uaddr(\"12345_2\");"
@@ -1487,13 +1494,13 @@ TEST(semantic_analyser, call_uaddr)
                      "$f = uaddr(\"12345_33\");"
                      "}";
 
-  test(driver, prog);
+  auto ast = test(prog);
 
   std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
 
   for (size_t i = 0; i < sizes.size(); i++) {
     auto v = static_cast<ast::AssignVarStatement *>(
-        driver.ctx.root->probes.at(0)->block->stmts.at(i));
+        ast.root->probes.at(0)->block->stmts.at(i));
     EXPECT_TRUE(v->var->type.IsPtrTy());
     EXPECT_TRUE(v->var->type.GetPointeeTy()->IsIntTy());
     EXPECT_EQ((unsigned long int)sizes.at(i),
@@ -1776,31 +1783,30 @@ TEST(semantic_analyser, array_access)
        "arg0; @x = $s->y[5];}",
        3);
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver,
-       "struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
-       "arg0; @x = $s->y[0];}");
+  auto ast = test(
+      "struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+      "arg0; @x = $s->y[0];}");
   auto assignment = static_cast<ast::AssignMapStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(1));
+      ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt64(), assignment->map->type);
 
-  test(driver,
-       "struct MyStruct { int y[4]; } kprobe:f { $s = ((struct MyStruct *) "
-       "arg0)->y; @x = $s[0];}");
+  ast = test(
+      "struct MyStruct { int y[4]; } kprobe:f { $s = ((struct MyStruct *) "
+      "arg0)->y; @x = $s[0];}");
   auto array_var_assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateArray(4, CreateInt32()), array_var_assignment->var->type);
 
-  test(driver,
-       "struct MyStruct { int y[4]; } kprobe:f { @a[0] = ((struct MyStruct *) "
-       "arg0)->y; @x = @a[0][0];}");
+  ast = test(
+      "struct MyStruct { int y[4]; } kprobe:f { @a[0] = ((struct MyStruct *) "
+      "arg0)->y; @x = @a[0][0];}");
   auto array_map_assignment = static_cast<ast::AssignMapStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateArray(4, CreateInt32()), array_map_assignment->map->type);
 
-  test(driver, "kprobe:f { $s = (int32 *) arg0; $x = $s[0]; }");
+  ast = test("kprobe:f { $s = (int32 *) arg0; $x = $s[0]; }");
   auto var_assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(1));
+      ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
 
   // Positional parameter as index
@@ -1901,11 +1907,10 @@ TEST(semantic_analyser, array_compare)
 TEST(semantic_analyser, variable_type)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $x = 1 }");
+  auto ast = test("kprobe:f { $x = 1 }");
   auto st = CreateInt64();
   auto assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(st, assignment->var->type);
 }
 
@@ -1933,13 +1938,12 @@ TEST(semantic_analyser, unroll)
 TEST(semantic_analyser, map_integer_sizes)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $x = (int32) -1; @x = $x; }");
+  auto ast = test("kprobe:f { $x = (int32) -1; @x = $x; }");
 
   auto var_assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   auto map_assignment = static_cast<ast::AssignMapStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(1));
+      ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
   EXPECT_EQ(CreateInt64(), map_assignment->map->type);
 }
@@ -1947,22 +1951,20 @@ TEST(semantic_analyser, map_integer_sizes)
 TEST(semantic_analyser, binop_integer_promotion)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $x = (int32)5 + (int16)6 }");
+  auto ast = test("kprobe:f { $x = (int32)5 + (int16)6 }");
 
   auto var_assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
 }
 
 TEST(semantic_analyser, binop_integer_no_promotion)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $x = (int8)5 + (int8)6 }");
+  auto ast = test("kprobe:f { $x = (int8)5 + (int8)6 }");
 
   auto var_assignment = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateInt8(), var_assignment->var->type);
 }
 
@@ -2715,20 +2717,19 @@ TEST(semantic_analyser, field_access_sub_struct)
 TEST(semantic_analyser, field_access_is_internal)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   std::string structs = "struct type1 { int x; }";
 
   {
-    test(driver, structs + "kprobe:f { $x = (*(struct type1*)0).x }");
-    auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+    auto ast = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
+    auto &stmts = ast.root->probes.at(0)->block->stmts;
     auto var_assignment1 = static_cast<ast::AssignVarStatement *>(stmts.at(0));
     EXPECT_FALSE(var_assignment1->var->type.is_internal);
   }
 
   {
-    test(driver,
-         structs + "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
-    auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+    auto ast = test(structs +
+                    "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
+    auto &stmts = ast.root->probes.at(0)->block->stmts;
     auto map_assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
     auto var_assignment2 = static_cast<ast::AssignVarStatement *>(stmts.at(1));
     EXPECT_TRUE(map_assignment->map->type.is_internal);
@@ -2833,10 +2834,9 @@ TEST(semantic_analyser, positional_parameters)
   // Parameters can be used as string literals
   test(bpftrace, "kprobe:f { printf(\"%d\", cgroupid(str($2))); }");
 
-  Driver driver(bpftrace);
-  test(driver, "k:f { $1 }");
+  auto ast = test("k:f { $1 }");
   auto stmt = static_cast<ast::ExprStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(0));
+      ast.root->probes.at(0)->block->stmts.at(0));
   auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
   EXPECT_EQ(CreateUInt64(), pp->type);
   EXPECT_TRUE(pp->is_literal);
@@ -2998,22 +2998,21 @@ TEST(semantic_analyser, cast_sign)
 {
   // The C struct parser should set the is_signed flag on signed types
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   std::string prog =
       "struct t { int s; unsigned int us; long l; unsigned long ul }; "
       "kprobe:f { "
       "  $t = ((struct t *)0xFF);"
       "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
-  test(driver, prog);
+  auto ast = test(prog);
 
   auto s = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(1));
+      ast.root->probes.at(0)->block->stmts.at(1));
   auto us = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(2));
+      ast.root->probes.at(0)->block->stmts.at(2));
   auto l = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(3));
+      ast.root->probes.at(0)->block->stmts.at(3));
   auto ul = static_cast<ast::AssignVarStatement *>(
-      driver.ctx.root->probes.at(0)->block->stmts.at(4));
+      ast.root->probes.at(0)->block->stmts.at(4));
   EXPECT_EQ(CreateInt32(), s->var->type);
   EXPECT_EQ(CreateUInt32(), us->var->type);
   EXPECT_EQ(CreateInt64(), l->var->type);
@@ -3031,7 +3030,6 @@ TEST(semantic_analyser, binop_sign)
                               ">=", "+",  "-", "/",  "*" };
   for (std::string op : operators) {
     BPFtrace bpftrace;
-    Driver driver(bpftrace);
     std::string prog = prog_pre + "$varA = $t->l " + op +
                        " $t->l; "
                        "$varB = $t->ul " +
@@ -3042,15 +3040,15 @@ TEST(semantic_analyser, binop_sign)
                        " $t->ul;"
                        "}";
 
-    test(driver, prog);
+    auto ast = test(prog);
     auto varA = static_cast<ast::AssignVarStatement *>(
-        driver.ctx.root->probes.at(0)->block->stmts.at(1));
+        ast.root->probes.at(0)->block->stmts.at(1));
     EXPECT_EQ(CreateInt64(), varA->var->type);
     auto varB = static_cast<ast::AssignVarStatement *>(
-        driver.ctx.root->probes.at(0)->block->stmts.at(2));
+        ast.root->probes.at(0)->block->stmts.at(2));
     EXPECT_EQ(CreateUInt64(), varB->var->type);
     auto varC = static_cast<ast::AssignVarStatement *>(
-        driver.ctx.root->probes.at(0)->block->stmts.at(3));
+        ast.root->probes.at(0)->block->stmts.at(3));
     EXPECT_EQ(CreateUInt64(), varC->var->type);
   }
 }
@@ -3444,13 +3442,12 @@ TEST(semantic_analyser, builtin_args)
 TEST(semantic_analyser, type_ctx)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   std::string structs = "struct c {char c} struct x { long a; short b[4]; "
                         "struct c c; struct c *d;}";
-  test(driver,
-       structs + "kprobe:f { $x = (struct x*)ctx; $a = $x->a; $b = $x->b[0]; "
-                 "$c = $x->c.c; $d = $x->d->c;}");
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto ast = test(structs +
+                  "kprobe:f { $x = (struct x*)ctx; $a = $x->a; $b = $x->b[0]; "
+                  "$c = $x->c.c; $d = $x->d->c;}");
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $x = (struct x*)ctx;
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
@@ -3527,9 +3524,9 @@ TEST(semantic_analyser, double_pointer_basic)
 TEST(semantic_analyser, double_pointer_int)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver, "kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }");
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto ast = test(driver,
+                  "kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }");
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $pp = (int8 **)1;
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
@@ -3555,11 +3552,11 @@ TEST(semantic_analyser, double_pointer_int)
 TEST(semantic_analyser, double_pointer_struct)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(driver,
-       "struct Foo { char x; long y; }"
-       "kprobe:f { $pp = (struct Foo **)1; $p = *$pp; $val = $p->x; }");
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto ast = test(
+      driver,
+      "struct Foo { char x; long y; }"
+      "kprobe:f { $pp = (struct Foo **)1; $p = *$pp; $val = $p->x; }");
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $pp = (struct Foo **)1;
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
@@ -3736,16 +3733,15 @@ TEST(semantic_analyser, tuple_indexing)
 TEST(semantic_analyser, tuple_assign_var)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   SizedType ty = CreateTuple(
       bpftrace.structs.AddTuple({ CreateInt64(), CreateString(6) }));
-  test(bpftrace,
-       true,
-       driver,
-       R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_",
-       0);
+  auto ast = test(bpftrace,
+                  true,
+                  driver,
+                  R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_",
+                  0);
 
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
@@ -3760,15 +3756,14 @@ TEST(semantic_analyser, tuple_assign_var)
 TEST(semantic_analyser, tuple_assign_map)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   SizedType ty;
-  test(bpftrace,
-       true,
-       driver,
-       R"_(BEGIN { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })_",
-       0);
+  auto ast = test(bpftrace,
+                  true,
+                  driver,
+                  R"_(BEGIN { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })_",
+                  0);
 
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, 3, 3, 7);
   auto assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
@@ -3787,14 +3782,13 @@ TEST(semantic_analyser, tuple_assign_map)
 TEST(semantic_analyser, tuple_nested)
 {
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
   SizedType ty_inner = CreateTuple(
       bpftrace.structs.AddTuple({ CreateInt64(), CreateInt64() }));
   SizedType ty = CreateTuple(
       bpftrace.structs.AddTuple({ CreateInt64(), ty_inner }));
-  test(bpftrace, true, driver, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
+  auto ast = test(bpftrace, true, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
 
-  auto &stmts = driver.ctx.root->probes.at(0)->block->stmts;
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
@@ -3934,36 +3928,31 @@ TEST(semantic_analyser, string_size)
 {
   // Size of the variable should be the size of the larger string (incl. null)
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(bpftrace, true, driver, R"_(BEGIN { $x = "hi"; $x = "hello"; })_", 0);
-  auto stmt = driver.ctx.root->probes.at(0)->block->stmts.at(0);
+  auto ast = test(bpftrace, true, R"_(BEGIN { $x = "hi"; $x = "hello"; })_", 0);
+  auto stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsStringTy());
   ASSERT_EQ(var_assign->var->type.GetSize(), 6UL);
 
-  test(bpftrace, true, driver, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
-  stmt = driver.ctx.root->probes.at(0)->block->stmts.at(0);
+  ast = test(bpftrace, true, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
+  stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->type.IsStringTy());
   ASSERT_EQ(map_assign->map->type.GetSize(), 6UL);
 
-  test(bpftrace,
-       true,
-       driver,
-       R"_(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})_",
-       0);
-  stmt = driver.ctx.root->probes.at(0)->block->stmts.at(0);
+  ast = test(
+      bpftrace, true, R"_(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})_", 0);
+  stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->key_expr->type.IsStringTy());
   ASSERT_EQ(map_assign->map->key_expr->type.GetSize(), 3UL);
   ASSERT_EQ(map_assign->map->key_type.GetSize(), 6UL);
 
-  test(bpftrace,
-       true,
-       driver,
-       R"_(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})_",
-       0);
-  stmt = driver.ctx.root->probes.at(0)->block->stmts.at(0);
+  ast = test(bpftrace,
+             true,
+             R"_(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})_",
+             0);
+  stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->key_expr->type.IsTupleTy());
   ASSERT_TRUE(map_assign->map->key_expr->type.GetField(0).type.IsStringTy());
@@ -3972,12 +3961,11 @@ TEST(semantic_analyser, string_size)
   ASSERT_EQ(map_assign->map->key_expr->type.GetSize(), 16UL);
   ASSERT_EQ(map_assign->map->key_type.GetSize(), 16UL);
 
-  test(bpftrace,
-       true,
-       driver,
-       R"_(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })_",
-       0);
-  stmt = driver.ctx.root->probes.at(0)->block->stmts.at(0);
+  ast = test(bpftrace,
+             true,
+             R"_(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })_",
+             0);
+  stmt = ast.root->probes.at(0)->block->stmts.at(0);
   var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsTupleTy());
   ASSERT_TRUE(var_assign->var->type.GetField(0).type.IsStringTy());

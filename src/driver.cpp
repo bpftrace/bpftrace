@@ -48,7 +48,9 @@ void Driver::parse(const std::string &contents)
 
 void Driver::error(const location &l, const std::string &m)
 {
-  ctx.diagnostics().addError(l) << m;
+  // This path is normally not allowed, however we don't yet have nodes
+  // constructed. Therefore, we add diagnostics directly via the private field.
+  ctx.diagnostics_->addError(l) << m;
 }
 
 } // namespace bpftrace
