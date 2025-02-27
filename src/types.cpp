@@ -439,9 +439,9 @@ SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
 SizedType CreateStack(bool kernel, StackType stack)
 {
   // These sizes are based on the stack key (see
-  // IRBuilderBPF::GetStackStructType)
+  // IRBuilderBPF::GetStackStructType) but include struct padding
   auto st = SizedType(kernel ? Type::kstack_t : Type::ustack_t,
-                      kernel ? 12 : 20);
+                      kernel ? 16 : 24);
   st.stack_type = stack;
   return st;
 }
