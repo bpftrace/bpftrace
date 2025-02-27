@@ -113,3 +113,11 @@ PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = ((int8)1, usym(reg("ni
 EXPECT_REGEX ^@: \(1, uprobeFunction1, 10\)$
 ARCH ppc64|ppc64le
 AFTER ./testprogs/uprobe_test
+
+NAME ustack in tuple
+PROG BEGIN { print((ustack, "a")); exit(); }
+EXPECT Attaching 1 probe...
+
+NAME kstack in tuple
+PROG BEGIN { print((kstack, "a")); exit(); }
+EXPECT Attaching 1 probe...
