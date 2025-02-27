@@ -428,13 +428,18 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   for (auto& match : uprobes) {
     std::string fun = match;
     std::string path = erase_prefix(fun);
-    auto dwarf = Dwarf::GetFromBinary(nullptr, path);
-    if (dwarf)
+    if (auto dwarf = Dwarf::GetFromBinary(nullptr, path)) {
       params.emplace(match, dwarf->get_function_params(fun));
-    else {
-      if (warned_paths.insert(path).second)
+    } else {
+      if (warned_paths.insert(path).second) {
+#ifdef HAVE_LIBLLDB
         LOG(WARNING) << "No DWARF found for \"" << path << "\""
                      << ", cannot show parameter info";
+#else
+        LOG(WARNING) << "bpftrace was compiled without liblldb, "
+                     << "cannot show parameter info for \"" << path << "\"";
+#endif
+      }
     }
   }
 
