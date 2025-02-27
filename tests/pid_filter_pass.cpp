@@ -31,7 +31,7 @@ void test(std::string_view input, bool has_pid, bool has_filter)
 
   ASSERT_EQ(driver.parse_str(input), 0);
   ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
-  pid_filter.analyse();
+  pid_filter.visit(driver.ctx.root);
 
   std::string_view expected_ast = R"(
   if
@@ -43,8 +43,8 @@ void test(std::string_view input, bool has_pid, bool has_filter)
 )";
 
   std::ostringstream out;
-  ast::Printer printer(driver.ctx, out);
-  printer.print();
+  ast::Printer printer(out);
+  printer.visit(driver.ctx.root);
 
   if (has_filter) {
     EXPECT_THAT(out.str(), HasSubstr(expected_ast));

@@ -39,7 +39,9 @@ bool probe_needs_pid_filter(AttachPoint *ap)
   return false;
 }
 
-Statement *create_pid_filter(ASTContext &ctx, int pid, const location &loc)
+static Statement *create_pid_filter(ASTContext &ctx,
+                                    int pid,
+                                    const location &loc)
 {
   return ctx.make_node<If>(
       ctx.make_node<Binop>(ctx.make_node<Builtin>("pid", loc),
@@ -63,22 +65,17 @@ void PidFilterPass::visit(Probe &probe)
   for (AttachPoint *ap : probe.attach_points) {
     if (probe_needs_pid_filter(ap)) {
       probe.block->stmts.insert(probe.block->stmts.begin(),
-                                create_pid_filter(ctx_, *pid, probe.loc));
+                                create_pid_filter(ast_, *pid, probe.loc));
       return;
     }
   }
-}
-
-void PidFilterPass::analyse()
-{
-  visit(ctx_.root);
 }
 
 Pass CreatePidFilterPass()
 {
   auto fn = [](PassContext &ctx) {
     auto pid_filter = PidFilterPass(ctx.ast_ctx, ctx.b);
-    pid_filter.analyse();
+    pid_filter.visit(ctx.ast_ctx.root);
   };
 
   return Pass("PidFilter", fn);

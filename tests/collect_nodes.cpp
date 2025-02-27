@@ -24,7 +24,7 @@ TEST(CollectNodes, direct)
   ASTContext ctx;
   auto &var = *ctx.make_node<Variable>("myvar", bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(var);
 
   test({ var }, visitor.nodes());
@@ -37,7 +37,7 @@ TEST(CollectNodes, indirect)
   auto &unop = *ctx.make_node<Unop>(
       Operator::INCREMENT, &var, false, bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(unop);
 
   test({ var }, visitor.nodes());
@@ -50,7 +50,7 @@ TEST(CollectNodes, none)
   auto &unop = *ctx.make_node<Unop>(
       Operator::INCREMENT, &map, false, bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(unop);
 
   test({}, visitor.nodes());
@@ -67,7 +67,7 @@ TEST(CollectNodes, multiple_runs)
   auto &unop2 = *ctx.make_node<Unop>(
       Operator::INCREMENT, &var2, false, bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(unop1);
   visitor.visit(unop2);
 
@@ -82,7 +82,7 @@ TEST(CollectNodes, multiple_children)
   auto &binop = *ctx.make_node<Binop>(
       &var1, Operator::PLUS, &var2, bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(binop);
 
   test({ var1, var2 }, visitor.nodes());
@@ -96,7 +96,7 @@ TEST(CollectNodes, predicate)
   auto &binop = *ctx.make_node<Binop>(
       &var1, Operator::PLUS, &var2, bpftrace::location{});
 
-  CollectNodes<Variable> visitor(ctx);
+  CollectNodes<Variable> visitor;
   visitor.visit(binop, [](const auto &var) { return var.ident == "myvar2"; });
 
   test({ var2 }, visitor.nodes());
@@ -113,7 +113,7 @@ TEST(CollectNodes, nested)
   auto &binop2 = *ctx.make_node<Binop>(
       &binop1, Operator::MINUS, &var3, bpftrace::location{});
 
-  CollectNodes<Binop> visitor(ctx);
+  CollectNodes<Binop> visitor;
   visitor.visit(binop2,
                 [](const auto &binop) { return binop.op == Operator::PLUS; });
 
