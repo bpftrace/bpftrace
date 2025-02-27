@@ -1453,9 +1453,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     assert(arg->type.IsIntegerTy());
     if (arg->type.GetSize() > 1) {
       llvm::Type *arg_type = b_.GetType(arg->type);
+#if LLVM_VERSION_MAJOR >= 20
+      llvm::Function *swap_fun = Intrinsic::getOrInsertDeclaration(
+          module_.get(), Intrinsic::bswap, { arg_type });
+#else
       llvm::Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
                                                            Intrinsic::bswap,
                                                            { arg_type });
+#endif
 
       return ScopedExpr(b_.CreateCall(swap_fun, { scoped_arg.value() }),
                         std::move(scoped_arg));
@@ -3964,8 +3969,7 @@ void CodegenLLVM::optimize()
   pb.crossRegisterProxies(lam, fam, cgam, mam);
 
   ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
-      llvm::OptimizationLevel::O3,
-      /*LTOPreLink=*/false);
+      llvm::OptimizationLevel::O3);
   mpm.run(*module_, mam);
 
   state_ = State::OPT;
