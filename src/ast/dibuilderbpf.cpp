@@ -176,11 +176,12 @@ DIType *DIBuilderBPF::CreateTupleType(const SizedType &stype)
 DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
 {
   assert(stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy() ||
-         stype.IsStatsTy());
+         stype.IsStatsTy() || stype.IsTSeriesTy());
 
   // For Min/Max, the first field is the value and the second field is the
   // "value is set" flag. For Avg/Stats, the first field is the total and the
-  // second field is the count.
+  // second field is the count. If used inside a TSeries, the third field is the
+  // "epoch", used to determine when our time window "rolls over".
   SmallVector<Metadata *, 2> fields = { createMemberType(file,
                                                          "",
                                                          file,
@@ -199,12 +200,25 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
                                                          stype.GetSize() * 8,
                                                          DINode::FlagZero,
                                                          getInt32Ty()) };
+  if (stype.IsTSeriesTy()) {
+    
+    SmallVector<Metadata *, 1> extra_field = { createMemberType(file,
+                                                                "",
+                                                                file,
+                                                                0,
+                                                                stype.GetSize() * 8,
+                                                                0,
+                                                                0,
+                                                                DINode::FlagZero,
+                                                                getInt64Ty()) };
+    fields.append(extra_field);
+  }
 
   DICompositeType *result = createStructType(file,
                                              "",
                                              file,
                                              0,
-                                             (stype.GetSize() * 8) * 2,
+                                             (stype.GetSize() * 8) * fields.size(),
                                              0,
                                              DINode::FlagZero,
                                              nullptr,
@@ -274,7 +288,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
     return CreateTupleType(stype);
 
   if (stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy() ||
-      stype.IsStatsTy())
+      stype.IsStatsTy() || stype.IsTSeriesTy())
     return CreateMapStructType(stype);
 
   if (stype.IsPtrTy())
@@ -315,7 +329,7 @@ DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
                : getInt64Ty();
 
   // Some map types need an extra 8-byte key.
-  if (value_type.IsHistTy() || value_type.IsLhistTy()) {
+  if (value_type.IsHistTy() || value_type.IsLhistTy() || value_type.IsTSeriesTy()) {
     uint64_t size = key_type.GetSize() + 8;
     return CreateByteArrayType(size);
   }

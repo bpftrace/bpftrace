@@ -284,6 +284,9 @@ public:
   // Returns the integer type used to represent pointers in traced code.
   llvm::Type *getPointerStorageTy(AddrSpace as);
 
+  void createMinMax(llvm::Type *value_type, Value *value_ptr, Value *new_val, bool is_signed, bool is_max, BasicBlock *merge_block);
+  void createAvg(llvm::Type *value_type, Value *value_ptr, Value *new_val);
+
 private:
   Module &module_;
   BPFtrace &bpftrace_;
@@ -359,6 +362,7 @@ private:
                        AllocaInst *count,
                        CallInst *call,
                        const SizedType &type);
+
 
   std::map<std::string, StructType *> structs_;
   llvm::Function *preserve_static_offset_ = nullptr;
