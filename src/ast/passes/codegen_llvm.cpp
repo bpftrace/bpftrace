@@ -766,12 +766,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *strlen = b_.getInt64(max_strlen);
     if (call.vargs.size() > 1) {
       auto scoped_arg = visit(call.vargs.at(1));
-      Value *cast = b_.CreateIntCast(scoped_arg.value(), b_.getInt64Ty(), true);
-      Value *proposed_strlen = b_.CreateAdd(cast,
-                                            b_.getInt64(1)); // add 1 to
-                                                             // accommodate
-                                                             // probe_read_str's
-                                                             // null byte
+      Value *proposed_strlen = scoped_arg.value();
 
       // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
