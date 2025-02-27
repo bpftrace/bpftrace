@@ -2741,8 +2741,13 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
 
 #if LLVM_VERSION_MAJOR >= 18
   if (!preserve_static_offset_) {
+#if LLVM_VERSION_MAJOR >= 20
+    preserve_static_offset_ = llvm::Intrinsic::getOrInsertDeclaration(
+        &module_, llvm::Intrinsic::preserve_static_offset);
+#else
     preserve_static_offset_ = llvm::Intrinsic::getDeclaration(
         &module_, llvm::Intrinsic::preserve_static_offset);
+#endif
   }
   ptr = CreateCall(preserve_static_offset_, ptr);
 #endif
