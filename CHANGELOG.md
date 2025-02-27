@@ -27,6 +27,8 @@ and this project adheres to
   - [#3812](https://github.com/bpftrace/bpftrace/pull/3812)
 - Added warning when strcontains() is used on strings that are too big and may cause verifier issues
   - [#3811](https://github.com/bpftrace/bpftrace/pull/3811)
+- Add support for LLVM 20
+  - [#3841](https://github.com/bpftrace/bpftrace/pull/3841)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
