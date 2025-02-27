@@ -30,6 +30,7 @@ For LLVM release schedule, see https://llvm.org/.
   - [ ] Mark the release in [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md)
   - [ ] Update `bpftrace_VERSION_*` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt)
   - [ ] Draft a new release in GitHub
+  - [ ] Update the docs on the bpftrace website. [Instructions](https://github.com/bpftrace/website?#updating-the-docs).
 - [ ] Forward-port [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md) and [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt) changes to the master branch.
 
 See [Release Process](docs/release_process.md) for general information on the
