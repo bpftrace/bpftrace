@@ -63,6 +63,8 @@ and this project adheres to
   - [#3805](https://github.com/bpftrace/bpftrace/pull/3805)
 - Fix strcontains() correctness bug where matches could be lost if both strings are non-literal
   - [#3811](https://github.com/bpftrace/bpftrace/pull/3811)
+- Fix str() bug where optional size parameter did not count towards NUL terminator
+  - [#3849](https://github.com/bpftrace/bpftrace/pull/3849)
 #### Security
 #### Docs
 #### Tools
