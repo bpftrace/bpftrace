@@ -44,24 +44,27 @@ jobs:
         - NAME: LLVM 18
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18
-        - NAME: LLVM 19 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm19
         - NAME: LLVM 19 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
-        - NAME: LLVM 19 Clang Debug
+        - NAME: LLVM 20 Release
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm20
+        - NAME: LLVM 20 Debug
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET: .#bpftrace-llvm20
+        - NAME: LLVM 20 Clang Debug
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm20
           CC: clang
           CXX: clang++
-        - NAME: Latest kernel (LLVM 19 Debug)
+        - NAME: Latest kernel (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET: .#bpftrace-llvm20
           NIX_TARGET_KERNEL: .#kernel-6_12
-        - NAME: AOT (LLVM 19 Debug)
+        - NAME: AOT (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
+          NIX_TARGET: .#bpftrace-llvm20
           RUN_TESTS: 0
           RUN_AOT_TESTS: 1
           AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
