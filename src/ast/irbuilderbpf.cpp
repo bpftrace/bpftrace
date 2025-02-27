@@ -435,6 +435,9 @@ llvm::Type *IRBuilderBPF::GetMapValueType(const SizedType &stype)
     // The second is the count value
     std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
     ty = GetStructType("avg_stas_val", llvm_elems, false);
+  } else if (stype.IsTSeriesTy()) {
+      std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty(), getInt64Ty() };
+      ty = GetStructType("t_series_val", llvm_elems, false);
   } else {
     ty = GetType(stype);
   }
@@ -2794,6 +2797,73 @@ llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
   // TODO: we don't currently have an easy way of determining the pointer size
   // of the uprobed process, so assume it's the same as the kernel's for now.
   return getKernelPointerStorageTy();
+}
+
+void IRBuilderBPF::createMinMax(llvm::Type *value_type, Value *value_ptr, Value *new_val, bool is_signed, bool is_max, BasicBlock *merge_block)
+{
+  Value *mm_val = CreateLoad(
+      getInt64Ty(),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(0) }));
+
+  Value *is_set_val = CreateLoad(
+      getInt64Ty(),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(1) }));
+
+  llvm::Function *parent = GetInsertBlock()->getParent();
+  
+  BasicBlock *is_set_block = BasicBlock::Create(module_.getContext(),
+                                                "is_set",
+                                                parent);
+  BasicBlock *min_max_block = BasicBlock::Create(module_.getContext(),
+                                                "min_max",
+                                                parent);
+  Value *is_set_condition = CreateICmpEQ(is_set_val,
+                                         getInt64(1),
+                                         "is_set_cond");
+
+  // If the value has not been set jump past the min_max_condition
+  CreateCondBr(is_set_condition, is_set_block, min_max_block);
+
+  SetInsertPoint(is_set_block);
+
+  Value *min_max_condition;
+
+  if (is_max) {
+    min_max_condition = is_signed ? CreateICmpSGE(new_val, mm_val)
+                                  : CreateICmpUGE(new_val, mm_val);
+  } else {
+    min_max_condition = is_signed ? CreateICmpSGE(mm_val, new_val)
+                                  : CreateICmpUGE(mm_val, new_val);
+  }
+
+  CreateCondBr(min_max_condition, min_max_block, merge_block);
+
+  SetInsertPoint(min_max_block);
+
+  CreateStore(
+      new_val,
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(0) }));
+  CreateStore(
+      getInt64(1),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(1) }));
+}
+
+void IRBuilderBPF::createAvg(llvm::Type *value_type, Value *value_ptr, Value *new_val)
+{
+  Value *total_val = CreateLoad(
+      getInt64Ty(),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(0) }));
+
+  Value *count_val = CreateLoad(
+      getInt64Ty(),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(1) }));
+
+  CreateStore(
+      CreateAdd(total_val, new_val),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(0) }));
+  CreateStore(
+      CreateAdd(getInt64(1), count_val),
+      CreateGEP(value_type, value_ptr, { getInt64(0), getInt32(1) }));
 }
 
 } // namespace bpftrace::ast

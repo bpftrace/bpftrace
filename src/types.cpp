@@ -93,6 +93,7 @@ std::string typestr(const SizedType &type)
     case Type::strerror_t:
     case Type::hist_t:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::none:
     case Type::voidtype:
       return typestr(type.GetTy());
@@ -215,6 +216,7 @@ std::string typestr(Type t)
     case Type::record:   return "record";   break;
     case Type::hist_t:     return "hist_t";     break;
     case Type::lhist_t:    return "lhist_t";    break;
+    case Type::tseries_t:    return "tseries_t";    break;
     case Type::count_t:    return "count_t";    break;
     case Type::sum_t:      return "sum_t";      break;
     case Type::min_t:      return "min_t";      break;
@@ -493,6 +495,11 @@ SizedType CreateLhist()
   return SizedType(Type::lhist_t, 8);
 }
 
+SizedType CreateTSeries()
+{
+  return SizedType(Type::tseries_t, 8);
+}
+
 SizedType CreateHist()
 {
   return SizedType(Type::hist_t, 8);
@@ -675,7 +682,7 @@ bool SizedType::FitsInto(const SizedType &t) const
 bool SizedType::NeedsPercpuMap() const
 {
   return IsHistTy() || IsLhistTy() || IsCountTy() || IsSumTy() || IsMinTy() ||
-         IsMaxTy() || IsAvgTy() || IsStatsTy();
+         IsMaxTy() || IsAvgTy() || IsStatsTy() || IsTSeriesTy();
 }
 } // namespace bpftrace
 
@@ -716,6 +723,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::voidtype:
     case bpftrace::Type::hist_t:
     case bpftrace::Type::lhist_t:
+    case bpftrace::Type::tseries_t:
     case bpftrace::Type::count_t:
     case bpftrace::Type::sum_t:
     case bpftrace::Type::min_t:
