@@ -23,22 +23,21 @@ entry:
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 13
   %arg1 = load volatile i64, ptr %2, align 8
-  %3 = add i64 %arg1, 1
-  %str.min.cmp = icmp ule i64 %3, 1024
-  %str.min.select = select i1 %str.min.cmp, i64 %3, i64 1024
+  %str.min.cmp = icmp ule i64 %arg1, 1024
+  %str.min.select = select i1 %str.min.cmp, i64 %arg1, i64 1024
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %4 = load i64, ptr @max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %4
-  %5 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %5, i32 1024, ptr null)
-  %6 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %7 = getelementptr i64, ptr %6, i64 14
-  %arg0 = load volatile i64, ptr %7, align 8
-  %8 = trunc i64 %str.min.select to i32
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %5, i32 %8, i64 %arg0)
+  %3 = load i64, ptr @max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %3
+  %4 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1024, ptr null)
+  %5 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %6 = getelementptr i64, ptr %5, i64 14
+  %arg0 = load volatile i64, ptr %6, align 8
+  %7 = trunc i64 %str.min.select to i32
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 %7, i64 %arg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %5, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %4, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
 }
