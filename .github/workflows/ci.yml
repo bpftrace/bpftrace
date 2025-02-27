@@ -44,7 +44,7 @@ jobs:
         - NAME: LLVM 18
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm18
-        - NAME: LLVM 19 Debug
+        - NAME: LLVM 19
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
         - NAME: LLVM 20 Release
