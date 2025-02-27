@@ -1,8 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <sstream>
-
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 #include "required_resources.h"
@@ -21,11 +18,9 @@ namespace ast {
 // example the helper error metadata is still being collected during codegen.
 class ResourceAnalyser : public Visitor<ResourceAnalyser> {
 public:
-  ResourceAnalyser(ASTContext &ctx,
-                   BPFtrace &bpftrace,
-                   std::ostream &out = std::cerr);
+  ResourceAnalyser(ASTContext &ctx, BPFtrace &bpftrace);
 
-  std::optional<RequiredResources> analyse();
+  RequiredResources analyse();
 
   using Visitor<ResourceAnalyser>::visit;
   void visit(Probe &probe);
@@ -54,8 +49,6 @@ private:
 
   RequiredResources resources_;
   BPFtrace &bpftrace_;
-  std::ostream &out_;
-  std::ostringstream err_;
   // Current probe we're analysing
   Probe *probe_;
 

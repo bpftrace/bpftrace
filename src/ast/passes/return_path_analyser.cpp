@@ -3,8 +3,8 @@
 
 namespace bpftrace::ast {
 
-ReturnPathAnalyser::ReturnPathAnalyser(ASTContext &ctx, std::ostream &out)
-    : Visitor<ReturnPathAnalyser, bool>(ctx), out_(out)
+ReturnPathAnalyser::ReturnPathAnalyser(ASTContext &ctx)
+    : Visitor<ReturnPathAnalyser, bool>(ctx)
 {
 }
 
@@ -26,7 +26,7 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
     if (visit(*stmt))
       return true;
   }
-  LOG(ERROR, subprog.loc, err_) << "Not all code paths returned a value";
+  subprog.addError() << "Not all code paths returned a value";
   return false;
 }
 
@@ -57,22 +57,11 @@ bool ReturnPathAnalyser::visit(If &if_node)
   return false;
 }
 
-int ReturnPathAnalyser::analyse()
-{
-  int result = visit(ctx_.root) ? 0 : 1;
-  if (result)
-    out_ << err_.str();
-  return result;
-}
-
 Pass CreateReturnPathPass()
 {
   auto fn = [](PassContext &ctx) {
     auto return_path = ReturnPathAnalyser(ctx.ast_ctx);
-    int err = return_path.analyse();
-    if (err)
-      return PassResult::Error("ReturnPath");
-    return PassResult::Success();
+    return_path.visit(ctx.ast_ctx.root);
   };
 
   return Pass("ReturnPath", fn);
