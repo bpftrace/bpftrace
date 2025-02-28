@@ -230,6 +230,40 @@ void ResourceAnalyser::visit(Call &call)
     } else {
       map_info.lhist_args = args;
     }
+  } else if (call.func == "tseries") {
+    Expression &value_arg = *call.vargs.at(0);
+    Expression &interval_arg = *call.vargs.at(1);
+    Expression &buckets_arg = *call.vargs.at(2);
+    String &interval = static_cast<String &>(interval_arg);
+    Integer &buckets = static_cast<Integer &>(buckets_arg);
+
+    int64_t interval_ns = std::stol(interval.str);
+    char unit = interval.str[interval.str.length()-2];
+    unit = ('0' <= unit && unit <= '9') ? 's' : unit;
+
+    switch (unit) {
+    case 's':
+      interval_ns *= 1000;
+    case 'm':
+      interval_ns *= 1000;
+    case 'u':
+      interval_ns *= 1000;
+    }
+
+    auto args = TSeriesArgs{
+      .interval_ns = interval_ns,
+      .buckets = buckets.n,
+      .inner_type = value_arg.type,
+    };
+
+    auto &map_info = resources_.maps_info[call.map->ident];
+
+    if (map_info.tseries_args.has_value() && *map_info.tseries_args != args) {
+      LOG(ERROR, call.loc, err_)
+          << "Different tseries bounds in a single map unsupported";
+    } else {
+      map_info.tseries_args = args;
+    }
   } else if (call.func == "time") {
     if (call.vargs.size() > 0)
       resources_.time_args.push_back(get_literal_string(*call.vargs.at(0)));
@@ -307,17 +341,17 @@ void ResourceAnalyser::visit(Call &call)
   // buffer here.
   //
   // The exceptions are:
-  // 1. lhist/hist because the map key buffer includes both the key itself
-  //    and the bucket ID from a call to linear/log2 functions.
+  // 1. lhist/hist/tseries because the map key buffer includes both the key itself
+  //    and the bucket ID from a call to linear/log2/tseries functions.
   // 2. has_key/delete because the map key buffer allocation depends on
   //    arguments to the function e.g.
   //      delete(@, 2)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
-  if (call.func == "lhist" || call.func == "hist") {
+  if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
     Map &map = *call.map;
-    // Allocation is always needed for lhist/hist. But we need to allocate
-    // space for both map key and the bucket ID from a call to linear/log2
+    // Allocation is always needed for lhist/hist/tseries. But we need to allocate
+    // space for both map key and the bucket ID from a call to linear/log2/tseries
     // functions.
     const auto map_key_size = map.key_expr ? map.key_type.GetSize() +
                                                  CreateUInt64().GetSize()
