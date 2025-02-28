@@ -51,9 +51,11 @@ int Driver::parse()
   yylex_destroy(scanner);
 
   if (!failed_) {
-    ast::AttachPointParser ap_parser(ctx, bpftrace_, out_, listing_);
-    if (ap_parser.parse())
+    ast::AttachPointParser ap_parser(ctx, bpftrace_, listing_);
+    if (ap_parser.parse() || !ctx.diagnostics().ok()) {
+      ctx.diagnostics().emit(out_);
       failed_ = true;
+    }
   }
 
   if (failed_) {

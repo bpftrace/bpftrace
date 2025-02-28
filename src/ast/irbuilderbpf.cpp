@@ -1395,8 +1395,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   int abs_size = std::abs(argument->size);
   assert(abs_size == 1 || abs_size == 2 || abs_size == 4 || abs_size == 8);
   if (argument->valid & BCC_USDT_ARGUMENT_DEREF_IDENT)
-    LOG(ERROR) << "deref ident is not handled yet [" << argument->deref_ident
-               << "]";
+    builtin.addError() << "deref ident is not handled yet ["
+                       << argument->deref_ident << "]";
   // USDT arguments can be any valid gas (GNU asm) operand.
   // BCC normalises these into the bcc_usdt_argument and supports most
   // valid gas operands.
@@ -1422,8 +1422,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME &&
       !(argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME)) {
     // Invalid combination??
-    LOG(ERROR) << "index register set without base register;"
-               << " this case is not yet handled";
+    builtin.addError() << "index register set without base register;"
+                       << " this case is not yet handled";
   }
   Value *result = nullptr;
   if (argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME) {
@@ -1446,8 +1446,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
       int ioffset = arch::offset(argument->index_register_name);
       if (ioffset < 0) {
-        LOG(BUG) << "offset for register " << argument->index_register_name
-                 << " not known";
+        builtin.addError() << "offset for register "
+                           << argument->index_register_name << " not known";
       }
       index_offset = CreateSafeGEP(getInt8Ty(),
                                    ctx,
@@ -1498,8 +1498,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   }
 
   if (usdt == nullptr) {
-    LOG(ERROR) << "failed to initialize usdt context for probe "
-               << attach_point->target;
+    builtin.addError() << "failed to initialize usdt context for probe "
+                       << attach_point->target;
     exit(-1);
   }
 
@@ -1512,9 +1512,9 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                             usdt_location_index,
                             arg_num,
                             &argument) != 0) {
-    LOG(ERROR) << "couldn't get argument " << arg_num << " for "
-               << attach_point->target << ":" << attach_point->ns << ":"
-               << attach_point->func;
+    builtin.addError() << "couldn't get argument " << arg_num << " for "
+                       << attach_point->target << ":" << attach_point->ns << ":"
+                       << attach_point->func;
     exit(-2);
   }
 
