@@ -10,6 +10,15 @@ namespace bpftrace::ast {
 
 static constexpr std::string_view ENUM = "enum ";
 
+Node::Node(Diagnostics &d, location loc) : diagnostics_(d), loc(loc)
+{
+  // We don't necessarily expect the `filename` to be accurate for all
+  // locations, but once we have our own location copy we ensure that it
+  // reflects the filename used in the diagnostics.
+  loc.begin.filename = &d.src_.filename;
+  loc.end.filename = &d.src_.filename;
+}
+
 Integer::Integer(Diagnostics &d, int64_t n, location loc, bool is_negative)
     : Expression(d, loc), n(n), is_negative(is_negative)
 {

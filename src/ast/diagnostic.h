@@ -13,6 +13,8 @@
 namespace bpftrace {
 namespace ast {
 
+class ASTSource;
+
 // Diagnostic reflects a single error at a single source location. This is a
 // simple wrapper around a string for that message, and the location class.
 class Diagnostic {
@@ -58,6 +60,8 @@ private:
 class Diagnostics {
 public:
   using Severity = Diagnostic::Severity;
+
+  Diagnostics(ASTSource& src) : src_(src) {};
 
   template <typename... Args>
   Diagnostic& add(Severity severity, Args... args)
@@ -120,12 +124,18 @@ private:
     }
   }
 
+  // The original source associated with these diagnostics. This is used to
+  // emit suitable messages by `emit` (with full source context).
+  ASTSource& src_;
+
   // Two-dimensional vector with all diagnostics. The first level is indexed by
   // severity, and the second level is the set of diagnostics for that level.
   //
   // N.B. we store diagnostics as a pointer because the lifetime is returned
   // early above, so they must not be moving at any point.
   std::vector<std::vector<std::unique_ptr<Diagnostic>>> diagnostics_;
+
+  friend class Node;
 };
 
 } // namespace ast

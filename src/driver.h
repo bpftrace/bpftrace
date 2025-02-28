@@ -1,41 +1,29 @@
 #pragma once
 
-#include <fstream>
-#include <string_view>
-
-#include "ast/ast.h"
 #include "ast/context.h"
 #include "bpftrace.h"
 
 typedef void *yyscan_t;
 
+#define YY_DECL                                                                \
+  bpftrace::Parser::symbol_type yylex(bpftrace::Driver &driver,                \
+                                      yyscan_t yyscanner)
+
 namespace bpftrace {
+
+class Parser;
 
 class Driver {
 public:
-  explicit Driver(BPFtrace &bpftrace, std::ostream &o = std::cerr);
-
-  int parse();
-  int parse_str(std::string_view script);
-  void source(std::string_view, std::string_view);
-  void error(std::ostream &, const location &, const std::string &);
+  explicit Driver(ast::ASTContext &ctx, BPFtrace &bpftrace, bool debug = false)
+      : ctx(ctx), bpftrace(bpftrace), debug(debug) {};
+  void parse();
   void error(const location &l, const std::string &m);
-  void error(const std::string &m);
-  ast::ASTContext ctx;
 
-  void debug()
-  {
-    debug_ = true;
-  };
-
-  BPFtrace &bpftrace_;
-
-  bool listing_ = false;
-
-private:
-  std::ostream &out_;
-  bool failed_ = false;
-  bool debug_ = false;
+  // These are accessible to the parser and lexer, but are not mutable.
+  ast::ASTContext &ctx;
+  BPFtrace &bpftrace;
+  const bool debug;
 };
 
 } // namespace bpftrace

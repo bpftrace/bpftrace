@@ -256,32 +256,44 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
   EXPECT_THAT(bpftrace.btf_set_, Contains("TASK_COMM_LEN"));
 }
 
+static void test(const std::string &input,
+                 std::function<void(ast::ASTContext &)> validate)
+{
+  BPFtrace bpftrace;
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  validate(ast);
+}
+
 TEST(tracepoint_format_parser, args_field_access)
 {
-  // Test computing the level of nested structs accessed from tracepoint args
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
   ast::TracepointArgsVisitor visitor;
-  visitor.visit(driver.ctx.root);
 
-  EXPECT_EQ(driver.parse_str("BEGIN { args.f1->f2->f3 }"), 0);
-  visitor.visit(*driver.ctx.root->probes.at(0));
-  EXPECT_EQ(driver.ctx.root->probes.at(0)->tp_args_structs_level, 3);
+  test("BEGIN { args.f1->f2->f3 }", [&](ast::ASTContext &ast) {
+    visitor.visit(*ast.root->probes.at(0));
+    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 3);
+  });
 
   // Should work via intermediary variable, too
-  EXPECT_EQ(driver.parse_str("BEGIN { $x = args.f1; $x->f2->f3 }"), 0);
-  visitor.visit(*driver.ctx.root->probes.at(0));
-  EXPECT_EQ(driver.ctx.root->probes.at(0)->tp_args_structs_level, 3);
+  test("BEGIN { $x = args.f1; $x->f2->f3 }", [&](ast::ASTContext &ast) {
+    visitor.visit(*ast.root->probes.at(0));
+    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 3);
+  });
 
   // "args" used without field access => level should be 0
-  EXPECT_EQ(driver.parse_str("BEGIN { args }"), 0);
-  visitor.visit(*driver.ctx.root->probes.at(0));
-  EXPECT_EQ(driver.ctx.root->probes.at(0)->tp_args_structs_level, 0);
+  test("BEGIN { args }", [&](ast::ASTContext &ast) {
+    visitor.visit(*ast.root->probes.at(0));
+    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 0);
+  });
 
   // "args" not used => level should be -1
-  EXPECT_EQ(driver.parse_str("BEGIN { x->f1->f2->f3 }"), 0);
-  visitor.visit(*driver.ctx.root->probes.at(0));
-  EXPECT_EQ(driver.ctx.root->probes.at(0)->tp_args_structs_level, -1);
+  test("BEGIN { x->f1->f2->f3 }", [&](ast::ASTContext &ast) {
+    visitor.visit(*ast.root->probes.at(0));
+    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, -1);
+  });
 }
 
 } // namespace bpftrace::test::tracepoint_format_parser

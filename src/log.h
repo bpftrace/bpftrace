@@ -31,25 +31,21 @@ enum class LogType
 
 class Log {
 public:
-  static Log& get();
-  void take_input(LogType type,
-                  const std::optional<location>& loc,
-                  std::ostream& out,
-                  std::string&& input);
-  inline void set_source(std::string_view filename, std::string_view source)
-  {
-    src_ = source;
-    filename_ = filename;
-  }
-  inline const std::string& get_source()
-  {
-    return src_;
-  }
-  const std::string get_source_line(unsigned int n);
-
-  // Can only construct with get()
   Log(const Log& other) = delete;
   Log& operator=(const Log& other) = delete;
+  Log(Log&& other) = delete;
+  Log& operator=(Log&& other) = delete;
+
+  static Log& get();
+
+  void take_input(LogType type,
+                  const std::string& src_filename,
+                  const std::string& src_contents,
+                  const location& loc,
+                  std::ostream& out,
+                  std::string&& input);
+
+  void take_input(LogType type, std::ostream& out, std::string&& input);
 
   inline void enable(LogType type)
   {
@@ -64,7 +60,6 @@ public:
   {
     return enabled_map_[type];
   }
-
   inline void set_colorize(bool is_colorize)
   {
     is_colorize_ = is_colorize;
@@ -73,12 +68,6 @@ public:
 private:
   Log();
   ~Log() = default;
-  std::string src_;
-  std::string filename_;
-  void log_with_location(LogType,
-                         const location&,
-                         std::ostream&,
-                         const std::string&);
   std::string log_format_output(LogType, std::string&&);
   std::unordered_map<LogType, bool> enabled_map_;
   bool is_colorize_ = false;
@@ -93,26 +82,32 @@ public:
   LogStream(const std::string& file,
             int line,
             LogType type,
-            std::optional<location> loc,
+            const std::string& src_filename,
+            const std::string& src_contents,
+            const location& loc,
             std::ostream& out = std::cerr);
   template <typename T>
   LogStream& operator<<(const T& v)
   {
-    if (sink_.is_enabled(type_))
+    auto& sink = Log::get();
+    if (sink.is_enabled(type_))
       buf_ << v;
     return *this;
   }
   virtual ~LogStream();
 
 protected:
+  // This formats the `file_` and `line_` and may be used to prefix the message
+  // for some types of log streams.
   std::string internal_location();
 
-  Log& sink_;
+  const std::string& file_;
+  const int line_;
   LogType type_;
-  const std::optional<location> loc_;
+  const std::optional<std::reference_wrapper<const std::string>> src_filename_;
+  const std::optional<std::reference_wrapper<const std::string>> src_contents_;
+  const std::optional<std::reference_wrapper<const location>> loc_;
   std::ostream& out_;
-  std::string log_file_;
-  int log_line_;
   std::ostringstream buf_;
 };
 
@@ -123,12 +118,6 @@ public:
                __attribute__((unused)) LogType,
                std::ostream& out = std::cerr)
       : LogStream(file, line, LogType::BUG, out) {};
-  LogStreamBug(const std::string& file,
-               int line,
-               __attribute__((unused)) LogType,
-               std::optional<location> loc,
-               std::ostream& out = std::cerr)
-      : LogStream(file, line, LogType::BUG, loc, out) {};
   [[noreturn]] ~LogStreamBug();
 };
 

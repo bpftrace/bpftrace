@@ -5,6 +5,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "ast/ast.h"
+#include "ast/context.h"
 #include "struct.h"
 
 namespace bpftrace::test::function_registry {
@@ -144,9 +146,11 @@ void TestFunctionRegistryPopulated::test(
     const std::vector<SizedType> &arg_types,
     const Function *expected_result)
 {
-  std::stringstream out;
-  EXPECT_EQ(expected_result, reg_.get("", func_name, arg_types, out));
-  EXPECT_EQ("", out.str());
+  ast::ASTContext ast;
+  ast::Node &node = *ast.make_node<ast::Call>(func_name, location());
+  EXPECT_EQ(expected_result,
+            reg_.get("", func_name, arg_types, std::ref(node)));
+  EXPECT_TRUE(ast.diagnostics().ok());
 }
 
 void TestFunctionRegistryPopulated::test(
@@ -154,12 +158,16 @@ void TestFunctionRegistryPopulated::test(
     const std::vector<SizedType> &arg_types,
     std::string_view expected_error)
 {
-  std::stringstream out;
-  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, out));
+  ast::ASTContext ast;
+  ast::Node &node = *ast.make_node<ast::Call>(func_name, location());
+  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, std::ref(node)));
+  EXPECT_FALSE(ast.diagnostics().ok());
 
   if (expected_error[0] == '\n')
     expected_error.remove_prefix(1);
-  EXPECT_EQ(expected_error, out.str());
+  std::stringstream out;
+  ast.diagnostics().emit(out);
+  EXPECT_THAT(out.str(), testing::HasSubstr(expected_error));
 }
 
 TEST_F(TestFunctionRegistryPopulated, does_not_exist)
@@ -333,11 +341,10 @@ TEST_F(TestFunctionRegistryPopulated, overloaded_origin)
 
 TEST(TestFunctionRegistry, add_namespaced)
 {
-  std::stringstream out; // To suppress (expected) errors from unit test output
   FunctionRegistry reg;
   auto *foo = reg.add(Function::Origin::Script, "ns", "foo", CreateNone(), {});
-  EXPECT_EQ(nullptr, reg.get("", "foo", {}, out));
-  EXPECT_EQ(foo, reg.get("ns", "foo", {}, out));
+  EXPECT_EQ(nullptr, reg.get("", "foo", {}));
+  EXPECT_EQ(foo, reg.get("ns", "foo", {}));
 }
 
 TEST(TestFunctionRegistry, add_duplicate_of_builtin)

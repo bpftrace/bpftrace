@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "location.hh"
+#include "ast/ast.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -102,8 +102,8 @@ public:
   const Function *get(std::string_view ns,
                       std::string_view name,
                       const std::vector<SizedType> &arg_types,
-                      std::ostream &out = std::cerr,
-                      std::optional<location> loc = {}) const;
+                      std::optional<std::reference_wrapper<ast::Node>> node =
+                          std::nullopt) const;
 
 private:
   struct FqName {

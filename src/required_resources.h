@@ -19,9 +19,34 @@ namespace bpftrace {
 
 class BPFtrace;
 
-struct HelperErrorInfo {
-  int func_id = -1;
-  location loc;
+class HelperErrorInfo {
+public:
+  // Note that this class does *not* preserve the full source context because
+  // it is not actually useful for the reader when the error is emitted. The
+  // line number and column are preserved for reference, but this would be a
+  // rather advanced runtime error, not a syntax or structural error.
+  HelperErrorInfo(int func_id,
+                  const std::string &filename,
+                  int line,
+                  int column)
+      : func_id(func_id), filename(filename), line(line), column(column) {};
+
+  // This is only used in the case that for some reason there is no helper
+  // registered for the specific instance.
+  HelperErrorInfo() : func_id(-1), line(-1), column(-1) {};
+
+  const int func_id;
+  const std::string filename;
+  const int line;
+  const int column;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(func_id, filename, line, column);
+  }
 };
 
 struct LinearHistogramArgs {
@@ -127,7 +152,7 @@ public:
   // pass should be collecting this, but it's complex to move the logic.
   //
   // Don't add more async arguments here!.
-  std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info;
+  std::unordered_map<int64_t, HelperErrorInfo> helper_error_info;
   std::vector<std::string> probe_ids;
 
   // Map metadata
