@@ -102,8 +102,8 @@ public:
   const Function *get(std::string_view ns,
                       std::string_view name,
                       const std::vector<SizedType> &arg_types,
-                      std::ostream &out = std::cerr,
-                      std::optional<location> loc = {}) const;
+                      const location &loc,
+                      std::ostream &out = std::cerr) const;
 
 private:
   struct FqName {
