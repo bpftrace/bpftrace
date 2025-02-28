@@ -974,7 +974,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateOutput(ctx_,
                     perfdata,
                     8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
-                    &call.loc);
+                    call.loc);
 
     b_.CreateBr(failure_callback);
 
@@ -1191,7 +1191,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         code,
         b_.CreateGEP(exit_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
+    b_.CreateOutput(ctx_, buf, struct_size, call.loc);
     b_.CreateLifetimeEnd(buf);
 
     createRet();
@@ -1272,7 +1272,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                    { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreateOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
+    b_.CreateOutput(ctx_, buf, getStructSize(event_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "len") {
     if (call.vargs.at(0)->type.IsStack()) {
@@ -1329,7 +1329,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         b_.GetIntSameSize(async_ids_.time(), elements.at(1)),
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateOutput(ctx_, buf, getStructSize(time_struct), &call.loc);
+    b_.CreateOutput(ctx_, buf, getStructSize(time_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "strftime") {
     auto elements = AsyncEvent::Strftime().asLLVMType(b_);
@@ -1446,7 +1446,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                          b_.getInt64Ty(),
                          false /* unsigned */),
         b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
+    b_.CreateOutput(ctx_, buf, struct_size, call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "bswap") {
     bpftrace::ast::Expression *arg = call.vargs.at(0);
@@ -2762,7 +2762,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
       current_attach_point_->func.size())
     generateWatchpointSetupProbe(
-        func_type, name, current_attach_point_->address, index);
+        func_type, name, current_attach_point_->address, index, probe.loc);
 }
 
 void CodegenLLVM::add_probe(AttachPoint &ap,
@@ -3563,7 +3563,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
       b_.CreateStore(scoped_arg.value(), offset);
   }
 
-  b_.CreateOutput(ctx_, fmt_args, struct_size, &call.loc);
+  b_.CreateOutput(ctx_, fmt_args, struct_size, call.loc);
   if (dyn_cast<AllocaInst>(fmt_args))
     b_.CreateLifetimeEnd(fmt_args);
 }
@@ -3572,7 +3572,8 @@ void CodegenLLVM::generateWatchpointSetupProbe(
     FunctionType *func_type,
     const std::string &expanded_probe_name,
     int arg_num,
-    int index)
+    int index,
+    const location &loc)
 {
   auto func_name = get_function_name_for_watchpoint_setup(expanded_probe_name,
                                                           index);
@@ -3613,7 +3614,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreateStore(
       addr,
       b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
-  b_.CreateOutput(ctx, buf, struct_size);
+  b_.CreateOutput(ctx, buf, struct_size, loc);
   b_.CreateLifetimeEnd(buf);
 
   createRet();
@@ -3665,7 +3666,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
                                 { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
   }
 
-  b_.CreateOutput(ctx_, buf, getStructSize(print_struct), &call.loc);
+  b_.CreateOutput(ctx_, buf, getStructSize(print_struct), call.loc);
   b_.CreateLifetimeEnd(buf);
 }
 
@@ -3711,7 +3712,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
     b_.CreateStore(value, content_offset);
   }
 
-  b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
+  b_.CreateOutput(ctx_, buf, struct_size, call.loc);
   if (dyn_cast<AllocaInst>(buf))
     b_.CreateLifetimeEnd(buf);
 }
