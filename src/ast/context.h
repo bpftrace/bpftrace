@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "ast/diagnostic.h"
+
 namespace bpftrace {
 namespace ast {
 
