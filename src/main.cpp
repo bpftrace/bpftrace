@@ -367,7 +367,7 @@ static void parse_env(BPFtrace& bpftrace)
   if (err)
     return std::nullopt;
 
-  bpftrace.parse_btf(driver.list_modules());
+  bpftrace.parse_btf(bpftrace.list_modules(driver.ctx));
 
   ast::FieldAnalyser fields(bpftrace);
   fields.visit(driver.ctx.root);
@@ -837,7 +837,7 @@ int main(int argc, char* argv[])
     if (err)
       return err;
 
-    bpftrace.parse_btf(driver.list_modules());
+    bpftrace.parse_btf(bpftrace.list_modules(driver.ctx));
 
     ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
     err = semantics.analyse();
