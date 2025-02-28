@@ -348,6 +348,7 @@ private:
   llvm::Function *log2_func_ = nullptr;
   llvm::Function *murmur_hash_2_func_ = nullptr;
   llvm::Function *map_len_func_ = nullptr;
+  llvm::Value *ts_cast_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)

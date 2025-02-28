@@ -47,10 +47,34 @@ private:
   }
 };
 
+struct TSeriesArgs {
+  long interval_ns = -1;
+  long buckets = -1;
+  SizedType inner_type;
+
+  bool operator==(const TSeriesArgs &other)
+  {
+    return interval_ns == other.interval_ns && buckets == other.buckets;
+  }
+  bool operator!=(const TSeriesArgs &other)
+  {
+    return !(*this == other);
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(interval_ns, buckets);
+  }
+};
+
 struct MapInfo {
   SizedType key_type;
   SizedType value_type;
   std::optional<LinearHistogramArgs> lhist_args;
+  std::optional<TSeriesArgs> tseries_args;
   std::optional<int> hist_bits_arg;
   int id = -1;
 
@@ -59,7 +83,7 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key_type, value_type, lhist_args, hist_bits_arg, id);
+    archive(key_type, value_type, lhist_args, tseries_args, hist_bits_arg, id);
   }
 };
 

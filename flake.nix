@@ -136,6 +136,7 @@
                 name = "bpftrace";
 
                 src = self;
+                dontStrip = true;
 
                 nativeBuildInputs = [
                   pkgs.bison
@@ -169,8 +170,10 @@
 
                 # Release flags
                 cmakeFlags = [
-                  "-DCMAKE_BUILD_TYPE=Release"
+                  "-DCMAKE_BUILD_TYPE=Debug"
                 ];
+
+                cmakeBuildType = "Debug";
 
                 # Technically not needed cuz package name matches mainProgram, but
                 # explicit is fine too.
