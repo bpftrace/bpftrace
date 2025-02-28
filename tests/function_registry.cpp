@@ -5,6 +5,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "log.h"
 #include "struct.h"
 
 namespace bpftrace::test::function_registry {
@@ -17,6 +18,7 @@ class TestFunctionRegistryPopulated : public ::testing::Test {
 protected:
   TestFunctionRegistryPopulated()
   {
+    Log::get().set_source("", "");
     unique_no_args_ = reg_.add(
         Function::Origin::Builtin, "unique_no_args", CreateNone(), {});
     unique_int8_ = reg_.add(Function::Origin::Builtin,
@@ -145,7 +147,8 @@ void TestFunctionRegistryPopulated::test(
     const Function *expected_result)
 {
   std::stringstream out;
-  EXPECT_EQ(expected_result, reg_.get("", func_name, arg_types, out));
+  EXPECT_EQ(expected_result,
+            reg_.get("", func_name, arg_types, location(), out));
   EXPECT_EQ("", out.str());
 }
 
@@ -155,11 +158,11 @@ void TestFunctionRegistryPopulated::test(
     std::string_view expected_error)
 {
   std::stringstream out;
-  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, out));
+  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, location(), out));
 
   if (expected_error[0] == '\n')
     expected_error.remove_prefix(1);
-  EXPECT_EQ(expected_error, out.str());
+  EXPECT_THAT(out.str(), testing::HasSubstr(expected_error));
 }
 
 TEST_F(TestFunctionRegistryPopulated, does_not_exist)
@@ -336,8 +339,8 @@ TEST(TestFunctionRegistry, add_namespaced)
   std::stringstream out; // To suppress (expected) errors from unit test output
   FunctionRegistry reg;
   auto *foo = reg.add(Function::Origin::Script, "ns", "foo", CreateNone(), {});
-  EXPECT_EQ(nullptr, reg.get("", "foo", {}, out));
-  EXPECT_EQ(foo, reg.get("ns", "foo", {}, out));
+  EXPECT_EQ(nullptr, reg.get("", "foo", {}, location(), out));
+  EXPECT_EQ(foo, reg.get("ns", "foo", {}, location(), out));
 }
 
 TEST(TestFunctionRegistry, add_duplicate_of_builtin)
