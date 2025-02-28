@@ -103,7 +103,9 @@ public:
   // The use of `emit` should be generally discouraged, especially by tests,
   // who should use more structured checks and avoid matching against the
   // specific format here.
-  void emit(std::ostream& out);
+  void emit(std::ostream& out) const;
+  void emit(std::ostream& out, Severity s) const;
+  void emit(std::ostream& out, Severity s, const Diagnostic& d) const;
 
 private:
   void foreach(Severity severity,
