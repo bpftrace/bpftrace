@@ -93,38 +93,4 @@ void Driver::error(const std::string &m)
   failed_ = true;
 }
 
-// Retrieves the list of kernel modules for all attachpoints. Will be used to
-// identify modules whose BTF we need to parse.
-// Currently, this is useful for fentry/fexit, k(ret)probes, and tracepoints.
-std::set<std::string> Driver::list_modules() const
-{
-  std::set<std::string> modules;
-  for (auto &probe : ctx.root->probes) {
-    for (auto &ap : probe->attach_points) {
-      auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
-          ((probe_type == ProbeType::kprobe ||
-            probe_type == ProbeType::kretprobe) &&
-           !ap->target.empty())) {
-        if (ap->expansion != ast::ExpansionType::NONE) {
-          for (auto &match :
-               bpftrace_.probe_matcher_->get_matches_for_ap(*ap)) {
-            std::string func = match;
-            erase_prefix(func);
-            auto match_modules = bpftrace_.get_func_modules(func);
-            modules.insert(match_modules.begin(), match_modules.end());
-          }
-        } else
-          modules.insert(ap->target);
-      } else if (probe_type == ProbeType::tracepoint) {
-        // For now, we support this for a single target only since tracepoints
-        // need dumping of C definitions BTF and that is not available for
-        // multiple modules at once.
-        modules.insert(ap->target);
-      }
-    }
-  }
-  return modules;
-}
-
 } // namespace bpftrace
