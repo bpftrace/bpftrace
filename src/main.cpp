@@ -359,81 +359,40 @@ void parse(ast::ASTContext& ast,
            const std::vector<std::string>& include_dirs,
            const std::vector<std::string>& include_files)
 {
-  Driver driver(ast,
-                bpftrace,
-                /*debug=*/bt_debug.find(DebugStage::Parse) != bt_debug.end());
+  std::string ksrc, kobj;
+  struct utsname utsname;
+  std::vector<std::string> extra_flags;
+  uname(&utsname);
+  bool found_kernel_headers = get_kernel_dirs(utsname, ksrc, kobj);
 
-  driver.parse();
-  if (!ast.diagnostics().ok())
-    return;
+  if (found_kernel_headers)
+    extra_flags = get_kernel_cflags(
+        utsname.machine, ksrc, kobj, bpftrace.kconfig);
 
-  bpftrace.parse_btf(bpftrace.list_modules(ast));
+  for (auto dir : include_dirs) {
+    extra_flags.push_back("-I");
+    extra_flags.push_back(dir);
+  }
+  for (auto file : include_files) {
+    extra_flags.push_back("-include");
+    extra_flags.push_back(file);
+  }
 
   auto ok = ast::PassManager()
                 .put(bpftrace)
+                .add(ast::CreateParsePass())
+                .add(ast::CreateParseAttachPointsPass())
+                .add(ast::CreateParseBTFPass())
+                .add(ast::CreateTracepointFormatParsePass())
                 .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateClangParsePass(std::move(extra_flags)))
+                .add(ast::CreateReparsePass())
+                .add(ast::CreateParseAttachPointsPass())
                 .run(ast);
   if (!ok || !ast.diagnostics().ok()) {
     ast.diagnostics().emit(std::cerr);
     return std::nullopt;
   }
-
-  if (TracepointFormatParser::parse(ast, bpftrace) == false)
-    return;
-
-  // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
-  // avoid issues in some versions. Since we're including files in the command
-  // line, we want to force parsing, so we make sure C definitions are not
-  // empty before going to clang parser stage.
-  if (!include_files.empty() && ast.root->c_definitions.empty())
-    ast.root->c_definitions = "#define __BPFTRACE_DUMMY__";
-
-  bool should_clang_parse = !(ast.root->c_definitions.empty() &&
-                              bpftrace.btf_set_.empty());
-
-  if (should_clang_parse) {
-    ClangParser clang;
-    std::string ksrc, kobj;
-    struct utsname utsname;
-    std::vector<std::string> extra_flags;
-    uname(&utsname);
-    bool found_kernel_headers = get_kernel_dirs(utsname, ksrc, kobj);
-
-    if (found_kernel_headers)
-      extra_flags = get_kernel_cflags(
-          utsname.machine, ksrc, kobj, bpftrace.kconfig);
-
-    for (auto dir : include_dirs) {
-      extra_flags.push_back("-I");
-      extra_flags.push_back(dir);
-    }
-    for (auto file : include_files) {
-      extra_flags.push_back("-include");
-      extra_flags.push_back(file);
-    }
-
-    if (!clang.parse(ast.root, bpftrace, extra_flags)) {
-      if (!found_kernel_headers) {
-        LOG(WARNING)
-            << "Could not find kernel headers in " << ksrc << " / " << kobj
-            << ". To specify a particular path to kernel headers, set the env "
-            << "variables BPFTRACE_KERNEL_SOURCE and, optionally, "
-            << "BPFTRACE_KERNEL_BUILD if the kernel was built in a different "
-            << "directory than its source. You can also point the variable to "
-            << "a directory with built-in headers extracted from the following "
-            << "snippet:\nmodprobe kheaders && tar -C <directory> -xf "
-            << "/sys/kernel/kheaders.tar.xz";
-      }
-      return;
-    }
-  }
-
-  driver.parse();
-  if (!ast.diagnostics().ok())
-    return;
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
 }
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)

@@ -64,6 +64,15 @@ public:
     return *diagnostics_.get();
   }
 
+  // Reset frees all nodes, clears all diagnostics and clears the root
+  // reference. This should be done only prior to a full parse or reparse.
+  void reset()
+  {
+    root = std::nullopt;
+    nodes_.reset();
+    diagnostics_.clear();
+  }
+
   // The root is the program which is set after parsing. If this is not set,
   // then parsing was not successfully.
   std::optional<std::reference_wrapper<Program>> root;

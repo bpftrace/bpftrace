@@ -15,14 +15,13 @@ class Parser;
 
 class Driver {
 public:
-  explicit Driver(ast::ASTContext &ctx, BPFtrace &bpftrace, bool debug = false)
-      : ctx(ctx), bpftrace(bpftrace), debug(debug) {};
+  explicit Driver(ast::ASTContext &ctx, bool debug = false)
+      : ctx(ctx), debug(debug) {};
   void parse();
   void error(const location &l, const std::string &m);
 
   // These are accessible to the parser and lexer, but are not mutable.
   ast::ASTContext &ctx;
-  BPFtrace &bpftrace;
   const bool debug;
 };
 

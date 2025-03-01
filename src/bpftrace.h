@@ -190,7 +190,6 @@ public:
   BpfBytecode bytecode_;
   StructManager structs;
   FunctionRegistry functions;
-  std::map<std::string, std::string> macros_;
   // Map of enum variant_name to (variant_value, enum_name).
   std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
   // Map of enum_name to map of variant_value to variant_name.
