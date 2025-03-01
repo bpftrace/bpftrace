@@ -260,30 +260,37 @@ EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exis
 TIMEOUT 1
 
 NAME per_cpu_map_count_if
+REQUIRES_FEATURE lookup_percpu_elem
 PROG i:ms:1 { @ = count(); if (@ > 5) { printf("done\n"); exit(); }}
 EXPECT done
 
 NAME per_cpu_map_min_if
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @ = 10; } i:ms:1 { @--; @mn = min(@); if (@mn < 5) { printf("done\n"); exit(); }}
 EXPECT done
 
 NAME per_cpu_map_max_if
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n"); exit(); }}
 EXPECT done
 
 NAME per_cpu_map_avg_if
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n"); exit(); }}
 EXPECT done
 
 NAME per_cpu_map_arithmetic
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } exit();}
 EXPECT done
 
 NAME per_cpu_map_cast
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); exit();}
 EXPECT 1-10
 
 NAME per_cpu_map_as_map_key
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN {@a = count(); @b = sum(5); @c = min(1); @d = max(10); @e = avg(7); @[@a, @b, @c, @d, @e] = 1; exit(); }
 EXPECT @[1, 5, 1, 10, 7]: 1
 

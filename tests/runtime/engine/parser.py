@@ -3,6 +3,7 @@
 from collections import namedtuple
 import os
 import platform
+from runner import Runner
 
 DEFAULT_TIMEOUT = 5
 
@@ -192,26 +193,7 @@ class TestParser(object):
             elif item_name == 'ARCH':
                 arch = [x.strip() for x in line.split("|")]
             elif item_name == 'REQUIRES_FEATURE':
-                features = {
-                    "loop",
-                    "btf",
-                    "fentry",
-                    "probe_read_kernel",
-                    "dpath",
-                    "uprobe_refcount",
-                    "signal",
-                    "iter",
-                    "libpath_resolv",
-                    "dwarf",
-                    "kernel_dwarf",
-                    "aot",
-                    "kprobe_multi",
-                    "uprobe_multi",
-                    "skboutput",
-                    "get_tai_ns",
-                    "get_func_ip",
-                    "jiffies64",
-                }
+                features = set(Runner.get_bpffeature().keys())
 
                 for f in line.split(" "):
                     f = f.strip()
