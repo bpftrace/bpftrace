@@ -87,19 +87,29 @@ auto make_error(Ts... args)
 //
 //   auto ok = doAThing();
 //   if (!ok) {
-//     auto nowOk = handleErrors(ok.takeError(),
+//     auto nowOk = handleErrors(std::move(ok),
 //                               [](const BpfVerifierError&) { ... });
 //     if (!nowOk) {
 //       return nowOk.takeError();
 //     }
 //  }
-template <typename Err, typename... Ts>
-Result<> handleErrors(Err err, Ts... args)
+//
+// (3) You can also in-line error handling if you prefer.
+//
+//   auto ok = handleErrors(doAThing(), [&](const MyError&) {...});
+//
+template <typename T, typename... Ts>
+Result<> handleErrors(Result<T>&& ok, Ts&&... args)
 {
+  // If this is being done inline, then we can simply propagate the good news
+  // back to the caller.
+  if (ok) {
+    return OK();
+  }
+
   // This changes the semantics of the error propagation to return the wrapper
   // above. This keeps the `operator bool` behavior consistent.
-  auto llvmErr = llvm::handleErrors(std::forward<Err>(err),
-                                    std::forward<Ts>(args)...);
+  auto llvmErr = llvm::handleErrors(ok.takeError(), std::forward<Ts>(args)...);
   if (!llvmErr) {
     return OK();
   }
