@@ -47,6 +47,7 @@ add_executable(bpftrace_test
   config_analyser.cpp
   pid_filter_pass.cpp
   resource_analyser.cpp
+  result.cpp
   required_resources.cpp
   return_path_analyser.cpp
   scopeguard.cpp
