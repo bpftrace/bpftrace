@@ -136,7 +136,7 @@ class Runner(object):
 
     @staticmethod
     @lru_cache(maxsize=1)
-    def __get_bpffeature():
+    def get_bpffeature():
         p = subprocess.Popen(
             [BPFTRACE_BIN, "--info"],
             stdout=subprocess.PIPE,
@@ -164,6 +164,7 @@ class Runner(object):
         bpffeature["get_tai_ns"] = output.find("get_ktime_ns: yes") != -1
         bpffeature["get_func_ip"] = output.find("get_func_ip: yes") != -1
         bpffeature["jiffies64"] = output.find("jiffies64: yes") != -1
+        bpffeature["lookup_percpu_elem"] = output.find("lookup_percpu_elem: yes") != -1
         return bpffeature
 
 
@@ -319,7 +320,7 @@ class Runner(object):
                             return Runner.SKIP_REQUIREMENT_UNSATISFIED
 
             if test.feature_requirement or test.neg_feature_requirement:
-                bpffeature = Runner.__get_bpffeature()
+                bpffeature = Runner.get_bpffeature()
 
                 for feature in test.feature_requirement:
                     if feature not in bpffeature:
