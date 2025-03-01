@@ -7,6 +7,7 @@ PROG BEGIN { @=avg(-30); @=avg(-10); exit(); }
 EXPECT @: -20
 
 NAME avg cast negative values
+REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @ = avg(-1); @ = avg(-1); @ = avg(-10); if (@ == -4) { printf("done\n"); exit(); }}
 EXPECT done
 
