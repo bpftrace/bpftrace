@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "aot/aot.h"
+#include "ast/attachpoint_parser.h"
 #include "ast/diagnostic.h"
 #include "ast/pass_manager.h"
 #include "ast/passes/codegen_llvm.h"
@@ -349,43 +350,42 @@ static void parse_env(BPFtrace& bpftrace)
   });
 }
 
-[[nodiscard]] std::optional<ast::ASTContext> parse(
-    BPFtrace& bpftrace,
-    const std::string& name,
-    const std::string& program,
-    const std::vector<std::string>& include_dirs,
-    const std::vector<std::string>& include_files)
+void parse(ast::ASTContext& ast,
+           BPFtrace& bpftrace,
+           const std::vector<std::string>& include_dirs,
+           const std::vector<std::string>& include_files)
 {
-  Driver driver(bpftrace);
-  driver.source(name, program);
-  int err;
+  Driver driver(ast,
+                bpftrace,
+                bt_debug.find(DebugStage::Parse) != bt_debug.end());
 
-  err = driver.parse();
-  if (err)
-    return std::nullopt;
+  driver.parse();
+  if (!ast.diagnostics().ok())
+    return;
 
-  bpftrace.parse_btf(bpftrace.list_modules(driver.ctx));
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  if (!ast.diagnostics().ok())
+    return;
+
+  bpftrace.parse_btf(bpftrace.list_modules(ast));
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  if (!driver.ctx.diagnostics().ok()) {
-    driver.ctx.diagnostics().emit(std::cerr);
-    return std::nullopt;
-  }
+  fields.visit(ast.root);
+  if (!ast.diagnostics().ok())
+    return;
 
-  if (TracepointFormatParser::parse(driver.ctx, bpftrace) == false) {
-    driver.ctx.diagnostics().emit(std::cerr);
-    return std::nullopt;
-  }
+  if (TracepointFormatParser::parse(ast, bpftrace) == false)
+    return;
 
   // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
   // avoid issues in some versions. Since we're including files in the command
   // line, we want to force parsing, so we make sure C definitions are not
   // empty before going to clang parser stage.
-  if (!include_files.empty() && driver.ctx.root->c_definitions.empty())
-    driver.ctx.root->c_definitions = "#define __BPFTRACE_DUMMY__";
+  if (!include_files.empty() && ast.root->c_definitions.empty())
+    ast.root->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  bool should_clang_parse = !(driver.ctx.root->c_definitions.empty() &&
+  bool should_clang_parse = !(ast.root->c_definitions.empty() &&
                               bpftrace.btf_set_.empty());
 
   if (should_clang_parse) {
@@ -409,7 +409,7 @@ static void parse_env(BPFtrace& bpftrace)
       extra_flags.push_back(file);
     }
 
-    if (!clang.parse(driver.ctx.root, bpftrace, extra_flags)) {
+    if (!clang.parse(ast.root, bpftrace, extra_flags)) {
       if (!found_kernel_headers) {
         LOG(WARNING)
             << "Could not find kernel headers in " << ksrc << " / " << kobj
@@ -421,15 +421,15 @@ static void parse_env(BPFtrace& bpftrace)
             << "snippet:\nmodprobe kheaders && tar -C <directory> -xf "
             << "/sys/kernel/kheaders.tar.xz";
       }
-      return {};
+      return;
     }
   }
 
-  err = driver.parse();
-  if (err)
-    return {};
+  driver.parse();
+  if (!ast.diagnostics().ok())
+    return;
 
-  return std::move(driver.ctx);
+  ap_parser.parse();
 }
 
 void CreateDynamicPasses(ast::PassManager& pm)
@@ -775,6 +775,17 @@ bool is_colorize()
   }
 }
 
+static ast::ASTContext buildListProgram(const std::string& search)
+{
+  ast::ASTContext ast("listing", search);
+  auto ap = ast.make_node<ast::AttachPoint>(search, true, location());
+  auto probe = ast.make_node<ast::Probe>(
+      ast::AttachPointList({ ap }), nullptr, nullptr, location());
+  ast.root = ast.make_node<ast::Program>(
+      "", nullptr, ast::SubprogList(), ast::ProbeList({ probe }), location());
+  return ast;
+}
+
 int main(int argc, char* argv[])
 {
   Log::get().set_colorize(is_colorize());
@@ -853,7 +864,12 @@ int main(int argc, char* argv[])
     }
   }
 
-  // Listing probes when there is no program
+  // This is our primary program AST context. Initially it is empty, i.e. there
+  // is no filename set or source file. The way we set it up depends on the
+  // mode of execution below, and we expect that it will be reinitialized.
+  ast::ASTContext ast;
+
+  // Listing probes when there is no program.
   if (args.listing && args.script.empty() && args.filename.empty()) {
     check_is_root();
 
@@ -872,29 +888,27 @@ int main(int argc, char* argv[])
           << args.search << "\' as a search pattern.";
     }
 
-    Driver driver(bpftrace);
-    driver.listing_ = true;
-    driver.source("stdin", args.search);
+    // To list tracepoints, we construct a synthetic AST and then expand the
+    // probe. The raw contents of the program are the initial search provided.
+    ast = buildListProgram(args.search);
 
-    int err = driver.parse();
-    if (err)
-      return err;
+    // Parse and expand all the attachpoints. We don't need to descend into the
+    // actual driver here, since we know that the program is already formed.
+    ast::AttachPointParser ap_parser(ast, bpftrace, true);
+    ap_parser.parse();
 
-    bpftrace.parse_btf(bpftrace.list_modules(driver.ctx));
+    bpftrace.parse_btf(bpftrace.list_modules(ast));
 
-    ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false, true);
-    err = semantics.analyse();
-    if (!driver.ctx.diagnostics().ok()) {
-      driver.ctx.diagnostics().emit(std::cerr);
+    ast::SemanticAnalyser semantics(ast, bpftrace, false, true);
+    semantics.analyse();
+    if (!ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
       return 1;
     }
 
-    bpftrace.probe_matcher_->list_probes(driver.ctx.root);
+    bpftrace.probe_matcher_->list_probes(ast.root);
     return 0;
   }
-
-  std::string filename;
-  std::string program;
 
   if (!args.filename.empty()) {
     std::stringstream buf;
@@ -908,8 +922,7 @@ int main(int argc, char* argv[])
         buf << line << std::endl;
       }
 
-      filename = "stdin";
-      program = buf.str();
+      ast = ast::ASTContext("stdin", buf.str());
     } else {
       std::ifstream file(args.filename);
       if (file.fail()) {
@@ -918,15 +931,12 @@ int main(int argc, char* argv[])
         exit(1);
       }
 
-      filename = args.filename;
-      program = buf.str();
       buf << file.rdbuf();
-      program = buf.str();
+      ast = ast::ASTContext(args.filename, buf.str());
     }
   } else {
-    // Script is provided as a command line argument
-    filename = "stdin";
-    program = args.script;
+    // Script is provided as a command line argument.
+    ast = ast::ASTContext("stdin", args.script);
   }
 
   for (const auto& param : args.params) {
@@ -948,17 +958,18 @@ int main(int argc, char* argv[])
     enforce_infinite_rlimit();
   }
 
-  auto ast_ctx = parse(
-      bpftrace, filename, program, args.include_dirs, args.include_files);
-  if (!ast_ctx)
+  parse(ast, bpftrace, args.include_dirs, args.include_files);
+  if (!ast.diagnostics().ok()) {
+    ast.diagnostics().emit(std::cerr);
     return 1;
+  }
 
   if (args.listing) {
-    bpftrace.probe_matcher_->list_probes(ast_ctx->root);
+    bpftrace.probe_matcher_->list_probes(ast.root);
     return 0;
   }
 
-  ast::PassContext ctx(bpftrace, *ast_ctx);
+  ast::PassContext ctx(bpftrace, ast);
   ast::PassManager pm;
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
@@ -976,13 +987,13 @@ int main(int argc, char* argv[])
       break;
   }
 
-  bpftrace.fentry_recursion_check(ast_ctx->root);
+  bpftrace.fentry_recursion_check(ast.root);
 
   auto pmresult = pm.Run(ctx);
   if (pmresult)
     return 1;
 
-  ast::CodegenLLVM llvm(ctx.ast_ctx, bpftrace);
+  ast::CodegenLLVM llvm(ast, bpftrace);
   BpfBytecode bytecode;
   try {
     llvm.generate_ir();

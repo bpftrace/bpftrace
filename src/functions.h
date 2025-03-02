@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "ast/ast.h"
 #include "ast/location.h"
 #include "types.h"
 
@@ -102,8 +103,7 @@ public:
   const Function *get(std::string_view ns,
                       std::string_view name,
                       const std::vector<SizedType> &arg_types,
-                      const ast::Location &loc,
-                      std::ostream &out = std::cerr) const;
+                      const ast::Node &node) const;
 
 private:
   struct FqName {

@@ -330,7 +330,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
-    bpftrace->out_->helper_error(info.func_id, return_value, info.loc);
+    bpftrace->out_->helper_error(return_value, info);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach)) {
     bool abort = false;
@@ -906,11 +906,13 @@ int BPFtrace::run(BpfBytecode bytecode)
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   } catch (const HelperVerifierError &e) {
-    if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
-      ast::Location loc(helper_use_loc_[e.func_id]);
-      LOG(ERROR, loc, std::cerr) << e.what();
-    } else {
-      LOG(ERROR) << e.what();
+    // To provide the most useful diagnostics, provide the error for every
+    // callsite. After all, they all must be fixed.
+    for (const auto &info : helper_use_loc_[e.func_id]) {
+      LOG(ERROR,
+          std::string(info.source_location),
+          std::vector(info.source_context))
+          << e.what();
     }
     return -1;
   } catch (const std::runtime_error &e) {

@@ -1,5 +1,6 @@
 #include <llvm/Config/llvm-config.h>
 
+#include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -17,15 +18,22 @@ static void parse(const std::string &input,
                   const std::string &probe = "kprobe:sys_read { 1 }")
 {
   auto extended_input = input + probe;
-  Driver driver(bpftrace);
-  ASSERT_EQ(driver.parse_str(extended_input), 0);
+  ast::ASTContext ast("stdin", extended_input);
+  Driver driver(ast, bpftrace);
+
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  fields.visit(ast.root);
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  ASSERT_EQ(clang.parse(driver.ctx.root, bpftrace), result);
+  ASSERT_EQ(clang.parse(ast.root, bpftrace), result);
 }
 
 TEST(clang_parser, integers)

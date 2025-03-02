@@ -1,7 +1,8 @@
 #include <sstream>
 
+#include "ast/ast.h"
+#include "ast/context.h"
 #include "functions.h"
-#include "log.h"
 #include "struct.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -16,7 +17,6 @@ class TestFunctionRegistryPopulated : public ::testing::Test {
 protected:
   TestFunctionRegistryPopulated()
   {
-    Log::get().set_source("", "");
     unique_no_args_ = reg_.add(
         Function::Origin::Builtin, "unique_no_args", CreateNone(), {});
     unique_int8_ = reg_.add(Function::Origin::Builtin,
@@ -144,10 +144,10 @@ void TestFunctionRegistryPopulated::test(
     const std::vector<SizedType> &arg_types,
     const Function *expected_result)
 {
-  std::stringstream out;
-  EXPECT_EQ(expected_result,
-            reg_.get("", func_name, arg_types, ast::Location(), out));
-  EXPECT_EQ("", out.str());
+  ast::ASTContext ast;
+  auto &call = *ast.make_node<ast::Call>(func_name, ast::Location());
+  EXPECT_EQ(expected_result, reg_.get("", func_name, arg_types, call));
+  EXPECT_TRUE(ast.diagnostics().ok());
 }
 
 void TestFunctionRegistryPopulated::test(
@@ -155,11 +155,15 @@ void TestFunctionRegistryPopulated::test(
     const std::vector<SizedType> &arg_types,
     std::string_view expected_error)
 {
-  std::stringstream out;
-  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, ast::Location(), out));
+  ast::ASTContext ast;
+  auto &call = *ast.make_node<ast::Call>(func_name, ast::Location());
+  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, call));
+  EXPECT_FALSE(ast.diagnostics().ok());
 
   if (expected_error[0] == '\n')
     expected_error.remove_prefix(1);
+  std::stringstream out;
+  ast.diagnostics().emit(out);
   EXPECT_THAT(out.str(), testing::HasSubstr(expected_error));
 }
 
@@ -334,11 +338,12 @@ TEST_F(TestFunctionRegistryPopulated, overloaded_origin)
 
 TEST(TestFunctionRegistry, add_namespaced)
 {
-  std::stringstream out; // To suppress (expected) errors from unit test output
   FunctionRegistry reg;
   auto *foo = reg.add(Function::Origin::Script, "ns", "foo", CreateNone(), {});
-  EXPECT_EQ(nullptr, reg.get("", "foo", {}, ast::Location(), out));
-  EXPECT_EQ(foo, reg.get("ns", "foo", {}, ast::Location(), out));
+  ast::ASTContext ast;
+  auto &call = *ast.make_node<ast::Call>("foo", ast::Location());
+  EXPECT_EQ(nullptr, reg.get("", "foo", {}, call));
+  EXPECT_EQ(foo, reg.get("ns", "foo", {}, call));
 }
 
 TEST(TestFunctionRegistry, add_duplicate_of_builtin)
