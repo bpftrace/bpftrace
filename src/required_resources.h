@@ -19,9 +19,39 @@ namespace bpftrace {
 
 class BPFtrace;
 
-struct HelperErrorInfo {
-  int func_id = -1;
-  ast::Location loc;
+class HelperErrorInfo {
+public:
+  // This class effectively wraps a location, but preserves only the parts that
+  // are needed to emit the error in a useful way. This is because it may be
+  // serialized and used by a separate runtime.
+  HelperErrorInfo(int func_id, const ast::Location &loc)
+      : func_id(func_id),
+        filename(loc.filename()),
+        line(loc.line()),
+        column(loc.column()),
+        source_location(loc.source_location()),
+        source_context(loc.source_context())
+  {
+  }
+
+  // This is only used in the case that for some reason there is no helper
+  // registered for the specific instance.
+  HelperErrorInfo() : func_id(-1), line(0), column(0) {};
+
+  const int func_id;
+  const std::string filename;
+  const int line;
+  const int column;
+  const std::string source_location;
+  const std::vector<std::string> source_context;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(func_id, filename, line, column, source_location, source_context);
+  }
 };
 
 struct LinearHistogramArgs {
@@ -127,7 +157,7 @@ public:
   // pass should be collecting this, but it's complex to move the logic.
   //
   // Don't add more async arguments here!.
-  std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info;
+  std::unordered_map<int64_t, HelperErrorInfo> helper_error_info;
   std::vector<std::string> probe_ids;
 
   // Map metadata

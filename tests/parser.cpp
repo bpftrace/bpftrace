@@ -2,6 +2,8 @@
 #include <sstream>
 
 #include "ast/passes/printer.h"
+
+#include "ast/attachpoint_parser.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 
@@ -10,12 +12,17 @@ namespace bpftrace::test::parser {
 using Printer = ast::Printer;
 
 void test_parse_failure(BPFtrace &bpftrace,
-                        std::string_view input,
+                        const std::string &input,
                         std::string_view expected_error)
 {
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_EQ(driver.parse_str(input), 1);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
 
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
@@ -24,27 +31,35 @@ void test_parse_failure(BPFtrace &bpftrace,
   }
 }
 
-void test_parse_failure(std::string_view input, std::string_view expected_error)
+void test_parse_failure(const std::string &input,
+                        std::string_view expected_error)
 {
   BPFtrace bpftrace;
   test_parse_failure(bpftrace, input, expected_error);
 }
 
-void test(BPFtrace &bpftrace, std::string_view input, std::string_view expected)
+void test(BPFtrace &bpftrace,
+          const std::string &input,
+          std::string_view expected)
 {
-  Driver driver(bpftrace);
-  ASSERT_EQ(driver.parse_str(input), 0);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
+
+  driver.parse();
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   if (expected[0] == '\n')
     expected.remove_prefix(1); // Remove initial '\n'
 
   std::ostringstream out;
   Printer printer(out);
-  printer.visit(driver.ctx.root);
+  printer.visit(ast.root);
   EXPECT_EQ(expected, out.str());
 }
 
-void test(std::string_view input, std::string_view expected)
+void test(const std::string &input, std::string_view expected)
 {
   BPFtrace bpftrace;
   test(bpftrace, input, expected);
@@ -2166,8 +2181,11 @@ TEST(Parser, unexpected_symbol)
 {
   BPFtrace bpftrace;
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_EQ(driver.parse_str("i:s:1 { < }"), 1);
+  ast::ASTContext ast("stdin", "i:s:1 { < }");
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
   std::string expected =
       R"(stdin:1:9-10: ERROR: syntax error, unexpected <
 i:s:1 { < }
@@ -2180,8 +2198,11 @@ TEST(Parser, string_with_tab)
 {
   BPFtrace bpftrace;
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_EQ(driver.parse_str("i:s:1\t\t\t$a"), 1);
+  ast::ASTContext ast("stdin", "i:s:1\t\t\t$a");
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
   std::string expected =
       R"(stdin:1:9-11: ERROR: syntax error, unexpected variable, expecting {
 i:s:1            $a
@@ -2194,8 +2215,11 @@ TEST(Parser, unterminated_string)
 {
   BPFtrace bpftrace;
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_EQ(driver.parse_str("kprobe:f { \"asdf }"), 1);
+  ast::ASTContext ast("stdin", "kprobe:f { \"asdf }");
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
   std::string expected =
       R"(stdin:1:12-19: ERROR: unterminated string
 kprobe:f { "asdf }
@@ -2224,7 +2248,7 @@ TEST(Parser, kprobe_offset)
        " kprobe:fn.abc+16\n");
 
   test_parse_failure("k:asdf+123abc", R"(
-stdin:1:1-14: ERROR: unexpected end of file, expected {
+stdin:1:1-14: ERROR: syntax error, unexpected end of file, expecting {
 k:asdf+123abc
 ~~~~~~~~~~~~~
 )");
@@ -2310,9 +2334,11 @@ TEST(Parser, long_param_overflow)
 {
   BPFtrace bpftrace;
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_NO_THROW(
-      driver.parse_str("i:s:100 { @=$111111111111111111111111111 }"));
+  ast::ASTContext ast("stdin", "i:s:100 { @=$111111111111111111111111111 }");
+  Driver driver(ast, bpftrace);
+  EXPECT_NO_THROW(driver.parse());
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
   std::string expected = "stdin:1:11-41: ERROR: param "
                          "$111111111111111111111111111 is out of "
                          "integer range [1, " +
@@ -2458,8 +2484,11 @@ TEST(Parser, tuple_assignment_error_message)
 {
   BPFtrace bpftrace;
   std::stringstream out;
-  Driver driver(bpftrace, out);
-  EXPECT_EQ(driver.parse_str("i:s:1 { @x = (1, 2); $x.1 = 1; }"), 1);
+  ast::ASTContext ast("stdin", "i:s:1 { @x = (1, 2); $x.1 = 1; }");
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_FALSE(ast.diagnostics().ok());
+  ast.diagnostics().emit(out);
   std::string expected =
       R"(stdin:1:22-30: ERROR: Tuples are immutable once created. Consider creating a new tuple and assigning it instead.
 i:s:1 { @x = (1, 2); $x.1 = 1; }

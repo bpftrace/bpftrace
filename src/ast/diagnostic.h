@@ -11,6 +11,8 @@
 
 namespace bpftrace::ast {
 
+class ASTSource;
+
 // Diagnostic reflects a single error at a single source location. This is a
 // simple wrapper around a string for that message, and the location class.
 class Diagnostic {
@@ -124,6 +126,8 @@ private:
   // N.B. we store diagnostics as a pointer because the lifetime is returned
   // early above, so they must not be moving at any point.
   std::vector<std::vector<std::unique_ptr<Diagnostic>>> diagnostics_;
+
+  friend class Node;
 };
 
 } // namespace bpftrace::ast

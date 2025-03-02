@@ -4,7 +4,9 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "ast/location.h"
 
@@ -31,25 +33,18 @@ enum class LogType
 
 class Log {
 public:
-  static Log& get();
-  void take_input(LogType type,
-                  std::optional<ast::Location> loc,
-                  std::ostream& out,
-                  std::string&& input);
-  inline void set_source(std::string_view filename, std::string_view source)
-  {
-    src_ = source;
-    filename_ = filename;
-  }
-  inline const std::string& get_source()
-  {
-    return src_;
-  }
-  const std::string get_source_line(unsigned int n);
-
-  // Can only construct with get()
   Log(const Log& other) = delete;
   Log& operator=(const Log& other) = delete;
+  Log(Log&& other) = delete;
+  Log& operator=(Log&& other) = delete;
+
+  static Log& get();
+
+  void take_input(LogType type,
+                  std::optional<std::string>&& source_location,
+                  std::optional<std::vector<std::string>>&& source_context,
+                  std::ostream& out,
+                  std::string&& input);
 
   inline void enable(LogType type)
   {
@@ -64,7 +59,6 @@ public:
   {
     return enabled_map_[type];
   }
-
   inline void set_colorize(bool is_colorize)
   {
     is_colorize_ = is_colorize;
@@ -73,13 +67,7 @@ public:
 private:
   Log();
   ~Log() = default;
-  std::string src_;
-  std::string filename_;
-  void log_with_location(LogType,
-                         ast::Location,
-                         std::ostream&,
-                         const std::string&);
-  std::string log_format_output(LogType, std::string&&);
+
   std::unordered_map<LogType, bool> enabled_map_;
   bool is_colorize_ = false;
 };
@@ -93,26 +81,36 @@ public:
   LogStream(std::string file,
             int line,
             LogType type,
-            ast::Location loc,
+            std::string&& source_location,
             std::ostream& out = std::cerr);
+  LogStream(const std::string& file,
+            int line,
+            LogType type,
+            std::string&& source_location,
+            std::vector<std::string>&& source_context,
+            std::ostream& out = std::cerr);
+
   template <typename T>
   LogStream& operator<<(const T& v)
   {
-    if (sink_.is_enabled(type_))
+    auto& sink = Log::get();
+    if (sink.is_enabled(type_))
       buf_ << v;
     return *this;
   }
   virtual ~LogStream();
 
 protected:
+  // This formats the `file_` and `line_` and may be used to prefix the message
+  // for some types of log streams.
   std::string internal_location();
 
-  Log& sink_;
+  const std::string& file_;
+  const int line_;
   LogType type_;
-  std::optional<ast::Location> loc_;
+  std::optional<std::string> source_location_;
+  std::optional<std::vector<std::string>> source_context_;
   std::ostream& out_;
-  std::string log_file_;
-  int log_line_;
   std::ostringstream buf_;
 };
 
@@ -126,13 +124,17 @@ public:
   [[noreturn]] ~LogStreamBug() override;
 };
 
-// Usage examples:
-// 1. LOG(WARNING) << "this is a " << "warning!"; (this goes to std::cerr)
-// 2. LOG(DEBUG, std::cout) << "this is a " << " message.";
-// 3. LOG(ERROR, call.loc, std::cerr) << "this is a semantic error";
-// Note: LogType::DEBUG will prepend __FILE__ and __LINE__ to the debug message
-
 // clang-format off
+
+// Usage examples:
+//
+//   1. LOG(WARNING) << "this is a " << "warning!"; (this goes to std::cerr)
+//   2. LOG(DEBUG, std::cout) << "this is a " << " message.";
+//   3. LOG(ERROR, call.loc.source_location(), std::cerr) << "error with location";
+//   4. LOG(ERROR, call.loc.source_location(), call.loc.source_context(), std::err) << "error with context";
+//
+// Note: LogType::DEBUG will prepend __FILE__ and __LINE__ to the debug message.
+
 #define LOGSTREAM_COMMON(...) bpftrace::LogStream(__FILE__, __LINE__, __VA_ARGS__)
 #define LOGSTREAM_DEBUG(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_V1(...) LOGSTREAM_COMMON(__VA_ARGS__)
