@@ -49,30 +49,42 @@ public:
 
 TEST(codegen, printf_offsets)
 {
+  ast::ASTContext ast("stdin", R"(
+struct Foo { char c; int i; char str[10]; }
+kprobe:f
+{
+  $foo = (struct Foo*)arg0;
+  printf("%c %u %s %p\n", $foo->c, $foo->i, $foo->str, 0)
+})");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
+  Driver driver(ast, *bpftrace);
 
-  ASSERT_EQ(driver.parse_str(
-                "struct Foo { char c; int i; char str[10]; }\n"
-                "kprobe:f\n"
-                "{\n"
-                "  $foo = (struct Foo*)arg0;\n"
-                "  printf(\"%c %u %s %p\\n\", $foo->c, $foo->i, $foo->str, 0)\n"
-                "}"),
-            0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
   ClangParser clang;
-  clang.parse(driver.ctx.root, *bpftrace);
+  clang.parse(ast.root, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, *bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(driver.ctx.root);
+  resource_analyser.visit(ast.root);
   bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
+  ast::CodegenLLVM codegen(ast, *bpftrace);
   codegen.generate_ir();
 
   EXPECT_EQ(bpftrace->resources.printf_args.size(), 1U);
@@ -104,19 +116,28 @@ TEST(codegen, printf_offsets)
 
 TEST(codegen, probe_count)
 {
+  ast::ASTContext ast("stdin", R"(
+kprobe:f { 1; } kprobe:d { 1; }
+)");
   MockBPFtrace bpftrace;
   EXPECT_CALL(bpftrace, add_probe(_, _, _, _)).Times(2);
 
-  Driver driver(bpftrace);
+  Driver driver(ast, bpftrace);
 
-  ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
+  ast::SemanticAnalyser semantics(ast, bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::CodegenLLVM codegen(driver.ctx, bpftrace);
+  ast::CodegenLLVM codegen(ast, bpftrace);
   codegen.generate_ir();
 }
 } // namespace codegen

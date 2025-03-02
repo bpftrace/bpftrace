@@ -446,9 +446,7 @@ CallInst *IRBuilderBPF::CreateHelperCall(libbpf::bpf_func_id func_id,
                                          const Twine &Name,
                                          const Location &loc)
 {
-  if (bpftrace_.helper_use_loc_.find(func_id) ==
-      bpftrace_.helper_use_loc_.end())
-    bpftrace_.helper_use_loc_[func_id] = loc;
+  bpftrace_.helper_use_loc_[func_id].emplace_back(func_id, loc);
   PointerType *helper_ptr_type = PointerType::get(helper_type, 0);
   Constant *helper_func = ConstantExpr::getCast(Instruction::IntToPtr,
                                                 getInt64(func_id),
@@ -2541,9 +2539,8 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
     return;
 
   int error_id = async_ids_.helper_error();
-  bpftrace_.resources.helper_error_info[error_id] = { .func_id = func_id,
-                                                      .loc = loc };
-
+  bpftrace_.resources.helper_error_info.try_emplace(
+      error_id, HelperErrorInfo(func_id, loc));
   auto elements = AsyncEvent::HelperError().asLLVMType(*this);
   StructType *helper_error_struct = GetStructType("helper_error_t",
                                                   elements,

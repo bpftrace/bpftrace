@@ -2,7 +2,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <regex>
 
+#include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/pid_filter_pass.h"
@@ -44,32 +46,44 @@ static void test(BPFtrace &bpftrace,
                  const std::string &input,
                  const std::string &name)
 {
-  Driver driver(bpftrace);
-  ASSERT_EQ(driver.parse_str(input), 0);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
+
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  fields.visit(ast.root);
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  clang.parse(driver.ctx.root, bpftrace);
+  clang.parse(ast.root, bpftrace);
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
-  pid_filter.visit(driver.ctx.root);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
+  ast::PidFilterPass pid_filter(ast, bpftrace);
+  pid_filter.visit(ast.root);
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(driver.ctx.root);
+  resource_analyser.visit(ast.root);
   bpftrace.resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.ctx, bpftrace);
+  ast::CodegenLLVM codegen(ast, bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
   // Test that generated code compiles cleanly
