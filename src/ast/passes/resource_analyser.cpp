@@ -479,6 +479,27 @@ void ResourceAnalyser::update_map_info(Map &map)
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
   map_info.key_type = map.key_type;
+
+  auto initializer = dynamic_cast<MapInitializer *>(map.initializer);
+  map_info.max_entries = initializer && initializer->max_entries
+                             ? *initializer->max_entries
+                             : bpftrace_.config_->get(
+                                   ConfigKeyInt::max_map_keys);
+
+  // hist() and lhist() transparently create additional elements in whatever
+  // map they are assigned to. So even if the map looks like it has no keys,
+  // multiple keys are necessary.
+  if (map_info.key_type.IsNoneTy() && !map_info.value_type.IsHistTy() &&
+      !map_info.value_type.IsLhistTy()) {
+    map_info.max_entries = 1;
+  }
+
+  if (initializer) {
+    map_info.bpf_type = BPF_MAP_TYPES.at(initializer->bpf_type);
+  } else {
+    map_info.bpf_type = get_bpf_map_type(map_info.value_type,
+                                         map_info.key_type);
+  }
 }
 
 void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map)
