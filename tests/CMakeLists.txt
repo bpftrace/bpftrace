@@ -36,6 +36,7 @@ add_executable(bpftrace_test
   cstring_view.cpp
   field_analyser.cpp
   function_registry.cpp
+  location.cpp
   log.cpp
   main.cpp
   mocks.cpp
