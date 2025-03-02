@@ -56,6 +56,7 @@ extern bool bt_verbose;
 extern bool dry_run;
 
 enum class DebugStage {
+  Parse,
   Ast,
   Codegen,
   CodegenOpt,
@@ -65,14 +66,12 @@ enum class DebugStage {
 };
 
 const std::unordered_map<std::string_view, DebugStage> debug_stages = {
-  { "ast", DebugStage::Ast },
-  { "codegen", DebugStage::Codegen },
-  { "codegen-opt", DebugStage::CodegenOpt },
+  { "parse", DebugStage::Parse },     { "ast", DebugStage::Ast },
+  { "codegen", DebugStage::Codegen }, { "codegen-opt", DebugStage::CodegenOpt },
 #ifndef NDEBUG
   { "dis", DebugStage::Disassemble },
 #endif
-  { "libbpf", DebugStage::Libbpf },
-  { "verifier", DebugStage::Verifier },
+  { "libbpf", DebugStage::Libbpf },   { "verifier", DebugStage::Verifier },
 };
 
 class WildcardException : public std::exception {

@@ -12,7 +12,7 @@ namespace bpftrace::test::pid_filter_pass {
 using ::testing::_;
 using ::testing::HasSubstr;
 
-void test(std::string_view input, bool has_pid, bool has_filter)
+void test(const std::string& input, bool has_pid, bool has_filter)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
@@ -20,18 +20,22 @@ void test(std::string_view input, bool has_pid, bool has_filter)
     bpftrace.procmon_ = std::make_unique<MockProcMon>(1);
   }
 
-  Driver driver(bpftrace);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
+  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
 
-  ASSERT_EQ(driver.parse_str(input), 0);
-  ast::PidFilterPass pid_filter(driver.ctx, bpftrace);
-  pid_filter.visit(driver.ctx.root);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ast::PidFilterPass pid_filter(ast, bpftrace);
+  pid_filter.visit(ast.root);
 
   std::string_view expected_ast = R"(
   if
@@ -44,7 +48,7 @@ void test(std::string_view input, bool has_pid, bool has_filter)
 
   std::ostringstream out;
   ast::Printer printer(out);
-  printer.visit(driver.ctx.root);
+  printer.visit(ast.root);
 
   if (has_filter) {
     EXPECT_THAT(out.str(), HasSubstr(expected_ast));

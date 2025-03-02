@@ -80,8 +80,8 @@ TEST(LogStream, with_location)
       "found\ni:s:1 { print(1, 2); }\n        ~~~~~~~~~~~\n";
   bpftrace::location loc(bpftrace::position(nullptr, 1, 9),
                          bpftrace::position(nullptr, 1, 20));
-  Log::get().set_source(filename, source);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 2 found";
+  LOG(ERROR, filename, source, loc, ss)
+      << "Non-map print() only takes 1 argument, 2 found";
   EXPECT_EQ(ss.str(), expected);
 }
 
@@ -103,9 +103,9 @@ TEST(LogStream, with_location_colorized)
 
   bpftrace::location loc(bpftrace::position(nullptr, 1, 9),
                          bpftrace::position(nullptr, 1, 20));
-  Log::get().set_source(filename, source);
   Log::get().set_colorize(true);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 2 found";
+  LOG(ERROR, filename, source, loc, ss)
+      << "Non-map print() only takes 1 argument, 2 found";
   Log::get().set_colorize(false);
   EXPECT_EQ(ss.str(), expected);
 }
@@ -125,9 +125,9 @@ TEST(LogStream, with_location_colorized_multi_lines)
 
   bpftrace::location loc(bpftrace::position(nullptr, 1),
                          bpftrace::position(nullptr, 3));
-  Log::get().set_source(filename, source);
   Log::get().set_colorize(true);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 3 found";
+  LOG(ERROR, filename, source, loc, ss)
+      << "Non-map print() only takes 1 argument, 3 found";
   Log::get().set_colorize(false);
   EXPECT_EQ(ss.str(), expected);
 }

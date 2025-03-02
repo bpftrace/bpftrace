@@ -835,14 +835,15 @@ void TextOutput::attached_probes(uint64_t num_probes) const
 
 void TextOutput::helper_error(int func_id,
                               int retcode,
+                              const std::string &filename,
                               int line,
                               int column) const
 {
   LOG(WARNING, out_) << get_helper_error_msg(func_id, retcode)
                      << "\nAdditional Info - helper: "
                      << libbpf::bpf_func_name[func_id]
-                     << ", retcode: " << retcode << ", line: " << line
-                     << ", column: " << column;
+                     << ", retcode: " << retcode << ", filename: " << filename
+                     << ", line: " << line << ", col: " << column;
 }
 
 std::string TextOutput::field_to_str(const std::string &name,
@@ -1136,12 +1137,14 @@ void JsonOutput::attached_probes(uint64_t num_probes) const
 
 void JsonOutput::helper_error(int func_id,
                               int retcode,
+                              const std::string &filename,
                               int line,
                               int column) const
 {
   out_ << R"({"type": "helper_error", "msg": ")"
        << get_helper_error_msg(func_id, retcode) << R"(", "helper": ")"
        << libbpf::bpf_func_name[func_id] << R"(", "retcode": )" << retcode
+       << ", \"filename\"" << filename << "\","
        << ", \"line\": " << line << ", \"col\": " << column << "}" << std::endl;
 }
 

@@ -1,5 +1,6 @@
 #include "diagnostic.h"
 
+#include "ast/context.h"
 #include "log.h"
 
 namespace bpftrace::ast {
@@ -20,13 +21,13 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
 {
   switch (s) {
     case Severity::Warning:
-      LOG(WARNING, d.loc(), out) << d.msg();
+      LOG(WARNING, src_.filename, src_.contents, d.loc(), out) << d.msg();
       if (auto s = d.hint(); s.size() > 0) {
         LOG(HINT, out) << s;
       }
       break;
     case Severity::Error:
-      LOG(ERROR, d.loc(), out) << d.msg();
+      LOG(ERROR, src_.filename, src_.contents, d.loc(), out) << d.msg();
       if (auto s = d.hint(); s.size() > 0) {
         LOG(HINT, out) << s;
       }

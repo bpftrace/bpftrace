@@ -334,7 +334,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
     bpftrace->out_->helper_error(
-        info.func_id, return_value, info.line, info.column);
+        info.func_id, return_value, info.filename, info.line, info.column);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach)) {
     bool abort = false;
@@ -918,7 +918,12 @@ int BPFtrace::run(BpfBytecode bytecode)
     LOG(ERROR) << e.what();
     LOG(HINT) << "Possible callsites:";
     for (const auto &info : helper_use_loc_[e.func_id]) {
+<<<<<<< HEAD
       LOG(HINT) << "- " << info.line << ":" << info.column;
+=======
+      LOG(HINT) << "- " << info.filename << ":" << info.line << ":"
+                << info.column;
+>>>>>>> d27a70b6 (Invert the `Driver`/`ASTContext` relationship)
     }
     return -1;
   } catch (const std::runtime_error &e) {
