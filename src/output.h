@@ -92,7 +92,8 @@ public:
   virtual void attached_probes(uint64_t num_probes) const = 0;
   virtual void helper_error(int func_id,
                             int retcode,
-                            const location &loc) const = 0;
+                            int line,
+                            int column) const = 0;
 
 protected:
   std::ostream &out_;
@@ -237,7 +238,8 @@ public:
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,
                     int retcode,
-                    const location &loc) const override;
+                    int line,
+                    int column) const override;
 
 protected:
   std::string value_to_str(BPFtrace &bpftrace,
@@ -315,7 +317,8 @@ public:
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,
                     int retcode,
-                    const location &loc) const override;
+                    int line,
+                    int column) const override;
 
 private:
   std::string json_escape(const std::string &str) const;
