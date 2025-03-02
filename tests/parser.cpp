@@ -2872,4 +2872,40 @@ BEGIN { $x: int8 = 1; }
 )");
 }
 
+TEST(Parser, macro_expansion_error)
+{
+  BPFtrace bpftrace;
+
+  // A recursive macro expansion
+  bpftrace.macros_.emplace("M", "M+1");
+  test_parse_failure(bpftrace,
+                     "#define M M+1\n"
+                     "BEGIN { M; }",
+                     R"(
+stdin:2:9-343: ERROR: Macro recursion limit reached: M, M+1
+BEGIN { M; }
+        ~~~~
+stdin:2:9-343: ERROR: syntax error, unexpected end of file
+BEGIN { M; }
+        ~~~~
+)");
+
+  // Macro expansion causes buffer overflow
+  bpftrace.macros_["M"] = std::string(25, 'm'); // Macro defined in a.h
+  std::string padding(16384, 'p');
+  test_parse_failure(bpftrace,
+                     "#include \"a.h\"\n"
+                     "BEGIN { M; }\n"
+                     "END { printf(\"" +
+                         padding + "\"); }",
+                     R"(
+stdin:2:9-10: ERROR: Buffer overflow while expanding macro: M, mmmmmmmmmmmmmmmmmmmmmmmmm
+BEGIN { M; }
+        ~
+stdin:2:9-10: ERROR: syntax error, unexpected end of file
+BEGIN { M; }
+        ~
+)");
+}
+
 } // namespace bpftrace::test::parser
