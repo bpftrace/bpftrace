@@ -3,9 +3,12 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <bpf/libbpf.h>
 #include <linux/bpf.h>
+
+#include "types.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -14,6 +17,23 @@ namespace libbpf {
 #include "container/cstring_view.h"
 
 namespace bpftrace {
+
+static const std::unordered_map<std::string, libbpf::bpf_map_type>
+    BPF_MAP_TYPES = { { "hash", libbpf::BPF_MAP_TYPE_HASH },
+                      { "lruhash", libbpf::BPF_MAP_TYPE_LRU_HASH },
+                      { "percpuhash", libbpf::BPF_MAP_TYPE_PERCPU_HASH },
+                      { "percpuarray", libbpf::BPF_MAP_TYPE_PERCPU_ARRAY },
+                      { "percpulruhash",
+                        libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH } };
+
+static const std::unordered_map<libbpf::bpf_map_type, std::string>
+    BPF_MAP_TYPE_TO_STR = {
+      { libbpf::BPF_MAP_TYPE_HASH, "hash" },
+      { libbpf::BPF_MAP_TYPE_LRU_HASH, "lruhash" },
+      { libbpf::BPF_MAP_TYPE_PERCPU_HASH, "percpuhash" },
+      { libbpf::BPF_MAP_TYPE_PERCPU_ARRAY, "percpuarray" },
+      { libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH, "percpulruhash" }
+    };
 
 class BpfMap {
 public:
@@ -98,5 +118,12 @@ inline bool is_bpf_map_clearable(libbpf::bpf_map_type map_type)
   return map_type != libbpf::BPF_MAP_TYPE_ARRAY &&
          map_type != libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
 }
+
+libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type,
+                                      const SizedType &key_type);
+bool is_array_map(const SizedType &val_type, const SizedType &key_type);
+bool bpf_map_types_compatible(const SizedType &val_type,
+                              const SizedType &key_type,
+                              libbpf::bpf_map_type kind);
 
 } // namespace bpftrace

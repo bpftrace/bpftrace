@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bpf/libbpf.h>
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
@@ -9,6 +10,10 @@
 #include "collect_nodes.h"
 #include "config.h"
 #include "types.h"
+
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
 
 namespace bpftrace {
 namespace ast {
@@ -185,6 +190,7 @@ private:
   std::map<Node *, CollectNodes<Variable>> for_vars_referenced_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
+  std::map<std::string, libbpf::bpf_map_type> bpf_map_type_;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
