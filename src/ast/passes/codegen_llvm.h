@@ -268,7 +268,8 @@ private:
   void generateWatchpointSetupProbe(FunctionType *func_type,
                                     const std::string &expanded_probe_name,
                                     int arg_num,
-                                    int index);
+                                    int index,
+                                    const location &loc);
 
   ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
                                          Value *index,

@@ -174,7 +174,7 @@ public:
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,
                              const Twine &Name,
-                             const location *loc = nullptr);
+                             const location &loc);
   CallInst *createCall(FunctionType *callee_type,
                        Value *callee,
                        ArrayRef<Value *> args,
@@ -183,10 +183,7 @@ public:
                             AllocaInst *buf,
                             size_t size,
                             const location &loc);
-  void CreateOutput(Value *ctx,
-                    Value *data,
-                    size_t size,
-                    const location *loc = nullptr);
+  void CreateOutput(Value *ctx, Value *data, size_t size, const location &loc);
   void CreateAtomicIncCounter(const std::string &map_name, uint32_t idx);
   void CreateMapElemInit(Value *ctx,
                          Map &map,
@@ -337,13 +334,11 @@ private:
 
   llvm::Type *getKernelPointerStorageTy();
   llvm::Type *getUserPointerStorageTy();
-  void CreateRingbufOutput(Value *data,
-                           size_t size,
-                           const location *loc = nullptr);
+  void CreateRingbufOutput(Value *data, size_t size, const location &loc);
   void CreatePerfEventOutput(Value *ctx,
                              Value *data,
                              size_t size,
-                             const location *loc = nullptr);
+                             const location &loc);
 
   void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
   void createPerCpuMinMax(AllocaInst *ret,
