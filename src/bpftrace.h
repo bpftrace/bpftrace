@@ -177,6 +177,7 @@ public:
     return !dwarves_.empty();
   }
   void fentry_recursion_check(ast::Program *prog);
+  std::set<std::string> list_modules(const ast::ASTContext &ctx);
 
   std::string cmd_;
   bool finalize_ = false;
