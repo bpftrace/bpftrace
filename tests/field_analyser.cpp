@@ -1,4 +1,6 @@
 #include "ast/passes/field_analyser.h"
+
+#include "ast/attachpoint_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -14,12 +16,18 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  Driver driver(bpftrace);
-  EXPECT_EQ(driver.parse_str(input), 0);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result);
+  fields.visit(ast.root);
+  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)
