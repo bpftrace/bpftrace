@@ -215,6 +215,11 @@ class Map : public Expression {
 public:
   explicit Map(Diagnostics &d, const std::string &ident, location loc);
   Map(Diagnostics &d, const std::string &ident, Expression &expr, location loc);
+  Map(Diagnostics &d,
+      const std::string &ident,
+      const std::string &bpf_type,
+      int max_entries,
+      location loc);
 
   std::string ident;
   Expression *key_expr = nullptr;
@@ -224,6 +229,9 @@ public:
   // which involve calling map_lookup_percpu_elem
   // https://github.com/bpftrace/bpftrace/issues/3755
   bool is_read = true;
+  bool is_decl = false;
+  std::optional<std::string> bpf_type = std::nullopt;
+  std::optional<int> max_entries = std::nullopt;
 };
 
 class Variable : public Expression {
@@ -312,6 +320,8 @@ public:
 
   Expression *expr = nullptr;
 };
+
+using MapDeclList = std::vector<Map *>;
 
 class VarDeclStatement : public Statement {
 public:
@@ -573,6 +583,7 @@ public:
   Program(Diagnostics &d,
           const std::string &c_definitions,
           Config *config,
+          MapDeclList &&map_decls,
           SubprogList &&functions,
           ProbeList &&probes,
           location loc);
@@ -581,6 +592,7 @@ public:
   Config *config = nullptr;
   SubprogList functions;
   ProbeList probes;
+  MapDeclList map_decls;
 };
 
 std::string opstr(const Binop &binop);

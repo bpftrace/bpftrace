@@ -102,6 +102,21 @@ Map::Map(Diagnostics &d,
   key_expr->key_for_map = this;
 }
 
+Map::Map(Diagnostics &d,
+         const std::string &ident,
+         const std::string &bpf_type,
+         int max_entries,
+         location loc)
+    : Expression(d, loc),
+      ident(ident),
+      bpf_type(bpf_type),
+      max_entries(max_entries)
+{
+  is_map = true;
+  is_decl = true;
+  skip_key_validation = true;
+}
+
 Variable::Variable(Diagnostics &d, const std::string &ident, location loc)
     : Expression(d, loc), ident(ident)
 {
@@ -303,6 +318,7 @@ Subprog::Subprog(Diagnostics &d,
 Program::Program(Diagnostics &d,
                  const std::string &c_definitions,
                  Config *config,
+                 MapDeclList &&map_decls,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  location loc)
@@ -310,7 +326,8 @@ Program::Program(Diagnostics &d,
       c_definitions(c_definitions),
       config(config),
       functions(std::move(functions)),
-      probes(std::move(probes))
+      probes(std::move(probes)),
+      map_decls(std::move(map_decls))
 {
 }
 

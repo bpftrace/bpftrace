@@ -208,6 +208,7 @@ public:
     visitImpl(program.functions);
     visitImpl(program.probes);
     visitAndReplace(&program.config);
+    visitImpl(program.map_decls);
     return default_value();
   }
 
