@@ -3,6 +3,11 @@
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 #include "required_resources.h"
+#include <bpf/libbpf.h>
+
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
 
 namespace bpftrace::ast {
 
@@ -25,6 +30,7 @@ public:
   void visit(Builtin &map);
   void visit(Call &call);
   void visit(Map &map);
+  void visit(MapDeclStatement &decl);
   void visit(Tuple &tuple);
   void visit(For &f);
   void visit(Ternary &ternary);
@@ -52,6 +58,8 @@ private:
   BPFtrace &bpftrace_;
   // Current probe we're analysing
   Probe *probe_{ nullptr };
+  std::unordered_map<std::string, std::pair<libbpf::bpf_map_type, int>>
+      map_decls_;
 
   int next_map_id_ = 0;
 };

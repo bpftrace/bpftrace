@@ -90,6 +90,18 @@ Offsetof::Offsetof(Diagnostics &d,
 {
 }
 
+MapDeclStatement::MapDeclStatement(Diagnostics &d,
+                                   std::string ident,
+                                   std::string bpf_type,
+                                   int max_entries,
+                                   Location &&loc)
+    : Expression(d, std::move(loc)),
+      ident(std::move(ident)),
+      bpf_type(std::move(bpf_type)),
+      max_entries(max_entries)
+{
+}
+
 Map::Map(Diagnostics &d, std::string ident, Location &&loc)
     : Expression(d, std::move(loc)), ident(std::move(ident))
 {
@@ -335,6 +347,7 @@ Subprog::Subprog(Diagnostics &d,
 Program::Program(Diagnostics &d,
                  std::string c_definitions,
                  Config *config,
+                 MapDeclList &&map_decls,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  Location &&loc)
@@ -342,7 +355,8 @@ Program::Program(Diagnostics &d,
       c_definitions(std::move(c_definitions)),
       config(config),
       functions(std::move(functions)),
-      probes(std::move(probes))
+      probes(std::move(probes)),
+      map_decls(std::move(map_decls))
 {
 }
 

@@ -1720,6 +1720,38 @@ void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
   }
 }
 
+void SemanticAnalyser::visit(MapDeclStatement &decl)
+{
+  if (!bpftrace_.config_->get(ConfigKeyBool::unstable_map_decl)) {
+    decl.addError() << "Map declarations are not enabled by default. To enable "
+                       "this unstable feature, set this config flag to 1 "
+                       "e.g. unstable_map_decl=1";
+  }
+
+  const auto bpf_type = get_bpf_map_type(decl.bpf_type);
+  if (!bpf_type) {
+    auto &err = decl.addError();
+    err << "Invalid bpf map type: " << decl.bpf_type;
+    auto &hint = err.addHint();
+    add_bpf_map_types_hint(hint);
+  } else {
+    bpf_map_type_.insert({ decl.ident, *bpf_type });
+
+    if (decl.max_entries != 1 &&
+        *bpf_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY) {
+      decl.addError() << "Max entries can only be 1 for map type "
+                      << decl.bpf_type;
+    }
+  }
+
+  if (is_final_pass()) {
+    auto map_key_search_val = map_key_.find(decl.ident);
+    if (map_key_search_val == map_key_.end()) {
+      decl.addWarning() << "Unused map: " << decl.ident;
+    }
+  }
+}
+
 void SemanticAnalyser::visit(Map &map)
 {
   SizedType new_key_type = CreateNone();
@@ -1778,6 +1810,21 @@ void SemanticAnalyser::visit(Map &map)
     map.key_type = map_key_search_val->second;
   } else {
     map.key_type = CreateNone();
+  }
+
+  if (is_final_pass()) {
+    auto found_kind = bpf_map_type_.find(map.ident);
+    if (found_kind != bpf_map_type_.end()) {
+      if (!bpf_map_types_compatible(map.type,
+                                    map.key_type,
+                                    found_kind->second)) {
+        auto map_type = get_bpf_map_type(map.type, map.key_type);
+        map.addError() << "Incompatible map types. Type from declaration: "
+                       << get_bpf_map_type_str(found_kind->second)
+                       << ". Type from value/key type: "
+                       << get_bpf_map_type_str(map_type);
+      }
+    }
   }
 }
 

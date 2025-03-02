@@ -214,6 +214,18 @@ public:
   std::vector<std::string> field;
 };
 
+class MapDeclStatement : public Expression {
+public:
+  explicit MapDeclStatement(Diagnostics &d,
+                            std::string ident,
+                            std::string bpf_type,
+                            int max_entries,
+                            Location &&loc);
+  std::string ident;
+  std::string bpf_type;
+  int max_entries;
+};
+
 class Map : public Expression {
 public:
   explicit Map(Diagnostics &d, std::string ident, Location &&loc);
@@ -315,6 +327,8 @@ public:
 
   Expression *expr = nullptr;
 };
+
+using MapDeclList = std::vector<MapDeclStatement *>;
 
 class VarDeclStatement : public Statement {
 public:
@@ -594,6 +608,7 @@ public:
   Program(Diagnostics &d,
           std::string c_definitions,
           Config *config,
+          MapDeclList &&map_decls,
           SubprogList &&functions,
           ProbeList &&probes,
           Location &&loc);
@@ -602,6 +617,7 @@ public:
   Config *config = nullptr;
   SubprogList functions;
   ProbeList probes;
+  MapDeclList map_decls;
 };
 
 std::string opstr(const Binop &binop);
