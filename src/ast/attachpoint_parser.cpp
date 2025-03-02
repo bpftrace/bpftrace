@@ -165,7 +165,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       // which raw_input has invalid number of parts will be ignored (instead
       // of throwing an error). These will have the same associated location.
       new_attach_points.push_back(
-          ctx_.make_node<AttachPoint>(raw_input, true, ap.loc));
+          ctx_.make_node<AttachPoint>(raw_input, true, Location(ap.loc)));
     }
     return NEW_APS;
   }

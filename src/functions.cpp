@@ -104,7 +104,7 @@ bool can_implicit_cast(const SizedType &from, const SizedType &to)
 const Function *FunctionRegistry::get(std::string_view ns,
                                       std::string_view name,
                                       const std::vector<SizedType> &arg_types,
-                                      const location &loc,
+                                      const ast::Location &loc,
                                       std::ostream &out) const
 {
   FqName fq_name = {
