@@ -41,18 +41,18 @@ bool probe_needs_pid_filter(AttachPoint *ap)
 
 static Statement *create_pid_filter(ASTContext &ctx,
                                     int pid,
-                                    const location &loc)
+                                    const Location &loc)
 {
   return ctx.make_node<If>(
-      ctx.make_node<Binop>(ctx.make_node<Builtin>("pid", loc),
+      ctx.make_node<Binop>(ctx.make_node<Builtin>("pid", Location(loc)),
                            Operator::NE,
-                           ctx.make_node<Integer>(pid, loc),
-                           loc),
+                           ctx.make_node<Integer>(pid, Location(loc)),
+                           Location(loc)),
       ctx.make_node<Block>(std::vector<Statement *>{ ctx.make_node<Jump>(
-                               JumpType::RETURN, loc) },
-                           loc),
-      ctx.make_node<Block>(std::vector<Statement *>{}, loc),
-      loc);
+                               JumpType::RETURN, Location(loc)) },
+                           Location(loc)),
+      ctx.make_node<Block>(std::vector<Statement *>{}, Location(loc)),
+      Location(loc));
 }
 
 void PidFilterPass::visit(Probe &probe)

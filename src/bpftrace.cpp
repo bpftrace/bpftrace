@@ -912,7 +912,8 @@ int BPFtrace::run(BpfBytecode bytecode)
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   } catch (const HelperVerifierError &e) {
     if (helper_use_loc_.find(e.func_id) != helper_use_loc_.end()) {
-      LOG(ERROR, helper_use_loc_[e.func_id], std::cerr) << e.what();
+      ast::Location loc(helper_use_loc_[e.func_id]);
+      LOG(ERROR, loc, std::cerr) << e.what();
     } else {
       LOG(ERROR) << e.what();
     }

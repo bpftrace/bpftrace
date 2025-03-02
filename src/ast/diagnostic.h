@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-#include "location.hh"
+#include "ast/location.h"
 
 namespace bpftrace {
 namespace ast {
@@ -21,7 +21,7 @@ public:
     Warning,
     Error,
   };
-  Diagnostic(location loc) : loc_(loc) {};
+  Diagnostic(const Location loc) : loc_(loc) {};
   const std::string msg() const
   {
     return msg_.str();
@@ -30,7 +30,7 @@ public:
   {
     return hint_.str();
   }
-  const location& loc() const
+  const Location& loc() const
   {
     return loc_;
   }
@@ -52,7 +52,7 @@ public:
 private:
   std::stringstream msg_;
   std::stringstream hint_;
-  location loc_;
+  const Location loc_;
 };
 
 class Diagnostics {
