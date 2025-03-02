@@ -136,6 +136,18 @@ void Printer::visit(Offsetof &offof)
   --depth_;
 }
 
+void Printer::visit(MapDeclStatement &decl)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "map decl: " << decl.ident << std::endl;
+
+  ++depth_;
+  std::string indentType(depth_, ' ');
+  out_ << indentType << "bpf type: " << decl.bpf_type << std::endl;
+  out_ << indentType << "max entries: " << decl.max_entries << std::endl;
+  --depth_;
+}
+
 void Printer::visit(Map &map)
 {
   std::string indent(depth_, ' ');
@@ -444,6 +456,10 @@ void Printer::visit(Program &program)
 
   ++depth_;
   visit(program.config);
+  --depth_;
+
+  ++depth_;
+  visit(program.map_decls);
   --depth_;
 
   ++depth_;

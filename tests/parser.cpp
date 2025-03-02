@@ -2958,4 +2958,40 @@ Program
 )");
 }
 
+TEST(Parser, map_declarations)
+{
+  test("let @a = hash(5); BEGIN { $x; }", R"(
+Program
+ map decl: @a
+  bpf type: hash
+  max entries: 5
+ BEGIN
+  variable: $x
+)");
+
+  test("let @a = hash(2); let @b = percpuhash(7); BEGIN { $x; }", R"(
+Program
+ map decl: @a
+  bpf type: hash
+  max entries: 2
+ map decl: @b
+  bpf type: percpuhash
+  max entries: 7
+ BEGIN
+  variable: $x
+)");
+
+  test_parse_failure("@a = hash(); BEGIN { $x; }", R"(
+stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
+@a = hash(); BEGIN { $x; }
+~~
+)");
+
+  test_parse_failure("let @a = hash(); BEGIN { $x; }", R"(
+stdin:1:10-16: ERROR: syntax error, unexpected ), expecting integer
+let @a = hash(); BEGIN { $x; }
+         ~~~~~~
+)");
+}
+
 } // namespace bpftrace::test::parser

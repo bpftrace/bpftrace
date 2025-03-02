@@ -178,9 +178,6 @@ private:
                        Value *dst_val,
                        Value *src_val);
 
-  libbpf::bpf_map_type get_map_type(const SizedType &val_type,
-                                    const SizedType &key_type);
-  bool is_array_map(const SizedType &val_type, const SizedType &key_type);
   bool map_has_single_elem(const SizedType &val_type,
                            const SizedType &key_type);
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);

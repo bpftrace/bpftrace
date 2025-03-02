@@ -31,6 +31,8 @@ and this project adheres to
   - [#3841](https://github.com/bpftrace/bpftrace/pull/3841)
 - Add simple block expressions
   - [#3780](https://github.com/bpftrace/bpftrace/pull/3780)
+- Add map declaration syntax (behind an "unstable" config flag)
+  - [#3863](https://github.com/bpftrace/bpftrace/pull/3863)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)

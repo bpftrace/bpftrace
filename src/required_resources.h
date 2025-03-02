@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bpf/libbpf.h>
 #include <cstdint>
 #include <istream>
 #include <ostream>
@@ -14,6 +15,10 @@
 #include "format_string.h"
 #include "struct.h"
 #include "types.h"
+
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
 
 namespace bpftrace {
 
@@ -83,13 +88,21 @@ struct MapInfo {
   std::optional<LinearHistogramArgs> lhist_args;
   std::optional<int> hist_bits_arg;
   int id = -1;
+  int max_entries = -1;
+  libbpf::bpf_map_type bpf_type = libbpf::BPF_MAP_TYPE_HASH;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key_type, value_type, lhist_args, hist_bits_arg, id);
+    archive(key_type,
+            value_type,
+            lhist_args,
+            hist_bits_arg,
+            id,
+            max_entries,
+            bpf_type);
   }
 };
 

@@ -27,6 +27,7 @@ enum class ConfigKeyBool {
   probe_inline,
   print_maps_on_exit,
   use_blazesym,
+  unstable_map_decl,
 };
 
 enum class ConfigKeyInt {
@@ -102,6 +103,7 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "missing_probes", ConfigKeyMissingProbes::default_ },
   { "print_maps_on_exit", ConfigKeyBool::print_maps_on_exit },
   { "use_blazesym", ConfigKeyBool::use_blazesym },
+  { "unstable_map_decl", ConfigKeyBool::unstable_map_decl },
 };
 
 // These are not tracked by the config class
