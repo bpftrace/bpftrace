@@ -1,6 +1,7 @@
 add_library(ast_defs STATIC
   ast.cpp
   context.cpp
+  int_parser.cpp
   location.cpp
 )
 add_dependencies(ast_defs parser)
@@ -11,7 +12,6 @@ add_library(ast STATIC
   codegen_helper.cpp
   diagnostic.cpp
   dibuilderbpf.cpp
-  int_parser.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
   signal.cpp

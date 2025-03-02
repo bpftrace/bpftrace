@@ -11,20 +11,27 @@ using ::testing::_;
 
 TEST(codegen, regression_957)
 {
+  ast::ASTContext ast("stdin", "t:sched:sched_one* { cat(\"%s\", probe); }");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
+  Driver driver(ast, *bpftrace);
 
-  ASSERT_EQ(driver.parse_str("t:sched:sched_one* { cat(\"%s\", probe); }"), 0);
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, *bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(driver.ctx.root);
+  resource_analyser.visit(ast.root);
   bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
+  ast::CodegenLLVM codegen(ast, *bpftrace);
   codegen.compile();
 }
 

@@ -1,5 +1,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+
+#include "ast/attachpoint_parser.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
@@ -14,23 +16,33 @@ void test(BPFtrace &bpftrace,
           std::string_view expected_error,
           bool expected_result)
 {
-  Driver driver(bpftrace);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
+  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
 
-  ASSERT_EQ(driver.parse_str(input), 0);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, bpftrace, false);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
 
   ast::ConfigAnalyser config_analyser(bpftrace);
-  config_analyser.visit(driver.ctx.root);
-  ASSERT_EQ(driver.ctx.diagnostics().ok(), expected_result) << msg.str();
+  config_analyser.visit(ast.root);
+  ASSERT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 
   if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
@@ -38,7 +50,7 @@ void test(BPFtrace &bpftrace,
 
     // Reproduce the full string.
     std::stringstream out;
-    driver.ctx.diagnostics().emit(out);
+    ast.diagnostics().emit(out);
     EXPECT_EQ(out.str(), expected_error);
   }
 }

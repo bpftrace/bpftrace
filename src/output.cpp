@@ -833,14 +833,15 @@ void TextOutput::attached_probes(uint64_t num_probes) const
     out_ << "Attaching " << num_probes << " probes..." << std::endl;
 }
 
-void TextOutput::helper_error(int func_id,
-                              int retcode,
-                              const ast::Location &loc) const
+void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
 {
-  LOG(WARNING, loc, out_) << get_helper_error_msg(func_id, retcode)
-                          << "\nAdditional Info - helper: "
-                          << libbpf::bpf_func_name[func_id]
-                          << ", retcode: " << retcode;
+  LOG(WARNING,
+      std::string(info.source_location),
+      std::vector(info.source_context),
+      out_)
+      << get_helper_error_msg(info.func_id, retcode)
+      << "\nAdditional Info - helper: " << libbpf::bpf_func_name[info.func_id]
+      << ", retcode: " << retcode;
 }
 
 std::string TextOutput::field_to_str(const std::string &name,
@@ -1132,15 +1133,13 @@ void JsonOutput::attached_probes(uint64_t num_probes) const
   message(MessageType::attached_probes, "probes", num_probes);
 }
 
-void JsonOutput::helper_error(int func_id,
-                              int retcode,
-                              const ast::Location &loc) const
+void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
 {
   out_ << R"({"type": "helper_error", "msg": ")"
-       << get_helper_error_msg(func_id, retcode) << R"(", "helper": ")"
-       << libbpf::bpf_func_name[func_id] << R"(", "retcode": )" << retcode
-       << ", \"line\": " << loc.line() << ", \"col\": " << loc.column() << "}"
-       << std::endl;
+       << get_helper_error_msg(info.func_id, retcode) << R"(", "helper": ")"
+       << libbpf::bpf_func_name[info.func_id] << R"(", "retcode": )" << retcode
+       << R"(, "filename": ")" << info.filename << R"(", "line": )" << info.line
+       << R"(, "col": )" << info.column << "}" << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

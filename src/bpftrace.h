@@ -55,6 +55,7 @@ extern bool bt_verbose;
 extern bool dry_run;
 
 enum class DebugStage {
+  Parse,
   Ast,
   Codegen,
   CodegenOpt,
@@ -64,6 +65,8 @@ enum class DebugStage {
 };
 
 const std::unordered_map<std::string_view, DebugStage> debug_stages = {
+  // clang-format off
+  { "parse", DebugStage::Parse },
   { "ast", DebugStage::Ast },
   { "codegen", DebugStage::Codegen },
   { "codegen-opt", DebugStage::CodegenOpt },
@@ -72,6 +75,7 @@ const std::unordered_map<std::string_view, DebugStage> debug_stages = {
 #endif
   { "libbpf", DebugStage::Libbpf },
   { "verifier", DebugStage::Verifier },
+  // clang-format on
 };
 
 class WildcardException : public std::exception {
@@ -190,11 +194,12 @@ public:
   StructManager structs;
   FunctionRegistry functions;
   std::map<std::string, std::string> macros_;
-  // Map of enum variant_name to (variant_value, enum_name)
+  // Map of enum variant_name to (variant_value, enum_name).
   std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
-  // Map of enum_name to map of variant_value to variant_name
+  // Map of enum_name to map of variant_value to variant_name.
   std::map<std::string, std::map<uint64_t, std::string>> enum_defs_;
-  std::map<libbpf::bpf_func_id, ast::Location> helper_use_loc_;
+  // For each helper, list of all generated call sites.
+  std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;
   const FuncsModulesMap &get_traceable_funcs() const;
   KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
