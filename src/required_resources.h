@@ -25,14 +25,18 @@ public:
   // it is not actually useful for the reader when the error is emitted. The
   // line number and column are preserved for reference, but this would be a
   // rather advanced runtime error, not a syntax or structural error.
-  HelperErrorInfo(int func_id, int line, int column)
-      : func_id(func_id), line(line), column(column) {};
+  HelperErrorInfo(int func_id,
+                  const std::string &filename,
+                  int line,
+                  int column)
+      : func_id(func_id), filename(filename), line(line), column(column) {};
 
   // This is only used in the case that for some reason there is no helper
   // registered for the specific instance.
   HelperErrorInfo() : func_id(-1), line(-1), column(-1) {};
 
   const int func_id;
+  const std::string filename;
   const int line;
   const int column;
 
@@ -41,7 +45,7 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(func_id, line, column);
+    archive(func_id, filename, line, column);
   }
 };
 

@@ -15,26 +15,34 @@ TEST(codegen, call_kstack)
 
 TEST(codegen, call_kstack_mapids)
 {
+  ast::ASTContext ast("stdin", R"(
+kprobe:f {
+  @x = kstack(5);
+  @y = kstack(6);
+  @z = kstack(6)
+})");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
+  Driver driver(ast, *bpftrace);
 
-  ASSERT_EQ(driver.parse_str(
-                "kprobe:f { @x = kstack(5); @y = kstack(6); @z = kstack(6) }"),
-            0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  clang.parse(driver.ctx.root, *bpftrace);
+  clang.parse(ast.root, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, *bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(driver.ctx.root);
+  resource_analyser.visit(ast.root);
   bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
+  ast::CodegenLLVM codegen(ast, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 8);
@@ -49,27 +57,35 @@ TEST(codegen, call_kstack_mapids)
 
 TEST(codegen, call_kstack_modes_mapids)
 {
+  ast::ASTContext ast("stdin", R"(
+kprobe:f {
+  @w = kstack(raw);
+  @x = kstack(perf);
+  @y = kstack(bpftrace);
+  @z = kstack()
+})");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
+  Driver driver(ast, *bpftrace);
 
-  ASSERT_EQ(driver.parse_str(
-                "kprobe:f { @w = kstack(raw); @x = kstack(perf); @y = "
-                "kstack(bpftrace); @z = kstack() }"),
-            0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  clang.parse(driver.ctx.root, *bpftrace);
+  clang.parse(ast.root, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, *bpftrace);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::SemanticAnalyser semantics(ast, *bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(driver.ctx.root);
+  resource_analyser.visit(ast.root);
   bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
-  ast::CodegenLLVM codegen(driver.ctx, *bpftrace);
+  ast::CodegenLLVM codegen(ast, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 10);

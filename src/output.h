@@ -92,6 +92,10 @@ public:
   virtual void attached_probes(uint64_t num_probes) const = 0;
   virtual void helper_error(int func_id,
                             int retcode,
+<<<<<<< HEAD
+=======
+                            const std::string &filename,
+>>>>>>> d27a70b6 (Invert the `Driver`/`ASTContext` relationship)
                             int line,
                             int column) const = 0;
 
@@ -238,6 +242,7 @@ public:
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,
                     int retcode,
+                    const std::string &filename,
                     int line,
                     int column) const override;
 
@@ -317,6 +322,7 @@ public:
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,
                     int retcode,
+                    const std::string &filename,
                     int line,
                     int column) const override;
 

@@ -61,7 +61,7 @@ enum class ExpansionType {
 
 class Node {
 public:
-  Node(Diagnostics &d, location loc) : diagnostics_(d), loc(loc) {};
+  Node(Diagnostics &d, location loc);
   virtual ~Node() = default;
 
   Node(const Node &) = delete;
