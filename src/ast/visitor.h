@@ -84,6 +84,10 @@ public:
   {
     return visitAndReplace(&ofof.expr);
   }
+  R visit(MapDeclStatement &decl __attribute__((__unused__)))
+  {
+    return default_value();
+  }
   R visit(Map &map)
   {
     return visitAndReplace(&map.key_expr);
@@ -207,9 +211,11 @@ public:
   }
   R visit(Program &program)
   {
+    // This order is important
     visitImpl(program.functions);
-    visitImpl(program.probes);
     visitAndReplace(&program.config);
+    visitImpl(program.map_decls);
+    visitImpl(program.probes);
     return default_value();
   }
 

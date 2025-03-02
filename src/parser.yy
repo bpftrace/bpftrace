@@ -151,12 +151,14 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::SubprogArgList> subprog_args
 %type <ast::Integer *> int
 %type <ast::Map *> map
+%type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
 %type <ast::Config *> config
 %type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt for_stmt
+%type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
@@ -184,8 +186,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %%
 
 program:
-                c_definitions config probes_and_subprogs END {
-                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3.second), std::move($3.first), @$);
+                c_definitions config map_decl_list probes_and_subprogs END {
+                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4.second), std::move($4.first), @$);
                 }
                 ;
 
@@ -464,6 +466,15 @@ assign_stmt:
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
                   $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, b, @$);
                 }
+        ;
+
+map_decl_list:
+                map_decl_list map_decl_stmt ";"      { $$ = std::move($1); $$.push_back($2); }
+        |        %empty                              { $$ = ast::MapDeclList{}; }
+        ;
+
+map_decl_stmt:
+                LET MAP ASSIGN IDENT LPAREN INT RPAREN { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
         ;
 
 var_decl_stmt:

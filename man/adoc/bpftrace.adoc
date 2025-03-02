@@ -906,6 +906,35 @@ All valid identifiers can be used as `name`.
 
 The data type of a variable is automatically determined during first assignment and cannot be changed afterwards.
 
+==== Maps Declarations
+
+Maps can also be declared in the global scope, before probes and after the config e.g.
+----
+config = {
+    unstable_map_decl=1;
+}
+
+let @a = hash(100);
+let @b = percpulruhash(20);
+
+BEGIN { ... }
+----
+
+The utility of this is that you can specify different underlying BPF map types.
+Currently these are available in bpftrace:
+- hash (BPF_MAP_TYPE_HASH)
+- lruhash (BPF_MAP_TYPE_LRU_HASH)
+- percpuhash (BPF_MAP_TYPE_PERCPU_HASH)
+- percpulruhash (BPF_MAP_TYPE_LRU_PERCPU_HASH)
+- percpuarray (BPF_MAP_TYPE_PERCPU_ARRAY)
+
+Additionally, map declarations must supply a single argument: **max entries** e.g. `let @a = lruhash(100);`
+All maps that are not declared in the global scope utilize the default set in the config variable "max_map_keys".
+However, it's best practice to declare maps up front as using the default can lead to lost map update events (if the map is full) or over allocation of memory if the map is intended to only store a few entries.
+
+**Warning** this feature is experimental and may be subject to changes.
+It also requires the 'unstable_map_decl' config being set to 1.
+
 ==== Maps without Explicit Keys
 
 Values can be assigned directly to maps without a key (sometimes refered to as scalar maps).

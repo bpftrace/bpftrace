@@ -219,7 +219,9 @@ std::string Output::get_helper_error_msg(int func_id, int retcode) const
 {
   std::string msg;
   if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG) {
-    msg = "Map full; can't update element. Try increasing max_map_keys config";
+    msg = "Map full; can't update element. Try increasing max_map_keys config "
+          "or manually setting the max entries in a map declaration e.g. `let "
+          "@a = hash(5000)`";
   } else if (func_id == libbpf::BPF_FUNC_map_delete_elem &&
              retcode == -ENOENT) {
     msg = "Can't delete map element because it does not exist.";

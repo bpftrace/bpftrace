@@ -744,8 +744,12 @@ static ast::ASTContext buildListProgram(const std::string& search)
   auto ap = ast.make_node<ast::AttachPoint>(search, true, location());
   auto probe = ast.make_node<ast::Probe>(
       ast::AttachPointList({ ap }), nullptr, nullptr, location());
-  ast.root = ast.make_node<ast::Program>(
-      "", nullptr, ast::SubprogList(), ast::ProbeList({ probe }), location());
+  ast.root = ast.make_node<ast::Program>("",
+                                         nullptr,
+                                         ast::MapDeclList(),
+                                         ast::SubprogList(),
+                                         ast::ProbeList({ probe }),
+                                         location());
   return ast;
 }
 

@@ -4889,4 +4889,62 @@ Program
 )");
 }
 
+TEST(semantic_analyser, map_declarations)
+{
+  auto bpftrace = get_mock_bpftrace();
+  ConfigSetter configs{ *bpftrace->config_, ConfigSource::script };
+  configs.set(ConfigKeyBool::unstable_map_decl, true);
+
+  test(*bpftrace, "let @a = hash(2); BEGIN { @a = 1; }");
+  test(*bpftrace, "let @a = lruhash(2); BEGIN { @a = 1; }");
+  test(*bpftrace, "let @a = percpuhash(2); BEGIN { @a[1] = count(); }");
+  test(*bpftrace, "let @a = percpulruhash(2); BEGIN { @a[1] = count(); }");
+  test(*bpftrace, "let @a = percpulruhash(2); BEGIN { @a[1] = count(); }");
+  test(*bpftrace, "let @a = percpuarray(1); BEGIN { @a = count(); }");
+
+  test_for_warning(*bpftrace,
+                   "let @a = hash(2); BEGIN { print(1); }",
+                   "WARNING: Unused map: @a");
+
+  test_error(*bpftrace, "let @a = percpuhash(2); BEGIN { @a = 1; }", R"(
+stdin:1:33-35: ERROR: Incompatible map types. Type from declaration: percpuhash. Type from value/key type: hash
+let @a = percpuhash(2); BEGIN { @a = 1; }
+                                ~~
+)");
+  test_error(*bpftrace, "let @a = percpulruhash(2); BEGIN { @a = 1; }", R"(
+stdin:1:36-38: ERROR: Incompatible map types. Type from declaration: percpulruhash. Type from value/key type: hash
+let @a = percpulruhash(2); BEGIN { @a = 1; }
+                                   ~~
+)");
+  test_error(*bpftrace, "let @a = hash(2); BEGIN { @a = count(); }", R"(
+stdin:1:27-29: ERROR: Incompatible map types. Type from declaration: hash. Type from value/key type: percpuarray
+let @a = hash(2); BEGIN { @a = count(); }
+                          ~~
+)");
+  test_error(*bpftrace, "let @a = lruhash(2); BEGIN { @a = count(); }", R"(
+stdin:1:30-32: ERROR: Incompatible map types. Type from declaration: lruhash. Type from value/key type: percpuarray
+let @a = lruhash(2); BEGIN { @a = count(); }
+                             ~~
+)");
+  test_error(*bpftrace,
+             "let @a = percpuarray(1); BEGIN { @a[1] = count(); }",
+             R"(
+stdin:1:34-39: ERROR: Incompatible map types. Type from declaration: percpuarray. Type from value/key type: percpuhash
+let @a = percpuarray(1); BEGIN { @a[1] = count(); }
+                                 ~~~~~
+)");
+  test_error(*bpftrace, "let @a = potato(2); BEGIN { @a[1] = count(); }", R"(
+stdin:1:1-19: ERROR: Invalid bpf map type: potato
+let @a = potato(2); BEGIN { @a[1] = count(); }
+~~~~~~~~~~~~~~~~~~
+HINT: Valid map types: percpulruhash, percpuarray, percpuhash, lruhash, hash
+)");
+
+  test_error(*bpftrace, "let @a = percpuarray(10); BEGIN { @a = count(); }", R"(
+stdin:1:1-25: ERROR: Max entries can only be 1 for map type percpuarray
+let @a = percpuarray(10); BEGIN { @a = count(); }
+~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 } // namespace bpftrace::test::semantic_analyser

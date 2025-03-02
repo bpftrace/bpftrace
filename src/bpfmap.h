@@ -1,10 +1,13 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 
 #include <bpf/libbpf.h>
 #include <linux/bpf.h>
+
+#include "types.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -97,5 +100,15 @@ inline bool is_bpf_map_clearable(libbpf::bpf_map_type map_type)
   return map_type != libbpf::BPF_MAP_TYPE_ARRAY &&
          map_type != libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
 }
+
+libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type,
+                                      const SizedType &key_type);
+std::optional<libbpf::bpf_map_type> get_bpf_map_type(const std::string &name);
+std::string get_bpf_map_type_str(libbpf::bpf_map_type map_type);
+void add_bpf_map_types_hint(std::stringstream &hint);
+bool is_array_map(const SizedType &val_type, const SizedType &key_type);
+bool bpf_map_types_compatible(const SizedType &val_type,
+                              const SizedType &key_type,
+                              libbpf::bpf_map_type kind);
 
 } // namespace bpftrace

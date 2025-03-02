@@ -3777,26 +3777,6 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
   var->addDebugInfo(debuginfo);
 }
 
-libbpf::bpf_map_type CodegenLLVM::get_map_type(const SizedType &val_type,
-                                               const SizedType &key_type)
-{
-  if (val_type.IsCountTy() && key_type.IsNoneTy()) {
-    return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
-  } else if (val_type.NeedsPercpuMap()) {
-    return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
-  } else {
-    return libbpf::BPF_MAP_TYPE_HASH;
-  }
-}
-
-bool CodegenLLVM::is_array_map(const SizedType &val_type,
-                               const SizedType &key_type)
-{
-  auto map_type = get_map_type(val_type, key_type);
-  return map_type == libbpf::BPF_MAP_TYPE_ARRAY ||
-         map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
-}
-
 // Check if we can special-case the map to have a single element. This is done
 // for keyless maps BPF_MAP_TYPE_(PERCPU_)ARRAY type.
 bool CodegenLLVM::map_has_single_elem(const SizedType &val_type,
@@ -3837,18 +3817,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   for (const auto &[name, info] : required_resources.maps_info) {
     const auto &val_type = info.value_type;
     const auto &key_type = info.key_type;
-
-    auto max_entries = bpftrace_.config_->get(ConfigKeyInt::max_map_keys);
-    auto map_type = get_map_type(val_type, key_type);
-
-    // hist() and lhist() transparently create additional elements in whatever
-    // map they are assigned to. So even if the map looks like it has no keys,
-    // multiple keys are necessary.
-    if (key_type.IsNoneTy() && !val_type.IsHistTy() && !val_type.IsLhistTy()) {
-      max_entries = 1;
-    }
-
-    createMapDefinition(name, map_type, max_entries, key_type, val_type);
+    createMapDefinition(
+        name, info.bpf_type, info.max_entries, key_type, val_type);
   }
 
   // bpftrace internal maps
@@ -4422,7 +4392,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
 bool CodegenLLVM::canAggPerCpuMapElems(const SizedType &val_type,
                                        const SizedType &key_type)
 {
-  auto map_type = get_map_type(val_type, key_type);
+  auto map_type = get_bpf_map_type(val_type, key_type);
   return val_type.IsCastableMapTy() &&
          (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
           map_type == libbpf::BPF_MAP_TYPE_PERCPU_HASH);
