@@ -799,7 +799,7 @@ void AttachedProbe::attach_multi_uprobe(std::optional<int> pid)
   }
 }
 #else
-void AttachedProbe::attach_multi_uprobe(int)
+void AttachedProbe::attach_multi_uprobe([[maybe_unused]] std::optional<int> pid)
 {
 }
 #endif // HAVE_LIBBPF_UPROBE_MULTI
