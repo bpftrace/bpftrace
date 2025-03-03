@@ -1,6 +1,8 @@
 name: Distros
 
-on: [push]
+on:
+  push:
+    branches: [ master, release/* ]
 
 # Cancel previous run if a new one is started
 concurrency:
