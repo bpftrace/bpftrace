@@ -1,6 +1,9 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master, release/* ]
+  pull_request:
 
 # Cancel previous run if a new one is started
 concurrency:
