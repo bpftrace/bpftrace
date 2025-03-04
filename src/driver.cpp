@@ -5,10 +5,7 @@
 #include "log.h"
 #include "parser.tab.hh"
 
-struct yy_buffer_state;
-
-extern struct yy_buffer_state *yy_scan_string(const char *yy_str,
-                                              yyscan_t yyscanner);
+extern void yy_set_source_string(const std::string &s);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy(yyscan_t yyscanner);
 extern bpftrace::location loc;
@@ -46,7 +43,7 @@ int Driver::parse()
   if (debug_) {
     parser.set_debug_level(1);
   }
-  yy_scan_string(Log::get().get_source().c_str(), scanner);
+  yy_set_source_string(Log::get().get_source());
   parser.parse();
   yylex_destroy(scanner);
 

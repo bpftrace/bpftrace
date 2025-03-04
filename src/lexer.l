@@ -19,6 +19,15 @@ static std::string buffer;
 #define yyterminate() return bpftrace::Parser::make_END(loc)
 
 using namespace bpftrace;
+
+static std::string source;
+static size_t curr;
+
+void yy_set_source_string(const std::string& s);
+int yy_read_from_source(char* buf, size_t max_size);
+
+#define YY_INPUT(buf,result,max_size) \
+  result = yy_read_from_source(buf, max_size);
 %}
 
 /* https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal */
@@ -267,18 +276,16 @@ struct|union|enum       {
                             }
                             else
                             {
-                              int leng = YY_BUF_SIZE;
                               std::string original_s(s);
                               std::string original_yytext(yytext);
-                              for (z=strlen(s) - 1; z >= 0; z--){
-                                if (unput_count >= 1000 || leng <= 0) {
+                              for (z=strlen(s) - 1; z >= 0; z--) {
+                                if (unput_count >= 1000) {
                                   driver.error(loc, std::string("Macro recursion limit reached: ")
                                                     + original_yytext + ", " + original_s);
                                   yyterminate();
                                 }
                                 unput(s[z]);
                                 unput_count++;
-                                leng--;
                               }
                             }
                           } else {
@@ -291,3 +298,15 @@ struct|union|enum       {
                                             std::string(yytext) + std::string("'")); }
 
 %%
+
+void yy_set_source_string(const std::string& s) {
+  source = s;
+  curr = 0;
+}
+
+int yy_read_from_source(char* buf, size_t max_size) {
+  size_t num_to_copy = std::min(source.size() - curr, max_size);
+  source.copy(buf, num_to_copy, curr);
+  curr += num_to_copy;
+  return num_to_copy;
+}
