@@ -21,7 +21,7 @@ public:
   }
 
   bool open(std::string file);
-  void close(void);
+  void close();
 
   bool write(uint64_t ns, void *pkt, unsigned int size);
 

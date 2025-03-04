@@ -1,11 +1,9 @@
-#include "format_string.h"
-#include "log.h"
-#include "struct.h"
-#include "utils.h"
-
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
+
+#include "format_string.h"
+#include "struct.h"
+#include "utils.h"
 
 namespace bpftrace {
 

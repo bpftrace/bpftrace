@@ -1,11 +1,9 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/printer.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::pid_filter_pass {
 

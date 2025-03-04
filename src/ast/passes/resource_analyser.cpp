@@ -5,8 +5,6 @@
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
 #include "bpftrace.h"
-#include "globalvars.h"
-#include "log.h"
 #include "struct.h"
 
 namespace bpftrace::ast {

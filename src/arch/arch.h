@@ -1,11 +1,9 @@
 #pragma once
 
-#include <stdexcept>
 #include <string>
 #include <vector>
 
-namespace bpftrace {
-namespace arch {
+namespace bpftrace::arch {
 
 int offset(std::string reg_name);
 int max_arg();
@@ -20,5 +18,4 @@ std::vector<std::string> invalid_watchpoint_modes();
 // Returns the width in bits of kernel pointers.
 int get_kernel_ptr_width();
 
-} // namespace arch
-} // namespace bpftrace
+} // namespace bpftrace::arch

@@ -3,15 +3,12 @@
 #include "ast/ast.h"
 #include "ast/context.h"
 #include "ast/int_parser.h"
-#include "log.h"
 #include "types.h"
 #include <algorithm>
 #include <bcc/bcc_proc.h>
 #include <exception>
-#include <functional>
 #include <iostream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace bpftrace::ast {

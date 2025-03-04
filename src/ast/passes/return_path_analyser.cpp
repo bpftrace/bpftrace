@@ -1,5 +1,4 @@
 #include "return_path_analyser.h"
-#include "log.h"
 
 namespace bpftrace::ast {
 

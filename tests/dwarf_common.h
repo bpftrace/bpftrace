@@ -1,13 +1,16 @@
 #pragma once
 
-#include <sys/stat.h>
+#ifdef HAVE_LIBLLDB
 
 #include <cstdio>
 #include <fcntl.h>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
+#include <sys/stat.h>
 
 #include "data/dwarf_data.h"
+#include "gtest/gtest.h"
 
 class test_dwarf : public ::testing::Test {
 protected:
@@ -35,3 +38,5 @@ protected:
   static constexpr const char *bin_ = "/tmp/bpftrace-test-dwarf-data";
   static constexpr const char *cxx_bin_ = dwarf_data_cxx_path;
 };
+
+#endif

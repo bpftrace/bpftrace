@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <unordered_set>
 
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
@@ -11,8 +10,7 @@ namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
@@ -55,5 +53,4 @@ private:
 
 Pass CreateFieldAnalyserPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

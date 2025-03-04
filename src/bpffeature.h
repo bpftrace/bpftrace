@@ -2,7 +2,6 @@
 
 #include "btf.h"
 #include "kfuncs.h"
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -105,7 +104,7 @@ public:
 
   bool has_kernel_func(Kfunc kfunc);
 
-  std::string report(void);
+  std::string report();
 
   DEFINE_MAP_TEST(array, libbpf::BPF_MAP_TYPE_ARRAY);
   DEFINE_MAP_TEST(hash, libbpf::BPF_MAP_TYPE_HASH);

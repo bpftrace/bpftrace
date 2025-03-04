@@ -1,5 +1,3 @@
-#include "required_resources.h"
-
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/map.hpp>
 #include <cereal/types/memory.hpp>
@@ -9,8 +7,7 @@
 #include <cereal/types/unordered_set.hpp>
 #include <cereal/types/vector.hpp>
 
-#include "bpftrace.h"
-#include "log.h"
+#include "required_resources.h"
 #include "utils.h"
 
 namespace bpftrace {

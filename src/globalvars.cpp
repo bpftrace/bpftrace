@@ -1,16 +1,14 @@
-#include "globalvars.h"
-
-#include "bpftrace.h"
-#include "log.h"
-#include "types.h"
-#include "utils.h"
-
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <elf.h>
 #include <map>
-#include <stdexcept>
 #include <sys/mman.h>
+
+#include "bpftrace.h"
+#include "globalvars.h"
+#include "log.h"
+#include "types.h"
+#include "utils.h"
 
 namespace bpftrace::globalvars {
 

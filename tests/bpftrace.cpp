@@ -7,9 +7,11 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "dwarf_common.h"
 #include "mocks.h"
 #include "tracefs.h"
-#include "gmock/gmock.h"
+#include "gmock/gmock-matchers.h"
+#include "gmock/gmock-nice-strict.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::bpftrace {
@@ -712,8 +714,6 @@ TEST(bpftrace, add_probes_uprobe_no_demangling)
 }
 
 #ifdef HAVE_LIBLLDB
-#include "dwarf_common.h"
-
 class bpftrace_dwarf : public test_dwarf {};
 
 TEST_F(bpftrace_dwarf, add_probes_uprobe_symbol_source)
@@ -748,7 +748,6 @@ TEST_F(bpftrace_dwarf, add_probes_uprobe_symbol_source)
     ASSERT_EQ(probe.address, 0);
   }
 }
-
 #endif
 
 TEST(bpftrace, add_probes_usdt)

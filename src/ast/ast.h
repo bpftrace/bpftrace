@@ -7,10 +7,8 @@
 #include "diagnostic.h"
 #include "types.h"
 #include "usdt.h"
-#include "utils.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class ASTContext;
 
@@ -103,7 +101,7 @@ class Variable;
 class Expression : public Node {
 public:
   Expression(Diagnostics &d, Location &&loc) : Node(d, std::move(loc)) {};
-  virtual ~Expression() = default;
+  ~Expression() override = default;
 
   SizedType type;
   Map *key_for_map = nullptr;
@@ -602,5 +600,4 @@ std::string opstr(const Jump &jump);
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

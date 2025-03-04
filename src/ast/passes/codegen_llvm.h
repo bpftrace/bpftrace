@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <optional>
 #include <tuple>
 
@@ -22,8 +21,7 @@
 #include "kfuncs.h"
 #include "required_resources.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 using namespace llvm;
 
@@ -154,7 +152,7 @@ public:
   ScopedExpr createLogicalOr(Binop &binop);
 
   // Exists to make calling from a debugger easier
-  void DumpIR(void);
+  void DumpIR();
   void DumpIR(std::ostream &out);
   void DumpIR(const std::string filename);
   void createFormatStringCall(Call &call,
@@ -181,7 +179,7 @@ public:
                        Value *dst_val,
                        Value *src_val);
 
-  void generate_ir(void);
+  void generate_ir();
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const SizedType &key_type);
   bool is_array_map(const SizedType &val_type, const SizedType &key_type);
@@ -190,13 +188,13 @@ public:
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
-  void optimize(void);
-  bool verify(void);
+  void optimize();
+  bool verify();
   BpfBytecode emit(bool disassemble);
   void emit_elf(const std::string &filename);
   void emit(raw_pwrite_stream &stream);
   // Combine generate_ir, optimize and emit into one call
-  BpfBytecode compile(void);
+  BpfBytecode compile();
 
 private:
   static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
@@ -367,5 +365,4 @@ private:
   State state_ = State::INIT;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

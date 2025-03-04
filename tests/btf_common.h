@@ -2,8 +2,10 @@
 
 #include <array>
 #include <cstdint>
+#include <unistd.h>
 
 #include "data/btf_data.h"
+#include "gtest/gtest.h"
 
 namespace {
 constexpr std::array<uint8_t, 4> INVALID_BTF_DATA = { 0xDE, 0xAD, 0xBE, 0xEF };

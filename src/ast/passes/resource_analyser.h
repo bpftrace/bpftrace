@@ -4,8 +4,7 @@
 #include "ast/visitor.h"
 #include "required_resources.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 // Resource analysis pass on AST
 //
@@ -59,5 +58,4 @@ private:
 
 Pass CreateResourcePass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -1,14 +1,11 @@
-#include "clang_parser.h"
-
-#include <iostream>
-#include <utility>
+#include <llvm/Config/llvm-config.h>
 
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "struct.h"
 #include "gtest/gtest.h"
-#include <llvm/Config/llvm-config.h>
 
 namespace bpftrace::test::clang_parser {
 
@@ -704,10 +701,9 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
-TEST_F(clang_parser_btf, btf_arrays_multi_dim)
+// Disabled because BTF flattens multi-dimensional arrays #3082.
+TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
 {
-  GTEST_SKIP() << "BTF flattens multi-dimensional arrays #3082";
-
   BPFtrace bpftrace;
   bpftrace.parse_btf({});
   parse("struct Foo { struct Arrays a; };", bpftrace);

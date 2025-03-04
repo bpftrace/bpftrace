@@ -1,21 +1,23 @@
-Checks: |
-  -*
-  bugprone-suspicious-memset-usage
-  bugprone-unchecked-optional-access
-  bugprone-undefined-memory-manipulation
-  bugprone-unused-raii
-  bugprone-use-after-move
-  google-readability-casting
-  modernize-concat-nested-namespaces
-  modernize-deprecated-headers
-  modernize-loop-convert
-  modernize-make-shared
-  modernize-make-unique
-  modernize-raw-string-literal
-  modernize-use-nullptr
-  modernize-use-override
-  modernize-redundant-void-arg
-  performance-unnecessary-copy-initialization
+Checks:
+  - -*
+  - bugprone-suspicious-memset-usage
+  - bugprone-unchecked-optional-access
+  - bugprone-undefined-memory-manipulation
+  - bugprone-unused-raii
+  - bugprone-use-after-move
+  - google-readability-casting
+  - modernize-concat-nested-namespaces
+  - modernize-deprecated-headers
+  - modernize-loop-convert
+  - modernize-make-shared
+  - modernize-make-unique
+  - modernize-raw-string-literal
+  - modernize-use-nullptr
+  - modernize-use-override
+  - modernize-redundant-void-arg
+  - performance-unnecessary-copy-initialization
 
 WarningsAsErrors: "*"
 UseColor: true
+HeaderFilterRegex: ".*"
+ExcludeHeaderFilterRegex: ".*/parser.tab.hh"

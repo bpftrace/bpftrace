@@ -1,15 +1,14 @@
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
-
-#include "utils.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "utils.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::utils {
 

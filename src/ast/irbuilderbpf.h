@@ -1,10 +1,8 @@
 #pragma once
 
 #include <bcc/bcc_usdt.h>
-
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/IRBuilder.h>
-
 #include <optional>
 
 #include "ast/ast.h"
@@ -15,8 +13,7 @@
 #define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
   CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 using namespace llvm;
 
@@ -354,5 +351,4 @@ private:
   llvm::Function *preserve_static_offset_ = nullptr;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

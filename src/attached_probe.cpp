@@ -6,7 +6,6 @@
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
-#include <fstream>
 #include <iostream>
 #include <linux/hw_breakpoint.h>
 #include <linux/limits.h>
@@ -14,7 +13,6 @@
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
-#include <tuple>
 #include <unistd.h>
 
 #include <bcc/bcc_elf.h>

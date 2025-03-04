@@ -1,8 +1,7 @@
 #include "printf.h"
 
 #include "log.h"
-#include "printf_format_types.h"
-#include "struct.h"
+#include "utils.h"
 
 #include <cstdint>
 

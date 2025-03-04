@@ -1,11 +1,10 @@
+#include <bcc/bcc_syms.h>
 #include <sstream>
 
-#include <bcc/bcc_syms.h>
 #ifdef HAVE_BLAZESYM
 #include <blazesym.h>
 #endif
 
-#include "config.h"
 #include "ksyms.h"
 #include "scopeguard.h"
 #include "utils.h"
@@ -20,6 +19,7 @@ std::string stringify_addr(uint64_t addr)
 } // namespace
 
 namespace bpftrace {
+
 Ksyms::Ksyms(const Config &config) : config_(config)
 {
 }
@@ -116,4 +116,5 @@ std::string Ksyms::resolve(uint64_t addr, bool show_offset)
 #endif
   return resolve_bcc(addr, show_offset);
 }
+
 } // namespace bpftrace

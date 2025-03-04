@@ -1,6 +1,5 @@
 #include "arch.h"
 
-#include <algorithm>
 #include <array>
 #include <set>
 #include <vector>
@@ -11,8 +10,7 @@
 // For big endian 64 bit, sp + 48 + 8 regs save area + argX
 #define ARG0_STACK_BE 112
 
-namespace bpftrace {
-namespace arch {
+namespace bpftrace::arch {
 
 // clang-format off
 static std::vector<std::set<std::string>> registers = {
@@ -142,5 +140,4 @@ int get_kernel_ptr_width()
   return 64;
 }
 
-} // namespace arch
-} // namespace bpftrace
+} // namespace bpftrace::arch
