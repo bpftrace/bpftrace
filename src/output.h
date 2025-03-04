@@ -7,6 +7,7 @@
 
 #include "ast/location.h"
 #include "bpfmap.h"
+#include "required_resources.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -90,9 +91,7 @@ public:
                        bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
-  virtual void helper_error(int func_id,
-                            int retcode,
-                            const ast::Location &loc) const = 0;
+  virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
 
 protected:
   std::ostream &out_;
@@ -235,9 +234,7 @@ public:
                bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(int func_id,
-                    int retcode,
-                    const ast::Location &loc) const override;
+  void helper_error(int retcode, const HelperErrorInfo &info) const override;
 
 protected:
   std::string value_to_str(BPFtrace &bpftrace,
@@ -313,9 +310,7 @@ public:
                uint64_t value) const;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(int func_id,
-                    int retcode,
-                    const ast::Location &loc) const override;
+  void helper_error(int retcode, const HelperErrorInfo &info) const override;
 
 private:
   std::string json_escape(const std::string &str) const;

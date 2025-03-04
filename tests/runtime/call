@@ -505,8 +505,8 @@ AFTER TMPDIR=/tmp ./testprogs/syscall open
 NAME path_in_unsupported_fentry
 PROG fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
 EXPECT stdin:1:31-60: ERROR: helper bpf_d_path not allowed in probe
-EXPECT fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
 REQUIRES_FEATURE fentry
 WILL_FAIL

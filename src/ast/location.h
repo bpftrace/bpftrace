@@ -9,12 +9,6 @@
 #include "location.hh"
 
 namespace bpftrace {
-
-// See below.
-class Log;
-class LogStream;
-class LogSink;
-
 namespace ast {
 
 class ASTSource;
@@ -89,13 +83,6 @@ private:
   range_t line_range_;
   range_t column_range_;
   std::shared_ptr<ASTSource> source_;
-
-  // Currently, the LogStream and LogSink classes will reach in and use
-  // line_range_ and column_range_ directly, because the `source_` will not be
-  // populated. This will be removed as soon as this member is valid.
-  friend class bpftrace::Log;
-  friend class bpftrace::LogStream;
-  friend class bpftrace::LogSink;
 };
 
 } // namespace ast
