@@ -19,18 +19,14 @@ static void parse(const std::string &input,
 {
   auto extended_input = input + probe;
   ast::ASTContext ast("stdin", extended_input);
-  Driver driver(ast, bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ClangParser clang;
   ASSERT_EQ(clang.parse(ast.root, bpftrace), result);
