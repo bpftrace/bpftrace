@@ -3,6 +3,7 @@
 #include <istream>
 #include <set>
 
+#include "ast/pass_manager.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 
@@ -63,5 +64,7 @@ protected:
                                            const std::string &event_name,
                                            BPFtrace &bpftrace);
 };
+
+ast::Pass CreateParseTracepointFormatPass();
 
 } // namespace bpftrace

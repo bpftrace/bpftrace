@@ -780,4 +780,12 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
   return OK;
 }
 
+Pass CreateParseAttachpointsPass()
+{
+  return Pass::create("attachpoints", [](ASTContext &ast, BPFtrace &b) {
+    AttachPointParser ap_parser(ast, b, false);
+    ap_parser.parse();
+  });
+}
+
 } // namespace bpftrace::ast
