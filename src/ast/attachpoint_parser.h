@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ast/ast.h"
+#include "ast/pass_manager.h"
 #include "bpftrace.h"
 
 namespace bpftrace {
@@ -62,6 +63,9 @@ private:
   AttachPointList new_attach_points;
   bool listing_;
 };
+
+// The attachpoints are expanded in their own separate pass.
+Pass CreateParseAttachpointsPass();
 
 } // namespace ast
 } // namespace bpftrace

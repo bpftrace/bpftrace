@@ -790,4 +790,14 @@ std::vector<std::string> ClangParser::system_include_paths()
   return result;
 }
 
+ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags)
+{
+  return ast::Pass::create("ClangParser",
+                           [extra_flags = std::move(extra_flags)](
+                               ast::ASTContext &ast, BPFtrace &b) {
+                             ClangParser parser;
+                             parser.parse(ast.root, b, extra_flags);
+                           });
+}
+
 } // namespace bpftrace
