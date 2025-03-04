@@ -1,13 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <unordered_set>
 
 #include "ast/visitor.h"
 #include "config.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 struct CodegenResources {
   bool needs_elapsed_map = false;
@@ -34,5 +32,4 @@ private:
   CodegenResources resources_;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

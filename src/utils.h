@@ -9,7 +9,6 @@
 #include <map>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <sys/utsname.h>
@@ -379,7 +378,7 @@ stats<T> stats_value(const std::vector<uint8_t> &value, int nvalues)
     ret.count += cpu_count;
     ret.total += val;
   }
-  ret.avg = (T)(ret.total / ret.count);
+  ret.avg = static_cast<T>(ret.total / ret.count);
   return ret;
 }
 

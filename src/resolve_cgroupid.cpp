@@ -18,10 +18,7 @@
 #include <cstring>
 #include <fcntl.h>
 
-#include <stdexcept>
-
 #include "act_helpers.h"
-#include "log.h"
 #include "resolve_cgroupid.h"
 #include "utils.h"
 

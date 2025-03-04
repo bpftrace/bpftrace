@@ -1,6 +1,5 @@
-#include "gtest/gtest.h"
-
 #include "util/result.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::result {
 

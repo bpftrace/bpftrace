@@ -1,9 +1,8 @@
 #pragma once
 
-#include "bpftrace.h"
+#include "ast/ast.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 inline bool needMemcpy(const SizedType &stype)
 {
@@ -38,5 +37,4 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment);
 bool needMapKeyAllocation(const Map &map);
 bool needMapKeyAllocation(const Map &map, Expression *key_expr);
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

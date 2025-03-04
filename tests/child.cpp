@@ -1,21 +1,18 @@
 #include <csignal>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <system_error>
-
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include <system_error>
 
 #include "child.h"
 #include "childhelper.h"
-#include "utils.h"
+#include "gmock/gmock-matchers.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::child {
 

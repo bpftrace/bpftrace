@@ -1,18 +1,15 @@
 #pragma once
 
+#include <bcc/libbpf.h>
 #include <functional>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
-#include "config.h"
 #include "types.h"
 #include "usdt.h"
-
-#include <bcc/libbpf.h>
 
 namespace bpftrace {
 
@@ -40,7 +37,7 @@ private:
   std::string eventname() const;
   void resolve_offset_kprobe();
   bool resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps);
-  void attach_multi_kprobe(void);
+  void attach_multi_kprobe();
   void attach_multi_uprobe(std::optional<int> pid);
   void attach_kprobe();
   void attach_uprobe(std::optional<int> pid, bool safe_mode);
@@ -65,16 +62,16 @@ private:
   void attach_software(std::optional<int> pid);
   void attach_hardware(std::optional<int> pid);
   void attach_watchpoint(std::optional<int> pid, const std::string &mode);
-  void attach_fentry(void);
-  int detach_fentry(void);
+  void attach_fentry();
+  int detach_fentry();
   void attach_iter(std::optional<int> pid);
-  int detach_iter(void);
-  void attach_raw_tracepoint(void);
-  int detach_raw_tracepoint(void);
+  int detach_iter();
+  void attach_raw_tracepoint();
+  int detach_raw_tracepoint();
 
   static std::map<std::string, int> cached_prog_fds_;
   bool use_cached_progfd(BPFfeature &feature);
-  void cache_progfd(void);
+  void cache_progfd();
 
   Probe &probe_;
   std::vector<int> perf_event_fds_;

@@ -6,7 +6,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -33,10 +32,8 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#include "bpftrace.h"
 #include "debugfs.h"
 #include "log.h"
-#include "probe_matcher.h"
 #include "scopeguard.h"
 #include "tracefs.h"
 #include "utils.h"

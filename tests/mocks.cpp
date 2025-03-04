@@ -1,5 +1,6 @@
 #include "mocks.h"
 #include "tracefs.h"
+#include "gmock/gmock-nice-strict.h"
 
 namespace bpftrace::test {
 
@@ -57,11 +58,11 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
       });
 
   ON_CALL(matcher, get_func_symbols_from_file(_, "/bin/*sh"))
-      .WillByDefault([sh_usyms, bash_usyms](std::optional<int>,
-                                            const std::string &) {
-        return std::unique_ptr<std::istream>(
-            new std::istringstream(sh_usyms + bash_usyms));
-      });
+      .WillByDefault(
+          [sh_usyms, bash_usyms](std::optional<int>, const std::string &) {
+            return std::unique_ptr<std::istream>(
+                new std::istringstream(sh_usyms + bash_usyms));
+          });
 
   std::string sh_usdts = "/bin/sh:prov1:tp1\n"
                          "/bin/sh:prov1:tp2\n"
@@ -74,11 +75,11 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         return std::unique_ptr<std::istream>(new std::istringstream(sh_usdts));
       });
   ON_CALL(matcher, get_symbols_from_usdt(_, "/bin/*sh"))
-      .WillByDefault([sh_usdts, bash_usdts](std::optional<int>,
-                                            const std::string &) {
-        return std::unique_ptr<std::istream>(
-            new std::istringstream(sh_usdts + bash_usdts));
-      });
+      .WillByDefault(
+          [sh_usdts, bash_usdts](std::optional<int>, const std::string &) {
+            return std::unique_ptr<std::istream>(
+                new std::istringstream(sh_usdts + bash_usdts));
+          });
 }
 
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)

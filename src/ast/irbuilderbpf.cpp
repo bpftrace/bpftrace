@@ -1,11 +1,8 @@
 #include "ast/irbuilderbpf.h"
 
-#include <iostream>
-#include <sstream>
-#include <thread>
-
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
+#include <sstream>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
@@ -14,7 +11,6 @@
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
-#include "utils.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"

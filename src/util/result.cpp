@@ -1,3 +1,6 @@
+
+#include <llvm/Support/raw_os_ostream.h>
+
 #include "util/result.h"
 
 namespace bpftrace {

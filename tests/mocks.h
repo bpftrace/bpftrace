@@ -1,15 +1,13 @@
 #pragma once
 
-#include "gmock/gmock.h"
-
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "gmock/gmock-function-mocker.h"
 
-namespace bpftrace {
-namespace test {
+namespace bpftrace::test {
 
 class MockProbeMatcher : public ProbeMatcher {
 public:
@@ -144,14 +142,14 @@ public:
   {
     child_pid_ = 1337;
   };
-  ~MockChildProc() {};
+  ~MockChildProc() override {};
 
   void terminate(bool force __attribute__((unused)) = false) override {};
   bool is_alive() override
   {
     return true;
   };
-  void resume(void) override {};
+  void resume() override {};
 
   void run(bool pause = false) override
   {
@@ -168,7 +166,7 @@ public:
 
   ~MockProcMon() override = default;
 
-  bool is_alive(void) override
+  bool is_alive() override
   {
     if (pid_ > 0)
       return true;
@@ -196,5 +194,4 @@ public:
 
 std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations);
 
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test

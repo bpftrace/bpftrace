@@ -1,7 +1,8 @@
 #pragma once
 
-namespace bpftrace {
-namespace ast {
+#include <functional>
+
+namespace bpftrace::ast {
 
 // Add new ids here
 #define FOR_LIST_OF_ASYNC_IDS(DO)                                              \
@@ -52,5 +53,4 @@ private:
   FOR_LIST_OF_ASYNC_IDS(DEFINE_MEMBER_VAR)
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

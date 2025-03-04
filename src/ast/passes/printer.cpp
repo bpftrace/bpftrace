@@ -2,7 +2,6 @@
 
 #include <cctype>
 #include <iomanip>
-#include <regex>
 #include <sstream>
 
 #include "ast/ast.h"

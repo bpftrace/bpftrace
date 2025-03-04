@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "ast/context.h"
-#include "ast/visitor.h"
 #include "log.h"
+#include "utils.h"
 
 namespace bpftrace::ast {
 

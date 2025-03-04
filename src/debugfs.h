@@ -2,8 +2,7 @@
 
 #include <string>
 
-namespace bpftrace {
-namespace debugfs {
+namespace bpftrace::debugfs {
 
 std::string path();
 
@@ -14,5 +13,4 @@ inline std::string kprobes_blacklist()
   return path("kprobes/blacklist");
 }
 
-} // namespace debugfs
-} // namespace bpftrace
+} // namespace bpftrace::debugfs

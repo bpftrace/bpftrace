@@ -2,8 +2,7 @@
 
 #include <string>
 
-namespace bpftrace {
-namespace tracefs {
+namespace bpftrace::tracefs {
 
 std::string path();
 
@@ -27,5 +26,4 @@ inline std::string available_filter_functions()
 std::string event_format_file(const std::string &category,
                               const std::string &event);
 
-} // namespace tracefs
-} // namespace bpftrace
+} // namespace bpftrace::tracefs

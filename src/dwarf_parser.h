@@ -1,12 +1,11 @@
 #pragma once
 
-#include "struct.h"
-#include "types.h"
-
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
+
+#include "struct.h"
+#include "types.h"
 
 #ifdef HAVE_LIBLLDB
 #include <lldb/API/SBDebugger.h>
@@ -62,8 +61,6 @@ private:
 } // namespace bpftrace
 
 #else // HAVE_LIBLLDB
-
-#include "log.h"
 
 namespace bpftrace {
 class BPFtrace;

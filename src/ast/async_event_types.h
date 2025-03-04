@@ -11,19 +11,17 @@
 namespace llvm {
 class Type;
 } // namespace llvm
-namespace bpftrace {
-namespace ast {
+
+namespace bpftrace::ast {
 class IRBuilderBPF;
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast
 
 // The main goal here is to keep the struct definitions close to each other,
 // making it easier to spot type mismatches.
 //
 // If you update a type, remember to update the .cpp too!
 
-namespace bpftrace {
-namespace AsyncEvent {
+namespace bpftrace::AsyncEvent {
 
 struct Print {
   uint64_t action_id;
@@ -121,5 +119,4 @@ struct Exit {
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-} // namespace AsyncEvent
-} // namespace bpftrace
+} // namespace bpftrace::AsyncEvent

@@ -5,8 +5,6 @@
 
 #include "ast/ast.h"
 #include "bpftrace.h"
-#include "log.h"
-#include "struct.h"
 #include "tracefs.h"
 #include "tracepoint_format_parser.h"
 

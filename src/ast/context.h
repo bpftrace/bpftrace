@@ -5,8 +5,7 @@
 
 #include "ast/diagnostic.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class Location;
 class Node;
@@ -90,5 +89,4 @@ private:
   std::shared_ptr<ASTSource> source_;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

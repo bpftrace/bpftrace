@@ -1,6 +1,5 @@
 #include "types.h"
 #include "struct.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::types {

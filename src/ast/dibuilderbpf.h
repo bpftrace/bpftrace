@@ -1,18 +1,15 @@
 #pragma once
 
-#include "functions.h"
-#include "types.h"
-
 #include <linux/bpf.h>
+#include <llvm/IR/DIBuilder.h>
+
+#include "types.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
-#include <llvm/IR/DIBuilder.h>
-
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 using namespace llvm;
 
@@ -71,5 +68,4 @@ private:
   std::unordered_map<std::string, DIType *> structs_;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

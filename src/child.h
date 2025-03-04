@@ -1,7 +1,6 @@
 #pragma once
 
 #include <csignal>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -63,7 +62,7 @@ public:
 
   // Resume a paused child. Only valid when run() has been called with
   // pause=true
-  virtual void resume(void) = 0;
+  virtual void resume() = 0;
 
 protected:
   pid_t child_pid_ = -1;
@@ -82,7 +81,7 @@ public:
   //   an exception is raised.
   //
   ChildProc(std::string cmd);
-  ~ChildProc();
+  ~ChildProc() override;
 
   // Disallow copying as the internal state will get out of sync which will
   // cause issues.
@@ -94,7 +93,7 @@ public:
   void run(bool pause = false) override;
   void terminate(bool force = false) override;
   bool is_alive() override;
-  void resume(void) override;
+  void resume() override;
 
 private:
   enum class State {

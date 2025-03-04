@@ -1083,8 +1083,8 @@ void SemanticAnalyser::visit(Call &call)
 
     auto &arg = *call.vargs.at(0);
     if (!(arg.type.IsIntTy() || arg.type.IsPtrTy())) {
-      call.addError() << "() only supports int or pointer arguments"
-                      << " (" << arg.type.GetTy() << " provided)";
+      call.addError() << "() only supports int or pointer arguments" << " ("
+                      << arg.type.GetTy() << " provided)";
     }
 
     if (call.vargs.size() > 1)
@@ -1295,8 +1295,7 @@ void SemanticAnalyser::visit(Call &call)
         Map &map = static_cast<Map &>(arg);
         if (map.key_expr) {
           call.addError() << "The map passed to " << call.func
-                          << "() should not be "
-                          << "indexed by a key";
+                          << "() should not be " << "indexed by a key";
         }
       }
     }
@@ -1310,8 +1309,7 @@ void SemanticAnalyser::visit(Call &call)
         Map &map = static_cast<Map &>(arg);
         if (map.key_expr) {
           call.addError() << "The map passed to " << call.func
-                          << "() should not be "
-                          << "indexed by a key";
+                          << "() should not be " << "indexed by a key";
         }
       }
     }
@@ -1322,8 +1320,7 @@ void SemanticAnalyser::visit(Call &call)
         Map &map = static_cast<Map &>(arg);
         if (map.key_expr) {
           call.addError() << "The map passed to " << call.func
-                          << "() should not be "
-                          << "indexed by a key";
+                          << "() should not be " << "indexed by a key";
         }
       } else if (!arg.type.IsStack())
         call.addError() << "len() expects a map or stack to be provided";
@@ -1514,8 +1511,8 @@ If you're seeing errors, try clamping the string sizes. For example:
     if (!arg->type.IsIntTy() && !arg->type.IsArrayTy() &&
         !arg->type.IsByteArray() && !arg->type.IsPtrTy())
       call.addError() << call.func
-                      << "() only supports array or pointer arguments"
-                      << " (" << arg->type.GetTy() << " provided)";
+                      << "() only supports array or pointer arguments" << " ("
+                      << arg->type.GetTy() << " provided)";
 
     auto type = arg->type;
     if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() != 6)
@@ -1615,14 +1612,12 @@ void SemanticAnalyser::visit(Offsetof &offof)
   SizedType record = offof.record;
   for (const auto &field : offof.field) {
     if (!record.IsRecordTy()) {
-      offof.addError() << "'" << record << "' "
-                       << "is not a record type.";
+      offof.addError() << "'" << record << "' " << "is not a record type.";
     } else if (!bpftrace_.structs.Has(record.GetName())) {
       offof.addError() << "'" << record.GetName() << "' does not exist.";
     } else if (!record.HasField(field)) {
       offof.addError() << "'" << record.GetName() << "' "
-                       << "has no field named "
-                       << "'" << field << "'";
+                       << "has no field named " << "'" << field << "'";
     } else {
       // Get next sub-field
       record = record.GetField(field).type;
@@ -1996,7 +1991,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
     default:;
   }
 
-  auto invalid_op = [&binop, this, &lht, &rht]() {
+  auto invalid_op = [&binop, &lht, &rht]() {
     binop.addError() << "The " << opstr(binop)
                      << " operator can not be used on expressions of types "
                      << lht << ", " << rht;
@@ -2674,8 +2669,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     const auto record = it.second.lock();
     if (!record->HasField(acc.field)) {
       acc.addError() << "Struct/union of type '" << cast_type
-                     << "' does not contain "
-                     << "a field named '" << acc.field << "'";
+                     << "' does not contain " << "a field named '" << acc.field
+                     << "'";
     } else {
       const auto &field = record->GetField(acc.field);
 

@@ -1,29 +1,22 @@
 #pragma once
 
-#include <regex>
-
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
-#include "../mocks.h"
+#include <fstream>
+#include <iostream>
 
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-
-#include "bpffeature.h"
 #include "bpftrace.h"
+#include "btf_common.h"
 #include "clang_parser.h"
 #include "driver.h"
-#include "tracepoint_format_parser.h"
+#include "gtest/gtest.h"
 
-#include "btf_common.h"
+#include "../mocks.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 #define NAME (::testing::UnitTest::GetInstance()->current_test_info()->name())
 
@@ -112,6 +105,4 @@ static void test(const std::string &input,
   test(*bpftrace, input, name);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

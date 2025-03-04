@@ -3,8 +3,7 @@
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class ReturnPathAnalyser : public Visitor<ReturnPathAnalyser, bool> {
 public:
@@ -19,5 +18,4 @@ public:
 
 Pass CreateReturnPathPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

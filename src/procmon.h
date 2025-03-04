@@ -1,5 +1,4 @@
 #pragma once
-#include <string>
 #include <unistd.h>
 
 namespace bpftrace {
@@ -10,10 +9,10 @@ public:
   virtual ~ProcMonBase() = default;
 
   // Whether the process is still alive
-  virtual bool is_alive(void) = 0;
+  virtual bool is_alive() = 0;
 
   // pid of the process being monitored
-  pid_t pid(void)
+  pid_t pid()
   {
     return pid_;
   };
@@ -34,7 +33,7 @@ public:
   ProcMon(ProcMon&&) = delete;
   ProcMon& operator=(ProcMon&&) = delete;
 
-  bool is_alive(void) override;
+  bool is_alive() override;
 
 private:
   int pidfd_ = -1;

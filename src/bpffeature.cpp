@@ -13,9 +13,7 @@
 
 #include "bpf_assembler.h"
 #include "btf.h"
-#include "debugfs.h"
 #include "dwarf_parser.h"
-#include "probe_matcher.h"
 #include "tracefs.h"
 #include "utils.h"
 
@@ -705,10 +703,6 @@ bool BPFfeature::has_iter(std::string name)
 
 bool BPFfeature::has_kernel_dwarf()
 {
-#ifndef HAVE_LIBLLDB
-  return false;
-#endif
-
   auto vmlinux = find_vmlinux();
   if (!vmlinux.has_value())
     return false;

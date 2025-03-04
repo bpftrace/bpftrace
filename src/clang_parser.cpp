@@ -1,6 +1,5 @@
 #include <cstring>
 #include <iostream>
-#include <limits>
 #include <regex>
 #include <sstream>
 #include <utility>
@@ -9,7 +8,6 @@
 #include "llvm/Config/llvm-config.h"
 
 #include "ast/ast.h"
-#include "ast/passes/field_analyser.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "log.h"
@@ -384,7 +382,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           if (enum_name.empty()) {
             std::ostringstream name;
             name << "enum <anon_" << anon_enum_count << ">";
-            enum_name = std::move(name.str());
+            enum_name = name.str();
           }
           auto variant_name = get_clang_string(clang_getCursorSpelling(c));
           auto variant_value = clang_getEnumConstantDeclValue(c);

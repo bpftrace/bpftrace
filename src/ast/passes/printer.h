@@ -4,8 +4,7 @@
 
 #include "ast/visitor.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class Printer : public Visitor<Printer> {
 public:
@@ -56,5 +55,4 @@ private:
   std::string type(const SizedType &ty);
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

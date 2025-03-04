@@ -7,8 +7,7 @@
 
 #include <sys/utsname.h>
 
-namespace bpftrace {
-namespace arch {
+namespace bpftrace::arch {
 
 namespace {
 
@@ -224,5 +223,4 @@ int get_kernel_ptr_width()
   return 64;
 }
 
-} // namespace arch
-} // namespace bpftrace
+} // namespace bpftrace::arch

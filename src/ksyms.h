@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
+
+#include "config.h"
 
 namespace bpftrace {
 class Config;
@@ -10,7 +13,6 @@ class Ksyms {
 public:
   Ksyms(const Config &config);
   ~Ksyms();
-
   Ksyms(Ksyms &) = delete;
   Ksyms &operator=(const Ksyms &) = delete;
 

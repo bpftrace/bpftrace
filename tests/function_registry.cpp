@@ -1,12 +1,10 @@
-#include "functions.h"
-
 #include <sstream>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
+#include "functions.h"
 #include "log.h"
 #include "struct.h"
+#include "gmock/gmock-matchers.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::function_registry {
 
