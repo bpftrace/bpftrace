@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 
+#include "ast/pass_manager.h"
 #include "bpftrace.h"
 #include <clang-c/Index.h>
 
@@ -93,5 +94,7 @@ private:
     std::vector<std::string> error_msgs;
   };
 };
+
+ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags = {});
 
 } // namespace bpftrace

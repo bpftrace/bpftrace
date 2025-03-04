@@ -1,11 +1,10 @@
-#include "clang_parser.h"
-
 #include <iostream>
 #include <utility>
 
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "struct.h"
 #include "gtest/gtest.h"
@@ -22,18 +21,14 @@ static void parse(const std::string &input,
 {
   auto extended_input = input + probe;
   ast::ASTContext ast("stdin", extended_input);
-  Driver driver(ast, bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .run(ast);
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ClangParser clang;
   ASSERT_EQ(clang.parse(ast.root, bpftrace), result);

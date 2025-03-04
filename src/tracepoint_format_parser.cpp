@@ -270,4 +270,11 @@ std::string TracepointFormatParser::get_tracepoint_struct(
   return format_struct;
 }
 
+ast::Pass CreateParseTracepointFormatPass()
+{
+  return ast::Pass::create("tracepoint", [](ast::ASTContext &ast, BPFtrace &b) {
+    TracepointFormatParser::parse(ast, b);
+  });
+}
+
 } // namespace bpftrace
