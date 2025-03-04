@@ -23,7 +23,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     blazesym = {
-      url = "github:libbpf/blazesym/6beb39ebc8e3a604c7b483951c85c831c1bbe0d1";
+      url = "github:libbpf/blazesym";
       flake = false;
     };
   };
