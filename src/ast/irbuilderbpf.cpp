@@ -161,12 +161,14 @@ StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
       getInt32Ty(), // nr_stack_frames
       getInt32Ty(), // pid
       getInt32Ty(), // probe id
+      getInt32Ty(), // __padding, see #3870
     };
     return GetStructType("ustack_key", elements, false);
   } else {
     std::vector<llvm::Type *> elements{
       getInt64Ty(), // stack id
       getInt32Ty(), // nr_stack_frames
+      getInt32Ty(), // __padding, see #3870
     };
     return GetStructType("kstack_key", elements, false);
   }

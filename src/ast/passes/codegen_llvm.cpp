@@ -176,14 +176,9 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
 
   StructType *stack_key_struct = b_.GetStackStructType(is_ustack);
   AllocaInst *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
-  b_.CreateStore(b_.getInt64(0),
-                 b_.CreateGEP(stack_key_struct,
-                              stack_key,
-                              { b_.getInt64(0), b_.getInt32(0) }));
-  b_.CreateStore(b_.getInt32(0),
-                 b_.CreateGEP(stack_key_struct,
-                              stack_key,
-                              { b_.getInt64(0), b_.getInt32(1) }));
+  b_.CreateMemsetBPF(stack_key,
+                     b_.getInt8(0),
+                     datalayout().getTypeStoreSize(stack_key_struct));
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *stack_scratch_failure = BasicBlock::Create(

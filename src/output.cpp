@@ -360,7 +360,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
               return std::to_string(
                   reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
             return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
-          // clang-format on
+            // clang-format on
         default:
           LOG(BUG) << "value_to_str: Invalid int bitwidth: "
                    << type.GetIntBitWidth() << "provided";
