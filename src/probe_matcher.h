@@ -1,11 +1,9 @@
 #pragma once
 
-#include "ast/ast.h"
-
-#include <set>
-#include <sstream>
-
 #include <linux/perf_event.h>
+#include <set>
+
+#include "ast/ast.h"
 
 namespace bpftrace {
 
@@ -104,7 +102,7 @@ private:
   virtual std::unique_ptr<std::istream> adjust_rawtracepoint(
       std::istream &symbol_list) const;
 
-  std::unique_ptr<std::istream> get_iter_symbols(void) const;
+  std::unique_ptr<std::istream> get_iter_symbols() const;
 
   std::unique_ptr<std::istream> kernel_probe_list();
   std::unique_ptr<std::istream> userspace_probe_list();

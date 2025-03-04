@@ -1,13 +1,11 @@
 #pragma once
 
+#include <bcc/bcc_syms.h>
 #include <cstdint>
 #include <map>
 #include <string>
 
-#include "types.h"
 #include "utils.h"
-
-#include <bcc/bcc_syms.h>
 
 namespace bpftrace {
 class Config;

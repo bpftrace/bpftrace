@@ -5,13 +5,11 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <variant>
 #include <vector>
 
 #include "ast/location.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 // Diagnostic reflects a single error at a single source location. This is a
 // simple wrapper around a string for that message, and the location class.
@@ -128,5 +126,4 @@ private:
   std::vector<std::vector<std::unique_ptr<Diagnostic>>> diagnostics_;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

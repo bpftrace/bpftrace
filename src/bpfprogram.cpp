@@ -1,14 +1,12 @@
-#include "bpfprogram.h"
-
-#include "attached_probe.h"
-#include "log.h"
-#include "utils.h"
-
 #include <bpf/bpf.h>
 #include <elf.h>
 #include <linux/bpf.h>
 #include <linux/btf.h>
-#include <stdexcept>
+
+#include "attached_probe.h"
+#include "bpfprogram.h"
+#include "log.h"
+#include "utils.h"
 
 namespace bpftrace {
 

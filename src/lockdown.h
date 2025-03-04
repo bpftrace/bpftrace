@@ -2,10 +2,7 @@
 
 #include <iostream>
 
-#include "bpffeature.h"
-
-namespace bpftrace {
-namespace lockdown {
+namespace bpftrace::lockdown {
 
 enum class LockdownState {
   None,
@@ -17,5 +14,4 @@ enum class LockdownState {
 LockdownState detect();
 void emit_warning(std::ostream &out);
 
-} //  namespace lockdown
-} //  namespace bpftrace
+} //  namespace bpftrace::lockdown

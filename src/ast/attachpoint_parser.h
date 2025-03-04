@@ -1,15 +1,13 @@
 #pragma once
 
 #include <optional>
-#include <ostream>
 #include <sstream>
 #include <vector>
 
 #include "ast/ast.h"
 #include "bpftrace.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class AttachPointParser {
 public:
@@ -63,5 +61,4 @@ private:
   bool listing_;
 };
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

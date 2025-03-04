@@ -1,4 +1,3 @@
-#include <array>
 #include <bpf/libbpf.h>
 #include <cstdio>
 #include <cstring>
@@ -16,7 +15,6 @@
 #include "aot/aot.h"
 #include "ast/diagnostic.h"
 #include "ast/pass_manager.h"
-
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
@@ -25,7 +23,6 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "btf.h"

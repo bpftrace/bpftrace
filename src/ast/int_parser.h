@@ -1,9 +1,7 @@
 #include <cstdint>
 #include <string>
 
-namespace bpftrace {
-namespace ast {
-namespace int_parser {
+namespace bpftrace::ast::int_parser {
 
 //   String -> int conversion specific to bpftrace
 //
@@ -17,6 +15,4 @@ namespace int_parser {
 int64_t to_int(const std::string &num, int base);
 uint64_t to_uint(const std::string &num, int base);
 
-} // namespace int_parser
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast::int_parser

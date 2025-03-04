@@ -1,12 +1,10 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-
-#include "ast/passes/field_analyser.h"
 #include "ast/passes/resource_analyser.h"
+#include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::resource_analyser {
 

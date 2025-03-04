@@ -1,6 +1,7 @@
 #pragma once
 
-#include <string>
+#include <optional>
+#include <variant>
 
 #include "ast/ast.h"
 #include "ast/context.h"

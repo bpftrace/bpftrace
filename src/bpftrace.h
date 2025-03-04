@@ -1,7 +1,5 @@
 #pragma once
 
-#include <time.h>
-
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -231,7 +229,7 @@ public:
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
-  std::optional<pid_t> pid(void) const
+  std::optional<pid_t> pid() const
   {
     if (procmon_) {
       return procmon_->pid();
@@ -264,13 +262,13 @@ private:
   int setup_event_loss();
   // when the ringbuf feature is available, enable ringbuf for built-ins like
   // printf, cat.
-  bool is_ringbuf_enabled(void) const
+  bool is_ringbuf_enabled() const
   {
     return feature_->has_map_ringbuf();
   }
   // when the ringbuf feature is unavailable or built-in skboutput is used,
   // enable perf_event
-  bool is_perf_event_enabled(void) const
+  bool is_perf_event_enabled() const
   {
     return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
   }

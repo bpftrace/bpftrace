@@ -6,9 +6,7 @@
 #include <csignal>
 #include <cstdio>
 #include <ctime>
-#include <filesystem>
 #include <fstream>
-#include <limits>
 #include <llvm/IR/GlobalValue.h>
 
 #if LLVM_VERSION_MAJOR <= 16
@@ -37,7 +35,6 @@
 #include "ast/context.h"
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
-#include "collect_nodes.h"
 #include "globalvars.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"

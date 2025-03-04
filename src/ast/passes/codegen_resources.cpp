@@ -1,7 +1,5 @@
 #include "codegen_resources.h"
 
-#include "ast/async_event_types.h"
-#include "struct.h"
 #include "types.h"
 
 namespace bpftrace::ast {

@@ -1,9 +1,7 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <exception>
 
 #include "scopeguard.h"
-
-#include <exception>
+#include "gtest/gtest.h"
 
 namespace bpftrace {
 

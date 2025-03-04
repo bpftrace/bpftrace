@@ -1,8 +1,5 @@
 #include "config.h"
-#include "mocks.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <iostream>
 
 namespace bpftrace::test {
 

@@ -4,8 +4,6 @@
 #include <sstream>
 
 #include "ast/async_event_types.h"
-#include "bpftrace.h"
-#include "log.h"
 #include "struct.h"
 #include "types.h"
 #include "utils.h"

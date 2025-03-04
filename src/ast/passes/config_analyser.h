@@ -1,16 +1,12 @@
 #pragma once
 
-#include <unordered_set>
-
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
-#include "bpffeature.h"
 #include "bpftrace.h"
 #include "config.h"
 #include "types.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class ConfigAnalyser : public Visitor<ConfigAnalyser> {
 public:
@@ -48,5 +44,4 @@ private:
 
 Pass CreateConfigPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -3,8 +3,7 @@
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 // Checks if a script uses any non-portable bpftrace features that AOT
 // cannot handle.
@@ -23,5 +22,4 @@ public:
 
 Pass CreatePortabilityPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

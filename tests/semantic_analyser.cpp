@@ -1,12 +1,11 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
-#include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "dwarf_common.h"
 #include "mocks.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::semantic_analyser {
@@ -1997,8 +1996,6 @@ TEST(semantic_analyser, unop_increment_decrement)
 }
 
 #ifdef HAVE_LIBLLDB
-#include "dwarf_common.h"
-
 class semantic_analyser_dwarf : public test_dwarf {};
 
 TEST_F(semantic_analyser_dwarf, reference_into_deref)

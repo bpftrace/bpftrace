@@ -5,7 +5,6 @@
 
 #include "ast/ast.h"
 #include "config.h"
-#include "log.h"
 #include "types.h"
 
 namespace bpftrace::ast {

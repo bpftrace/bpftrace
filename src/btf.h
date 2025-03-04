@@ -1,11 +1,11 @@
 #pragma once
 
 #include "types.h"
+
 #include <cstddef>
 #include <linux/types.h>
 #include <map>
 #include <optional>
-#include <regex>
 #include <set>
 #include <string>
 #include <unistd.h>
@@ -58,7 +58,7 @@ public:
   };
   ~BTF();
 
-  bool has_data(void) const;
+  bool has_data() const;
   size_t objects_cnt() const
   {
     return btf_objects.size();
@@ -119,7 +119,7 @@ private:
   BPFtrace* bpftrace_ = nullptr;
 };
 
-inline bool BTF::has_data(void) const
+inline bool BTF::has_data() const
 {
   return state == OK;
 }

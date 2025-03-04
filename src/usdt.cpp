@@ -1,16 +1,13 @@
-#include "usdt.h"
-#include "log.h"
-#include "utils.h"
-
-#include <csignal>
-
 #include <algorithm>
-#include <iostream>
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_usdt.h>
+#include <csignal>
 #include <unordered_map>
 #include <unordered_set>
 
-#include <bcc/bcc_elf.h>
-#include <bcc/bcc_usdt.h>
+#include "log.h"
+#include "usdt.h"
+#include "utils.h"
 
 static std::unordered_set<std::string> path_cache;
 static std::unordered_set<int> pid_cache;

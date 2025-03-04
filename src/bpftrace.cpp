@@ -1,36 +1,32 @@
-#include "btf.h"
 #include <algorithm>
 #include <arpa/inet.h>
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_syms.h>
+#include <bcc/perf_reader.h>
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 #include <cassert>
 #include <cerrno>
 #include <cinttypes>
+#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <elf.h>
+#include <fcntl.h>
 #include <fstream>
 #include <glob.h>
-#include <iomanip>
 #include <iostream>
 #include <ranges>
 #include <regex>
 #include <sstream>
 #include <sys/epoll.h>
-
-#include <bcc/bcc_elf.h>
-#include <csignal>
-#include <elf.h>
-#include <fcntl.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#include <bcc/bcc_syms.h>
-#include <bcc/perf_reader.h>
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
 #ifdef HAVE_LIBSYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
@@ -40,6 +36,7 @@
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
+#include "btf.h"
 #include "log.h"
 #include "printf.h"
 #include "resolve_cgroupid.h"

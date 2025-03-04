@@ -3,9 +3,7 @@
 #include <cassert>
 #include <map>
 #include <memory>
-#include <optional>
 #include <ostream>
-#include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <unistd.h>
@@ -253,7 +251,7 @@ public:
     is_signed_ = is_signed;
   }
 
-  bool IsSigned(void) const;
+  bool IsSigned() const;
 
   size_t GetSize() const
   {
@@ -348,115 +346,115 @@ public:
   {
     return IsIntTy() && name_.size();
   }
-  bool IsNoneTy(void) const
+  bool IsNoneTy() const
   {
     return type_ == Type::none;
   };
-  bool IsVoidTy(void) const
+  bool IsVoidTy() const
   {
     return type_ == Type::voidtype;
   };
-  bool IsIntegerTy(void) const
+  bool IsIntegerTy() const
   {
     return type_ == Type::integer;
   };
-  bool IsHistTy(void) const
+  bool IsHistTy() const
   {
     return type_ == Type::hist_t;
   };
-  bool IsLhistTy(void) const
+  bool IsLhistTy() const
   {
     return type_ == Type::lhist_t;
   };
-  bool IsCountTy(void) const
+  bool IsCountTy() const
   {
     return type_ == Type::count_t;
   };
-  bool IsSumTy(void) const
+  bool IsSumTy() const
   {
     return type_ == Type::sum_t;
   };
-  bool IsMinTy(void) const
+  bool IsMinTy() const
   {
     return type_ == Type::min_t;
   };
-  bool IsMaxTy(void) const
+  bool IsMaxTy() const
   {
     return type_ == Type::max_t;
   };
-  bool IsAvgTy(void) const
+  bool IsAvgTy() const
   {
     return type_ == Type::avg_t;
   };
-  bool IsStatsTy(void) const
+  bool IsStatsTy() const
   {
     return type_ == Type::stats_t;
   };
-  bool IsKstackTy(void) const
+  bool IsKstackTy() const
   {
     return type_ == Type::kstack_t;
   };
-  bool IsUstackTy(void) const
+  bool IsUstackTy() const
   {
     return type_ == Type::ustack_t;
   };
-  bool IsStringTy(void) const
+  bool IsStringTy() const
   {
     return type_ == Type::string;
   };
-  bool IsKsymTy(void) const
+  bool IsKsymTy() const
   {
     return type_ == Type::ksym_t;
   };
-  bool IsUsymTy(void) const
+  bool IsUsymTy() const
   {
     return type_ == Type::usym_t;
   };
-  bool IsUsernameTy(void) const
+  bool IsUsernameTy() const
   {
     return type_ == Type::username;
   };
-  bool IsInetTy(void) const
+  bool IsInetTy() const
   {
     return type_ == Type::inet;
   };
-  bool IsStackModeTy(void) const
+  bool IsStackModeTy() const
   {
     return type_ == Type::stack_mode;
   };
-  bool IsArrayTy(void) const
+  bool IsArrayTy() const
   {
     return type_ == Type::array;
   };
-  bool IsRecordTy(void) const
+  bool IsRecordTy() const
   {
     return type_ == Type::record;
   };
-  bool IsBufferTy(void) const
+  bool IsBufferTy() const
   {
     return type_ == Type::buffer;
   };
-  bool IsTupleTy(void) const
+  bool IsTupleTy() const
   {
     return type_ == Type::tuple;
   };
-  bool IsTimestampTy(void) const
+  bool IsTimestampTy() const
   {
     return type_ == Type::timestamp;
   };
-  bool IsMacAddressTy(void) const
+  bool IsMacAddressTy() const
   {
     return type_ == Type::mac_address;
   };
-  bool IsCgroupPathTy(void) const
+  bool IsCgroupPathTy() const
   {
     return type_ == Type::cgroup_path_t;
   };
-  bool IsStrerrorTy(void) const
+  bool IsStrerrorTy() const
   {
     return type_ == Type::strerror_t;
   };
-  bool IsTimestampModeTy(void) const
+  bool IsTimestampModeTy() const
   {
     return type_ == Type::timestamp_mode;
   }

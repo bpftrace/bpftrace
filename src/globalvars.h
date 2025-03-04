@@ -1,7 +1,6 @@
 #pragma once
 
 #include <optional>
-#include <set>
 #include <string>
 
 #include "bpftrace.h"
@@ -10,8 +9,7 @@
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 
-namespace bpftrace {
-namespace globalvars {
+namespace bpftrace::globalvars {
 
 std::string to_string(GlobalVar global_var);
 std::optional<GlobalVar> from_string(std::string_view name);
@@ -69,5 +67,4 @@ SizedType get_type(GlobalVar global_var,
                    const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
 
-} // namespace globalvars
-} // namespace bpftrace
+} // namespace bpftrace::globalvars

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iomanip>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -226,9 +225,9 @@ public:
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key) const override;
-  virtual void value(BPFtrace &bpftrace,
-                     const SizedType &ty,
-                     std::vector<uint8_t> &value) const override;
+  void value(BPFtrace &bpftrace,
+             const SizedType &ty,
+             std::vector<uint8_t> &value) const override;
 
   void message(MessageType type,
                const std::string &msg,
@@ -248,13 +247,13 @@ protected:
                            bool is_map_key = false) const override;
   static std::string hist_index_label(uint32_t index, uint32_t bits);
   static std::string lhist_index_label(int number, int step);
-  virtual std::string hist_to_str(const std::vector<uint64_t> &values,
-                                  uint32_t div,
-                                  uint32_t k) const override;
-  virtual std::string lhist_to_str(const std::vector<uint64_t> &values,
-                                   int min,
-                                   int max,
-                                   int step) const override;
+  std::string hist_to_str(const std::vector<uint64_t> &values,
+                          uint32_t div,
+                          uint32_t k) const override;
+  std::string lhist_to_str(const std::vector<uint64_t> &values,
+                           int min,
+                           int max,
+                           int step) const override;
 
   std::string map_key_to_str(BPFtrace &bpftrace,
                              const BpfMap &map,
@@ -301,9 +300,9 @@ public:
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key) const override;
-  virtual void value(BPFtrace &bpftrace,
-                     const SizedType &ty,
-                     std::vector<uint8_t> &value) const override;
+  void value(BPFtrace &bpftrace,
+             const SizedType &ty,
+             std::vector<uint8_t> &value) const override;
 
   void message(MessageType type,
                const std::string &msg,

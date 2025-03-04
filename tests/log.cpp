@@ -1,8 +1,7 @@
-#include "log.h"
-#include "mocks.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include <iostream>
+
+#include "log.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace::test::log {
 

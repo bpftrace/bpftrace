@@ -1,6 +1,5 @@
 #pragma once
 
-#include <fstream>
 #include <string_view>
 
 #include "ast/ast.h"

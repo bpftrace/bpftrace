@@ -1,17 +1,12 @@
 #pragma once
 
-#include <unordered_set>
-
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
-#include "bpffeature.h"
 #include "bpftrace.h"
 #include "collect_nodes.h"
-#include "config.h"
 #include "types.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 struct variable {
   SizedType type;
@@ -160,7 +155,7 @@ private:
   Expression *dereference_if_needed(Expression *expr);
 
   bool has_error() const;
-  bool in_loop(void)
+  bool in_loop()
   {
     return loop_depth_ > 0;
   };
@@ -195,5 +190,4 @@ private:
 
 Pass CreateSemanticPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

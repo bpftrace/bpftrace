@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include "procmon.h"
-#include "utils.h"
 
 namespace bpftrace {
 

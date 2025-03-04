@@ -4,8 +4,7 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 
-namespace bpftrace {
-namespace ast {
+namespace bpftrace::ast {
 
 class PidFilterPass : public Visitor<PidFilterPass> {
 public:
@@ -24,5 +23,4 @@ private:
 
 Pass CreatePidFilterPass();
 
-} // namespace ast
-} // namespace bpftrace
+} // namespace bpftrace::ast

@@ -123,7 +123,7 @@ public:
                __attribute__((unused)) LogType,
                std::ostream& out = std::cerr)
       : LogStream(file, line, LogType::BUG, out) {};
-  [[noreturn]] ~LogStreamBug();
+  [[noreturn]] ~LogStreamBug() override;
 };
 
 // Usage examples:
