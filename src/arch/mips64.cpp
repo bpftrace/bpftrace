@@ -47,7 +47,7 @@ static std::array<std::string, 32> registers = {
 };
 
 // Alternative register names that match struct pt_regs
-static std::array<std::string, 32> ptrace_registers = {
+static std::array<std::string, 38> ptrace_registers = {
   "regs[0]",
   "regs[1]",
   "regs[2]",
@@ -80,6 +80,15 @@ static std::array<std::string, 32> ptrace_registers = {
   "regs[29]",
   "regs[30]",
   "regs[31]",
+  // This layout supports only MIP64, which does not have the option
+  // `CONFIG_CPU_HAS_SMARTMIPS`. See the `pt_regs` defintion for MIP64 [1].
+  // [1] https://github.com/torvalds/linux/blob/848e076317446f9c663771ddec142d7c2eb4cb43/arch/mips/include/asm/ptrace.h#L28
+  "cp0_status";
+  "hi",
+  "lo",
+  "cp0_badvaddr",
+  "cp0_cause",
+  "cp0_epc",
 };
 
 static std::array<std::string, 8> arg_registers = {
@@ -119,25 +128,9 @@ int arg_offset(int arg_num)
   return offset(arg_registers.at(arg_num));
 }
 
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-static int *__getpc(void)
-{
-  int *rtaddr;
-
-  __asm__ volatile("move %0, $31" : "=r"(rtaddr));
-  return rtaddr;
-}
-#pragma GCC pop_options
-
 int pc_offset()
 {
-  int *retAddr, pc;
-
-  retAddr = __getpc();
-  pc = *retAddr;
-
-  return pc;
+  return offset("cp0_epc");
 }
 
 int ret_offset()
