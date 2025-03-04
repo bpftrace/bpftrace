@@ -20,8 +20,14 @@ static std::string buffer;
 
 using namespace bpftrace;
 
-YY_BUFFER_STATE yy_scan_string_with_size(const char *yystr, size_t size, yyscan_t yyscanner);
-bool yy_is_buffer_full(struct yyguts_t *yyg);
+static std::string source;
+static size_t curr;
+
+void yy_set_source_string(const std::string& s);
+int yy_read_from_source(char* buf, size_t max_size);
+
+#define YY_INPUT(buf,result,max_size) \
+  result = yy_read_from_source(buf, max_size);
 %}
 
 /* https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal */
@@ -273,13 +279,9 @@ struct|union|enum       {
                               std::string original_s(s);
                               std::string original_yytext(yytext);
                               for (z=strlen(s) - 1; z >= 0; z--) {
-                                if (yy_is_buffer_full(yyg)) {
-                                  driver.error(loc, std::string("Buffer overflow while expanding macro: ")
-                                          + original_yytext + ", " + original_s);
-                                  yyterminate();
-                                } else if (unput_count >= 1000) {
+                                if (unput_count >= 1000) {
                                   driver.error(loc, std::string("Macro recursion limit reached: ")
-                                            + original_yytext + ", " + original_s);
+                                                    + original_yytext + ", " + original_s);
                                   yyterminate();
                                 }
                                 unput(s[z]);
@@ -297,19 +299,14 @@ struct|union|enum       {
 
 %%
 
-YY_BUFFER_STATE yy_scan_string_with_size(const char *yystr, size_t size, yyscan_t yyscanner) {
-  YY_BUFFER_STATE b = yy_scan_string(yystr, yyscanner);
-
-  // If we use yy_scan_string(), the buffer size is set to strlen(yystr) + 2.
-  // So we need to adjust the buffer to the given size.
-  b->yy_buf_pos = b->yy_ch_buf = (char *)yyrealloc((void *)b->yy_ch_buf, size + 2, yyscanner);
-  b->yy_buf_size = size;
-
-  return b;
+void yy_set_source_string(const std::string& s) {
+  source = s;
+  curr = 0;
 }
 
-bool yy_is_buffer_full(struct yyguts_t *yyg) {
-  char *yy_cp = yyg->yy_c_buf_p;
-  return (yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 &&
-          YY_CURRENT_BUFFER_LVALUE->yy_n_chars == YY_CURRENT_BUFFER_LVALUE->yy_buf_size);
+int yy_read_from_source(char* buf, size_t max_size) {
+  size_t num_to_copy = std::min(source.size() - curr, max_size);
+  source.copy(buf, num_to_copy, curr);
+  curr += num_to_copy;
+  return num_to_copy;
 }

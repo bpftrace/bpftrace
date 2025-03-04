@@ -2889,23 +2889,6 @@ stdin:2:9-343: ERROR: syntax error, unexpected end of file
 BEGIN { M; }
         ~~~~
 )");
-
-  // Macro expansion causes buffer overflow
-  bpftrace.macros_["M"] = std::string(25, 'm'); // Macro defined in a.h
-  std::string padding(16384, 'p');
-  test_parse_failure(bpftrace,
-                     "#include \"a.h\"\n"
-                     "BEGIN { M; }\n"
-                     "END { printf(\"" +
-                         padding + "\"); }",
-                     R"(
-stdin:2:9-10: ERROR: Buffer overflow while expanding macro: M, mmmmmmmmmmmmmmmmmmmmmmmmm
-BEGIN { M; }
-        ~
-stdin:2:9-10: ERROR: syntax error, unexpected end of file
-BEGIN { M; }
-        ~
-)");
 }
 
 } // namespace bpftrace::test::parser
