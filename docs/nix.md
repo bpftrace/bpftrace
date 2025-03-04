@@ -107,6 +107,37 @@ dxu@kashmir bpftrace]$ CC=afl-clang-fast CXX=afl-clang-fast++ cmake -B build-fuz
 
 This section has a few examples on how to interact with the Nix configuration.
 
+### Update flake inputs
+
+Flakes have external inputs in the `inputs = { ... }` section of `flake.nix`.
+
+To update a single input:
+```
+$ nix flake lock --update-input blazesym
+warning: updating lock file '/home/dxu/dev/bpftrace/flake.lock':
+• Updated input 'blazesym':
+    'github:libbpf/blazesym/6beb39ebc8e3a604c7b483951c85c831c1bbe0d1' (2025-02-14)
+  → 'github:libbpf/blazesym/285b17f15a12885544b21f1ae352928910656767' (2025-03-04)
+```
+
+To update a single input to a specific revision:
+```
+$ nix flake lock --override-input blazesym github:libbpf/blazesym/6beb39ebc8e3a604c7b483951c85c831c1bbe0d1
+warning: updating lock file '/home/dxu/dev/bpftrace/flake.lock':
+• Updated input 'blazesym':
+    'github:libbpf/blazesym/285b17f15a12885544b21f1ae352928910656767' (2025-03-04)
+  → 'github:libbpf/blazesym/6beb39ebc8e3a604c7b483951c85c831c1bbe0d1' (2025-02-14)
+```
+
+To update all inputs:
+```
+$ nix flake update
+warning: updating lock file '/home/dxu/dev/bpftrace/flake.lock':
+• Updated input 'nixpkgs':
+    'github:NixOS/nixpkgs/d9b69c3ec2a2e2e971c534065bdd53374bd68b97' (2025-02-24)
+  → 'github:NixOS/nixpkgs/02032da4af073d0f6110540c8677f16d4be0117f' (2025-03-03)
+```
+
 ### Format `*.nix` files
 
 ```
