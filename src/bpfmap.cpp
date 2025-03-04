@@ -45,7 +45,8 @@ bool BpfMap::is_stack_map() const
 bool BpfMap::is_per_cpu_type() const
 {
   return type() == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||
-         type() == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+         type() == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
+         type() == libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH;
 }
 
 bool BpfMap::is_clearable() const
@@ -76,6 +77,56 @@ std::string to_string(MapType t)
       return "recursion_prevention";
   }
   return {}; // unreached
+}
+
+libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type,
+                                      const SizedType &key_type)
+{
+  if (val_type.IsCountTy() && key_type.IsNoneTy()) {
+    return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+  } else if (val_type.NeedsPercpuMap()) {
+    return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
+  } else {
+    return libbpf::BPF_MAP_TYPE_HASH;
+  }
+}
+
+bool is_array_map(const SizedType &val_type, const SizedType &key_type)
+{
+  auto map_type = get_bpf_map_type(val_type, key_type);
+  return map_type == libbpf::BPF_MAP_TYPE_ARRAY ||
+         map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+}
+
+bool bpf_map_types_compatible(const SizedType &val_type,
+                              const SizedType &key_type,
+                              libbpf::bpf_map_type kind)
+{
+  auto kind_from_stype = get_bpf_map_type(val_type, key_type);
+  if (kind_from_stype == kind) {
+    return true;
+  }
+  if ((kind_from_stype == libbpf::BPF_MAP_TYPE_HASH ||
+       kind_from_stype == libbpf::BPF_MAP_TYPE_LRU_HASH) &&
+      (kind == libbpf::BPF_MAP_TYPE_HASH ||
+       kind == libbpf::BPF_MAP_TYPE_LRU_HASH)) {
+    return true;
+  }
+
+  if ((kind_from_stype == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||
+       kind_from_stype == libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH) &&
+      (kind == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||
+       kind == libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH)) {
+    return true;
+  }
+
+  // This doesn't work the opposite way
+  if (kind == libbpf::BPF_MAP_TYPE_PERCPU_HASH &&
+      kind_from_stype == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY) {
+    return true;
+  }
+
+  return false;
 }
 
 } // namespace bpftrace
