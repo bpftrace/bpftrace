@@ -6,7 +6,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "location.hh"
+#include "ast/location.h"
 
 namespace bpftrace {
 
@@ -33,7 +33,7 @@ class Log {
 public:
   static Log& get();
   void take_input(LogType type,
-                  const std::optional<location>& loc,
+                  std::optional<ast::Location> loc,
                   std::ostream& out,
                   std::string&& input);
   inline void set_source(std::string_view filename, std::string_view source)
@@ -76,7 +76,7 @@ private:
   std::string src_;
   std::string filename_;
   void log_with_location(LogType,
-                         const location&,
+                         ast::Location,
                          std::ostream&,
                          const std::string&);
   std::string log_format_output(LogType, std::string&&);
@@ -93,7 +93,7 @@ public:
   LogStream(const std::string& file,
             int line,
             LogType type,
-            std::optional<location> loc,
+            ast::Location loc,
             std::ostream& out = std::cerr);
   template <typename T>
   LogStream& operator<<(const T& v)
@@ -109,7 +109,7 @@ protected:
 
   Log& sink_;
   LogType type_;
-  const std::optional<location> loc_;
+  std::optional<ast::Location> loc_;
   std::ostream& out_;
   std::string log_file_;
   int log_line_;
@@ -123,12 +123,6 @@ public:
                __attribute__((unused)) LogType,
                std::ostream& out = std::cerr)
       : LogStream(file, line, LogType::BUG, out) {};
-  LogStreamBug(const std::string& file,
-               int line,
-               __attribute__((unused)) LogType,
-               std::optional<location> loc,
-               std::ostream& out = std::cerr)
-      : LogStream(file, line, LogType::BUG, loc, out) {};
   [[noreturn]] ~LogStreamBug();
 };
 

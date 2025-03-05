@@ -10,8 +10,8 @@
 
 #include <cereal/access.hpp>
 
+#include "ast/location.h"
 #include "format_string.h"
-#include "location.hh"
 #include "struct.h"
 #include "types.h"
 
@@ -21,7 +21,7 @@ class BPFtrace;
 
 struct HelperErrorInfo {
   int func_id = -1;
-  location loc;
+  ast::Location loc;
 };
 
 struct LinearHistogramArgs {

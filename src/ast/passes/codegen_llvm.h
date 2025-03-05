@@ -14,12 +14,12 @@
 #include "ast/async_ids.h"
 #include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
+#include "ast/location.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "codegen_resources.h"
 #include "format_string.h"
 #include "kfuncs.h"
-#include "location.hh"
 #include "required_resources.h"
 
 namespace bpftrace {
@@ -148,7 +148,7 @@ public:
   ScopedExpr visit(Program &program);
   ScopedExpr visit(Block &block);
 
-  ScopedExpr getHistMapKey(Map &map, Value *log2, const location &loc);
+  ScopedExpr getHistMapKey(Map &map, Value *log2, const Location &loc);
   int getNextIndexForProbe();
   ScopedExpr createLogicalAnd(Binop &binop);
   ScopedExpr createLogicalOr(Binop &binop);
@@ -173,9 +173,9 @@ public:
                            const SizedType &value_type);
   Value *createTuple(
       const SizedType &tuple_type,
-      const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+      const std::vector<std::pair<llvm::Value *, Location>> &vals,
       const std::string &name,
-      const location &loc);
+      const Location &loc);
   void createTupleCopy(const SizedType &expr_type,
                        const SizedType &var_type,
                        Value *dst_val,
@@ -224,7 +224,7 @@ private:
   [[nodiscard]] ScopedExpr getMultiMapKey(
       Map &map,
       const std::vector<Value *> &extra_keys,
-      const location &loc);
+      const Location &loc);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 
@@ -245,7 +245,7 @@ private:
 
   ScopedExpr kstack_ustack(const std::string &ident,
                            StackType stack_type,
-                           const location &loc);
+                           const Location &loc);
 
   int get_probe_id();
 
@@ -269,7 +269,7 @@ private:
                                     const std::string &expanded_probe_name,
                                     int arg_num,
                                     int index,
-                                    const location &loc);
+                                    const Location &loc);
 
   ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
                                          Value *index,
@@ -283,7 +283,7 @@ private:
                                      Value *offset,
                                      const SizedType &data_type,
                                      const SizedType &elem_type,
-                                     location loc,
+                                     const Location &loc,
                                      const std::string &temp_name);
 
   ScopedExpr createIncDec(Unop &unop);
@@ -299,7 +299,7 @@ private:
 
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type,
-                          const location &loc);
+                          const Location &loc);
   VariableLLVM *maybeGetVariable(const std::string &);
   VariableLLVM &getVariable(const std::string &);
 

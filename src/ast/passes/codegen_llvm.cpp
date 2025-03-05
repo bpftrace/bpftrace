@@ -167,7 +167,7 @@ ScopedExpr CodegenLLVM::visit(Identifier &identifier)
 
 ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
                                       StackType stack_type,
-                                      const location &loc)
+                                      const Location &loc)
 {
   if (!murmur_hash_2_func_)
     murmur_hash_2_func_ = createMurmurHash2Func();
@@ -2241,9 +2241,9 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
 // Constructs a tuple on the scratch buffer or stack from the provided values.
 Value *CodegenLLVM::createTuple(
     const SizedType &tuple_type,
-    const std::vector<std::pair<llvm::Value *, const location *>> &vals,
+    const std::vector<std::pair<llvm::Value *, Location>> &vals,
     const std::string &name,
-    const location &loc)
+    const Location &loc)
 {
   auto tuple_ty = b_.GetType(tuple_type);
   size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
@@ -2261,7 +2261,7 @@ Value *CodegenLLVM::createTuple(
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
-      b_.CreateProbeRead(ctx_, dst, type, val, *vloc);
+      b_.CreateProbeRead(ctx_, dst, type, val, vloc);
     else
       b_.CreateStore(val, dst);
   }
@@ -2306,13 +2306,13 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 
   compareStructure(tuple.type, tuple_ty);
 
-  std::vector<std::pair<llvm::Value *, const location *>> vals;
+  std::vector<std::pair<llvm::Value *, Location>> vals;
   std::vector<ScopedExpr> scoped_exprs;
   vals.reserve(tuple.elems.size());
 
   for (Expression *elem : tuple.elems) {
     auto scoped_expr = visit(elem);
-    vals.push_back({ scoped_expr.value(), &elem->loc });
+    vals.push_back({ scoped_expr.value(), elem->loc });
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }
 
@@ -2379,7 +2379,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 
 void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
                                      const SizedType &var_type,
-                                     const location &loc)
+                                     const Location &loc)
 {
   if (maybeGetVariable(var_ident) != nullptr) {
     // Already been allocated
@@ -3060,7 +3060,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression *key_expr)
 
 ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
                                        const std::vector<Value *> &extra_keys,
-                                       const location &loc)
+                                       const Location &loc)
 {
   size_t size = map.key_type.GetSize();
   for (auto *extra_key : extra_keys) {
@@ -3141,7 +3141,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
 
 ScopedExpr CodegenLLVM::getHistMapKey(Map &map,
                                       Value *log2,
-                                      const location &loc)
+                                      const Location &loc)
 {
   if (map.key_expr)
     return getMultiMapKey(map, { log2 }, loc);
@@ -3568,7 +3568,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
     const std::string &expanded_probe_name,
     int arg_num,
     int index,
-    const location &loc)
+    const Location &loc)
 {
   auto func_name = get_function_name_for_watchpoint_setup(expanded_probe_name,
                                                           index);
@@ -4121,7 +4121,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
                                                 Value *offset,
                                                 const SizedType &data_type,
                                                 const SizedType &elem_type,
-                                                location loc,
+                                                const Location &loc,
                                                 const std::string &temp_name)
 {
   // We treat this access as a raw byte offset, but may then subsequently need
@@ -4502,7 +4502,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
 
   // Create decl variable for use in this iteration of the loop
   auto tuple = createTuple(f.decl->type,
-                           { { key, &f.decl->loc }, { val, &f.decl->loc } },
+                           { { key, f.decl->loc }, { val, f.decl->loc } },
                            f.decl->ident,
                            f.decl->loc);
   variables_[scope_stack_.back()][f.decl->ident] = VariableLLVM{

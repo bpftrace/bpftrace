@@ -148,7 +148,7 @@ void TestFunctionRegistryPopulated::test(
 {
   std::stringstream out;
   EXPECT_EQ(expected_result,
-            reg_.get("", func_name, arg_types, location(), out));
+            reg_.get("", func_name, arg_types, ast::Location(), out));
   EXPECT_EQ("", out.str());
 }
 
@@ -158,7 +158,7 @@ void TestFunctionRegistryPopulated::test(
     std::string_view expected_error)
 {
   std::stringstream out;
-  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, location(), out));
+  EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, ast::Location(), out));
 
   if (expected_error[0] == '\n')
     expected_error.remove_prefix(1);
@@ -339,8 +339,8 @@ TEST(TestFunctionRegistry, add_namespaced)
   std::stringstream out; // To suppress (expected) errors from unit test output
   FunctionRegistry reg;
   auto *foo = reg.add(Function::Origin::Script, "ns", "foo", CreateNone(), {});
-  EXPECT_EQ(nullptr, reg.get("", "foo", {}, location(), out));
-  EXPECT_EQ(foo, reg.get("ns", "foo", {}, location(), out));
+  EXPECT_EQ(nullptr, reg.get("", "foo", {}, ast::Location(), out));
+  EXPECT_EQ(foo, reg.get("ns", "foo", {}, ast::Location(), out));
 }
 
 TEST(TestFunctionRegistry, add_duplicate_of_builtin)

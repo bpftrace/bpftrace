@@ -689,8 +689,8 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
     if (call.vargs.size() == 1) {
-      call.vargs.push_back(ctx_.make_node<Integer>(0, call.loc)); // default
-                                                                  // bits is 0
+      call.vargs.push_back(
+          ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
     } else {
       if (!check_arg(call, Type::integer, 1, true))
         return;
@@ -2895,7 +2895,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   if (map_contains_int && expr_is_map_with_castable_agg) {
     assignment.expr = ctx_.make_node<Cast>(*map_type_before,
                                            assignment.expr,
-                                           assignment.expr->loc);
+                                           Location(assignment.expr->loc));
   }
 
   assign_map_type(*assignment.map, assignment.expr->type);
@@ -2979,7 +2979,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   if (expr_is_map_with_castable_agg) {
     assignment.expr = ctx_.make_node<Cast>(CreateInt64(),
                                            assignment.expr,
-                                           assignment.expr->loc);
+                                           Location(assignment.expr->loc));
   }
 
   Node *var_scope = nullptr;
@@ -3034,7 +3034,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
             Expression *cast = ctx_.make_node<Cast>(
                 CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
                 assignment.expr,
-                assignment.loc);
+                Location(assignment.loc));
             assignment.expr = dereference_if_needed(cast);
           } else if (!type_mismatch_error) {
             assignment.addError()
@@ -4016,7 +4016,7 @@ Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
     Expression *ptr_expr = expr;
 
     Unop *deref_expr = ctx_.make_node<Unop>(
-        Operator::MUL, ptr_expr, false, ptr_expr->loc);
+        Operator::MUL, ptr_expr, false, Location(ptr_expr->loc));
     deref_expr->type = *ptr_type.GetPointeeTy();
     deref_expr->type.is_internal = ptr_type.is_internal;
     deref_expr->type.SetAS(ptr_type.GetAS());

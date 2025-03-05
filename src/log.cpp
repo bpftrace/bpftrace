@@ -35,7 +35,7 @@ Log& Log::get()
 }
 
 void Log::take_input(LogType type,
-                     const std::optional<location>& loc,
+                     std::optional<ast::Location> loc,
                      std::ostream& out,
                      std::string&& input)
 {
@@ -44,15 +44,15 @@ void Log::take_input(LogType type,
       std::cerr << "Log: cannot resolve location before calling set_source()."
                 << std::endl;
       out << log_format_output(type, std::move(input));
-    } else if (loc->begin.line == 0) {
+    } else if (loc->line_range_.first == 0 || loc->line_range_.second == 0) {
       std::cerr << "Log: invalid location." << std::endl;
       out << log_format_output(type, std::move(input));
-    } else if (loc->begin.line > loc->end.line) {
-      std::cerr << "Log: loc.begin > loc.end: " << loc->begin << ":" << loc->end
-                << std::endl;
+    } else if (loc->line_range_.first > loc->line_range_.second) {
+      std::cerr << "Log: loc.begin > loc.end: " << loc->line_range_.first << ":"
+                << loc->line_range_.second << std::endl;
       out << log_format_output(type, std::move(input));
     } else {
-      log_with_location(type, loc.value(), out, input);
+      log_with_location(type, *loc, out, input);
     }
   } else {
     out << log_format_output(type, std::move(input));
@@ -95,7 +95,7 @@ const std::string Log::get_source_line(unsigned int n)
 }
 
 void Log::log_with_location(LogType type,
-                            const location& l,
+                            ast::Location l,
                             std::ostream& out,
                             const std::string& m)
 {
@@ -129,9 +129,9 @@ void Log::log_with_location(LogType type,
 
   // For a multi line error only the line range is printed:
   //     <filename>:<start_line>-<end_line>: ERROR: <message>
-  if (l.begin.line < l.end.line) {
-    out << l.begin.line << "-" << l.end.line << ": " << typestr << msg
-        << std::endl
+  if (l.line_range_.first < l.line_range_.second) {
+    out << l.line_range_.first << "-" << l.line_range_.second << ": " << typestr
+        << msg << std::endl
         << color_end;
     return;
   }
@@ -147,11 +147,12 @@ void Log::log_with_location(LogType type,
   // file.bt:1:10-20: error: <message>
   // i:s:1   /1 < "str"/
   //         ~~~~~~~~~~
-  out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
+  out << l.line_range_.first << ":" << l.column_range_.first << "-"
+      << l.column_range_.second;
   out << ": " << typestr << msg << std::endl << color_end;
 
   // for bpftrace::position, valid line# starts from 1
-  std::string srcline = get_source_line(l.begin.line - 1);
+  std::string srcline = get_source_line(l.line_range_.first - 1);
 
   if (srcline == "") {
     return;
@@ -167,10 +168,12 @@ void Log::log_with_location(LogType type,
   out << std::endl;
 
   for (unsigned int x = 0;
-       x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
+       x < srcline.size() &&
+       x < (static_cast<unsigned int>(l.column_range_.second) - 1);
        x++) {
-    char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
-                                                                        : '~';
+    char marker = (x < (static_cast<unsigned int>(l.column_range_.first) - 1))
+                      ? ' '
+                      : '~';
     if (srcline[x] == '\t') {
       out << std::string(4, marker);
     } else {
@@ -196,11 +199,11 @@ LogStream::LogStream(const std::string& file,
 LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
-                     std::optional<location> loc,
+                     ast::Location loc,
                      std::ostream& out)
     : sink_(Log::get()),
       type_(type),
-      loc_(loc),
+      loc_(std::ref(loc)),
       out_(out),
       log_file_(file),
       log_line_(line)
