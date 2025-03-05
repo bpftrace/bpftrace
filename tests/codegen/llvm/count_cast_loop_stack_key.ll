@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
-%kstack_key = type { i64, i32 }
+%kstack_key = type { i64, i32, i32 }
 %kstack_count_t__tuple_t = type { %kstack_key, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -29,10 +29,7 @@ entry:
   %lookup_stack_scratch_key = alloca i32, align 4
   %stack_key = alloca %kstack_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key)
-  %1 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
-  store i64 0, ptr %1, align 8
-  %2 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
-  store i32 0, ptr %2, align 4
+  call void @llvm.memset.p0.i64(ptr align 1 %stack_key, i8 0, i64 16, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key)
   store i32 0, ptr %lookup_stack_scratch_key, align 4
   %lookup_stack_scratch_map = call ptr inttoptr (i64 1 to ptr)(ptr @stack_scratch, ptr %lookup_stack_scratch_key)
@@ -55,17 +52,17 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
   %get_stack = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 0)
-  %3 = icmp sge i32 %get_stack, 0
-  br i1 %3, label %get_stack_success, label %get_stack_fail
+  %1 = icmp sge i32 %get_stack, 0
+  br i1 %1, label %get_stack_success, label %get_stack_fail
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
-  %4 = udiv i32 %get_stack, 8
-  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
-  store i32 %4, ptr %5, align 4
-  %6 = trunc i32 %4 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %6, i64 1)
-  %7 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, ptr %7, align 8
+  %2 = udiv i32 %get_stack, 8
+  %3 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
+  store i32 %2, ptr %3, align 4
+  %4 = trunc i32 %2 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %4, i64 1)
+  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, ptr %5, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_raw_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
@@ -73,9 +70,9 @@ get_stack_fail:                                   ; preds = %lookup_stack_scratc
   br label %merge_block
 
 lookup_success:                                   ; preds = %merge_block
-  %8 = load i64, ptr %lookup_elem, align 8
-  %9 = add i64 %8, 1
-  store i64 %9, ptr %lookup_elem, align 8
+  %6 = load i64, ptr %lookup_elem, align 8
+  %7 = add i64 %6, 1
+  store i64 %7, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %merge_block
@@ -174,6 +171,9 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
+
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !100 {
   %"$res" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
@@ -240,9 +240,6 @@ error_failure:                                    ; preds = %lookup_failure
   %19 = load i32, ptr %i, align 4
   br label %while_end
 }
-
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #4
