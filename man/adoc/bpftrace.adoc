@@ -891,6 +891,21 @@ All valid identifiers can be used as `name`.
 
 The data type of a variable is automatically determined during first assignment and cannot be changed afterwards.
 
+==== Block Expressions
+
+A block can be used as expression, as long as the last line of the block is an
+expression with no trailing semi-colon.
+
+```
+let $a = {
+  let $b = 1;
+  $b
+}
+// $a is 1
+```
+
+This can be used anywhere a regular expression can be used.
+
 ==== Maps without Explicit Keys
 
 Values can be assigned directly to maps without a key (sometimes refered to as scalar maps).
