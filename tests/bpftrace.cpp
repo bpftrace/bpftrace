@@ -722,7 +722,7 @@ TEST_F(bpftrace_dwarf, add_probes_uprobe_symbol_source)
 
   {
     BPFtrace bpftrace;
-    ConfigSetter configs{ bpftrace.config_, ConfigSource::script };
+    ConfigSetter configs{ *bpftrace.config_, ConfigSource::script };
     configs.set_symbol_source_config("dwarf");
     parse_probe(uprobe, bpftrace);
 
@@ -736,7 +736,7 @@ TEST_F(bpftrace_dwarf, add_probes_uprobe_symbol_source)
 
   {
     BPFtrace bpftrace;
-    ConfigSetter configs{ bpftrace.config_, ConfigSource::script };
+    ConfigSetter configs{ *bpftrace.config_, ConfigSource::script };
     configs.set_symbol_source_config("symbol_table");
     parse_probe(uprobe, bpftrace);
 
