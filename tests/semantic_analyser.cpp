@@ -293,7 +293,7 @@ kprobe:f { fake }
 TEST(semantic_analyser, builtin_variables_inline)
 {
   auto bpftrace = get_mock_bpftrace();
-  ConfigSetter configs{ bpftrace->config_, ConfigSource::script };
+  ConfigSetter configs{ *bpftrace->config_, ConfigSource::script };
   configs.set(ConfigKeyBool::probe_inline, true);
 
   // Check argument builtins are rejected when `probe_inline` is enabled.
