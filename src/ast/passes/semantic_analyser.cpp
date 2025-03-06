@@ -1722,6 +1722,27 @@ void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
 
 void SemanticAnalyser::visit(Map &map)
 {
+  auto initializer = dynamic_cast<MapInitializer *>(map.initializer);
+  if (initializer) {
+    auto found = BPF_MAP_TYPES.find(initializer->bpf_type);
+    if (found == BPF_MAP_TYPES.end()) {
+      auto &err = initializer->addError();
+      err << "Invalid bpf map type: " << initializer->bpf_type;
+      std::stringstream hint;
+      int num_types = BPF_MAP_TYPES.size();
+      for (const auto &bpf_type : BPF_MAP_TYPES) {
+        hint << bpf_type.first;
+        num_types--;
+        if (num_types != 0) {
+          hint << ", ";
+        }
+      }
+      err.addHint() << "Valid map types: " << hint.str();
+    } else {
+      bpf_map_type_.insert({ map.ident, found->second });
+    }
+  }
+
   SizedType new_key_type = CreateNone();
   bool key_is_map = false;
   if (map.key_expr) {
@@ -1767,7 +1788,11 @@ void SemanticAnalyser::visit(Map &map)
     // If there is no record of any assignment after the first pass
     // then it's safe to say this map is undefined
     if (!is_first_pass()) {
-      map.addError() << "Undefined map: " << map.ident;
+      if (initializer) {
+        map.addError() << "Unused map: " << map.ident;
+      } else {
+        map.addError() << "Undefined map: " << map.ident;
+      }
     }
     pass_tracker_.inc_num_unresolved();
     map.type = CreateNone();
@@ -1778,6 +1803,21 @@ void SemanticAnalyser::visit(Map &map)
     map.key_type = map_key_search_val->second;
   } else {
     map.key_type = CreateNone();
+  }
+
+  if (is_final_pass() && !initializer) {
+    auto found_kind = bpf_map_type_.find(map.ident);
+    if (found_kind != bpf_map_type_.end()) {
+      if (!bpf_map_types_compatible(map.type,
+                                    map.key_type,
+                                    found_kind->second)) {
+        auto map_type = get_bpf_map_type(map.type, map.key_type);
+        map.addError() << "Incompatible map types. Type from declaration: "
+                       << BPF_MAP_TYPE_TO_STR.at(found_kind->second)
+                       << ". Type from value/key type: "
+                       << BPF_MAP_TYPE_TO_STR.at(map_type);
+      }
+    }
   }
 }
 
