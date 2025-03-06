@@ -22,6 +22,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/probe_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -442,6 +443,7 @@ void CreateDynamicPasses(ast::PassManager& pm)
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
+  pm.AddPass(ast::CreateProbePass());
 }
 
 void CreateAotPasses(ast::PassManager& pm)
@@ -450,6 +452,7 @@ void CreateAotPasses(ast::PassManager& pm)
   pm.AddPass(ast::CreatePortabilityPass());
   pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateReturnPathPass());
+  pm.AddPass(ast::CreateProbePass());
 }
 
 struct Args {
@@ -558,7 +561,7 @@ Args parse_args(int argc, char* argv[])
       case Options::NO_FEATURE: // --no-feature
         if (args.no_feature.parse(optarg)) {
           LOG(ERROR) << "USAGE: --no-feature can only have values "
-                        "'kprobe_multi,uprobe_multi'.";
+                        "'kprobe_multi,kprobe_session,uprobe_multi'.";
           exit(1);
         }
         break;
