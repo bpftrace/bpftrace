@@ -16,30 +16,30 @@ struct ProbeListItem {
 
 // clang-format off
 const std::vector<ProbeListItem> SW_PROBE_LIST = {
-  { "alignment-faults", "",       PERF_COUNT_SW_ALIGNMENT_FAULTS,    1 },
-  { "bpf-output",       "",       PERF_COUNT_SW_BPF_OUTPUT,          1 },
-  { "context-switches", "cs",     PERF_COUNT_SW_CONTEXT_SWITCHES, 1000 },
-  { "cpu-clock",        "cpu",    PERF_COUNT_SW_CPU_CLOCK,     1000000 },
-  { "cpu-migrations",   "",       PERF_COUNT_SW_CPU_MIGRATIONS,      1 },
-  { "dummy",            "",       PERF_COUNT_SW_DUMMY,               1 },
-  { "emulation-faults", "",       PERF_COUNT_SW_EMULATION_FAULTS,    1 },
-  { "major-faults",     "",       PERF_COUNT_SW_PAGE_FAULTS_MAJ,     1 },
-  { "minor-faults",     "",       PERF_COUNT_SW_PAGE_FAULTS_MIN,   100 },
-  { "page-faults",      "faults", PERF_COUNT_SW_PAGE_FAULTS,       100 },
-  { "task-clock",       "",       PERF_COUNT_SW_TASK_CLOCK,          1 },
+  { .path="alignment-faults", .alias="",       .type=PERF_COUNT_SW_ALIGNMENT_FAULTS,    .defaultp=1 },
+  { .path="bpf-output",       .alias="",       .type=PERF_COUNT_SW_BPF_OUTPUT,          .defaultp=1 },
+  { .path="context-switches", .alias="cs",     .type=PERF_COUNT_SW_CONTEXT_SWITCHES, .defaultp=1000 },
+  { .path="cpu-clock",        .alias="cpu",    .type=PERF_COUNT_SW_CPU_CLOCK,     .defaultp=1000000 },
+  { .path="cpu-migrations",   .alias="",       .type=PERF_COUNT_SW_CPU_MIGRATIONS,      .defaultp=1 },
+  { .path="dummy",            .alias="",       .type=PERF_COUNT_SW_DUMMY,               .defaultp=1 },
+  { .path="emulation-faults", .alias="",       .type=PERF_COUNT_SW_EMULATION_FAULTS,    .defaultp=1 },
+  { .path="major-faults",     .alias="",       .type=PERF_COUNT_SW_PAGE_FAULTS_MAJ,     .defaultp=1 },
+  { .path="minor-faults",     .alias="",       .type=PERF_COUNT_SW_PAGE_FAULTS_MIN,   .defaultp=100 },
+  { .path="page-faults",      .alias="faults", .type=PERF_COUNT_SW_PAGE_FAULTS,       .defaultp=100 },
+  { .path="task-clock",       .alias="",       .type=PERF_COUNT_SW_TASK_CLOCK,          .defaultp=1 },
 };
 
 const std::vector<ProbeListItem> HW_PROBE_LIST = {
-  { "backend-stalls",      "",         PERF_COUNT_HW_STALLED_CYCLES_BACKEND,  1000000 },
-  { "branch-instructions", "branches", PERF_COUNT_HW_BRANCH_INSTRUCTIONS,      100000 },
-  { "branch-misses",       "",         PERF_COUNT_HW_BRANCH_MISSES,            100000 },
-  { "bus-cycles",          "",         PERF_COUNT_HW_BUS_CYCLES,               100000 },
-  { "cache-misses",        "",         PERF_COUNT_HW_CACHE_MISSES,            1000000 },
-  { "cache-references",    "",         PERF_COUNT_HW_CACHE_REFERENCES,        1000000 },
-  { "cpu-cycles",          "cycles",   PERF_COUNT_HW_CPU_CYCLES,              1000000 },
-  { "frontend-stalls",     "",         PERF_COUNT_HW_STALLED_CYCLES_FRONTEND, 1000000 },
-  { "instructions",        "",         PERF_COUNT_HW_INSTRUCTIONS,            1000000 },
-  { "ref-cycles",          "",         PERF_COUNT_HW_REF_CPU_CYCLES,          1000000 }
+  { .path="backend-stalls",      .alias="",         .type=PERF_COUNT_HW_STALLED_CYCLES_BACKEND,  .defaultp=1000000 },
+  { .path="branch-instructions", .alias="branches", .type=PERF_COUNT_HW_BRANCH_INSTRUCTIONS,      .defaultp=100000 },
+  { .path="branch-misses",       .alias="",         .type=PERF_COUNT_HW_BRANCH_MISSES,            .defaultp=100000 },
+  { .path="bus-cycles",          .alias="",         .type=PERF_COUNT_HW_BUS_CYCLES,               .defaultp=100000 },
+  { .path="cache-misses",        .alias="",         .type=PERF_COUNT_HW_CACHE_MISSES,            .defaultp=1000000 },
+  { .path="cache-references",    .alias="",         .type=PERF_COUNT_HW_CACHE_REFERENCES,        .defaultp=1000000 },
+  { .path="cpu-cycles",          .alias="cycles",   .type=PERF_COUNT_HW_CPU_CYCLES,              .defaultp=1000000 },
+  { .path="frontend-stalls",     .alias="",         .type=PERF_COUNT_HW_STALLED_CYCLES_FRONTEND, .defaultp=1000000 },
+  { .path="instructions",        .alias="",         .type=PERF_COUNT_HW_INSTRUCTIONS,            .defaultp=1000000 },
+  { .path="ref-cycles",          .alias="",         .type=PERF_COUNT_HW_REF_CPU_CYCLES,          .defaultp=1000000 }
 };
 // clang-format on
 
@@ -49,7 +49,7 @@ const std::unordered_set<std::string> SIGNALS = { "SIGUSR1" };
 
 class BPFtrace;
 
-typedef std::map<std::string, std::vector<std::string>> FuncParamLists;
+using FuncParamLists = std::map<std::string, std::vector<std::string>>;
 
 class ProbeMatcher {
 public:

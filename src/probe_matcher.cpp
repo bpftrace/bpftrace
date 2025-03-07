@@ -47,9 +47,9 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   auto has_parameter = [](const std::string& token) {
     return token.find('(') != std::string::npos;
   };
-  const bool truncate_parameters = std::none_of(tokens.begin(),
-                                                tokens.end(),
-                                                has_parameter);
+  const bool truncate_parameters = std::ranges::none_of(tokens,
+
+                                                        has_parameter);
 
   std::string line;
   std::set<std::string> matches;
@@ -383,7 +383,7 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     } while (line.length() > 0);
 
     while (getline(format_file, line)) {
-      if (line.find("\tfield:") == 0) {
+      if (line.starts_with("\tfield:")) {
         size_t col_pos = line.find(':') + 1;
         params[tracepoint].push_back(
             line.substr(col_pos, line.find(';') - col_pos));

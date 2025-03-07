@@ -131,7 +131,7 @@ static void update_global_vars_rodata(
 
   // Update the values for the global vars (using the above offsets)
   for (const auto &[global_var, offset] : vars_and_offsets) {
-    int64_t *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
+    auto *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
 
     switch (global_var) {
       case GlobalVar::NUM_CPUS:

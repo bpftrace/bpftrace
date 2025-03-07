@@ -78,7 +78,7 @@ Pass CreatePidFilterPass()
     pid_filter.visit(ctx.ast_ctx.root);
   };
 
-  return Pass("PidFilter", fn);
+  return { "PidFilter", fn };
 };
 
 } // namespace bpftrace::ast

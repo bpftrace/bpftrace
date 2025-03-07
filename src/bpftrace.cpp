@@ -405,13 +405,11 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     // (ie invalid addr). This lets script writers be a bit more aggressive
     // when unwatch'ing addresses, especially if they're sampling a portion
     // of addresses they're interested in watching.
-    bpftrace->attached_probes_.erase(
-        std::remove_if(bpftrace->attached_probes_.begin(),
-                       bpftrace->attached_probes_.end(),
-                       [&](const auto &ap) {
-                         return ap->probe().address == addr;
-                       }),
-        bpftrace->attached_probes_.end());
+    auto it = std::ranges::remove_if(bpftrace->attached_probes_,
+                                     [&](const auto &ap) {
+                                       return ap->probe().address == addr;
+                                     });
+    bpftrace->attached_probes_.erase(it.begin(), it.end());
 
     return;
   } else if (printf_id == asyncactionint(AsyncAction::skboutput)) {
@@ -1361,48 +1359,48 @@ int BPFtrace::print_map(const BpfMap &map, uint32_t top, uint32_t div)
       return -1;
     }
 
-    values_by_key.push_back({ key, value });
+    values_by_key.emplace_back(key, value);
 
     old_key = key.data();
   }
 
   if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy()) {
     bool is_signed = value_type.IsSigned();
-    std::sort(values_by_key.begin(),
-              values_by_key.end(),
-              [&](auto &a, auto &b) {
-                if (is_signed)
-                  return reduce_value<int64_t>(a.second, nvalues) <
-                         reduce_value<int64_t>(b.second, nvalues);
-                return reduce_value<uint64_t>(a.second, nvalues) <
-                       reduce_value<uint64_t>(b.second, nvalues);
-              });
+    std::ranges::sort(values_by_key,
+
+                      [&](auto &a, auto &b) {
+                        if (is_signed)
+                          return reduce_value<int64_t>(a.second, nvalues) <
+                                 reduce_value<int64_t>(b.second, nvalues);
+                        return reduce_value<uint64_t>(a.second, nvalues) <
+                               reduce_value<uint64_t>(b.second, nvalues);
+                      });
   } else if (value_type.IsMinTy() || value_type.IsMaxTy()) {
-    std::sort(values_by_key.begin(),
-              values_by_key.end(),
-              [&](auto &a, auto &b) {
-                return min_max_value<uint64_t>(a.second,
-                                               nvalues,
-                                               value_type.IsMaxTy()) <
-                       min_max_value<uint64_t>(b.second,
-                                               nvalues,
-                                               value_type.IsMaxTy());
-              });
+    std::ranges::sort(values_by_key,
+
+                      [&](auto &a, auto &b) {
+                        return min_max_value<uint64_t>(a.second,
+                                                       nvalues,
+                                                       value_type.IsMaxTy()) <
+                               min_max_value<uint64_t>(b.second,
+                                                       nvalues,
+                                                       value_type.IsMaxTy());
+                      });
   } else if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
     if (value_type.IsSigned()) {
-      std::sort(values_by_key.begin(),
-                values_by_key.end(),
-                [&](auto &a, auto &b) {
-                  return avg_value<int64_t>(a.second, nvalues) <
-                         avg_value<int64_t>(b.second, nvalues);
-                });
+      std::ranges::sort(values_by_key,
+
+                        [&](auto &a, auto &b) {
+                          return avg_value<int64_t>(a.second, nvalues) <
+                                 avg_value<int64_t>(b.second, nvalues);
+                        });
     } else {
-      std::sort(values_by_key.begin(),
-                values_by_key.end(),
-                [&](auto &a, auto &b) {
-                  return avg_value<uint64_t>(a.second, nvalues) <
-                         avg_value<uint64_t>(b.second, nvalues);
-                });
+      std::ranges::sort(values_by_key,
+
+                        [&](auto &a, auto &b) {
+                          return avg_value<uint64_t>(a.second, nvalues) <
+                                 avg_value<uint64_t>(b.second, nvalues);
+                        });
     }
   } else {
     sort_by_key(map_info.key_type, values_by_key);
@@ -1437,8 +1435,7 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
   const auto &map_info = resources.maps_info.at(map.name());
   while (bpf_get_next_key(map.fd(), old_key, key.data()) == 0) {
     auto key_prefix = std::vector<uint8_t>(map_info.key_type.GetSize());
-    uint64_t bucket = read_data<uint64_t>(key.data() +
-                                          map_info.key_type.GetSize());
+    auto bucket = read_data<uint64_t>(key.data() + map_info.key_type.GetSize());
 
     for (size_t i = 0; i < map_info.key_type.GetSize(); i++)
       key_prefix.at(i) = key.at(i);
@@ -1474,11 +1471,11 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
     for (unsigned long i : map_elem.second) {
       sum += i;
     }
-    total_counts_by_key.push_back({ map_elem.first, sum });
+    total_counts_by_key.emplace_back(map_elem.first, sum);
   }
-  std::sort(total_counts_by_key.begin(),
-            total_counts_by_key.end(),
-            [&](auto &a, auto &b) { return a.second < b.second; });
+  std::ranges::sort(total_counts_by_key,
+
+                    [&](auto &a, auto &b) { return a.second < b.second; });
 
   if (div == 0)
     div = 1;
@@ -1509,7 +1506,8 @@ std::string BPFtrace::get_stack(int64_t stackid,
                                 StackType stack_type,
                                 int indent)
 {
-  struct stack_key stack_key = { stackid, nr_stack_frames };
+  struct stack_key stack_key = { .stackid = stackid,
+                                 .nr_stack_frames = nr_stack_frames };
   auto stack_trace = std::vector<uint64_t>(stack_type.limit);
   int err = bpf_lookup_elem(bytecode_.getMap(stack_type.name()).fd(),
                             &stack_key,
@@ -1592,7 +1590,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
 {
   static const auto usec_regex = std::regex("%f");
   static constexpr auto ns_in_sec = 1'000'000'000;
-  TimestampMode ts_mode = static_cast<TimestampMode>(mode);
+  auto ts_mode = static_cast<TimestampMode>(mode);
   struct timespec zero = {};
   struct timespec *basetime = &zero;
 
@@ -1682,7 +1680,7 @@ static int sym_resolve_callback(const char *name,
                                 uint64_t size,
                                 void *payload)
 {
-  struct symbol *sym = static_cast<struct symbol *>(payload);
+  auto *sym = static_cast<struct symbol *>(payload);
   if (!strcmp(name, sym->name.c_str())) {
     sym->address = addr;
     sym->size = size;
@@ -1717,7 +1715,7 @@ std::string BPFtrace::resolve_mac_address(const uint8_t *mac_addr) const
            mac_addr[3],
            mac_addr[4],
            mac_addr[5]);
-  return std::string(addr);
+  return addr;
 }
 
 std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
@@ -1744,14 +1742,14 @@ static std::string resolve_inetv4(const uint8_t *inet)
 {
   char addr_cstr[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, inet, addr_cstr, INET_ADDRSTRLEN);
-  return std::string(addr_cstr);
+  return addr_cstr;
 }
 
 static std::string resolve_inetv6(const uint8_t *inet)
 {
   char addr_cstr[INET6_ADDRSTRLEN];
   inet_ntop(AF_INET6, inet, addr_cstr, INET6_ADDRSTRLEN);
-  return std::string(addr_cstr);
+  return addr_cstr;
 }
 
 std::string BPFtrace::resolve_inet(int af, const uint8_t *inet) const
@@ -1823,18 +1821,18 @@ void BPFtrace::sort_by_key(
       const auto &field = fields.at(i);
       if (field.type.IsIntTy()) {
         if (field.type.GetSize() == 8) {
-          std::stable_sort(
-              values_by_key.begin(),
-              values_by_key.end(),
+          std::ranges::stable_sort(
+              values_by_key,
+
               [&](auto &a, auto &b) {
                 auto va = read_data<uint64_t>(a.first.data() + field.offset);
                 auto vb = read_data<uint64_t>(b.first.data() + field.offset);
                 return va < vb;
               });
         } else if (field.type.GetSize() == 4) {
-          std::stable_sort(
-              values_by_key.begin(),
-              values_by_key.end(),
+          std::ranges::stable_sort(
+              values_by_key,
+
               [&](auto &a, auto &b) {
                 auto va = read_data<uint32_t>(a.first.data() + field.offset);
                 auto vb = read_data<uint32_t>(b.first.data() + field.offset);
@@ -1845,46 +1843,46 @@ void BPFtrace::sort_by_key(
                    << field.type.GetSize() << " provided";
         }
       } else if (field.type.IsStringTy()) {
-        std::stable_sort(values_by_key.begin(),
-                         values_by_key.end(),
-                         [&](auto &a, auto &b) {
-                           return strncmp(reinterpret_cast<const char *>(
-                                              a.first.data() + field.offset),
-                                          reinterpret_cast<const char *>(
-                                              b.first.data() + field.offset),
-                                          field.type.GetSize()) < 0;
-                         });
+        std::ranges::stable_sort(
+            values_by_key,
+
+            [&](auto &a, auto &b) {
+              return strncmp(reinterpret_cast<const char *>(a.first.data() +
+                                                            field.offset),
+                             reinterpret_cast<const char *>(b.first.data() +
+                                                            field.offset),
+                             field.type.GetSize()) < 0;
+            });
       }
     }
   } else if (key.IsIntTy()) {
     if (key.GetSize() == 8) {
-      std::stable_sort(values_by_key.begin(),
-                       values_by_key.end(),
-                       [&](auto &a, auto &b) {
-                         auto va = read_data<uint64_t>(a.first.data());
-                         auto vb = read_data<uint64_t>(b.first.data());
-                         return va < vb;
-                       });
+      std::ranges::stable_sort(values_by_key,
+
+                               [&](auto &a, auto &b) {
+                                 auto va = read_data<uint64_t>(a.first.data());
+                                 auto vb = read_data<uint64_t>(b.first.data());
+                                 return va < vb;
+                               });
     } else if (key.GetSize() == 4) {
-      std::stable_sort(values_by_key.begin(),
-                       values_by_key.end(),
-                       [&](auto &a, auto &b) {
-                         auto va = read_data<uint32_t>(a.first.data());
-                         auto vb = read_data<uint32_t>(b.first.data());
-                         return va < vb;
-                       });
+      std::ranges::stable_sort(values_by_key,
+
+                               [&](auto &a, auto &b) {
+                                 auto va = read_data<uint32_t>(a.first.data());
+                                 auto vb = read_data<uint32_t>(b.first.data());
+                                 return va < vb;
+                               });
     } else {
       LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
                << key.GetSize() << " provided";
     }
 
   } else if (key.IsStringTy()) {
-    std::stable_sort(
-        values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
-          return strncmp(reinterpret_cast<const char *>(a.first.data()),
-                         reinterpret_cast<const char *>(b.first.data()),
-                         key.GetSize()) < 0;
-        });
+    std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
+      return strncmp(reinterpret_cast<const char *>(a.first.data()),
+                     reinterpret_cast<const char *>(b.first.data()),
+                     key.GetSize()) < 0;
+    });
   }
 }
 

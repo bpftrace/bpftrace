@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <regex>
+#include <utility>
 
 #include "printf_format_types.h"
 #include "types.h"
@@ -38,7 +39,7 @@ enum class ArgumentType {
 
 class IPrintable {
 public:
-  virtual ~IPrintable() {};
+  virtual ~IPrintable() = default;
   virtual int print(char* buf,
                     size_t size,
                     const char* fmt,
@@ -128,7 +129,8 @@ private:
 
 class PrintableEnum : public virtual IPrintable {
 public:
-  PrintableEnum(uint64_t value, std::string name) : name_(name), value_(value)
+  PrintableEnum(uint64_t value, std::string name)
+      : name_(std::move(name)), value_(value)
   {
   }
   int print(char* buf,

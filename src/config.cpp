@@ -105,12 +105,12 @@ std::optional<ConfigKey> Config::get_config_key(const std::string &str,
 {
   std::string maybe_key = str;
   static const std::string prefix = "bpftrace_";
-  std::transform(maybe_key.begin(),
-                 maybe_key.end(),
-                 maybe_key.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(maybe_key,
 
-  if (maybe_key.rfind(prefix, 0) == 0) {
+                         maybe_key.begin(),
+                         [](unsigned char c) { return std::tolower(c); });
+
+  if (maybe_key.starts_with(prefix)) {
     maybe_key = maybe_key.substr(prefix.length());
   }
   if (ENV_ONLY.find(maybe_key) != ENV_ONLY.end()) {

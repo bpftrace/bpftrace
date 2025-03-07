@@ -74,7 +74,7 @@ public:
     } else if (other.line_range_.second == lines.second) {
       columns.second = std::max(columns.second, other.column_range_.second);
     }
-    return Location(std::move(lines), std::move(columns), source_);
+    return { std::move(lines), std::move(columns), source_ };
   }
 
 private:

@@ -21,8 +21,7 @@ struct Bitfield {
   {
   }
   Bitfield() // necessary for serialization
-  {
-  }
+      = default;
 
   bool operator==(const Bitfield &other) const;
   bool operator!=(const Bitfield &other) const;

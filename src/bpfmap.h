@@ -87,7 +87,7 @@ inline std::string bpf_map_name(std::string_view bpftrace_map_name)
 inline std::string bpftrace_map_name(std::string_view bpf_map_name)
 {
   auto name = std::string{ bpf_map_name };
-  if (name.compare(0, 3, "AT_") == 0)
+  if (name.starts_with("AT_"))
     name = "@" + name.substr(3);
   return name;
 }

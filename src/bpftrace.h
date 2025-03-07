@@ -76,7 +76,7 @@ const std::unordered_map<std::string_view, DebugStage> debug_stages = {
 
 class WildcardException : public std::exception {
 public:
-  WildcardException(const std::string &msg) : msg_(msg)
+  WildcardException(std::string msg) : msg_(std::move(msg))
   {
   }
 

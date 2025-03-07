@@ -240,9 +240,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
     std::string name = stype.GetName();
     static constexpr std::string_view struct_prefix = "struct ";
     static constexpr std::string_view union_prefix = "union ";
-    if (name.find(struct_prefix) == 0)
+    if (name.starts_with(struct_prefix))
       name = name.substr(struct_prefix.length());
-    else if (name.find(union_prefix) == 0)
+    else if (name.starts_with(union_prefix))
       name = name.substr(union_prefix.length());
 
     return createStructType(file,

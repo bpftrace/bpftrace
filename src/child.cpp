@@ -28,7 +28,7 @@ constexpr unsigned int STACK_SIZE = (64 * 1024UL);
 
 std::system_error SYS_ERROR(std::string msg)
 {
-  return std::system_error(errno, std::generic_category(), msg);
+  return { errno, std::generic_category(), msg };
 }
 
 static void report_status(int wstatus)
@@ -49,7 +49,7 @@ static void report_status(int wstatus)
 
 static int childfn(void* arg)
 {
-  struct child_args* args = static_cast<struct child_args*>(arg);
+  auto* args = static_cast<struct child_args*>(arg);
 
   // Receive SIGTERM if parent dies
   if (prctl(PR_SET_PDEATHSIG, SIGTERM)) {

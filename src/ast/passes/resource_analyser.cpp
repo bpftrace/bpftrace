@@ -25,14 +25,13 @@ ProbeType single_provider_type_postsema(Probe *probe)
 
 std::string get_literal_string(Expression &expr)
 {
-  String &str = static_cast<String &>(expr);
+  auto &str = static_cast<String &>(expr);
   return str.str;
 }
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace)
-    : bpftrace_(bpftrace), probe_(nullptr)
+ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
 {
 }
 
@@ -165,12 +164,12 @@ void ResourceAnalyser::visit(Call &call)
     if (call.func == "printf") {
       if (probe_ != nullptr &&
           single_provider_type_postsema(probe_) == ProbeType::iter) {
-        resources_.bpf_print_fmts.push_back(fmtstr);
+        resources_.bpf_print_fmts.emplace_back(fmtstr);
       } else {
         resources_.printf_args.emplace_back(fmtstr, tuple->fields);
       }
     } else if (call.func == "debugf") {
-      resources_.bpf_print_fmts.push_back(fmtstr);
+      resources_.bpf_print_fmts.emplace_back(fmtstr);
     } else if (call.func == "system") {
       resources_.system_args.emplace_back(fmtstr, tuple->fields);
     } else {
@@ -198,9 +197,9 @@ void ResourceAnalyser::visit(Call &call)
     Expression &min_arg = *call.vargs.at(1);
     Expression &max_arg = *call.vargs.at(2);
     Expression &step_arg = *call.vargs.at(3);
-    Integer &min = static_cast<Integer &>(min_arg);
-    Integer &max = static_cast<Integer &>(max_arg);
-    Integer &step = static_cast<Integer &>(step_arg);
+    auto &min = static_cast<Integer &>(min_arg);
+    auto &max = static_cast<Integer &>(max_arg);
+    auto &step = static_cast<Integer &>(step_arg);
 
     auto args = LinearHistogramArgs{
       .min = min.n,
@@ -219,7 +218,7 @@ void ResourceAnalyser::visit(Call &call)
     if (call.vargs.size() > 0)
       resources_.time_args.push_back(get_literal_string(*call.vargs.at(0)));
     else
-      resources_.time_args.push_back("%H:%M:%S\n");
+      resources_.time_args.emplace_back("%H:%M:%S\n");
   } else if (call.func == "strftime") {
     resources_.strftime_args.push_back(get_literal_string(*call.vargs.at(0)));
   } else if (call.func == "print") {
@@ -250,13 +249,13 @@ void ResourceAnalyser::visit(Call &call)
       resources_.cgroup_path_args.push_back(
           get_literal_string(*call.vargs.at(1)));
     else
-      resources_.cgroup_path_args.push_back("*");
+      resources_.cgroup_path_args.emplace_back("*");
   } else if (call.func == "skboutput") {
     auto &file_arg = *call.vargs.at(0);
-    String &file = static_cast<String &>(file_arg);
+    auto &file = static_cast<String &>(file_arg);
 
     auto &offset_arg = *call.vargs.at(3);
-    Integer &offset = static_cast<Integer &>(offset_arg);
+    auto &offset = static_cast<Integer &>(offset_arg);
 
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
@@ -498,7 +497,7 @@ Pass CreateResourcePass()
     ctx.b.resources = analyser.resources();
   };
 
-  return Pass("ResourceAnalyser", fn);
+  return { "ResourceAnalyser", fn };
 }
 
 } // namespace bpftrace::ast

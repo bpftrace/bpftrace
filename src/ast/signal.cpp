@@ -26,7 +26,7 @@ int signal_name_to_num(const std::string &signal)
 
   std::string sig(signal);
 
-  std::for_each(sig.begin(), sig.end(), [](char &c) { c = ::toupper(c); });
+  std::ranges::for_each(sig, [](char &c) { c = ::toupper(c); });
 
   if (sig[0] != 'S') {
     sig.insert(0, "SIG");

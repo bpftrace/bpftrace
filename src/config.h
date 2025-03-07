@@ -72,14 +72,13 @@ enum class ConfigKeyMissingProbes {
   default_,
 };
 
-typedef std::variant<ConfigKeyBool,
-                     ConfigKeyInt,
-                     ConfigKeyString,
-                     ConfigKeyStackMode,
-                     ConfigKeyUserSymbolCacheType,
-                     ConfigKeySymbolSource,
-                     ConfigKeyMissingProbes>
-    ConfigKey;
+using ConfigKey = std::variant<ConfigKeyBool,
+                               ConfigKeyInt,
+                               ConfigKeyString,
+                               ConfigKeyStackMode,
+                               ConfigKeyUserSymbolCacheType,
+                               ConfigKeySymbolSource,
+                               ConfigKeyMissingProbes>;
 
 // The strings in CONFIG_KEY_MAP AND ENV_ONLY match the env variables (minus the
 // 'BPFTRACE_' prefix)

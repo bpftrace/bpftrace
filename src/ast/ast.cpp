@@ -1,6 +1,7 @@
 #include "ast/ast.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "ast/context.h"
 #include "log.h"
@@ -16,14 +17,14 @@ Integer::Integer(Diagnostics &d, int64_t n, Location &&loc, bool is_negative)
   is_literal = true;
 }
 
-String::String(Diagnostics &d, const std::string &str, Location &&loc)
-    : Expression(d, std::move(loc)), str(str)
+String::String(Diagnostics &d, std::string str, Location &&loc)
+    : Expression(d, std::move(loc)), str(std::move(str))
 {
   is_literal = true;
 }
 
-StackMode::StackMode(Diagnostics &d, const std::string &mode, Location &&loc)
-    : Expression(d, std::move(loc)), mode(mode)
+StackMode::StackMode(Diagnostics &d, std::string mode, Location &&loc)
+    : Expression(d, std::move(loc)), mode(std::move(mode))
 {
   is_literal = true;
 }
@@ -33,8 +34,8 @@ Builtin::Builtin(Diagnostics &d, const std::string &ident, Location &&loc)
 {
 }
 
-Identifier::Identifier(Diagnostics &d, const std::string &ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(ident)
+Identifier::Identifier(Diagnostics &d, std::string ident, Location &&loc)
+    : Expression(d, std::move(loc)), ident(std::move(ident))
 {
 }
 
@@ -63,7 +64,7 @@ Call::Call(Diagnostics &d,
 }
 
 Sizeof::Sizeof(Diagnostics &d, SizedType type, Location &&loc)
-    : Expression(d, std::move(loc)), argtype(type)
+    : Expression(d, std::move(loc)), argtype(std::move(type))
 {
 }
 
@@ -76,7 +77,7 @@ Offsetof::Offsetof(Diagnostics &d,
                    SizedType record,
                    std::vector<std::string> &field,
                    Location &&loc)
-    : Expression(d, std::move(loc)), record(record), field(field)
+    : Expression(d, std::move(loc)), record(std::move(record)), field(field)
 {
 }
 
@@ -88,24 +89,21 @@ Offsetof::Offsetof(Diagnostics &d,
 {
 }
 
-Map::Map(Diagnostics &d, const std::string &ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(ident)
+Map::Map(Diagnostics &d, std::string ident, Location &&loc)
+    : Expression(d, std::move(loc)), ident(std::move(ident))
 {
   is_map = true;
 }
 
-Map::Map(Diagnostics &d,
-         const std::string &ident,
-         Expression &expr,
-         Location &&loc)
-    : Expression(d, std::move(loc)), ident(ident), key_expr(&expr)
+Map::Map(Diagnostics &d, std::string ident, Expression &expr, Location &&loc)
+    : Expression(d, std::move(loc)), ident(std::move(ident)), key_expr(&expr)
 {
   is_map = true;
   key_expr->key_for_map = this;
 }
 
-Variable::Variable(Diagnostics &d, const std::string &ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(ident)
+Variable::Variable(Diagnostics &d, std::string ident, Location &&loc)
+    : Expression(d, std::move(loc)), ident(std::move(ident))
 {
   is_variable = true;
 }
@@ -139,9 +137,9 @@ Ternary::Ternary(Diagnostics &d,
 
 FieldAccess::FieldAccess(Diagnostics &d,
                          Expression *expr,
-                         const std::string &field,
+                         std::string field,
                          Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), field(field)
+    : Expression(d, std::move(loc)), expr(expr), field(std::move(field))
 {
 }
 
@@ -210,12 +208,13 @@ AssignVarStatement::AssignVarStatement(Diagnostics &d,
   expr->var = var;
 }
 
-AssignConfigVarStatement::AssignConfigVarStatement(
-    Diagnostics &d,
-    const std::string &config_var,
-    Expression *expr,
-    Location &&loc)
-    : Statement(d, std::move(loc)), config_var(config_var), expr(expr)
+AssignConfigVarStatement::AssignConfigVarStatement(Diagnostics &d,
+                                                   std::string config_var,
+                                                   Expression *expr,
+                                                   Location &&loc)
+    : Statement(d, std::move(loc)),
+      config_var(std::move(config_var)),
+      expr(expr)
 {
 }
 
@@ -242,11 +241,11 @@ Predicate::Predicate(Diagnostics &d, Expression *expr, Location &&loc)
 }
 
 AttachPoint::AttachPoint(Diagnostics &d,
-                         const std::string &raw_input,
+                         std::string raw_input,
                          bool ignore_invalid,
                          Location &&loc)
     : Node(d, std::move(loc)),
-      raw_input(raw_input),
+      raw_input(std::move(raw_input)),
       ignore_invalid(ignore_invalid)
 {
 }
@@ -313,13 +312,13 @@ Subprog::Subprog(Diagnostics &d,
 }
 
 Program::Program(Diagnostics &d,
-                 const std::string &c_definitions,
+                 std::string c_definitions,
                  Config *config,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  Location &&loc)
     : Node(d, std::move(loc)),
-      c_definitions(c_definitions),
+      c_definitions(std::move(c_definitions)),
       config(config),
       functions(std::move(functions)),
       probes(std::move(probes))
@@ -526,10 +525,10 @@ void AttachPoint::set_index(int index)
 std::string Probe::name() const
 {
   std::vector<std::string> ap_names;
-  std::transform(attach_points.begin(),
-                 attach_points.end(),
-                 std::back_inserter(ap_names),
-                 [](const AttachPoint *ap) { return ap->name(); });
+  std::ranges::transform(attach_points,
+
+                         std::back_inserter(ap_names),
+                         [](const AttachPoint *ap) { return ap->name(); });
   return str_join(ap_names, ",");
 }
 

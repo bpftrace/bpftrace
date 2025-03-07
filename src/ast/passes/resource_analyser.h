@@ -51,7 +51,7 @@ private:
   RequiredResources resources_;
   BPFtrace &bpftrace_;
   // Current probe we're analysing
-  Probe *probe_;
+  Probe *probe_{ nullptr };
 
   int next_map_id_ = 0;
 };

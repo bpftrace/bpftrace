@@ -15,11 +15,13 @@ TEST(TextOutput, lhist_no_suffix)
 
   MockBPFtrace bpftrace;
   bpftrace.resources.maps_info["@mymap"] = MapInfo{
-    CreateNone(),
-    SizedType{ Type::lhist_t, 8 },
-    LinearHistogramArgs{ 610000, 670000, 10000 },
-    {},
-    {}
+    .key_type = CreateNone(),
+    .value_type = SizedType{ Type::lhist_t, 8 },
+    .lhist_args = LinearHistogramArgs{ .min = 610000,
+                                       .max = 670000,
+                                       .step = 10000 },
+    .hist_bits_arg = {},
+    .id = {}
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 
@@ -61,11 +63,13 @@ TEST(TextOutput, lhist_suffix)
 
   MockBPFtrace bpftrace;
   bpftrace.resources.maps_info["@mymap"] = MapInfo{
-    CreateNone(),
-    SizedType{ Type::lhist_t, 8 },
-    LinearHistogramArgs{ 0, 5 * 1024, 1024 },
-    {},
-    {}
+    .key_type = CreateNone(),
+    .value_type = SizedType{ Type::lhist_t, 8 },
+    .lhist_args = LinearHistogramArgs{ .min = 0,
+                                       .max = 5 * 1024,
+                                       .step = 1024 },
+    .hist_bits_arg = {},
+    .id = {}
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
 
