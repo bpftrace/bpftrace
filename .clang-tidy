@@ -20,4 +20,4 @@ Checks:
 WarningsAsErrors: "*"
 UseColor: true
 HeaderFilterRegex: ".*"
-ExcludeHeaderFilterRegex: ".*/parser.tab.hh"
+ExcludeHeaderFilterRegex: ".*/(parser\\.tab|location)\\.hh"
