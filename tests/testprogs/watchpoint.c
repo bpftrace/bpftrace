@@ -28,9 +28,9 @@ int main()
   fclose(addr_fp);
 
   uint8_t i = 0;
-  while (i < 10) {
+  while (i < 40) {
     *((volatile uint8_t*)addr) = i++;
-    // 250ms*10 sleep, enough for watchpoint trigger
+    // 250ms*40 sleep, enough for watchpoint trigger in vmtest
     usleep(250 * 1000);
   }
 

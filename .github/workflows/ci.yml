@@ -73,6 +73,10 @@ jobs:
           NIX_TARGET: .#bpftrace-fuzz
           CC: afl-clang-fast
           CXX: afl-clang-fast++
+        - NAME: Oldest kernel (LLVM 20 Debug)
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET_KERNEL: .#kernel-5_15
         - NAME: Latest kernel (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20

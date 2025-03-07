@@ -48,6 +48,7 @@ EXPECT A         B C
 
 NAME printf_enum_symbolize_tracepoint
 PROG tracepoint:skb:kfree_skb { $r = args->reason; printf("%d %s\n", args->reason, $r); exit() }
+MIN_KERNEL 5.17 # The `reason` argument was added in 5.17. Is there another enum we could trigger and symbolize?
 EXPECT_REGEX ^\d+ [A-Z_]+$
 AFTER ping localhost -c 5
 TIMEOUT 5
@@ -701,6 +702,7 @@ PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0
 EXPECT_REGEX nr_running: [0-9]+
 
 NAME percpu_kaddr field access no NULL check
+MIN_KERNEL 5.17 # The verifier checked NULL access on struct starting with 5.17
 PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
 EXPECT stdin:1:17-60: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
        BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
