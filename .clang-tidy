@@ -6,6 +6,13 @@ Checks:
   - bugprone-unused-raii
   - bugprone-use-after-move
   - google-readability-casting
+  - misc-misleading-identifier
+  - misc-misplaced-const
+  - misc-non-copyable-objects
+  - misc-throw-by-value-catch-by-reference
+  - misc-redundant-expression
+  - misc-unconventional-assign-operator
+  - misc-static-assert
   - modernize-concat-nested-namespaces
   - modernize-deprecated-headers
   - modernize-loop-convert
