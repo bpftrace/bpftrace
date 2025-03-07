@@ -9,7 +9,6 @@
 #include "utils.h"
 #include "parser.tab.hh"
 #include "ast/int_parser.h"
-#include "lexer.h"
 
 bpftrace::location loc;
 static std::string struct_type;
@@ -251,9 +250,9 @@ struct|union|enum       {
 
 {ident}                 {
                           static int unput_count = 0;
-                          if (driver.bpftrace_.macros_.count(yytext) != 0)
+                          if (driver.bpftrace.macros_.count(yytext) != 0)
                           {
-                            const char *s = driver.bpftrace_.macros_[yytext].c_str();
+                            const char *s = driver.bpftrace.macros_.find(yytext)->second.c_str();
                             int z;
                             // NOTE(mmarchini) workaround for simple recursive
                             // macros. More complex recursive macros (for

@@ -19,7 +19,7 @@ TEST(LogStream, basic)
                  << content_1 << content_2 << content_1 << content_2 << "\n";
   const std::string content_long = content_1 + content_2 + content_1 +
                                    content_2;
-  EXPECT_EQ(ss.str(), "ERROR: " + content_long + "\n" + content_long + "\n\n");
+  EXPECT_EQ(ss.str(), "ERROR: " + content_long + "\n" + content_long + "\n");
   ss.str({});
 
   // test macro with 1 argument
@@ -55,7 +55,7 @@ TEST(LogStream, basic_colorized)
                                    content_2;
   EXPECT_EQ(ss.str(),
             error_color + "ERROR: " + content_long + "\n" + content_long +
-                "\n" + default_color + "\n");
+                default_color + "\n");
 
   Log::get().set_colorize(false);
   ss.str({});
@@ -71,63 +71,32 @@ TEST(LogStream, basic_colorized)
 
 TEST(LogStream, with_location)
 {
+  std::string location = "stdin:xyz";
+  std::vector<std::string> context({ "ctx1", "ctx2" });
+
   std::ostringstream ss;
-  const std::string filename = "stdin";
-  const std::string source = "i:s:1 { print(1, 2); }";
-  const std::string expected =
-      "stdin:1:9-20: ERROR: Non-map print() only takes 1 argument, 2 "
-      "found\ni:s:1 { print(1, 2); }\n        ~~~~~~~~~~~\n";
-  bpftrace::location loc(bpftrace::position(nullptr, 1, 9),
-                         bpftrace::position(nullptr, 1, 20));
-  Log::get().set_source(filename, source);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 2 found";
+  const std::string expected = "stdin:xyz: ERROR: test error\n"
+                               "ctx1\n"
+                               "ctx2\n";
+  LOG(ERROR, std::move(location), std::move(context), ss) << "test error";
   EXPECT_EQ(ss.str(), expected);
 }
 
 TEST(LogStream, with_location_colorized)
 {
-  std::ostringstream ss;
-  const std::string filename = "stdin";
-  const std::string source = "i:s:1 { print(1, 2); }";
-  const std::string error_msg =
-      "stdin:1:9-20: ERROR: Non-map print() only takes 1 argument, 2 found\n";
-  const std::string source_marker =
-      "i:s:1 { print(1, 2); }\n        ~~~~~~~~~~~";
+  std::string location = "stdin:xyz";
+  std::vector<std::string> context({ "ctx1", "ctx2" });
 
+  std::ostringstream ss;
   const std::string error_color = std::string(bpftrace::LogColor::RED);
   const std::string default_color = std::string(bpftrace::LogColor::RESET);
 
-  const std::string expected = error_color + error_msg + default_color +
-                               source_marker + "\n";
-
-  bpftrace::location loc(bpftrace::position(nullptr, 1, 9),
-                         bpftrace::position(nullptr, 1, 20));
-  Log::get().set_source(filename, source);
+  const std::string expected = error_color + "stdin:xyz: ERROR: test error" +
+                               default_color + "\n" + "ctx1\n" + "ctx2\n";
   Log::get().set_colorize(true);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 2 found";
+  LOG(ERROR, std::move(location), std::move(context), ss) << "test error";
   Log::get().set_colorize(false);
-  EXPECT_EQ(ss.str(), expected);
-}
 
-TEST(LogStream, with_location_colorized_multi_lines)
-{
-  std::ostringstream ss;
-  const std::string filename = "stdin";
-  const std::string source = "i:s:1 { print(1,\n 2, \n 3); }";
-  const std::string error_msg =
-      "stdin:1-3: ERROR: Non-map print() only takes 1 argument, 3 found";
-
-  const std::string error_color = std::string(bpftrace::LogColor::RED);
-  const std::string default_color = std::string(bpftrace::LogColor::RESET);
-
-  const std::string expected = error_color + error_msg + "\n" + default_color;
-
-  bpftrace::location loc(bpftrace::position(nullptr, 1),
-                         bpftrace::position(nullptr, 3));
-  Log::get().set_source(filename, source);
-  Log::get().set_colorize(true);
-  LOG(ERROR, loc, ss) << "Non-map print() only takes 1 argument, 3 found";
-  Log::get().set_colorize(false);
   EXPECT_EQ(ss.str(), expected);
 }
 

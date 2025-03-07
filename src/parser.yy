@@ -10,7 +10,7 @@
 %define define_location_comparison
 %define parse.assert
 %define parse.trace
-%expect 5
+%expect 4
 
 %define parse.error verbose
 
@@ -39,7 +39,9 @@ class Node;
 #include <iostream>
 
 #include "driver.h"
-#include "lexer.h"
+#include "parser.tab.hh"
+
+YY_DECL;
 
 void yyerror(bpftrace::Driver &driver, const char *s);
 %}
@@ -321,23 +323,7 @@ probes_and_subprogs:
 probe:
                 attach_points pred block
                 {
-                  if (!driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3), @3), @$);
-                  else
-                  {
-                    error(@$, "unexpected listing query format");
-                    YYERROR;
-                  }
-                }
-        |       attach_points END
-                {
-                  if (driver.listing_)
-                    $$ = driver.ctx.make_node<ast::Probe>(std::move($1), nullptr, driver.ctx.make_node<ast::Block>(ast::StatementList(), @$), @$);
-                  else
-                  {
-                    error(@$, "unexpected end of file, expected {");
-                    YYERROR;
-                  }
+                  $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3), @3), @$);
                 }
                 ;
 

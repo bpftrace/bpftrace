@@ -1,4 +1,5 @@
 #include "ast/passes/portability_analyser.h"
+#include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "clang_parser.h"
@@ -14,27 +15,38 @@ using ::testing::_;
 
 void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 {
-  Driver driver(bpftrace);
+  ast::ASTContext ast("stdin", input);
+  Driver driver(ast, bpftrace);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  ASSERT_EQ(driver.parse_str(input), 0);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
+  fields.visit(ast.root);
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.ctx.root, bpftrace));
+  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
 
-  ASSERT_EQ(driver.parse_str(input), 0);
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace, false);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
+
+  ast::SemanticAnalyser semantics(ast, bpftrace, false);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok()) << msg.str();
+  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
 
   ast::PortabilityAnalyser portability;
-  portability.visit(driver.ctx.root);
-  ASSERT_EQ(int(!driver.ctx.diagnostics().ok()), expected_result) << msg.str();
+  portability.visit(ast.root);
+  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)

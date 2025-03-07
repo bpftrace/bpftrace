@@ -18,15 +18,16 @@ void Diagnostics::emit(std::ostream& out, Severity s) const
 
 void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
 {
+  auto& loc = d.loc();
   switch (s) {
     case Severity::Warning:
-      LOG(WARNING, d.loc(), out) << d.msg();
+      LOG(WARNING, loc.source_location(), loc.source_context(), out) << d.msg();
       if (auto msg = d.hint(); msg.size() > 0) {
         LOG(HINT, out) << msg;
       }
       break;
     case Severity::Error:
-      LOG(ERROR, d.loc(), out) << d.msg();
+      LOG(ERROR, loc.source_location(), loc.source_context(), out) << d.msg();
       if (auto msg = d.hint(); msg.size() > 0) {
         LOG(HINT, out) << msg;
       }

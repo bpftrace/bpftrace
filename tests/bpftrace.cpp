@@ -4,6 +4,8 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+
+#include "ast/attachpoint_parser.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
@@ -40,23 +42,30 @@ static auto parse_probe(const std::string &str,
                         BPFtrace &bpftrace,
                         int usdt_num_locations = 0)
 {
-  Driver driver(bpftrace);
-  ASSERT_EQ(driver.parse_str(str), 0);
+  ast::ASTContext ast("stdin", str);
+  Driver driver(ast, bpftrace);
+
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::FieldAnalyser fields(bpftrace);
-  fields.visit(driver.ctx.root);
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  fields.visit(ast.root);
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   ClangParser clang;
-  clang.parse(driver.ctx.root, bpftrace);
+  clang.parse(ast.root, bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.ctx, bpftrace);
+  ast::SemanticAnalyser semantics(ast, bpftrace);
   semantics.analyse();
-  ASSERT_TRUE(driver.ctx.diagnostics().ok());
+  ASSERT_TRUE(ast.diagnostics().ok());
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.ctx, bpftrace, std::move(usdt_helper));
+  ast::CodegenLLVM codegen(ast, bpftrace, std::move(usdt_helper));
   codegen.generate_ir();
 }
 
@@ -958,15 +967,31 @@ TEST(bpftrace, add_probes_hardware)
                  probe_orig_name);
 }
 
-TEST(bpftrace, empty_attachpoints)
+TEST(bpftrace, trailing_comma)
 {
+  ast::ASTContext ast("stdin", "kprobe:f1, {}");
   StrictMock<MockBPFtrace> bpftrace;
-  Driver driver(bpftrace);
+  Driver driver(ast, bpftrace);
 
   // Trailing comma is fine
-  ASSERT_EQ(driver.parse_str("kprobe:f1, {}"), 0);
-  // Empty attach point should fail
-  ASSERT_EQ(driver.parse_str("{}"), 1);
+  driver.parse();
+  ASSERT_TRUE(ast.diagnostics().ok());
+}
+
+TEST(bpftrace, empty_attachpoint)
+{
+  ast::ASTContext ast("stdin", "{}");
+  StrictMock<MockBPFtrace> bpftrace;
+  Driver driver(ast, bpftrace);
+
+  // Empty attach point should fail...
+  driver.parse();
+
+  // ... ah, but it doesn't really. What fails is the attachpoint parser. The
+  // above is a valid program, it is just not a valid attachpoint.
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ap_parser.parse();
+  EXPECT_FALSE(ast.diagnostics().ok());
 }
 
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(

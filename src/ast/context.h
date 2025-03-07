@@ -5,7 +5,11 @@
 
 #include "ast/diagnostic.h"
 
-namespace bpftrace::ast {
+namespace bpftrace {
+
+class Driver;
+
+namespace ast {
 
 class Location;
 class Node;
@@ -60,10 +64,7 @@ public:
     return nodes_.size();
   }
 
-  // Callers should avoid mutating diagnostics through this method. It is
-  // non-const to allow for tests to clear the set, but this should be avoided
-  // except in the context of a test.
-  Diagnostics &diagnostics() const
+  const Diagnostics &diagnostics() const
   {
     return *diagnostics_.get();
   }
@@ -87,6 +88,9 @@ private:
   std::vector<std::unique_ptr<Node>> nodes_;
   std::unique_ptr<Diagnostics> diagnostics_;
   std::shared_ptr<ASTSource> source_;
+
+  friend class bpftrace::Driver;
 };
 
-} // namespace bpftrace::ast
+} // namespace ast
+} // namespace bpftrace
