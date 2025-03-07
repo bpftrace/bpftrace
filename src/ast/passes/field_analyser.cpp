@@ -326,7 +326,7 @@ Pass CreateFieldAnalyserPass()
     analyser.visit(ctx.ast_ctx.root);
   };
 
-  return Pass("FieldAnalyser", fn);
+  return { "FieldAnalyser", fn };
 };
 
 } // namespace bpftrace::ast

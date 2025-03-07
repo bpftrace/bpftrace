@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace bpftrace {
@@ -30,7 +31,8 @@ using PassFPtr = std::function<void(PassContext &)>;
 class Pass {
 public:
   Pass() = delete;
-  Pass(std::string name, PassFPtr fn) : fn_(fn), name(name) {};
+  Pass(std::string name, PassFPtr fn)
+      : fn_(std::move(fn)), name(std::move(name)) {};
 
   virtual ~Pass() = default;
 

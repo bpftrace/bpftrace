@@ -13,7 +13,7 @@
 
 namespace bpftrace {
 
-BfdDisasm::BfdDisasm(std::string &path) : size_(0)
+BfdDisasm::BfdDisasm(std::string &path)
 {
   fd_ = open(path.c_str(), O_RDONLY);
 

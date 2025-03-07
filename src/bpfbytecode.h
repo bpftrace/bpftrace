@@ -21,9 +21,7 @@ namespace bpftrace {
 // Encapsulates libbpf's 'struct bpf_object' and contains BPF maps and programs.
 class BpfBytecode {
 public:
-  BpfBytecode()
-  {
-  }
+  BpfBytecode() = default;
   BpfBytecode(std::span<const std::byte> elf);
   BpfBytecode(std::span<uint8_t> elf);
   BpfBytecode(std::span<char> elf);

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <ranges>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -70,14 +71,14 @@ std::variant<T, std::string> _parse_exp(const std::string &coeff,
 {
   std::stringstream errmsg;
   auto maybe_coeff = _parse_int<T>(coeff, 10);
-  if (std::string *err = std::get_if<std::string>(&maybe_coeff)) {
+  if (auto *err = std::get_if<std::string>(&maybe_coeff)) {
     errmsg << "Coefficient part of scientific literal is not a valid number: "
            << coeff << ": " << *err;
     return errmsg.str();
   }
 
   auto maybe_exp = _parse_int<T>(exp, 10);
-  if (std::string *err = std::get_if<std::string>(&maybe_exp)) {
+  if (auto *err = std::get_if<std::string>(&maybe_exp)) {
     errmsg << "Exponent part of scientific literal is not a valid number: "
            << exp << ": " << *err;
     return errmsg.str();
@@ -109,12 +110,13 @@ template <typename T>
 T to_int(const std::string &num, int base)
 {
   std::string n(num);
-  n.erase(std::remove(n.begin(), n.end(), '_'), n.end());
+  auto it = std::ranges::remove(n, '_');
+  n.erase(it.begin(), it.end());
 
   std::variant<T, std::string> res;
 
   // If hex
-  if ((n.rfind("0x", 0) == 0) || (n.rfind("0X", 0) == 0)) {
+  if ((n.starts_with("0x")) || (n.starts_with("0X"))) {
     res = _parse_int<T>(n, base);
   } else {
     auto pos = n.find_first_of("eE");
@@ -126,7 +128,7 @@ T to_int(const std::string &num, int base)
     }
   }
 
-  if (std::string *err = std::get_if<std::string>(&res))
+  if (auto *err = std::get_if<std::string>(&res))
     throw std::invalid_argument(*err);
   return std::get<T>(res);
 }

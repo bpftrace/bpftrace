@@ -142,7 +142,7 @@ public:
   {
     child_pid_ = 1337;
   };
-  ~MockChildProc() override {};
+  ~MockChildProc() override = default;
 
   void terminate(bool force __attribute__((unused)) = false) override {};
   bool is_alive() override

@@ -283,7 +283,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     }
     case Type::string: {
       auto p = reinterpret_cast<const char *>(value.data());
-      return std::string(p, strnlen(p, type.GetSize()));
+      return { p, strnlen(p, type.GetSize()) };
     }
     case Type::array: {
       size_t elem_size = type.GetElementTy()->GetSize();

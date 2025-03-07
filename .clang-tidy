@@ -13,15 +13,10 @@ Checks:
   - misc-redundant-expression
   - misc-unconventional-assign-operator
   - misc-static-assert
-  - modernize-concat-nested-namespaces
-  - modernize-deprecated-headers
-  - modernize-loop-convert
-  - modernize-make-shared
-  - modernize-make-unique
-  - modernize-raw-string-literal
-  - modernize-use-nullptr
-  - modernize-use-override
-  - modernize-redundant-void-arg
+  - modernize-*
+  - -modernize-avoid-c-arrays
+  - -modernize-use-nodiscard
+  - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
 
 WarningsAsErrors: "*"

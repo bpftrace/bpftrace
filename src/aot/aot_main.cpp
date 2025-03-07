@@ -68,9 +68,25 @@ int main(int argc, char* argv[])
   // TODO: which other options from `bpftrace` should be included?
   const char* const short_opts = "d:f:hVo:qv";
   option long_opts[] = {
-    option{ "help", no_argument, nullptr, 'h' },
-    option{ "version", no_argument, nullptr, 'V' },
-    option{ nullptr, 0, nullptr, 0 }, // Must be last
+    option{
+        .name = "help",
+        .has_arg = no_argument,
+        .flag = nullptr,
+        .val = 'h',
+    },
+    option{
+        .name = "version",
+        .has_arg = no_argument,
+        .flag = nullptr,
+        .val = 'V',
+    },
+    // Must be last
+    option{
+        .name = nullptr,
+        .has_arg = 0,
+        .flag = nullptr,
+        .val = 0,
+    },
   };
 
   std::filesystem::path p(argv[0]);

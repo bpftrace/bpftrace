@@ -72,7 +72,7 @@ std::vector<std::string> expand_wildcard_path(const std::string &path)
 
   std::vector<std::string> matching_paths;
   for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
-    matching_paths.push_back(std::string(glob_result.gl_pathv[i]));
+    matching_paths.emplace_back(glob_result.gl_pathv[i]);
   }
 
   globfree(&glob_result);
@@ -97,15 +97,15 @@ namespace bpftrace {
 //'borrowed' from libbpf's bpf_core_find_kernel_btf
 // from Andrii Nakryiko
 const struct vmlinux_location vmlinux_locs[] = {
-  { "/sys/kernel/btf/vmlinux", true },
-  { "/boot/vmlinux-%1$s", false },
-  { "/lib/modules/%1$s/vmlinux-%1$s", false },
-  { "/lib/modules/%1$s/build/vmlinux", false },
-  { "/usr/lib/modules/%1$s/kernel/vmlinux", false },
-  { "/usr/lib/debug/boot/vmlinux-%1$s", false },
-  { "/usr/lib/debug/boot/vmlinux-%1$s.debug", false },
-  { "/usr/lib/debug/lib/modules/%1$s/vmlinux", false },
-  { nullptr, false },
+  { .path = "/sys/kernel/btf/vmlinux", .raw = true },
+  { .path = "/boot/vmlinux-%1$s", .raw = false },
+  { .path = "/lib/modules/%1$s/vmlinux-%1$s", .raw = false },
+  { .path = "/lib/modules/%1$s/build/vmlinux", .raw = false },
+  { .path = "/usr/lib/modules/%1$s/kernel/vmlinux", .raw = false },
+  { .path = "/usr/lib/debug/boot/vmlinux-%1$s", .raw = false },
+  { .path = "/usr/lib/debug/boot/vmlinux-%1$s.debug", .raw = false },
+  { .path = "/usr/lib/debug/lib/modules/%1$s/vmlinux", .raw = false },
+  { .path = nullptr, .raw = false },
 };
 
 std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
@@ -168,8 +168,8 @@ std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
 std::optional<std::string> find_vmlinux(struct symbol *sym)
 {
   struct vmlinux_location locs_env[] = {
-    { std::getenv("BPFTRACE_VMLINUX"), false },
-    { nullptr, false },
+    { .path = std::getenv("BPFTRACE_VMLINUX"), .raw = false },
+    { .path = nullptr, .raw = false },
   };
   return find_vmlinux(locs_env[0].path ? locs_env : vmlinux_locs, sym);
 }
@@ -264,7 +264,7 @@ KConfig::KConfig()
     char buf[4096];
     while (gzgets(file, buf, sizeof(buf))) {
       std::string option(buf);
-      if (option.find("CONFIG_") == 0) {
+      if (option.starts_with("CONFIG_")) {
         // trim trailing '\n'
         if (option[option.length() - 1] == '\n')
           option = option.substr(0, option.length() - 1);
@@ -556,7 +556,8 @@ std::vector<std::string> get_wildcard_tokens(const std::string &input,
   end_wildcard = input[input.length() - 1] == '*';
 
   std::vector<std::string> tokens = split_string(input, '*');
-  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
+  auto it = std::ranges::remove(tokens, "");
+  tokens.erase(it.begin(), it.end());
   return tokens;
 }
 
@@ -627,9 +628,9 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   if (archenv)
     arch = std::string(archenv);
 
-  cflags.push_back("-nostdinc");
-  cflags.push_back("-isystem");
-  cflags.push_back("/virtual/lib/clang/include");
+  cflags.emplace_back("-nostdinc");
+  cflags.emplace_back("-isystem");
+  cflags.emplace_back("/virtual/lib/clang/include");
 
   // see linux/Makefile for $(LINUXINCLUDE) + $(USERINCLUDE)
   cflags.push_back("-I" + ksrc + "/arch/" + arch + "/include");
@@ -641,14 +642,14 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   cflags.push_back("-I" + ksrc + "/include/uapi");
   cflags.push_back("-I" + kobj + "/include/generated/uapi");
 
-  cflags.push_back("-include");
+  cflags.emplace_back("-include");
   cflags.push_back(ksrc + "/include/linux/kconfig.h");
-  cflags.push_back("-D__KERNEL__");
-  cflags.push_back("-D__BPF_TRACING__");
-  cflags.push_back("-D__HAVE_BUILTIN_BSWAP16__");
-  cflags.push_back("-D__HAVE_BUILTIN_BSWAP32__");
-  cflags.push_back("-D__HAVE_BUILTIN_BSWAP64__");
-  cflags.push_back("-DKBUILD_MODNAME=\"bpftrace\"");
+  cflags.emplace_back("-D__KERNEL__");
+  cflags.emplace_back("-D__BPF_TRACING__");
+  cflags.emplace_back("-D__HAVE_BUILTIN_BSWAP16__");
+  cflags.emplace_back("-D__HAVE_BUILTIN_BSWAP32__");
+  cflags.emplace_back("-D__HAVE_BUILTIN_BSWAP64__");
+  cflags.emplace_back("-DKBUILD_MODNAME=\"bpftrace\"");
 
   // If ARCH env variable is set, pass this along.
   if (archenv)
@@ -656,7 +657,7 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
 
   if (arch == "arm") {
     // Required by several header files in arch/arm/include
-    cflags.push_back("-D__LINUX_ARM_ARCH__=7");
+    cflags.emplace_back("-D__LINUX_ARM_ARCH__=7");
   }
 
   if (arch == "arm64") {
@@ -665,9 +666,9 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
     // value manually (values are taken from arch/arm64/Makefile).
     if (kconfig.has_value("CONFIG_KASAN", "y")) {
       if (kconfig.has_value("CONFIG_KASAN_SW_TAGS", "y"))
-        cflags.push_back("-DKASAN_SHADOW_SCALE_SHIFT=4");
+        cflags.emplace_back("-DKASAN_SHADOW_SCALE_SHIFT=4");
       else
-        cflags.push_back("-DKASAN_SHADOW_SCALE_SHIFT=3");
+        cflags.emplace_back("-DKASAN_SHADOW_SCALE_SHIFT=3");
     }
   }
 
@@ -776,7 +777,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
                                                           paths_v2.end());
   std::vector<std::pair<std::string, std::string>> sorted_v1(paths_v1.begin(),
                                                              paths_v1.end());
-  std::sort(sorted_v1.begin(), sorted_v1.end());
+  std::ranges::sort(sorted_v1);
   sorted.insert(sorted.end(), sorted_v1.begin(), sorted_v1.end());
   return sorted;
 }
@@ -892,29 +893,33 @@ const std::string &is_deprecated(const std::string &str)
 
 bool is_unsafe_func(const std::string &func_name)
 {
-  return std::any_of(UNSAFE_BUILTIN_FUNCS.begin(),
-                     UNSAFE_BUILTIN_FUNCS.end(),
-                     [&](const auto &cand) { return func_name == cand; });
+  return std::ranges::any_of(UNSAFE_BUILTIN_FUNCS,
+
+                             [&](const auto &cand) {
+                               return func_name == cand;
+                             });
 }
 
 bool is_compile_time_func(const std::string &func_name)
 {
-  return std::any_of(COMPILE_TIME_FUNCS.begin(),
-                     COMPILE_TIME_FUNCS.end(),
-                     [&](const auto &cand) { return func_name == cand; });
+  return std::ranges::any_of(COMPILE_TIME_FUNCS,
+
+                             [&](const auto &cand) {
+                               return func_name == cand;
+                             });
 }
 
 bool is_supported_lang(const std::string &lang)
 {
-  return std::any_of(UPROBE_LANGS.begin(),
-                     UPROBE_LANGS.end(),
-                     [&](const auto &cand) { return lang == cand; });
+  return std::ranges::any_of(UPROBE_LANGS,
+
+                             [&](const auto &cand) { return lang == cand; });
 }
 
 bool is_type_name(std::string_view str)
 {
-  return str.find("struct ") == 0 || str.find("union ") == 0 ||
-         str.find("enum ") == 0;
+  return str.starts_with("struct ") || str.starts_with("union ") ||
+         str.starts_with("enum ");
 }
 
 std::string exec_system(const char *cmd)
@@ -1070,7 +1075,7 @@ std::string path_for_pid_mountns(int pid, const std::string &path)
 
   snprintf(pid_root, sizeof(pid_root), "/proc/%d/root", pid);
 
-  if (path.find(pid_root) != 0) {
+  if (!path.starts_with(pid_root)) {
     std::string sep = (path.length() >= 1 && path.at(0) == '/') ? "" : "/";
     pid_relative_path << pid_root << sep << path;
   } else {
@@ -1572,7 +1577,7 @@ std::vector<int> get_pids_for_program(const std::string &program)
   std::vector<int> pids;
   for (const auto &process : std::filesystem::directory_iterator("/proc")) {
     std::string filename = process.path().filename().string();
-    if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
+    if (!std::ranges::all_of(filename, ::isdigit))
       continue;
     std::error_code ec;
     std::filesystem::path pid_program = std::filesystem::read_symlink(
@@ -1588,7 +1593,7 @@ std::vector<int> get_all_running_pids()
   std::vector<int> pids;
   for (const auto &process : std::filesystem::directory_iterator("/proc")) {
     std::string filename = process.path().filename().string();
-    if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
+    if (!std::ranges::all_of(filename, ::isdigit))
       continue;
     pids.emplace_back(std::stoi(filename));
   }
@@ -1600,9 +1605,9 @@ std::vector<int> get_all_running_pids()
 std::string sanitise_bpf_program_name(const std::string &name)
 {
   std::string sanitised_name = name;
-  std::replace_if(
-      sanitised_name.begin(),
-      sanitised_name.end(),
+  std::ranges::replace_if(
+      sanitised_name,
+
       [](char c) { return !isalnum(c) && c != '_'; },
       '_');
 

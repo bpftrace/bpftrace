@@ -677,7 +677,7 @@ std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
     "unknown type name \'", "use of undeclared identifier \'"
   };
   for (auto &unknown_type_msg : unknown_type_msgs) {
-    if (diagnostic_msg.find(unknown_type_msg) == 0) {
+    if (diagnostic_msg.starts_with(unknown_type_msg)) {
       return diagnostic_msg.substr(unknown_type_msg.length(),
                                    diagnostic_msg.length() -
                                        unknown_type_msg.length() - 1);

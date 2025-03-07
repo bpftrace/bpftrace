@@ -14,8 +14,7 @@ namespace bpftrace::ast {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
-  explicit FieldAnalyser(BPFtrace &bpftrace)
-      : bpftrace_(bpftrace), prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC)
+  explicit FieldAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
   {
   }
 
@@ -44,7 +43,7 @@ private:
   std::string attach_func_;
   SizedType sized_type_;
   BPFtrace &bpftrace_;
-  libbpf::bpf_prog_type prog_type_;
+  libbpf::bpf_prog_type prog_type_{ libbpf::BPF_PROG_TYPE_UNSPEC };
   bool has_builtin_args_;
   Probe *probe_ = nullptr;
 

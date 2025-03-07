@@ -15,6 +15,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -30,7 +31,7 @@ struct vmlinux_location {
 extern const struct vmlinux_location vmlinux_locs[];
 class MountNSException : public std::exception {
 public:
-  MountNSException(const std::string &msg) : msg_(msg)
+  MountNSException(std::string msg) : msg_(std::move(msg))
   {
   }
 
@@ -131,8 +132,8 @@ struct DeprecatedName {
   }
 };
 
-typedef std::unordered_map<std::string, std::unordered_set<std::string>>
-    FuncsModulesMap;
+using FuncsModulesMap =
+    std::unordered_map<std::string, std::unordered_set<std::string>>;
 
 struct KConfig {
   KConfig();
@@ -146,7 +147,10 @@ struct KConfig {
 };
 
 static std::vector<DeprecatedName> DEPRECATED_LIST = {
-  { "sarg*", "*(reg(\"sp\") + <stack_offset>)", true, false }
+  { .old_name = "sarg*",
+    .new_name = "*(reg(\"sp\") + <stack_offset>)",
+    .show_warning = true,
+    .replace_by_new_name = false }
 };
 
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
@@ -344,8 +348,8 @@ T min_max_value(const std::vector<uint8_t> &value, int nvalues, bool is_max)
   bool mm_set = false;
   for (int i = 0; i < nvalues; i++) {
     T val = read_data<T>(value.data() + i * (sizeof(T) * 2));
-    uint32_t is_set = read_data<uint32_t>(value.data() + sizeof(T) +
-                                          i * (sizeof(T) * 2));
+    auto is_set = read_data<uint32_t>(value.data() + sizeof(T) +
+                                      i * (sizeof(T) * 2));
     if (!is_set) {
       continue;
     }
@@ -409,7 +413,7 @@ inline int sym_name_cb(const char *symname,
                        uint64_t size,
                        void *p)
 {
-  struct symbol *sym = static_cast<struct symbol *>(p);
+  auto *sym = static_cast<struct symbol *>(p);
 
   if (sym->name == symname) {
     sym->start = start;
@@ -425,7 +429,7 @@ inline int sym_address_cb(const char *symname,
                           uint64_t size,
                           void *p)
 {
-  struct symbol *sym = static_cast<struct symbol *>(p);
+  auto *sym = static_cast<struct symbol *>(p);
 
   // When size is 0, then [start, start + size) = [start, start) = ø.
   // So we need a special case when size=0, but address matches the symbol's

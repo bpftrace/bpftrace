@@ -65,11 +65,11 @@ std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
     probes = usdt_provider_cache[target][provider];
   }
 
-  auto it = std::find_if(probes.begin(),
-                         probes.end(),
-                         [&name](const usdt_probe_entry &e) {
-                           return e.name == name;
-                         });
+  auto it = std::ranges::find_if(probes,
+
+                                 [&name](const usdt_probe_entry &e) {
+                                   return e.name == name;
+                                 });
   if (it != probes.end()) {
     return *it;
   } else {

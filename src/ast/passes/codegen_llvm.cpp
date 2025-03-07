@@ -1329,10 +1329,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         b_.GetIntSameSize(async_ids_.strftime(), elements.at(0)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     b_.CreateStore(
-        b_.GetIntSameSize(
-            static_cast<std::underlying_type<TimestampMode>::type>(
-                call.type.ts_mode),
-            elements.at(1)),
+        b_.GetIntSameSize(static_cast<std::underlying_type_t<TimestampMode>>(
+                              call.type.ts_mode),
+                          elements.at(1)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     auto &arg = *call.vargs.at(1);
     auto scoped_expr = visit(arg);
@@ -2304,7 +2303,7 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 
   for (Expression *elem : tuple.elems) {
     auto scoped_expr = visit(elem);
-    vals.push_back({ scoped_expr.value(), elem->loc });
+    vals.emplace_back(scoped_expr.value(), elem->loc);
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }
 
@@ -2390,7 +2389,7 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
 
   auto val = b_.CreateVariableAllocationInit(alloca_type, var_ident, loc);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
-    val, b_.GetType(alloca_type)
+    .value = val, .type = b_.GetType(alloca_type)
   };
 }
 
@@ -2602,7 +2601,7 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
                                              "while_end",
                                              parent);
 
-  loops_.push_back(std::make_tuple(while_cond, while_end));
+  loops_.emplace_back(while_cond, while_end);
 
   b_.CreateBr(while_cond);
 
@@ -2803,13 +2802,15 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
   // First argument is for passing ctx pointer for output, rest are proper
   // arguments to the function
   arg_types.push_back(b_.getPtrTy());
-  std::transform(subprog.args.begin(),
-                 subprog.args.end(),
-                 std::back_inserter(arg_types),
-                 [this](SubprogArg *arg) { return b_.GetType(arg->type); });
+  std::ranges::transform(subprog.args,
+
+                         std::back_inserter(arg_types),
+                         [this](SubprogArg *arg) {
+                           return b_.GetType(arg->type);
+                         });
   FunctionType *func_type = FunctionType::get(b_.GetType(subprog.return_type),
                                               arg_types,
-                                              0);
+                                              false);
 
   auto *func = llvm::Function::Create(func_type,
                                       llvm::Function::InternalLinkage,
@@ -2827,7 +2828,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
     auto alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name());
     b_.CreateStore(func->getArg(arg_index + 1), alloca);
     variables_[scope_stack_.back()][arg->name()] = VariableLLVM{
-      alloca, alloca->getAllocatedType()
+      .value = alloca, .type = alloca->getAllocatedType()
     };
     ++arg_index;
   }
@@ -3514,7 +3515,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   // expects. This is just a guard rail against bad padding analysis logic.
   auto *struct_layout = datalayout().getStructLayout(fmt_struct);
   for (size_t i = 0; i < args.size(); i++) {
-    size_t offset = static_cast<size_t>(args[i].offset);
+    auto offset = static_cast<size_t>(args[i].offset);
     // +1 for the id field
     size_t expected_offset = struct_layout->getElementOffset(i + 1);
     if (offset != expected_offset)
@@ -4208,7 +4209,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     b_.CreateLifetimeEnd(newval);
     return ScopedExpr(value);
   } else if (unop.expr->is_variable) {
-    Variable &var = static_cast<Variable &>(*unop.expr);
+    auto &var = static_cast<Variable &>(*unop.expr);
     const auto &variable = getVariable(var.ident);
     Value *oldval = b_.CreateLoad(variable.type, variable.value);
     Value *newval;
@@ -4498,7 +4499,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
                            f.decl->ident,
                            f.decl->loc);
   variables_[scope_stack_.back()][f.decl->ident] = VariableLLVM{
-    tuple, b_.GetType(f.decl->type)
+    .value = tuple, .type = b_.GetType(f.decl->type)
   };
 
   // 1. Save original locations of variables which will form part of the

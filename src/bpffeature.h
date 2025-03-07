@@ -58,14 +58,12 @@ class BPFfeature;
 
 class BPFnofeature {
 public:
-  BPFnofeature() : kprobe_multi_(false), uprobe_multi_(false)
-  {
-  }
+  BPFnofeature() = default;
   int parse(const char* optarg);
 
 protected:
-  bool kprobe_multi_;
-  bool uprobe_multi_;
+  bool kprobe_multi_{ false };
+  bool uprobe_multi_{ false };
   friend class BPFfeature;
 };
 

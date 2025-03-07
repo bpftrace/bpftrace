@@ -81,7 +81,7 @@ private:
   }
   Location wrap(location loc)
   {
-    return Location(loc, source_);
+    return { loc, source_ };
   };
 
   std::vector<std::unique_ptr<Node>> nodes_;

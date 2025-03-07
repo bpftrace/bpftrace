@@ -1,5 +1,7 @@
 #include "log.h"
 
+#include <utility>
+
 namespace bpftrace {
 
 std::string logtype_str(LogType t)
@@ -183,7 +185,7 @@ void Log::log_with_location(LogType type,
   out << std::endl;
 }
 
-LogStream::LogStream(const std::string& file,
+LogStream::LogStream(std::string file,
                      int line,
                      LogType type,
                      std::ostream& out)
@@ -191,12 +193,12 @@ LogStream::LogStream(const std::string& file,
       type_(type),
       loc_(std::nullopt),
       out_(out),
-      log_file_(file),
+      log_file_(std::move(file)),
       log_line_(line)
 {
 }
 
-LogStream::LogStream(const std::string& file,
+LogStream::LogStream(std::string file,
                      int line,
                      LogType type,
                      ast::Location loc,
@@ -205,7 +207,7 @@ LogStream::LogStream(const std::string& file,
       type_(type),
       loc_(std::ref(loc)),
       out_(out),
-      log_file_(file),
+      log_file_(std::move(file)),
       log_line_(line)
 {
 }

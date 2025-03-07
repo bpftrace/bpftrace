@@ -6,7 +6,7 @@
 #include "ast/context.h"
 #include "bpftrace.h"
 
-typedef void *yyscan_t;
+using yyscan_t = void *;
 
 namespace bpftrace {
 

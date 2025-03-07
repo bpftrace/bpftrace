@@ -89,12 +89,11 @@ int AttachPointParser::parse()
       errs_.str({});
     }
 
-    auto new_end = std::remove_if(probe->attach_points.begin(),
-                                  probe->attach_points.end(),
-                                  [](const AttachPoint *ap) {
-                                    return ap->provider.empty();
-                                  });
-    probe->attach_points.erase(new_end, probe->attach_points.end());
+    auto it = std::ranges::remove_if(probe->attach_points,
+                                     [](const AttachPoint *ap) {
+                                       return ap->provider.empty();
+                                     });
+    probe->attach_points.erase(it.begin(), it.end());
 
     if (probe->attach_points.empty()) {
       probe->addError() << "No attach points for probe";
@@ -393,7 +392,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
   ap_->target = "";
 
-  if (!has_wildcard(parts_[1]) && parts_[1].find("lib") == 0) {
+  if (!has_wildcard(parts_[1]) && parts_[1].starts_with("lib")) {
     // Automatic resolution of shared library paths.
     // If the target has form "libXXX" then we use BCC to find the correct path
     // to the given library as it may differ across systems.
@@ -654,7 +653,8 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
     if (ap_->func.find('*') != std::string::npos)
       ap_->expansion = ExpansionType::FULL;
 
-    if (func_arg_parts[1].size() <= 3 || func_arg_parts[1].find("arg") != 0) {
+    if (func_arg_parts[1].size() <= 3 ||
+        !func_arg_parts[1].starts_with("arg")) {
       errs_ << "Invalid function argument" << std::endl;
       return INVALID;
     }

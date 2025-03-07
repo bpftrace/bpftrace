@@ -97,7 +97,7 @@ Pass CreatePortabilityPass()
     }
   };
 
-  return Pass("PortabilityAnalyser", fn);
+  return { "PortabilityAnalyser", fn };
 }
 
 } // namespace bpftrace::ast

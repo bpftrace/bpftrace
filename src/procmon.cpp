@@ -16,7 +16,7 @@ namespace bpftrace {
 
 static std::system_error SYS_ERROR(std::string msg)
 {
-  return std::system_error(errno, std::generic_category(), msg);
+  return { errno, std::generic_category(), msg };
 }
 
 static inline int pidfd_open(int pid, unsigned int flags)

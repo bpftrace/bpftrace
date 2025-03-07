@@ -155,7 +155,7 @@ void SemanticAnalyser::visit(Integer &integer)
     integer.type = CreateInt64();
   } else {
     // Default to signed unless the original value is too large
-    uint64_t val = static_cast<uint64_t>(integer.n);
+    auto val = static_cast<uint64_t>(integer.n);
     if (val > std::numeric_limits<int32_t>::max()) {
       integer.type = CreateUInt64();
     } else {
@@ -1186,7 +1186,7 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass()) {
         // NOTE: the same logic can be found in the resource_analyser pass
         auto &fmt_arg = *call.vargs.at(0);
-        String &fmt = static_cast<String &>(fmt_arg);
+        auto &fmt = static_cast<String &>(fmt_arg);
         std::vector<Field> args;
         for (auto iter = call.vargs.begin() + 1; iter != call.vargs.end();
              iter++) {
@@ -3361,7 +3361,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       ap.addError() << "watchpoint length must be one of (1,2,4,8)";
     if (ap.mode.empty())
       ap.addError() << "watchpoint mode must be combination of (r,w,x)";
-    std::sort(ap.mode.begin(), ap.mode.end());
+    std::ranges::sort(ap.mode);
     for (const char c : ap.mode) {
       if (c != 'r' && c != 'w' && c != 'x')
         ap.addError() << "watchpoint mode must be combination of (r,w,x)";
@@ -3371,9 +3371,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap.addError() << "watchpoint modes may not be duplicated";
     }
     const auto invalid_modes = arch::invalid_watchpoint_modes();
-    if (std::any_of(invalid_modes.cbegin(),
-                    invalid_modes.cend(),
-                    [&](const auto &mode) { return mode == ap.mode; }))
+    if (std::ranges::any_of(invalid_modes,
+
+                            [&](const auto &mode) { return mode == ap.mode; }))
       ap.addError() << "invalid watchpoint mode: " << ap.mode;
   } else if (ap.provider == "hardware") {
     if (ap.target == "")
@@ -3999,7 +3999,7 @@ Pass CreateSemanticPass()
     semantics.analyse();
   };
 
-  return Pass("Semantic", fn);
+  return { "Semantic", fn };
 };
 
 Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)

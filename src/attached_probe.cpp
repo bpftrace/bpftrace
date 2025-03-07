@@ -450,7 +450,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
       } else {
         if (missing_probes == ConfigMissingProbes::warn)
           LOG(WARNING) << msg << ", skipping probe.";
-        return 0;
+        return false;
       }
     }
   }
@@ -666,10 +666,10 @@ struct bcc_sym_cb_data {
 
 static int bcc_sym_cb(const char *symname, uint64_t start, uint64_t, void *p)
 {
-  struct bcc_sym_cb_data *data = static_cast<struct bcc_sym_cb_data *>(p);
+  auto *data = static_cast<struct bcc_sym_cb_data *>(p);
   std::vector<std::string> &syms = data->syms;
 
-  if (std::binary_search(syms.begin(), syms.end(), symname)) {
+  if (std::ranges::binary_search(syms, symname)) {
     data->offsets.insert(start);
   }
 
@@ -686,8 +686,7 @@ static int bcc_load_cb(uint64_t v_addr,
                        uint64_t file_offset,
                        void *p)
 {
-  std::vector<struct addr_offset> *addrs =
-      static_cast<std::vector<struct addr_offset> *>(p);
+  auto *addrs = static_cast<std::vector<struct addr_offset> *>(p);
 
   for (auto &a : *addrs) {
     if (a.addr >= v_addr && a.addr < (v_addr + mem_sz)) {
@@ -718,7 +717,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
     syms.push_back(func.substr(pos + 1));
   }
 
-  std::sort(std::begin(syms), std::end(syms));
+  std::ranges::sort(syms);
 
   option.use_debug_file = 1;
   option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);

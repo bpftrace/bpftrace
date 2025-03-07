@@ -13,7 +13,7 @@ struct usdt_probe_entry {
   int num_locations;
 };
 
-typedef std::vector<usdt_probe_entry> usdt_probe_list;
+using usdt_probe_list = std::vector<usdt_probe_entry>;
 
 // Note this class is fully static because bcc_usdt_foreach takes a function
 // pointer callback without a context variable. So we must keep global state.

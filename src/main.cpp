@@ -401,11 +401,11 @@ static void parse_env(BPFtrace& bpftrace)
           utsname.machine, ksrc, kobj, bpftrace.kconfig);
 
     for (auto dir : include_dirs) {
-      extra_flags.push_back("-I");
+      extra_flags.emplace_back("-I");
       extra_flags.push_back(dir);
     }
     for (auto file : include_files) {
-      extra_flags.push_back("-include");
+      extra_flags.emplace_back("-include");
       extra_flags.push_back(file);
     }
 
@@ -500,23 +500,69 @@ Args parse_args(int argc, char* argv[])
 
   const char* const short_options = "d:bB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
-    option{ "help", no_argument, nullptr, Options::HELP },
-    option{ "version", no_argument, nullptr, Options::VERSION },
-    option{
-        "usdt-file-activation", no_argument, nullptr, Options::USDT_SEMAPHORE },
-    option{ "unsafe", no_argument, nullptr, Options::UNSAFE },
-    option{ "btf", no_argument, nullptr, Options::BTF },
-    option{ "include", required_argument, nullptr, Options::INCLUDE },
-    option{ "info", no_argument, nullptr, Options::INFO },
-    option{ "emit-llvm", required_argument, nullptr, Options::EMIT_LLVM },
-    option{ "emit-elf", required_argument, nullptr, Options::EMIT_ELF },
-    option{ "no-warnings", no_argument, nullptr, Options::NO_WARNING },
-    option{ "test", required_argument, nullptr, Options::TEST },
-    option{ "aot", required_argument, nullptr, Options::AOT },
-    option{ "no-feature", required_argument, nullptr, Options::NO_FEATURE },
-    option{ "debug", required_argument, nullptr, Options::DEBUG },
-    option{ "dry-run", no_argument, nullptr, Options::DRY_RUN },
-    option{ nullptr, 0, nullptr, 0 }, // Must be last
+    option{ .name = "help",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::HELP },
+    option{ .name = "version",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::VERSION },
+    option{ .name = "usdt-file-activation",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::USDT_SEMAPHORE },
+    option{ .name = "unsafe",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::UNSAFE },
+    option{ .name = "btf",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::BTF },
+    option{ .name = "include",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::INCLUDE },
+    option{ .name = "info",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::INFO },
+    option{ .name = "emit-llvm",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::EMIT_LLVM },
+    option{ .name = "emit-elf",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::EMIT_ELF },
+    option{ .name = "no-warnings",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::NO_WARNING },
+    option{ .name = "test",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::TEST },
+    option{ .name = "aot",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::AOT },
+    option{ .name = "no-feature",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::NO_FEATURE },
+    option{ .name = "debug",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::DEBUG },
+    option{ .name = "dry-run",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::DRY_RUN },
+    option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 }, // Must
+                                                                        // be
+                                                                        // last
   };
 
   int c;
@@ -599,10 +645,10 @@ Args parse_args(int argc, char* argv[])
         args.pid_str = optarg;
         break;
       case 'I':
-        args.include_dirs.push_back(optarg);
+        args.include_dirs.emplace_back(optarg);
         break;
       case Options::INCLUDE:
-        args.include_files.push_back(optarg);
+        args.include_files.emplace_back(optarg);
         break;
       case 'l':
         args.listing = true;
@@ -699,7 +745,7 @@ Args parse_args(int argc, char* argv[])
     // Load positional parameters before driver runs so positional
     // parameters used inside attach point definitions can be resolved.
     while (optind < argc) {
-      args.params.push_back(argv[optind]);
+      args.params.emplace_back(argv[optind]);
       optind++;
     }
   }
