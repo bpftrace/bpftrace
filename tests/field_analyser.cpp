@@ -700,7 +700,7 @@ TEST_F(field_analyser_dwarf, parse_inheritance_multi)
 }
 
 // Disable because anonymous fields not supported #3084.
-TEST_F(field_analyser_dwarf, DISALBED_parse_struct_anonymous_fields)
+TEST_F(field_analyser_dwarf, DISABLED_parse_struct_anonymous_fields)
 {
   BPFtrace bpftrace;
   std::string uprobe = "uprobe:" + std::string(bin_);
