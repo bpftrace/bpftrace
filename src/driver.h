@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/context.h"
+#include "ast/pass_manager.h"
 #include "bpftrace.h"
 
 typedef void *yyscan_t;
@@ -25,5 +26,7 @@ public:
   BPFtrace &bpftrace;
   const bool debug;
 };
+
+ast::Pass CreateParsePass(bool debug = false);
 
 } // namespace bpftrace

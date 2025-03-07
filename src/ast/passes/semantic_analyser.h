@@ -188,6 +188,6 @@ private:
   bool has_pos_param_ = false;
 };
 
-Pass CreateSemanticPass();
+Pass CreateSemanticPass(bool listing = false);
 
 } // namespace bpftrace::ast
