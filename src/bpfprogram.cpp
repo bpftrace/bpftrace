@@ -28,7 +28,7 @@ void BpfProgram::set_prog_type(const Probe &probe)
 void BpfProgram::set_expected_attach_type(const Probe &probe,
                                           BPFfeature &feature)
 {
-  libbpf::bpf_attach_type attach_type = static_cast<libbpf::bpf_attach_type>(0);
+  auto attach_type = static_cast<libbpf::bpf_attach_type>(0);
   if (probe.type == ProbeType::fentry)
     attach_type = libbpf::BPF_TRACE_FENTRY;
   else if (probe.type == ProbeType::fexit)

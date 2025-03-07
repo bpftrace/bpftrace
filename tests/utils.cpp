@@ -149,7 +149,7 @@ static std::string get_working_path()
     throw std::runtime_error(
         "getting current working directory for tests failed");
   }
-  return std::string(cwd_path);
+  return cwd_path;
 }
 
 TEST(utils, resolve_binary_path)

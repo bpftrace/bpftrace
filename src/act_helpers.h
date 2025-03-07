@@ -22,12 +22,11 @@ M get_member_type(M T::*);
   (sizeof(cxxtype) == sizeof(ctype) + sizeof(extra_type))
 #define ACTH_GET_TYPE_OF(mem) decltype(act_helpers::get_member_type(&mem))
 #define ACTH_SAME_OFFSET(cxxtype, cxxmem, ctype, cmem)                         \
-  (std::is_standard_layout<cxxtype>::value &&                                  \
-   std::is_standard_layout<ctype>::value &&                                    \
+  (std::is_standard_layout_v<cxxtype> && std::is_standard_layout_v<ctype> &&   \
    (offsetof(cxxtype, cxxmem) == offsetof(ctype, cmem)))
 #define ACTH_SAME_TYPE(cxxtype, cxxmem, ctype, cmem)                           \
-  std::is_same<ACTH_GET_TYPE_OF(cxxtype ::cxxmem),                             \
-               ACTH_GET_TYPE_OF(ctype ::cmem)>::value
+  std::is_same_v<ACTH_GET_TYPE_OF(cxxtype ::cxxmem),                           \
+                 ACTH_GET_TYPE_OF(ctype ::cmem)>
 
 #define ACTH_ASSERT_SAME_SIZE(cxxtype, ctype, extra_type)                      \
   static_assert(ACTH_SAME_SIZE(cxxtype, ctype, extra_type),                    \

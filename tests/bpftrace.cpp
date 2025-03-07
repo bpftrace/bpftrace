@@ -93,8 +93,8 @@ void check_uprobe(Probe &p,
                   uint64_t address = 0,
                   uint64_t func_offset = 0)
 {
-  bool retprobe = orig_name.find("uretprobe:") == 0 ||
-                  orig_name.find("ur:") == 0;
+  bool retprobe = orig_name.starts_with("uretprobe:") ||
+                  orig_name.starts_with("ur:");
   EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
   EXPECT_EQ(path, p.path);
   EXPECT_EQ(attach_point, p.attach_point);
@@ -111,8 +111,8 @@ void check_uprobe_multi(Probe &p,
                         const std::string &orig_name,
                         const std::string &name)
 {
-  bool retprobe = orig_name.find("uretprobe:") == 0 ||
-                  orig_name.find("ur:") == 0;
+  bool retprobe = orig_name.starts_with("uretprobe:") ||
+                  orig_name.starts_with("ur:");
   EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
   EXPECT_EQ(path, p.path);
   EXPECT_EQ(funcs, p.funcs);
@@ -1300,7 +1300,7 @@ TEST(bpftrace, resolve_timestamp)
 
   // Basic sanity check
   bpftrace->boottime_ = { .tv_sec = 3, .tv_nsec = 0 };
-  bpftrace->resources.strftime_args.push_back("%s.%f");
+  bpftrace->resources.strftime_args.emplace_back("%s.%f");
   EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 0, 1000), "3.000001");
 
   // Check that boottime nsecs close to 1s doesn't trigger floating-point error.
@@ -1308,11 +1308,11 @@ TEST(bpftrace, resolve_timestamp)
   // Due to the peculiarities of floating-point, not _any_ set of numbers
   // trigger the bug here. These values were discovered in the wild.
   bpftrace->boottime_ = { .tv_sec = 1736725826, .tv_nsec = 999999985 };
-  bpftrace->resources.strftime_args.push_back("%s");
+  bpftrace->resources.strftime_args.emplace_back("%s");
   EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 1, 0), "1736725826");
 
   // Now check that we handle rollover to a new second correctly
-  bpftrace->resources.strftime_args.push_back("%s.%f");
+  bpftrace->resources.strftime_args.emplace_back("%s.%f");
   EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 2, 15), "1736725827.000000");
 }
 

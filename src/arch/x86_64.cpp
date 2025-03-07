@@ -4,7 +4,7 @@
 #include <array>
 
 // SP + 8 points to the first argument that is passed on the stack
-#define ARG0_STACK 8
+enum { ARG0_STACK = 8 };
 
 namespace bpftrace::arch {
 
@@ -45,7 +45,7 @@ static std::array<std::string, 6> arg_registers = {
 
 int offset(std::string reg_name)
 {
-  auto it = find(registers.begin(), registers.end(), reg_name);
+  auto it = std::ranges::find(registers, reg_name);
   if (it == registers.end())
     return -1;
   return distance(registers.begin(), it);
@@ -83,7 +83,7 @@ int arg_stack_offset()
 
 std::string name()
 {
-  return std::string("x86_64");
+  return "x86_64";
 }
 
 std::vector<std::string> invalid_watchpoint_modes()

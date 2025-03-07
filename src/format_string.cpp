@@ -64,7 +64,7 @@ std::vector<std::tuple<std::string, Type>> get_token_types(
     if (format_types.contains(token))
       token_type = format_types.at(token);
 
-    types.push_back(std::make_tuple(token, token_type));
+    types.emplace_back(token, token_type);
   }
 
   return types;

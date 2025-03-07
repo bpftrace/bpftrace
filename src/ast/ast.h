@@ -138,21 +138,21 @@ public:
 
 class String : public Expression {
 public:
-  explicit String(Diagnostics &d, const std::string &str, Location &&loc);
+  explicit String(Diagnostics &d, std::string str, Location &&loc);
 
   std::string str;
 };
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(Diagnostics &d, const std::string &mode, Location &&loc);
+  explicit StackMode(Diagnostics &d, std::string mode, Location &&loc);
 
   std::string mode;
 };
 
 class Identifier : public Expression {
 public:
-  explicit Identifier(Diagnostics &d, const std::string &ident, Location &&loc);
+  explicit Identifier(Diagnostics &d, std::string ident, Location &&loc);
 
   std::string ident;
 };
@@ -211,11 +211,8 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(Diagnostics &d, const std::string &ident, Location &&loc);
-  Map(Diagnostics &d,
-      const std::string &ident,
-      Expression &expr,
-      Location &&loc);
+  explicit Map(Diagnostics &d, std::string ident, Location &&loc);
+  Map(Diagnostics &d, std::string ident, Expression &expr, Location &&loc);
 
   std::string ident;
   Expression *key_expr = nullptr;
@@ -229,7 +226,7 @@ public:
 
 class Variable : public Expression {
 public:
-  explicit Variable(Diagnostics &d, const std::string &ident, Location &&loc);
+  explicit Variable(Diagnostics &d, std::string ident, Location &&loc);
 
   std::string ident;
 };
@@ -265,7 +262,7 @@ public:
   FieldAccess(Diagnostics &d, Expression *expr, const std::string &field);
   FieldAccess(Diagnostics &d,
               Expression *expr,
-              const std::string &field,
+              std::string field,
               Location &&loc);
   FieldAccess(Diagnostics &d, Expression *expr, ssize_t index, Location &&loc);
 
@@ -356,7 +353,7 @@ public:
 class AssignConfigVarStatement : public Statement {
 public:
   AssignConfigVarStatement(Diagnostics &d,
-                           const std::string &config_var,
+                           std::string config_var,
                            Expression *expr,
                            Location &&loc);
 
@@ -472,7 +469,7 @@ public:
 class AttachPoint : public Node {
 public:
   AttachPoint(Diagnostics &d,
-              const std::string &raw_input,
+              std::string raw_input,
               bool ignore_invalid,
               Location &&loc);
 
@@ -581,7 +578,7 @@ using SubprogList = std::vector<Subprog *>;
 class Program : public Node {
 public:
   Program(Diagnostics &d,
-          const std::string &c_definitions,
+          std::string c_definitions,
           Config *config,
           SubprogList &&functions,
           ProbeList &&probes,

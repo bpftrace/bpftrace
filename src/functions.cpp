@@ -67,7 +67,7 @@ const Function *FunctionRegistry::add(Function::Origin origin,
       origin, std::string{ name }, return_type, params));
   Function &new_func = *all_funcs_.back().get();
 
-  funcs_by_fq_name_[fq_name].push_back(new_func);
+  funcs_by_fq_name_[fq_name].emplace_back(new_func);
   return &new_func;
 }
 

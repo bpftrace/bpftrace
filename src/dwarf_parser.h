@@ -67,6 +67,8 @@ class BPFtrace;
 
 class Dwarf {
 public:
+  Dwarf() = delete;
+
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
                                               __attribute__((unused)),
                                               std::string file_path_
@@ -107,9 +109,6 @@ public:
   void resolve_fields(const SizedType &type __attribute__((unused)))
   {
   }
-
-private:
-  Dwarf() = delete;
 };
 
 } // namespace bpftrace

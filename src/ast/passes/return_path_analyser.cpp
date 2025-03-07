@@ -58,7 +58,7 @@ Pass CreateReturnPathPass()
     return_path.visit(ctx.ast_ctx.root);
   };
 
-  return Pass("ReturnPath", fn);
+  return { "ReturnPath", fn };
 }
 
 } // namespace bpftrace::ast

@@ -42,9 +42,7 @@ struct VariableLLVM {
 class ScopedExpr {
 public:
   // Neither a value nor a deletion method.
-  explicit ScopedExpr()
-  {
-  }
+  explicit ScopedExpr() = default;
 
   // Value only.
   explicit ScopedExpr(Value *value) : value_(value)

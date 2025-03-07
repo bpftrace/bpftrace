@@ -171,7 +171,7 @@ Pass CreateConfigPass()
     configs.visit(ctx.ast_ctx.root);
   };
 
-  return Pass("ConfigAnalyser", fn);
+  return { "ConfigAnalyser", fn };
 };
 
 } // namespace bpftrace::ast
