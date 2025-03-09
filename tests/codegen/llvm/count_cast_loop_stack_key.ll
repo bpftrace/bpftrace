@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
-%kstack_key = type { i64, i32, i32 }
+%kstack_key = type { i64, i64 }
 %kstack_count_t__tuple_t = type { %kstack_key, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
@@ -58,11 +58,12 @@ lookup_stack_scratch_merge:                       ; preds = %entry
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
   %2 = udiv i32 %get_stack, 8
   %3 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
-  store i32 %2, ptr %3, align 4
-  %4 = trunc i32 %2 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %4, i64 1)
-  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, ptr %5, align 8
+  %4 = zext i32 %2 to i64
+  store i64 %4, ptr %3, align 8
+  %5 = trunc i32 %2 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %5, i64 1)
+  %6 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, ptr %6, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_raw_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
@@ -70,9 +71,9 @@ get_stack_fail:                                   ; preds = %lookup_stack_scratc
   br label %merge_block
 
 lookup_success:                                   ; preds = %merge_block
-  %6 = load i64, ptr %lookup_elem, align 8
-  %7 = add i64 %6, 1
-  store i64 %7, ptr %lookup_elem, align 8
+  %7 = load i64, ptr %lookup_elem, align 8
+  %8 = add i64 %7, 1
+  store i64 %8, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %merge_block

@@ -8,7 +8,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.2" = type { ptr, ptr }
 %"struct map_t.3" = type { ptr, ptr, ptr, ptr }
-%kstack_key = type { i64, i32, i32 }
+%kstack_key = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
@@ -56,11 +56,12 @@ lookup_stack_scratch_merge:                       ; preds = %entry
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
   %2 = udiv i32 %get_stack, 8
   %3 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
-  store i32 %2, ptr %3, align 4
-  %4 = trunc i32 %2 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %4, i64 1)
-  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, ptr %5, align 8
+  %4 = zext i32 %2 to i64
+  store i64 %4, ptr %3, align 8
+  %5 = trunc i32 %2 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %5, i64 1)
+  %6 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, ptr %6, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_bpftrace_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
