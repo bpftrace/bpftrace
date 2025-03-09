@@ -604,8 +604,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         arg_values.push_back(std::make_unique<PrintableString>(
             get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
                       *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
-                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 12),
                       *reinterpret_cast<int32_t *>(arg_data + arg.offset + 16),
+                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 20),
                       true,
                       arg.type.stack_type,
                       8)));

@@ -244,7 +244,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   switch (type.GetTy()) {
     case Type::kstack_t: {
       return bpftrace.get_stack(read_data<uint64_t>(value.data()),
-                                read_data<uint32_t>(value.data() + 8),
+                                read_data<uint64_t>(value.data() + 8),
                                 -1,
                                 -1,
                                 false,
@@ -252,10 +252,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                                 8);
     }
     case Type::ustack_t: {
-      return bpftrace.get_stack(read_data<int64_t>(value.data()),
-                                read_data<uint32_t>(value.data() + 8),
-                                read_data<int32_t>(value.data() + 12),
+      return bpftrace.get_stack(read_data<uint64_t>(value.data()),
+                                read_data<uint64_t>(value.data() + 8),
                                 read_data<int32_t>(value.data() + 16),
+                                read_data<int32_t>(value.data() + 20),
                                 true,
                                 type.stack_type,
                                 8);

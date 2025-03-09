@@ -214,7 +214,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.SetInsertPoint(get_stack_success);
 
   Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt32(uint64_size));
-  b_.CreateStore(num_frames,
+  b_.CreateStore(b_.CreateIntCast(num_frames, b_.getInt64Ty(), false),
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(1) }));
@@ -1272,7 +1272,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                             scoped_arg.value(),
                                             { b_.getInt64(0), b_.getInt32(1) });
       return ScopedExpr(
-          b_.CreateIntCast(b_.CreateLoad(b_.getInt32Ty(), nr_stack_frames),
+          b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
                            b_.getInt64Ty(),
                            false));
     } else /* call.vargs.at(0)->is_map */ {
