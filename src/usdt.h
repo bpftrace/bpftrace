@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+namespace bpftrace {
+
 struct usdt_probe_entry {
   std::string path;
   std::string provider;
@@ -33,3 +35,5 @@ private:
   static void read_probes_for_pid(int pid, bool print_error = true);
   static void read_probes_for_path(const std::string &path);
 };
+
+} // namespace bpftrace

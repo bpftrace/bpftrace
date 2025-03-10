@@ -7,10 +7,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "utils.h"
+#include "util/bpf_names.h"
+#include "util/cgroup.h"
+#include "util/format.h"
+#include "util/kernel.h"
+#include "util/math.h"
+#include "util/paths.h"
+#include "util/symbols.h"
+#include "util/system.h"
+#include "util/wildcard.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::utils {
+
+using namespace bpftrace::util;
 
 TEST(utils, split_string)
 {

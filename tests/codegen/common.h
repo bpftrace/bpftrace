@@ -14,6 +14,7 @@
 #include "btf_common.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "util/env.h"
 #include "gtest/gtest.h"
 
 #include "../mocks.h"
@@ -91,8 +92,8 @@ static void test(BPFtrace &bpftrace,
   codegen.emit(false);
 
   uint64_t update_tests = 0;
-  get_uint64_env_var("BPFTRACE_UPDATE_TESTS",
-                     [&](uint64_t x) { update_tests = x; });
+  util::get_uint64_env_var("BPFTRACE_UPDATE_TESTS",
+                           [&](uint64_t x) { update_tests = x; });
   if (update_tests >= 1) {
     std::cerr << "Running in update mode, test is skipped" << std::endl;
     std::ofstream file(TEST_CODEGEN_LOCATION + name + ".ll");

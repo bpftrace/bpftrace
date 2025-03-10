@@ -5,6 +5,7 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "util/format.h"
 #include "gmock/gmock-function-mocker.h"
 
 namespace bpftrace::test {
@@ -54,7 +55,7 @@ public:
       sym->address = 12345;
       sym->size = 4;
     } else {
-      auto fields = split_string(name, '_');
+      auto fields = util::split_string(name, '_');
       sym->address = std::stoull(fields.at(0));
       sym->size = std::stoull(fields.at(1));
     }

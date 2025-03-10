@@ -8,7 +8,7 @@
 #include "globalvars.h"
 #include "log.h"
 #include "types.h"
-#include "utils.h"
+#include "util/exceptions.h"
 
 namespace bpftrace::globalvars {
 
@@ -178,9 +178,9 @@ static void update_global_vars_custom_rw_section(
   auto desired_size = (bpftrace.max_cpu_id_ + 1) * actual_size;
   auto err = bpf_map__set_value_size(global_vars_map, desired_size);
   if (err != 0) {
-    throw bpftrace::FatalUserException("Failed to set size to " +
-                                       std::to_string(desired_size) +
-                                       " for section " + section_name);
+    throw util::FatalUserException("Failed to set size to " +
+                                   std::to_string(desired_size) +
+                                   " for section " + section_name);
   }
 
   buf = bpf_map__initial_value(global_vars_map, &actual_size);
@@ -189,7 +189,7 @@ static void update_global_vars_custom_rw_section(
              << " after resizing";
   }
   if (actual_size != desired_size) {
-    throw bpftrace::FatalUserException(
+    throw util::FatalUserException(
         "Failed to set size from " + std::to_string(actual_size) + " to " +
         std::to_string(desired_size) + " for section " + section_name);
   }

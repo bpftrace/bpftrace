@@ -1,5 +1,6 @@
-#include "debugfs.h"
 #include <unistd.h>
+
+#include "debugfs.h"
 
 namespace bpftrace::debugfs {
 

@@ -3,9 +3,8 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "probe_matcher.h"
-#include "tracefs.h"
+#include "tracefs/tracefs.h"
 #include "types.h"
-#include "utils.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>

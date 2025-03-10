@@ -11,6 +11,7 @@
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/context.h"
+#include "ast/helpers.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -20,6 +21,10 @@
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
+#include "util/int_parser.h"
+#include "util/paths.h"
+#include "util/system.h"
+#include "util/wildcard.h"
 
 namespace bpftrace::ast {
 
@@ -179,7 +184,7 @@ void SemanticAnalyser::visit(PositionalParameter &param)
                                 " is not a valid parameter";
       if (is_final_pass()) {
         std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        auto param_int = get_int_from_str(pstr);
+        auto param_int = util::get_int_from_str(pstr);
         if (!param_int.has_value() && !param.is_in_str) {
           param.addError() << "$" << param.n << " used numerically but given \""
                            << pstr << "\". Try using str($" << param.n << ").";
@@ -3198,7 +3203,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       // Warn if user tries to attach to a non-traceable function
       if (bpftrace_.config_->get(ConfigKeyMissingProbes::default_) !=
               ConfigMissingProbes::ignore &&
-          !has_wildcard(ap.func) && !bpftrace_.is_traceable_func(ap.func)) {
+          !util::has_wildcard(ap.func) &&
+          !bpftrace_.is_traceable_func(ap.func)) {
         ap.addWarning()
             << ap.func
             << " is not traceable (either non-existing, inlined, or marked as "
@@ -3221,11 +3227,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     const auto pid = bpftrace_.pid();
     if (ap.target == "*") {
       if (pid.has_value())
-        paths = get_mapped_paths_for_pid(*pid);
+        paths = util::get_mapped_paths_for_pid(*pid);
       else
-        paths = get_mapped_paths_for_running_pids();
+        paths = util::get_mapped_paths_for_running_pids();
     } else {
-      paths = resolve_binary_path(ap.target, pid);
+      paths = util::resolve_binary_path(ap.target, pid);
     }
     switch (paths.size()) {
       case 0:
@@ -3256,8 +3262,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       ap.addError() << "usdt probe must have a target function or wildcard";
 
     if (ap.target != "" &&
-        !(bpftrace_.pid().has_value() && has_wildcard(ap.target))) {
-      auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
+        !(bpftrace_.pid().has_value() && util::has_wildcard(ap.target))) {
+      auto paths = util::resolve_binary_path(ap.target, bpftrace_.pid());
       switch (paths.size()) {
         case 0:
           ap.addError() << "usdt target file '" << ap.target
@@ -3285,7 +3291,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     } else if (ap.target == "*") {
       USDTHelper::probes_for_all_pids();
     } else if (ap.target != "") {
-      for (auto &path : resolve_binary_path(ap.target))
+      for (auto &path : util::resolve_binary_path(ap.target))
         USDTHelper::probes_for_path(path);
     } else {
       ap.addError()
@@ -3326,7 +3332,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "")
       ap.addError() << "software probe must have a software event name";
     else {
-      if (!has_wildcard(ap.target) && !ap.ignore_invalid) {
+      if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
         for (auto &probeListItem : SW_PROBE_LIST) {
           if (ap.target == probeListItem.path ||
@@ -3379,7 +3385,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "")
       ap.addError() << "hardware probe must have a hardware event name";
     else {
-      if (!has_wildcard(ap.target) && !ap.ignore_invalid) {
+      if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
         for (auto &probeListItem : HW_PROBE_LIST) {
           if (ap.target == probeListItem.path ||

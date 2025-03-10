@@ -6,7 +6,7 @@
 #include "attached_probe.h"
 #include "bpfprogram.h"
 #include "log.h"
-#include "utils.h"
+#include "util/exceptions.h"
 
 namespace bpftrace {
 
@@ -80,7 +80,7 @@ void BpfProgram::set_attach_target(const Probe &probe,
       bpf_program__set_autoload(bpf_prog_, false);
     } else {
       // explicit match failed, fail hard
-      throw FatalUserException(msg);
+      throw util::FatalUserException(msg);
     }
   }
 

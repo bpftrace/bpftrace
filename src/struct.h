@@ -1,14 +1,13 @@
 #pragma once
 
+#include <cereal/access.hpp>
 #include <map>
 #include <memory>
 #include <optional>
 
-#include <cereal/access.hpp>
-
 #include "ast/ast.h"
 #include "types.h"
-#include "utils.h"
+#include "util/hash.h"
 
 namespace bpftrace {
 
@@ -135,7 +134,7 @@ struct hash<bpftrace::Struct> {
   {
     size_t hash = std::hash<int>()(s.size);
     for (auto &field : s.fields)
-      bpftrace::hash_combine(hash, field.type);
+      bpftrace::util::hash_combine(hash, field.type);
     return hash;
   }
 };

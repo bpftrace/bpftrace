@@ -6,9 +6,9 @@
 %{
 #include <climits>
 #include "driver.h"
-#include "utils.h"
 #include "parser.tab.hh"
-#include "ast/int_parser.h"
+#include "util/int_parser.h"
+#include "util/format.h"
 
 bpftrace::location loc;
 static std::string struct_type;
@@ -82,7 +82,7 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 {int}|{hex}|{exponent}  {
                           try
                           {
-                            auto res = ast::int_parser::to_uint(yytext, 0);
+                            auto res = util::to_uint(yytext, 0);
                             return Parser::make_INT(res, loc);
                           }
                           catch (const std::exception &e)
@@ -213,7 +213,7 @@ struct|union|enum       {
   {ident}               {
                           buffer = yytext;
                           yy_pop_state(yyscanner);
-                          return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);
+                          return Parser::make_IDENT(struct_type + " " + util::trim(buffer), loc);
                         }
 }
 <STRUCT,BRACE>{
@@ -226,7 +226,7 @@ struct|union|enum       {
                             yy_pop_state(yyscanner);
                             for (int i = yyleng - 1; i >= 0; i--)
                               unput(yytext[i]);
-                            return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);
+                            return Parser::make_IDENT(struct_type + " " + util::trim(buffer), loc);
                           }
                           buffer += yytext[0];
                         }

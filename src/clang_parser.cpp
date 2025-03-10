@@ -1,11 +1,11 @@
 #include <cstring>
 #include <iostream>
+#include <llvm/Config/llvm-config.h>
 #include <regex>
 #include <sstream>
+#include <sys/utsname.h>
 #include <utility>
 #include <vector>
-
-#include "llvm/Config/llvm-config.h"
 
 #include "ast/ast.h"
 #include "btf.h"
@@ -13,7 +13,9 @@
 #include "log.h"
 #include "resources/headers.h"
 #include "types.h"
-#include "utils.h"
+#include "util/format.h"
+#include "util/io.h"
+#include "util/system.h"
 
 namespace bpftrace {
 namespace {
@@ -272,7 +274,7 @@ bool ClangParser::ClangParserHandler::parse_file(
     std::vector<CXUnsavedFile> &unsaved_files,
     bool bail_on_errors)
 {
-  StderrSilencer silencer;
+  util::StderrSilencer silencer;
   if (!bail_on_errors)
     silencer.silence();
 
@@ -758,14 +760,14 @@ static void query_clang_include_dirs(std::vector<std::string> &result)
   try {
     auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
     auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
-    auto check = exec_system(cmd.c_str());
+    auto check = util::exec_system(cmd.c_str());
     std::istringstream lines(check);
     std::string line;
     while (std::getline(lines, line) &&
            line != "#include <...> search starts here:") {
     }
     while (std::getline(lines, line) && line != "End of search list.")
-      result.push_back(trim(line));
+      result.push_back(util::trim(line));
   } catch (std::runtime_error &) { // If exec_system fails, just ignore it
   }
 }
@@ -779,7 +781,7 @@ std::vector<std::string> ClangParser::system_include_paths()
     if (line == "auto")
       query_clang_include_dirs(result);
     else
-      result.push_back(trim(line));
+      result.push_back(util::trim(line));
   }
 
   if (result.empty())

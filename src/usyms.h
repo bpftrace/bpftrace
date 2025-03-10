@@ -1,13 +1,17 @@
 #pragma once
 
+#include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <cstdint>
 #include <map>
 #include <string>
 
-#include "utils.h"
+#include "util/symbols.h"
 
 namespace bpftrace {
+
+using util::elf_symbol;
+
 class Config;
 
 class Usyms {
@@ -35,4 +39,5 @@ private:
 
   struct bcc_symbol_option& get_symbol_opts();
 };
+
 } // namespace bpftrace

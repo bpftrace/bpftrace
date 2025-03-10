@@ -21,7 +21,7 @@
 #include <cereal/types/vector.hpp>
 
 #include "log.h"
-#include "utils.h"
+#include "util/paths.h"
 #include "version.h"
 
 #define AOT_ELF_SECTION ".btaot"
@@ -147,7 +147,7 @@ int build_binary(const std::filesystem::path &shim,
     objcopy = c;
 
   // Resolve objcopy binary to full path
-  auto objcopy_full = find_in_path(objcopy);
+  auto objcopy_full = util::find_in_path(objcopy);
   if (!objcopy_full) {
     ret = 1;
     LOG(ERROR) << "Failed to find " << objcopy << " in $PATH";
@@ -195,8 +195,8 @@ int generate(const RequiredResources &resources,
   // "real" one that could be present elsewhere in $PATH. So we give precedence
   // to shim found "next" to the running binary.
   auto rel = std::filesystem::path("aot") / AOT_SHIM_NAME;
-  auto local = find_near_self(rel.native());
-  auto path = find_in_path(AOT_SHIM_NAME);
+  auto local = util::find_near_self(rel.native());
+  auto path = util::find_in_path(AOT_SHIM_NAME);
   auto shim = local ? local : path;
   if (!shim) {
     LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
