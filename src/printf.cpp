@@ -1,9 +1,8 @@
-#include "printf.h"
+#include <cstdint>
 
 #include "log.h"
-#include "utils.h"
-
-#include <cstdint>
+#include "printf.h"
+#include "util/format.h"
 
 namespace bpftrace {
 
@@ -37,12 +36,12 @@ int PrintableBuffer::print(char *buf,
                            Type,
                            ArgumentType)
 {
-  return snprintf(
-      buf,
-      size,
-      fmt,
-      hex_format_buffer(value_.data(), value_.size(), keep_ascii_, escape_hex_)
-          .c_str());
+  return snprintf(buf,
+                  size,
+                  fmt,
+                  util::hex_format_buffer(
+                      value_.data(), value_.size(), keep_ascii_, escape_hex_)
+                      .c_str());
 }
 
 void PrintableBuffer::keep_ascii(bool value)

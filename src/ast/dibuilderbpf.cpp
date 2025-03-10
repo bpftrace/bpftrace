@@ -7,7 +7,7 @@
 #include "libbpf/bpf.h"
 #include "log.h"
 #include "struct.h"
-#include "utils.h"
+#include "util/bpf_names.h"
 
 namespace bpftrace::ast {
 
@@ -30,7 +30,8 @@ void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
-  std::string sanitised_name = sanitise_bpf_program_name(func.getName().str());
+  std::string sanitised_name = util::sanitise_bpf_program_name(
+      func.getName().str());
 
   DISubprogram::DISPFlags flags = DISubprogram::SPFlagZero;
   if (!is_declaration)

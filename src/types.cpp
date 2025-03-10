@@ -6,7 +6,7 @@
 #include "ast/async_event_types.h"
 #include "struct.h"
 #include "types.h"
-#include "utils.h"
+#include "util/exceptions.h"
 
 namespace bpftrace {
 
@@ -563,7 +563,7 @@ Field &SizedType::GetField(ssize_t n) const
 {
   assert(IsTupleTy() || IsRecordTy());
   if (n >= GetFieldCount())
-    throw FatalUserException("Getfield(): out of bounds");
+    throw util::FatalUserException("Getfield(): out of bounds");
   return inner_struct_.lock()->fields[n];
 }
 
@@ -684,31 +684,31 @@ size_t hash<bpftrace::SizedType>::operator()(
     const bpftrace::SizedType &type) const
 {
   auto hash = std::hash<unsigned>()(static_cast<unsigned>(type.GetTy()));
-  bpftrace::hash_combine(hash, type.GetSize());
+  bpftrace::util::hash_combine(hash, type.GetSize());
 
   switch (type.GetTy()) {
     case bpftrace::Type::integer:
-      bpftrace::hash_combine(hash, type.IsSigned());
+      bpftrace::util::hash_combine(hash, type.IsSigned());
       break;
     case bpftrace::Type::pointer:
-      bpftrace::hash_combine(hash, *type.GetPointeeTy());
+      bpftrace::util::hash_combine(hash, *type.GetPointeeTy());
       break;
     case bpftrace::Type::reference:
-      bpftrace::hash_combine(hash, *type.GetDereferencedTy());
+      bpftrace::util::hash_combine(hash, *type.GetDereferencedTy());
       break;
     case bpftrace::Type::record:
-      bpftrace::hash_combine(hash, type.GetName());
+      bpftrace::util::hash_combine(hash, type.GetName());
       break;
     case bpftrace::Type::kstack_t:
     case bpftrace::Type::ustack_t:
-      bpftrace::hash_combine(hash, type.stack_type);
+      bpftrace::util::hash_combine(hash, type.stack_type);
       break;
     case bpftrace::Type::array:
-      bpftrace::hash_combine(hash, *type.GetElementTy());
-      bpftrace::hash_combine(hash, type.GetNumElements());
+      bpftrace::util::hash_combine(hash, *type.GetElementTy());
+      bpftrace::util::hash_combine(hash, type.GetNumElements());
       break;
     case bpftrace::Type::tuple:
-      bpftrace::hash_combine(hash, *type.GetStruct().lock());
+      bpftrace::util::hash_combine(hash, *type.GetStruct().lock());
       break;
     // No default case (explicitly skip all remaining types instead) to get
     // a compiler warning when we add a new type

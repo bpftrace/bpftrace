@@ -5,6 +5,7 @@
 #include "arch/arch.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
+#include "util/format.h"
 
 namespace bpftrace::ast {
 
@@ -188,7 +189,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
         // Both uprobes and fentry have a target (binary for uprobes, kernel
         // module for fentry).
         std::string func = match;
-        std::string target = erase_prefix(func);
+        std::string target = util::erase_prefix(func);
 
         // Trying to attach to multiple fentry. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and

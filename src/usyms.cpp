@@ -1,9 +1,12 @@
+#include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <sstream>
 
 #include "config.h"
-#include "usyms.h"
-
 #include "scopeguard.h"
+#include "usyms.h"
+#include "util/symbols.h"
+#include "util/system.h"
 
 namespace bpftrace {
 
@@ -33,14 +36,14 @@ void Usyms::cache(const std::string &elf_file)
   // might be different
   if (cache_type == UserSymbolCacheType::per_program &&
       symbol_table_cache_.find(elf_file) == symbol_table_cache_.end())
-    symbol_table_cache_[elf_file] = get_symbol_table_for_elf(elf_file);
+    symbol_table_cache_[elf_file] = util::get_symbol_table_for_elf(elf_file);
 
   if (cache_type == UserSymbolCacheType::per_pid)
     // preload symbol tables from running processes
     // this allows symbol resolution for processes that are running at probe
     // attach time, but not at symbol resolution time, even with ASLR
     // enabled, since BCC symcache records the offsets
-    for (int pid : get_pids_for_program(elf_file))
+    for (int pid : util::get_pids_for_program(elf_file))
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
 }
 
@@ -63,7 +66,7 @@ std::string Usyms::resolve(uint64_t addr,
       std::map<uintptr_t, elf_symbol, std::greater<>> &symbol_table =
           symbol_table_cache_.find(pid_exe) != symbol_table_cache_.end()
               ? symbol_table_cache_[pid_exe]
-              : (symbol_table_cache_[pid_exe] = get_symbol_table_for_elf(
+              : (symbol_table_cache_[pid_exe] = util::get_symbol_table_for_elf(
                      pid_exe));
       auto sym = symbol_table.lower_bound(addr);
       // address has to be either the start of the symbol (for symbols of

@@ -11,7 +11,7 @@
 #include "driver.h"
 #include "dwarf_common.h"
 #include "mocks.h"
-#include "tracefs.h"
+#include "tracefs/tracefs.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-nice-strict.h"
 #include "gtest/gtest.h"

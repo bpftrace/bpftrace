@@ -7,7 +7,9 @@
 
 #include "log.h"
 #include "usdt.h"
-#include "utils.h"
+#include "util/system.h"
+
+namespace bpftrace {
 
 static std::unordered_set<std::string> path_cache;
 static std::unordered_set<int> pid_cache;
@@ -95,7 +97,7 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
 usdt_probe_list USDTHelper::probes_for_all_pids()
 {
   usdt_probe_list probes;
-  for (int pid : bpftrace::get_all_running_pids()) {
+  for (int pid : util::get_all_running_pids()) {
     for (auto &probe : probes_for_pid(pid, false)) {
       probes.push_back(std::move(probe));
     }
@@ -154,3 +156,5 @@ void USDTHelper::read_probes_for_path(const std::string &path)
 
   path_cache.emplace(path);
 }
+
+} // namespace bpftrace

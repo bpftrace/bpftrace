@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include "aot/aot.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/diagnostic.h"
+#include "ast/helpers.h"
 #include "ast/pass_manager.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
@@ -39,7 +41,10 @@
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "tracepoint_format_parser.h"
-#include "utils.h"
+#include "util/env.h"
+#include "util/format.h"
+#include "util/int_parser.h"
+#include "util/kernel.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -254,11 +259,11 @@ static std::optional<struct timespec> get_delta_taitime()
 static void parse_env(BPFtrace& bpftrace)
 {
   ConfigSetter config_setter(*bpftrace.config_, ConfigSource::env_var);
-  get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_strlen, x);
   });
 
-  get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
     LOG(WARNING) << "BPFTRACE_STRLEN is deprecated. Use "
                     "BPFTRACE_MAX_STRLEN instead.";
     config_setter.set(ConfigKeyInt::max_strlen, x);
@@ -267,42 +272,42 @@ static void parse_env(BPFtrace& bpftrace)
   if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
     config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
 
-  get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
+  util::get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
     config_setter.set(ConfigKeyBool::cpp_demangle, x);
   });
 
-  get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
-                   [&](bool x) { bpftrace.debug_output_ = x; });
+  util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
+                         [&](bool x) { bpftrace.debug_output_ = x; });
 
-  get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
+  util::get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
     config_setter.set(ConfigKeyBool::lazy_symbolication, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_map_keys, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_probes, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_bpf_progs, x);
   });
 
-  get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::log_size, x);
   });
 
-  get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::perf_rb_pages, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_cat_bytes, x);
   });
 
@@ -312,33 +317,33 @@ static void parse_env(BPFtrace& bpftrace)
       exit(1);
   }
 
-  get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
-                     [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
+  util::get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                           [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
 
   if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE")) {
     if (!config_setter.set_stack_mode(stack_mode))
       exit(1);
   }
 
-  get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
+  util::get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
     LOG(WARNING) << "BPFTRACE_NO_CPP_DEMANGLE is deprecated. Use "
                     "BPFTRACE_CPP_DEMANGLE=0 instead.";
     config_setter.set(ConfigKeyBool::cpp_demangle, !x);
   });
 
-  get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
     LOG(WARNING) << "BPFTRACE_CAT_BYTES_MAX is deprecated. Use "
                     "BPFTRACE_MAX_CAT_BYTES instead.";
     config_setter.set(ConfigKeyInt::max_cat_bytes, x);
   });
 
-  get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
+  util::get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
     LOG(WARNING) << "BPFTRACE_MAP_KEYS_MAX is deprecated. Use "
                     "BPFTRACE_MAX_MAP_KEYS instead.";
     config_setter.set(ConfigKeyInt::max_map_keys, x);
   });
 
-  get_bool_env_var("BPFTRACE_USE_BLAZESYM", [&](bool x) {
+  util::get_bool_env_var("BPFTRACE_USE_BLAZESYM", [&](bool x) {
 #ifndef HAVE_BLAZESYM
     if (x) {
       LOG(ERROR) << "BPFTRACE_USE_BLAZESYM requires blazesym support enabled "
@@ -394,7 +399,7 @@ void parse(ast::ASTContext& ast,
     struct utsname utsname;
     std::vector<std::string> extra_flags;
     uname(&utsname);
-    bool found_kernel_headers = get_kernel_dirs(utsname, ksrc, kobj);
+    bool found_kernel_headers = util::get_kernel_dirs(utsname, ksrc, kobj);
 
     if (found_kernel_headers)
       extra_flags = get_kernel_cflags(
@@ -477,7 +482,7 @@ struct Args {
 
 static bool parse_debug_stages(const std::string& arg)
 {
-  auto stages = split_string(arg, ',', /* remove_empty= */ true);
+  auto stages = util::split_string(arg, ',', /* remove_empty= */ true);
 
   for (const auto& stage : stages) {
     if (debug_stages.contains(stage)) {
@@ -714,7 +719,7 @@ Args parse_args(int argc, char* argv[])
     if (optind == argc) {
       args.search = "*:*";
     } else if (optind == argc - 1) {
-      std::string_view val(argv[optind]);
+      std::string val(argv[optind]);
       if (std::filesystem::exists(val)) {
         args.filename = val;
       } else {
@@ -841,7 +846,7 @@ int main(int argc, char* argv[])
 
   if (!args.pid_str.empty()) {
     std::string errmsg;
-    auto maybe_pid = parse_pid(args.pid_str, errmsg);
+    auto maybe_pid = util::parse_pid(args.pid_str, errmsg);
     if (!maybe_pid.has_value()) {
       LOG(ERROR) << "Failed to parse pid: " + errmsg;
       exit(1);
@@ -1007,8 +1012,8 @@ int main(int argc, char* argv[])
     }
 
     bool verify_llvm_ir = false;
-    get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
-                     [&](bool x) { verify_llvm_ir = x; });
+    util::get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
+                           [&](bool x) { verify_llvm_ir = x; });
     if (verify_llvm_ir && !llvm.verify()) {
       LOG(ERROR) << "Verification of generated LLVM IR failed";
       exit(1);

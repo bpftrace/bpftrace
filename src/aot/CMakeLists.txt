@@ -17,7 +17,7 @@ endif()
 
 add_executable(bpftrace-aotrt aot_main.cpp)
 target_compile_definitions(bpftrace-aotrt PRIVATE ${BPFTRACE_FLAGS})
-target_link_libraries(bpftrace-aotrt aot runtime arch ast ast_defs cxxdemangler_stdlib)
+target_link_libraries(bpftrace-aotrt aot runtime arch ast ast_defs util cxxdemangler_stdlib)
 install(TARGETS bpftrace-aotrt DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(LIBPCAP_FOUND)

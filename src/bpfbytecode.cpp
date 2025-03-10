@@ -3,7 +3,9 @@
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
-#include "utils.h"
+#include "util/bpf_names.h"
+#include "util/exceptions.h"
+#include "util/wildcard.h"
 
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
@@ -81,12 +83,12 @@ const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
                                      probe.usdt_location_idx)
                                : std::nullopt;
 
-  auto prog = programs_.find(
-      get_function_name_for_probe(probe.name, probe.index, usdt_location_idx));
+  auto prog = programs_.find(util::get_function_name_for_probe(
+      probe.name, probe.index, usdt_location_idx));
   if (prog == programs_.end()) {
-    prog = programs_.find(get_function_name_for_probe(probe.orig_name,
-                                                      probe.index,
-                                                      usdt_location_idx));
+    prog = programs_.find(util::get_function_name_for_probe(probe.orig_name,
+                                                            probe.index,
+                                                            usdt_location_idx));
   }
 
   if (prog == programs_.end()) {
@@ -167,7 +169,7 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 bool is_log_trimmed(std::string_view log)
 {
   static const std::vector<std::string> tokens = { "processed", "insns" };
-  return !wildcard_match(log, tokens, true, true);
+  return !util::wildcard_match(log, tokens, true, true);
 }
 } // namespace
 
@@ -259,7 +261,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   }
 
   std::cerr << err.str();
-  throw FatalUserException("Loading BPF object(s) failed.");
+  throw util::FatalUserException("Loading BPF object(s) failed.");
 }
 
 void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,

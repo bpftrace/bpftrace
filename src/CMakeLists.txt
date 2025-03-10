@@ -30,13 +30,8 @@ add_library(runtime STATIC
   probe_matcher.cpp
   procmon.cpp
   printf.cpp
-  resolve_cgroupid.cpp
   run_bpftrace.cpp
-  tracefs.cpp
-  debugfs.cpp
   usdt.cpp
-  utils.cpp
-  util/result.cpp
   pcap_writer.cpp
   ksyms.cpp
   usyms.cpp
@@ -71,11 +66,6 @@ target_link_libraries(bpftrace libbpftrace)
 
 # compile definitions
 
-if (KERNEL_HEADERS_DIR)
-  MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
-endif()
-target_compile_definitions(runtime PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
-
 if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
   MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
 endif()
@@ -106,8 +96,9 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
+target_link_libraries(runtime debugfs tracefs util)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
-target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm)
+target_link_libraries(libbpftrace parser resources runtime aot ast arch util cxxdemangler_llvm)
 
 if(LLDB_FOUND)
   target_link_libraries(runtime LLDB)
@@ -205,4 +196,7 @@ add_subdirectory(aot)
 add_subdirectory(arch)
 add_subdirectory(ast)
 add_subdirectory(cxxdemangler)
+add_subdirectory(debugfs)
 add_subdirectory(resources)
+add_subdirectory(tracefs)
+add_subdirectory(util)

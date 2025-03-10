@@ -1,7 +1,12 @@
-#include <cstdint>
-#include <string>
+#pragma once
 
-namespace bpftrace::ast::int_parser {
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <unistd.h>
+#include <variant>
+
+namespace bpftrace::util {
 
 //   String -> int conversion specific to bpftrace
 //
@@ -15,4 +20,9 @@ namespace bpftrace::ast::int_parser {
 int64_t to_int(const std::string &num, int base);
 uint64_t to_uint(const std::string &num, int base);
 
-} // namespace bpftrace::ast::int_parser
+std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
+    const std::string &s);
+
+std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
+
+} // namespace bpftrace::util
