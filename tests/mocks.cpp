@@ -1,5 +1,5 @@
 #include "mocks.h"
-#include "tracefs.h"
+#include "tracefs/tracefs.h"
 #include "gmock/gmock-nice-strict.h"
 
 namespace bpftrace::test {

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <string>
 
 #include "aot.h"
 #include "bpftrace.h"
@@ -117,11 +118,11 @@ int main(int argc, char* argv[])
         bt_verbose = true;
         break;
       case 'd':
-        if (std::strcmp(optarg, "libbpf") == 0)
+        if (std::string(optarg) == "libbpf")
           bt_debug.insert(DebugStage::Libbpf);
-        else if (std::strcmp(optarg, "verifier") == 0)
+        else if (std::string(optarg) == "verifier")
           bt_debug.insert(DebugStage::Verifier);
-        else if (std::strcmp(optarg, "all") == 0) {
+        else if (std::string(optarg) == "all") {
           bt_debug.insert({ DebugStage::Libbpf, DebugStage::Verifier });
         } else {
           LOG(ERROR) << "USAGE: invalid option for -d: " << optarg;

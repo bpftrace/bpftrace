@@ -5,8 +5,10 @@
 
 #include "ast/ast.h"
 #include "bpftrace.h"
-#include "tracefs.h"
+#include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
+#include "util/format.h"
+#include "util/wildcard.h"
 
 namespace bpftrace {
 
@@ -39,7 +41,7 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
                                                                   event_name);
         glob_t glob_result;
 
-        if (has_wildcard(category) || has_wildcard(event_name)) {
+        if (util::has_wildcard(category) || util::has_wildcard(event_name)) {
           // tracepoint wildcard expansion, part 1 of 3. struct definitions.
           memset(&glob_result, 0, sizeof(glob_result));
           int ret = glob(format_file_path.c_str(), 0, nullptr, &glob_result);
@@ -148,7 +150,7 @@ std::string TracepointFormatParser::get_struct_name(const std::string &probe_id)
 {
   // probe_id has format category:event
   std::string event_name = probe_id;
-  std::string category = erase_prefix(event_name);
+  std::string category = util::erase_prefix(event_name);
   return get_struct_name(category, event_name);
 }
 

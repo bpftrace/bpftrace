@@ -40,6 +40,10 @@
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
+#include "util/bpf_names.h"
+#include "util/cgroup.h"
+#include "util/cpus.h"
+#include "util/exceptions.h"
 
 namespace bpftrace::ast {
 
@@ -67,7 +71,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ctx,
   std::string error_str;
   auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
   if (!target)
-    throw FatalUserException(
+    throw util::FatalUserException(
         "Could not find bpf llvm target, does your llvm support it?");
 
   target_machine_.reset(
@@ -881,7 +885,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
-      throw FatalUserException("Failed to resolve kernel symbol: " + name);
+      throw util::FatalUserException("Failed to resolve kernel symbol: " +
+                                     name);
     return ScopedExpr(b_.getInt64(addr));
   } else if (call.func == "percpu_kaddr") {
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
@@ -901,13 +906,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                       &sym,
                                       current_attach_point_->target);
     if (err < 0 || sym.address == 0)
-      throw FatalUserException("Could not resolve symbol: " +
-                               current_attach_point_->target + ":" + name);
+      throw util::FatalUserException(
+          "Could not resolve symbol: " + current_attach_point_->target + ":" +
+          name);
     return ScopedExpr(b_.getInt64(sym.address));
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
     auto path = bpftrace_.get_string_literal(call.vargs.at(0));
-    cgroupid = bpftrace_.resolve_cgroupid(path);
+    cgroupid = util::resolve_cgroupid(path);
     return ScopedExpr(b_.getInt64(cgroupid));
   } else if (call.func == "join") {
     auto arg0 = call.vargs.front();
@@ -1050,8 +1056,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *octet;
     auto ret = inet_pton(af_type, addr.c_str(), dst.data());
     if (ret != 1) {
-      throw FatalUserException("inet_pton() call returns " +
-                               std::to_string(ret));
+      throw util::FatalUserException("inet_pton() call returns " +
+                                     std::to_string(ret));
     }
     for (int i = 0; i < addr_size; i++) {
       octet = b_.getInt8(dst[i]);
@@ -1065,7 +1071,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
     int offset = arch::offset(reg_name);
     if (offset == -1) {
-      throw FatalUserException("negative offset on reg() call");
+      throw util::FatalUserException("negative offset on reg() call");
     }
 
     return ScopedExpr(
@@ -2713,12 +2719,12 @@ void CodegenLLVM::generateProbe(Probe &probe,
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
 
   int index = current_attach_point_->index() ?: probe.index();
-  auto func_name = get_function_name_for_probe(name,
-                                               index,
-                                               usdt_location_index);
+  auto func_name = util::get_function_name_for_probe(name,
+                                                     index,
+                                                     usdt_location_index);
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
-  func->setSection(get_section_name(func_name));
+  func->setSection(util::get_section_name(func_name));
   debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
@@ -2767,7 +2773,8 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
   if (probetype(ap.provider) == ProbeType::usdt) {
     auto usdt = usdt_helper_->find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
     if (!usdt.has_value()) {
-      throw FatalUserException("Failed to find usdt probe: " + probefull_);
+      throw util::FatalUserException("Failed to find usdt probe: " +
+                                     probefull_);
     } else
       ap.usdt = *usdt;
 
@@ -2927,7 +2934,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
       uint64_t max_bpf_progs = bpftrace_.config_->get(
           ConfigKeyInt::max_bpf_progs);
       if (probe_count_ > max_bpf_progs) {
-        throw FatalUserException(
+        throw util::FatalUserException(
             "Your program is trying to generate more than " +
             std::to_string(probe_count_) +
             " BPF programs, which exceeds the current limit of " +
@@ -3563,11 +3570,11 @@ void CodegenLLVM::generateWatchpointSetupProbe(
     int index,
     const Location &loc)
 {
-  auto func_name = get_function_name_for_watchpoint_setup(expanded_probe_name,
-                                                          index);
+  auto func_name = util::get_function_name_for_watchpoint_setup(
+      expanded_probe_name, index);
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
-  func->setSection(get_section_name(func_name));
+  func->setSection(util::get_section_name(func_name));
   debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
@@ -3873,7 +3880,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
       required_resources.needs_perf_event_map) {
     createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
-                        get_online_cpus().size(),
+                        util::get_online_cpus().size(),
                         CreateInt32(),
                         CreateInt32());
   }
@@ -4582,7 +4589,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
   std::string err;
   auto maybe_func_type = bpftrace_.btf_->resolve_args(func_name, true, err);
   if (!maybe_func_type.has_value()) {
-    throw FatalUserException(err);
+    throw util::FatalUserException(err);
   }
 
   std::vector<llvm::Type *> args;

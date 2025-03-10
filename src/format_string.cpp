@@ -1,9 +1,11 @@
+#include <cstring>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "format_string.h"
 #include "struct.h"
-#include "utils.h"
+#include "util/exceptions.h"
+#include "util/format.h"
 
 namespace bpftrace {
 
@@ -139,7 +141,8 @@ std::string validate_format_string(const std::string &fmt,
 
       message << call_func << ": %" << token
               << " specifier expects a value of type " << token_type << " ("
-              << str_join(arg_types_vec, ",") << " supplied)" << std::endl;
+              << util::str_join(arg_types_vec, ",") << " supplied)"
+              << std::endl;
       return message.str();
     }
   }
@@ -185,8 +188,8 @@ void FormatString::format(std::ostream &out,
   auto check_snprintf_ret = [](int r) {
     if (r < 0) {
       char *e = std::strerror(errno);
-      throw FatalUserException("format() error occurred: " +
-                               std::string(e ? e : ""));
+      throw util::FatalUserException("format() error occurred: " +
+                                     std::string(e ? e : ""));
     }
   };
 

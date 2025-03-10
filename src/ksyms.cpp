@@ -7,7 +7,6 @@
 
 #include "ksyms.h"
 #include "scopeguard.h"
-#include "utils.h"
 
 namespace {
 std::string stringify_addr(uint64_t addr)
@@ -75,10 +74,9 @@ std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
     .vmlinux = "",
   };
 #pragma GCC diagnostic pop
-  uint64_t addrs[1] = { addr };
 
   const blaze_syms *syms = blaze_symbolize_kernel_abs_addrs(
-      symbolizer_, &src, addrs, ARRAY_SIZE(addrs));
+      symbolizer_, &src, &addr, 1);
   if (syms == nullptr)
     return std::nullopt;
   SCOPE_EXIT

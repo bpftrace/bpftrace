@@ -4,8 +4,9 @@
 #include <utility>
 
 #include "ast/context.h"
+#include "ast/helpers.h"
 #include "log.h"
-#include "utils.h"
+#include "util/format.h"
 
 namespace bpftrace::ast {
 
@@ -443,7 +444,7 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
     case ProbeType::kretprobe:
       ap.func = match;
       if (match.find(":") != std::string::npos)
-        ap.target = erase_prefix(ap.func);
+        ap.target = util::erase_prefix(ap.func);
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -454,21 +455,21 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
       // (category for tracepoints, binary for uprobes, and kernel module
       // for fentry/fexit and a function name.
       ap.func = match;
-      ap.target = erase_prefix(ap.func);
+      ap.target = util::erase_prefix(ap.func);
       break;
     case ProbeType::usdt:
       // USDT probes specify a target binary path, a provider, and a function
       // name.
       ap.func = match;
-      ap.target = erase_prefix(ap.func);
-      ap.ns = erase_prefix(ap.func);
+      ap.target = util::erase_prefix(ap.func);
+      ap.ns = util::erase_prefix(ap.func);
       break;
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
       // Watchpoint probes come with target prefix. Strip the target to get the
       // function
       ap.func = match;
-      erase_prefix(ap.func);
+      util::erase_prefix(ap.func);
       break;
     case ProbeType::rawtracepoint:
       ap.func = match;
@@ -529,7 +530,7 @@ std::string Probe::name() const
 
                          std::back_inserter(ap_names),
                          [](const AttachPoint *ap) { return ap->name(); });
-  return str_join(ap_names, ",");
+  return util::str_join(ap_names, ",");
 }
 
 std::string Probe::args_typename() const

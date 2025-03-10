@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
+#include <filesystem>
 #include <fstream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -14,14 +15,19 @@
 #include "bpf_assembler.h"
 #include "btf.h"
 #include "dwarf_parser.h"
-#include "tracefs.h"
-#include "utils.h"
+#include "tracefs/tracefs.h"
+#include "util/format.h"
+#include "util/kernel.h"
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 namespace bpftrace {
 
+using util::KernelVersionMethod;
+
 int BPFnofeature::parse(const char* str)
 {
-  for (auto feat : split_string(str, ',')) {
+  for (auto feat : util::split_string(str, ',')) {
     if (feat == "kprobe_multi") {
       kprobe_multi_ = true;
     } else if (feat == "uprobe_multi") {
@@ -44,12 +50,14 @@ static bool try_load_(const char* name,
                       size_t logbuf_size,
                       int* outfd = nullptr)
 {
-  const KernelVersionMethod methods[] = { vDSO, UTS, File };
+  const KernelVersionMethod methods[] = { KernelVersionMethod::vDSO,
+                                          KernelVersionMethod::UTS,
+                                          KernelVersionMethod::File };
 
   for (KernelVersionMethod method : methods) {
     auto version = kernel_version(method);
 
-    if (method != vDSO && !version) {
+    if (method != KernelVersionMethod::vDSO && !version) {
       // Recent kernels don't check the version so we should try to call
       // bpf_prog_load during first iteration even if we failed to determine
       // the version. We should not do that in subsequent iterations to avoid
@@ -703,7 +711,7 @@ bool BPFfeature::has_iter(std::string name)
 
 bool BPFfeature::has_kernel_dwarf()
 {
-  auto vmlinux = find_vmlinux();
+  auto vmlinux = util::find_vmlinux();
   if (!vmlinux.has_value())
     return false;
 

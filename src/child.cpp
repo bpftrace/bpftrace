@@ -1,7 +1,6 @@
 #include <cassert>
 #include <cerrno>
 #include <fcntl.h>
-
 #include <sched.h>
 #include <stdexcept>
 #include <string>
@@ -12,10 +11,12 @@
 #include <sys/wait.h>
 #include <system_error>
 #include <unistd.h>
+#include <unordered_set>
 
 #include "child.h"
 #include "log.h"
-#include "utils.h"
+#include "util/format.h"
+#include "util/paths.h"
 
 extern char** environ;
 
@@ -90,7 +91,7 @@ static int childfn(void* arg)
 
 static void validate_cmd(std::vector<std::string>& cmd)
 {
-  auto paths = resolve_binary_path(cmd[0]);
+  auto paths = util::resolve_binary_path(cmd[0]);
   switch (paths.size()) {
     case 0:
       throw std::runtime_error("path '" + cmd[0] +
@@ -108,7 +109,7 @@ static void validate_cmd(std::vector<std::string>& cmd)
       // /usr/bin/ping
       std::unordered_set<std::string> uniq_abs_path;
       for (const auto& path : paths) {
-        auto absolute = abs_path(path);
+        auto absolute = util::abs_path(path);
         if (!absolute.has_value())
           continue;
         uniq_abs_path.insert(*absolute);
@@ -136,7 +137,7 @@ ChildProc::ChildProc(std::string cmd)
   auto child_args = std::make_unique<struct child_args>();
   auto child_stack = std::make_unique<char[]>(STACK_SIZE);
 
-  child_args->cmd = split_string(cmd, ' ');
+  child_args->cmd = util::split_string(cmd, ' ');
   validate_cmd(child_args->cmd);
 
   int event_fd = eventfd(0, EFD_CLOEXEC);

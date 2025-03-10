@@ -1,10 +1,10 @@
 add_library(ast_defs STATIC
   ast.cpp
   context.cpp
-  int_parser.cpp
   location.cpp
 )
 add_dependencies(ast_defs parser)
+target_link_libraries(ast_defs util)
 
 add_library(ast STATIC
   async_event_types.cpp
@@ -12,6 +12,7 @@ add_library(ast STATIC
   codegen_helper.cpp
   diagnostic.cpp
   dibuilderbpf.cpp
+  helpers.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
   signal.cpp
@@ -29,6 +30,7 @@ add_library(ast STATIC
 )
 
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
+target_link_libraries(ast PRIVATE debugfs tracefs util)
 target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
 
 if(STATIC_LINKING)

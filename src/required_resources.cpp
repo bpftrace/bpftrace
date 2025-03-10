@@ -8,7 +8,7 @@
 #include <cereal/types/vector.hpp>
 
 #include "required_resources.h"
-#include "utils.h"
+#include "util/io.h"
 
 namespace bpftrace {
 
@@ -27,7 +27,7 @@ void RequiredResources::load_state(std::istream &in)
 void RequiredResources::load_state(const uint8_t *ptr, size_t len)
 {
   auto addr = const_cast<uint8_t *>(ptr);
-  Membuf mbuf(addr, addr + len);
+  util::Membuf mbuf(addr, addr + len);
   std::istream istream(&mbuf);
   cereal::BinaryInputArchive archive(istream);
   archive(*this);

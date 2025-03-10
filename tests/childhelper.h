@@ -1,13 +1,13 @@
 #include "child.h"
-#include "utils.h"
+#include "util/io.h"
 #include "gtest/gtest.h"
 
 namespace {
 
 using bpftrace::ChildProc;
 using bpftrace::ChildProcBase;
-using bpftrace::StderrSilencer;
-using bpftrace::StdoutSilencer;
+using bpftrace::util::StderrSilencer;
+using bpftrace::util::StdoutSilencer;
 
 inline int msleep(int msec)
 {

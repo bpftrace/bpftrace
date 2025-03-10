@@ -1,7 +1,9 @@
 #pragma once
 
+#include <bcc/bcc_syms.h>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -33,11 +35,12 @@
 #include "struct.h"
 #include "types.h"
 #include "usyms.h"
-#include "utils.h"
-
-#include <bcc/bcc_syms.h>
+#include "util/cpus.h"
+#include "util/kernel.h"
 
 namespace bpftrace {
+
+using util::symbol;
 
 const int timeout_ms = 100;
 
@@ -101,8 +104,8 @@ public:
       : out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>(no_feature)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
-        ncpus_(get_possible_cpus().size()),
-        max_cpu_id_(get_max_cpu_id()),
+        ncpus_(util::get_possible_cpus().size()),
+        max_cpu_id_(util::get_max_cpu_id()),
         config_(std::move(config)),
         ksyms_(*config_),
         usyms_(*config_)
@@ -153,7 +156,6 @@ public:
   std::string resolve_cgroup_path(uint64_t cgroup_path_id,
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;
-  uint64_t resolve_cgroupid(const std::string &path) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(
       const std::vector<Field> &args,
       uint8_t *arg_data);
@@ -200,8 +202,8 @@ public:
   std::map<std::string, std::map<uint64_t, std::string>> enum_defs_;
   // For each helper, list of all generated call sites.
   std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;
-  const FuncsModulesMap &get_traceable_funcs() const;
-  KConfig kconfig;
+  const util::FuncsModulesMap &get_traceable_funcs() const;
+  util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::optional<int> sigusr1_prog_fd_;
 
@@ -295,7 +297,7 @@ private:
   // Mapping traceable functions to modules (or "vmlinux") they appear in.
   // Needs to be mutable to allow lazy loading of the mapping from const lookup
   // functions.
-  mutable FuncsModulesMap traceable_funcs_;
+  mutable util::FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };

@@ -1,5 +1,6 @@
-#include "tracefs.h"
 #include <unistd.h>
+
+#include "tracefs.h"
 
 namespace bpftrace::tracefs {
 
