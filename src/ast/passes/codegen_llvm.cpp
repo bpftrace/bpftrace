@@ -1,12 +1,9 @@
-#include "codegen_llvm.h"
-
 #include <algorithm>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <csignal>
 #include <cstdio>
 #include <ctime>
-#include <fstream>
 #include <llvm/IR/GlobalValue.h>
 
 #if LLVM_VERSION_MAJOR <= 16
@@ -35,6 +32,7 @@
 #include "ast/context.h"
 #include "ast/signal_bt.h"
 #include "bpfmap.h"
+#include "codegen_llvm.h"
 #include "globalvars.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
@@ -47,47 +45,52 @@
 
 namespace bpftrace::ast {
 
-CodegenLLVM::CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace)
-    : CodegenLLVM(ctx, bpftrace, std::make_unique<USDTHelper>())
+static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
+
+static auto getTargetMachine()
 {
+  static auto target = []() {
+    LLVMInitializeBPFTargetInfo();
+    LLVMInitializeBPFTarget();
+    LLVMInitializeBPFTargetMC();
+    LLVMInitializeBPFAsmPrinter();
+    std::string error_str;
+    auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple,
+                                                     error_str);
+    if (!target) {
+      throw util::FatalUserException(
+          "Could not find bpf llvm target, does your llvm support it?");
+    }
+    auto machine = target->createTargetMachine(LLVMTargetTriple,
+                                               "generic",
+                                               "",
+                                               TargetOptions(),
+                                               std::optional<Reloc::Model>());
+#if LLVM_VERSION_MAJOR >= 18
+    machine->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
+#else
+    machine->setOptLevel(llvm::CodeGenOpt::Aggressive);
+#endif
+    return machine;
+  }();
+  return target;
 }
 
-CodegenLLVM::CodegenLLVM(ASTContext &ctx,
+CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          BPFtrace &bpftrace,
-                         std::unique_ptr<USDTHelper> usdt_helper)
-    : astctx_(ctx),
+                         LLVMContext &llvm_ctx,
+                         USDTHelper &usdt_helper)
+    : ast_(ast),
       bpftrace_(bpftrace),
-      usdt_helper_(std::move(usdt_helper)),
-      context_(std::make_unique<LLVMContext>()),
-      module_(std::make_unique<Module>("bpftrace", *context_)),
+      llvm_ctx_(llvm_ctx),
+      usdt_helper_(usdt_helper),
+      module_(std::make_unique<Module>("bpftrace", llvm_ctx)),
       async_ids_(AsyncIds()),
-      b_(*context_, *module_, bpftrace, async_ids_),
+      b_(llvm_ctx, *module_, bpftrace, async_ids_),
       debug_(*module_)
 {
-  LLVMInitializeBPFTargetInfo();
-  LLVMInitializeBPFTarget();
-  LLVMInitializeBPFTargetMC();
-  LLVMInitializeBPFAsmPrinter();
-  std::string error_str;
-  auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
-  if (!target)
-    throw util::FatalUserException(
-        "Could not find bpf llvm target, does your llvm support it?");
-
-  target_machine_.reset(
-      target->createTargetMachine(LLVMTargetTriple,
-                                  "generic",
-                                  "",
-                                  TargetOptions(),
-                                  std::optional<Reloc::Model>()));
-#if LLVM_VERSION_MAJOR >= 18
-  target_machine_->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
-#else
-  target_machine_->setOptLevel(llvm::CodeGenOpt::Aggressive);
-#endif
-
   module_->setTargetTriple(LLVMTargetTriple);
-  module_->setDataLayout(target_machine_->createDataLayout());
+  module_->setDataLayout(getTargetMachine()->createDataLayout());
 
   debug_.createCompileUnit(dwarf::DW_LANG_C,
                            debug_.file,
@@ -885,8 +888,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
-      throw util::FatalUserException("Failed to resolve kernel symbol: " +
-                                     name);
+      call.addError() << "Failed to resolve kernel symbol: " << name;
     return ScopedExpr(b_.getInt64(addr));
   } else if (call.func == "percpu_kaddr") {
     auto name = bpftrace_.get_string_literal(call.vargs.at(0));
@@ -906,9 +908,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                       &sym,
                                       current_attach_point_->target);
     if (err < 0 || sym.address == 0)
-      throw util::FatalUserException(
-          "Could not resolve symbol: " + current_attach_point_->target + ":" +
-          name);
+      call.addError() << "Could not resolve symbol: "
+                      << current_attach_point_->target << ":" << name;
     return ScopedExpr(b_.getInt64(sym.address));
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
@@ -1056,8 +1057,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *octet;
     auto ret = inet_pton(af_type, addr.c_str(), dst.data());
     if (ret != 1) {
-      throw util::FatalUserException("inet_pton() call returns " +
-                                     std::to_string(ret));
+      call.addError() << "inet_pton() call returns " << std::to_string(ret);
     }
     for (int i = 0; i < addr_size; i++) {
       octet = b_.getInt8(dst[i]);
@@ -1071,7 +1071,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
     int offset = arch::offset(reg_name);
     if (offset == -1) {
-      throw util::FatalUserException("negative offset on reg() call");
+      call.addError() << "negative offset on reg() call";
     }
 
     return ScopedExpr(
@@ -1297,7 +1297,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                  !is_array_map(map.type, map.key_type)) {
         return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
                                                { b_.GetMapVar(map.ident) },
-                                               "len"));
+                                               "len",
+                                               call));
       } else {
         if (!map_len_func_)
           map_len_func_ = createMapLenCallback();
@@ -2749,9 +2750,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                                 "exit_probe",
                                                 func);
 
-    Value *is_ret = CreateKernelFuncCall(Kfunc::bpf_session_is_return,
-                                         {},
-                                         "is_return");
+    Value *is_ret = CreateKernelFuncCall(
+        Kfunc::bpf_session_is_return, {}, "is_return", probe);
     b_.CreateCondBr(b_.CreateICmpNE(is_ret, b_.GetIntSameSize(0, is_ret)),
                     exit_probe,
                     entry_probe);
@@ -2803,10 +2803,9 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
       return;
   }
   if (probetype(ap.provider) == ProbeType::usdt) {
-    auto usdt = usdt_helper_->find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
+    auto usdt = usdt_helper_.find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
     if (!usdt.has_value()) {
-      throw util::FatalUserException("Failed to find usdt probe: " +
-                                     probefull_);
+      ap.addError() << "Failed to find usdt probe: " << probefull_;
     } else
       ap.usdt = *usdt;
 
@@ -2824,12 +2823,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
       std::string full_func_id = name + "_loc" + std::to_string(i);
       generateProbe(probe, full_func_id, probefull_, func_type, i);
-      bpftrace_.add_probe(astctx_, ap, probe, i);
+      bpftrace_.add_probe(ast_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, name, probefull_, func_type);
-    bpftrace_.add_probe(astctx_, ap, probe);
+    bpftrace_.add_probe(ast_, ap, probe);
   }
   current_attach_point_ = nullptr;
 }
@@ -2949,6 +2948,12 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
                                               { b_.getPtrTy() }, // ctx
                                               false);
 
+  // Skip if we've generated too many, an error will have already been
+  // generated below when we first crossed this threshold.
+  uint64_t max_bpf_progs = bpftrace_.config_->get(ConfigKeyInt::max_bpf_progs);
+  if (probe_count_ > max_bpf_progs)
+    return ScopedExpr();
+
   // We begin by saving state that gets changed by the codegen pass, so we
   // can restore it for the next pass (printf_id_, time_id_).
   auto reset_ids = async_ids_.create_reset_ids();
@@ -2963,16 +2968,16 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
           *attach_point);
 
       probe_count_ += matches.size();
-      uint64_t max_bpf_progs = bpftrace_.config_->get(
-          ConfigKeyInt::max_bpf_progs);
       if (probe_count_ > max_bpf_progs) {
-        throw util::FatalUserException(
-            "Your program is trying to generate more than " +
-            std::to_string(probe_count_) +
-            " BPF programs, which exceeds the current limit of " +
-            std::to_string(max_bpf_progs) +
-            ".\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
-            "environment variable.");
+        auto &err = probe.addError();
+        err << "Your program is trying to generate more than "
+            << std::to_string(probe_count_)
+            << " BPF programs, which exceeds the current limit of "
+            << std::to_string(max_bpf_progs);
+        err.addHint()
+            << "You can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
+               "environment variable.";
+        return ScopedExpr();
       }
 
       for (auto &match : matches) {
@@ -2980,7 +2985,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
         if (attach_point->index() == 0)
           attach_point->set_index(getNextIndexForProbe());
 
-        auto &match_ap = attach_point->create_expansion_copy(astctx_, match);
+        auto &match_ap = attach_point->create_expansion_copy(ast_, match);
         add_probe(match_ap, probe, match, func_type);
         generated = true;
       }
@@ -3518,10 +3523,9 @@ MDNode *CodegenLLVM::createLoopMetadata()
   //
   // For legacy reasons, the first item of a loop metadata node must be
   // a self-reference. See https://llvm.org/docs/LangRef.html#llvm-loop
-  LLVMContext &context = *context_;
   MDNode *unroll_disable = MDNode::get(
-      context, MDString::get(context, "llvm.loop.unroll.disable"));
-  MDNode *loopid = MDNode::getDistinct(context,
+      llvm_ctx_, MDString::get(llvm_ctx_, "llvm.loop.unroll.disable"));
+  MDNode *loopid = MDNode::getDistinct(llvm_ctx_,
                                        { unroll_disable, unroll_disable });
   loopid->replaceOperandWith(0, loopid);
 
@@ -3744,21 +3748,6 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
     b_.CreateLifetimeEnd(buf);
 }
 
-void CodegenLLVM::generate_ir()
-{
-  assert(state_ == State::INIT);
-
-  auto analyser = CodegenResourceAnalyser(*bpftrace_.config_);
-  auto codegen_resources = analyser.analyse(*astctx_.root);
-
-  generate_maps(bpftrace_.resources, codegen_resources);
-  generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
-
-  auto scoped_del = visit(astctx_.root);
-  debug_.finalize();
-  state_ = State::IR;
-}
-
 void CodegenLLVM::createMapDefinition(const std::string &name,
                                       libbpf::bpf_map_type map_type,
                                       uint64_t max_entries,
@@ -3953,150 +3942,6 @@ void CodegenLLVM::generate_global_vars(
     var->setDSOLocal(true);
     var->addDebugInfo(debug_.createGlobalVariable(config.name, type));
   }
-}
-
-void CodegenLLVM::emit_elf(const std::string &filename)
-{
-  assert(state_ == State::OPT);
-
-  std::error_code err;
-  raw_fd_ostream out(filename, err);
-  if (err)
-    throw std::system_error(err.value(),
-                            std::generic_category(),
-                            "Failed to open: " + filename);
-
-  emit(out);
-  out.flush();
-
-  return;
-}
-
-void CodegenLLVM::optimize()
-{
-  assert(state_ == State::IR);
-
-  PipelineTuningOptions pto;
-  pto.LoopUnrolling = false;
-  pto.LoopInterleaving = false;
-  pto.LoopVectorization = false;
-  pto.SLPVectorization = false;
-
-  llvm::PassBuilder pb(target_machine_.get(), pto);
-
-  // ModuleAnalysisManager must be destroyed first.
-  llvm::LoopAnalysisManager lam;
-  llvm::FunctionAnalysisManager fam;
-  llvm::CGSCCAnalysisManager cgam;
-  llvm::ModuleAnalysisManager mam;
-
-  // Register all the basic analyses with the managers.
-  pb.registerModuleAnalyses(mam);
-  pb.registerCGSCCAnalyses(cgam);
-  pb.registerFunctionAnalyses(fam);
-  pb.registerLoopAnalyses(lam);
-  pb.crossRegisterProxies(lam, fam, cgam, mam);
-
-  ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
-      llvm::OptimizationLevel::O3);
-  mpm.run(*module_, mam);
-
-  state_ = State::OPT;
-}
-
-bool CodegenLLVM::verify()
-{
-  bool ret = llvm::verifyModule(*module_, &errs());
-  if (ret) {
-    /* verifyModule doesn't end output with end of line of line, print it now */
-    std::cerr << std::endl;
-  }
-  return !ret;
-}
-
-// Technically we could use LLVM APIs to do a proper disassemble on
-// the in-memory ELF file. But that is quite complex, as LLVM only
-// provides fairly low level APIs to do this.
-//
-// Since disassembly is a debugging tool, just shell out to llvm-objdump
-// to keep things simple.
-static void disassemble(const SmallVector<char, 0> &elf)
-{
-  std::cout << "\nDisassembled bytecode\n";
-  std::cout << "---------------------------\n";
-
-  FILE *objdump = ::popen("llvm-objdump -d -", "w");
-  if (!objdump) {
-    LOG(ERROR) << "Failed to spawn llvm-objdump: " << strerror(errno);
-    return;
-  }
-
-  if (::fwrite(elf.data(), sizeof(char), elf.size(), objdump) != elf.size()) {
-    LOG(ERROR) << "Failed to write ELF to llvm-objdump";
-    return;
-  }
-
-  if (auto rc = ::pclose(objdump))
-    LOG(WARNING) << "llvm-objdump did not exit cleanly: status " << rc;
-}
-
-void CodegenLLVM::emit(raw_pwrite_stream &stream)
-{
-  legacy::PassManager PM;
-
-#if LLVM_VERSION_MAJOR >= 18
-  auto type = CodeGenFileType::ObjectFile;
-#else
-  auto type = llvm::CGFT_ObjectFile;
-#endif
-
-  if (target_machine_->addPassesToEmitFile(PM, stream, nullptr, type))
-    LOG(BUG) << "Cannot emit a file of this type";
-  PM.run(*module_.get());
-}
-
-BpfBytecode CodegenLLVM::emit(bool dis)
-{
-  assert(state_ == State::OPT);
-  SmallVector<char, 0> output;
-  raw_svector_ostream os(output);
-
-  emit(os);
-  assert(!output.empty());
-
-  if (dis)
-    disassemble(output);
-
-  state_ = State::DONE;
-  return BpfBytecode{ output };
-}
-
-BpfBytecode CodegenLLVM::compile()
-{
-  generate_ir();
-  optimize();
-  return emit(false);
-}
-
-void CodegenLLVM::DumpIR()
-{
-  DumpIR(std::cout);
-}
-
-void CodegenLLVM::DumpIR(std::ostream &out)
-{
-  assert(module_.get() != nullptr);
-  raw_os_ostream os(out);
-  module_->print(os, nullptr, false, true);
-}
-
-void CodegenLLVM::DumpIR(const std::string filename)
-{
-  assert(module_.get() != nullptr);
-  std::ofstream file;
-  file.open(filename);
-  raw_os_ostream os(file);
-  module_->print(os, nullptr, false, true);
 }
 
 // Read a single element from a compound data structure (i.e. an array or
@@ -4612,7 +4457,7 @@ Value *CodegenLLVM::createFmtString(int print_id)
 ///
 /// If the function declaration is already in the module, just return it.
 ///
-llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
+llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
 {
   const std::string &func_name = kfunc_name(kfunc);
   if (auto *fun = module_->getFunction(func_name))
@@ -4622,7 +4467,8 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
   auto maybe_func_type = bpftrace_.btf_->resolve_args(
       func_name, true, false, err);
   if (!maybe_func_type.has_value()) {
-    throw util::FatalUserException(err);
+    call.addError() << "Unknown kernel function: " << func_name;
+    return nullptr;
   }
 
   std::vector<llvm::Type *> args;
@@ -4658,9 +4504,10 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc)
 
 CallInst *CodegenLLVM::CreateKernelFuncCall(Kfunc kfunc,
                                             ArrayRef<Value *> args,
-                                            const Twine &name)
+                                            const Twine &name,
+                                            Node &call)
 {
-  auto func = DeclareKernelFunc(kfunc);
+  auto func = DeclareKernelFunc(kfunc, call);
   return b_.createCall(func->getFunctionType(), func, args, name);
 }
 
@@ -4692,6 +4539,151 @@ GlobalVariable *CodegenLLVM::DeclareKernelVar(const std::string &var_name)
   var->addDebugInfo(var_debug);
 
   return var;
+}
+
+std::unique_ptr<llvm::Module> CodegenLLVM::compile()
+{
+  CodegenResourceAnalyser analyser(*bpftrace_.config_.get());
+  auto codegen_resources = analyser.analyse(*ast_.root);
+  generate_maps(bpftrace_.resources, codegen_resources);
+  generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
+  {
+    visit(ast_.root);
+  }
+  debug_.finalize();
+  return std::move(module_);
+}
+
+Pass CreateLLVMInitPass()
+{
+  return Pass::create("llvm-init", [] { return CompileContext(); });
+}
+
+Pass CreateCompilePass(
+    std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper)
+{
+  return Pass::create(
+      "compile",
+      [usdt_helper](ASTContext &ast,
+                    BPFtrace &bpftrace,
+                    CompileContext &ctx) mutable {
+        USDTHelper default_usdt;
+        if (!usdt_helper) {
+          usdt_helper = std::ref(default_usdt);
+        }
+        CodegenLLVM llvm(ast, bpftrace, *ctx.context.get(), usdt_helper->get());
+        return CompiledModule(llvm.compile());
+      });
+}
+
+Pass CreateVerifyPass()
+{
+  return Pass::create("verify", [](ASTContext &ast, CompiledModule &cm) {
+    std::stringstream ss;
+    raw_os_ostream OS(ss);
+    bool ret = llvm::verifyModule(*cm.module.get(), &OS);
+    if (ret) {
+      ast.root->addError() << ss.str();
+    }
+  });
+}
+
+Pass CreateOptimizePass()
+{
+  return Pass::create("optimize", [](CompiledModule &cm) {
+    PipelineTuningOptions pto;
+    pto.LoopUnrolling = false;
+    pto.LoopInterleaving = false;
+    pto.LoopVectorization = false;
+    pto.SLPVectorization = false;
+
+    llvm::PassBuilder pb(getTargetMachine(), pto);
+
+    // ModuleAnalysisManager must be destroyed first.
+    llvm::LoopAnalysisManager lam;
+    llvm::FunctionAnalysisManager fam;
+    llvm::CGSCCAnalysisManager cgam;
+    llvm::ModuleAnalysisManager mam;
+
+    // Register all the basic analyses with the managers.
+    pb.registerModuleAnalyses(mam);
+    pb.registerCGSCCAnalyses(cgam);
+    pb.registerFunctionAnalyses(fam);
+    pb.registerLoopAnalyses(lam);
+    pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+    ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
+        llvm::OptimizationLevel::O3);
+    mpm.run(*cm.module.get(), mam);
+  });
+}
+
+Pass CreateDumpIRPass(std::ostream &out)
+{
+  return Pass::create("dump-ir", [&out](CompiledModule &cm) {
+    raw_os_ostream os(out);
+    cm.module->print(os, nullptr, false, true);
+    os.flush();
+  });
+}
+
+Pass CreateObjectPass()
+{
+  return Pass::create("object", [](CompiledModule &cm) {
+    SmallVector<char, 0> output;
+    raw_svector_ostream os(output);
+
+    legacy::PassManager PM;
+#if LLVM_VERSION_MAJOR >= 18
+    auto type = CodeGenFileType::ObjectFile;
+#else
+    auto type = llvm::CGFT_ObjectFile;
+#endif
+    if (getTargetMachine()->addPassesToEmitFile(PM, os, nullptr, type))
+      LOG(BUG) << "Cannot emit a file of this type";
+    PM.run(*cm.module.get());
+    return BpfObject(output);
+  });
+}
+
+Pass CreateDumpASMPass([[maybe_unused]] std::ostream &out)
+{
+  return Pass::create("dump-asm", [](BpfObject &bpf) {
+    // Technically we could use LLVM APIs to do a proper disassemble on
+    // the in-memory ELF file. But that is quite complex, as LLVM only
+    // provides fairly low level APIs to do this.
+    //
+    // Since disassembly is a debugging tool, just shell out to llvm-objdump
+    // to keep things simple.
+    std::cout << "\nDisassembled bytecode\n";
+    std::cout << "---------------------------\n";
+
+    FILE *objdump = ::popen("llvm-objdump -d -", "w");
+    if (!objdump) {
+      LOG(ERROR) << "Failed to spawn llvm-objdump: " << strerror(errno);
+      return;
+    }
+
+    if (::fwrite(bpf.data.data(), sizeof(char), bpf.data.size(), objdump) !=
+        bpf.data.size()) {
+      LOG(ERROR) << "Failed to write ELF to llvm-objdump";
+      return;
+    }
+
+    if (auto rc = ::pclose(objdump)) {
+      LOG(WARNING) << "llvm-objdump did not exit cleanly: status " << rc;
+    }
+  });
+}
+
+Pass CreateLinkPass()
+{
+  return Pass::create("link", [](BpfObject &obj) {
+    // For now, this is effectively a no-op. It merely
+    // unwraps the type into a `BpfBytecode` object. In the
+    // future, this can link additonal external components.
+    return BpfBytecode{ obj.data };
+  });
 }
 
 } // namespace bpftrace::ast
