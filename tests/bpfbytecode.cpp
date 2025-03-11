@@ -1,10 +1,8 @@
 #include "bpfbytecode.h"
-#include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "mocks.h"
-
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::bpfbytecode {
@@ -20,11 +18,11 @@ BpfBytecode codegen(const std::string &input)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
+                .add(ast::AllCompilePasses())
                 .run();
   EXPECT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  return codegen.compile();
+  auto &output = ok->get<BpfBytecode>();
+  return std::move(output);
 }
 
 TEST(bpfbytecode, create_programs)

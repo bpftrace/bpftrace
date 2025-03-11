@@ -23,11 +23,9 @@ TEST(codegen, regression_957)
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  codegen.compile();
 }
 
 } // namespace codegen

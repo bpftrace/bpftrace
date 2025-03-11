@@ -52,6 +52,7 @@ static void test(BPFtrace &bpftrace,
   ast::ASTContext ast("stdin", input);
 
   // N.B. No tracepoint expansion.
+  std::stringstream out;
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
@@ -66,18 +67,13 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::CreateProbePass())
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateCompilePass())
+                .add(ast::CreateDumpIRPass(out))
                 .run();
   std::stringstream errs;
   ast.diagnostics().emit(errs);
   ASSERT_TRUE(ok && ast.diagnostics().ok()) << errs.str();
-
-  std::stringstream out;
-  ast::CodegenLLVM codegen(ast, bpftrace);
-  codegen.generate_ir();
-  codegen.DumpIR(out);
-  // Test that generated code compiles cleanly
-  codegen.optimize();
-  codegen.emit(false);
 
   uint64_t update_tests = 0;
   util::get_uint64_env_var("BPFTRACE_UPDATE_TESTS",

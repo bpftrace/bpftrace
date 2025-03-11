@@ -63,11 +63,9 @@ kprobe:f
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  codegen.generate_ir();
 
   EXPECT_EQ(bpftrace->resources.printf_args.size(), 1U);
   auto fmt = std::get<0>(bpftrace->resources.printf_args[0]).str();
@@ -112,11 +110,9 @@ kprobe:f { 1; } kprobe:d { 1; }
                 .put<BPFtrace>(bpftrace)
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, bpftrace);
-  codegen.generate_ir();
 }
 } // namespace codegen
 } // namespace test

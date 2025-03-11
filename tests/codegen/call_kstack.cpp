@@ -28,11 +28,10 @@ kprobe:f {
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  bpftrace->bytecode_ = codegen.compile();
+  bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 8);
   ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 3U);
@@ -60,11 +59,10 @@ kprobe:f {
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  bpftrace->bytecode_ = codegen.compile();
+  bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 10);
   ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 4U);

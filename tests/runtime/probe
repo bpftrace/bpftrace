@@ -505,10 +505,12 @@ EXPECT Hello
 TIMEOUT 2
 
 # The "probe" builtin forces bpftrace to generate one BPF function for each
-# match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS.
+# match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS. The error is
+# attached to the probe that went over the limit, which in this case is the
+# only probe that we specify.
 NAME bpf_programs_limit
 PROG k:* { @[probe] = count(); }
-EXPECT_REGEX ERROR: Failed to compile: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 1024.\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
+EXPECT_REGEX stdin:1:1-28: ERROR: Your program is trying to generate more than \d+ BPF programs, which exceeds the current limit of 1024\nk:\* { @\[probe\] = count\(\); }\n~~~~~~~~~~~~~~~~~~~~~~~~~~~\nHINT: You can increase the limit through the BPFTRACE_MAX_BPF_PROGS environment variable.
 WILL_FAIL
 TIMEOUT 2
 

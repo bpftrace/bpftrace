@@ -45,6 +45,7 @@ static auto parse_probe(const std::string &str,
   ast::ASTContext ast("stdin", str);
 
   // N.B. Don't use tracepoint format parser here.
+  auto usdt = get_mock_usdt_helper(usdt_num_locations);
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
@@ -54,13 +55,10 @@ static auto parse_probe(const std::string &str,
                 .add(CreateClangPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateProbePass())
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateCompilePass(std::ref(*usdt)))
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
-  std::stringstream out;
-  ast::CodegenLLVM codegen(ast, bpftrace, std::move(usdt_helper));
-  codegen.generate_ir();
 }
 
 void check_kprobe(Probe &p,
