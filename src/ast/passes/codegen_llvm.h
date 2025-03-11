@@ -105,10 +105,10 @@ private:
 
 class CodegenLLVM : public Visitor<CodegenLLVM, ScopedExpr> {
 public:
-  explicit CodegenLLVM(ASTContext &ctx, BPFtrace &bpftrace);
-  explicit CodegenLLVM(ASTContext &ctx,
+  explicit CodegenLLVM(ASTContext &ast,
                        BPFtrace &bpftrace,
-                       std::unique_ptr<USDTHelper> usdt_helper);
+                       LLVMContext &llvm_ctx,
+                       USDTHelper &usdt_helper);
 
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
@@ -144,15 +144,16 @@ public:
   ScopedExpr visit(Program &program);
   ScopedExpr visit(Block &block);
 
+  // compile is the primary entrypoint; it will return the generated LLVMModule.
+  // Only one call to `compile` is permitted per instantiation.
+  std::unique_ptr<llvm::Module> compile();
+
+private:
   ScopedExpr getHistMapKey(Map &map, Value *log2, const Location &loc);
   int getNextIndexForProbe();
   ScopedExpr createLogicalAnd(Binop &binop);
   ScopedExpr createLogicalOr(Binop &binop);
 
-  // Exists to make calling from a debugger easier
-  void DumpIR();
-  void DumpIR(std::ostream &out);
-  void DumpIR(const std::string filename);
   void createFormatStringCall(Call &call,
                               int id,
                               const CallArgs &call_args,
@@ -177,7 +178,6 @@ public:
                        Value *dst_val,
                        Value *src_val);
 
-  void generate_ir();
   libbpf::bpf_map_type get_map_type(const SizedType &val_type,
                                     const SizedType &key_type);
   bool is_array_map(const SizedType &val_type, const SizedType &key_type);
@@ -186,16 +186,6 @@ public:
   void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
-  void optimize();
-  bool verify();
-  BpfBytecode emit(bool disassemble);
-  void emit_elf(const std::string &filename);
-  void emit(raw_pwrite_stream &stream);
-  // Combine generate_ir, optimize and emit into one call
-  BpfBytecode compile();
-
-private:
-  static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
 
   // Generate a probe for `current_attach_point_`
   //
@@ -299,23 +289,23 @@ private:
   VariableLLVM *maybeGetVariable(const std::string &);
   VariableLLVM &getVariable(const std::string &);
 
-  llvm::Function *DeclareKernelFunc(Kfunc kfunc);
+  llvm::Function *DeclareKernelFunc(Kfunc kfunc, Node &call);
 
   CallInst *CreateKernelFuncCall(Kfunc kfunc,
                                  ArrayRef<Value *> args,
-                                 const Twine &name);
+                                 const Twine &name,
+                                 Node &call);
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
 
-  ASTContext &astctx_;
+  ASTContext &ast_;
   BPFtrace &bpftrace_;
-  std::unique_ptr<USDTHelper> usdt_helper_;
-  std::unique_ptr<LLVMContext> context_;
-  std::unique_ptr<TargetMachine> target_machine_;
+  LLVMContext &llvm_ctx_;
+  USDTHelper &usdt_helper_;
   std::unique_ptr<Module> module_;
   AsyncIds async_ids_;
-  IRBuilderBPF b_;
 
+  IRBuilderBPF b_;
   DIBuilderBPF debug_;
 
   const DataLayout &datalayout() const
@@ -362,5 +352,69 @@ private:
   };
   State state_ = State::INIT;
 };
+
+class CompileContext : public ast::State<"compile-context"> {
+public:
+  CompileContext() : context(std::make_unique<LLVMContext>()) {};
+  std::unique_ptr<LLVMContext> context;
+};
+
+// LLVMInit will create the required LLVM context which can be subsequently
+// shared by other passes. This should always be added, unless an external
+// `LLVMContext` is injected into the pass ahead of time.
+Pass CreateLLVMInitPass();
+
+class CompiledModule : public ast::State<"compiled-module"> {
+public:
+  CompiledModule(std::unique_ptr<llvm::Module> module)
+      : module(std::move(module)) {};
+  std::unique_ptr<llvm::Module> module;
+};
+
+// Compiles the primary AST, and emits `CompiledModule`.
+Pass CreateCompilePass(std::optional<std::reference_wrapper<USDTHelper>>
+                           &&usdt_helper = std::nullopt);
+
+// Dumps `CompiledModule` to the given stream.
+Pass CreateDumpIRPass(std::ostream &out);
+
+// Validates `CompiledModule`, and attaches an error diagnostic to the program
+// itself if verification fails.
+Pass CreateVerifyPass();
+
+// In-place optimizes the `CompiledModule` emitted by the compile pass.
+Pass CreateOptimizePass();
+
+class BpfObject : public ast::State<"bpf-object"> {
+public:
+  BpfObject(std::span<char> data) : data(data.begin(), data.end()) {};
+  std::vector<char> data;
+};
+
+// Produces the ELF data for the BPF bytecode as a `BpfObject`. This is
+// required by the Link pass below.
+Pass CreateObjectPass();
+
+// Dumps `BpfObject` as disassembled bytecode.
+Pass CreateDumpASMPass(std::ostream &out);
+
+// Produces the final output `BpfBytecode` object from `BpfObject`.
+Pass CreateLinkPass();
+
+// AllCompilePasses returns a vector of passes representing all compile passes,
+// in the expected order.
+inline std::vector<Pass> AllCompilePasses(
+    std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper =
+        std::nullopt)
+{
+  std::vector<Pass> passes;
+  passes.emplace_back(CreateLLVMInitPass());
+  passes.emplace_back(CreateCompilePass(std::move(usdt_helper)));
+  passes.emplace_back(CreateVerifyPass());
+  passes.emplace_back(CreateOptimizePass());
+  passes.emplace_back(CreateObjectPass());
+  passes.emplace_back(CreateLinkPass());
+  return passes;
+}
 
 } // namespace bpftrace::ast

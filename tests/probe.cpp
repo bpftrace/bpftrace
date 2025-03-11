@@ -30,12 +30,11 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
+                .add(ast::AllCompilePasses())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  ast::CodegenLLVM codegen(ast, *bpftrace);
-  codegen.generate_ir();
-  codegen.DumpIR(out);
+  auto &obj = ok->get<ast::BpfObject>();
+  out.write(obj.data.data(), obj.data.size());
 }
 
 void compare_bytecode(const std::string &input1, const std::string &input2)

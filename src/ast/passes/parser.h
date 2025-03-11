@@ -10,7 +10,7 @@
 
 namespace bpftrace::ast {
 
-// AllParsePasses returns a `MultiPass` representing all parser passes, in
+// AllParsePasses returns a vector of passes representing all parser passes, in
 // the expected order. This should be used unless there's a reason not to.
 inline std::vector<Pass> AllParsePasses(
     std::vector<std::string> &&extra_flags = {})

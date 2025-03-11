@@ -979,67 +979,72 @@ int main(int argc, char* argv[])
       break;
   }
 
+  pm.add(ast::CreateLLVMInitPass());
+  pm.add(ast::CreateCompilePass());
+  if (bt_debug.find(DebugStage::Codegen) != bt_debug.end()) {
+    pm.add(ast::Pass::create("dump-ir-prefix", [&] {
+      std::cout << "LLVM IR before optimization\n";
+      std::cout << "---------------------------\n\n";
+    }));
+    pm.add(ast::CreateDumpIRPass(std::cout));
+  }
+  std::optional<std::ofstream> output_ir;
+  if (!args.output_llvm.empty()) {
+    output_ir = std::ofstream(args.output_llvm + ".original.ll");
+    pm.add(ast::CreateDumpIRPass(*output_ir));
+  }
+  bool verify_llvm_ir = false;
+  util::get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
+                         [&](bool x) { verify_llvm_ir = x; });
+  if (verify_llvm_ir) {
+    pm.add(ast::CreateVerifyPass());
+  }
+  pm.add(ast::CreateOptimizePass());
+  if (bt_debug.find(DebugStage::CodegenOpt) != bt_debug.end()) {
+    pm.add(ast::Pass::create("dump-ir-opt-prefix", [&] {
+      std::cout << "\nLLVM IR after optimization\n";
+      std::cout << "----------------------------\n\n";
+    }));
+    pm.add(ast::CreateDumpIRPass(std::cout));
+  }
+  std::optional<std::ofstream> output_ir_opt;
+  if (!args.output_llvm.empty()) {
+    output_ir_opt = std::ofstream(args.output_llvm + ".optimized.ll");
+    pm.add(ast::CreateDumpIRPass(*output_ir_opt));
+  }
+  pm.add(ast::CreateObjectPass());
+  if (bt_debug.find(DebugStage::Disassemble) != bt_debug.end()) {
+    pm.add(ast::Pass::create("dump-asm-prefix", [&] {
+      std::cout << "\nDisassembled bytecode\n";
+      std::cout << "----------------------------\n\n";
+    }));
+    pm.add(ast::CreateDumpASMPass(std::cout));
+  }
+  if (!args.output_elf.empty()) {
+    pm.add(ast::Pass::create("dump-elf", [&](ast::BpfObject& obj) {
+      std::ofstream out(args.output_elf);
+      out.write(obj.data.data(), obj.data.size());
+    }));
+  }
+  pm.add(ast::CreateLinkPass());
+
   auto pmresult = pm.run();
   if (!pmresult || !ast.diagnostics().ok()) {
     ast.diagnostics().emit(std::cerr);
     return 1;
   }
 
-  ast::CodegenLLVM llvm(ast, bpftrace);
-  BpfBytecode bytecode;
-  try {
-    llvm.generate_ir();
-    if (bt_debug.find(DebugStage::Codegen) != bt_debug.end()) {
-      std::cout << "LLVM IR before optimization\n";
-      std::cout << "---------------------------\n\n";
-      llvm.DumpIR();
-    }
-    if (!args.output_llvm.empty()) {
-      llvm.DumpIR(args.output_llvm + ".original.ll");
-    }
-
-    bool verify_llvm_ir = false;
-    util::get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
-                           [&](bool x) { verify_llvm_ir = x; });
-    if (verify_llvm_ir && !llvm.verify()) {
-      LOG(ERROR) << "Verification of generated LLVM IR failed";
-      exit(1);
-    }
-
-    llvm.optimize();
-    if (bt_debug.find(DebugStage::CodegenOpt) != bt_debug.end()) {
-      std::cout << "\nLLVM IR after optimization\n";
-      std::cout << "----------------------------\n\n";
-      llvm.DumpIR();
-    }
-    if (!args.output_llvm.empty()) {
-      llvm.DumpIR(args.output_llvm + ".optimized.ll");
-    }
-    if (!args.output_elf.empty()) {
-      llvm.emit_elf(args.output_elf);
-      return 0;
-    }
-    if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
-      llvm::SmallVector<char, 0> aot_output;
-      llvm::raw_svector_ostream aot_os(aot_output);
-      llvm.emit(aot_os);
-
-      return aot::generate(
-          bpftrace.resources, args.aot, aot_output.data(), aot_output.size());
-    }
-
-    bool disassemble = bt_debug.find(DebugStage::Disassemble) != bt_debug.end();
-    bytecode = llvm.emit(disassemble);
-  } catch (const std::system_error& ex) {
-    LOG(ERROR) << "failed to write elf: " << ex.what();
-    return 1;
-  } catch (const std::exception& ex) {
-    LOG(ERROR) << "Failed to compile: " << ex.what();
-    return 1;
+  if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
+    // Note: this should use the fully-linked version in the future, but
+    // presently it is just using the single object.
+    auto& out = pmresult->get<ast::BpfObject>();
+    return aot::generate(
+        bpftrace.resources, args.aot, out.data.data(), out.data.size());
   }
 
   if (args.test_mode == TestMode::CODEGEN)
     return 0;
 
+  auto& bytecode = pmresult->get<BpfBytecode>();
   return run_bpftrace(bpftrace, bytecode);
 }
