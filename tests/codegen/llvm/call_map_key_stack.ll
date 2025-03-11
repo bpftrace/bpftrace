@@ -13,7 +13,7 @@ target triple = "bpf-pc-linux"
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !20
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !22
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !36
-@num_cpus = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !53
+@num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !53
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
