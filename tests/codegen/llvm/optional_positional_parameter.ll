@@ -13,7 +13,7 @@ target triple = "bpf-pc-linux"
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !16
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !26
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !40
-@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !52
+@max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !52
 @get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !54
 @0 = global [1 x i8] zeroinitializer
 
