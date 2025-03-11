@@ -15,9 +15,9 @@ target triple = "bpf-pc-linux"
 @event_loss_counter = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !36
 @map_key_buf = dso_local externally_initialized global [1 x [7 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !53
 @write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !63
-@max_cpu_id = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !67
+@max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !67
 @read_map_val_buf = dso_local externally_initialized global [1 x [2 x [8 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !69
-@num_cpus = dso_local externally_initialized constant i64 zeroinitializer, section ".rodata", !dbg !73
+@num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !73
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0

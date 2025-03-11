@@ -3907,7 +3907,7 @@ void CodegenLLVM::generate_global_vars(
                                                bpftrace_config);
     auto var = llvm::dyn_cast<GlobalVariable>(
         module_->getOrInsertGlobal(config.name, b_.GetType(type)));
-    var->setInitializer(ConstantAggregateZero::get(b_.GetType(type)));
+    var->setInitializer(Constant::getNullValue(b_.GetType(type)));
     var->setConstant(config.read_only);
     var->setSection(config.section);
     var->setExternallyInitialized(true);
