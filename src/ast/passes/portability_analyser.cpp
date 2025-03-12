@@ -1,10 +1,27 @@
-#include "portability_analyser.h"
-
 #include <cstdlib>
 
+#include "ast/passes/portability_analyser.h"
+#include "ast/visitor.h"
 #include "types.h"
 
 namespace bpftrace::ast {
+
+namespace {
+
+// Checks if a script uses any non-portable bpftrace features that AOT
+// cannot handle.
+//
+// Over time, we expect to relax these restrictions as AOT supports more
+// features.
+class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
+public:
+  using Visitor<PortabilityAnalyser>::visit;
+  void visit(PositionalParameter &param);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Cast &cast);
+  void visit(AttachPoint &ap);
+};
 
 void PortabilityAnalyser::visit(PositionalParameter &param)
 {
@@ -84,6 +101,8 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
     ap.addError() << "AOT does not yet support watchpoint probes";
   }
 }
+
+} // namespace
 
 Pass CreatePortabilityPass()
 {
