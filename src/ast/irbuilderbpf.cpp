@@ -2048,7 +2048,7 @@ CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
   // Return: The non-negative copied *buf* length equal to or less than
   // *size* on success, or a negative error in case of failure.
   FunctionType *getstack_func_type = FunctionType::get(
-      getInt32Ty(),
+      getInt64Ty(),
       { getPtrTy(), getPtrTy(), getInt32Ty(), getInt64Ty() },
       false);
   CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_stack,
@@ -2390,7 +2390,7 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 
   // long bpf_skb_output(void *skb, struct bpf_map *map, u64 flags,
   //                     void *data, u64 size)
-  FunctionType *skb_output_func_type = FunctionType::get(getInt32Ty(),
+  FunctionType *skb_output_func_type = FunctionType::get(getInt64Ty(),
                                                          { skb->getType(),
                                                            map_ptr->getType(),
                                                            getInt64Ty(),
