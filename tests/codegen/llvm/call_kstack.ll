@@ -70,19 +70,18 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
-  %get_stack = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 0)
-  %1 = icmp sge i32 %get_stack, 0
+  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 0)
+  %1 = icmp sge i64 %get_stack, 0
   br i1 %1, label %get_stack_success, label %get_stack_fail
 
 get_stack_success:                                ; preds = %lookup_stack_scratch_merge
-  %2 = udiv i32 %get_stack, 8
+  %2 = udiv i64 %get_stack, 8
   %3 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 1
-  %4 = zext i32 %2 to i64
-  store i64 %4, ptr %3, align 8
-  %5 = trunc i32 %2 to i8
-  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %5, i64 1)
-  %6 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
-  store i64 %murmur_hash_2, ptr %6, align 8
+  store i64 %2, ptr %3, align 8
+  %4 = trunc i64 %2 to i8
+  %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %4, i64 1)
+  %5 = getelementptr %kstack_key, ptr %stack_key, i64 0, i32 0
+  store i64 %murmur_hash_2, ptr %5, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @stack_bpftrace_127, ptr %stack_key, ptr %lookup_stack_scratch_map, i64 0)
   br label %merge_block
 
@@ -111,19 +110,18 @@ lookup_stack_scratch_failure7:                    ; preds = %merge_block
 
 lookup_stack_scratch_merge8:                      ; preds = %merge_block
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_stack_scratch_map6, i8 0, i64 48, i1 false)
-  %get_stack12 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 0)
-  %7 = icmp sge i32 %get_stack12, 0
-  br i1 %7, label %get_stack_success10, label %get_stack_fail11
+  %get_stack12 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 0)
+  %6 = icmp sge i64 %get_stack12, 0
+  br i1 %6, label %get_stack_success10, label %get_stack_fail11
 
 get_stack_success10:                              ; preds = %lookup_stack_scratch_merge8
-  %8 = udiv i32 %get_stack12, 8
-  %9 = getelementptr %kstack_key, ptr %stack_key2, i64 0, i32 1
-  %10 = zext i32 %8 to i64
-  store i64 %10, ptr %9, align 8
-  %11 = trunc i32 %8 to i8
-  %murmur_hash_213 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map6, i8 %11, i64 1)
-  %12 = getelementptr %kstack_key, ptr %stack_key2, i64 0, i32 0
-  store i64 %murmur_hash_213, ptr %12, align 8
+  %7 = udiv i64 %get_stack12, 8
+  %8 = getelementptr %kstack_key, ptr %stack_key2, i64 0, i32 1
+  store i64 %7, ptr %8, align 8
+  %9 = trunc i64 %7 to i8
+  %murmur_hash_213 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map6, i8 %9, i64 1)
+  %10 = getelementptr %kstack_key, ptr %stack_key2, i64 0, i32 0
+  store i64 %murmur_hash_213, ptr %10, align 8
   %update_elem14 = call i64 inttoptr (i64 2 to ptr)(ptr @stack_bpftrace_6, ptr %stack_key2, ptr %lookup_stack_scratch_map6, i64 0)
   br label %merge_block4
 
@@ -145,19 +143,18 @@ lookup_stack_scratch_failure21:                   ; preds = %merge_block4
 
 lookup_stack_scratch_merge22:                     ; preds = %merge_block4
   %probe_read_kernel24 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map20, i32 1016, ptr null)
-  %get_stack27 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0)
-  %13 = icmp sge i32 %get_stack27, 0
-  br i1 %13, label %get_stack_success25, label %get_stack_fail26
+  %get_stack27 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0)
+  %11 = icmp sge i64 %get_stack27, 0
+  br i1 %11, label %get_stack_success25, label %get_stack_fail26
 
 get_stack_success25:                              ; preds = %lookup_stack_scratch_merge22
-  %14 = udiv i32 %get_stack27, 8
-  %15 = getelementptr %kstack_key, ptr %stack_key16, i64 0, i32 1
-  %16 = zext i32 %14 to i64
-  store i64 %16, ptr %15, align 8
-  %17 = trunc i32 %14 to i8
-  %murmur_hash_228 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map20, i8 %17, i64 1)
-  %18 = getelementptr %kstack_key, ptr %stack_key16, i64 0, i32 0
-  store i64 %murmur_hash_228, ptr %18, align 8
+  %12 = udiv i64 %get_stack27, 8
+  %13 = getelementptr %kstack_key, ptr %stack_key16, i64 0, i32 1
+  store i64 %12, ptr %13, align 8
+  %14 = trunc i64 %12 to i8
+  %murmur_hash_228 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map20, i8 %14, i64 1)
+  %15 = getelementptr %kstack_key, ptr %stack_key16, i64 0, i32 0
+  store i64 %murmur_hash_228, ptr %15, align 8
   %update_elem29 = call i64 inttoptr (i64 2 to ptr)(ptr @stack_perf_127, ptr %stack_key16, ptr %lookup_stack_scratch_map20, i64 0)
   br label %merge_block18
 
