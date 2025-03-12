@@ -76,16 +76,16 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
-  %get_stack = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256)
-  %6 = icmp sge i32 %get_stack, 0
-  br i1 %6, label %helper_merge, label %helper_failure
+  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256)
+  %6 = trunc i64 %get_stack to i32
+  %7 = icmp sge i32 %6, 0
+  br i1 %7, label %helper_merge, label %helper_failure
 
 get_stack_success:                                ; preds = %helper_merge
-  %7 = udiv i32 %get_stack, 8
-  %8 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 1
-  %9 = zext i32 %7 to i64
-  store i64 %9, ptr %8, align 8
-  %10 = trunc i32 %7 to i8
+  %8 = udiv i64 %get_stack, 8
+  %9 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 1
+  store i64 %8, ptr %9, align 8
+  %10 = trunc i64 %8 to i8
   %murmur_hash_2 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map, i8 %10, i64 1)
   %11 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 0
   store i64 %murmur_hash_2, ptr %11, align 8
@@ -104,13 +104,13 @@ helper_failure:                                   ; preds = %lookup_stack_scratc
   %15 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
   store i64 0, ptr %15, align 8
   %16 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
-  store i32 %get_stack, ptr %16, align 4
+  store i32 %6, ptr %16, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 helper_merge:                                     ; preds = %counter_merge, %lookup_stack_scratch_merge
-  %17 = icmp sge i32 %get_stack, 0
+  %17 = icmp sge i64 %get_stack, 0
   br i1 %17, label %get_stack_success, label %get_stack_fail
 
 event_loss_counter:                               ; preds = %helper_failure
@@ -233,16 +233,16 @@ lookup_stack_scratch_failure33:                   ; preds = %helper_merge16
 
 lookup_stack_scratch_merge34:                     ; preds = %helper_merge16
   %probe_read_kernel36 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map32, i32 1016, ptr null)
-  %get_stack39 = call i32 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map32, i32 1016, i64 0)
-  %29 = icmp sge i32 %get_stack39, 0
-  br i1 %29, label %helper_merge41, label %helper_failure40
+  %get_stack39 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map32, i32 1016, i64 0)
+  %29 = trunc i64 %get_stack39 to i32
+  %30 = icmp sge i32 %29, 0
+  br i1 %30, label %helper_merge41, label %helper_failure40
 
 get_stack_success37:                              ; preds = %helper_merge41
-  %30 = udiv i32 %get_stack39, 8
-  %31 = getelementptr %kstack_key, ptr %stack_key28, i64 0, i32 1
-  %32 = zext i32 %30 to i64
-  store i64 %32, ptr %31, align 8
-  %33 = trunc i32 %30 to i8
+  %31 = udiv i64 %get_stack39, 8
+  %32 = getelementptr %kstack_key, ptr %stack_key28, i64 0, i32 1
+  store i64 %31, ptr %32, align 8
+  %33 = trunc i64 %31 to i8
   %murmur_hash_253 = call i64 @murmur_hash_2(ptr %lookup_stack_scratch_map32, i8 %33, i64 1)
   %34 = getelementptr %kstack_key, ptr %stack_key28, i64 0, i32 0
   store i64 %murmur_hash_253, ptr %34, align 8
@@ -261,13 +261,13 @@ helper_failure40:                                 ; preds = %lookup_stack_scratc
   %38 = getelementptr %helper_error_t, ptr %helper_error_t42, i64 0, i32 1
   store i64 3, ptr %38, align 8
   %39 = getelementptr %helper_error_t, ptr %helper_error_t42, i64 0, i32 2
-  store i32 %get_stack39, ptr %39, align 4
+  store i32 %29, ptr %39, align 4
   %ringbuf_output43 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t42, i64 20, i64 0)
   %ringbuf_loss46 = icmp slt i64 %ringbuf_output43, 0
   br i1 %ringbuf_loss46, label %event_loss_counter44, label %counter_merge45
 
 helper_merge41:                                   ; preds = %counter_merge45, %lookup_stack_scratch_merge34
-  %40 = icmp sge i32 %get_stack39, 0
+  %40 = icmp sge i64 %get_stack39, 0
   br i1 %40, label %get_stack_success37, label %get_stack_fail38
 
 event_loss_counter44:                             ; preds = %helper_failure40
