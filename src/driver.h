@@ -12,8 +12,6 @@ using yyscan_t = void *;
 
 namespace bpftrace {
 
-class Parser;
-
 class Driver {
 public:
   explicit Driver(ast::ASTContext &ctx, BPFtrace &bpftrace, bool debug = false)
