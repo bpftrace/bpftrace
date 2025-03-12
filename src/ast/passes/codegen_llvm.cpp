@@ -205,7 +205,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
 
   Value *stack_size = b_.CreateGetStack(
       ctx_, is_ustack, stack_trace, stack_type, loc);
-  Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt32(0));
+  Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
@@ -215,8 +215,8 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
-  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt32(uint64_size));
-  b_.CreateStore(b_.CreateIntCast(num_frames, b_.getInt64Ty(), false),
+  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(uint64_size));
+  b_.CreateStore(num_frames,
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(1) }));
