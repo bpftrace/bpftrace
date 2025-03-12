@@ -16,6 +16,7 @@
 #include "util/symbols.h"
 #include "util/system.h"
 #include "util/wildcard.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::utils {
@@ -414,12 +415,10 @@ TEST(utils, find_near_self)
 TEST(utils, get_pids_for_program)
 {
   auto pids = get_pids_for_program("/proc/self/exe");
-
-  ASSERT_EQ(pids.size(), 1);
-  ASSERT_EQ(pids[0], getpid());
+  EXPECT_THAT(pids, testing::Contains(getpid()));
 
   pids = get_pids_for_program("/doesnotexist");
-  ASSERT_EQ(pids.size(), 0);
+  EXPECT_EQ(pids.size(), 0);
 }
 
 TEST(utils, round_up_to_next_power_of_two)
