@@ -63,6 +63,7 @@ AFTER ./testprogs/syscall read
 
 NAME fexit large args
 PROG fexit:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
+MIN_KERNEL 6.1 # Struct argument support was added in 6.1: https://elixir.bootlin.com/linux/v6.1/source/kernel/bpf/btf.c#L5894
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
