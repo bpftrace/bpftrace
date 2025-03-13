@@ -81,12 +81,13 @@ void test(BPFtrace &bpftrace,
   driver.parse();
   ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  std::ostringstream out;
+  ast.diagnostics().emit(out);
+  ASSERT_TRUE(ast.diagnostics().ok()) << out.str();
 
   if (expected[0] == '\n')
     expected.remove_prefix(1); // Remove initial '\n'
 
-  std::ostringstream out;
   Printer printer(out);
   printer.visit(ast.root);
   EXPECT_EQ(expected, out.str());
@@ -3076,6 +3077,40 @@ BEGIN { M; }
 stdin:2:9-343: ERROR: syntax error, unexpected end of file
 BEGIN { M; }
         ~~~~
+)");
+}
+
+TEST(Parser, imports)
+{
+  test(R"(import "foo"; BEGIN { })", R"(
+Program
+ import foo
+ BEGIN
+)");
+
+  test(R"(import "foo"; import "bar"; BEGIN { })", R"(
+Program
+ import foo
+ import bar
+ BEGIN
+)");
+
+  test_parse_failure(R"(BEGIN { }; import "foo";)", R"(
+stdin:1:9-11: ERROR: syntax error, unexpected ;, expecting {
+BEGIN { }; import "foo";
+        ~~
+)");
+
+  test_parse_failure("import 0; BEGIN { }", R"(
+stdin:1:8-9: ERROR: syntax error, unexpected integer, expecting string
+import 0; BEGIN { }
+       ~
+)");
+
+  test_parse_failure("import foo; BEGIN { }", R"(
+stdin:1:8-11: ERROR: syntax error, unexpected identifier, expecting string
+import foo; BEGIN { }
+       ~~~
 )");
 }
 

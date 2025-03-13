@@ -342,9 +342,15 @@ Subprog::Subprog(Diagnostics &d,
 {
 }
 
+Import::Import(Diagnostics &d, std::string name, Location &&loc)
+    : Node(d, std::move(loc)), name_(std::move(name))
+{
+}
+
 Program::Program(Diagnostics &d,
                  std::string c_definitions,
                  Config *config,
+                 ImportList &&imports,
                  MapDeclList &&map_decls,
                  SubprogList &&functions,
                  ProbeList &&probes,
@@ -352,6 +358,7 @@ Program::Program(Diagnostics &d,
     : Node(d, std::move(loc)),
       c_definitions(std::move(c_definitions)),
       config(config),
+      imports(std::move(imports)),
       functions(std::move(functions)),
       probes(std::move(probes)),
       map_decls(std::move(map_decls))

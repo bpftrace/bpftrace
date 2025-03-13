@@ -48,6 +48,7 @@ public:
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(Subprog &subprog);
+  void visit(Import &imp);
   void visit(Program &program);
 
 private:
