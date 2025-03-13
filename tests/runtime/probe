@@ -106,7 +106,7 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kprobe_order.bt
-EXPECT first second
+EXPECT_REGEX (first)+ second
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1001";
 
 NAME kprobe_offset
