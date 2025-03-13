@@ -131,6 +131,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> SIZEOF "sizeof"
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> LET "let"
+%token <std::string> IMPORT "import"
 
 
 %type <ast::Operator> unary_op compound_op
@@ -157,6 +158,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
 %type <ast::Config *> config
+%type <ast::Import *> import_stmt
+%type <ast::ImportList> imports
 %type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt for_stmt
 %type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
@@ -187,8 +190,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %%
 
 program:
-                c_definitions config map_decl_list probes_and_subprogs END {
-                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4.second), std::move($4.first), @$);
+                c_definitions config imports map_decl_list probes_and_subprogs END {
+                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5.second), std::move($5.first), @$);
                 }
                 ;
 
@@ -197,6 +200,15 @@ c_definitions:
         |       STRUCT STRUCT_DEFN c_definitions { $$ = $2 + ";\n" + $3; }
         |       STRUCT ENUM c_definitions        { $$ = $2 + ";\n" + $3; }
         |       %empty                           { $$ = std::string(); }
+                ;
+
+imports:
+                imports import_stmt { $$ = std::move($1); $$.push_back($2); }
+        |       %empty              { $$ = ast::ImportList{}; }
+                ;
+
+import_stmt:
+                IMPORT STRING ";" { $$ = driver.ctx.make_node<ast::Import>($2, @$); }
                 ;
 
 type:

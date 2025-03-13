@@ -213,11 +213,16 @@ public:
     visitImpl(subprog.stmts);
     return default_value();
   }
+  R visit([[maybe_unused]] Import &imp)
+  {
+    return default_value();
+  }
   R visit(Program &program)
   {
-    // This order is important
-    visitImpl(program.functions);
+    // This order is important.
     visitAndReplace(&program.config);
+    visitImpl(program.imports);
+    visitImpl(program.functions);
     visitImpl(program.map_decls);
     visitImpl(program.probes);
     return default_value();
