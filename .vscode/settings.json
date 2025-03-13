@@ -1,0 +1,7 @@
+{
+    "cmake.buildDirectory": "${workspaceFolder}/build-vscode",
+    "clangd.arguments": [
+        "-background-index",
+        "-compile-commands-dir=${workspaceFolder}/build-vscode"
+    ]
+}

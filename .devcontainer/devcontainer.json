@@ -1,0 +1,13 @@
+{
+  "build": { "dockerfile": "Dockerfile" },
+   "customizations": {
+    "vscode": {
+      "extensions": [
+        "mkhl.direnv",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  },
+  "postStartCommand": "nix develop -c true && direnv allow"
+}
