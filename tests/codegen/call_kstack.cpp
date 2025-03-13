@@ -22,32 +22,14 @@ kprobe:f {
   @z = kstack(6)
 })");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(ast, *bpftrace);
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  clang.parse(ast.root, *bpftrace);
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .add(ast::AllParsePasses())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   bpftrace->bytecode_ = codegen.compile();
@@ -72,31 +54,13 @@ kprobe:f {
   @z = kstack()
 })");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(ast, *bpftrace);
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  clang.parse(ast.root, *bpftrace);
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .add(ast::AllParsePasses())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
   ASSERT_TRUE(ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);

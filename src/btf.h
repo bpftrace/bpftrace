@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <unordered_set>
 
+#include "ast/pass_manager.h"
+
 // Taken from libbpf
 #define BTF_INFO_ENC(kind, kind_flag, vlen)                                    \
   ((!!(kind_flag) << 31) | ((kind) << 24) | ((vlen) & BTF_MAX_VLEN))
@@ -123,5 +125,7 @@ inline bool BTF::has_data() const
 {
   return state == OK;
 }
+
+ast::Pass CreateParseBTFPass();
 
 } // namespace bpftrace

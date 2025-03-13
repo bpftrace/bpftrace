@@ -4002,10 +4002,11 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
   }
 }
 
-Pass CreateSemanticPass()
+Pass CreateSemanticPass(bool listing)
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b) {
-    SemanticAnalyser semantics(ast, b, !b.cmd_.empty());
+  auto fn = [listing](ASTContext &ast, BPFtrace &b) {
+    SemanticAnalyser semantics(
+        ast, b, !b.cmd_.empty() || b.child_ != nullptr, listing);
     semantics.analyse();
   };
 

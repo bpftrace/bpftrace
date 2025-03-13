@@ -1,10 +1,9 @@
-
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "clang_parser.h"
+#include "bpftrace.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -21,30 +20,18 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
 {
   auto bpftrace = get_mock_bpftrace();
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, *bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(*bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  clang.parse(ast.root, *bpftrace);
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  // N.B. No macro or tracepoint expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   codegen.generate_ir();

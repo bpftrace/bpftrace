@@ -2,7 +2,6 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -16,37 +15,21 @@ using ::testing::_;
 void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 {
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ClangParser clang;
-  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::SemanticAnalyser semantics(ast, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::PortabilityAnalyser portability;
-  portability.visit(ast.root);
-  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
+  // N.B. No macro or tracepoint expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreatePortabilityPass())
+                .run();
+  ASSERT_TRUE(bool(ok));
+  EXPECT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
 }
 
 void test(const std::string &input, int expected_result = 0)

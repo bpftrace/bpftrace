@@ -1,5 +1,4 @@
 #include "ast/passes/field_analyser.h"
-
 #include "ast/attachpoint_parser.h"
 #include "driver.h"
 #include "dwarf_common.h"
@@ -18,17 +17,15 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_EQ(int(!ast.diagnostics().ok()), expected_result) << msg.str();
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .run();
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(int(!ast.diagnostics().ok()), expected_result);
 }
 
 void test(const std::string &input, int expected_result = 0)

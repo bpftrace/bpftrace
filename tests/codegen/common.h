@@ -7,6 +7,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -48,40 +49,25 @@ static void test(BPFtrace &bpftrace,
                  const std::string &name)
 {
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  clang.parse(ast.root, bpftrace);
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::PidFilterPass pid_filter(ast, bpftrace);
-  pid_filter.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace.resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  // N.B. No tracepoint expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(CreateClangPass())
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreatePidFilterPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
+  std::stringstream errs;
+  ast.diagnostics().emit(errs);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << errs.str();
 
   std::stringstream out;
   ast::CodegenLLVM codegen(ast, bpftrace);

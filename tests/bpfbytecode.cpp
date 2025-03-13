@@ -1,8 +1,8 @@
 #include "bpfbytecode.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "driver.h"
 #include "mocks.h"
 
 #include "gtest/gtest.h"
@@ -14,21 +14,14 @@ BpfBytecode codegen(const std::string &input)
   auto bpftrace = get_mock_bpftrace();
 
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, *bpftrace);
 
-  driver.parse();
-  bool parse_ok = ast.diagnostics().ok();
-  EXPECT_TRUE(parse_ok);
-  if (!parse_ok) {
-    return {};
-  }
-
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  EXPECT_TRUE(ast.diagnostics().ok());
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .add(ast::AllParsePasses())
+                .add(ast::CreateSemanticPass())
+                .run();
+  EXPECT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   return codegen.compile();

@@ -1,15 +1,26 @@
 #pragma once
 
+#include <clang-c/Index.h>
 #include <unordered_set>
 
+#include "ast/pass_manager.h"
 #include "bpftrace.h"
-#include <clang-c/Index.h>
+#include "util/result.h"
 
 namespace bpftrace {
 
 namespace ast {
 class Program;
 }
+
+class ClangParseError : public ErrorInfo<ClangParseError> {
+public:
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << "Clang parse error";
+  }
+};
 
 class ClangParser {
 public:
@@ -93,5 +104,7 @@ private:
     std::vector<std::string> error_msgs;
   };
 };
+
+ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags = {});
 
 } // namespace bpftrace

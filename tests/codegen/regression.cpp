@@ -13,23 +13,18 @@ TEST(codegen, regression_957)
 {
   ast::ASTContext ast("stdin", "t:sched:sched_one* { cat(\"%s\", probe); }");
   auto bpftrace = get_mock_bpftrace();
-  Driver driver(ast, *bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, *bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::ResourceAnalyser resource_analyser(*bpftrace);
-  resource_analyser.visit(ast.root);
-  bpftrace->resources = resource_analyser.resources();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  // N.B. No macros or tracepoint expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   ast::CodegenLLVM codegen(ast, *bpftrace);
   codegen.compile();

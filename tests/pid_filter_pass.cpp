@@ -1,7 +1,7 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -20,28 +20,19 @@ void test(const std::string& input, bool has_pid, bool has_filter)
   }
 
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::PidFilterPass pid_filter(ast, bpftrace);
-  pid_filter.visit(ast.root);
+  // N.B. No macro or tracepoint expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreatePidFilterPass())
+                .run();
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   std::string_view expected_ast = R"(
   if
