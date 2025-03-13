@@ -1,9 +1,6 @@
 #include "ast/passes/resource_analyser.h"
-#include "ast/attachpoint_parser.h"
-#include "ast/passes/field_analyser.h"
+#include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
-#include "clang_parser.h"
-#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -17,42 +14,22 @@ void test(BPFtrace &bpftrace,
           RequiredResources *out_p = nullptr)
 {
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
   std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ClangParser clang;
-  ASSERT_TRUE(clang.parse(ast.root, bpftrace));
-
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, bpftrace, false);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok()) << msg.str();
-
-  ast::ResourceAnalyser resource_analyser(bpftrace);
-  resource_analyser.visit(ast.root);
-  auto r = resource_analyser.resources();
-  ASSERT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(ast::AllParsePasses())
+                .add(ast::CreateSemanticPass())
+                .add(ast::CreateResourcePass())
+                .run();
+  ASSERT_TRUE(bool(ok)) << msg.str();
+  EXPECT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 
   if (out_p)
-    *out_p = std::move(r);
+    *out_p = std::move(bpftrace.resources);
 }
 
 void test(const std::string &input,

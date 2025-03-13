@@ -7,6 +7,7 @@
 #include "driver.h"
 #include "dwarf_common.h"
 #include "mocks.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::semantic_analyser {
@@ -23,31 +24,22 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                                  bool safe_mode = true)
 {
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
   bpftrace.safe_mode_ = safe_mode;
-  driver.parse();
-  bool parse_ok = ast.diagnostics().ok();
-  EXPECT_TRUE(parse_ok);
-  if (!parse_ok) {
-    return ast;
-  }
 
-  ClangParser clang;
-  clang.parse(ast.root, bpftrace);
-
-  driver.parse();
-  parse_ok = ast.diagnostics().ok();
-  EXPECT_TRUE(parse_ok);
-  if (!parse_ok) {
-    return ast;
-  }
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  EXPECT_TRUE(ast.diagnostics().ok());
-
-  ast::SemanticAnalyser semantics(ast, bpftrace);
-  semantics.analyse();
+  // N.B. No tracepoint expansion, but we will do the double parse to enable
+  // macro expansion.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(CreateClangPass())
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateSemanticPass())
+                .run();
+  EXPECT_TRUE(bool(ok));
 
   std::stringstream out;
   ast.diagnostics().emit(out);
@@ -80,66 +72,43 @@ ast::ASTContext test(BPFtrace &bpftrace,
   if (!local_input.empty() && local_input[0] == '\n')
     local_input = local_input.substr(1); // Remove initial '\n'
   ast::ASTContext ast("stdin", local_input);
-  Driver driver(ast, bpftrace);
 
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   bpftrace.safe_mode_ = safe_mode;
-  driver.parse();
-  bool parse_ok = ast.diagnostics().ok();
-  EXPECT_TRUE(parse_ok) << msg.str();
-  if (!parse_ok) {
-    return ast;
-  }
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  EXPECT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  EXPECT_TRUE(ast.diagnostics().ok()) << msg.str();
-  if (!ast.diagnostics().ok()) {
-    return ast;
-  }
-
-  ClangParser clang;
-  clang.parse(ast.root, bpftrace);
-
-  driver.parse();
-  parse_ok = ast.diagnostics().ok();
-  EXPECT_TRUE(parse_ok) << msg.str();
-  if (!parse_ok) {
-    return ast;
-  }
-
-  ap_parser.parse();
-  EXPECT_TRUE(ast.diagnostics().ok());
-
-  // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
-  ast::SemanticAnalyser semantics(ast, bpftrace, has_child);
-  if (expected_result == -1) {
-    // Accept any failure result.
-    semantics.analyse();
-    EXPECT_FALSE(ast.diagnostics().ok()) << msg.str();
-  } else if (expected_result == 0) {
+  if (has_child) {
+    bpftrace.cmd_ = "not-empty"; // Used by SemanticAnalyser.
+  }
+
+  // N.B. See above.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(CreateClangPass())
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateSemanticPass())
+                .run();
+
+  // Reproduce the full string.
+  std::stringstream out;
+  ast.diagnostics().emit(out);
+
+  if (expected_result == 0) {
     // Accept no errors.
-    semantics.analyse();
-    std::stringstream out;
-    ast.diagnostics().emit(out);
-    EXPECT_TRUE(ast.diagnostics().ok()) << msg.str() << out.str();
+    EXPECT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
   } else {
-    EXPECT_EQ(expected_result, semantics.analyse()) << msg.str();
+    // Accept any failure result.
+    EXPECT_FALSE(ok && ast.diagnostics().ok()) << msg.str();
   }
   if (expected_error.data() && !expected_error.empty()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
-
-    // Reproduce the full string.
-    std::stringstream out;
-    ast.diagnostics().emit(out);
     EXPECT_EQ(out.str(), expected_error);
   }
 

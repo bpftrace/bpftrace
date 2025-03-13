@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ast/ast.h"
+#include "ast/context.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "log.h"
@@ -18,6 +19,9 @@
 #include "util/system.h"
 
 namespace bpftrace {
+
+char ClangParseError::ID;
+
 namespace {
 const std::vector<CXUnsavedFile> &getDefaultHeaders()
 {
@@ -788,6 +792,20 @@ std::vector<std::string> ClangParser::system_include_paths()
     result = { "/usr/local/include", "/usr/include" };
 
   return result;
+}
+
+ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags)
+{
+  return ast::Pass::create("ClangParser",
+                           [extra_flags = std::move(
+                                extra_flags)](ast::ASTContext &ast,
+                                              BPFtrace &b) -> Result<OK> {
+                             ClangParser parser;
+                             if (!parser.parse(ast.root, b, extra_flags)) {
+                               return make_error<ClangParseError>();
+                             }
+                             return OK();
+                           });
 }
 
 } // namespace bpftrace

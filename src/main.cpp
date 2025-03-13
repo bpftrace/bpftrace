@@ -20,7 +20,7 @@
 #include "ast/pass_manager.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
-#include "ast/passes/field_analyser.h"
+#include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"
@@ -34,14 +34,12 @@
 #include "child.h"
 #include "clang_parser.h"
 #include "config.h"
-#include "driver.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "run_bpftrace.h"
-#include "tracepoint_format_parser.h"
 #include "util/env.h"
 #include "util/format.h"
 #include "util/int_parser.h"
@@ -356,86 +354,31 @@ static void parse_env(BPFtrace& bpftrace)
   });
 }
 
-void parse(ast::ASTContext& ast,
-           BPFtrace& bpftrace,
-           const std::vector<std::string>& include_dirs,
-           const std::vector<std::string>& include_files)
+std::vector<std::string> extra_flags(
+    BPFtrace& bpftrace,
+    const std::vector<std::string>& include_dirs,
+    const std::vector<std::string>& include_files)
 {
-  Driver driver(ast,
-                bpftrace,
-                bt_debug.find(DebugStage::Parse) != bt_debug.end());
+  std::string ksrc, kobj;
+  struct utsname utsname;
+  std::vector<std::string> extra_flags;
+  uname(&utsname);
+  bool found_kernel_headers = util::get_kernel_dirs(utsname, ksrc, kobj);
 
-  driver.parse();
-  if (!ast.diagnostics().ok())
-    return;
+  if (found_kernel_headers)
+    extra_flags = get_kernel_cflags(
+        utsname.machine, ksrc, kobj, bpftrace.kconfig);
 
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  if (!ast.diagnostics().ok())
-    return;
-
-  bpftrace.parse_btf(bpftrace.list_modules(ast));
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  if (!ast.diagnostics().ok())
-    return;
-
-  if (TracepointFormatParser::parse(ast, bpftrace) == false)
-    return;
-
-  // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
-  // avoid issues in some versions. Since we're including files in the command
-  // line, we want to force parsing, so we make sure C definitions are not
-  // empty before going to clang parser stage.
-  if (!include_files.empty() && ast.root->c_definitions.empty())
-    ast.root->c_definitions = "#define __BPFTRACE_DUMMY__";
-
-  bool should_clang_parse = !(ast.root->c_definitions.empty() &&
-                              bpftrace.btf_set_.empty());
-
-  if (should_clang_parse) {
-    ClangParser clang;
-    std::string ksrc, kobj;
-    struct utsname utsname;
-    std::vector<std::string> extra_flags;
-    uname(&utsname);
-    bool found_kernel_headers = util::get_kernel_dirs(utsname, ksrc, kobj);
-
-    if (found_kernel_headers)
-      extra_flags = get_kernel_cflags(
-          utsname.machine, ksrc, kobj, bpftrace.kconfig);
-
-    for (auto dir : include_dirs) {
-      extra_flags.emplace_back("-I");
-      extra_flags.push_back(dir);
-    }
-    for (auto file : include_files) {
-      extra_flags.emplace_back("-include");
-      extra_flags.push_back(file);
-    }
-
-    if (!clang.parse(ast.root, bpftrace, extra_flags)) {
-      if (!found_kernel_headers) {
-        LOG(WARNING)
-            << "Could not find kernel headers in " << ksrc << " / " << kobj
-            << ". To specify a particular path to kernel headers, set the env "
-            << "variables BPFTRACE_KERNEL_SOURCE and, optionally, "
-            << "BPFTRACE_KERNEL_BUILD if the kernel was built in a different "
-            << "directory than its source. You can also point the variable to "
-            << "a directory with built-in headers extracted from the following "
-            << "snippet:\nmodprobe kheaders && tar -C <directory> -xf "
-            << "/sys/kernel/kheaders.tar.xz";
-      }
-      return;
-    }
+  for (auto dir : include_dirs) {
+    extra_flags.emplace_back("-I");
+    extra_flags.push_back(dir);
+  }
+  for (auto file : include_files) {
+    extra_flags.emplace_back("-include");
+    extra_flags.push_back(file);
   }
 
-  driver.parse();
-  if (!ast.diagnostics().ok())
-    return;
-
-  ap_parser.parse();
+  return extra_flags;
 }
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
@@ -911,14 +854,14 @@ int main(int argc, char* argv[])
 
     // Parse and expand all the attachpoints. We don't need to descend into the
     // actual driver here, since we know that the program is already formed.
-    ast::AttachPointParser ap_parser(ast, bpftrace, true);
-    ap_parser.parse();
-
-    bpftrace.parse_btf(bpftrace.list_modules(ast));
-
-    ast::SemanticAnalyser semantics(ast, bpftrace, false, true);
-    semantics.analyse();
-    if (!ast.diagnostics().ok()) {
+    auto ok = ast::PassManager()
+                  .put(ast)
+                  .put(bpftrace)
+                  .add(ast::CreateParseAttachpointsPass())
+                  .add(CreateParseBTFPass())
+                  .add(ast::CreateSemanticPass(true))
+                  .run();
+    if (!ok || !ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
@@ -975,17 +918,6 @@ int main(int argc, char* argv[])
     enforce_infinite_rlimit();
   }
 
-  parse(ast, bpftrace, args.include_dirs, args.include_files);
-  if (!ast.diagnostics().ok()) {
-    ast.diagnostics().emit(std::cerr);
-    return 1;
-  }
-
-  if (args.listing) {
-    bpftrace.probe_matcher_->list_probes(ast.root);
-    return 0;
-  }
-
   // Temporarily, we make the full `BPFTrace` object available via the pass
   // manager (and objects are temporarily mutable). As passes are refactored
   // into lighter-weight components, the `BPFTrace` object should be decomposed
@@ -995,6 +927,7 @@ int main(int argc, char* argv[])
   ast::PassManager pm;
   pm.put(ast);
   pm.put(bpftrace);
+  auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   // Wrap all added passes in passes that dump the intermediate state. These
   // could dump intermediate objects from the context as well, but preserve
@@ -1006,9 +939,26 @@ int main(int argc, char* argv[])
       pm.add(printPass(name));
     }
   };
-  if (bt_debug.find(DebugStage::Ast) != bt_debug.end()) {
-    pm.add(printPass("parser"));
+  // Start with all the basic parsing steps.
+  for (auto& pass : ast::AllParsePasses(std::move(flags))) {
+    addPass(std::move(pass));
   }
+
+  if (args.listing) {
+    auto ok = pm.run();
+    if (!ok || !ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+    bpftrace.probe_matcher_->list_probes(ast.root);
+    return 0;
+  }
+
+  // This should be a standardized pass in the future.
+  addPass(ast::Pass::create("recursion-check",
+                            [](ast::ASTContext& ast, BPFtrace& b) {
+                              b.fentry_recursion_check(ast.root);
+                            }));
 
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
@@ -1025,8 +975,6 @@ int main(int argc, char* argv[])
       CreateAotPasses(addPass);
       break;
   }
-
-  bpftrace.fentry_recursion_check(ast.root);
 
   auto pmresult = pm.run();
   if (!pmresult || !ast.diagnostics().ok()) {

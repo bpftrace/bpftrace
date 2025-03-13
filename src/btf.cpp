@@ -1,10 +1,3 @@
-#include "btf.h"
-#include "arch/arch.h"
-#include "bpftrace.h"
-#include "log.h"
-#include "probe_matcher.h"
-#include "tracefs/tracefs.h"
-#include "types.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -28,7 +21,15 @@
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 
+#include "arch/arch.h"
+#include "ast/context.h"
+#include "ast/pass_manager.h"
 #include "bpftrace.h"
+#include "btf.h"
+#include "log.h"
+#include "probe_matcher.h"
+#include "tracefs/tracefs.h"
+#include "types.h"
 
 namespace bpftrace {
 
@@ -885,6 +886,14 @@ SizedType BTF::get_var_type(const std::string &var_name)
     return CreateNone();
 
   return get_stype(BTFId{ .btf = var_id.btf, .id = t->type });
+}
+
+ast::Pass CreateParseBTFPass()
+{
+  return ast::Pass::create(
+      "btf", []([[maybe_unused]] ast::ASTContext &ast, BPFtrace &b) {
+        b.parse_btf(b.list_modules(ast));
+      });
 }
 
 } // namespace bpftrace

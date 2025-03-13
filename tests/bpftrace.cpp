@@ -1,11 +1,10 @@
 #include <cstdint>
 #include <cstring>
 
+#include "ast/attachpoint_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
-
-#include "ast/attachpoint_parser.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
@@ -43,25 +42,18 @@ static auto parse_probe(const std::string &str,
                         int usdt_num_locations = 0)
 {
   ast::ASTContext ast("stdin", str);
-  Driver driver(ast, bpftrace);
 
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ast::FieldAnalyser fields(bpftrace);
-  fields.visit(ast.root);
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  ClangParser clang;
-  clang.parse(ast.root, bpftrace);
-
-  ast::SemanticAnalyser semantics(ast, bpftrace);
-  semantics.analyse();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  // N.B. Don't use tracepoint format parser here.
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFieldAnalyserPass())
+                .add(CreateClangPass())
+                .add(ast::CreateSemanticPass())
+                .run();
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
 
   auto usdt_helper = get_mock_usdt_helper(usdt_num_locations);
   std::stringstream out;
