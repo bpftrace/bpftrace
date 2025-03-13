@@ -1,6 +1,6 @@
 # bpftrace
 
-[![Build Status](https://github.com/bpftrace/bpftrace/workflows/CI/badge.svg?branch=master)](https://github.com/bpftrace/bpftrace/actions?query=workflow%3ACI+branch%3Amaster)
+[![Build Status](https://github.com/bpftrace/bpftrace/actions/workflows/ci.yml/badge.svg)](https://github.com/bpftrace/bpftrace/actions/workflows/ci.yml)
 [![IRC#bpftrace](https://img.shields.io/badge/IRC-bpftrace-blue.svg)](https://webchat.oftc.net/?channels=bpftrace)
 [![CodeQL](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml/badge.svg)](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml)
 
