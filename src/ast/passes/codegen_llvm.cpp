@@ -46,6 +46,7 @@
 namespace bpftrace::ast {
 
 static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
+static constexpr auto LICENSE = "LICENSE";
 
 static auto getTargetMachine()
 {
@@ -106,11 +107,15 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
 
   // Set license of BPF programs
   const std::string license = "GPL";
-  auto license_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-      "LICENSE", ArrayType::get(b_.getInt8Ty(), license.size() + 1)));
+  auto license_size = license.size() + 1;
+  auto license_var = llvm::dyn_cast<GlobalVariable>(
+      module_->getOrInsertGlobal(LICENSE,
+                                 ArrayType::get(b_.getInt8Ty(), license_size)));
   license_var->setInitializer(
       ConstantDataArray::getString(module_->getContext(), license.c_str()));
   license_var->setSection("license");
+  license_var->addDebugInfo(
+      debug_.createGlobalVariable(LICENSE, CreateString(license_size)));
 }
 
 ScopedExpr CodegenLLVM::visit(Integer &integer)
