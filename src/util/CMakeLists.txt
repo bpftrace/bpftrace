@@ -21,4 +21,4 @@ if (KERNEL_HEADERS_DIR)
 endif()
 target_compile_definitions(util PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 
-target_link_libraries(util debugfs)
+target_link_libraries(util debugfs ${ZLIB_LIBRARIES})
