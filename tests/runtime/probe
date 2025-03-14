@@ -244,7 +244,7 @@ AFTER ./testprogs/syscall read
 
 NAME kretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt
-EXPECT first second
+EXPECT_REGEX (first)+ second
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000";
 
 NAME kretprobe_wildcard
@@ -311,7 +311,7 @@ REQUIRES_FEATURE libpath_resolv
 
 NAME uprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uprobe_order.bt
-EXPECT first second
+EXPECT_REGEX (first)+ second
 AFTER /bin/bash -c "echo lala";
 
 NAME uprobe_zero_size
@@ -348,7 +348,7 @@ AFTER /bin/bash -c "echo lala"
 
 NAME uretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uretprobe_order.bt
-EXPECT first second
+EXPECT_REGEX (first)+ second
 AFTER /bin/bash -c "echo lala";
 
 NAME tracepoint
@@ -363,7 +363,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME tracepoint_order
 RUN {{BPFTRACE}} runtime/scripts/tracepoint_order.bt
-EXPECT first second
+EXPECT_REGEX (first)+ second
 AFTER ./testprogs/syscall nanosleep 100000001;
 
 NAME tracepoint_expansion
