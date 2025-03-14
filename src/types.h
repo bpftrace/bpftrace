@@ -517,6 +517,7 @@ SizedType CreateUInt32();
 SizedType CreateUInt64();
 SizedType CreateEnum(size_t bits, const std::string &name);
 
+// Create a string of `size` bytes, inclusive of NUL terminator.
 SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
