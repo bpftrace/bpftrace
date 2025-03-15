@@ -280,7 +280,7 @@ def fuzz():
                     "-i", "inputs",
                     "-o", "outputs",
                     "-E", "10", # 10 execs, smoke test only.
-                    "-t", "1000",
+                    "-t", "60000",
                     "--",
                     "src/bpftrace",
                     "--test=codegen",
