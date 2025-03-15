@@ -76,7 +76,7 @@ void Log::take_input(LogType type,
   }
 }
 
-LogStream::LogStream(std::string file,
+LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
                      std::ostream& out)
@@ -84,7 +84,7 @@ LogStream::LogStream(std::string file,
 {
 }
 
-LogStream::LogStream(std::string file,
+LogStream::LogStream(const std::string& file,
                      int line,
                      LogType type,
                      std::string&& source_location,

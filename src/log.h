@@ -74,11 +74,11 @@ private:
 
 class LogStream {
 public:
-  LogStream(std::string file,
+  LogStream(const std::string& file,
             int line,
             LogType type,
             std::ostream& out = std::cerr);
-  LogStream(std::string file,
+  LogStream(const std::string& file,
             int line,
             LogType type,
             std::string&& source_location,
