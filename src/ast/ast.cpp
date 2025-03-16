@@ -30,8 +30,8 @@ StackMode::StackMode(Diagnostics &d, std::string mode, Location &&loc)
   is_literal = true;
 }
 
-Builtin::Builtin(Diagnostics &d, const std::string &ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(is_deprecated(ident))
+Builtin::Builtin(Diagnostics &d, std::string ident, Location &&loc)
+    : Expression(d, std::move(loc)), ident(std::move(ident))
 {
 }
 
@@ -49,17 +49,17 @@ PositionalParameter::PositionalParameter(Diagnostics &d,
   is_literal = true;
 }
 
-Call::Call(Diagnostics &d, const std::string &func, Location &&loc)
-    : Expression(d, std::move(loc)), func(is_deprecated(func))
+Call::Call(Diagnostics &d, std::string func, Location &&loc)
+    : Expression(d, std::move(loc)), func(std::move(func))
 {
 }
 
 Call::Call(Diagnostics &d,
-           const std::string &func,
+           std::string func,
            ExpressionList &&vargs,
            Location &&loc)
     : Expression(d, std::move(loc)),
-      func(is_deprecated(func)),
+      func(std::move(func)),
       vargs(std::move(vargs))
 {
 }
