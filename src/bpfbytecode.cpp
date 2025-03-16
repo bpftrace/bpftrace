@@ -230,6 +230,17 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
           "pointer arithmetic on ptr_or_null_ prohibited, null-check it first",
           ": result needs to be null-checked before accessing fields");
 
+      auto err_pos = log.find("from non-GPL compatible program");
+      if (err_pos != log.npos) {
+        LOG(ERROR) << "Your bpftrace program cannot load because you are using "
+                      "a license that is non-GPL compatible. License: "
+                   << config.get(ConfigKeyString::license);
+        LOG(HINT)
+            << "Read more about BPF programs and licensing: "
+               "https://docs.kernel.org/bpf/"
+               "bpf_licensing.html#using-bpf-programs-in-the-linux-kernel";
+      }
+
       std::stringstream errmsg;
       errmsg << "Error loading BPF program for " << name << ".";
       if (bt_verbose) {

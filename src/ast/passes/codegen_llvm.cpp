@@ -447,7 +447,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          llvm::DEBUG_METADATA_VERSION);
 
   // Set license of BPF programs
-  const std::string license = "GPL";
+  const std::string license = bpftrace_.config_->get(ConfigKeyString::license);
   auto license_size = license.size() + 1;
   auto license_var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(LICENSE,
