@@ -33,6 +33,8 @@ and this project adheres to
   - [#3780](https://github.com/bpftrace/bpftrace/pull/3780)
 - Add map declaration syntax (behind an "unstable" config flag)
   - [#3863](https://github.com/bpftrace/bpftrace/pull/3863)
+- Add license config to specify BPF license
+  - [#3905](https://github.com/bpftrace/bpftrace/pull/3905)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)

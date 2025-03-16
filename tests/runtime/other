@@ -341,3 +341,12 @@ EXPECT FOO
 NAME no symbolize int cast to unknown enum variant
 PROG enum BAZ { FOO = 333, BAR }; BEGIN { $x = 444; print((enum BAZ)$x); exit(); }
 EXPECT 444
+
+NAME valid license
+PROG config={license="Dual BSD/GPL"} BEGIN { @p[1] = 1; print(len(@p)); exit(); }
+EXPECT 1
+
+NAME invalid license
+PROG config={license="Potato"} BEGIN { @p[1] = 1; print(len(@p)); exit(); }
+EXPECT ERROR: Your bpftrace program cannot load because you are using a license that is non-GPL compatible. License: Potato
+WILL_FAIL
