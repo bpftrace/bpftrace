@@ -3652,6 +3652,12 @@ Default: 0
 
 For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
 
+=== license
+
+Default: "GPL"
+
+The license bpftrace will use to load BPF programs into the linux kernel.
+
 ==== log_size
 
 Default: 1000000
@@ -3835,6 +3841,13 @@ BEGIN { @=*uptr(kaddr("do_poweroff")) }
 
 bpftrace tries to automatically set the correct address space for a pointer based on the probe type, but might fail in cases where it is unclear.
 The address space can be changed with the <<functions-kptr, kptrs>> and <<functios-uptr, uptr>> functions.
+
+=== BPF License
+
+By default bpftrace uses "GPL", which is actually "GPL version 2", as the license it uses to load BPF programs into the kernel.
+Some other examples of compatible licenses are: "GPL v2" and "Dual MPL/GPL".
+You can specify a different license using the "license" config variable.
+link:https://docs.kernel.org/bpf/bpf_licensing.html#using-bpf-programs-in-the-linux-kernel[#Read more about BPF programs and licensing].
 
 === BTF Support
 

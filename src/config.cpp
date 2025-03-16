@@ -32,6 +32,7 @@ Config::Config(bool has_cmd)
     { ConfigKeyInt::on_stack_limit, { .value = static_cast<uint64_t>(32) } },
     { ConfigKeyInt::perf_rb_pages, { .value = static_cast<uint64_t>(64) } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },
+    { ConfigKeyString::license, { .value = std::string("GPL") } },
     { ConfigKeyString::str_trunc_trailer, { .value = std::string("..") } },
     { ConfigKeySymbolSource::default_,
       { .value =
