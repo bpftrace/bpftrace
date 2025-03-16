@@ -213,7 +213,6 @@ public:
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
   ScopedExpr visit(Predicate &pred);
-  ScopedExpr visit(AttachPoint &ap);
   ScopedExpr visit(Probe &probe);
   ScopedExpr visit(Subprog &subprog);
   ScopedExpr visit(Program &program);
@@ -3035,12 +3034,6 @@ ScopedExpr CodegenLLVM::visit(Predicate &pred)
   b_.SetInsertPoint(pred_true_block);
 
   return ScopedExpr(cmp_value);
-}
-
-ScopedExpr CodegenLLVM::visit(AttachPoint &)
-{
-  // Empty
-  return ScopedExpr();
 }
 
 ScopedExpr CodegenLLVM::visit(Block &block)
