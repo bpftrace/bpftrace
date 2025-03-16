@@ -3037,12 +3037,6 @@ ScopedExpr CodegenLLVM::visit(Predicate &pred)
   return ScopedExpr(cmp_value);
 }
 
-ScopedExpr CodegenLLVM::visit(AttachPoint &)
-{
-  // Empty
-  return ScopedExpr();
-}
-
 ScopedExpr CodegenLLVM::visit(Block &block)
 {
   scope_stack_.push_back(&block);
