@@ -164,7 +164,7 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(Diagnostics &d, const std::string &ident, Location &&loc);
+  explicit Builtin(Diagnostics &d, std::string ident, Location &&loc);
 
   std::string ident;
   int probe_id;
@@ -179,9 +179,9 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(Diagnostics &d, const std::string &func, Location &&loc);
+  explicit Call(Diagnostics &d, std::string func, Location &&loc);
   Call(Diagnostics &d,
-       const std::string &func,
+       std::string func,
        ExpressionList &&vargs,
        Location &&loc);
 

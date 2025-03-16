@@ -19,6 +19,7 @@ add_library(ast STATIC
 
   passes/codegen_resources.cpp
   passes/config_analyser.cpp
+  passes/deprecated.cpp
   passes/field_analyser.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
