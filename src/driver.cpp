@@ -4,14 +4,15 @@
 extern void set_source_string(const std::string *s);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy(yyscan_t yyscanner);
-extern bpftrace::location loc;
 
 namespace bpftrace {
 
 void Driver::parse()
 {
-  // Reset source location info on every pass.
+  // Reset state on every pass.
   loc.initialize();
+  struct_type.clear();
+  buffer.clear();
 
   yyscan_t scanner;
   yylex_init(&scanner);
