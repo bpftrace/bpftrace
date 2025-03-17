@@ -25,6 +25,7 @@
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_analyser.h"
+#include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -388,6 +389,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
+  add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
   add(ast::CreateProbePass());
 }
@@ -397,6 +399,7 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateSemanticPass());
   add(ast::CreatePortabilityPass());
   add(ast::CreateResourcePass());
+  add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
   add(ast::CreateProbePass());
 }
@@ -960,12 +963,6 @@ int main(int argc, char* argv[])
     bpftrace.probe_matcher_->list_probes(ast.root);
     return 0;
   }
-
-  // This should be a standardized pass in the future.
-  addPass(ast::Pass::create("recursion-check",
-                            [](ast::ASTContext& ast, BPFtrace& b) {
-                              b.fentry_recursion_check(ast.root);
-                            }));
 
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:

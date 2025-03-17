@@ -1,6 +1,7 @@
 add_library(ast_defs STATIC
   ast.cpp
   context.cpp
+  helpers.cpp
   location.cpp
 )
 add_dependencies(ast_defs parser)
@@ -12,7 +13,6 @@ add_library(ast STATIC
   codegen_helper.cpp
   diagnostic.cpp
   dibuilderbpf.cpp
-  helpers.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
   signal.cpp
@@ -28,6 +28,7 @@ add_library(ast STATIC
   passes/codegen_llvm.cpp
   passes/return_path_analyser.cpp
   passes/pid_filter_pass.cpp
+  passes/recursion_check.cpp
 )
 
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})

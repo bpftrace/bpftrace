@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <set>
 #include <vector>
 
 #include "ast/helpers.h"
@@ -41,13 +40,6 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
 static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
 
 static std::vector<std::string> UPROBE_LANGS = { "cpp" };
-
-static const std::set<std::string> RECURSIVE_KERNEL_FUNCS = {
-  "vmlinux:_raw_spin_lock",
-  "vmlinux:_raw_spin_lock_irqsave",
-  "vmlinux:_raw_spin_unlock_irqrestore",
-  "vmlinux:queued_spin_lock_slowpath",
-};
 
 const std::string &is_deprecated(const std::string &str)
 {
@@ -102,15 +94,6 @@ bool is_type_name(std::string_view str)
 {
   return str.starts_with("struct ") || str.starts_with("union ") ||
          str.starts_with("enum ");
-}
-
-// Attaching to these kernel functions with fentry/fexit (kfunc/kretfunc)
-// could lead to a recursive loop and kernel crash so we need additional
-// generated BPF code to protect against this if one of these are being
-// attached to.
-bool is_recursive_func(const std::string &func_name)
-{
-  return RECURSIVE_KERNEL_FUNCS.find(func_name) != RECURSIVE_KERNEL_FUNCS.end();
 }
 
 } // namespace bpftrace
