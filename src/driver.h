@@ -23,6 +23,11 @@ public:
   ast::ASTContext &ctx;
   BPFtrace &bpftrace;
   const bool debug;
+
+  // These are mutable state that can be modified by the lexer.
+  location loc;
+  std::string struct_type;
+  std::string buffer;
 };
 
 ast::Pass CreateParsePass(bool debug = false);
