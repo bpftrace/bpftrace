@@ -10,6 +10,7 @@
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/probe_analyser.h"
+#include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
@@ -64,6 +65,7 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreatePidFilterPass())
+                .add(ast::CreateRecursionCheckPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::CreateProbePass())

@@ -33,7 +33,6 @@
 
 #include "ast/async_event_types.h"
 #include "ast/context.h"
-#include "ast/helpers.h"
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
@@ -2054,40 +2053,6 @@ void BPFtrace::parse_btf(const std::set<std::string> &modules)
 bool BPFtrace::has_btf_data() const
 {
   return btf_ && btf_->has_data();
-}
-
-// This prevents an ABBA deadlock when attaching to spin lock internal
-// functions e.g. "fentry:queued_spin_lock_slowpath".
-//
-// Specifically, if there are two hash maps (non percpu) being accessed by
-// two different CPUs by two bpf progs then we can get in a situation where,
-// because there are progs attached to spin lock internals, a lock is taken for
-// one map while a different lock is trying to be acquired for the other map.
-// This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
-// protections against this type of deadlock.
-//
-// Note: it would be better if this was in resource analyzer but we need
-// probe_matcher to get the list of functions for the attach point.
-void BPFtrace::fentry_recursion_check(ast::Program *prog)
-{
-  for (auto *probe : prog->probes) {
-    for (auto *ap : probe->attach_points) {
-      auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        auto matches = probe_matcher_->get_matches_for_ap(*ap);
-        for (const auto &match : matches) {
-          if (is_recursive_func(match)) {
-            LOG(WARNING)
-                << "Attaching to dangerous function: " << match
-                << ". bpftrace has added mitigations to prevent a kernel "
-                   "deadlock but they may result in some lost events.";
-            need_recursion_check_ = true;
-            return;
-          }
-        }
-      }
-    }
-  }
 }
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to
