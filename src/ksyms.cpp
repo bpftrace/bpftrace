@@ -52,8 +52,8 @@ std::string Ksyms::resolve_bcc(uint64_t addr, bool show_offset)
 }
 
 #ifdef HAVE_BLAZESYM
-std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
-                                                       bool show_offset)
+std::optional<std::string> Ksyms::resolve_blazesym_impl(uint64_t addr,
+                                                        bool show_offset)
 {
   if (symbolizer_ == nullptr) {
     symbolizer_ = blaze_symbolizer_new();
@@ -99,7 +99,7 @@ std::optional<std::string> Ksyms::resolve_blazesym_int(uint64_t addr,
 
 std::string Ksyms::resolve_blazesym(uint64_t addr, bool show_offset)
 {
-  if (auto sym = resolve_blazesym_int(addr, show_offset)) {
+  if (auto sym = resolve_blazesym_impl(addr, show_offset)) {
     return *sym;
   }
   return stringify_addr(addr);
