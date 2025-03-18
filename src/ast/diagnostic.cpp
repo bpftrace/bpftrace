@@ -22,13 +22,13 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
   switch (s) {
     case Severity::Warning:
       LOG(WARNING, loc.source_location(), loc.source_context(), out) << d.msg();
-      if (auto msg = d.hint(); msg.size() > 0) {
+      if (auto msg = d.hint(); !msg.empty()) {
         LOG(HINT, out) << msg;
       }
       break;
     case Severity::Error:
       LOG(ERROR, loc.source_location(), loc.source_context(), out) << d.msg();
-      if (auto msg = d.hint(); msg.size() > 0) {
+      if (auto msg = d.hint(); !msg.empty()) {
         LOG(HINT, out) << msg;
       }
       break;

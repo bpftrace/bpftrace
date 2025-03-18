@@ -3117,7 +3117,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
-      current_attach_point_->func.size())
+      !current_attach_point_->func.empty())
     generateWatchpointSetupProbe(
         func_type, name, current_attach_point_->address, index, probe.loc);
 }

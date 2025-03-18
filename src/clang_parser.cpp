@@ -232,7 +232,7 @@ static bool translateMacro(CXCursor cursor,
     clang_disposeString(tokenText);
   }
   clang_disposeTokens(transUnit, tokens, numTokens);
-  return value.length() != 0;
+  return !value.empty();
 }
 
 static std::string remove_qualifiers(std::string &&typestr)
