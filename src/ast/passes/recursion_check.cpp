@@ -1,4 +1,4 @@
-#include <set>
+#include <unordered_set>
 
 #include "ast/ast.h"
 #include "ast/passes/recursion_check.h"
@@ -10,7 +10,7 @@ namespace bpftrace::ast {
 
 namespace {
 
-static const std::set<std::string> RECURSIVE_KERNEL_FUNCS = {
+static const std::unordered_set<std::string> RECURSIVE_KERNEL_FUNCS = {
   "vmlinux:_raw_spin_lock",
   "vmlinux:_raw_spin_lock_irqsave",
   "vmlinux:_raw_spin_unlock_irqrestore",
@@ -23,7 +23,7 @@ static const std::set<std::string> RECURSIVE_KERNEL_FUNCS = {
 // attached to.
 bool is_recursive_func(const std::string &func_name)
 {
-  return RECURSIVE_KERNEL_FUNCS.find(func_name) != RECURSIVE_KERNEL_FUNCS.end();
+  return RECURSIVE_KERNEL_FUNCS.contains(func_name);
 }
 
 class RecursionCheck : public Visitor<RecursionCheck> {

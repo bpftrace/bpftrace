@@ -1,4 +1,4 @@
-#include <algorithm>
+#include <unordered_set>
 #include <vector>
 
 #include "ast/helpers.h"
@@ -31,15 +31,15 @@ static std::vector<DeprecatedName> DEPRECATED_LIST = {
     .replace_by_new_name = false }
 };
 
-static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
+static std::unordered_set<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
   "signal",
   "override",
 };
 
-static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
+static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
 
-static std::vector<std::string> UPROBE_LANGS = { "cpp" };
+static std::unordered_set<std::string> UPROBE_LANGS = { "cpp" };
 
 const std::string &is_deprecated(const std::string &str)
 {
@@ -67,27 +67,17 @@ const std::string &is_deprecated(const std::string &str)
 
 bool is_unsafe_func(const std::string &func_name)
 {
-  return std::ranges::any_of(UNSAFE_BUILTIN_FUNCS,
-
-                             [&](const auto &cand) {
-                               return func_name == cand;
-                             });
+  return UNSAFE_BUILTIN_FUNCS.contains(func_name);
 }
 
 bool is_compile_time_func(const std::string &func_name)
 {
-  return std::ranges::any_of(COMPILE_TIME_FUNCS,
-
-                             [&](const auto &cand) {
-                               return func_name == cand;
-                             });
+  return COMPILE_TIME_FUNCS.contains(func_name);
 }
 
 bool is_supported_lang(const std::string &lang)
 {
-  return std::ranges::any_of(UPROBE_LANGS,
-
-                             [&](const auto &cand) { return lang == cand; });
+  return UPROBE_LANGS.contains(lang);
 }
 
 bool is_type_name(std::string_view str)
