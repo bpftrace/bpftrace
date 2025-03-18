@@ -464,6 +464,16 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           }
           return CXChildVisit_Recurse;
         }
+        
+        if (clang_getCursorKind(c) == CXCursor_TypedefDecl) {
+          auto &macros = static_cast<BPFtrace *>(client_data)->macros_;
+          auto type_from = clang_getTypedefDeclUnderlyingType(c);
+          auto type_to   = clang_getCursorType(c);
+          auto str_from = get_unqualified_type_name(type_from);
+          auto str_to = get_unqualified_type_name(type_to);
+          macros[str_to] = str_from;
+          return CXChildVisit_Recurse;
+        }
 
         // Each anon enum must have a unique ID otherwise two variants
         // with different names but same value will clobber each other
