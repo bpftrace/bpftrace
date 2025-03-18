@@ -26,7 +26,7 @@ void RequiredResources::load_state(std::istream &in)
 
 void RequiredResources::load_state(const uint8_t *ptr, size_t len)
 {
-  auto addr = const_cast<uint8_t *>(ptr);
+  auto *addr = const_cast<uint8_t *>(ptr);
   util::Membuf mbuf(addr, addr + len);
   std::istream istream(&mbuf);
   cereal::BinaryInputArchive archive(istream);

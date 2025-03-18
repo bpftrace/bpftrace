@@ -252,7 +252,7 @@ TEST_F(childproc, multi_exec_match)
   }
 
   // Set ENV
-  auto old_path = ::getenv("PATH");
+  auto *old_path = ::getenv("PATH");
   auto new_path = usr_bin.native(); // copy
   new_path += ":";
   new_path += symlink_bin.c_str();

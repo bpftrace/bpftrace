@@ -30,24 +30,24 @@ namespace bpftrace::util {
 // Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
 static uint32_t _find_version_note(unsigned long base)
 {
-  auto ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
+  const auto *ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
 
   for (int i = 0; i < ehdr->e_shnum; i++) {
-    auto shdr = reinterpret_cast<const ElfW(Shdr) *>(base + ehdr->e_shoff +
-                                                     (i * ehdr->e_shentsize));
+    const auto *shdr = reinterpret_cast<const ElfW(Shdr) *>(
+        base + ehdr->e_shoff + (i * ehdr->e_shentsize));
 
     if (shdr->sh_type == SHT_NOTE) {
-      auto ptr = reinterpret_cast<const char *>(base + shdr->sh_offset);
-      auto end = ptr + shdr->sh_size;
+      const auto *ptr = reinterpret_cast<const char *>(base + shdr->sh_offset);
+      const auto *end = ptr + shdr->sh_size;
 
       while (ptr < end) {
-        auto nhdr = reinterpret_cast<const ElfW(Nhdr) *>(ptr);
+        const auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(ptr);
         ptr += sizeof *nhdr;
 
-        auto name = ptr;
+        const auto *name = ptr;
         ptr += (nhdr->n_namesz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
 
-        auto desc = ptr;
+        const auto *desc = ptr;
         ptr += (nhdr->n_descsz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
 
         if ((nhdr->n_namesz > 5 && !memcmp(name, "Linux", 5)) &&
@@ -161,7 +161,7 @@ std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
                                         struct symbol *sym)
 {
   for (size_t i = 0; !locs[i].path.empty(); ++i) {
-    auto &loc = locs[i];
+    const auto &loc = locs[i];
     if (loc.raw)
       continue; // This file is for BTF. skip
 

@@ -204,7 +204,8 @@ void FormatString::format(std::ostream &out,
       std::string printf_fmt;
       if (fmt_string == "%r" || fmt_string == "%rx" || fmt_string == "%rh") {
         if (fmt_string == "%rx" || fmt_string == "%rh") {
-          auto printable_buffer = dynamic_cast<PrintableBuffer *>(&*args.at(i));
+          auto *printable_buffer = dynamic_cast<PrintableBuffer *>(
+              &*args.at(i));
           // this is checked by semantic analyzer
           assert(printable_buffer);
           printable_buffer->keep_ascii(false);

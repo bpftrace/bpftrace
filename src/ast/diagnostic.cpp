@@ -18,7 +18,7 @@ void Diagnostics::emit(std::ostream& out, Severity s) const
 
 void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
 {
-  auto& loc = d.loc();
+  const auto& loc = d.loc();
   switch (s) {
     case Severity::Warning:
       LOG(WARNING, loc.source_location(), loc.source_context(), out) << d.msg();

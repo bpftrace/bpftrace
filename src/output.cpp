@@ -286,7 +286,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
           reinterpret_cast<const AsyncEvent::Buf *>(value.data())->length);
     }
     case Type::string: {
-      auto p = reinterpret_cast<const char *>(value.data());
+      const auto *p = reinterpret_cast<const char *>(value.data());
       return { p, strnlen(p, type.GetSize()) };
     }
     case Type::array: {
@@ -507,7 +507,7 @@ void Output::map_contents(
   const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
 
   bool first = true;
-  for (auto &pair : values_by_key) {
+  for (const auto &pair : values_by_key) {
     auto key = pair.first;
     auto value = pair.second;
 
@@ -541,9 +541,9 @@ void Output::map_hist_contents(
   const auto &map_info = bpftrace.resources.maps_info.at(map.name());
   const auto &map_type = map_info.value_type;
   bool first = true;
-  for (auto &key_count : total_counts_by_key) {
-    auto &key = key_count.first;
-    auto &value = values_by_key.at(key);
+  for (const auto &key_count : total_counts_by_key) {
+    const auto &key = key_count.first;
+    const auto &value = values_by_key.at(key);
 
     if (top && values_by_key.size() > top && i++ < (values_by_key.size() - top))
       continue;
@@ -560,7 +560,7 @@ void Output::map_hist_contents(
         LOG(BUG) << "call to hist with missing \"bits\" argument";
       val_str = hist_to_str(value, div, *map_info.hist_bits_arg);
     } else {
-      auto &args = map_info.lhist_args;
+      const auto &args = map_info.lhist_args;
       if (!args.has_value())
         LOG(BUG) << "call to lhist with missing arguments";
       val_str = lhist_to_str(value, args->min, args->max, args->step);
@@ -582,7 +582,7 @@ void Output::map_stats_contents(
   size_t total = values_by_key.size();
   bool first = true;
 
-  for (auto &[key, value] : values_by_key) {
+  for (const auto &[key, value] : values_by_key) {
     if (top && map_type.IsAvgTy()) {
       if (total > top && i++ < (total - top))
         continue;
@@ -778,7 +778,7 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
       if (type.IsEnumTy() && div == 1) {
         assert(!is_per_cpu);
 
-        auto data = value.data();
+        const auto *data = value.data();
         auto enum_name = type.GetName();
         uint64_t enum_val;
         switch (type.GetIntBitWidth()) {

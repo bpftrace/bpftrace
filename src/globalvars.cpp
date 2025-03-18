@@ -166,7 +166,7 @@ static void update_global_vars_custom_rw_section(
   auto global_var = *needed_global_vars.begin();
 
   size_t actual_size;
-  auto buf = bpf_map__initial_value(global_vars_map, &actual_size);
+  auto *buf = bpf_map__initial_value(global_vars_map, &actual_size);
   if (!buf) {
     LOG(BUG) << "Failed to get size for section " << section_name
              << " before resizing";

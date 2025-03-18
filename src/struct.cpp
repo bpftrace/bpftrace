@@ -131,7 +131,7 @@ void Struct::Dump(std::ostream &os)
 
 bool Struct::HasField(const std::string &name) const
 {
-  for (auto &field : fields) {
+  for (const auto &field : fields) {
     if (field.name == name)
       return true;
   }
@@ -140,7 +140,7 @@ bool Struct::HasField(const std::string &name) const
 
 const Field &Struct::GetField(const std::string &name) const
 {
-  for (auto &field : fields) {
+  for (const auto &field : fields) {
     if (field.name == name)
       return field;
   }

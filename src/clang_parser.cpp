@@ -619,7 +619,7 @@ void ClangParser::resolve_incomplete_types_from_btf(
   // The maximum number of iterations can be also controlled by the
   // BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable (0 is unlimited).
   uint64_t field_lvl = 1;
-  for (auto &probe : probes)
+  for (const auto &probe : probes)
     if (probe->tp_args_structs_level > static_cast<int>(field_lvl))
       field_lvl = probe->tp_args_structs_level;
 
@@ -774,7 +774,7 @@ std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
   const std::vector<std::string> unknown_type_msgs = {
     "unknown type name \'", "use of undeclared identifier \'"
   };
-  for (auto &unknown_type_msg : unknown_type_msgs) {
+  for (const auto &unknown_type_msg : unknown_type_msgs) {
     if (diagnostic_msg.starts_with(unknown_type_msg)) {
       return diagnostic_msg.substr(unknown_type_msg.length(),
                                    diagnostic_msg.length() -

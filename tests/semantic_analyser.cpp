@@ -1296,7 +1296,7 @@ TEST(semantic_analyser, call_str_2_lit)
   BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = str(arg0, 3); }");
 
-  auto x = static_cast<ast::AssignVarStatement *>(
+  auto *x = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateString(3), x->var->type);
 }
@@ -1459,7 +1459,7 @@ TEST(semantic_analyser, call_uaddr)
   std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
 
   for (size_t i = 0; i < sizes.size(); i++) {
-    auto v = static_cast<ast::AssignVarStatement *>(
+    auto *v = static_cast<ast::AssignVarStatement *>(
         ast.root->probes.at(0)->block->stmts.at(i));
     EXPECT_TRUE(v->var->type.IsPtrTy());
     EXPECT_TRUE(v->var->type.GetPointeeTy()->IsIntTy());
@@ -1746,26 +1746,26 @@ TEST(semantic_analyser, array_access)
   auto ast = test(
       "struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
       "arg0; @x = $s->y[0];}");
-  auto assignment = static_cast<ast::AssignMapStatement *>(
+  auto *assignment = static_cast<ast::AssignMapStatement *>(
       ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt64(), assignment->map->type);
 
   ast = test(
       "struct MyStruct { int y[4]; } kprobe:f { $s = ((struct MyStruct *) "
       "arg0)->y; @x = $s[0];}");
-  auto array_var_assignment = static_cast<ast::AssignVarStatement *>(
+  auto *array_var_assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateArray(4, CreateInt32()), array_var_assignment->var->type);
 
   ast = test(
       "struct MyStruct { int y[4]; } kprobe:f { @a[0] = ((struct MyStruct *) "
       "arg0)->y; @x = @a[0][0];}");
-  auto array_map_assignment = static_cast<ast::AssignMapStatement *>(
+  auto *array_map_assignment = static_cast<ast::AssignMapStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateArray(4, CreateInt32()), array_map_assignment->map->type);
 
   ast = test("kprobe:f { $s = (int32 *) arg0; $x = $s[0]; }");
-  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+  auto *var_assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
 
@@ -1869,7 +1869,7 @@ TEST(semantic_analyser, variable_type)
   BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = 1 }");
   auto st = CreateInt64();
-  auto assignment = static_cast<ast::AssignVarStatement *>(
+  auto *assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(st, assignment->var->type);
 }
@@ -1900,9 +1900,9 @@ TEST(semantic_analyser, map_integer_sizes)
   BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = (int32) -1; @x = $x; }");
 
-  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+  auto *var_assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
-  auto map_assignment = static_cast<ast::AssignMapStatement *>(
+  auto *map_assignment = static_cast<ast::AssignMapStatement *>(
       ast.root->probes.at(0)->block->stmts.at(1));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
   EXPECT_EQ(CreateInt64(), map_assignment->map->type);
@@ -1913,7 +1913,7 @@ TEST(semantic_analyser, binop_integer_promotion)
   BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = (int32)5 + (int16)6 }");
 
-  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+  auto *var_assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
 }
@@ -1923,7 +1923,7 @@ TEST(semantic_analyser, binop_integer_no_promotion)
   BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = (int8)5 + (int8)6 }");
 
-  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+  auto *var_assignment = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   EXPECT_EQ(CreateInt8(), var_assignment->var->type);
 }
@@ -2680,7 +2680,7 @@ TEST(semantic_analyser, field_access_is_internal)
   {
     auto ast = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
     auto &stmts = ast.root->probes.at(0)->block->stmts;
-    auto var_assignment1 = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+    auto *var_assignment1 = static_cast<ast::AssignVarStatement *>(stmts.at(0));
     EXPECT_FALSE(var_assignment1->var->type.is_internal);
   }
 
@@ -2688,8 +2688,8 @@ TEST(semantic_analyser, field_access_is_internal)
     auto ast = test(structs +
                     "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
     auto &stmts = ast.root->probes.at(0)->block->stmts;
-    auto map_assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
-    auto var_assignment2 = static_cast<ast::AssignVarStatement *>(stmts.at(1));
+    auto *map_assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
+    auto *var_assignment2 = static_cast<ast::AssignVarStatement *>(stmts.at(1));
     EXPECT_TRUE(map_assignment->map->type.is_internal);
     EXPECT_TRUE(var_assignment2->var->type.is_internal);
   }
@@ -2793,9 +2793,9 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%d\", cgroupid(str($2))); }");
 
   auto ast = test("k:f { $1 }");
-  auto stmt = static_cast<ast::ExprStatement *>(
+  auto *stmt = static_cast<ast::ExprStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
-  auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
+  auto *pp = static_cast<ast::PositionalParameter *>(stmt->expr);
   EXPECT_EQ(CreateUInt64(), pp->type);
   EXPECT_TRUE(pp->is_literal);
 
@@ -2963,13 +2963,13 @@ TEST(semantic_analyser, cast_sign)
       "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
   auto ast = test(prog);
 
-  auto s = static_cast<ast::AssignVarStatement *>(
+  auto *s = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(1));
-  auto us = static_cast<ast::AssignVarStatement *>(
+  auto *us = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(2));
-  auto l = static_cast<ast::AssignVarStatement *>(
+  auto *l = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(3));
-  auto ul = static_cast<ast::AssignVarStatement *>(
+  auto *ul = static_cast<ast::AssignVarStatement *>(
       ast.root->probes.at(0)->block->stmts.at(4));
   EXPECT_EQ(CreateInt32(), s->var->type);
   EXPECT_EQ(CreateUInt32(), us->var->type);
@@ -2999,13 +2999,13 @@ TEST(semantic_analyser, binop_sign)
                        "}";
 
     auto ast = test(prog);
-    auto varA = static_cast<ast::AssignVarStatement *>(
+    auto *varA = static_cast<ast::AssignVarStatement *>(
         ast.root->probes.at(0)->block->stmts.at(1));
     EXPECT_EQ(CreateInt64(), varA->var->type);
-    auto varB = static_cast<ast::AssignVarStatement *>(
+    auto *varB = static_cast<ast::AssignVarStatement *>(
         ast.root->probes.at(0)->block->stmts.at(2));
     EXPECT_EQ(CreateUInt64(), varB->var->type);
-    auto varC = static_cast<ast::AssignVarStatement *>(
+    auto *varC = static_cast<ast::AssignVarStatement *>(
         ast.root->probes.at(0)->block->stmts.at(3));
     EXPECT_EQ(CreateUInt64(), varC->var->type);
   }
@@ -3408,23 +3408,23 @@ TEST(semantic_analyser, type_ctx)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $x = (struct x*)ctx;
-  auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   EXPECT_TRUE(assignment->var->type.IsPtrTy());
 
   // $a = $x->a;
   assignment = static_cast<ast::AssignVarStatement *>(stmts.at(1));
   EXPECT_EQ(CreateInt64(), assignment->var->type);
-  auto fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
+  auto *fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt64(), fieldaccess->type);
-  auto unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  auto *unop = static_cast<ast::Unop *>(fieldaccess->expr);
   EXPECT_TRUE(unop->type.IsCtxAccess());
-  auto var = static_cast<ast::Variable *>(unop->expr);
+  auto *var = static_cast<ast::Variable *>(unop->expr);
   EXPECT_TRUE(var->type.IsPtrTy());
 
   // $b = $x->b[0];
   assignment = static_cast<ast::AssignVarStatement *>(stmts.at(2));
   EXPECT_EQ(CreateInt16(), assignment->var->type);
-  auto arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
+  auto *arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt16(), arrayaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(arrayaccess->expr);
   EXPECT_TRUE(fieldaccess->type.IsCtxAccess());
@@ -3485,7 +3485,7 @@ TEST(semantic_analyser, double_pointer_int)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $pp = (int8 **)1;
-  auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   ASSERT_TRUE(assignment->var->type.IsPtrTy());
   ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsPtrTy());
   ASSERT_TRUE(assignment->var->type.GetPointeeTy()->GetPointeeTy()->IsIntTy());
@@ -3513,7 +3513,7 @@ TEST(semantic_analyser, double_pointer_struct)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $pp = (struct Foo **)1;
-  auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   ASSERT_TRUE(assignment->var->type.IsPtrTy());
   ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsPtrTy());
   ASSERT_TRUE(
@@ -3695,7 +3695,7 @@ TEST(semantic_analyser, tuple_assign_var)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
-  auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   EXPECT_EQ(ty, assignment->var->type);
 
   // $t = (4, "other");
@@ -3714,7 +3714,7 @@ TEST(semantic_analyser, tuple_assign_map)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, 3, 3, 7);
-  auto assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
   ty = CreateTuple(bpftrace.structs.AddTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
   EXPECT_EQ(ty, assignment->map->type);
@@ -3739,7 +3739,7 @@ TEST(semantic_analyser, tuple_nested)
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
-  auto assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
+  auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   EXPECT_EQ(ty, assignment->var->type);
 }
 
@@ -3877,14 +3877,14 @@ TEST(semantic_analyser, string_size)
   // Size of the variable should be the size of the larger string (incl. null)
   BPFtrace bpftrace;
   auto ast = test(bpftrace, true, R"_(BEGIN { $x = "hi"; $x = "hello"; })_", 0);
-  auto stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
+  auto *stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  auto *var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsStringTy());
   ASSERT_EQ(var_assign->var->type.GetSize(), 6UL);
 
   ast = test(bpftrace, true, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
-  auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
+  auto *map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->type.IsStringTy());
   ASSERT_EQ(map_assign->map->type.GetSize(), 6UL);
 

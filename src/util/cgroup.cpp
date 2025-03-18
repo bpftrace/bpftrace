@@ -47,7 +47,7 @@ std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
     return "/";
   }
 
-  for (auto &path_iter :
+  for (const auto &path_iter :
        std::filesystem::recursive_directory_iterator(base_path)) {
     if (stat(path_iter.path().c_str(), &path_st) < 0)
       return "";

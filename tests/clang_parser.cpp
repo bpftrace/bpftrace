@@ -223,8 +223,8 @@ TEST(clang_parser, string_ptr)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("str"));
 
-  auto &ty = foo->GetField("str").type;
-  auto *pointee = ty.GetPointeeTy();
+  const auto &ty = foo->GetField("str").type;
+  const auto *pointee = ty.GetPointeeTy();
   EXPECT_TRUE(pointee->IsIntTy());
   EXPECT_EQ(pointee->GetIntBitWidth(), 8 * sizeof(char));
   EXPECT_EQ(foo->GetField("str").offset, 0);
@@ -260,7 +260,7 @@ TEST(clang_parser, nested_struct_named)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("bar"));
 
-  auto &bar = foo->GetField("bar");
+  const auto &bar = foo->GetField("bar");
   EXPECT_TRUE(bar.type.IsRecordTy());
   EXPECT_EQ(bar.type.GetName(), "struct Bar");
   EXPECT_EQ(bar.type.GetSize(), 4U);
@@ -280,7 +280,7 @@ TEST(clang_parser, nested_struct_ptr_named)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("bar"));
 
-  auto &bar = foo->GetField("bar");
+  const auto &bar = foo->GetField("bar");
   EXPECT_TRUE(bar.type.IsPtrTy());
   EXPECT_TRUE(bar.type.GetPointeeTy()->IsRecordTy());
   EXPECT_EQ(bar.type.GetPointeeTy()->GetName(), "struct Bar");
@@ -328,12 +328,12 @@ TEST(clang_parser, nested_struct_no_type)
   EXPECT_EQ(baz->GetField("y").offset, 0);
 
   {
-    auto &bar_field = foo->GetField("bar");
+    const auto &bar_field = foo->GetField("bar");
     EXPECT_TRUE(bar_field.type.IsRecordTy());
     EXPECT_EQ(bar_field.type.GetSize(), sizeof(int));
     EXPECT_EQ(bar_field.offset, 0);
 
-    auto &baz_field = foo->GetField("baz");
+    const auto &baz_field = foo->GetField("baz");
     EXPECT_TRUE(baz_field.type.IsRecordTy());
     EXPECT_EQ(baz_field.type.GetSize(), sizeof(int));
     EXPECT_EQ(baz_field.offset, 4);
