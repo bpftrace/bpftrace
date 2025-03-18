@@ -1,5 +1,8 @@
 #include "bpfbytecode.h"
 
+#include <algorithm>
+#include <stdexcept>
+
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
@@ -10,7 +13,6 @@
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <elf.h>
-#include <stdexcept>
 
 namespace bpftrace {
 
@@ -29,7 +31,7 @@ static std::optional<std::string> get_global_var_section_name(
 {
   for (const auto &section_name : section_names) {
     // there are some random chars in the beginning of the map name
-    if (map_name.npos != map_name.find(section_name))
+    if (std::string_view::npos != map_name.find(section_name))
       return section_name;
   }
   return std::nullopt;
@@ -134,21 +136,21 @@ void maybe_throw_helper_verifier_error(std::string_view log,
                                        const std::string &exception_msg_suffix)
 {
   auto err_pos = log.find(err_pattern);
-  if (err_pos == log.npos)
+  if (err_pos == std::string_view::npos)
     return;
 
   std::string_view call_pattern = " call ";
   auto call_pos = log.rfind(call_pattern, err_pos);
-  if (call_pos == log.npos)
+  if (call_pos == std::string_view::npos)
     return;
 
   auto helper_begin = call_pos + call_pattern.size();
   auto hash_pos = log.find("#", helper_begin);
-  if (hash_pos == log.npos)
+  if (hash_pos == std::string_view::npos)
     return;
 
   auto eol = log.find("\n", hash_pos + 1);
-  if (eol == log.npos)
+  if (eol == std::string_view::npos)
     return;
 
   auto helper_name = std::string{ log.substr(helper_begin,
@@ -231,7 +233,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
           ": result needs to be null-checked before accessing fields");
 
       auto err_pos = log.find("from non-GPL compatible program");
-      if (err_pos != log.npos) {
+      if (err_pos != std::string_view::npos) {
         LOG(ERROR) << "Your bpftrace program cannot load because you are using "
                       "a license that is non-GPL compatible. License: "
                    << config.get(ConfigKeyString::license);
@@ -291,11 +293,9 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
 
 bool BpfBytecode::all_progs_loaded()
 {
-  for (const auto &prog : programs_) {
-    if (prog.second.fd() < 0)
-      return false;
-  }
-  return true;
+  return std::ranges::all_of(programs_, [](const auto &prog) {
+    return prog.second.fd() >= 0;
+  });
 }
 
 bool BpfBytecode::hasMap(MapType internal_type) const

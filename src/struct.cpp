@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iomanip>
 #include <limits>
 
@@ -131,11 +132,9 @@ void Struct::Dump(std::ostream &os)
 
 bool Struct::HasField(const std::string &name) const
 {
-  for (const auto &field : fields) {
-    if (field.name == name)
-      return true;
-  }
-  return false;
+  return std::ranges::any_of(fields, [name](const auto &field) {
+    return field.name == name;
+  });
 }
 
 const Field &Struct::GetField(const std::string &name) const

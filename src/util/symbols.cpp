@@ -93,10 +93,7 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
 {
-  if (!sym_name.rfind("_Z", 0) || !sym_name.rfind("____Z", 0))
-    return true;
-  else
-    return false;
+  return !sym_name.rfind("_Z", 0) || !sym_name.rfind("____Z", 0);
 }
 
 } // namespace bpftrace::util

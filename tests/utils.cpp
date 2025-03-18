@@ -166,7 +166,7 @@ static std::string get_working_path()
 TEST(utils, resolve_binary_path)
 {
   std::string path = "/tmp/bpftrace-test-utils-XXXXXX";
-  if (::mkdtemp(&path[0]) == nullptr) {
+  if (::mkdtemp(path.data()) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
@@ -201,7 +201,7 @@ TEST(utils, abs_path)
 {
   std::string path = "/tmp/bpftrace-test-utils-XXXXXX";
   std::string rel_file = "bpftrace-test-utils-abs-path";
-  if (::mkdtemp(&path[0]) == nullptr) {
+  if (::mkdtemp(path.data()) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
@@ -246,7 +246,7 @@ TEST(utils, get_cgroup_path_in_hierarchy)
 {
   std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
 
-  if (::mkdtemp(&tmpdir[0]) == nullptr) {
+  if (::mkdtemp(tmpdir.data()) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
@@ -337,7 +337,7 @@ static void with_env(const std::string &key,
 TEST(utils, find_in_path)
 {
   std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
-  ASSERT_TRUE(::mkdtemp(&tmpdir[0]));
+  ASSERT_TRUE(::mkdtemp(tmpdir.data()));
 
   // Create some directories
   const std::filesystem::path path(tmpdir);

@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "ast/passes/return_path_analyser.h"
 #include "ast/visitor.h"
 
@@ -13,18 +15,15 @@ public:
   bool visit(Program &prog);
   bool visit(Subprog &subprog);
   bool visit(Jump &jump);
-  bool visit(If &if_stmt);
+  bool visit(If &if_node);
 };
 
 } // namespace
 
 bool ReturnPathAnalyser::visit(Program &prog)
 {
-  for (Subprog *subprog : prog.functions) {
-    if (!visit(*subprog))
-      return false;
-  }
-  return true;
+  return std::ranges::all_of(prog.functions,
+                             [this](auto *subprog) { return visit(*subprog); });
 }
 
 bool ReturnPathAnalyser::visit(Subprog &subprog)
@@ -57,14 +56,10 @@ bool ReturnPathAnalyser::visit(If &if_node)
     return false;
   }
 
-  for (Statement *stmt : if_node.else_block->stmts) {
-    if (visit(stmt)) {
-      // both blocks have a return
-      return true;
-    }
-  }
-  // else block has no return (or there is no else block)
-  return false;
+  // True if both blocks have a return.
+  // False if else block has no return (or there is no else block).
+  return std::ranges::any_of(if_node.else_block->stmts,
+                             [this](auto *stmt) { return visit(stmt); });
 }
 
 Pass CreateReturnPathPass()

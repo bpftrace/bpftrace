@@ -158,7 +158,7 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
                                                 int *last_offset,
                                                 BPFtrace &bpftrace)
 {
-  std::string extra = "";
+  std::string extra;
 
   auto field_pos = line.find("field:");
   if (field_pos == std::string::npos)

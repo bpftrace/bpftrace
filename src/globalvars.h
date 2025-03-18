@@ -72,7 +72,7 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
 };
 
 void update_global_vars(
-    const struct bpf_object *obj,
+    const struct bpf_object *bpf_object,
     const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
     const BPFtrace &bpftrace);
 

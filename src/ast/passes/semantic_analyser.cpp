@@ -167,8 +167,7 @@ private:
                         const std::string &map_ident,
                         const Node &node);
   bool update_string_size(SizedType &type, const SizedType &new_type);
-  SizedType create_merged_tuple(const SizedType &blah_type,
-                                const SizedType &prev_type);
+  SizedType create_merged_tuple(const SizedType &left, const SizedType &right);
   void validate_map_key(const SizedType &key, Node &node);
   void resolve_struct_type(SizedType &type, Node &node);
 
@@ -337,7 +336,7 @@ bool SemanticAnalyser::is_valid_assignment(const Expression *target,
     // Prevent declaring a map copying another aggregate map.
     if (const auto *target_map = dynamic_cast<const Map *>(target)) {
       bool map_has_type = get_map_type(*target_map);
-      if (expr->type.IsCastableMapTy() && map_has_type == false)
+      if (expr->type.IsCastableMapTy() && !map_has_type)
         return false;
     }
   }
@@ -549,7 +548,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << "ctx cannot be used in different BPF program types: "
             << progtypeName(bt) << " and " << progtypeName(bt2);
     }
-    switch (static_cast<libbpf::bpf_prog_type>(bt)) {
+    switch (bt) {
       case libbpf::BPF_PROG_TYPE_KPROBE:
         builtin.type = CreatePointer(CreateRecord("struct pt_regs",
                                                   bpftrace_.structs.Lookup(
@@ -2447,8 +2446,8 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   } else if (unop.op == Operator::LNOT) {
     // CreateUInt() abort if a size is invalid, so check the size here
-    if (!(type.GetSize() == 0 || type.GetSize() == 1 || type.GetSize() == 2 ||
-          type.GetSize() == 4 || type.GetSize() == 8)) {
+    if (type.GetSize() != 0 && type.GetSize() != 1 && type.GetSize() != 2 &&
+        type.GetSize() != 4 && type.GetSize() != 8) {
       unop.addError() << "The " << opstr(unop)
                       << " operator can not be used on expressions of type '"
                       << type << "'";
@@ -2979,8 +2978,8 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (!cast.type.IsIntTy() && !cast.type.IsPtrTy() &&
-      !(cast.type.IsPtrTy() && !cast.type.GetElementTy()->IsIntTy() &&
-        !cast.type.GetElementTy()->IsRecordTy()) &&
+      (!cast.type.IsPtrTy() || cast.type.GetElementTy()->IsIntTy() ||
+       cast.type.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
       !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();

@@ -36,7 +36,7 @@ void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
   DISubprogram::DISPFlags flags = DISubprogram::SPFlagZero;
   if (!is_declaration)
     flags |= DISubprogram::SPFlagDefinition;
-  if (func.isLocalLinkage(func.getLinkage()))
+  if (llvm::Function::isLocalLinkage(func.getLinkage()))
     flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
 
   DISubprogram *subprog = createFunction(file,

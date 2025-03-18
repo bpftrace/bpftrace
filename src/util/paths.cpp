@@ -183,7 +183,7 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
 std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                              std::optional<int> pid)
 {
-  std::string env_paths = "";
+  std::string env_paths;
   std::ostringstream pid_environ_path;
 
   if (pid.has_value() && pid_in_different_mountns(*pid)) {

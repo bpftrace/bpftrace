@@ -203,7 +203,6 @@ private:
     }
   }
 
-private:
   bool can_set(ConfigSource prevSource, ConfigSource source);
   bool is_aslr_enabled();
 

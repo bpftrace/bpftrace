@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bpf/libbpf.h>
 #include <iomanip>
 
@@ -113,7 +114,8 @@ std::ostream &operator<<(std::ostream &out, MessageType type)
 
 std::string TextOutput::hist_index_label(uint32_t index, uint32_t k)
 {
-  const uint32_t n = (1 << k), interval = index & (n - 1);
+  const uint32_t n = (1 << k);
+  const uint32_t interval = index & (n - 1);
   assert(index >= n);
   uint32_t power = (index >> k) - 1;
   // Choose the suffix for the largest power of 2^10
@@ -167,8 +169,7 @@ void Output::hist_prepare(const std::vector<uint64_t> &values,
         min_index = i;
       max_index = i;
     }
-    if (v > max_value)
-      max_value = v;
+    max_value = std::max(v, max_value);
   }
 }
 
@@ -190,8 +191,7 @@ void Output::lhist_prepare(const std::vector<uint64_t> &values,
     int v = values.at(i);
     if (v != 0)
       max_index = i;
-    if (v > max_value)
-      max_value = v;
+    max_value = std::max(v, max_value);
   }
 
   if (max_index == -1)
@@ -714,8 +714,8 @@ std::string TextOutput::lhist_to_str(const std::vector<uint64_t> &values,
     } else if (i == (buckets + 1)) {
       header << "[" << lhist_index_label(max, step) << ", ...)";
     } else {
-      header << "[" << lhist_index_label((i - 1) * step + min, step);
-      header << ", " << lhist_index_label(i * step + min, step) << ")";
+      header << "[" << lhist_index_label(((i - 1) * step) + min, step);
+      header << ", " << lhist_index_label((i * step) + min, step) << ")";
     }
 
     std::string bar(bar_width, '@');
@@ -995,11 +995,12 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
       res << "\"min\": " << i - 1 << ", \"max\": " << i - 1 << ", ";
     } else {
       const uint32_t n = 1 << k;
-      uint32_t power = ((i - 1) >> k) - 1, bucket = (i - 1) & (n - 1);
+      uint32_t power = ((i - 1) >> k) - 1;
+      uint32_t bucket = (i - 1) & (n - 1);
       const long low = (1ULL << power) * (n + bucket);
       power = (i >> k) - 1;
       bucket = i & (n - 1);
-      const long high = (1ULL << power) * (n + bucket) - 1;
+      const long high = ((1ULL << power) * (n + bucket)) - 1;
       res << "\"min\": " << low << ", \"max\": " << high << ", ";
     }
     res << "\"count\": " << values.at(i) / div;
@@ -1040,8 +1041,8 @@ std::string JsonOutput::lhist_to_str(const std::vector<uint64_t> &values,
     } else if (i == (buckets + 1)) {
       res << "\"min\": " << max << ", ";
     } else {
-      long low = (i - 1) * step + min;
-      long high = i * step + min - 1;
+      long low = ((i - 1) * step) + min;
+      long high = (i * step) + min - 1;
       res << "\"min\": " << low << ", \"max\": " << high << ", ";
     }
     res << "\"count\": " << values.at(i);

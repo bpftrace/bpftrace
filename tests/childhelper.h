@@ -14,7 +14,7 @@ inline int msleep(int msec)
   struct timespec sleep = { .tv_sec = 0, .tv_nsec = msec * 1000000L };
   struct timespec rem = {};
   if (nanosleep(&sleep, &rem) < 0)
-    return 1000L * rem.tv_sec + 1000000L * rem.tv_nsec;
+    return (1000L * rem.tv_sec) + (1000000L * rem.tv_nsec);
   return 0;
 }
 

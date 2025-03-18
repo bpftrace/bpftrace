@@ -255,7 +255,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   if (bpftrace->finalize_)
     return;
 
-  if (bpftrace->exitsig_recv) {
+  if (bpftrace::BPFtrace::exitsig_recv) {
     bpftrace->request_finalize();
     return;
   }
@@ -283,7 +283,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     std::vector<uint8_t> bytes;
     for (size_t i = 0; i < ty.GetSize(); ++i)
-      bytes.emplace_back(reinterpret_cast<uint8_t>(print->content[i]));
+      bytes.emplace_back(print->content[i]);
 
     bpftrace->out_->value(*bpftrace, ty, bytes);
 
@@ -328,7 +328,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     const auto *delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
-      auto *arg = arg_data + 2 * sizeof(uint64_t) + i * bpftrace->join_argsize_;
+      auto *arg = arg_data + (2 * sizeof(uint64_t)) +
+                  (i * bpftrace->join_argsize_);
       if (arg[0] == 0)
         break;
       if (i)
@@ -692,8 +693,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
-  if (feature_->has_uprobe_refcnt() ||
-      !(file_activation && !probe.path.empty())) {
+  if (feature_->has_uprobe_refcnt() || !file_activation || probe.path.empty()) {
     ret.emplace_back(
         std::make_unique<AttachedProbe>(probe, program, pid, *this));
     return ret;
@@ -950,7 +950,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (bytecode_.hasMap(MapType::Elapsed)) {
     struct timespec ts;
     clock_gettime(CLOCK_BOOTTIME, &ts);
-    auto nsec = 1000000000ULL * ts.tv_sec + ts.tv_nsec;
+    auto nsec = (1000000000ULL * ts.tv_sec) + ts.tv_nsec;
     uint64_t key = 0;
 
     if (bpf_update_elem(
@@ -1140,8 +1140,8 @@ int BPFtrace::setup_perf_events()
 
 void BPFtrace::setup_ringbuf()
 {
-  ringbuf_ = static_cast<struct ring_buffer *>(ring_buffer__new(
-      bytecode_.getMap(MapType::Ringbuf).fd(), ringbuf_printer, this, nullptr));
+  ringbuf_ = ring_buffer__new(
+      bytecode_.getMap(MapType::Ringbuf).fd(), ringbuf_printer, this, nullptr);
 }
 
 int BPFtrace::setup_event_loss()
@@ -1239,7 +1239,6 @@ void BPFtrace::poll_output(bool drain)
       }
     }
   }
-  return;
 }
 
 int BPFtrace::poll_perf_events()
@@ -1574,7 +1573,7 @@ std::string BPFtrace::resolve_uid(uint64_t addr) const
 {
   std::string file_name = "/etc/passwd";
   std::string uid = std::to_string(addr);
-  std::string username = "";
+  std::string username;
 
   std::ifstream file(file_name);
   if (file.fail()) {

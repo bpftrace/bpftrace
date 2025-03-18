@@ -14,7 +14,7 @@ namespace bpftrace {
 static constexpr auto RETVAL_FIELD_NAME = "$retval";
 
 struct Bitfield {
-  Bitfield(size_t byte_offset, size_t bit_width);
+  Bitfield(size_t bit_offset, size_t bit_width);
   Bitfield(size_t read_bytes, size_t access_rshift, uint64_t mask)
       : read_bytes(read_bytes), access_rshift(access_rshift), mask(mask)
   {

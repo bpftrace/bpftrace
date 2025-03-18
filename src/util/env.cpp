@@ -37,7 +37,6 @@ void get_bool_env_var(const ::std::string &str,
     }
     cb(dest);
   }
-  return;
 }
 
 } // namespace bpftrace::util

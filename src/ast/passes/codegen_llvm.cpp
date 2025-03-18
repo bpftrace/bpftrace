@@ -14,7 +14,6 @@
 #include <llvm/ADT/FunctionExtras.h>
 #include <llvm/CodeGen/UnreachableBlockElim.h>
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
@@ -254,7 +253,8 @@ private:
 
   bool map_has_single_elem(const SizedType &val_type,
                            const SizedType &key_type);
-  void generate_maps(const RequiredResources &rr, const CodegenResources &cr);
+  void generate_maps(const RequiredResources &required_resources,
+                     const CodegenResources &codegen_resources);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
 
@@ -427,7 +427,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
       llvm_ctx_(llvm_ctx),
       usdt_helper_(usdt_helper),
       module_(std::make_unique<Module>("bpftrace", llvm_ctx)),
-      async_ids_(AsyncIds()),
+
       b_(llvm_ctx, *module_, bpftrace, async_ids_),
       debug_(*module_)
 {
@@ -453,7 +453,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
       module_->getOrInsertGlobal(LICENSE,
                                  ArrayType::get(b_.getInt8Ty(), license_size)));
   license_var->setInitializer(
-      ConstantDataArray::getString(module_->getContext(), license.c_str()));
+      ConstantDataArray::getString(module_->getContext(), license));
   license_var->setSection("license");
   license_var->addDebugInfo(
       debug_.createGlobalVariable(LICENSE, CreateString(license_size)));
@@ -1303,7 +1303,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
           ctx_,
           b_.CreateGEP(b_.getInt8Ty(),
                        perfdata,
-                       b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
+                       b_.getInt64(8 + 8 + (i * bpftrace_.join_argsize_))),
           bpftrace_.join_argsize_,
           b_.CreateLoad(b_.getInt64Ty(), arr),
           addrspace,
@@ -1313,7 +1313,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // emit
     b_.CreateOutput(ctx_,
                     perfdata,
-                    8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
+                    8 + 8 + (bpftrace_.join_argnum_ * bpftrace_.join_argsize_),
                     call.loc);
 
     b_.CreateBr(failure_callback);
@@ -1762,11 +1762,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (inBpfMemory(macaddr->type))
       b_.CreateMemcpyBPF(buf, scoped_arg.value(), macaddr->type.GetSize());
     else
-      b_.CreateProbeRead(ctx_,
-                         static_cast<AllocaInst *>(buf),
-                         macaddr->type,
-                         scoped_arg.value(),
-                         call.loc);
+      b_.CreateProbeRead(
+          ctx_, buf, macaddr->type, scoped_arg.value(), call.loc);
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "unwatch") {
@@ -1840,7 +1837,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (call.type.ts_mode == TimestampMode::sw_tai) {
       if (!bpftrace_.delta_taitime_.has_value())
         LOG(BUG) << "Should have been checked in semantic analysis";
-      uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
+      uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
                        bpftrace_.delta_taitime_->tv_nsec;
       Value *ns = b_.CreateGetNs(TimestampMode::boot, call.loc);
       return ScopedExpr(b_.CreateAdd(ns, b_.getInt64(delta)));
@@ -3727,7 +3724,7 @@ llvm::Function *CodegenLLVM::createLog2Function()
   // index of first bit set in n, 1 means bit 0, guaranteed to be >= k
   Value *l = zero;
   for (int i = 5; i >= 0; i--) {
-    Value *threshold = b_.getInt64(1ul << (1ul << i));
+    Value *threshold = b_.getInt64(1UL << (1UL << i));
     Value *is_ge = b_.CreateICmpSGE(n, threshold);
     // cast is important.
     is_ge = b_.CreateIntCast(is_ge, b_.getInt64Ty(), false);
@@ -4184,7 +4181,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   if (codegen_resources.needs_join_map) {
-    auto value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
+    auto value_size = 8 + 8 +
+                      (bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
     SizedType value_type = CreateArray(value_size, CreateInt8());
     createMapDefinition(to_string(MapType::Join),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
@@ -4227,8 +4225,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateNone());
   }
 
-  int loss_cnt_key_size = sizeof(bpftrace_.event_loss_cnt_key_) * 8;
-  int loss_cnt_val_size = sizeof(bpftrace_.event_loss_cnt_val_) * 8;
+  int loss_cnt_key_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_key_) * 8;
+  int loss_cnt_val_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_val_) * 8;
   createMapDefinition(to_string(MapType::EventLossCounter),
                       libbpf::BPF_MAP_TYPE_ARRAY,
                       1,
@@ -4855,7 +4853,7 @@ GlobalVariable *CodegenLLVM::DeclareKernelVar(const std::string &var_name)
 
 std::unique_ptr<llvm::Module> CodegenLLVM::compile()
 {
-  CodegenResourceAnalyser analyser(*bpftrace_.config_.get());
+  CodegenResourceAnalyser analyser(*bpftrace_.config_);
   auto codegen_resources = analyser.analyse(*ast_.root);
   generate_maps(bpftrace_.resources, codegen_resources);
   generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
@@ -4883,7 +4881,7 @@ Pass CreateCompilePass(
         if (!usdt_helper) {
           usdt_helper = std::ref(default_usdt);
         }
-        CodegenLLVM llvm(ast, bpftrace, *ctx.context.get(), usdt_helper->get());
+        CodegenLLVM llvm(ast, bpftrace, *ctx.context, usdt_helper->get());
         return CompiledModule(llvm.compile());
       });
 }
@@ -4893,7 +4891,7 @@ Pass CreateVerifyPass()
   return Pass::create("verify", [](ASTContext &ast, CompiledModule &cm) {
     std::stringstream ss;
     raw_os_ostream OS(ss);
-    bool ret = llvm::verifyModule(*cm.module.get(), &OS);
+    bool ret = llvm::verifyModule(*cm.module, &OS);
     if (ret) {
       ast.root->addError() << ss.str();
     }
@@ -4926,7 +4924,7 @@ Pass CreateOptimizePass()
 
     ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
         llvm::OptimizationLevel::O3);
-    mpm.run(*cm.module.get(), mam);
+    mpm.run(*cm.module, mam);
   });
 }
 
@@ -4953,7 +4951,7 @@ Pass CreateObjectPass()
 #endif
     if (getTargetMachine()->addPassesToEmitFile(PM, os, nullptr, type))
       LOG(BUG) << "Cannot emit a file of this type";
-    PM.run(*cm.module.get());
+    PM.run(*cm.module);
     return BpfObject(output);
   });
 }

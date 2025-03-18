@@ -18,11 +18,20 @@ Checks:
   - -modernize-use-nodiscard
   - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
-  - readability-const-return-type
-  - readability-container-size-empty
-  - readability-container-contains
-  - readability-named-parameter
-  - readability-qualified-auto
+  - readability-*
+  - -readability-avoid-nested-conditional-operator
+  - -readability-braces-around-statements
+  - -readability-convert-member-functions-to-static
+  - -readability-else-after-return
+  - -readability-enum-initial-value
+  - -readability-function-cognitive-complexity
+  - -readability-function-size
+  - -readability-identifier-length
+  - -readability-implicit-bool-conversion
+  - -readability-isolate-declaration
+  - -readability-magic-numbers
+  - -readability-make-member-function-const
+  - -readability-suspicious-call-argument
 
 WarningsAsErrors: "*"
 UseColor: true
