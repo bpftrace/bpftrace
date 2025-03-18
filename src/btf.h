@@ -95,7 +95,7 @@ private:
                      std::optional<__u32> kind = std::nullopt) const;
   __s32 find_id_in_btf(struct btf* btf,
                        std::string_view name,
-                       std::optional<__u32> = std::nullopt) const;
+                       std::optional<__u32> kind = std::nullopt) const;
 
   std::string dump_defs_from_btf(const struct btf* btf,
                                  std::unordered_set<std::string>& types) const;

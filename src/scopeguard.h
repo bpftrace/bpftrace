@@ -29,7 +29,7 @@ private:
   std::function<void()> fn_;
 };
 
-inline ScopeGuard operator+(ScopeGuardExit, std::function<void()> fn)
+inline ScopeGuard operator+(ScopeGuardExit /*unused*/, std::function<void()> fn)
 {
   return ScopeGuard(fn);
 }

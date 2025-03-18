@@ -11,7 +11,7 @@ namespace bpftrace::test::passes {
 class Error1 : public ErrorInfo<Error1> {
 public:
   static char ID;
-  void log(llvm::raw_ostream &) const override
+  void log(llvm::raw_ostream & /*OS*/) const override
   {
   }
 };
@@ -19,7 +19,7 @@ public:
 class Error2 : public ErrorInfo<Error2> {
 public:
   static char ID;
-  void log(llvm::raw_ostream &) const override
+  void log(llvm::raw_ostream & /*OS*/) const override
   {
   }
 };

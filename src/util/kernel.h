@@ -10,7 +10,7 @@
 namespace bpftrace::util {
 
 enum KernelVersionMethod { vDSO, UTS, File, None };
-uint32_t kernel_version(KernelVersionMethod);
+uint32_t kernel_version(KernelVersionMethod method);
 
 std::optional<std::string> find_vmlinux(struct symbol *sym = nullptr);
 
