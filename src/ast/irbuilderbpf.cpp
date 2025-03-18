@@ -378,7 +378,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
     std::ostringstream ty_name;
 
     for (const auto &elem : stype.GetFields()) {
-      auto &elemtype = elem.type;
+      const auto &elemtype = elem.type;
       llvm_elems.emplace_back(GetType(elemtype));
       ty_name << elemtype << "_";
     }
@@ -656,14 +656,14 @@ Value *IRBuilderBPF::createScratchBuffer(
                                    *bpftrace_.config_);
 
   // Get CPU ID
-  auto cpu_id = CreateGetCpuId(loc);
-  auto max = CreateLoad(getInt64Ty(),
-                        module_.getGlobalVariable(to_string(
-                            bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
+  auto *cpu_id = CreateGetCpuId(loc);
+  auto *max = CreateLoad(getInt64Ty(),
+                         module_.getGlobalVariable(to_string(
+                             bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
   // Mask CPU ID by MAX_CPU_ID to ensure BPF verifier knows CPU ID is bounded
   // on older kernels. Note this means MAX_CPU_ID must be 2^N - 1 for some N.
   // See get_max_cpu_id() for more details.
-  auto bounded_cpu_id = CreateAnd(cpu_id, max, "cpu.id.bounded");
+  auto *bounded_cpu_id = CreateAnd(cpu_id, max, "cpu.id.bounded");
 
   // Note the 1st index is 0 because we're pointing to
   // ValueType var[MAX_CPU_ID + 1][num_elements]
@@ -1737,7 +1737,7 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
   CreateBr(done);
 
   SetInsertPoint(done);
-  auto phi = CreatePHI(getInt1Ty(), 2, "result");
+  auto *phi = CreatePHI(getInt1Ty(), 2, "result");
   phi->addIncoming(getInt1(false), done_false);
   phi->addIncoming(getInt1(true), done_true);
   CreateLifetimeEnd(j);
@@ -1922,7 +1922,7 @@ void IRBuilderBPF::CreateGetNsPidTgid(Value *ctx,
   // long bpf_get_ns_current_pid_tgid(
   //   u64 dev, u64 ino, struct bpf_pidns_info *nsdata, u32 size)
   // Return: 0 on success
-  auto &layout = module_.getDataLayout();
+  const auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(BpfPidnsInfoType());
 
   FunctionType *getnspidtgid_func_type = FunctionType::get(getInt64Ty(),
@@ -2322,7 +2322,7 @@ void IRBuilderBPF::CreateTracePrintk(Value *fmt_ptr,
                                      const Location &loc)
 {
   std::vector<Value *> args = { fmt_ptr, fmt_size };
-  for (auto val : values) {
+  for (auto *val : values) {
     args.push_back(val);
   }
 
@@ -2554,7 +2554,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
       return_value,
       CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(2) }));
 
-  auto &layout = module_.getDataLayout();
+  const auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(helper_error_struct);
   CreateOutput(ctx, buf, struct_size, loc);
   CreateLifetimeEnd(buf);

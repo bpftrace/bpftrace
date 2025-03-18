@@ -25,7 +25,7 @@ void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
   SmallVector<Metadata *> types;
   types.reserve(args.fields.size() + 1);
   types.push_back(GetType(ret_type, false));
-  for (auto &arg : args.fields)
+  for (const auto &arg : args.fields)
     types.push_back(GetType(arg.type, false));
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
@@ -215,7 +215,7 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
 
 DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 {
-  auto subrange = getOrCreateSubrange(0, num_bytes);
+  auto *subrange = getOrCreateSubrange(0, num_bytes);
   return createArrayType(
       num_bytes * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
 }
@@ -258,13 +258,13 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
   }
 
   if (stype.IsByteArray() || stype.IsRecordTy() || stype.IsStack()) {
-    auto subrange = getOrCreateSubrange(0, stype.GetSize());
+    auto *subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
         stype.GetSize() * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
   }
 
   if (stype.IsArrayTy()) {
-    auto subrange = getOrCreateSubrange(0, stype.GetNumElements());
+    auto *subrange = getOrCreateSubrange(0, stype.GetNumElements());
     return createArrayType(stype.GetSize() * 8,
                            0,
                            GetType(*stype.GetElementTy()),
@@ -328,8 +328,8 @@ DIType *DIBuilderBPF::GetMapFieldInt(int value)
 {
   // Integer fields of map entry are represented by 64-bit pointers to an array
   // of int, in which dimensionality of the array encodes the specified value.
-  auto subrange = getOrCreateSubrange(0, value);
-  auto array = createArrayType(
+  auto *subrange = getOrCreateSubrange(0, value);
+  auto *array = createArrayType(
       32 * value, 0, getIntTy(), getOrCreateArray({ subrange }));
   return createPointerType(array, 64);
 }

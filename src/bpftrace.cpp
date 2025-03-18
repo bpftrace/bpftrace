@@ -243,8 +243,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   data_aligned.resize(size);
   memcpy(data_aligned.data(), data, size);
 
-  auto bpftrace = static_cast<BPFtrace *>(cb_cookie);
-  auto arg_data = data_aligned.data();
+  auto *bpftrace = static_cast<BPFtrace *>(cb_cookie);
+  auto *arg_data = data_aligned.data();
 
   auto printf_id = *reinterpret_cast<uint64_t *>(arg_data);
 
@@ -262,13 +262,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit)) {
-    auto exit = static_cast<AsyncEvent::Exit *>(data);
+    auto *exit = static_cast<AsyncEvent::Exit *>(data);
     BPFtrace::exit_code = exit->exit_code;
     bpftrace->request_finalize();
     return;
   } else if (printf_id == asyncactionint(AsyncAction::print)) {
-    auto print = static_cast<AsyncEvent::Print *>(data);
-    auto &map = bpftrace->bytecode_.getMap(print->mapid);
+    auto *print = static_cast<AsyncEvent::Print *>(data);
+    const auto &map = bpftrace->bytecode_.getMap(print->mapid);
 
     err = bpftrace->print_map(map, print->top, print->div);
 
@@ -277,7 +277,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::print_non_map)) {
-    auto print = static_cast<AsyncEvent::PrintNonMap *>(data);
+    auto *print = static_cast<AsyncEvent::PrintNonMap *>(data);
     const SizedType &ty = bpftrace->resources.non_map_print_args.at(
         print->print_id);
 
@@ -289,8 +289,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   } else if (printf_id == asyncactionint(AsyncAction::clear)) {
-    auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
-    auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
+    auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+    const auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
 
     err = bpftrace->clear_map(map);
     if (err)
@@ -298,8 +298,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::zero)) {
-    auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
-    auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
+    auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+    const auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
 
     err = bpftrace->zero_map(map);
     if (err)
@@ -315,8 +315,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       LOG(WARNING) << "localtime_r: " << strerror(errno);
       return;
     }
-    auto time = static_cast<AsyncEvent::Time *>(data);
-    auto fmt = bpftrace->resources.time_args[time->time_id].c_str();
+    auto *time = static_cast<AsyncEvent::Time *>(data);
+    const auto *fmt = bpftrace->resources.time_args[time->time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
       LOG(WARNING) << "strftime returned 0";
       return;
@@ -325,7 +325,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id == asyncactionint(AsyncAction::join)) {
     uint64_t join_id = *(static_cast<uint64_t *>(data) + 1);
-    auto delim = bpftrace->resources.join_args[join_id].c_str();
+    const auto *delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
       auto *arg = arg_data + 2 * sizeof(uint64_t) + i * bpftrace->join_argsize_;
@@ -338,7 +338,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->out_->message(MessageType::join, joined.str());
     return;
   } else if (printf_id == asyncactionint(AsyncAction::helper_error)) {
-    auto helpererror = static_cast<AsyncEvent::HelperError *>(data);
+    auto *helpererror = static_cast<AsyncEvent::HelperError *>(data);
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
@@ -346,7 +346,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach)) {
     bool abort = false;
-    auto watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
+    auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
     uint64_t probe_idx = watchpoint->watchpoint_idx;
     uint64_t addr = watchpoint->addr;
 
@@ -410,7 +410,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   } else if (printf_id == asyncactionint(AsyncAction::watchpoint_detach)) {
-    auto unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
+    auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
     uint64_t addr = unwatch->addr;
 
     // Remove all probes watching `addr`. Note how we fail silently here
@@ -565,7 +565,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         }
         break;
       case Type::string: {
-        auto p = reinterpret_cast<char *>(arg_data + arg.offset);
+        auto *p = reinterpret_cast<char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
             std::string(p, strnlen(p, arg.type.GetSize())),
             config_->get(ConfigKeyInt::max_strlen),
@@ -680,7 +680,7 @@ size_t BPFtrace::num_params() const
 
 void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
-  auto bpftrace = static_cast<BPFtrace *>(cb_cookie);
+  auto *bpftrace = static_cast<BPFtrace *>(cb_cookie);
   bpftrace->out_->lost_events(lost);
 }
 
@@ -767,7 +767,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   try {
-    auto &program = bytecode.getProgramForProbe(probe);
+    const auto &program = bytecode.getProgramForProbe(probe);
     std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
                                       : this->pid();
 
@@ -1279,7 +1279,7 @@ int BPFtrace::print_maps()
   if (dry_run)
     return 0;
 
-  for (auto &map : bytecode_.maps()) {
+  for (const auto &map : bytecode_.maps()) {
     if (!map.second.is_printable())
       continue;
 
@@ -1903,13 +1903,14 @@ void BPFtrace::sort_by_key(
 std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
 {
   if (expr->is_literal) {
-    if (auto *string = dynamic_cast<const ast::String *>(expr))
+    if (const auto *string = dynamic_cast<const ast::String *>(expr))
       return string->str;
-    else if (auto *str_call = dynamic_cast<const ast::Call *>(expr)) {
+    else if (const auto *str_call = dynamic_cast<const ast::Call *>(expr)) {
       // Positional parameters in the form str($1) can be used as literals
       if (str_call->func == "str") {
-        if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                str_call->vargs.at(0)))
+        if (const auto *pos_param =
+                dynamic_cast<const ast::PositionalParameter *>(
+                    str_call->vargs.at(0)))
           return get_param(pos_param->n, true);
       }
     }
@@ -1923,10 +1924,10 @@ std::optional<int64_t> BPFtrace::get_int_literal(
     const ast::Expression *expr) const
 {
   if (expr->is_literal) {
-    if (auto *integer = dynamic_cast<const ast::Integer *>(expr))
+    if (const auto *integer = dynamic_cast<const ast::Integer *>(expr))
       return integer->n;
-    else if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
-                 expr)) {
+    else if (const auto *pos_param =
+                 dynamic_cast<const ast::PositionalParameter *>(expr)) {
       if (pos_param->ptype == PositionalParameterType::positional) {
         auto param_str = get_param(pos_param->n, false);
         auto param_int = util::get_int_from_str(param_str);
@@ -1958,14 +1959,14 @@ const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const
 
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
-  auto &funcs = get_traceable_funcs();
+  const auto &funcs = get_traceable_funcs();
   return funcs.contains(func_name);
 }
 
 std::unordered_set<std::string> BPFtrace::get_func_modules(
     const std::string &func_name) const
 {
-  auto &funcs = get_traceable_funcs();
+  const auto &funcs = get_traceable_funcs();
   auto mod = funcs.find(func_name);
   return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
 }
@@ -2069,7 +2070,7 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
             probe_type == ProbeType::kretprobe) &&
            !ap->target.empty())) {
         if (ap->expansion != ast::ExpansionType::NONE) {
-          for (auto &match : probe_matcher_->get_matches_for_ap(*ap)) {
+          for (const auto &match : probe_matcher_->get_matches_for_ap(*ap)) {
             std::string func = match;
             util::erase_prefix(func);
             auto match_modules = get_func_modules(func);

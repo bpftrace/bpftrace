@@ -211,7 +211,7 @@ void ChildProc::run(bool pause)
 
   assert(state_ == State::FORKED);
 
-  auto* data = pause ? &CHILD_PTRACE : &CHILD_GO;
+  const auto* data = pause ? &CHILD_PTRACE : &CHILD_GO;
   if (write(child_event_fd_, data, sizeof(*data)) < 0) {
     close(child_event_fd_);
     terminate(true);

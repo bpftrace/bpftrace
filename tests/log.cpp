@@ -24,7 +24,7 @@ TEST(LogStream, basic)
 
   // test macro with 1 argument
   ENABLE_LOG(V1);
-  auto cerr_buf = std::cerr.rdbuf(ss.rdbuf());
+  auto *cerr_buf = std::cerr.rdbuf(ss.rdbuf());
   LOG(V1) << content_1 << content_2;
   EXPECT_EQ(ss.str(), content_1 + content_2 + "\n");
   std::cerr.rdbuf(cerr_buf);
@@ -62,7 +62,7 @@ TEST(LogStream, basic_colorized)
 
   // test macro with 1 argument
   ENABLE_LOG(V1);
-  auto cerr_buf = std::cerr.rdbuf(ss.rdbuf());
+  auto *cerr_buf = std::cerr.rdbuf(ss.rdbuf());
   LOG(V1) << content_1 << content_2;
   EXPECT_EQ(ss.str(), content_1 + content_2 + "\n");
   std::cerr.rdbuf(cerr_buf);

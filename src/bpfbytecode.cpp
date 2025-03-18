@@ -280,7 +280,7 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
                                 BPFfeature &feature,
                                 const Config &config)
 {
-  for (auto &probe : probes) {
+  for (const auto &probe : probes) {
     auto &program = getProgramForProbe(probe);
     program.set_prog_type(probe);
     program.set_expected_attach_type(probe, feature);
@@ -339,7 +339,7 @@ const std::map<std::string, BpfMap> &BpfBytecode::maps() const
 int BpfBytecode::countStackMaps() const
 {
   int n = 0;
-  for (auto &map : maps_) {
+  for (const auto &map : maps_) {
     if (map.second.is_stack_map())
       n++;
   }

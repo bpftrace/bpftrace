@@ -95,7 +95,7 @@ void FieldAnalyser::visit(Builtin &builtin)
       return;
     resolve_args(*probe_);
 
-    auto arg = bpftrace_.structs.GetProbeArg(*probe_, RETVAL_FIELD_NAME);
+    const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, RETVAL_FIELD_NAME);
     if (arg)
       sized_type_ = arg->type;
     return;
@@ -128,7 +128,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
   visit(acc.expr);
 
   if (has_builtin_args_) {
-    auto arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
+    const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
     if (arg)
       sized_type_ = arg->type;
 
@@ -232,7 +232,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
       // ... and check if they share same arguments.
 
       Struct ap_args;
-      for (auto &match : matches) {
+      for (const auto &match : matches) {
         // Both uprobes and fentry have a target (binary for uprobes, kernel
         // module for fentry).
         std::string func = match;

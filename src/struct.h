@@ -133,7 +133,7 @@ struct hash<bpftrace::Struct> {
   size_t operator()(const bpftrace::Struct &s) const
   {
     size_t hash = std::hash<int>()(s.size);
-    for (auto &field : s.fields)
+    for (const auto &field : s.fields)
       bpftrace::util::hash_combine(hash, field.type);
     return hash;
   }

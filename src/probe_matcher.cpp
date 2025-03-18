@@ -29,7 +29,7 @@ static int add_symbol(const char* symname,
                       uint64_t /*size*/,
                       void* payload)
 {
-  auto syms = static_cast<std::set<std::string>*>(payload);
+  auto* syms = static_cast<std::set<std::string>*>(payload);
   syms->insert(std::string(symname));
   return 0;
 }
@@ -165,7 +165,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
 
       std::string ret;
       auto iters = bpftrace_->btf_->get_all_iters();
-      for (auto& iter : iters) {
+      for (const auto& iter : iters) {
         // second check
         if (bpftrace_->feature_->has_iter(iter))
           ret += iter + "\n";
@@ -180,7 +180,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::interval:
     case ProbeType::profile: {
       std::string ret;
-      for (auto& unit : TIME_UNITS)
+      for (const auto& unit : TIME_UNITS)
         ret += unit + ":\n";
       symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
@@ -207,7 +207,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_set(
   std::string stream_in;
   // Strings in the set may contain a newline character, so we use '$'
   // as a delimiter.
-  for (auto& str : set)
+  for (const auto& str : set)
     stream_in.append(str + "$");
 
   std::istringstream stream(stream_in);
@@ -231,9 +231,9 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     bool with_modules) const
 {
   std::string funcs;
-  for (auto& func_mod : bpftrace_->get_traceable_funcs()) {
+  for (const auto& func_mod : bpftrace_->get_traceable_funcs()) {
     if (with_modules) {
-      for (auto& mod : func_mod.second)
+      for (const auto& mod : func_mod.second)
         funcs += mod + ":" + func_mod.first + "\n";
     } else {
       funcs += func_mod.first + "\n";
@@ -277,7 +277,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
     if (err) {
       LOG(WARNING) << "Could not list function symbols: " + real_path;
     }
-    for (auto& sym : syms)
+    for (const auto& sym : syms)
       result += real_path + ":" + sym + "\n";
   }
   return std::make_unique<std::istringstream>(result);
@@ -323,7 +323,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
     const std::vector<ProbeListItem>& probes_list) const
 {
   std::string symbols;
-  for (auto& probe : probes_list) {
+  for (const auto& probe : probes_list) {
     symbols += probe.path + ":\n";
     if (!probe.alias.empty())
       symbols += probe.alias + ":\n";
@@ -336,7 +336,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
 std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
 {
   std::string probes;
-  for (auto& p : PROBE_LIST) {
+  for (const auto& p : PROBE_LIST) {
     if (!p.show_in_kernel_list) {
       continue;
     }
@@ -357,7 +357,7 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
 std::unique_ptr<std::istream> ProbeMatcher::userspace_probe_list()
 {
   std::string probes;
-  for (auto& p : PROBE_LIST) {
+  for (const auto& p : PROBE_LIST) {
     if (p.show_in_userspace_list) {
       probes += p.name + "\n";
     }
@@ -370,7 +370,7 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     const std::set<std::string>& tracepoints)
 {
   FuncParamLists params;
-  for (auto& tracepoint : tracepoints) {
+  for (const auto& tracepoint : tracepoints) {
     auto event = tracepoint;
     auto category = util::erase_prefix(event);
 
@@ -406,7 +406,7 @@ FuncParamLists ProbeMatcher::get_iters_params(
   FuncParamLists params;
   std::set<std::string> funcs;
 
-  for (auto& iter : iters)
+  for (const auto& iter : iters)
     funcs.insert(prefix + iter);
 
   params = bpftrace_->btf_->get_params(funcs);
@@ -429,7 +429,7 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   FuncParamLists params;
   static std::set<std::string> warned_paths;
 
-  for (auto& match : uprobes) {
+  for (const auto& match : uprobes) {
     std::string fun = match;
     std::string path = util::erase_prefix(fun);
     if (auto dwarf = Dwarf::GetFromBinary(nullptr, path)) {
@@ -469,7 +469,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = get_uprobe_params(matches);
       }
 
-      for (auto& match : matches) {
+      for (const auto& match : matches) {
         std::string match_print = match;
         if (ap->lang == "cpp") {
           std::string target = util::erase_prefix(match_print);
@@ -594,7 +594,7 @@ void ProbeMatcher::list_structs(const std::string& search)
   if (bt_verbose)
     search_input += " *{*}*";
 
-  for (auto& match : get_matches_in_set(search_input, structs))
+  for (const auto& match : get_matches_in_set(search_input, structs))
     std::cout << match << std::endl;
 }
 

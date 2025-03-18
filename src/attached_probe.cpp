@@ -1096,7 +1096,7 @@ void AttachedProbe::attach_software(std::optional<int> pid)
   uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
-  for (auto &probeListItem : SW_PROBE_LIST) {
+  for (const auto &probeListItem : SW_PROBE_LIST) {
     if (probe_.path == probeListItem.path ||
         probe_.path == probeListItem.alias) {
       type = probeListItem.type;
@@ -1135,7 +1135,7 @@ void AttachedProbe::attach_hardware(std::optional<int> pid)
   uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
-  for (auto &probeListItem : HW_PROBE_LIST) {
+  for (const auto &probeListItem : HW_PROBE_LIST) {
     if (probe_.path == probeListItem.path ||
         probe_.path == probeListItem.alias) {
       type = probeListItem.type;

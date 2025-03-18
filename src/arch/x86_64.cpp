@@ -45,7 +45,7 @@ static std::array<std::string, 6> arg_registers = {
 
 int offset(std::string reg_name)
 {
-  auto it = std::ranges::find(registers, reg_name);
+  auto *it = std::ranges::find(registers, reg_name);
   if (it == registers.end())
     return -1;
   return distance(registers.begin(), it);
