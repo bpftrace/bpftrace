@@ -25,7 +25,7 @@ concept NodeType = std::derived_from<T, Node>;
 // single instance of this class should be created and referenced.
 class ASTSource {
 public:
-  ASTSource(std::string &&filename, std::string &&contents);
+  ASTSource(std::string &&filename, std::string &&input);
   ASTSource(const ASTSource &other) = delete;
   ASTSource &operator=(const ASTSource &other) = delete;
 
@@ -53,7 +53,7 @@ public:
   template <NodeType T, typename... Args>
   constexpr T *make_node(Args &&...args)
   {
-    auto uniq_ptr = std::make_unique<T>(*diagnostics_.get(),
+    auto uniq_ptr = std::make_unique<T>(*diagnostics_,
                                         wrap(std::forward<Args>(args))...);
     auto *raw_ptr = uniq_ptr.get();
     nodes_.push_back(std::move(uniq_ptr));
@@ -67,7 +67,7 @@ public:
 
   const Diagnostics &diagnostics() const
   {
-    return *diagnostics_.get();
+    return *diagnostics_;
   }
 
   Program *root = nullptr;

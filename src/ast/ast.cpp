@@ -589,11 +589,9 @@ std::string Subprog::name() const
 
 bool Probe::has_ap_of_probetype(ProbeType probe_type)
 {
-  for (auto *ap : attach_points) {
-    if (probetype(ap->provider) == probe_type)
-      return true;
-  }
-  return false;
+  return std::ranges::any_of(attach_points, [probe_type](auto *ap) {
+    return probetype(ap->provider) == probe_type;
+  });
 }
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)

@@ -123,7 +123,7 @@ static void update_global_vars_rodata(
 
   size_t v_size;
   char *global_vars_buf = reinterpret_cast<char *>(
-      const_cast<void *>(bpf_map__initial_value(global_vars_map, &v_size)));
+      bpf_map__initial_value(global_vars_map, &v_size));
 
   if (!global_vars_buf) {
     LOG(BUG) << "Failed to get array buf for global variable map";

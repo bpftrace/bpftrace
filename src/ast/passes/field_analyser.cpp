@@ -303,7 +303,6 @@ void FieldAnalyser::resolve_args(Probe &probe)
       bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
     }
   }
-  return;
 }
 
 void FieldAnalyser::resolve_fields(SizedType &type)

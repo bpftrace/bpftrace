@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>
@@ -227,12 +228,9 @@ static bool is_bad_func(std::string &func)
   if (bad_funcs.contains(func))
     return true;
 
-  for (const auto &s : bad_funcs_partial) {
-    if (!std::strncmp(func.c_str(), s.c_str(), s.length()))
-      return true;
-  }
-
-  return false;
+  return std::ranges::any_of(bad_funcs_partial, [func](const auto &s) {
+    return !std::strncmp(func.c_str(), s.c_str(), s.length());
+  });
 }
 
 FuncsModulesMap parse_traceable_funcs()

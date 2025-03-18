@@ -44,22 +44,22 @@ public:
                   std::optional<std::string>&& source_location,
                   std::optional<std::vector<std::string>>&& source_context,
                   std::ostream& out,
-                  std::string&& input);
+                  std::string&& msg);
 
-  inline void enable(LogType type)
+  void enable(LogType type)
   {
     enabled_map_[type] = true;
   }
-  inline void disable(LogType type)
+  void disable(LogType type)
   {
     assert(type != LogType::BUG && type != LogType::ERROR);
     enabled_map_[type] = false;
   }
-  inline bool is_enabled(LogType type)
+  bool is_enabled(LogType type)
   {
     return enabled_map_[type];
   }
-  inline void set_colorize(bool is_colorize)
+  void set_colorize(bool is_colorize)
   {
     is_colorize_ = is_colorize;
   }

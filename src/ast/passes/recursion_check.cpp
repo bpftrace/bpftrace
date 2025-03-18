@@ -10,7 +10,7 @@ namespace bpftrace::ast {
 
 namespace {
 
-static const std::unordered_set<std::string> RECURSIVE_KERNEL_FUNCS = {
+const std::unordered_set<std::string> RECURSIVE_KERNEL_FUNCS = {
   "vmlinux:_raw_spin_lock",
   "vmlinux:_raw_spin_lock_irqsave",
   "vmlinux:_raw_spin_unlock_irqrestore",

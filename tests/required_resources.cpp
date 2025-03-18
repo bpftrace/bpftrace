@@ -27,7 +27,7 @@ TEST(required_resources, round_trip_simple)
   {
     RequiredResources r;
     r.load_state(input);
-    ASSERT_EQ(r.probe_ids.size(), 1ul);
+    ASSERT_EQ(r.probe_ids.size(), 1UL);
     EXPECT_EQ(r.probe_ids[0], "itsastring");
   }
 }
@@ -52,22 +52,22 @@ TEST(required_resources, round_trip_field_sized_type)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.system_args.size(), 1ul);
+    ASSERT_EQ(r.system_args.size(), 1UL);
     EXPECT_EQ(std::get<0>(r.system_args[0]).str(), "field0");
 
     auto &fields = std::get<1>(r.system_args[0]);
-    ASSERT_EQ(fields.size(), 1ul);
+    ASSERT_EQ(fields.size(), 1UL);
     auto &field = fields[0];
     EXPECT_EQ(field.name, "myfield");
     EXPECT_TRUE(field.type.IsIntTy());
-    EXPECT_EQ(field.type.GetSize(), 4ul);
+    EXPECT_EQ(field.type.GetSize(), 4UL);
     EXPECT_EQ(field.offset, 123);
     // clang-tidy does not recognize ASSERT_*() terminates testcase
     // NOLINTBEGIN(bugprone-unchecked-optional-access)
     ASSERT_TRUE(field.bitfield.has_value());
-    EXPECT_EQ(field.bitfield->read_bytes, 1ul);
-    EXPECT_EQ(field.bitfield->access_rshift, 2ul);
-    EXPECT_EQ(field.bitfield->mask, 0xFFul);
+    EXPECT_EQ(field.bitfield->read_bytes, 1UL);
+    EXPECT_EQ(field.bitfield->access_rshift, 2UL);
+    EXPECT_EQ(field.bitfield->mask, 0xFFUL);
     // NOLINTEND(bugprone-unchecked-optional-access)
   }
 }
@@ -98,11 +98,11 @@ TEST(required_resources, round_trip_map_info)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.maps_info.count("mymap"), 1ul);
+    ASSERT_EQ(r.maps_info.count("mymap"), 1UL);
     const auto &map_info = r.maps_info["mymap"];
 
     EXPECT_TRUE(map_info.value_type.IsInetTy());
-    EXPECT_EQ(map_info.value_type.GetSize(), 3ul);
+    EXPECT_EQ(map_info.value_type.GetSize(), 3UL);
 
     EXPECT_TRUE(map_info.key_type.IsIntegerTy());
     EXPECT_EQ(map_info.key_type.GetSize(), 4);
@@ -140,7 +140,7 @@ TEST(required_resources, round_trip_probes)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.special_probes.size(), 1ul);
+    ASSERT_EQ(r.special_probes.size(), 1UL);
     auto &probe = r.special_probes["test"];
     EXPECT_EQ(probe.type, ProbeType::hardware);
     EXPECT_EQ(probe.path, "mypath");
@@ -163,9 +163,9 @@ TEST(required_resources, round_trip_multiple_members)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.join_args.size(), 1ul);
+    ASSERT_EQ(r.join_args.size(), 1UL);
     EXPECT_EQ(r.join_args[0], "joinarg0");
-    ASSERT_EQ(r.time_args.size(), 1ul);
+    ASSERT_EQ(r.time_args.size(), 1UL);
     EXPECT_EQ(r.time_args[0], "timearg0");
   }
 }

@@ -77,7 +77,7 @@ private:
   std::set<std::string> get_matches_in_stream(const std::string &search_input,
                                               std::istream &symbol_stream,
                                               bool demangle_symbols = true,
-                                              const char delim = '\n');
+                                              char delim = '\n');
   std::set<std::string> get_matches_for_probetype(
       const ProbeType &probe_type,
       const std::string &target,

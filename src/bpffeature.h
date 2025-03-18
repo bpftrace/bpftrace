@@ -59,7 +59,7 @@ class BPFfeature;
 class BPFnofeature {
 public:
   BPFnofeature() = default;
-  int parse(const char* optarg);
+  int parse(const char* str);
 
 protected:
   bool kprobe_multi_{ false };

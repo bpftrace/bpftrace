@@ -142,10 +142,12 @@ void Usyms::cache_blazesym(const std::string &elf_file)
 void Usyms::cache(const std::string &elf_file)
 {
 #ifdef HAVE_BLAZESYM
-  if (config_.get(ConfigKeyBool::use_blazesym))
-    return cache_blazesym(elf_file);
+  if (config_.get(ConfigKeyBool::use_blazesym)) {
+    cache_blazesym(elf_file);
+    return;
+  }
 #endif
-  return cache_bcc(elf_file);
+  cache_bcc(elf_file);
 }
 
 std::string Usyms::resolve_bcc(uint64_t addr,

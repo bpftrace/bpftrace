@@ -852,7 +852,8 @@ void BTF::resolve_fields(const BTFId &type_id,
     std::string field_name = btf__name_by_offset(type_id.btf,
                                                  members[i].name_off);
 
-    __u32 field_offset = start_offset + btf_member_bit_offset(btf_type, i) / 8;
+    __u32 field_offset = start_offset +
+                         (btf_member_bit_offset(btf_type, i) / 8);
 
     if (btf_is_composite(field_type) &&
         (field_name.empty() || field_name == "(anon)")) {

@@ -82,7 +82,7 @@ public:
   // If provided, the optional AddrSpace argument is used instead of the type's
   // address space (which may not always be set).
   void CreateProbeRead(Value *ctx,
-                       Value *dest,
+                       Value *dst,
                        const SizedType &type,
                        Value *src,
                        const Location &loc,
@@ -111,22 +111,22 @@ public:
   Value *CreateUSDTReadArgument(Value *ctx,
                                 AttachPoint *attach_point,
                                 int usdt_location_index,
-                                int arg_name,
+                                int arg_num,
                                 Builtin &builtin,
                                 std::optional<pid_t> pid,
                                 AddrSpace as,
                                 const Location &loc);
   Value *CreateStrncmp(Value *str1, Value *str2, uint64_t n, bool inverse);
-  Value *CreateStrcontains(Value *val1,
-                           uint64_t str1_size,
-                           Value *val2,
-                           uint64_t str2_size);
+  Value *CreateStrcontains(Value *haystack,
+                           uint64_t haystack_sz,
+                           Value *needle,
+                           uint64_t needle_sz);
   Value *CreateIntegerArrayCmp(Value *ctx,
                                Value *val1,
                                Value *val2,
                                const SizedType &val1_type,
                                const SizedType &val2_type,
-                               const bool inverse,
+                               bool inverse,
                                const Location &loc,
                                MDNode *metadata);
   CallInst *CreateGetNs(TimestampMode ts, const Location &loc);
@@ -262,7 +262,7 @@ public:
   // [1] https://reviews.llvm.org/D133361
   llvm::Value *CreateSafeGEP(llvm::Type *Ty,
                              llvm::Value *Ptr,
-                             llvm::ArrayRef<Value *> IdxList,
+                             llvm::ArrayRef<Value *> offsets,
                              const llvm::Twine &Name = "");
 
   StoreInst *createAlignedStore(Value *val, Value *ptr, unsigned align);

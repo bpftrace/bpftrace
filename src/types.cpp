@@ -580,7 +580,7 @@ void SizedType::DumpStructure(std::ostream &os)
     os << "tuple";
   else
     os << "struct";
-  return inner_struct_.lock()->Dump(os);
+  inner_struct_.lock()->Dump(os);
 }
 
 ssize_t SizedType::GetInTupleAlignment() const

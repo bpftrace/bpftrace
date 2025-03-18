@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <map>
 #include <memory>
@@ -155,7 +156,7 @@ private:
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
   bool ctx_ = false;                                   // Is bpf program context
-  std::unordered_set<std::string> btf_type_tags_ = {}; // Only populated for
+  std::unordered_set<std::string> btf_type_tags_;      // Only populated for
                                                        // Type::pointer
   size_t num_elements_ = 0; // Only populated for array types
 
@@ -270,8 +271,7 @@ public:
   {
     assert(IsIntTy());
     // Truncate integers too large to fit in BPF registers (64-bits).
-    if (bits > 64)
-      bits = 64;
+    bits = std::min<size_t>(bits, 64);
     // Zero sized integers are not usually valid. However, during semantic
     // analysis when we're inferring types, the first pass may not have
     // enough information to figure out the exact size of the integer. Later
@@ -493,7 +493,8 @@ public:
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
-  friend SizedType CreateReference(const SizedType &pointee_type, AddrSpace as);
+  friend SizedType CreateReference(const SizedType &referred_type,
+                                   AddrSpace as);
   friend SizedType CreateRecord(const std::string &name,
                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
@@ -638,7 +639,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
     .show_in_kernel_list = true },
 };
 
-ProbeType probetype(const std::string &type);
+ProbeType probetype(const std::string &probeName);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string typestr(const SizedType &type);

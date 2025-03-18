@@ -34,7 +34,7 @@ public:
   using Visitor<ResourceAnalyser>::visit;
   void visit(Probe &probe);
   void visit(Subprog &subprog);
-  void visit(Builtin &map);
+  void visit(Builtin &builtin);
   void visit(Call &call);
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
