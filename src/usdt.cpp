@@ -120,7 +120,7 @@ usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
 
 void USDTHelper::read_probes_for_pid(int pid, bool print_error)
 {
-  if (pid_cache.count(pid))
+  if (pid_cache.contains(pid))
     return;
 
   void *ctx = bcc_usdt_new_frompid(pid, nullptr);
@@ -143,7 +143,7 @@ void USDTHelper::read_probes_for_pid(int pid, bool print_error)
 
 void USDTHelper::read_probes_for_path(const std::string &path)
 {
-  if (path_cache.count(path))
+  if (path_cache.contains(path))
     return;
 
   void *ctx = bcc_usdt_new_frompath(path.c_str());

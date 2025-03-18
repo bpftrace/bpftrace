@@ -28,7 +28,7 @@ static void verify_maps_found(
 {
   for (const auto global_var : bpftrace.resources.needed_global_vars) {
     auto config = get_config(global_var);
-    if (!section_name_to_global_vars_map.count(config.section)) {
+    if (!section_name_to_global_vars_map.contains(config.section)) {
       LOG(BUG) << "No map found for " << config.section
                << " which is needed to set global variable " << config.name;
     }

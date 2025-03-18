@@ -149,7 +149,7 @@ std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
     if (res == 1 && buf[0] == '/') {
       std::string name = buf;
       if (name.find("(deleted)") == std::string::npos &&
-          seen_mappings.count(name) == 0) {
+          !seen_mappings.contains(name)) {
         seen_mappings.emplace(name);
         paths.push_back(std::move(name));
       }

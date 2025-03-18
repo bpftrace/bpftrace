@@ -18,6 +18,7 @@ Checks:
   - -modernize-use-nodiscard
   - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
+  - readability-container-contains
 
 WarningsAsErrors: "*"
 UseColor: true
