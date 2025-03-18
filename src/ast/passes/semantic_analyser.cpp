@@ -1399,7 +1399,7 @@ void SemanticAnalyser::visit(Call &call)
           });
         }
         std::string msg = validate_format_string(fmt.str, args, call.func);
-        if (msg != "") {
+        if (!msg.empty()) {
           call.addError() << msg;
         }
       }
@@ -1525,7 +1525,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, false, false, false);
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
-        if (call.vargs.size() > 0)
+        if (!call.vargs.empty())
           check_arg(call, Type::string, 0, true);
       }
     }
@@ -2798,7 +2798,7 @@ void SemanticAnalyser::visit(For &f)
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   // A field access must have a field XOR index
-  assert((acc.field.size() > 0) != (acc.index >= 0));
+  assert((!acc.field.empty()) != (acc.index >= 0));
 
   acc.expr = dereference_if_needed(acc.expr);
 
@@ -2813,7 +2813,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   if (!type.IsRecordTy() && !type.IsTupleTy()) {
     if (is_final_pass()) {
       std::string field;
-      if (acc.field.size())
+      if (!acc.field.empty())
         field += "field '" + acc.field + "'";
       else
         field += "index " + std::to_string(acc.index);
@@ -3434,7 +3434,7 @@ void SemanticAnalyser::visit(Predicate &pred)
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
-    if (ap.func == "")
+    if (ap.func.empty())
       ap.addError() << "kprobes should be attached to a function";
     if (is_final_pass()) {
       // Warn if user tries to attach to a non-traceable function
@@ -3449,12 +3449,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
   } else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
-    if (ap.target == "")
+    if (ap.target.empty())
       ap.addError() << ap.provider << " should have a target";
-    if (ap.func == "" && ap.address == 0)
+    if (ap.func.empty() && ap.address == 0)
       ap.addError() << ap.provider
                     << " should be attached to a function and/or address";
-    if (ap.lang != "" && !is_supported_lang(ap.lang))
+    if (!ap.lang.empty() && !is_supported_lang(ap.lang))
       ap.addError() << "unsupported language type: " << ap.lang;
 
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
@@ -3495,10 +3495,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
   } else if (ap.provider == "usdt") {
     bpftrace_.has_usdt_ = true;
-    if (ap.func == "")
+    if (ap.func.empty())
       ap.addError() << "usdt probe must have a target function or wildcard";
 
-    if (ap.target != "" &&
+    if (!ap.target.empty() &&
         !(bpftrace_.pid().has_value() && util::has_wildcard(ap.target))) {
       auto paths = util::resolve_binary_path(ap.target, bpftrace_.pid());
       switch (paths.size()) {
@@ -3527,7 +3527,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       USDTHelper::probes_for_pid(*pid);
     } else if (ap.target == "*") {
       USDTHelper::probes_for_all_pids();
-    } else if (ap.target != "") {
+    } else if (!ap.target.empty()) {
       for (auto &path : util::resolve_binary_path(ap.target))
         USDTHelper::probes_for_path(path);
     } else {
@@ -3536,37 +3536,37 @@ void SemanticAnalyser::visit(AttachPoint &ap)
              "all paths/pids set the path to '*'.";
     }
   } else if (ap.provider == "tracepoint") {
-    if (ap.target == "" || ap.func == "")
+    if (ap.target.empty() || ap.func.empty())
       ap.addError() << "tracepoint probe must have a target";
   } else if (ap.provider == "rawtracepoint") {
-    if (ap.target != "")
+    if (!ap.target.empty())
       ap.addError() << "rawtracepoint should not have a target";
-    if (ap.func == "")
+    if (ap.func.empty())
       ap.addError() << "rawtracepoint should be attached to a function";
   } else if (ap.provider == "profile") {
-    if (ap.target == "")
+    if (ap.target.empty())
       ap.addError() << "profile probe must have unit of time";
     else if (!listing_) {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
-      if (ap.func != "")
+      if (!ap.func.empty())
         ap.addError() << "profile probe must have an integer frequency";
       else if (ap.freq <= 0)
         ap.addError() << "profile frequency should be a positive integer";
     }
   } else if (ap.provider == "interval") {
-    if (ap.target == "")
+    if (ap.target.empty())
       ap.addError() << "interval probe must have unit of time";
     else if (!listing_) {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
-      if (ap.func != "")
+      if (!ap.func.empty())
         ap.addError() << "interval probe must have an integer frequency";
       else if (ap.freq <= 0)
         ap.addError() << "interval frequency should be a positive integer";
     }
   } else if (ap.provider == "software") {
-    if (ap.target == "")
+    if (ap.target.empty())
       ap.addError() << "software probe must have a software event name";
     else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
@@ -3585,12 +3585,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap.addError() << "wildcards are not allowed for hardware probe type";
       }
     }
-    if (ap.func != "")
+    if (!ap.func.empty())
       ap.addError() << "software probe can only have an integer count";
     else if (ap.freq < 0)
       ap.addError() << "software count should be a positive integer";
   } else if (ap.provider == "watchpoint" || ap.provider == "asyncwatchpoint") {
-    if (ap.func.size()) {
+    if (!ap.func.empty()) {
       if (!bpftrace_.pid().has_value() && !has_child_)
         ap.addError() << "-p PID or -c CMD required for watchpoint";
 
@@ -3619,7 +3619,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
                             [&](const auto &mode) { return mode == ap.mode; }))
       ap.addError() << "invalid watchpoint mode: " << ap.mode;
   } else if (ap.provider == "hardware") {
-    if (ap.target == "")
+    if (ap.target.empty())
       ap.addError() << "hardware probe must have a hardware event name";
     else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
@@ -3638,12 +3638,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap.addError() << "wildcards are not allowed for hardware probe type";
       }
     }
-    if (ap.func != "")
+    if (!ap.func.empty())
       ap.addError() << "hardware probe can only have an integer count";
     else if (ap.freq < 0)
       ap.addError() << "hardware frequency should be a positive integer";
   } else if (ap.provider == "BEGIN" || ap.provider == "END") {
-    if (ap.target != "" || ap.func != "")
+    if (!ap.target.empty() || !ap.func.empty())
       ap.addError() << "BEGIN/END probes should not have a target";
     if (is_final_pass()) {
       if (ap.provider == "BEGIN") {
@@ -3670,7 +3670,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       return;
     }
 
-    if (ap.func == "")
+    if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
     if (!listing_ && !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
@@ -3678,7 +3678,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
                     << " not available for your kernel version.";
     }
 
-    if (ap.func == "")
+    if (ap.func.empty())
       ap.addError() << "iter should specify a iterator's name";
   } else {
     ap.addError() << "Invalid provider: '" << ap.provider << "'";

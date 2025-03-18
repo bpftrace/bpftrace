@@ -344,7 +344,7 @@ public:
   };
   bool IsEnumTy() const
   {
-    return IsIntTy() && name_.size();
+    return IsIntTy() && !name_.empty();
   }
   bool IsNoneTy() const
   {

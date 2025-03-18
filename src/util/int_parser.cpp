@@ -146,7 +146,7 @@ uint64_t to_uint(const std::string &num, int base)
 std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
     const std::string &s)
 {
-  if (s.size() == 0) {
+  if (s.empty()) {
     return std::nullopt;
   }
 

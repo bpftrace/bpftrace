@@ -386,7 +386,7 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     // Skip lines until the first empty line
     do {
       getline(format_file, line);
-    } while (line.length() > 0);
+    } while (!line.empty());
 
     while (getline(format_file, line)) {
       if (line.starts_with("\tfield:")) {

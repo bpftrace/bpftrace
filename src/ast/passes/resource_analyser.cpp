@@ -275,7 +275,7 @@ void ResourceAnalyser::visit(Call &call)
       map_info.lhist_args = args;
     }
   } else if (call.func == "time") {
-    if (call.vargs.size() > 0)
+    if (!call.vargs.empty())
       resources_.time_args.push_back(get_literal_string(*call.vargs.at(0)));
     else
       resources_.time_args.emplace_back("%H:%M:%S\n");

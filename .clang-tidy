@@ -19,6 +19,7 @@ Checks:
   - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
   - readability-const-return-type
+  - readability-container-size-empty
   - readability-container-contains
 
 WarningsAsErrors: "*"

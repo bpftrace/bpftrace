@@ -125,7 +125,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     resources.special_probes[name] = std::move(probe);
   } else if ((type == ProbeType::watchpoint ||
               type == ProbeType::asyncwatchpoint) &&
-             ap.func.size()) {
+             !ap.func.empty()) {
     // (async)watchpoint - generate also the setup probe
     resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
     resources.watchpoint_probes.emplace_back(std::move(probe));
@@ -693,7 +693,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   if (feature_->has_uprobe_refcnt() ||
-      !(file_activation && probe.path.size())) {
+      !(file_activation && !probe.path.empty())) {
     ret.emplace_back(
         std::make_unique<AttachedProbe>(probe, program, pid, *this));
     return ret;
