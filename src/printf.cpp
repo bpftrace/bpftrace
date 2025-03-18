@@ -24,8 +24,8 @@ PrintableString::PrintableString(std::string value,
 int PrintableString::print(char *buf,
                            size_t size,
                            const char *fmt,
-                           Type,
-                           ArgumentType)
+                           Type /*token*/,
+                           ArgumentType /*expected_type*/)
 {
   return snprintf(buf, size, fmt, value_.c_str());
 }
@@ -33,8 +33,8 @@ int PrintableString::print(char *buf,
 int PrintableBuffer::print(char *buf,
                            size_t size,
                            const char *fmt,
-                           Type,
-                           ArgumentType)
+                           Type /*token*/,
+                           ArgumentType /*expected_type*/)
 {
   return snprintf(buf,
                   size,
@@ -57,8 +57,8 @@ void PrintableBuffer::escape_hex(bool value)
 int PrintableCString::print(char *buf,
                             size_t size,
                             const char *fmt,
-                            Type,
-                            ArgumentType)
+                            Type /*token*/,
+                            ArgumentType /*expected_type*/)
 {
   return snprintf(buf, size, fmt, value_);
 }
@@ -66,7 +66,7 @@ int PrintableCString::print(char *buf,
 int PrintableInt::print(char *buf,
                         size_t size,
                         const char *fmt,
-                        Type,
+                        Type /*token*/,
                         ArgumentType expected_type)
 {
   // Since the value is internally always stored as a 64-bit integer, a cast is
@@ -104,7 +104,7 @@ int PrintableInt::print(char *buf,
 int PrintableSInt::print(char *buf,
                          size_t size,
                          const char *fmt,
-                         Type,
+                         Type /*token*/,
                          ArgumentType expected_type)
 {
   switch (expected_type) {

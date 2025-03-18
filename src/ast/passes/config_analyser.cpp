@@ -102,7 +102,7 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
-                                [[maybe_unused]] ConfigKeyStackMode)
+                                [[maybe_unused]] ConfigKeyStackMode key)
 {
   auto &assignTy = assignment.expr->type;
   if (!assignTy.IsStackModeTy()) {

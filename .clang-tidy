@@ -21,6 +21,7 @@ Checks:
   - readability-const-return-type
   - readability-container-size-empty
   - readability-container-contains
+  - readability-named-parameter
   - readability-qualified-auto
 
 WarningsAsErrors: "*"

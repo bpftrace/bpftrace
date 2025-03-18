@@ -153,7 +153,7 @@ private:
 
   void check_stack_call(Call &call, bool kernel);
 
-  Probe *get_probe(Node &node, std::string = "");
+  Probe *get_probe(Node &node, std::string name = "");
 
   bool is_valid_assignment(const Expression *target, const Expression *expr);
   SizedType *get_map_type(const Map &map);

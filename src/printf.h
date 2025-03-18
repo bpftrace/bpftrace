@@ -55,8 +55,8 @@ public:
   int print(char* buf,
             size_t size,
             const char* fmt,
-            Type,
-            ArgumentType) override;
+            Type /*token*/,
+            ArgumentType /*expected_type*/) override;
 
 private:
   std::string value_;
@@ -71,8 +71,8 @@ public:
   int print(char* buf,
             size_t size,
             const char* fmt,
-            Type,
-            ArgumentType) override;
+            Type /*token*/,
+            ArgumentType /*expected_type*/) override;
   void keep_ascii(bool value);
   void escape_hex(bool value);
 
@@ -90,8 +90,8 @@ public:
   int print(char* buf,
             size_t size,
             const char* fmt,
-            Type,
-            ArgumentType) override;
+            Type /*token*/,
+            ArgumentType /*expected_type*/) override;
 
 private:
   char* value_;

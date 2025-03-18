@@ -46,6 +46,6 @@ public:
   }
 };
 
-void cat_file(const char *filename, size_t, std::ostream &);
+void cat_file(const char *filename, size_t max_bytes, std::ostream &out);
 
 } // namespace bpftrace::util
