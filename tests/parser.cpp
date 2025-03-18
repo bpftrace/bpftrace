@@ -247,6 +247,12 @@ stdin:1:12-14: ERROR: param $0 is out of integer range [1, 9223372036854775807]
 kprobe:f { $0 }
            ~~
 )");
+
+  test_parse_failure("kprobe:f { $999999999999999999999999 }", R"(
+stdin:1:12-37: ERROR: param $999999999999999999999999 is out of integer range [1, 9223372036854775807]
+kprobe:f { $999999999999999999999999 }
+           ~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, positional_param_count)
@@ -287,6 +293,13 @@ TEST(Parser, positional_param_attachpoint)
 )PROG");
 
   test(bpftrace,
+       R"PROG(uprobe:/$1/bash:readline { 1 })PROG",
+       R"PROG(Program
+ uprobe:/foo/bash:readline
+  int: 1
+)PROG");
+
+  test(bpftrace,
        R"PROG(uprobe:$1:$2 { 1 })PROG",
        R"PROG(Program
  uprobe:foo:bar
@@ -322,41 +335,44 @@ TEST(Parser, positional_param_attachpoint)
 )PROG");
 
   test(bpftrace,
-       R"PROG(uprobe:aa$1:$2 { 1 })PROG",
+       R"PROG(uprobe:aa$1aa:$2 { 1 })PROG",
        R"PROG(Program
- uprobe:aafoo:bar
+ uprobe:aafooaa:bar
   int: 1
 )PROG");
 
-  // Error location is incorrect: #3063
-  test_parse_failure(bpftrace, R"(uprobe:$1a { 1 })", R"(
-stdin:1:1-12: ERROR: Found trailing text 'a' in positional parameter index. Try quoting the trailing text.
-uprobe:$1a { 1 }
-~~~~~~~~~~~
-stdin:1:1-18: ERROR: No attach points for probe
-uprobe:$1a { 1 }
-~~~~~~~~~~~~~~~~
+  test(bpftrace,
+       R"PROG(uprobe:$1:$2func$4 { 1 })PROG",
+       R"PROG(Program
+ uprobe:foo:barfunc
+  int: 1
+)PROG");
+
+  test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$0 { 1 })", R"(
+stdin:1:1-20: ERROR: invalid trailing character for positional param: 0. Try quoting this entire part if this is intentional e.g. "$0".
+uprobe:/bin/bash:$0 { 1 }
+~~~~~~~~~~~~~~~~~~~
+stdin:1:1-26: ERROR: No attach points for probe
+uprobe:/bin/bash:$0 { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 
-  test_parse_failure(bpftrace, R"(uprobe:$a { 1 })", R"(
-stdin:1:1-11: ERROR: syntax error, unexpected variable, expecting {
-uprobe:$a { 1 }
-~~~~~~~~~~
-)");
-
-  test_parse_failure(bpftrace, R"(uprobe:$-1 { 1 })", R"(
-stdin:1:1-10: ERROR: invalid character '$'
-uprobe:$-1 { 1 }
-~~~~~~~~~
-stdin:1:1-11: ERROR: syntax error, unexpected -, expecting {
-uprobe:$-1 { 1 }
-~~~~~~~~~~
+  test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$a { 1 })", R"(
+stdin:1:1-20: ERROR: invalid trailing character for positional param: a. Try quoting this entire part if this is intentional e.g. "$a".
+uprobe:/bin/bash:$a { 1 }
+~~~~~~~~~~~~~~~~~~~
+stdin:1:1-26: ERROR: No attach points for probe
+uprobe:/bin/bash:$a { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 
   test_parse_failure(bpftrace, R"(uprobe:$999999999999999999999999 { 1 })", R"(
-stdin:1:1-34: ERROR: param $999999999999999999999999 is out of integer range [1, 9223372036854775807]
+stdin:1:1-33: ERROR: positional param index 999999999999999999999999 is out of integer range. Max int: 9223372036854775807
 uprobe:$999999999999999999999999 { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+stdin:1:1-39: ERROR: No attach points for probe
+uprobe:$999999999999999999999999 { 1 }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 

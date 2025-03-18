@@ -1783,8 +1783,8 @@ The 'Kernel' column indicates the minimum kernel version required and the 'BPF H
 | n/a
 | n/a
 | The nth positional parameter passed to the bpftrace program.
-If less than n parameters are passed this evaluates to `0`.
-For string arguments use the `str()` call to retrieve the value.
+If less than n parameters are passed this evaluates to `0` in an action block or an empty string in a probe.
+For string arguments in an action block use the `str()` call to retrieve the value.
 
 | `$#`
 | int64

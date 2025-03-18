@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <bcc/bcc_proc.h>
+#include <cctype>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -236,25 +237,37 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       argument += raw[idx + 1];
       ++idx;
     } else if (!in_quotes && raw[idx] == '$') {
-      // There's an assumption that the positional parameter is well
-      // formed. ie we are not expecting a bare `$` or `$nonint`. The
-      // bison parser should have guaranteed this.
       size_t i = idx + 1;
       size_t len = 0;
-      while (i < raw.size() && (raw[i] != '"' && raw[i] != ':')) {
+      while (i < raw.size() && std::isdigit(raw[i])) {
+        if (len == 0 && raw[i] == '0') {
+          break;
+        }
         len++;
         i++;
       }
 
-      std::string param_idx_str = raw.substr(idx + 1, len);
-      size_t pos, param_idx;
-      param_idx = std::stoll(param_idx_str, &pos, 0);
+      std::string param_idx_str;
 
-      if (pos != param_idx_str.size()) {
+      if (len == 0 && (idx + 1) < raw.size()) {
+        param_idx_str = raw.substr(idx + 1, 1);
         errs_
-            << "Found trailing text '" << param_idx_str.substr(pos)
-            << "' in positional parameter index. Try quoting the trailing text."
-            << std::endl;
+            << "invalid trailing character for positional param: "
+            << param_idx_str
+            << ". Try quoting this entire part if this is intentional e.g. \"$"
+            << param_idx_str << "\".";
+        return State::INVALID;
+      }
+
+      param_idx_str = raw.substr(idx + 1, len);
+      size_t pos, param_idx;
+
+      try {
+        param_idx = std::stoll(param_idx_str, &pos, 0);
+      } catch (std::out_of_range const &ex) {
+        errs_ << "positional param index " << param_idx_str
+              << " is out of integer range. Max int: "
+              << std::to_string(std::numeric_limits<long>::max());
         return State::INVALID;
       }
 
