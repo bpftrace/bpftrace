@@ -118,7 +118,7 @@ class LogStreamBug : public LogStream {
 public:
   LogStreamBug(const std::string& file,
                int line,
-               __attribute__((unused)) LogType,
+               __attribute__((unused)) LogType /*unused*/,
                std::ostream& out = std::cerr)
       : LogStream(file, line, LogType::BUG, out) {};
   [[noreturn]] ~LogStreamBug() override;

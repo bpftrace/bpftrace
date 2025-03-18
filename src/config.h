@@ -204,7 +204,7 @@ private:
   }
 
 private:
-  bool can_set(ConfigSource prevSource, ConfigSource);
+  bool can_set(ConfigSource prevSource, ConfigSource source);
   bool is_aslr_enabled();
 
   std::map<ConfigKey, ConfigValue> config_map_;

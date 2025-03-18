@@ -673,7 +673,10 @@ struct bcc_sym_cb_data {
   std::set<uint64_t> &offsets;
 };
 
-static int bcc_sym_cb(const char *symname, uint64_t start, uint64_t, void *p)
+static int bcc_sym_cb(const char *symname,
+                      uint64_t start,
+                      uint64_t /*unused*/,
+                      void *p)
 {
   auto *data = static_cast<struct bcc_sym_cb_data *>(p);
   std::vector<std::string> &syms = data->syms;

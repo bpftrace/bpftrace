@@ -357,8 +357,8 @@ private:
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type,
                           const Location &loc);
-  VariableLLVM *maybeGetVariable(const std::string &);
-  VariableLLVM &getVariable(const std::string &);
+  VariableLLVM *maybeGetVariable(const std::string &var_ident);
+  VariableLLVM &getVariable(const std::string &var_ident);
 
   llvm::Function *DeclareKernelFunc(Kfunc kfunc, Node &call);
 

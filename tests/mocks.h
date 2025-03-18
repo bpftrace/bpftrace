@@ -63,13 +63,13 @@ public:
   }
 
   bool is_traceable_func(
-      const std::string &__attribute__((unused))) const override
+      const std::string &__attribute__((unused)) /*func_name*/) const override
   {
     return true;
   }
 
   std::unordered_set<std::string> get_func_modules(
-      const std::string &__attribute__((unused))) const override
+      const std::string &__attribute__((unused)) /*func_name*/) const override
   {
     return { "mock_vmlinux" };
   }
