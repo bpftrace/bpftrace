@@ -29,6 +29,8 @@ and this project adheres to
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
 - Introduce automatic session probes
   - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
+- Positional params can be used in any part of a probe string
+  - [#3956](https://github.com/bpftrace/bpftrace/pull/3956)
 #### Deprecated
 #### Removed
 #### Fixed
