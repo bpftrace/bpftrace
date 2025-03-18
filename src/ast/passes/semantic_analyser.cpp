@@ -431,13 +431,13 @@ void SemanticAnalyser::visit(StackMode &mode)
 
 void SemanticAnalyser::visit(Identifier &identifier)
 {
-  if (bpftrace_.enums_.count(identifier.ident) != 0) {
+  if (bpftrace_.enums_.contains(identifier.ident)) {
     const auto &enum_name = std::get<1>(bpftrace_.enums_[identifier.ident]);
     identifier.type = CreateEnum(64, enum_name);
   } else if (bpftrace_.structs.Has(identifier.ident)) {
     identifier.type = CreateRecord(identifier.ident,
                                    bpftrace_.structs.Lookup(identifier.ident));
-  } else if (func_ == "sizeof" && getIntcasts().count(identifier.ident) != 0) {
+  } else if (func_ == "sizeof" && getIntcasts().contains(identifier.ident)) {
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
   } else if (func_ == "nsecs") {
@@ -3016,13 +3016,13 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (cast.type.IsEnumTy()) {
-    if (bpftrace_.enum_defs_.count(cast.type.GetName()) == 0) {
+    if (!bpftrace_.enum_defs_.contains(cast.type.GetName())) {
       cast.addError() << "Unknown enum: " << cast.type.GetName();
     } else {
       if (rhs.IsIntTy() && cast.expr->is_literal) {
         auto integer = static_cast<Integer *>(cast.expr);
 
-        if (bpftrace_.enum_defs_[cast.type.GetName()].count(integer->n) == 0) {
+        if (!bpftrace_.enum_defs_[cast.type.GetName()].contains(integer->n)) {
           cast.expr->addError()
               << "Enum: " << cast.type.GetName()
               << " doesn't contain a variant value of " << integer->n;
@@ -3673,7 +3673,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "")
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (!listing_ && bpftrace_.btf_->get_all_iters().count(ap.func) <= 0) {
+    if (!listing_ && !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
       ap.addError() << "iter " << ap.func
                     << " not available for your kernel version.";
     }
