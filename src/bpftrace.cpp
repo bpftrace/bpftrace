@@ -1466,7 +1466,7 @@ int BPFtrace::print_map_hist(const BpfMap &map, uint32_t top, uint32_t div)
       return -1;
     }
 
-    if (values_by_key.find(key_prefix) == values_by_key.end()) {
+    if (!values_by_key.contains(key_prefix)) {
       // New key - create a list of buckets for it
       if (map_info.value_type.IsHistTy())
         values_by_key[key_prefix] = std::vector<uint64_t>(65 * 32);
@@ -1959,7 +1959,7 @@ const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
   auto &funcs = get_traceable_funcs();
-  return funcs.find(func_name) != funcs.end();
+  return funcs.contains(func_name);
 }
 
 std::unordered_set<std::string> BPFtrace::get_func_modules(

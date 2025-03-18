@@ -115,7 +115,7 @@ std::optional<ConfigKey> Config::get_config_key(const std::string &str,
   if (maybe_key.starts_with(prefix)) {
     maybe_key = maybe_key.substr(prefix.length());
   }
-  if (ENV_ONLY.find(maybe_key) != ENV_ONLY.end()) {
+  if (ENV_ONLY.contains(maybe_key)) {
     err = maybe_key + " can only be set as an environment variable";
     return std::nullopt;
   }

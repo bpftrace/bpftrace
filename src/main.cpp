@@ -945,7 +945,7 @@ int main(int argc, char* argv[])
   auto addPass = [&pm](ast::Pass&& pass) {
     auto name = pass.name();
     pm.add(std::move(pass));
-    if (bt_debug.find(DebugStage::Ast) != bt_debug.end()) {
+    if (bt_debug.contains(DebugStage::Ast)) {
       pm.add(printPass(name));
     }
   };
@@ -982,7 +982,7 @@ int main(int argc, char* argv[])
 
   pm.add(ast::CreateLLVMInitPass());
   pm.add(ast::CreateCompilePass());
-  if (bt_debug.find(DebugStage::Codegen) != bt_debug.end()) {
+  if (bt_debug.contains(DebugStage::Codegen)) {
     pm.add(ast::Pass::create("dump-ir-prefix", [&] {
       std::cout << "LLVM IR before optimization\n";
       std::cout << "---------------------------\n\n";
@@ -1001,7 +1001,7 @@ int main(int argc, char* argv[])
     pm.add(ast::CreateVerifyPass());
   }
   pm.add(ast::CreateOptimizePass());
-  if (bt_debug.find(DebugStage::CodegenOpt) != bt_debug.end()) {
+  if (bt_debug.contains(DebugStage::CodegenOpt)) {
     pm.add(ast::Pass::create("dump-ir-opt-prefix", [&] {
       std::cout << "\nLLVM IR after optimization\n";
       std::cout << "----------------------------\n\n";
@@ -1014,7 +1014,7 @@ int main(int argc, char* argv[])
     pm.add(ast::CreateDumpIRPass(*output_ir_opt));
   }
   pm.add(ast::CreateObjectPass());
-  if (bt_debug.find(DebugStage::Disassemble) != bt_debug.end()) {
+  if (bt_debug.contains(DebugStage::Disassemble)) {
     pm.add(ast::Pass::create("dump-asm-prefix", [&] {
       std::cout << "\nDisassembled bytecode\n";
       std::cout << "----------------------------\n\n";

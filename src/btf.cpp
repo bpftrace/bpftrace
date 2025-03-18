@@ -126,7 +126,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 
     if (mod_name == "vmlinux") {
       btf_objects.front().id = id;
-    } else if (modules.find(mod_name) != modules.end()) {
+    } else if (modules.contains(mod_name)) {
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
                   .id = id,
@@ -569,7 +569,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
     std::string func_name = btf_obj.name + ":" + str;
 
-    if (funcs.find(func_name) == funcs.end())
+    if (!funcs.contains(func_name))
       continue;
 
     t = btf__type_by_id(btf_obj.btf, t->type);
@@ -625,7 +625,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
 {
   std::map<std::string, std::vector<std::string>> params;
   auto all_resolved = [&params](const std::string &f) {
-    return params.find(f) != params.end();
+    return params.contains(f);
   };
 
   for (auto &btf_obj : btf_objects) {

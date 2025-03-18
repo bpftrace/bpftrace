@@ -2727,7 +2727,7 @@ void SemanticAnalyser::visit(For &f)
       auto [iter, _] = for_vars_referenced_.try_emplace(&f);
       auto &collector = iter->second;
       collector.visit(stmt, [this, &found_vars](const auto &var) {
-        if (found_vars.find(var.ident) != found_vars.end())
+        if (found_vars.contains(var.ident))
           return false;
 
         if (find_variable(var.ident)) {
@@ -3547,7 +3547,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "")
       ap.addError() << "profile probe must have unit of time";
     else if (!listing_) {
-      if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
+      if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (ap.func != "")
         ap.addError() << "profile probe must have an integer frequency";
@@ -3558,7 +3558,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "")
       ap.addError() << "interval probe must have unit of time";
     else if (!listing_) {
-      if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
+      if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (ap.func != "")
         ap.addError() << "interval probe must have an integer frequency";
@@ -3659,7 +3659,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {
-      if (SIGNALS.find(ap.func) == SIGNALS.end())
+      if (!SIGNALS.contains(ap.func))
         ap.addError() << ap.func << " is not a supported signal";
       return;
     }
