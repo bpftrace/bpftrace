@@ -18,6 +18,7 @@ Checks:
   - -modernize-use-nodiscard
   - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
+  - readability-const-return-type
   - readability-container-contains
 
 WarningsAsErrors: "*"

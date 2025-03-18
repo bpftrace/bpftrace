@@ -27,9 +27,9 @@ static const int STRING_SIZE = 64;
 
 static const std::optional<int> no_pid = std::nullopt;
 
-static const std::string kprobe_name(const std::string &attach_point,
-                                     const std::string &target,
-                                     uint64_t func_offset)
+static std::string kprobe_name(const std::string &attach_point,
+                               const std::string &target,
+                               uint64_t func_offset)
 {
   auto str = func_offset ? "+" + std::to_string(func_offset) : "";
   if (!target.empty()) {
