@@ -290,7 +290,6 @@ std::optional<std::string> Usyms::resolve_blazesym_impl(
     // TODO: Enable usage of debug symbols at some point.
     .debug_syms = false,
     .perf_map = true,
-    .map_files = true,
   };
 
   const blaze_syms *syms = blaze_symbolize_process_abs_addrs(
