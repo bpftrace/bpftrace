@@ -297,7 +297,7 @@ public:
     return num_elements_;
   };
 
-  const std::string GetName() const
+  std::string GetName() const
   {
     assert(IsRecordTy() || IsEnumTy());
     return name_;

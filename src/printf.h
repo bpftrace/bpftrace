@@ -9,7 +9,7 @@
 
 namespace bpftrace {
 
-static const std::string generate_pattern_string()
+static std::string generate_pattern_string()
 {
   std::string pattern = "%-?[0-9]*(\\.[0-9]+)?(";
   for (const auto& e : printf_format_types) {

@@ -22,11 +22,11 @@ public:
     Error,
   };
   Diagnostic(const Location loc) : loc_(loc) {};
-  const std::string msg() const
+  std::string msg() const
   {
     return msg_.str();
   }
-  const std::string hint() const
+  std::string hint() const
   {
     return hint_.str();
   }
