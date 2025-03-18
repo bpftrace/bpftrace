@@ -18,8 +18,6 @@
 #include "util/format.h"
 #include "util/paths.h"
 
-extern char** environ;
-
 namespace bpftrace {
 
 constexpr unsigned int maxargs = 256;
@@ -97,7 +95,7 @@ static void validate_cmd(std::vector<std::string>& cmd)
       throw std::runtime_error("path '" + cmd[0] +
                                "' does not exist or is not executable");
     case 1:
-      cmd[0] = paths.front().c_str();
+      cmd[0] = paths.front();
       break;
     default:
       // /bin maybe is a symbolic link to /usr/bin (/bin -> /usr/bin), there
@@ -116,7 +114,7 @@ static void validate_cmd(std::vector<std::string>& cmd)
       }
 
       if (uniq_abs_path.size() == 1) {
-        cmd[0] = paths.front().c_str();
+        cmd[0] = paths.front();
         break;
       } else {
         throw std::runtime_error(

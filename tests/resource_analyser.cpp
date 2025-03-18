@@ -40,7 +40,7 @@ void test(const std::string &input,
   auto bpftrace = get_mock_bpftrace();
   auto configs = ConfigSetter(*bpftrace->config_, ConfigSource::script);
   configs.set(ConfigKeyInt::on_stack_limit, on_stack_limit.value_or(0));
-  return test(*bpftrace, input, expected_result, out);
+  test(*bpftrace, input, expected_result, out);
 }
 
 TEST(resource_analyser, multiple_hist_bits_in_single_map)

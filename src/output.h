@@ -242,7 +242,7 @@ protected:
                            bool is_per_cpu,
                            uint32_t div,
                            bool is_map_key = false) const override;
-  static std::string hist_index_label(uint32_t index, uint32_t bits);
+  static std::string hist_index_label(uint32_t index, uint32_t k);
   static std::string lhist_index_label(int number, int step);
   std::string hist_to_str(const std::vector<uint64_t> &values,
                           uint32_t div,

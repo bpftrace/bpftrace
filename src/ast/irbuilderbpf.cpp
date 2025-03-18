@@ -1238,7 +1238,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
   // to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
   // for nested probes e.g. "page_fault_user" -> "print".
   CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
-                         bpftrace_.event_loss_cnt_key_);
+                         bpftrace::BPFtrace::event_loss_cnt_key_);
   CreateRet(getInt64(early_exit_ret));
 
   SetInsertPoint(lookup_failure_block);
@@ -2170,7 +2170,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
 
   SetInsertPoint(loss_block);
   CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
-                         bpftrace_.event_loss_cnt_key_);
+                         bpftrace::BPFtrace::event_loss_cnt_key_);
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
@@ -2225,7 +2225,6 @@ void IRBuilderBPF::CreateMapElemInit(Value *ctx,
   CreateStore(val, initValue);
   CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
   CreateLifetimeEnd(initValue);
-  return;
 }
 
 void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
@@ -2270,7 +2269,6 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
   CreateLifetimeEnd(value);
-  return;
 }
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
@@ -2667,8 +2665,10 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
 {
   AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
 
-  if (!type.IsPtrTy())
-    return CreateProbeRead(ctx, dst, getInt32(type.GetSize()), src, as, loc);
+  if (!type.IsPtrTy()) {
+    CreateProbeRead(ctx, dst, getInt32(type.GetSize()), src, as, loc);
+    return;
+  }
 
   // Pointers are internally always represented as 64-bit integers, matching the
   // BPF register size (BPF is a 64-bit ISA). This helps to avoid BPF codegen

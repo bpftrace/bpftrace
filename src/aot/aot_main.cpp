@@ -29,7 +29,6 @@ void usage(std::ostream& out, std::string_view filename)
   out << "    -V, --version  bpftrace version" << std::endl;
   out << std::endl;
   // clang-format on
-  return;
 }
 
 std::unique_ptr<Output> prepare_output(const std::string& output_file,

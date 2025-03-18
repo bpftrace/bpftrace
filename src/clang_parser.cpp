@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <clang-c/Index.h>
 #include <cstring>
 #include <iostream>
@@ -351,9 +352,7 @@ bool ClangParser::ClangParserHandler::check_diagnostics(bool bail_on_error)
     if ((bail_on_error && severity == CXDiagnostic_Error) ||
         severity == CXDiagnostic_Fatal) {
       // Do not fail on "too many errors"
-      if (!bail_on_error && msg == "too many errors emitted, stopping now")
-        return true;
-      return false;
+      return !bail_on_error && msg == "too many errors emitted, stopping now";
     }
   }
   return true;
@@ -399,20 +398,16 @@ const std::vector<std::string> &ClangParser::ClangParserHandler::
 
 bool ClangParser::ClangParserHandler::has_redefinition_error()
 {
-  for (auto &msg : error_msgs) {
-    if (msg.find("redefinition") != std::string::npos)
-      return true;
-  }
-  return false;
+  return std::ranges::any_of(error_msgs, [](const auto &msg) {
+    return msg.find("redefinition") != std::string::npos;
+  });
 }
 
 bool ClangParser::ClangParserHandler::has_unknown_type_error()
 {
-  for (auto &msg : error_msgs) {
-    if (ClangParser::get_unknown_type(msg).has_value())
-      return true;
-  }
-  return false;
+  return std::ranges::any_of(error_msgs, [](const auto &msg) {
+    return ClangParser::get_unknown_type(msg).has_value();
+  });
 }
 
 namespace {

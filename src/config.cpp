@@ -55,11 +55,9 @@ Config::Config(bool has_cmd)
 
 bool Config::can_set(ConfigSource prevSource, ConfigSource source)
 {
-  if (prevSource == ConfigSource::default_ ||
-      (prevSource == ConfigSource::script && source == ConfigSource::env_var)) {
-    return true;
-  }
-  return false;
+  return prevSource == ConfigSource::default_ ||
+         (prevSource == ConfigSource::script &&
+          source == ConfigSource::env_var);
 }
 
 // /proc/sys/kernel/randomize_va_space >= 1

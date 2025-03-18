@@ -116,7 +116,7 @@ private:
       return;
     }
     for (const auto& diag : diagnostics_[index]) {
-      fn(*diag.get());
+      fn(*diag);
     }
   }
 

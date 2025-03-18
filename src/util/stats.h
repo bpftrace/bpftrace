@@ -21,7 +21,7 @@ T reduce_value(const std::vector<uint8_t> &value, int nvalues)
 {
   T sum = 0;
   for (int i = 0; i < nvalues; i++) {
-    sum += read_data<T>(value.data() + i * sizeof(T));
+    sum += read_data<T>(value.data() + (i * sizeof(T)));
   }
   return sum;
 }
@@ -32,9 +32,9 @@ T min_max_value(const std::vector<uint8_t> &value, int nvalues, bool is_max)
   T mm_val = 0;
   bool mm_set = false;
   for (int i = 0; i < nvalues; i++) {
-    T val = read_data<T>(value.data() + i * (sizeof(T) * 2));
+    T val = read_data<T>(value.data() + (i * (sizeof(T) * 2)));
     auto is_set = read_data<uint32_t>(value.data() + sizeof(T) +
-                                      i * (sizeof(T) * 2));
+                                      (i * (sizeof(T) * 2)));
     if (!is_set) {
       continue;
     }
@@ -62,8 +62,9 @@ stats<T> stats_value(const std::vector<uint8_t> &value, int nvalues)
 {
   stats<T> ret = { 0, 0, 0 };
   for (int i = 0; i < nvalues; i++) {
-    T val = read_data<T>(value.data() + i * (sizeof(T) * 2));
-    T cpu_count = read_data<T>(value.data() + sizeof(T) + i * (sizeof(T) * 2));
+    T val = read_data<T>(value.data() + (i * (sizeof(T) * 2)));
+    T cpu_count = read_data<T>(value.data() + sizeof(T) +
+                               (i * (sizeof(T) * 2)));
     ret.count += cpu_count;
     ret.total += val;
   }

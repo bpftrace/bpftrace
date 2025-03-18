@@ -170,10 +170,7 @@ public:
 
   bool is_alive() override
   {
-    if (pid_ > 0)
-      return true;
-    else
-      return false;
+    return pid_ > 0;
   }
 };
 

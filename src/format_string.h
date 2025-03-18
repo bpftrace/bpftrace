@@ -13,7 +13,7 @@ namespace bpftrace {
 // validate_fmt makes sure that the type are valid for the format specifiers
 std::string validate_format_string(const std::string &fmt,
                                    std::vector<Field> args,
-                                   const std::string call_func);
+                                   std::string call_func);
 
 struct Field;
 
@@ -45,23 +45,23 @@ public:
   std::string format_str(std::vector<std::unique_ptr<IPrintable>> &args);
 
   // length returns the length of the format string
-  inline size_t length() const noexcept
+  size_t length() const noexcept
   {
     return fmt_.length();
   };
-  inline size_t size() const noexcept
+  size_t size() const noexcept
   {
     return length();
   };
 
   // str returns the format string as std::string
-  inline std::string str() const
+  std::string str() const
   {
     return fmt_;
   };
 
   // c_str returns the format string as c string
-  inline const char *c_str() const noexcept
+  const char *c_str() const noexcept
   {
     return fmt_.c_str();
   };

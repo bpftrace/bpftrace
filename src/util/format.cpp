@@ -74,7 +74,7 @@ std::string hex_format_buffer(const char *buf,
                               bool escape_hex)
 {
   // Allow enough space for every byte to be sanitized in the form "\x00"
-  std::string str(size * 4 + 1, '\0');
+  std::string str((size * 4) + 1, '\0');
   char *s = str.data();
 
   size_t offset = 0;

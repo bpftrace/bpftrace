@@ -999,7 +999,7 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(
 
   for (size_t i = 0; i < key.size(); i++) {
     uint64_t k = key.at(i);
-    std::memcpy(key_data + sizeof(uint64_t) * i, &k, sizeof(k));
+    std::memcpy(key_data + (sizeof(uint64_t) * i), &k, sizeof(k));
   }
   uint64_t v = val;
   std::memcpy(val_data, &v, sizeof(v));
@@ -1019,7 +1019,7 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(
   uint8_t *val_data = pair.second.data();
 
   for (size_t i = 0; i < key.size(); i++) {
-    strncpy(reinterpret_cast<char *>(key_data) + STRING_SIZE * i,
+    strncpy(reinterpret_cast<char *>(key_data) + (STRING_SIZE * i),
             key.at(i).c_str(),
             STRING_SIZE);
   }
@@ -1062,7 +1062,7 @@ TEST(bpftrace, sort_by_key_int)
         key_value_pair_int({ 3 }, 11),
         key_value_pair_int({ 1 }, 10),
       };
-  bpftrace.sort_by_key(key_arg, values_by_key);
+  StrictMock<MockBPFtrace>::sort_by_key(key_arg, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1087,7 +1087,7 @@ TEST(bpftrace, sort_by_key_int_int)
         key_value_pair_int({ 5, 1, 1 }, 3), key_value_pair_int({ 2, 2, 2 }, 4),
         key_value_pair_int({ 2, 3, 2 }, 5), key_value_pair_int({ 2, 1, 2 }, 6),
       };
-  bpftrace.sort_by_key(key, values_by_key);
+  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1111,7 +1111,7 @@ TEST(bpftrace, sort_by_key_str)
         key_value_pair_str({ "x" }, 3),
         key_value_pair_str({ "d" }, 4),
       };
-  bpftrace.sort_by_key(key_arg, values_by_key);
+  StrictMock<MockBPFtrace>::sort_by_key(key_arg, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1142,7 +1142,7 @@ TEST(bpftrace, sort_by_key_str_str)
         key_value_pair_str({ "z", "b", "p" }, 5),
         key_value_pair_str({ "a", "b", "q" }, 6),
       };
-  bpftrace.sort_by_key(key, values_by_key);
+  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1170,7 +1170,7 @@ TEST(bpftrace, sort_by_key_int_str)
         key_value_pair_int_str(3, "b", 3), key_value_pair_int_str(1, "a", 4),
         key_value_pair_int_str(2, "a", 5), key_value_pair_int_str(3, "a", 6),
       };
-  bpftrace.sort_by_key(key, values_by_key);
+  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {

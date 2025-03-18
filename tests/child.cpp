@@ -149,7 +149,7 @@ TEST_F(childproc, stop_cont)
     FAIL() << "kill(SIGSTOP)";
 
   waitpid(child->pid(), &status, WUNTRACED);
-  if (!(WIFSTOPPED(status) && WSTOPSIG(status) == SIGSTOP))
+  if (!WIFSTOPPED(status) || WSTOPSIG(status) != SIGSTOP)
     FAIL() << "! WIFSTOPPED";
 
   EXPECT_TRUE(child->is_alive());
@@ -223,7 +223,7 @@ TEST_F(childproc, multi_exec_match)
 
   // Create directory for test
   std::string tmpdir = "/tmp/bpftrace-test-child-XXXXXX";
-  ASSERT_NE(::mkdtemp(&tmpdir[0]), nullptr);
+  ASSERT_NE(::mkdtemp(tmpdir.data()), nullptr);
 
   // Create fixture directories
   const auto path = std::filesystem::path(tmpdir);

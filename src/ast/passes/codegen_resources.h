@@ -24,7 +24,7 @@ public:
   CodegenResources analyse(Program &program);
 
   using Visitor<CodegenResourceAnalyser>::visit;
-  void visit(Builtin &map);
+  void visit(Builtin &builtin);
   void visit(Call &call);
 
 private:
