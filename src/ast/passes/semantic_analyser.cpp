@@ -335,7 +335,7 @@ bool SemanticAnalyser::is_valid_assignment(const Expression *target,
     if (expr->type.IsMultiOutputMapTy())
       return false;
     // Prevent declaring a map copying another aggregate map.
-    if (auto *target_map = dynamic_cast<const Map *>(target)) {
+    if (const auto *target_map = dynamic_cast<const Map *>(target)) {
       bool map_has_type = get_map_type(*target_map);
       if (expr->type.IsCastableMapTy() && map_has_type == false)
         return false;
@@ -470,7 +470,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
   //    expansion.
   auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
   if (!matches.empty()) {
-    auto &match = *matches.begin();
+    const auto &match = *matches.begin();
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         match);
     builtin.type = CreateRecord(tracepoint_struct,
@@ -534,7 +534,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx") {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -609,7 +609,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                   "struct task_struct")),
                                  AddrSpace::kernel);
   } else if (builtin.ident == "retval") {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType type = single_provider_type(probe);
@@ -617,7 +617,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     if (type == ProbeType::kretprobe || type == ProbeType::uretprobe) {
       builtin.type = CreateUInt64();
     } else if (type == ProbeType::fentry || type == ProbeType::fexit) {
-      auto arg = bpftrace_.structs.GetProbeArg(*probe, RETVAL_FIELD_NAME);
+      const auto *arg = bpftrace_.structs.GetProbeArg(*probe,
+                                                      RETVAL_FIELD_NAME);
       if (arg) {
         builtin.type = arg->type;
         builtin.type.is_btftype = true;
@@ -647,7 +648,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // Case: @=comm and strncmp(@, "name")
     builtin.type.SetAS(AddrSpace::kernel);
   } else if (builtin.ident == "func") {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -675,7 +676,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
   } else if (builtin.is_argx()) {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -702,7 +703,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (!builtin.ident.compare(0, 4, "sarg") &&
              builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
              builtin.ident.at(4) <= '9') {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
@@ -731,7 +732,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = CreateUInt64();
     builtin.type.SetAS(addrspace);
   } else if (builtin.ident == "probe") {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     size_t str_size = 0;
@@ -758,7 +759,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.type = CreateUInt32();
   } else if (builtin.ident == "args") {
-    auto probe = get_probe(builtin, builtin.ident);
+    auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
     for (auto *attach_point : probe->attach_points) {
@@ -870,7 +871,7 @@ void SemanticAnalyser::visit(Call &call)
     call.vargs[i] = dereference_if_needed(call.vargs[i]);
   }
 
-  if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
+  if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
     for (auto *ap : probe->attach_points) {
       if (!check_available(call, *ap)) {
         call.addError() << call.func << " can not be used with \""
@@ -1105,7 +1106,7 @@ void SemanticAnalyser::visit(Call &call)
         if (dynamic_cast<PositionalParameter *>(arg))
           call.is_literal = true;
         else {
-          auto binop = dynamic_cast<Binop *>(arg);
+          auto *binop = dynamic_cast<Binop *>(arg);
           if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
                           dynamic_cast<PositionalParameter *>(binop->right)))) {
             // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
@@ -1204,7 +1205,7 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
 
-    auto arg = call.vargs.at(0);
+    auto *arg = call.vargs.at(0);
     if (call.vargs.size() == 2) {
       arg = call.vargs.at(1);
       check_arg(call, Type::integer, 0);
@@ -1298,7 +1299,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateUInt64();
-    if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
       ProbeType pt = single_provider_type(probe);
       // In case of different attach_points, Set the addrspace to none.
       call.type.SetAS(find_addrspace(pt));
@@ -1327,7 +1328,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "uaddr") {
-    auto probe = get_probe(call, call.func);
+    auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;
 
@@ -1574,7 +1575,7 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "signal only accepts string literals or integers";
     }
   } else if (call.func == "path") {
-    auto probe = get_probe(call, call.func);
+    auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;
 
@@ -1662,7 +1663,7 @@ If you're seeing errors, try clamping the string sizes. For example:
     }
     call.type = CreateUInt64();
   } else if (call.func == "override") {
-    auto probe = get_probe(call, call.func);
+    auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;
 
@@ -1881,7 +1882,7 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 
 Probe *SemanticAnalyser::get_probe(Node &node, std::string name)
 {
-  auto probe = dynamic_cast<Probe *>(top_level_node_);
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
   if (probe == nullptr) {
     // Attempting to use probe-specific feature in non-probe context
     if (name.empty()) {
@@ -2093,8 +2094,8 @@ void SemanticAnalyser::binop_int(Binop &binop)
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
 
-  auto left = binop.left;
-  auto right = binop.right;
+  auto *left = binop.left;
+  auto *right = binop.right;
   auto left_literal = bpftrace_.get_int_literal(left);
   auto right_literal = bpftrace_.get_int_literal(right);
 
@@ -2164,8 +2165,8 @@ void SemanticAnalyser::binop_int(Binop &binop)
   if (func_ == "str") {
     // Check if one of the operands is a positional parameter
     // The other one should be a constant offset
-    auto pos_param = dynamic_cast<PositionalParameter *>(left);
-    auto offset = dynamic_cast<Integer *>(right);
+    auto *pos_param = dynamic_cast<PositionalParameter *>(left);
+    auto *offset = dynamic_cast<Integer *>(right);
     if (!pos_param) {
       pos_param = dynamic_cast<PositionalParameter *>(right);
       offset = dynamic_cast<Integer *>(left);
@@ -2245,8 +2246,8 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
       binop.type = CreateUInt(64);
 
       if (is_final_pass()) {
-        auto le = lht.GetPointeeTy();
-        auto re = rht.GetPointeeTy();
+        const auto *le = lht.GetPointeeTy();
+        const auto *re = rht.GetPointeeTy();
         if (*le != *re) {
           binop.left->addWarning(*binop.right)
               << "comparison of distinct pointer types ('" << *le << ", '"
@@ -2552,7 +2553,7 @@ void SemanticAnalyser::visit(Jump &jump)
       if (jump.return_value) {
         jump.return_value = dereference_if_needed(jump.return_value);
       }
-      if (auto subprog = dynamic_cast<Subprog *>(top_level_node_)) {
+      if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
         if ((subprog->return_type.IsVoidTy() !=
              (jump.return_value == nullptr)) ||
             (jump.return_value &&
@@ -2825,10 +2826,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   }
 
   if (type.is_funcarg) {
-    auto probe = get_probe(acc);
+    auto *probe = get_probe(acc);
     if (probe == nullptr)
       return;
-    auto arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
+    const auto *arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
     if (arg) {
       // Only set acc.type if it's not already set. [1]
       // Overwriting the type once set could override the conversion
@@ -2881,7 +2882,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   std::map<std::string, std::weak_ptr<const Struct>> structs;
 
   if (type.is_tparg) {
-    auto probe = get_probe(acc);
+    auto *probe = get_probe(acc);
     if (probe == nullptr)
       return;
 
@@ -2895,7 +2896,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
           *attach_point);
-      for (auto &match : matches) {
+      for (const auto &match : matches) {
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);
         structs[tracepoint_struct] = bpftrace_.structs.Lookup(
@@ -3020,7 +3021,7 @@ void SemanticAnalyser::visit(Cast &cast)
       cast.addError() << "Unknown enum: " << cast.type.GetName();
     } else {
       if (rhs.IsIntTy() && cast.expr->is_literal) {
-        auto integer = static_cast<Integer *>(cast.expr);
+        auto *integer = static_cast<Integer *>(cast.expr);
 
         if (!bpftrace_.enum_defs_[cast.type.GetName()].contains(integer->n)) {
           cast.expr->addError()
@@ -3048,7 +3049,7 @@ void SemanticAnalyser::visit(Cast &cast)
   // case : BEGIN { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (cast.type.GetAS() == AddrSpace::none) {
-    if (auto probe = dynamic_cast<Probe *>(top_level_node_)) {
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
       ProbeType type = single_provider_type(probe);
       cast.type.SetAS(find_addrspace(type));
     } else {
@@ -3114,7 +3115,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
            "The function that returns this type must be called directly e.g. `"
         << assignment.map->ident << " = " << hint->second << ";`.";
 
-    if (auto *expr_map = dynamic_cast<const Map *>(assignment.expr)) {
+    if (const auto *expr_map = dynamic_cast<const Map *>(assignment.expr)) {
       if (type.IsCastableMapTy()) {
         err.addHint()
             << "Add a cast to integer if you want the value of the aggregate, "
@@ -3243,7 +3244,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       }
     } else if (storedTy.IsIntegerTy()) {
       if (assignment.expr->is_literal) {
-        auto integer = static_cast<Integer *>(assignment.expr);
+        auto *integer = static_cast<Integer *>(assignment.expr);
         if (!storedTy.IsEqual(assignTy)) {
           int64_t value = integer->n;
           bool can_fit = false;
@@ -3312,9 +3313,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       }
     }
     if (type_mismatch_error) {
-      auto err_segment = foundVar.was_assigned
-                             ? "when variable already contains a value of type"
-                             : "when variable already has a type";
+      const auto *err_segment =
+          foundVar.was_assigned
+              ? "when variable already contains a value of type"
+              : "when variable already has a type";
       assignment.addError() << "Type mismatch for " << var_ident << ": "
                             << "trying to assign value of type '" << assignTy
                             << "' " << err_segment << " '" << storedTy << "'";
@@ -3368,7 +3370,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
   // would be considered variable shadowing, when in fact, because of order,
   // there is no ambiguity in terms of future assignment and use.
   if (is_first_pass()) {
-    for (auto scope : scope_stack_) {
+    for (auto *scope : scope_stack_) {
       // This should be the first time we're seeing this variable
       if (auto decl_search = variable_decls_[scope].find(var_ident);
           decl_search != variable_decls_[scope].end()) {
@@ -3571,7 +3573,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
-        for (auto &probeListItem : SW_PROBE_LIST) {
+        for (const auto &probeListItem : SW_PROBE_LIST) {
           if (ap.target == probeListItem.path ||
               (!probeListItem.alias.empty() &&
                ap.target == probeListItem.alias)) {
@@ -3624,7 +3626,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
-        for (auto &probeListItem : HW_PROBE_LIST) {
+        for (const auto &probeListItem : HW_PROBE_LIST) {
           if (ap.target == probeListItem.path ||
               (!probeListItem.alias.empty() &&
                ap.target == probeListItem.alias)) {
@@ -3939,7 +3941,7 @@ bool SemanticAnalyser::check_symbol(const Call &call,
 
 bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
 {
-  auto &func = call.func;
+  const auto &func = call.func;
   ProbeType type = probetype(ap.provider);
 
   if (func == "reg") {
@@ -4080,7 +4082,7 @@ void SemanticAnalyser::accept_statements(StatementList &stmts)
 {
   for (size_t i = 0; i < stmts.size(); i++) {
     visit(stmts.at(i));
-    auto stmt = stmts.at(i);
+    auto *stmt = stmts.at(i);
 
     if (is_final_pass()) {
       auto *jump = dynamic_cast<Jump *>(stmt);
@@ -4280,7 +4282,7 @@ variable *SemanticAnalyser::find_variable(const std::string &var_ident)
 
 Node *SemanticAnalyser::find_variable_scope(const std::string &var_ident)
 {
-  for (auto scope : scope_stack_) {
+  for (auto *scope : scope_stack_) {
     if (auto search_val = variables_[scope].find(var_ident);
         search_val != variables_[scope].end()) {
       return scope;

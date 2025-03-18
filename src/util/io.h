@@ -40,8 +40,8 @@ class Membuf : public std::streambuf {
 public:
   Membuf(uint8_t *begin, uint8_t *end)
   {
-    auto b = reinterpret_cast<char *>(begin);
-    auto e = reinterpret_cast<char *>(end);
+    auto *b = reinterpret_cast<char *>(begin);
+    auto *e = reinterpret_cast<char *>(end);
     this->setg(b, b, e);
   }
 };

@@ -86,7 +86,7 @@ bool Config::is_aslr_enabled()
 std::map<std::string, StackMode> get_stack_mode_map()
 {
   std::map<std::string, StackMode> result;
-  for (auto &mode : STACK_MODE_NAME_MAP) {
+  for (const auto &mode : STACK_MODE_NAME_MAP) {
     result.emplace(mode.second, mode.first);
   }
   return result;

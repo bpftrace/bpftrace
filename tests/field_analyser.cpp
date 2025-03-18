@@ -234,24 +234,24 @@ void test_arrays_compound_data(BPFtrace &bpftrace)
   ASSERT_EQ(arrs->fields.size(), 1U);
   ASSERT_TRUE(arrs->HasField("data"));
 
-  auto &data_type = arrs->GetField("data").type;
+  const auto &data_type = arrs->GetField("data").type;
   EXPECT_TRUE(data_type.IsArrayTy());
   EXPECT_EQ(data_type.GetNumElements(), 2);
   EXPECT_EQ(data_type.GetSize(), 2 * sizeof(uintptr_t));
 
   // Check that referenced types n-levels deep are all parsed from BTF
 
-  auto &foo3_ptr_type = *data_type.GetElementTy();
+  const auto &foo3_ptr_type = *data_type.GetElementTy();
   ASSERT_TRUE(foo3_ptr_type.IsPtrTy());
 
-  auto &foo3_type = *foo3_ptr_type.GetPointeeTy();
+  const auto &foo3_type = *foo3_ptr_type.GetPointeeTy();
   ASSERT_TRUE(foo3_type.IsRecordTy());
   ASSERT_TRUE(foo3_type.HasField("foo1"));
 
-  auto &foo1_ptr_type = foo3_type.GetField("foo1").type;
+  const auto &foo1_ptr_type = foo3_type.GetField("foo1").type;
   ASSERT_TRUE(foo1_ptr_type.IsPtrTy());
 
-  auto &foo1_type = *foo1_ptr_type.GetPointeeTy();
+  const auto &foo1_type = *foo1_ptr_type.GetPointeeTy();
   ASSERT_TRUE(foo1_type.IsRecordTy());
   ASSERT_TRUE(foo1_type.HasField("a"));
 }

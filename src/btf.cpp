@@ -533,7 +533,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 std::unique_ptr<std::istream> BTF::get_all_funcs() const
 {
   auto funcs = std::make_unique<std::stringstream>();
-  for (auto &btf_obj : btf_objects)
+  for (const auto &btf_obj : btf_objects)
     *funcs << get_all_funcs_from_btf(btf_obj);
   return funcs;
 }
@@ -628,7 +628,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     return params.contains(f);
   };
 
-  for (auto &btf_obj : btf_objects) {
+  for (const auto &btf_obj : btf_objects) {
     if (std::ranges::all_of(funcs, all_resolved))
       break;
 
@@ -707,7 +707,7 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
 std::set<std::string> BTF::get_all_structs() const
 {
   std::set<std::string> structs;
-  for (auto &btf_obj : btf_objects) {
+  for (const auto &btf_obj : btf_objects) {
     auto mod_structs = get_all_structs_from_btf(btf_obj.btf);
     structs.insert(mod_structs.begin(), mod_structs.end());
   }
@@ -746,7 +746,7 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
 std::unordered_set<std::string> BTF::get_all_iters() const
 {
   std::unordered_set<std::string> iters;
-  for (auto &btf_obj : btf_objects) {
+  for (const auto &btf_obj : btf_objects) {
     auto mod_iters = get_all_iters_from_btf(btf_obj.btf);
     iters.insert(mod_iters.begin(), mod_iters.end());
   }
@@ -755,7 +755,7 @@ std::unordered_set<std::string> BTF::get_all_iters() const
 
 int BTF::get_btf_id(std::string_view func, std::string_view mod) const
 {
-  for (auto &btf_obj : btf_objects) {
+  for (const auto &btf_obj : btf_objects) {
     if (!mod.empty() && mod != btf_obj.name)
       continue;
 
@@ -770,7 +770,7 @@ int BTF::get_btf_id(std::string_view func, std::string_view mod) const
 BTF::BTFId BTF::find_id(const std::string &name,
                         std::optional<__u32> kind) const
 {
-  for (auto &btf_obj : btf_objects) {
+  for (const auto &btf_obj : btf_objects) {
     __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf, name.c_str(), *kind)
                     : btf__find_by_name(btf_obj.btf, name.c_str());
     if (id >= 0)
@@ -835,13 +835,13 @@ void BTF::resolve_fields(const BTFId &type_id,
                          Struct *record,
                          __u32 start_offset)
 {
-  auto btf_type = btf__type_by_id(type_id.btf, type_id.id);
+  const auto *btf_type = btf__type_by_id(type_id.btf, type_id.id);
   if (!btf_type)
     return;
-  auto members = btf_members(btf_type);
+  auto *members = btf_members(btf_type);
   for (__u32 i = 0; i < BTF_INFO_VLEN(btf_type->info); i++) {
     BTFId field_id{ .btf = type_id.btf, .id = members[i].type };
-    auto field_type = btf__type_by_id(field_id.btf, field_id.id);
+    const auto *field_type = btf__type_by_id(field_id.btf, field_id.id);
     if (!field_type) {
       LOG(ERROR) << "Inconsistent BTF data (no type found for id "
                  << members[i].type << ")";

@@ -169,7 +169,7 @@ std::vector<std::string> get_mapped_paths_for_running_pids()
     }
   }
   std::vector<std::string> paths;
-  for (auto &path : unique_paths) {
+  for (const auto &path : unique_paths) {
     paths.emplace_back(std::move(path));
   }
   return paths;

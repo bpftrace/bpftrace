@@ -339,7 +339,8 @@ TEST_F(TestFunctionRegistryPopulated, overloaded_origin)
 TEST(TestFunctionRegistry, add_namespaced)
 {
   FunctionRegistry reg;
-  auto *foo = reg.add(Function::Origin::Script, "ns", "foo", CreateNone(), {});
+  const auto *foo = reg.add(
+      Function::Origin::Script, "ns", "foo", CreateNone(), {});
   ast::ASTContext ast;
   auto &call = *ast.make_node<ast::Call>("foo", ast::Location());
   EXPECT_EQ(nullptr, reg.get("", "foo", {}, call));

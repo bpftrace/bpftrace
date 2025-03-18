@@ -143,7 +143,7 @@ int build_binary(const std::filesystem::path &shim,
 
   // Respect user provided BPFTRACE_OBJCOPY if present
   std::string_view objcopy = "objcopy";
-  if (auto c = std::getenv("BPFTRACE_OBJCOPY"))
+  if (auto *c = std::getenv("BPFTRACE_OBJCOPY"))
     objcopy = c;
 
   // Resolve objcopy binary to full path
