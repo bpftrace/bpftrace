@@ -286,7 +286,7 @@ std::string path_for_pid_mountns(int pid, const std::string &path)
   snprintf(pid_root, sizeof(pid_root), "/proc/%d/root", pid);
 
   if (!path.starts_with(pid_root)) {
-    std::string sep = (path.length() >= 1 && path.at(0) == '/') ? "" : "/";
+    std::string sep = (!path.empty() && path.at(0) == '/') ? "" : "/";
     pid_relative_path << pid_root << sep << path;
   } else {
     // The path is already relative to the pid's root

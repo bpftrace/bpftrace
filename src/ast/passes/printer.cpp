@@ -206,7 +206,7 @@ void Printer::visit(FieldAccess &acc)
   visit(acc.expr);
   --depth_;
 
-  if (acc.field.size())
+  if (!acc.field.empty())
     out_ << indent << " " << acc.field << std::endl;
   else
     out_ << indent << " " << acc.index << std::endl;
@@ -448,7 +448,7 @@ void Printer::visit(Subprog &subprog)
 
 void Printer::visit(Program &program)
 {
-  if (program.c_definitions.size() > 0)
+  if (!program.c_definitions.empty())
     out_ << program.c_definitions << std::endl;
 
   std::string indent(depth_, ' ');

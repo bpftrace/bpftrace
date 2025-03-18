@@ -171,7 +171,7 @@ void FormatString::split()
 void FormatString::format(std::ostream &out,
                           std::vector<std::unique_ptr<IPrintable>> &args)
 {
-  if (parts_.size() < 1) {
+  if (parts_.empty()) {
     split();
 
     // figure out the argument type for each format specifier

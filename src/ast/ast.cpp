@@ -525,13 +525,13 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
 std::string AttachPoint::name() const
 {
   std::string n = provider;
-  if (target != "")
+  if (!target.empty())
     n += ":" + target;
-  if (lang != "")
+  if (!lang.empty())
     n += ":" + lang;
-  if (ns != "")
+  if (!ns.empty())
     n += ":" + ns;
-  if (func != "") {
+  if (!func.empty()) {
     n += ":" + func;
     if (func_offset != 0)
       n += "+" + std::to_string(func_offset);
@@ -542,7 +542,7 @@ std::string AttachPoint::name() const
     n += ":" + std::to_string(freq);
   if (len != 0)
     n += ":" + std::to_string(len);
-  if (mode.size())
+  if (!mode.empty())
     n += ":" + mode;
   return n;
 }

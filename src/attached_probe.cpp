@@ -604,7 +604,7 @@ void AttachedProbe::attach_kprobe()
   // Note that we do not pass vmlinux, if it is specified.
   std::string funcname = probe_.attach_point;
   const std::string &modname = probe_.path;
-  if ((modname.length() > 0) && modname != "vmlinux") {
+  if ((!modname.empty()) && modname != "vmlinux") {
     if (!util::is_module_loaded(modname)) {
       std::string message = "specified module " + modname + " in probe " +
                             probe_.name + " is not loaded.";
@@ -626,7 +626,7 @@ void AttachedProbe::attach_kprobe()
   if (bpftrace_.config_->get(ConfigKeyMissingProbes::default_) ==
           ConfigMissingProbes::ignore &&
       probe_.name != probe_.orig_name &&
-      (funcname != "" || probe_.address != 0) &&
+      (!funcname.empty() || probe_.address != 0) &&
       !bpftrace_.is_traceable_func(funcname))
     return;
 
@@ -841,7 +841,7 @@ int AttachedProbe::usdt_sem_up_manual(const std::string &fn_name, void *ctx)
   int err;
 
 #ifdef BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
-  if (probe_.ns == "")
+  if (probe_.ns.empty())
     err = bcc_usdt_enable_probe(ctx,
                                 probe_.attach_point.c_str(),
                                 fn_name.c_str());
@@ -868,7 +868,7 @@ int AttachedProbe::usdt_sem_up_manual_addsem(int pid,
   // NB: we are careful to capture by value here everything that will not
   // be available in AttachedProbe destructor.
   auto addsem = [this, fn_name](void *c, int16_t val) -> int {
-    if (this->probe_.ns == "")
+    if (this->probe_.ns.empty())
       return bcc_usdt_addsem_probe(
           c, this->probe_.attach_point.c_str(), fn_name.c_str(), val);
     else

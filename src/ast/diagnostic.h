@@ -84,7 +84,7 @@ public:
   bool has(Severity severity) const
   {
     auto index = static_cast<long unsigned int>(severity);
-    return diagnostics_.size() > index && diagnostics_[index].size() > 0;
+    return diagnostics_.size() > index && !diagnostics_[index].empty();
   }
   void clear()
   {

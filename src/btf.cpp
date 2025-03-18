@@ -291,7 +291,7 @@ std::string BTF::type_of(const BTFId &type_id, const std::string &field)
     std::string m_name = btf__name_by_offset(type_id.btf, m[i].name_off);
 
     // anonymous struct/union
-    if (m_name == "") {
+    if (m_name.empty()) {
       std::string type_name = type_of(
           BTFId{ .btf = type_id.btf, .id = m[i].type }, field);
       if (!type_name.empty())
