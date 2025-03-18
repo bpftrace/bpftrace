@@ -205,7 +205,7 @@ std::weak_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
 
 bool StructManager::Has(const std::string &name) const
 {
-  return struct_map_.find(name) != struct_map_.end();
+  return struct_map_.contains(name);
 }
 
 std::weak_ptr<Struct> StructManager::AddAnonymousStruct(

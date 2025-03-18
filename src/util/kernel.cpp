@@ -224,7 +224,7 @@ static bool is_bad_func(std::string &func)
     "__ftrace_invalid_address__", "rcu_"
   };
 
-  if (bad_funcs.find(func) != bad_funcs.end())
+  if (bad_funcs.contains(func))
     return true;
 
   for (const auto &s : bad_funcs_partial) {

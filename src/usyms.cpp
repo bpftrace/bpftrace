@@ -78,7 +78,7 @@ void Usyms::cache_bcc(const std::string &elf_file)
   // note: this only makes sense with ASLR disabled, since with ASLR offsets
   // might be different
   if (cache_type == UserSymbolCacheType::per_program &&
-      symbol_table_cache_.find(elf_file) == symbol_table_cache_.end())
+      !symbol_table_cache_.contains(elf_file))
     symbol_table_cache_[elf_file] = util::get_symbol_table_for_elf(elf_file);
 
   if (cache_type == UserSymbolCacheType::per_pid)
@@ -165,7 +165,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
       // this might work when the process does not exist anymore, but cannot
       // resolve all symbols, e.g. those in a dynamically linked library
       std::map<uintptr_t, elf_symbol, std::greater<>> &symbol_table =
-          symbol_table_cache_.find(pid_exe) != symbol_table_cache_.end()
+          symbol_table_cache_.contains(pid_exe)
               ? symbol_table_cache_[pid_exe]
               : (symbol_table_cache_[pid_exe] = util::get_symbol_table_for_elf(
                      pid_exe));
@@ -183,7 +183,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
         return symbol.str();
       }
     }
-    if (exe_sym_.find(pid_exe) == exe_sym_.end()) {
+    if (!exe_sym_.contains(pid_exe)) {
       // not cached, create new ProcSyms cache
       psyms = bcc_symcache_new(pid, &get_symbol_opts());
       exe_sym_[pid_exe] = std::make_pair(pid, psyms);
@@ -192,7 +192,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
     }
   } else if (cache_type == UserSymbolCacheType::per_pid) {
     // cache user symbols per pid
-    if (pid_sym_.find(pid) == pid_sym_.end()) {
+    if (!pid_sym_.contains(pid)) {
       // not cached, create new ProcSyms cache
       psyms = bcc_symcache_new(pid, &get_symbol_opts());
       pid_sym_[pid] = psyms;

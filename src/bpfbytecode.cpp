@@ -40,7 +40,7 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   int log_level = 0;
   // In debug mode, show full verifier log.
   // In verbose mode, only show verifier log for failures.
-  if (bt_debug.find(DebugStage::Verifier) != bt_debug.end())
+  if (bt_debug.contains(DebugStage::Verifier))
     log_level = 15;
   else if (bt_verbose)
     log_level = 1;
@@ -197,7 +197,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
 
   // If requested, print the entire verifier logs, even if loading succeeded.
   for (const auto &[name, prog] : programs_) {
-    if (bt_debug.find(DebugStage::Verifier) != bt_debug.end()) {
+    if (bt_debug.contains(DebugStage::Verifier)) {
       std::cout << "BPF verifier log for " << name << ":\n";
       std::cout << "--------------------------------------\n";
       std::cout << log_bufs[name].data() << std::endl;
