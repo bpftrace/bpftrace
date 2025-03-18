@@ -2008,7 +2008,7 @@ int BPFtrace::create_pcaps()
   for (auto arg : resources.skboutput_args_) {
     auto file = std::get<0>(arg);
 
-    if (pcap_writers_.count(file) > 0) {
+    if (pcap_writers_.contains(file)) {
       return 0;
     }
 

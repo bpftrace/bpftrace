@@ -81,7 +81,7 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
             // definitions
             std::string struct_name = get_struct_name(real_category,
                                                       real_event);
-            if (!TracepointFormatParser::struct_list.count(struct_name)) {
+            if (!TracepointFormatParser::struct_list.contains(struct_name)) {
               program->c_definitions += get_tracepoint_struct(
                   format_file, real_category, real_event, bpftrace);
               TracepointFormatParser::struct_list.insert(struct_name);

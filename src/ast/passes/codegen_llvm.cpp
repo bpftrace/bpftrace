@@ -506,7 +506,7 @@ ScopedExpr CodegenLLVM::visit(String &string)
 // bpftrace you cannot really instantiate a struct.
 ScopedExpr CodegenLLVM::visit(Identifier &identifier)
 {
-  if (bpftrace_.enums_.count(identifier.ident) != 0) {
+  if (bpftrace_.enums_.contains(identifier.ident)) {
     return ScopedExpr(
         b_.getInt64(std::get<0>(bpftrace_.enums_[identifier.ident])));
   } else {
