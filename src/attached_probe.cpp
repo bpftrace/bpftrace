@@ -72,7 +72,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
     case ProbeType::fentry:     return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::fexit:      return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::iter:       return libbpf::BPF_PROG_TYPE_TRACING; break;
-    case ProbeType::rawtracepoint: return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
+    case ProbeType::rawtracepoint: return libbpf::BPF_PROG_TYPE_TRACING; break;
     // clang-format on
     case ProbeType::invalid:
       LOG(BUG) << "program type invalid";
@@ -147,7 +147,7 @@ int AttachedProbe::detach_iter()
 
 void AttachedProbe::attach_raw_tracepoint()
 {
-  tracing_fd_ = bpf_raw_tracepoint_open(probe_.attach_point.c_str(), progfd_);
+  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0) {
     if (tracing_fd_ == -ENOENT)
       throw util::FatalUserException("Probe does not exist: " + probe_.name);
