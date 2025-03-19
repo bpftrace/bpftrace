@@ -57,7 +57,6 @@ enum class ConfigKeyUserSymbolCacheType {
 
 enum class ConfigSymbolSource {
   symbol_table,
-  dwarf,
 };
 
 enum class ConfigKeySymbolSource {

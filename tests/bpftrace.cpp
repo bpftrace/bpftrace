@@ -9,7 +9,6 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
-#include "dwarf_common.h"
 #include "mocks.h"
 #include "tracefs/tracefs.h"
 #include "gmock/gmock-matchers.h"
@@ -713,43 +712,6 @@ TEST(bpftrace, add_probes_uprobe_no_demangling)
                "uprobe:/bin/sh:cpp_mangled",
                "uprobe:/bin/sh:cpp_mangled");
 }
-
-#ifdef HAVE_LIBLLDB
-class bpftrace_dwarf : public test_dwarf {};
-
-TEST_F(bpftrace_dwarf, add_probes_uprobe_symbol_source)
-{
-  auto uprobe = "uprobe:" + std::string(bin_) + ":func_1 {}";
-
-  {
-    BPFtrace bpftrace;
-    ConfigSetter configs{ *bpftrace.config_, ConfigSource::script };
-    configs.set_symbol_source_config("dwarf");
-    parse_probe(uprobe, bpftrace);
-
-    ASSERT_EQ(bpftrace.resources.probes.size(), 1);
-    ASSERT_EQ(bpftrace.resources.special_probes.size(), 0);
-
-    auto &probe = bpftrace.resources.probes.at(0);
-    ASSERT_TRUE(probe.attach_point.empty());
-    ASSERT_NE(probe.address, 0);
-  }
-
-  {
-    BPFtrace bpftrace;
-    ConfigSetter configs{ *bpftrace.config_, ConfigSource::script };
-    configs.set_symbol_source_config("symbol_table");
-    parse_probe(uprobe, bpftrace);
-
-    ASSERT_EQ(bpftrace.resources.probes.size(), 1);
-    ASSERT_EQ(bpftrace.resources.special_probes.size(), 0);
-
-    auto &probe = bpftrace.resources.probes.at(0);
-    ASSERT_FALSE(probe.attach_point.empty());
-    ASSERT_EQ(probe.address, 0);
-  }
-}
-#endif
 
 TEST(bpftrace, add_probes_usdt)
 {

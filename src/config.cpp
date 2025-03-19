@@ -35,13 +35,7 @@ Config::Config(bool has_cmd)
     { ConfigKeyString::license, { .value = std::string("GPL") } },
     { ConfigKeyString::str_trunc_trailer, { .value = std::string("..") } },
     { ConfigKeySymbolSource::default_,
-      { .value =
-#ifdef HAVE_LIBLLDB
-            ConfigSymbolSource::dwarf
-#else
-            ConfigSymbolSource::symbol_table
-#endif
-      } },
+      { .value = ConfigSymbolSource::symbol_table } },
     { ConfigKeyMissingProbes::default_,
       { .value = ConfigMissingProbes::warn } },
     // by default, cache user symbols per program if ASLR is disabled on system
@@ -164,13 +158,11 @@ bool ConfigSetter::set_user_symbol_cache_type(const std::string &s)
 bool ConfigSetter::set_symbol_source_config(const std::string &s)
 {
   ConfigSymbolSource source;
-  if (s == "dwarf") {
-    source = ConfigSymbolSource::dwarf;
-  } else if (s == "symbol_table") {
+  if (s == "symbol_table") {
     source = ConfigSymbolSource::symbol_table;
   } else {
     LOG(ERROR) << "Invalid value for symbol_source: valid values are "
-                  "\"dwarf\" and \"symbol_table\".";
+                  "\"symbol_table\".";
     return false;
   }
   return config_.set(ConfigKeySymbolSource::default_, source, source_);

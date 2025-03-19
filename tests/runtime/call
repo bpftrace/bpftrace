@@ -361,8 +361,9 @@ ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
 PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
 EXPECT_REGEX ^\s+test\+[0-9]+\s+test2\+[0-9]+\s+main\+[0-9]+
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
-# Required to skip function prologue
-REQUIRES_FEATURE dwarf
+# The stack output expects prologue to be skipped on uprobes. See kernel:
+# cfa7f3d2c526 ("perf,x86: avoid missing caller address in stack traces captured in uprobe")
+MIN_KERNEL 6.12
 
 NAME cat
 PROG i:ms:1 { cat("/proc/uptime"); exit();}

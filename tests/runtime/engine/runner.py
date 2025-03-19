@@ -155,8 +155,6 @@ class Runner(object):
         bpffeature["signal"] = output.find("send_signal: yes") != -1
         bpffeature["iter"] = output.find("iter: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
-        bpffeature["dwarf"] = output.find("liblldb (DWARF support): yes") != -1
-        bpffeature["kernel_dwarf"] = output.find("Kernel DWARF: yes") != -1
         bpffeature["kprobe_multi"] = output.find("kprobe_multi: yes") != -1
         bpffeature["kprobe_session"] = output.find("kprobe_session: yes") != -1
         bpffeature["uprobe_multi"] = output.find("uprobe_multi: yes") != -1

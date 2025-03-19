@@ -5,7 +5,6 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
-#include "dwarf_common.h"
 #include "mocks.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -270,35 +269,6 @@ kprobe:f { fake }
   test(feature, "k:f { cgroup }", 1);
   test(feature, "k:f { jiffies }", 1);
 }
-
-#ifdef HAVE_LIBLLDB
-TEST(semantic_analyser, builtin_variables_inline)
-{
-  auto bpftrace = get_mock_bpftrace();
-  ConfigSetter configs{ *bpftrace->config_, ConfigSource::script };
-  configs.set(ConfigKeyBool::probe_inline, true);
-
-  // Check argument builtins are rejected when `probe_inline` is enabled.
-  test_error(*bpftrace, "uprobe:/bin/sh:f { arg0 }", R"(
-stdin:1:20-24: ERROR: The arg0 builtin can only be used when the probe_inline config is disabled.
-uprobe:/bin/sh:f { arg0 }
-                   ~~~~
-)");
-  test_error(*bpftrace, "uprobe:/bin/sh:f { sarg0 }", R"(
-stdin:1:20-25: ERROR: The sarg0 builtin can only be used when the probe_inline config is disabled.
-uprobe:/bin/sh:f { sarg0 }
-                   ~~~~~
-)");
-  test_error(*bpftrace, "uprobe:/bin/sh:f { args }", R"(
-stdin:1:20-24: ERROR: The args builtin can only be used when the probe_inline config is disabled.
-uprobe:/bin/sh:f { args }
-                   ~~~~
-stdin:1:20-24: ERROR: Cannot read function parameters
-uprobe:/bin/sh:f { args }
-                   ~~~~
-)");
-}
-#endif // HAVE_LIBLLDB
 
 TEST(semantic_analyser, builtin_cpid)
 {
@@ -1970,26 +1940,6 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { @x = \"a\"; @x++; }", 3); // should be 2
   test("kprobe:f { $x = \"a\"; $x++; }", 2);
 }
-
-#ifdef HAVE_LIBLLDB
-class semantic_analyser_dwarf : public test_dwarf {};
-
-TEST_F(semantic_analyser_dwarf, reference_into_deref)
-{
-  auto uprobe = "uprobe:" + std::string(cxx_bin_) + ":cpp:func_1";
-
-  BPFtrace bpftrace;
-  test(bpftrace, uprobe + " { args.c }", R"(
-Program
- )" + uprobe + R"(
-  dereference :: [Child, AS(user)]
-   . :: [Child *, AS(user)]
-    builtin: args :: [struct )" + uprobe + R"(_args, ctx: 1, AS(user)]
-    c
-)");
-}
-
-#endif // HAVE_LIBLLDB
 
 TEST(semantic_analyser, printf)
 {

@@ -21,12 +21,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  liblldb (DWARF support): "
-#ifdef HAVE_LIBLLDB
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  libsystemd (systemd notify support): "
 #ifdef HAVE_LIBSYSTEMD
       << "yes" << std::endl;

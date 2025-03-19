@@ -4,7 +4,6 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
-#include "dwarf_parser.h"
 #include "probe_matcher.h"
 #include "util/format.h"
 
@@ -250,13 +249,6 @@ void FieldAnalyser::resolve_args(Probe &probe)
             continue;
           }
           ap_args = std::move(*maybe_ap_args);
-        } else // uprobe
-        {
-          Dwarf *dwarf = bpftrace_.get_dwarf(target);
-          if (dwarf)
-            ap_args = dwarf->resolve_args(func);
-          else
-            ap->addWarning() << "No debuginfo found for " << target;
         }
 
         if (probe_args.size == -1)
@@ -277,19 +269,6 @@ void FieldAnalyser::resolve_args(Probe &probe)
           return;
         }
         probe_args = std::move(*maybe_probe_args);
-      } else // uprobe
-      {
-        Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
-        if (dwarf)
-          probe_args = dwarf->resolve_args(ap->func);
-        else {
-          ap->addWarning() << "No debuginfo found for " << ap->target;
-        }
-        if (static_cast<int>(probe_args.fields.size()) >
-            (arch::max_arg() + 1)) {
-          ap->addError() << "\'args\' builtin is not supported for "
-                         << "probes with stack-passed arguments.";
-        }
       }
     }
 
@@ -310,12 +289,6 @@ void FieldAnalyser::resolve_fields(SizedType &type)
   if (!type.IsRecordTy())
     return;
 
-  if (probe_) {
-    for (auto &ap : probe_->attach_points)
-      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-        dwarf->resolve_fields(type);
-  }
-
   if (type.GetFieldCount() == 0 && bpftrace_.has_btf_data())
     bpftrace_.btf_->resolve_fields(type);
 }
@@ -331,13 +304,7 @@ void FieldAnalyser::resolve_type(SizedType &type)
     return;
   auto name = inner_type->GetName();
 
-  if (probe_) {
-    for (auto &ap : probe_->attach_points)
-      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-        sized_type_ = dwarf->get_stype(name);
-  }
-
-  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
+  if (bpftrace_.has_btf_data())
     sized_type_ = bpftrace_.btf_->get_stype(name);
 
   // Could not resolve destination type - let ClangParser do it
