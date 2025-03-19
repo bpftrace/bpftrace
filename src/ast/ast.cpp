@@ -95,7 +95,7 @@ MapDeclStatement::MapDeclStatement(Diagnostics &d,
                                    std::string bpf_type,
                                    int max_entries,
                                    Location &&loc)
-    : Expression(d, std::move(loc)),
+    : Node(d, std::move(loc)),
       ident(std::move(ident)),
       bpf_type(std::move(bpf_type)),
       max_entries(max_entries)
