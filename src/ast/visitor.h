@@ -119,6 +119,10 @@ public:
     visitAndReplace(&arr.indexpr);
     return default_value();
   }
+  R visit(TupleAccess &acc)
+  {
+    return visitAndReplace(&acc.expr);
+  }
   R visit(Cast &cast)
   {
     return visitAndReplace(&cast.expr);
@@ -333,6 +337,7 @@ public:
                               Unop *,
                               FieldAccess *,
                               ArrayAccess *,
+                              TupleAccess *,
                               Cast *,
                               Tuple *,
                               Ternary *,

@@ -206,10 +206,7 @@ void Printer::visit(FieldAccess &acc)
   visit(acc.expr);
   --depth_;
 
-  if (!acc.field.empty())
-    out_ << indent << " " << acc.field << std::endl;
-  else
-    out_ << indent << " " << acc.index << std::endl;
+  out_ << indent << " " << acc.field << std::endl;
 }
 
 void Printer::visit(ArrayAccess &arr)
@@ -221,6 +218,18 @@ void Printer::visit(ArrayAccess &arr)
   visit(arr.expr);
   visit(arr.indexpr);
   --depth_;
+}
+
+void Printer::visit(TupleAccess &acc)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "." << type(acc.type) << std::endl;
+
+  ++depth_;
+  visit(acc.expr);
+  --depth_;
+
+  out_ << indent << " " << acc.index << std::endl;
 }
 
 void Printer::visit(Cast &cast)
