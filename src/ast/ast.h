@@ -214,7 +214,7 @@ public:
   std::vector<std::string> field;
 };
 
-class MapDeclStatement : public Expression {
+class MapDeclStatement : public Node {
 public:
   explicit MapDeclStatement(Diagnostics &d,
                             std::string ident,
