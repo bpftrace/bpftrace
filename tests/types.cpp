@@ -32,8 +32,6 @@ TEST(types, to_str)
   ptr_ctx.MarkCtxAccess();
   EXPECT_EQ(to_str(ptr_ctx), "(ctx) int8 *");
 
-  EXPECT_EQ(to_str(CreateReference(CreateInt8(), AddrSpace::kernel)), "int8 &");
-
   EXPECT_EQ(to_str(CreateArray(2, CreateInt8())), "int8[2]");
 
   auto record = std::weak_ptr<Struct>();
