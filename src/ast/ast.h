@@ -276,16 +276,13 @@ public:
 
 class FieldAccess : public Expression {
 public:
-  FieldAccess(Diagnostics &d, Expression *expr, const std::string &field);
   FieldAccess(Diagnostics &d,
               Expression *expr,
               std::string field,
               Location &&loc);
-  FieldAccess(Diagnostics &d, Expression *expr, ssize_t index, Location &&loc);
 
   Expression *expr = nullptr;
   std::string field;
-  ssize_t index = -1;
 };
 
 class ArrayAccess : public Expression {
@@ -298,6 +295,14 @@ public:
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
+};
+
+class TupleAccess : public Expression {
+public:
+  TupleAccess(Diagnostics &d, Expression *expr, ssize_t index, Location &&loc);
+
+  Expression *expr = nullptr;
+  ssize_t index;
 };
 
 class Cast : public Expression {
