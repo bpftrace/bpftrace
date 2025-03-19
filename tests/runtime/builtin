@@ -195,30 +195,6 @@ EXPECT_REGEX @[{ .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }]: 1
 REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
-NAME args in uprobe print
-PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { print(args); exit(); }
-EXPECT_REGEX { .n = 0x[0-9a-f]+, .c = 120 }
-REQUIRES_FEATURE dwarf
-AFTER ./testprogs/uprobe_test
-
-NAME args in uprobe store in map
-PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; exit(); }
-EXPECT_REGEX @: { .n = 0x[0-9a-f]+, .c = 120 }
-REQUIRES_FEATURE dwarf
-AFTER ./testprogs/uprobe_test
-
-NAME args in uprobe store in map and access field
-PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; print(@.c); exit(); }
-EXPECT 120
-REQUIRES_FEATURE dwarf
-AFTER ./testprogs/uprobe_test
-
-NAME args in uprobe as a map key
-PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @[args] = 1; exit(); }
-EXPECT_REGEX @[{ .n = 0x[0-9a-f]+, .c = 120 }]: 1
-REQUIRES_FEATURE dwarf
-AFTER ./testprogs/uprobe_test
-
 NAME jiffies
 PROG i:ms:1 { printf("SUCCESS %llu\n", jiffies); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+

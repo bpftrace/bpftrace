@@ -7,7 +7,6 @@
 
 #include "bpftrace.h"
 #include "cxxdemangler/cxxdemangler.h"
-#include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "scopeguard.h"
@@ -423,33 +422,6 @@ FuncParamLists ProbeMatcher::get_iters_params(
   return params;
 }
 
-FuncParamLists ProbeMatcher::get_uprobe_params(
-    const std::set<std::string>& uprobes)
-{
-  FuncParamLists params;
-  static std::set<std::string> warned_paths;
-
-  for (const auto& match : uprobes) {
-    std::string fun = match;
-    std::string path = util::erase_prefix(fun);
-    if (auto dwarf = Dwarf::GetFromBinary(nullptr, path)) {
-      params.emplace(match, dwarf->get_function_params(fun));
-    } else {
-      if (warned_paths.insert(path).second) {
-#ifdef HAVE_LIBLLDB
-        LOG(WARNING) << "No DWARF found for \"" << path << "\""
-                     << ", cannot show parameter info";
-#else
-        LOG(WARNING) << "bpftrace was compiled without liblldb, "
-                     << "cannot show parameter info for \"" << path << "\"";
-#endif
-      }
-    }
-  }
-
-  return params;
-}
-
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
   for (auto* probe : prog->probes) {
@@ -465,8 +437,6 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = bpftrace_->btf_->get_params(matches);
         else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
-        else if (probe_type == ProbeType::uprobe)
-          param_lists = get_uprobe_params(matches);
       }
 
       for (const auto& match : matches) {

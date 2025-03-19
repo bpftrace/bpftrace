@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 - Remove '-kk' command line opt, surface some BPF errors by default, and make '-k' surface probe read errors
   - [#3784](https://github.com/bpftrace/bpftrace/pull/3784)
+- Drop DWARF support (userspace and kernel)
+  - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
 #### Added
 - `offsetof()` now supports sub fields e.g. `offsetof(struct Foo, bar.a.b);`
   - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)

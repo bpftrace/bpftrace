@@ -24,7 +24,6 @@
 #include "btf.h"
 #include "child.h"
 #include "config.h"
-#include "dwarf_parser.h"
 #include "functions.h"
 #include "ksyms.h"
 #include "output.h"
@@ -176,12 +175,6 @@ public:
 
   void parse_btf(const std::set<std::string> &modules);
   bool has_btf_data() const;
-  Dwarf *get_dwarf(const std::string &filename);
-  Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
-  bool has_dwarf_data() const
-  {
-    return !dwarves_.empty();
-  }
   std::set<std::string> list_modules(const ast::ASTContext &ctx);
 
   std::string cmd_;
@@ -298,8 +291,6 @@ private:
   // Needs to be mutable to allow lazy loading of the mapping from const lookup
   // functions.
   mutable util::FuncsModulesMap traceable_funcs_;
-
-  std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 
 } // namespace bpftrace
