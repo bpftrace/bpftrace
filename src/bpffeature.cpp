@@ -14,7 +14,6 @@
 
 #include "bpf_assembler.h"
 #include "btf.h"
-#include "dwarf_parser.h"
 #include "tracefs/tracefs.h"
 #include "util/format.h"
 #include "util/kernel.h"
@@ -606,7 +605,6 @@ std::string BPFfeature::report()
     { "Instruction limit", std::to_string(instruction_limit()) },
     { "btf", to_str(has_btf()) },
     { "module btf", to_str(has_module_btf()) },
-    { "Kernel DWARF", to_str(has_kernel_dwarf()) },
     { "map batch", to_str(has_map_batch()) },
     // Depends on BCC's bpf_attach_uprobe refcount feature
     { "uprobe refcount", to_str(has_uprobe_refcnt()) }
@@ -717,24 +715,6 @@ bool BPFfeature::has_iter(std::string name)
   return detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
                           tracing_name.c_str(),
                           libbpf::BPF_TRACE_ITER);
-}
-
-bool BPFfeature::has_kernel_dwarf()
-{
-  auto vmlinux = util::find_vmlinux();
-  if (!vmlinux.has_value())
-    return false;
-
-  // WARNING: we are not passing a pointer to BPFtrace, so we can only use:
-  // * Dwarf::has_debug_info
-  // * Dwarf::get_function_locations
-  // * Dwarf::get_function_params
-  // Otherwise, Dwarf will try to use the BPFtrace pointer and will segfault.
-  auto dwarf = Dwarf::GetFromBinary(nullptr, vmlinux.value());
-  if (!dwarf)
-    return false;
-
-  return dwarf->has_debug_info();
 }
 
 bool BPFfeature::has_kernel_func(Kfunc kfunc)

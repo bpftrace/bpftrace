@@ -161,48 +161,6 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
       probe.funcs = std::vector<std::string>(matches.begin(), matches.end());
       resources.probes.push_back(std::move(probe));
     }
-  } else if (probetype(ap.provider) == ProbeType::uprobe ||
-             probetype(ap.provider) == ProbeType::kprobe) {
-    bool locations_from_dwarf = false;
-
-    // Don't set the DWARF target when the user wants to use the symbol table.
-    std::optional<std::string> target;
-    if (config_->get(ConfigKeySymbolSource::default_) ==
-        ConfigSymbolSource::dwarf) {
-      if (probetype(ap.provider) == ProbeType::uprobe) {
-        target = probe.path;
-      } else {
-        // Only use the DWARF information of the Kernel,
-        // if the user wants to to probe inlined kprobes.
-        // Otherwise, fall back to using the symbol table.
-        if (config_->get(ConfigKeyBool::probe_inline))
-          target = util::find_vmlinux();
-      }
-    }
-
-    // If the user specified an address/offset, do not overwrite
-    // their choice with locations from the DebugInfo.
-    if (probe.address == 0 && probe.func_offset == 0 && target.has_value()) {
-      // Get function locations from the DebugInfo, as it skips the
-      // prologue and also returns locations of inlined function calls.
-      if (auto *dwarf = get_dwarf(target.value())) {
-        const auto locations = dwarf->get_function_locations(
-            probe.attach_point, config_->get(ConfigKeyBool::probe_inline));
-        for (const auto loc : locations) {
-          // Clear the attach point, so the address will be used instead
-          Probe probe_copy = probe;
-          probe_copy.attach_point.clear();
-          probe_copy.address = loc;
-          resources.probes.push_back(std::move(probe_copy));
-
-          locations_from_dwarf = true;
-        }
-      }
-    }
-
-    // Otherwise, use the location from the symbol table.
-    if (!locations_from_dwarf)
-      resources.probes.push_back(std::move(probe));
   } else {
     resources.probes.emplace_back(std::move(probe));
   }
@@ -1982,25 +1940,6 @@ const struct stat &BPFtrace::get_pidns_self_stat() const
   }();
 
   return pidns;
-}
-
-Dwarf *BPFtrace::get_dwarf(const std::string &filename)
-{
-  auto dwarf = dwarves_.find(filename);
-  if (dwarf == dwarves_.end()) {
-    dwarf =
-        dwarves_.emplace(filename, Dwarf::GetFromBinary(this, filename)).first;
-  }
-  return dwarf->second.get();
-}
-
-Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
-{
-  auto probe_type = probetype(attachpoint.provider);
-  if (probe_type != ProbeType::uprobe && probe_type != ProbeType::uretprobe)
-    return nullptr;
-
-  return get_dwarf(attachpoint.target);
 }
 
 int BPFtrace::create_pcaps()

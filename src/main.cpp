@@ -969,13 +969,6 @@ int main(int argc, char* argv[])
       CreateDynamicPasses(addPass);
       break;
     case BuildMode::AHEAD_OF_TIME:
-      if (bpftrace.has_dwarf_data()) {
-        // See #3392 to learn why AOT does not yet support uprobe+DebugInfo.
-        LOG(ERROR) << "AOT does not yet support uprobe probes using DebugInfo.";
-        if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))
-          std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"
-                    << std::endl;
-      }
       CreateAotPasses(addPass);
       break;
   }
