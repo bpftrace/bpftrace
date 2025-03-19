@@ -58,8 +58,6 @@ std::string typestr(const SizedType &type)
              std::to_string(type.GetNumElements()) + "]";
     case Type::record:
       return type.GetName();
-    case Type::reference:
-      return typestr(*type.GetDereferencedTy()) + " &";
     case Type::tuple: {
       std::string res = "(";
       size_t n = type.GetFieldCount();
@@ -209,7 +207,6 @@ std::string typestr(Type t)
     case Type::voidtype: return "void";     break;
     case Type::integer:  return "int";  break;
     case Type::pointer:  return "pointer";  break;
-    case Type::reference:return "reference";break;
     case Type::record:   return "record";   break;
     case Type::hist_t:     return "hist_t";     break;
     case Type::lhist_t:    return "lhist_t";    break;
@@ -415,15 +412,6 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
   // Pointer itself is always an uint64
   auto ty = SizedType(Type::pointer, 8);
   ty.element_type_ = std::make_shared<SizedType>(pointee_type);
-  ty.SetAS(as);
-  return ty;
-}
-
-SizedType CreateReference(const SizedType &referred_type, AddrSpace as)
-{
-  // Reference itself is always an uint64
-  auto ty = SizedType(Type::reference, 8);
-  ty.element_type_ = std::make_shared<SizedType>(referred_type);
   ty.SetAS(as);
   return ty;
 }
@@ -692,9 +680,6 @@ size_t hash<bpftrace::SizedType>::operator()(
       break;
     case bpftrace::Type::pointer:
       bpftrace::util::hash_combine(hash, *type.GetPointeeTy());
-      break;
-    case bpftrace::Type::reference:
-      bpftrace::util::hash_combine(hash, *type.GetDereferencedTy());
       break;
     case bpftrace::Type::record:
       bpftrace::util::hash_combine(hash, type.GetName());

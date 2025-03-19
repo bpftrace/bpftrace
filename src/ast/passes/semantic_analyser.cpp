@@ -178,7 +178,6 @@ private:
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
   void binop_array(Binop &op);
-  Expression *dereference_if_needed(Expression *expr);
 
   bool has_error() const;
   bool in_loop()
@@ -312,7 +311,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::cgroup_path_t:
     case Type::strerror_t:
     case Type::none:
-    case Type::reference:
     case Type::timestamp_mode:
       return true;
   }
@@ -867,7 +865,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    call.vargs[i] = dereference_if_needed(call.vargs[i]);
+    visit(expr);
   }
 
   if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -1787,7 +1785,7 @@ void SemanticAnalyser::visit(Sizeof &szof)
 {
   szof.type = CreateUInt64();
   if (szof.expr) {
-    szof.expr = dereference_if_needed(szof.expr);
+    visit(szof.expr);
     szof.argtype = szof.expr->type;
   }
   resolve_struct_type(szof.argtype, szof);
@@ -1797,7 +1795,7 @@ void SemanticAnalyser::visit(Offsetof &offof)
 {
   offof.type = CreateUInt64();
   if (offof.expr) {
-    offof.expr = dereference_if_needed(offof.expr);
+    visit(offof.expr);
     offof.record = offof.expr->type;
   }
 
@@ -1947,7 +1945,7 @@ void SemanticAnalyser::visit(Map &map)
   SizedType new_key_type = CreateNone();
   bool key_is_map = false;
   if (map.key_expr) {
-    map.key_expr = dereference_if_needed(map.key_expr);
+    visit(map.key_expr);
     key_is_map = map.key_expr->is_map;
     new_key_type = create_key_type(map.key_expr->type, *map.key_expr);
   }
@@ -2034,8 +2032,8 @@ void SemanticAnalyser::visit(Variable &var)
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
 {
-  arr.expr = dereference_if_needed(arr.expr);
-  arr.indexpr = dereference_if_needed(arr.indexpr);
+  visit(arr.expr);
+  visit(arr.indexpr);
 
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
@@ -2286,8 +2284,8 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
 
 void SemanticAnalyser::visit(Binop &binop)
 {
-  binop.left = dereference_if_needed(binop.left);
-  binop.right = dereference_if_needed(binop.right);
+  visit(binop.left);
+  visit(binop.right);
 
   auto &lht = binop.left->type;
   auto &rht = binop.right->type;
@@ -2396,7 +2394,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   }
 
-  unop.expr = dereference_if_needed(unop.expr);
+  visit(unop.expr);
 
   auto valid_ptr_op = false;
   switch (unop.op) {
@@ -2412,8 +2410,6 @@ void SemanticAnalyser::visit(Unop &unop)
   if (is_final_pass()) {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
     // and context (we allow args->field for backwards compatibility)
-    // References are not allowed, instead they get turned into pointers by the
-    // `dereference_if_needed()`.
     if (!type.IsIntegerTy() &&
         !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
       unop.addError() << "The " << opstr(unop)
@@ -2463,9 +2459,9 @@ void SemanticAnalyser::visit(Unop &unop)
 
 void SemanticAnalyser::visit(Ternary &ternary)
 {
-  ternary.cond = dereference_if_needed(ternary.cond);
-  ternary.left = dereference_if_needed(ternary.left);
-  ternary.right = dereference_if_needed(ternary.right);
+  visit(ternary.cond);
+  visit(ternary.left);
+  visit(ternary.right);
 
   const Type &cond = ternary.cond->type.GetTy();
   const auto &lhs = ternary.left->type;
@@ -2512,7 +2508,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 
 void SemanticAnalyser::visit(If &if_node)
 {
-  if_node.cond = dereference_if_needed(if_node.cond);
+  visit(if_node.cond);
 
   if (is_final_pass()) {
     const Type &cond = if_node.cond->type.GetTy();
@@ -2526,7 +2522,7 @@ void SemanticAnalyser::visit(If &if_node)
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
-  unroll.expr = dereference_if_needed(unroll.expr);
+  visit(unroll.expr);
 
   auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
   if (!unroll_value.has_value()) {
@@ -2550,7 +2546,7 @@ void SemanticAnalyser::visit(Jump &jump)
   switch (jump.ident) {
     case JumpType::RETURN:
       if (jump.return_value) {
-        jump.return_value = dereference_if_needed(jump.return_value);
+        visit(jump.return_value);
       }
       if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
         if ((subprog->return_type.IsVoidTy() !=
@@ -2576,7 +2572,7 @@ void SemanticAnalyser::visit(Jump &jump)
 
 void SemanticAnalyser::visit(While &while_block)
 {
-  while_block.cond = dereference_if_needed(while_block.cond);
+  visit(while_block.cond);
 
   loop_depth_++;
   visit(while_block.block);
@@ -2800,7 +2796,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   // A field access must have a field XOR index
   assert((!acc.field.empty()) != (acc.index >= 0));
 
-  acc.expr = dereference_if_needed(acc.expr);
+  visit(acc.expr);
 
   SizedType &type = acc.expr->type;
 
@@ -2830,11 +2826,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       return;
     const auto *arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
     if (arg) {
-      // Only set acc.type if it's not already set. [1]
-      // Overwriting the type once set could override the conversion
-      // from Reference to Pointer done by dereference_if_needed.
-      if (acc.type.IsNoneTy())
-        acc.type = arg->type;
+      acc.type = arg->type;
       acc.type.SetAS(acc.expr->type.GetAS());
 
       if (is_final_pass()) {
@@ -2930,10 +2922,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         }
       }
 
-      // Only set acc.type if it's not already set. See explanation [1].
-      if (acc.type.IsNoneTy())
-        acc.type = field.type;
-
+      acc.type = field.type;
       if (acc.expr->type.IsCtxAccess() &&
           (acc.type.IsArrayTy() || acc.type.IsRecordTy())) {
         // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
@@ -2964,7 +2953,7 @@ static std::unordered_map<std::string_view, std::string_view>
 
 void SemanticAnalyser::visit(Cast &cast)
 {
-  cast.expr = dereference_if_needed(cast.expr);
+  visit(cast.expr);
 
   // cast type is synthesised in parser, if it is a struct, it needs resolving
   resolve_struct_type(cast.type, cast);
@@ -3062,7 +3051,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
   for (auto &elem : tuple.elems) {
-    elem = dereference_if_needed(elem);
+    visit(elem);
 
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
@@ -3081,7 +3070,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
-  expr.expr = dereference_if_needed(expr.expr);
+  visit(expr.expr);
 }
 
 static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
@@ -3099,7 +3088,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
   assignment.map->is_read = false;
   visit(assignment.map);
-  assignment.expr = dereference_if_needed(assignment.expr);
+  visit(assignment.expr);
 
   const auto *map_type_before = get_map_type(*assignment.map);
   if (!is_valid_assignment(assignment.map, assignment.expr)) {
@@ -3201,7 +3190,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
-  assignment.expr = dereference_if_needed(assignment.expr);
+  visit(assignment.expr);
   if (assignment.var_decl_stmt) {
     visit(assignment.var_decl_stmt);
   }
@@ -3272,7 +3261,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                 CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
                 assignment.expr,
                 Location(assignment.loc));
-            assignment.expr = dereference_if_needed(cast);
+            visit(cast);
+            assignment.expr = cast;
           } else if (!type_mismatch_error) {
             assignment.addError()
                 << "Type mismatch for " << var_ident << ": "
@@ -3351,7 +3341,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
 void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
 {
-  assignment.expr = dereference_if_needed(assignment.expr);
+  visit(assignment.expr);
 }
 
 void SemanticAnalyser::visit(VarDeclStatement &decl)
@@ -3422,7 +3412,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
 
 void SemanticAnalyser::visit(Predicate &pred)
 {
-  pred.expr = dereference_if_needed(pred.expr);
+  visit(pred.expr);
   if (is_final_pass()) {
     SizedType &ty = pred.expr->type;
     if (!ty.IsIntTy() && !ty.IsPtrTy()) {
@@ -4250,26 +4240,6 @@ Pass CreateSemanticPass(bool listing)
 
   return Pass::create("Semantic", fn);
 };
-
-Expression *SemanticAnalyser::dereference_if_needed(Expression *expr)
-{
-  visit(expr);
-  if (expr->type.IsRefTy()) {
-    expr->type.IntoPointer();
-    const SizedType &ptr_type = expr->type;
-    Expression *ptr_expr = expr;
-
-    Unop *deref_expr = ctx_.make_node<Unop>(
-        Operator::MUL, ptr_expr, false, Location(ptr_expr->loc));
-    deref_expr->type = *ptr_type.GetPointeeTy();
-    deref_expr->type.is_internal = ptr_type.is_internal;
-    deref_expr->type.SetAS(ptr_type.GetAS());
-    if (ptr_type.IsCtxAccess())
-      deref_expr->type.MarkCtxAccess();
-    return deref_expr;
-  }
-  return expr;
-}
 
 variable *SemanticAnalyser::find_variable(const std::string &var_ident)
 {

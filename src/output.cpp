@@ -44,7 +44,6 @@ bool is_quoted_type(const SizedType &ty)
     case Type::max_t:
     case Type::min_t:
     case Type::pointer:
-    case Type::reference:
     case Type::record:
     case Type::stack_mode:
     case Type::stats_t:
@@ -423,7 +422,6 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     case Type::lhist_t:
     case Type::stack_mode:
     case Type::pointer:
-    case Type::reference:
     case Type::stats_t:
     case Type::timestamp_mode: {
       LOG(BUG) << "Invalid value type: " << type;
@@ -474,7 +472,6 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
     case Type::hist_t:
     case Type::lhist_t:
     case Type::none:
-    case Type::reference:
     case Type::stack_mode:
     case Type::stats_t:
     case Type::timestamp_mode:
@@ -768,8 +765,7 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
                                      bool is_map_key) const
 {
   switch (type.GetTy()) {
-    case Type::pointer:
-    case Type::reference: {
+    case Type::pointer: {
       std::ostringstream res;
       res << "0x" << std::hex << util::read_data<uint64_t>(value.data());
       return res.str();
@@ -1175,7 +1171,6 @@ std::string JsonOutput::value_to_str(BPFtrace &bpftrace,
 
   switch (type.GetTy()) {
     case Type::pointer:
-    case Type::reference:
       str = std::to_string(util::read_data<uint64_t>(value.data()));
       break;
     default:
