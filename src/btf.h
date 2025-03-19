@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <cstddef>
+#include <linux/btf.h>
 #include <linux/types.h>
 #include <map>
 #include <optional>
@@ -83,7 +84,9 @@ public:
                                      std::string& err);
   void resolve_fields(SizedType& type);
 
-  int get_btf_id(std::string_view func, std::string_view mod) const;
+  int get_btf_id(std::string_view func,
+                 std::string_view mod,
+                 __u32 kind = BTF_KIND_FUNC) const;
 
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);

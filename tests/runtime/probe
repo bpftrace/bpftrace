@@ -425,7 +425,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_missing
 PROG rawtracepoint:nonsense { print("hit"); exit(); }
-EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
+EXPECT ERROR: No BTF found for nonsense
 WILL_FAIL
 
 NAME rawtracepoint_wildcard

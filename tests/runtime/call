@@ -601,6 +601,13 @@ REQUIRES_FEATURE fentry
 REQUIRES_FEATURE skboutput
 MIN_KERNEL 5.5
 
+# Just test that the verifier doesn't reject this
+NAME skboutput rawtracepoint
+RUN {{BPFTRACE}} -e 'rawtracepoint:consume_skb { $ret = skboutput("receive.pcap", (struct sk_buff *)arg0, 1, 0); printf("ret: %d\n", $ret); exit(); }'
+EXPECT Attaching 1 probe...
+REQUIRES_FEATURE skboutput
+MIN_KERNEL 5.5
+
 NAME debugf
 RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf"); exit();}'; cat /sys/kernel/debug/tracing/trace
 EXPECT_REGEX bpf_trace_printk: debugf

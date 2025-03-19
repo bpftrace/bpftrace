@@ -175,10 +175,6 @@ aot.probe.probe_builtin_scratch_buf
 aot.probe.profile
 aot.probe.profile_probe_builtin
 aot.probe.profile_short_name
-aot.probe.rawtracepoint
-aot.probe.rawtracepoint_missing
-aot.probe.rawtracepoint_short_name
-aot.probe.rawtracepoint_wildcard
 aot.probe.sanitise probe name
 aot.probe.software
 aot.probe.software_alias_probe_builtin

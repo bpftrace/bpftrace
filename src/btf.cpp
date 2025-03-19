@@ -753,13 +753,15 @@ std::unordered_set<std::string> BTF::get_all_iters() const
   return iters;
 }
 
-int BTF::get_btf_id(std::string_view func, std::string_view mod) const
+int BTF::get_btf_id(std::string_view func,
+                    std::string_view mod,
+                    __u32 kind) const
 {
   for (const auto &btf_obj : btf_objects) {
     if (!mod.empty() && mod != btf_obj.name)
       continue;
 
-    auto id = find_id_in_btf(btf_obj.btf, func, BTF_KIND_FUNC);
+    auto id = find_id_in_btf(btf_obj.btf, func, kind);
     if (id >= 0)
       return id;
   }
