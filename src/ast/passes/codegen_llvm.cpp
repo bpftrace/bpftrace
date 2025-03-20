@@ -593,8 +593,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(0) }));
   // Add the stack and id to the stack map
-  b_.CreateMapUpdateElem(
-      ctx_, stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
+  b_.CreateMapUpdateElem(ctx_, stack_type.name(), stack_key, stack_trace, loc);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(stack_scratch_failure);

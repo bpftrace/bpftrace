@@ -1092,15 +1092,14 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
                                        const std::string &map_ident,
                                        Value *key,
                                        Value *val,
-                                       const Location &loc,
-                                       int64_t flags)
+                                       const Location &loc)
 {
   Value *map_ptr = GetMapVar(map_ident);
   assert(ctx && ctx->getType() == getPtrTy());
   assert(key->getType()->isPointerTy());
   assert(val->getType()->isPointerTy());
 
-  Value *flags_val = getInt64(flags);
+  Value *flags_val = getInt64(0);
 
   // long map_update_elem(struct bpf_map * map, void *key, void * value, u64
   // flags) Return: 0 on success or negative error
@@ -2223,7 +2222,7 @@ void IRBuilderBPF::CreateMapElemInit(Value *ctx,
 {
   AllocaInst *initValue = CreateAllocaBPF(val->getType(), "initial_value");
   CreateStore(val, initValue);
-  CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
+  CreateMapUpdateElem(ctx, map.ident, key, initValue, loc);
   CreateLifetimeEnd(initValue);
 }
 

@@ -59,8 +59,7 @@ public:
                            const std::string &map_ident,
                            Value *key,
                            Value *val,
-                           const Location &loc,
-                           int64_t flags = 0);
+                           const Location &loc);
   void CreateMapDeleteElem(Value *ctx,
                            Map &map,
                            Value *key,

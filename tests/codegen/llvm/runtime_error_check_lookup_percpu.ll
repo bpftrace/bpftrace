@@ -49,7 +49,7 @@ lookup_success:                                   ; preds = %entry
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
   store i64 1, ptr %initial_value, align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %initial_value, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %initial_value, i64 0)
   %3 = trunc i64 %update_elem to i32
   %4 = icmp sge i32 %3, 0
   br i1 %4, label %helper_merge, label %helper_failure
