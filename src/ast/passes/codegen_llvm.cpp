@@ -804,16 +804,18 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 ScopedExpr CodegenLLVM::visit(Call &call)
 {
   if (call.func == "count") {
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
     auto scoped_key = getMapKey(map);
     b_.CreateMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
   } else if (call.func == "sum") {
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
     ScopedExpr scoped_key = getMapKey(map);
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
+    ScopedExpr scoped_expr = visit(*call.vargs.at(1));
     // promote int to 64-bit
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
@@ -823,15 +825,16 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
   } else if (call.func == "max" || call.func == "min") {
     bool is_max = call.func == "max";
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
 
     ScopedExpr scoped_key = getMapKey(map);
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
+    ScopedExpr scoped_expr = visit(*call.vargs.at(1));
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front()->type.IsSigned());
+                                   call.vargs.at(1)->type.IsSigned());
 
     llvm::Type *mm_struct_ty = b_.GetMapValueType(map.type);
 
@@ -927,17 +930,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr();
 
   } else if (call.func == "avg" || call.func == "stats") {
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
 
     ScopedExpr scoped_key = getMapKey(map);
 
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
 
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
+    ScopedExpr scoped_expr = visit(*call.vargs.at(1));
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front()->type.IsSigned());
+                                   call.vargs.at(1)->type.IsSigned());
 
     llvm::Type *avg_struct_ty = b_.GetMapValueType(map.type);
 
@@ -1012,19 +1016,21 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!log2_func_)
       log2_func_ = createLog2Function();
 
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
+
     // There is only one log2_func_ so the second argument must be passed
     // as an argument even though it is a constant 0..5
     // Possible optimization is create one function per different value
     // of the second argument.
-    ScopedExpr scoped_arg2 = visit(call.vargs.at(1));
+    ScopedExpr scoped_arg2 = visit(call.vargs.at(2));
     Value *k = b_.CreateIntCast(scoped_arg2.value(), b_.getInt64Ty(), false);
 
-    ScopedExpr scoped_arg = visit(*call.vargs.front());
+    ScopedExpr scoped_arg = visit(*call.vargs.at(1));
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_arg.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front()->type.IsSigned());
+                                   call.vargs.at(1)->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr, k }, "log2");
     ScopedExpr scoped_key = getHistMapKey(map, log2, call.loc);
     b_.CreateMapElemAdd(
@@ -1036,13 +1042,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!linear_func_)
       linear_func_ = createLinearFunction();
 
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
 
     // prepare arguments
-    auto *value_arg = call.vargs.at(0);
-    auto *min_arg = call.vargs.at(1);
-    auto *max_arg = call.vargs.at(2);
-    auto *step_arg = call.vargs.at(3);
+    auto *value_arg = call.vargs.at(1);
+    auto *min_arg = call.vargs.at(2);
+    auto *max_arg = call.vargs.at(3);
+    auto *step_arg = call.vargs.at(4);
     auto scoped_value_arg = visit(value_arg);
     auto scoped_min_arg = visit(min_arg);
     auto scoped_max_arg = visit(max_arg);
@@ -1051,7 +1058,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     Value *value = b_.CreateIntCast(scoped_value_arg.value(),
                                     b_.getInt64Ty(),
-                                    call.vargs.front()->type.IsSigned());
+                                    call.vargs.at(1)->type.IsSigned());
     Value *min = b_.CreateIntCast(scoped_min_arg.value(),
                                   b_.getInt64Ty(),
                                   false);

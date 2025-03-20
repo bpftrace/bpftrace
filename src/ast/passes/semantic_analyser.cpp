@@ -135,11 +135,10 @@ private:
   bool is_final_pass() const;
   bool is_first_pass() const;
 
-  bool check_assignment(const Call &call,
-                        bool want_map,
-                        bool want_var,
-                        bool want_map_key);
-  [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
+  bool check_assignment(const Call &call, bool want_var, bool want_map_key);
+  [[nodiscard]] bool check_nargs(const Call &call,
+                                 size_t expected_nargs,
+                                 bool off_by_one = false);
   [[nodiscard]] bool check_varargs(const Call &call,
                                    size_t min_nargs,
                                    size_t max_nargs);
@@ -880,16 +879,16 @@ void SemanticAnalyser::visit(Call &call)
   }
 
   if (call.func == "hist") {
-    check_assignment(call, true, false, false);
-    if (!check_varargs(call, 1, 2))
+    if (!check_varargs(call, 2, 3))
       return;
-    if (call.vargs.size() == 1) {
+    check_arg(call, Type::integer, 1);
+    if (call.vargs.size() == 2) {
       call.vargs.push_back(
           ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
     } else {
-      if (!check_arg(call, Type::integer, 1, true))
+      if (!check_arg(call, Type::integer, 2, true))
         return;
-      const auto bits = bpftrace_.get_int_literal(call.vargs.at(1));
+      const auto bits = bpftrace_.get_int_literal(call.vargs.at(2));
       if (!bits.has_value()) {
         // Bug here as the validity of the integer literal is already checked by
         // check_arg above.
@@ -898,22 +897,21 @@ void SemanticAnalyser::visit(Call &call)
         call.addError() << call.func << ": bits " << *bits << " must be 0..5";
       }
     }
-    check_arg(call, Type::integer, 0);
 
     call.type = CreateHist();
   } else if (call.func == "lhist") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 4)) {
-      check_arg(call, Type::integer, 0, false);
-      check_arg(call, Type::integer, 1, true);
+    check_assignment(call, false, false);
+    if (check_nargs(call, 5, true)) {
+      check_arg(call, Type::integer, 1, false);
       check_arg(call, Type::integer, 2, true);
       check_arg(call, Type::integer, 3, true);
+      check_arg(call, Type::integer, 4, true);
     }
 
     if (is_final_pass()) {
-      Expression *min_arg = call.vargs.at(1);
-      Expression *max_arg = call.vargs.at(2);
-      Expression *step_arg = call.vargs.at(3);
+      Expression *min_arg = call.vargs.at(2);
+      Expression *max_arg = call.vargs.at(3);
+      Expression *step_arg = call.vargs.at(4);
       auto min = bpftrace_.get_int_literal(min_arg);
       auto max = bpftrace_.get_int_literal(max_arg);
       auto step = bpftrace_.get_int_literal(step_arg);
@@ -958,48 +956,48 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateLhist();
   } else if (call.func == "count") {
-    check_assignment(call, true, false, false);
-    (void)check_nargs(call, 0);
+    check_assignment(call, false, false);
+    (void)check_nargs(call, 1, true);
 
     call.type = CreateCount(true);
   } else if (call.func == "sum") {
     bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
+    check_assignment(call, false, false);
+    if (check_nargs(call, 2, true)) {
+      check_arg(call, Type::integer, 1);
+      sign = call.vargs.at(1)->type.IsSigned();
     }
     call.type = CreateSum(sign);
   } else if (call.func == "min") {
     bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
+    check_assignment(call, false, false);
+    if (check_nargs(call, 2, true)) {
+      check_arg(call, Type::integer, 1);
+      sign = call.vargs.at(1)->type.IsSigned();
     }
     call.type = CreateMin(sign);
   } else if (call.func == "max") {
     bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
+    check_assignment(call, false, false);
+    if (check_nargs(call, 2, true)) {
+      check_arg(call, Type::integer, 1);
+      sign = call.vargs.at(1)->type.IsSigned();
     }
     call.type = CreateMax(sign);
   } else if (call.func == "avg") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
+    check_assignment(call, false, false);
+    if (check_nargs(call, 2, true)) {
+      check_arg(call, Type::integer, 1);
     }
     call.type = CreateAvg(true);
   } else if (call.func == "stats") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
+    check_assignment(call, false, false);
+    if (check_nargs(call, 2, true)) {
+      check_arg(call, Type::integer, 1);
     }
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_varargs(call, 1, 2)) {
       if (!call.vargs.at(0)->is_map) {
         call.vargs.at(0)->addError() << DELETE_ERROR;
@@ -1267,7 +1265,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type.SetAS(AddrSpace::kernel);
     call.type.is_internal = true;
   } else if (call.func == "join") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     call.type = CreateNone();
 
     if (!check_varargs(call, 1, 2))
@@ -1375,7 +1373,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateUInt64();
   } else if (call.func == "printf" || call.func == "system" ||
              call.func == "cat" || call.func == "debugf") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_varargs(call, 1, 128)) {
       check_arg(call, Type::string, 0, true);
       if (is_final_pass()) {
@@ -1412,7 +1410,7 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateNone();
   } else if (call.func == "exit") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
 
     if (!check_varargs(call, 0, 1))
       return;
@@ -1420,7 +1418,7 @@ void SemanticAnalyser::visit(Call &call)
     if (call.vargs.size() == 1)
       check_arg(call, Type::integer, 0);
   } else if (call.func == "print") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (in_loop() && is_final_pass() && call.vargs.at(0)->is_map) {
       call.addWarning()
           << "Due to it's asynchronous nature using 'print()' in a loop can "
@@ -1481,7 +1479,7 @@ void SemanticAnalyser::visit(Call &call)
       call.vargs.size() > 1 && check_arg(call, Type::string, 1, false);
     }
   } else if (call.func == "clear") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs.at(0);
       if (!arg.is_map)
@@ -1495,7 +1493,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   } else if (call.func == "zero") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs.at(0);
       if (!arg.is_map)
@@ -1522,7 +1520,7 @@ void SemanticAnalyser::visit(Call &call)
       call.type = CreateInt64();
     }
   } else if (call.func == "time") {
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
         if (call.vargs.size() > 0)
@@ -1550,7 +1548,7 @@ void SemanticAnalyser::visit(Call &call)
           << "BPF_FUNC_send_signal not available for your kernel version";
     }
 
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
 
     if (!check_varargs(call, 1, 1)) {
       return;
@@ -1671,7 +1669,7 @@ If you're seeing errors, try clamping the string sizes. For example:
           << "BPF_FUNC_override_return not available for your kernel version";
     }
 
-    check_assignment(call, false, false, false);
+    check_assignment(call, false, false);
     if (check_varargs(call, 1, 1)) {
       check_arg(call, Type::integer, 0, false);
     }
@@ -1742,7 +1740,7 @@ If you're seeing errors, try clamping the string sizes. For example:
                          "version";
     }
 
-    check_assignment(call, false, true, false);
+    check_assignment(call, true, false);
     if (check_nargs(call, 4)) {
       if (is_final_pass()) {
         // pcap file name
@@ -3772,40 +3770,14 @@ bool SemanticAnalyser::is_first_pass() const
 }
 
 bool SemanticAnalyser::check_assignment(const Call &call,
-                                        bool want_map,
                                         bool want_var,
                                         bool want_map_key)
 {
-  if (want_map && want_var && want_map_key) {
-    if (!call.map && !call.var && !call.key_for_map) {
-      call.addError() << call.func
-                      << "() should be assigned to a map or a "
-                         "variable, or be used as a map key";
-      return false;
-    }
-  } else if (want_map && want_var) {
-    if (!call.map && !call.var) {
-      call.addError() << call.func
-                      << "() should be assigned to a map or a variable";
-      return false;
-    }
-  } else if (want_map && want_map_key) {
-    if (!call.map && !call.key_for_map) {
-      call.addError()
-          << call.func
-          << "() should be assigned to a map or be used as a map key";
-      return false;
-    }
-  } else if (want_var && want_map_key) {
+  if (want_var && want_map_key) {
     if (!call.var && !call.key_for_map) {
       call.addError()
           << call.func
           << "() should be assigned to a variable or be used as a map key";
-      return false;
-    }
-  } else if (want_map) {
-    if (!call.map) {
-      call.addError() << call.func << "() should be directly assigned to a map";
       return false;
     }
   } else if (want_var) {
@@ -3819,7 +3791,7 @@ bool SemanticAnalyser::check_assignment(const Call &call,
       return false;
     }
   } else {
-    if (call.map || call.var || call.key_for_map) {
+    if (call.var || call.key_for_map) {
       call.addError()
           << call.func
           << "() should not be used in an assignment or as a map key";
@@ -3830,12 +3802,19 @@ bool SemanticAnalyser::check_assignment(const Call &call,
 }
 
 // Checks the number of arguments passed to a function is correct.
-bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
+bool SemanticAnalyser::check_nargs(const Call &call,
+                                   size_t expected_nargs,
+                                   bool off_by_one)
 {
   std::stringstream err;
   auto nargs = call.vargs.size();
 
   if (nargs != expected_nargs) {
+    // Off-by-one should be set when we expect there was an earlier
+    // transformation of this function. The error we present to the user must
+    // be tweaked to take this into account.
+    if (off_by_one)
+      expected_nargs--;
     if (expected_nargs == 0)
       err << call.func << "() requires no arguments";
     else if (expected_nargs == 1)

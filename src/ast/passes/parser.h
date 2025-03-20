@@ -4,6 +4,7 @@
 #include "ast/pass_manager.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/map_assign_funcs.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "driver.h"
@@ -29,6 +30,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateParseBTFPass());
+  passes.emplace_back(CreateMapAssignTransformPass());
   return passes;
 }
 
