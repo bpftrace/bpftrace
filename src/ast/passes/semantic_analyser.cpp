@@ -110,6 +110,7 @@ public:
   void visit(Ternary &ternary);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
+  void visit(TupleAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(ExprStatement &expr);
@@ -2086,6 +2087,41 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   arr.type.is_btftype = type.is_btftype;
 }
 
+void SemanticAnalyser::visit(TupleAccess &acc)
+{
+  visit(acc.expr);
+  SizedType &type = acc.expr->type;
+
+  if (acc.index < 0) {
+    if (is_final_pass()) {
+      acc.addError()
+          << "Tuples must be indexed with a constant and non-negative integer";
+    }
+    return;
+  }
+
+  if (!type.IsTupleTy()) {
+    if (is_final_pass()) {
+      acc.addError() << "Can not access index '" << acc.index
+                     << "' on expression of type '" << type << "'";
+    }
+    return;
+  }
+
+  bool valid_idx = static_cast<size_t>(acc.index) < type.GetFields().size();
+
+  // We may not have inferred the full type of the tuple yet in early passes so
+  // wait until the final pass.
+  if (!valid_idx && is_final_pass()) {
+    acc.addError() << "Invalid tuple index: " << acc.index << ". Found "
+                   << type.GetFields().size() << " elements in tuple.";
+  }
+
+  if (valid_idx) {
+    acc.type = type.GetField(acc.index).type;
+  }
+}
+
 void SemanticAnalyser::binop_int(Binop &binop)
 {
   bool lsign = binop.left->type.IsSigned();
@@ -2793,11 +2829,7 @@ void SemanticAnalyser::visit(For &f)
 
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
-  // A field access must have a field XOR index
-  assert((!acc.field.empty()) != (acc.index >= 0));
-
   visit(acc.expr);
-
   SizedType &type = acc.expr->type;
 
   if (type.IsPtrTy()) {
@@ -2806,16 +2838,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!type.IsRecordTy() && !type.IsTupleTy()) {
+  if (!type.IsRecordTy()) {
     if (is_final_pass()) {
-      std::string field;
-      if (!acc.field.empty())
-        field += "field '" + acc.field + "'";
-      else
-        field += "index " + std::to_string(acc.index);
-
-      acc.addError() << "Can not access " << field << " on expression of type '"
-                     << type << "'";
+      acc.addError() << "Can not access field '" << acc.field
+                     << "' on expression of type '" << type << "'";
     }
     return;
   }
@@ -2841,27 +2867,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     } else {
       acc.addError() << "Can't find function parameter " << acc.field;
     }
-    return;
-  }
-
-  if (type.IsTupleTy()) {
-    if (acc.index < 0) {
-      acc.addError()
-          << "Tuples must be indexed with a constant and non-negative integer";
-      return;
-    }
-
-    bool valid_idx = static_cast<size_t>(acc.index) < type.GetFields().size();
-
-    // We may not have inferred the full type of the tuple yet in early passes
-    // so wait until the final pass.
-    if (!valid_idx && is_final_pass())
-      acc.addError() << "Invalid tuple index: " << acc.index << ". Found "
-                     << type.GetFields().size() << " elements in tuple.";
-
-    if (valid_idx)
-      acc.type = type.GetField(acc.index).type;
-
     return;
   }
 

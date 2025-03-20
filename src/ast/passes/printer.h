@@ -30,6 +30,7 @@ public:
   void visit(Ternary &ternary);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
+  void visit(TupleAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(ExprStatement &expr);

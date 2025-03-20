@@ -156,19 +156,19 @@ FieldAccess::FieldAccess(Diagnostics &d,
 {
 }
 
-FieldAccess::FieldAccess(Diagnostics &d,
-                         Expression *expr,
-                         ssize_t index,
-                         Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), index(index)
-{
-}
-
 ArrayAccess::ArrayAccess(Diagnostics &d,
                          Expression *expr,
                          Expression *indexpr,
                          Location &&loc)
     : Expression(d, std::move(loc)), expr(expr), indexpr(indexpr)
+{
+}
+
+TupleAccess::TupleAccess(Diagnostics &d,
+                         Expression *expr,
+                         ssize_t index,
+                         Location &&loc)
+    : Expression(d, std::move(loc)), expr(expr), index(index)
 {
 }
 

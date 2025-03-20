@@ -200,6 +200,7 @@ public:
   ScopedExpr visit(Ternary &ternary);
   ScopedExpr visit(FieldAccess &acc);
   ScopedExpr visit(ArrayAccess &arr);
+  ScopedExpr visit(TupleAccess &acc);
   ScopedExpr visit(Cast &cast);
   ScopedExpr visit(Tuple &tuple);
   ScopedExpr visit(ExprStatement &expr);
@@ -2330,15 +2331,14 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
   AddrSpace addrspace = acc.expr->type.GetAS();
-  assert(type.IsRecordTy() || type.IsTupleTy());
   auto scoped_arg = visit(*acc.expr);
 
+  assert(type.IsRecordTy());
   bool is_ctx = type.IsCtxAccess();
   bool is_tparg = type.is_tparg;
   bool is_internal = type.is_internal;
   bool is_funcarg = type.is_funcarg;
   bool is_btftype = type.is_btftype;
-  assert(type.IsRecordTy() || type.IsTupleTy());
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2351,19 +2351,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                          b_.getInt32(acc.type.funcarg_idx),
                                          args_type,
                                          acc.type);
-    }
-  } else if (type.IsTupleTy()) {
-    Value *src = b_.CreateGEP(b_.GetType(type),
-                              scoped_arg.value(),
-                              { b_.getInt32(0), b_.getInt32(acc.index) });
-    SizedType &elem_type = type.GetFields()[acc.index].type;
-
-    if (shouldBeInBpfMemoryAlready(elem_type)) {
-      // Extend lifetime of source buffer
-      return ScopedExpr(src, std::move(scoped_arg));
-    } else {
-      // Lifetime is not extended, it is freed after the load
-      return ScopedExpr(b_.CreateLoad(b_.GetType(elem_type), src));
     }
   }
 
@@ -2498,6 +2485,26 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
                                    elem_type,
                                    arr.loc,
                                    "array_access");
+  }
+}
+
+ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
+{
+  SizedType &type = acc.expr->type;
+  auto scoped_arg = visit(*acc.expr);
+  assert(type.IsTupleTy());
+
+  Value *src = b_.CreateGEP(b_.GetType(type),
+                            scoped_arg.value(),
+                            { b_.getInt32(0), b_.getInt32(acc.index) });
+  SizedType &elem_type = type.GetFields()[acc.index].type;
+
+  if (shouldBeInBpfMemoryAlready(elem_type)) {
+    // Extend lifetime of source buffer
+    return ScopedExpr(src, std::move(scoped_arg));
+  } else {
+    // Lifetime is not extended, it is freed after the load
+    return ScopedExpr(b_.CreateLoad(b_.GetType(elem_type), src));
   }
 }
 

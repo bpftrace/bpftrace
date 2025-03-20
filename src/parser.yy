@@ -521,7 +521,7 @@ postfix_expr:
 
 /* Tuple factored out so we can use it in the tuple field assignment error */
 tuple_access_expr:
-                postfix_expr DOT INT      { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @3); }
+                postfix_expr DOT INT      { $$ = driver.ctx.make_node<ast::TupleAccess>($1, $3, @3); }
                 ;
 
 block_expr:
