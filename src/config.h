@@ -59,10 +59,6 @@ enum class ConfigSymbolSource {
   symbol_table,
 };
 
-enum class ConfigKeySymbolSource {
-  default_,
-};
-
 enum class ConfigMissingProbes {
   ignore,
   warn,
@@ -78,7 +74,6 @@ using ConfigKey = std::variant<ConfigKeyBool,
                                ConfigKeyString,
                                ConfigKeyStackMode,
                                ConfigKeyUserSymbolCacheType,
-                               ConfigKeySymbolSource,
                                ConfigKeyMissingProbes>;
 
 // The strings in CONFIG_KEY_MAP AND ENV_ONLY match the env variables (minus the
@@ -100,7 +95,6 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "probe_inline", ConfigKeyBool::probe_inline },
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
-  { "symbol_source", ConfigKeySymbolSource::default_ },
   { "missing_probes", ConfigKeyMissingProbes::default_ },
   { "print_maps_on_exit", ConfigKeyBool::print_maps_on_exit },
   { "use_blazesym", ConfigKeyBool::use_blazesym },
@@ -152,11 +146,6 @@ public:
   UserSymbolCacheType get(ConfigKeyUserSymbolCacheType key) const
   {
     return get<UserSymbolCacheType>(key);
-  }
-
-  ConfigSymbolSource get(ConfigKeySymbolSource key) const
-  {
-    return get<ConfigSymbolSource>(key);
   }
 
   ConfigMissingProbes get(ConfigKeyMissingProbes key) const
@@ -245,7 +234,6 @@ public:
 
   bool set_stack_mode(const std::string &s);
   bool set_user_symbol_cache_type(const std::string &s);
-  bool set_symbol_source_config(const std::string &s);
   bool set_missing_probes_config(const std::string &s);
 
   Config &config_;
