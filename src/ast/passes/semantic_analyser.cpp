@@ -4007,6 +4007,8 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::iter:
         return false;
     }
+  } else if (func == "skboutput") {
+    return progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
   }
 
   if (type == ProbeType::invalid)

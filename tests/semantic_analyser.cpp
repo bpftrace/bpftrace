@@ -4035,6 +4035,12 @@ stdin:1:17-58: ERROR: skboutput() should be assigned to a variable
 fentry:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
+  test_error("kprobe:func_1 { $ret = skboutput(\"one.pcap\", arg1, 1500, 0); }",
+             R"(
+stdin:1:24-60: ERROR: skboutput can not be used with "kprobe" probes
+kprobe:func_1 { $ret = skboutput("one.pcap", arg1, 1500, 0); }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST_F(semantic_analyser_btf, call_percpu_kaddr)
