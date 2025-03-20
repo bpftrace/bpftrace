@@ -25,6 +25,7 @@ void test(BPFtrace &bpftrace,
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .run();
+  ast.diagnostics().emit(msg);
   ASSERT_TRUE(bool(ok)) << msg.str();
   EXPECT_EQ(ast.diagnostics().ok(), expected_result) << msg.str();
 

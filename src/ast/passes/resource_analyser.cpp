@@ -244,8 +244,11 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
-    auto &map_info = resources_.maps_info[call.map->ident];
-    int bits = static_cast<Integer *>(call.vargs.at(1))->n;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
+    auto &map_info = resources_.maps_info[map.ident];
+
+    int bits = static_cast<Integer *>(call.vargs.at(2))->n;
 
     if (map_info.hist_bits_arg.has_value() && *map_info.hist_bits_arg != bits) {
       call.addError() << "Different bits in a single hist, had "
@@ -254,9 +257,13 @@ void ResourceAnalyser::visit(Call &call)
       map_info.hist_bits_arg = bits;
     }
   } else if (call.func == "lhist") {
-    Expression &min_arg = *call.vargs.at(1);
-    Expression &max_arg = *call.vargs.at(2);
-    Expression &step_arg = *call.vargs.at(3);
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
+    auto &map_info = resources_.maps_info[map.ident];
+
+    Expression &min_arg = *call.vargs.at(2);
+    Expression &max_arg = *call.vargs.at(3);
+    Expression &step_arg = *call.vargs.at(4);
     auto &min = static_cast<Integer &>(min_arg);
     auto &max = static_cast<Integer &>(max_arg);
     auto &step = static_cast<Integer &>(step_arg);
@@ -266,8 +273,6 @@ void ResourceAnalyser::visit(Call &call)
       .max = max.n,
       .step = step.n,
     };
-
-    auto &map_info = resources_.maps_info[call.map->ident];
 
     if (map_info.lhist_args.has_value() && *map_info.lhist_args != args) {
       call.addError() << "Different lhist bounds in a single map unsupported";
@@ -359,7 +364,8 @@ void ResourceAnalyser::visit(Call &call)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
   if (call.func == "lhist" || call.func == "hist") {
-    Map &map = *call.map;
+    auto &arg0 = *call.vargs.at(0);
+    auto &map = static_cast<Map &>(arg0);
     // Allocation is always needed for lhist/hist. But we need to allocate
     // space for both map key and the bucket ID from a call to linear/log2
     // functions.

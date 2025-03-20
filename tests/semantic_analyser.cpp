@@ -1,6 +1,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/map_assign_funcs.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -37,6 +38,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateMapAssignTransformPass())
                 .add(ast::CreateSemanticPass())
                 .run();
   EXPECT_TRUE(bool(ok));
@@ -92,6 +94,7 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateMapAssignTransformPass())
                 .add(ast::CreateSemanticPass())
                 .run();
 
