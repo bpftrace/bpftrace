@@ -13,6 +13,8 @@ and this project adheres to
   - [#3784](https://github.com/bpftrace/bpftrace/pull/3784)
 - Drop DWARF support (userspace and kernel)
   - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
+- Removed config option 'symbol_source' - it no longer has any effect
+  - [#3925](https://github.com/bpftrace/bpftrace/pull/3925)
 #### Added
 - `offsetof()` now supports sub fields e.g. `offsetof(struct Foo, bar.a.b);`
   - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)
