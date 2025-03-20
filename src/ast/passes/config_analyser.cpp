@@ -35,8 +35,6 @@ private:
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyString key);
   void set_config(AssignConfigVarStatement &assignment,
                   ConfigKeyUserSymbolCacheType key);
-  void set_config(AssignConfigVarStatement &assignment,
-                  ConfigKeySymbolSource key);
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyStackMode key);
   void set_config(AssignConfigVarStatement &assignment,
                   ConfigKeyMissingProbes key);
@@ -125,20 +123,6 @@ void ConfigAnalyser::set_config(
 
   auto val = dynamic_cast<String *>(assignment.expr)->str;
   if (!config_setter_.set_user_symbol_cache_type(val))
-    assignment.expr->addError();
-}
-
-void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
-                                [[maybe_unused]] ConfigKeySymbolSource key)
-{
-  auto &assignTy = assignment.expr->type;
-  if (!assignTy.IsStringTy()) {
-    log_type_error(assignTy, Type::string, assignment);
-    return;
-  }
-
-  auto val = dynamic_cast<String *>(assignment.expr)->str;
-  if (!config_setter_.set_symbol_source_config(val))
     assignment.expr->addError();
 }
 

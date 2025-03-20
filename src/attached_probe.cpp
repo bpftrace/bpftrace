@@ -352,9 +352,6 @@ static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
 
-static constexpr std::string_view hint_symbol_source =
-    "\nUse config 'symbol_source = \"symbol_table\"' in case of bad DebugInfo.";
-
 static void check_alignment(std::string &orig_name,
                             std::string &path,
                             std::string &symbol,
@@ -376,13 +373,9 @@ static void check_alignment(std::string &orig_name,
         auto msg = "Could not add " + probetypeName(type) +
                    " into middle of instruction: " + tmp +
                    std::string{ hint_unsafe };
-        if (orig_name.find('*') != std::string::npos)
-          msg += hint_symbol_source;
         throw util::FatalUserException(std::move(msg));
       } else {
         std::string_view hint;
-        if (orig_name.find('*') != std::string::npos)
-          hint = hint_symbol_source;
         LOG(WARNING) << "Unsafe " << type
                      << " in the middle of the instruction: " << tmp << hint;
       }
