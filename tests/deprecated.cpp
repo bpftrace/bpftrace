@@ -40,4 +40,10 @@ TEST(deprecated, symbol_source)
        "symbol_source is deprecated and has no effect");
 }
 
+TEST(deprecated, sarg)
+{
+  test("BEGIN { sarg0 }", "sarg* is deprecated");
+  test("BEGIN { sarg1 }", "sarg* is deprecated");
+}
+
 } // namespace bpftrace::test::deprecated
