@@ -1613,15 +1613,6 @@ a full path. The path will be then automatically resolved using `/etc/ld.so.cach
 uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }
 ----
 
-If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
-
-----
-# bpftrace -lv 'uprobe:/bin/bash:rl_set_prompt'
-
-uprobe:/bin/bash:rl_set_prompt
-    const char* prompt
-----
-
 When tracing C{plus}{plus} programs, it's possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 
 ----
@@ -1809,7 +1800,7 @@ For string arguments use the `str()` call to retrieve the value.
 | struct args
 | n/a
 | n/a
-| The struct of all arguments of the traced function. Available in `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
+| The struct of all arguments of the traced function. Available in `tracepoint`, `fentry` and `fexit`.. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
 
 | cgroup
 | uint64
@@ -4091,10 +4082,6 @@ tracepoint:syscalls:sys_enter_openat
     const char * filename
     int flags
     umode_t mode
-
-# bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
-uprobe:/bin/bash:rl_set_prompt
-    const char *prompt
 
 # bpftrace -lv 'struct css_task_iter'
 struct css_task_iter {
