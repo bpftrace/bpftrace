@@ -70,18 +70,18 @@ void BpfProgram::set_attach_target(const Probe &probe,
   const std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
 
   std::string btf_fun;
-  __u32 kind = BTF_KIND_FUNC;
+  __u32 btf_kind = BTF_KIND_FUNC;
 
   if (probe.type == ProbeType::iter) {
     btf_fun = "bpf_iter_" + fun;
   } else if (probe.type == ProbeType::rawtracepoint) {
     btf_fun = "btf_trace_" + fun;
-    kind = BTF_KIND_TYPEDEF;
+    btf_kind = BTF_KIND_TYPEDEF;
   } else {
     btf_fun = fun;
   }
 
-  if (btf.get_btf_id(btf_fun, mod, kind) < 0) {
+  if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
     const std::string msg = "No BTF found for " + attach_target;
     if (probe.orig_name != probe.name &&
         config.get(ConfigKeyMissingProbes::default_) !=

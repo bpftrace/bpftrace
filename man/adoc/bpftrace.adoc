@@ -1482,29 +1482,22 @@ profile:hz:99 { @[tid] = count(); }
 .short name
 * `rt`
 
-The hook point triggered by `tracepoint` and `rawtracepoint` is the same.
-`tracepoint` and `rawtracepoint` are nearly identical in terms of functionality.
-The only difference is in the program context.
-`rawtracepoint` offers raw arguments to the tracepoint while `tracepoint` applies further processing to the raw arguments.
-The additional processing is defined inside the kernel.
+Raw tracepoints are attached to the same tracepoints as normal tracepoint programs.
+The reason why you might want to use raw tracepoints over normal tracepoints is due to the performance improvement - https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_RAW_TRACEPOINT/[Read More].
+
+`rawtracepoint` arguments can be accessed via the `argN` builtins AND via the `args` builtin.
 
 ----
-rawtracepoint:block_rq_insert {
-  printf("%llx %llx\n", arg0, arg1);
+rawtracepoint:kfree_skb {
+  printf("%llx %llx\n", arg0, args.skb);
 }
 ----
+`arg0` and `args.skb` will print the same address.
 
-Tracepoint arguments are available via the `argN` builtins.
-Each arg is a 64-bit integer.
-The available arguments can be found in the relative path of the kernel source code `include/trace/events/`. For example:
-
-----
-include/trace/events/block.h
-DEFINE_EVENT(block_rq, block_rq_insert,
-	TP_PROTO(struct request_queue *q, struct request *rq),
-	TP_ARGS(q, rq)
-);
-----
+`rawtracepoint` probes make use of BTF type information to derive the type of function arguments at compile time.
+This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
+The arguments accessible by a `rawtracepoint` are different from the arguments you can access from the `tracepoint` of the same name.
+The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see <<Listing Probes>>).
 
 [#probes-software]
 === software

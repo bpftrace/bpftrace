@@ -22,6 +22,8 @@ and this project adheres to
   - [#3863](https://github.com/bpftrace/bpftrace/pull/3863)
 - Add license config to specify BPF license
   - [#3905](https://github.com/bpftrace/bpftrace/pull/3905)
+- Rawtracepoints can now use `args` builtin and list params
+  - [#3918](https://github.com/bpftrace/bpftrace/pull/3918)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

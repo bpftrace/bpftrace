@@ -132,6 +132,11 @@ _Bool bpf_session_is_return()
   return 1;
 }
 
+long __probestub_event_rt(void *__data, long first_real_arg)
+{
+  return first_real_arg;
+}
+
 // kernel percpu variables
 __attribute__((section(".data..percpu"))) unsigned long process_counts;
 
@@ -150,5 +155,6 @@ int main(void)
   bpf_iter_task_file();
   bpf_iter_task_vma();
   bpf_map_sum_elem_count(&bpf_map);
+  __probestub_event_rt((void *)&bpf_map, 1);
   return 0;
 }
