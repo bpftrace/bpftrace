@@ -419,6 +419,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 std::optional<Struct> BTF::resolve_args(const std::string &func,
                                         bool ret,
                                         bool check_traceable,
+                                        bool is_raw_tracepoint,
                                         std::string &err)
 {
   if (!has_data()) {
@@ -465,6 +466,12 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
   int arg_idx = 0;
   __u32 type_size = 0;
   for (; j < vlen; j++, p++) {
+    if (j == 0 && is_raw_tracepoint) {
+      // The first param for raw tracepoints is void *, which should be skipped
+      // as it's not really part of tracepoint data
+      continue;
+    }
+
     const char *str = btf_str(func_id.btf, p->name_off);
     if (!str) {
       err = "failed to resolve arguments";
@@ -540,7 +547,8 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
 
 std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     const BTFObj &btf_obj,
-    const std::set<std::string> &funcs) const
+    const std::set<std::string> &funcs,
+    bool is_raw_tracepoint) const
 {
   __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
   std::string type = std::string("");
@@ -584,6 +592,11 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     int j;
 
     for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++) {
+      if (j == 0 && is_raw_tracepoint) {
+        // The first param for raw tracepoints is void *, which should be
+        // skipped as it's not really part of tracepoint data
+        continue;
+      }
       // set by dump_printf callback
       type = std::string("");
       const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
@@ -597,7 +610,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
       params[func_name].push_back(type + " " + arg_name);
     }
 
-    if (!t->type)
+    if (!t->type || is_raw_tracepoint)
       continue;
 
     // set by dump_printf callback
@@ -621,7 +634,8 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
 }
 
 std::map<std::string, std::vector<std::string>> BTF::get_params(
-    const std::set<std::string> &funcs) const
+    const std::set<std::string> &funcs,
+    bool is_raw_tracepoint) const
 {
   std::map<std::string, std::vector<std::string>> params;
   auto all_resolved = [&params](const std::string &f) {
@@ -632,7 +646,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     if (std::ranges::all_of(funcs, all_resolved))
       break;
 
-    auto mod_params = get_params_from_btf(btf_obj, funcs);
+    auto mod_params = get_params_from_btf(btf_obj, funcs, is_raw_tracepoint);
     params.insert(mod_params.begin(), mod_params.end());
   }
 

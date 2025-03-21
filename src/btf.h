@@ -30,6 +30,15 @@ struct btf_type;
 
 namespace bpftrace {
 
+// Note: there are several prefixes for raw tracepoint BTF functions.
+// "__probestub_" seems to be the most accurate in terms of getting the params
+// but it wasn't added until May 2023 so older kernels might not have it,
+// which is why we also check "__traceiter_" (as needed).
+// "btf_trace_" prefix is a typedef that eventually resolves to a FUNC_PROTO
+// but the params for this do not have names, which is what we need.
+static const std::vector<std::string> RT_BTF_PREFIXES = { "__probestub_",
+                                                          "__traceiter_" };
+
 class BPFtrace;
 
 class BTF {
@@ -76,11 +85,13 @@ public:
   std::unique_ptr<std::istream> get_all_funcs() const;
   std::unordered_set<std::string> get_all_iters() const;
   std::map<std::string, std::vector<std::string>> get_params(
-      const std::set<std::string>& funcs) const;
+      const std::set<std::string>& funcs,
+      bool is_raw_tracepoint = false) const;
 
   std::optional<Struct> resolve_args(const std::string& func,
                                      bool ret,
                                      bool check_traceable,
+                                     bool is_raw_tracepoint,
                                      std::string& err);
   void resolve_fields(SizedType& type);
 
@@ -105,7 +116,8 @@ private:
   std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
   std::map<std::string, std::vector<std::string>> get_params_from_btf(
       const BTFObj& btf_obj,
-      const std::set<std::string>& funcs) const;
+      const std::set<std::string>& funcs,
+      bool is_raw_tracepoint) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
   std::unordered_set<std::string> get_all_iters_from_btf(
       const struct btf* btf) const;
