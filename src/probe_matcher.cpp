@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "bpftrace.h"
+#include "btf.h"
 #include "cxxdemangler/cxxdemangler.h"
 #include "log.h"
 #include "probe_matcher.h"
@@ -422,6 +423,39 @@ FuncParamLists ProbeMatcher::get_iters_params(
   return params;
 }
 
+FuncParamLists ProbeMatcher::get_rawtracepoint_params(
+    const std::set<std::string>& raw_tps)
+{
+  std::vector<std::string> prefixes;
+  for (const auto& prefix : RT_BTF_PREFIXES) {
+    prefixes.emplace_back("vmlinux:" + prefix);
+  }
+
+  std::set<std::string> prefixed_tps;
+  for (const auto& rtp : raw_tps) {
+    for (const auto& prefix : prefixes) {
+      prefixed_tps.insert(prefix + rtp);
+    }
+  }
+  FuncParamLists prefixed_params = bpftrace_->btf_->get_params(prefixed_tps);
+  FuncParamLists params;
+  for (auto& [key, val] : prefixed_params) {
+    for (const auto& prefix : prefixes) {
+      if (key.find(prefix) != std::string::npos) {
+        std::string rtp = key;
+        rtp.erase(0, prefix.length());
+        params[rtp] = std::move(val);
+        // delete `int retval`
+        params[rtp].pop_back();
+        // delete `void *`
+        params[rtp].erase(params[rtp].begin());
+        break;
+      }
+    }
+  }
+  return params;
+}
+
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
   for (auto* probe : prog->probes) {
@@ -435,7 +469,9 @@ void ProbeMatcher::list_probes(ast::Program* prog)
         else if (probe_type == ProbeType::fentry ||
                  probe_type == ProbeType::fexit)
           param_lists = bpftrace_->btf_->get_params(matches);
-        else if (probe_type == ProbeType::iter)
+        else if (probe_type == ProbeType::rawtracepoint) {
+          param_lists = get_rawtracepoint_params(matches);
+        } else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
       }
 

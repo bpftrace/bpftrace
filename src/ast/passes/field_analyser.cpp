@@ -214,7 +214,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
 
     auto probe_type = probetype(ap->provider);
     if (probe_type != ProbeType::fentry && probe_type != ProbeType::fexit &&
-        probe_type != ProbeType::uprobe)
+        probe_type != ProbeType::rawtracepoint)
       continue;
 
     if (ap->expansion != ExpansionType::NONE) {
@@ -236,20 +236,32 @@ void FieldAnalyser::resolve_args(Probe &probe)
         // module for fentry).
         std::string func = match;
         std::string target = util::erase_prefix(func);
+        std::optional<Struct> maybe_ap_args = std::nullopt;
+        std::string err;
 
         // Trying to attach to multiple fentry. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and
         // continue with other functions.
         if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-          std::string err;
-          auto maybe_ap_args = bpftrace_.btf_->resolve_args(
-              func, probe_type == ProbeType::fexit, true, err);
-          if (!maybe_ap_args.has_value()) {
-            ap->addWarning() << "fentry:" << ap->func << ": " << err;
-            continue;
+          maybe_ap_args = bpftrace_.btf_->resolve_args(
+              func, probe_type == ProbeType::fexit, true, false, err);
+
+        } else if (probe_type == ProbeType::rawtracepoint) {
+          for (const auto &prefix : RT_BTF_PREFIXES) {
+            maybe_ap_args = bpftrace_.btf_->resolve_args(
+                prefix + ap->func, false, false, true, err);
+            if (maybe_ap_args.has_value()) {
+              break;
+            }
           }
-          ap_args = std::move(*maybe_ap_args);
         }
+
+        if (!maybe_ap_args.has_value()) {
+          ap->addWarning() << probetypeName(probe_type) << ap->func << ": "
+                           << err;
+          continue;
+        }
+        ap_args = std::move(*maybe_ap_args);
 
         if (probe_args.size == -1)
           probe_args = ap_args;
@@ -259,17 +271,27 @@ void FieldAnalyser::resolve_args(Probe &probe)
         }
       }
     } else {
+      std::optional<Struct> maybe_probe_args = std::nullopt;
+      std::string err;
       // Resolving args for an explicit function failed, print an error and fail
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        std::string err;
-        auto maybe_probe_args = bpftrace_.btf_->resolve_args(
-            ap->func, probe_type == ProbeType::fexit, true, err);
-        if (!maybe_probe_args.has_value()) {
-          ap->addError() << "fentry:" << ap->func << ": " << err;
-          return;
+        maybe_probe_args = bpftrace_.btf_->resolve_args(
+            ap->func, probe_type == ProbeType::fexit, true, false, err);
+      } else if (probe_type == ProbeType::rawtracepoint) {
+        for (const auto &prefix : RT_BTF_PREFIXES) {
+          maybe_probe_args = bpftrace_.btf_->resolve_args(
+              prefix + ap->func, false, false, true, err);
+          if (maybe_probe_args.has_value()) {
+            break;
+          }
         }
-        probe_args = std::move(*maybe_probe_args);
       }
+
+      if (!maybe_probe_args.has_value()) {
+        ap->addError() << probetypeName(probe_type) << ap->func << ": " << err;
+        return;
+      }
+      probe_args = std::move(*maybe_probe_args);
     }
 
     // check if we already stored arguments for this probe

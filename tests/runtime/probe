@@ -433,6 +433,11 @@ PROG rawtracepoint:sys_* { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep
 
+# Test that we get at least two characters out
+NAME rawtracepoint args
+PROG rawtracepoint:irq_handler_entry { print(str(((struct irqaction*)args.action)->name)); exit(); }
+EXPECT_REGEX ..+
+
 NAME profile
 PROG profile:hz:599 { print("hit"); exit(); }
 EXPECT hit

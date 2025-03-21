@@ -2230,7 +2230,7 @@ TEST(semantic_analyser, tracepoint)
 TEST(semantic_analyser, rawtracepoint)
 {
   test("rawtracepoint:event { 1 }");
-  test("rawtracepoint:event { args }", 1);
+  test("rawtracepoint:event { arg0 }");
 }
 
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -4082,6 +4082,17 @@ iter:task,iter:task_file { 1 }
 stdin:1:1-10: ERROR: Only single iter attach point is allowed.
 iter:task,f:func_1 { 1 }
 ~~~~~~~~~
+)");
+}
+
+TEST_F(semantic_analyser_btf, rawtracepoint)
+{
+  test("rawtracepoint:event_rt { args.first_real_arg }");
+
+  test_error("rawtracepoint:event_rt { args.bad_arg }", R"(
+stdin:1:26-31: ERROR: Can't find function parameter bad_arg
+rawtracepoint:event_rt { args.bad_arg }
+                         ~~~~~
 )");
 }
 

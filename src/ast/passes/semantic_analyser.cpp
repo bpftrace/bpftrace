@@ -777,7 +777,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
              "probe type, e.g. \"probe1 {args}\" is valid while "
              "\"probe1,probe2 {args}\" is not.";
     } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
-               type == ProbeType::uprobe) {
+               type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
       if (type == ProbeType::uprobe &&
           bpftrace_.config_->get(ConfigKeyBool::probe_inline))
         builtin.addError() << "The args builtin can only be used when "

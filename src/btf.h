@@ -30,6 +30,20 @@ struct btf_type;
 
 namespace bpftrace {
 
+// Note: there are several prefixes for raw tracepoint BTF functions.
+// "__probestub_" seems to be the most accurate in terms of getting the params
+// but it wasn't added until May 2023 so older kernels might not have it,
+// which is why we also check "__traceiter_" (as needed).
+// "btf_trace_" prefix, which we use to validate if we can attach to this
+// tracepoint is a typedef that eventually resolves to a FUNC_PROTO
+// but the params for this do not have names, which is what we need.
+// "__probestub_" was added here:
+// https://lore.kernel.org/all/168507471874.913472.17214624519622959593.stgit@mhiramat.roam.corp.google.com/
+// "__traceiter_" was added here:
+// https://lore.kernel.org/all/20200908105743.GW2674@hirez.programming.kicks-ass.net/
+static const std::vector<std::string> RT_BTF_PREFIXES = { "__probestub_",
+                                                          "__traceiter_" };
+
 class BPFtrace;
 
 class BTF {
@@ -81,6 +95,7 @@ public:
   std::optional<Struct> resolve_args(const std::string& func,
                                      bool ret,
                                      bool check_traceable,
+                                     bool skip_first_arg,
                                      std::string& err);
   void resolve_fields(SizedType& type);
 

@@ -57,6 +57,12 @@ RUN {{BPFTRACE}} -l | grep rawtracepoint
 EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
+NAME it lists rawtracepoint params
+RUN {{BPFTRACE}} -lv "rawtracepoint:*"
+EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists fentry params
 RUN {{BPFTRACE}} -lv "fentry:*"
 EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+

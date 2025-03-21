@@ -2342,7 +2342,8 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
-    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit)
+    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
+        probe_type == ProbeType::rawtracepoint)
       return ScopedExpr(b_.CreateKFuncArg(ctx_, acc.type, acc.field),
                         std::move(scoped_arg));
     else if (probe_type == ProbeType::uprobe) {
@@ -4782,7 +4783,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
 
   std::string err;
   auto maybe_func_type = bpftrace_.btf_->resolve_args(
-      func_name, true, false, err);
+      func_name, true, false, false, err);
   if (!maybe_func_type.has_value()) {
     call.addError() << "Unknown kernel function: " << func_name;
     return nullptr;

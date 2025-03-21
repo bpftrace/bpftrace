@@ -419,6 +419,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 std::optional<Struct> BTF::resolve_args(const std::string &func,
                                         bool ret,
                                         bool check_traceable,
+                                        bool skip_first_arg,
                                         std::string &err)
 {
   if (!has_data()) {
@@ -465,6 +466,10 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
   int arg_idx = 0;
   __u32 type_size = 0;
   for (; j < vlen; j++, p++) {
+    if (j == 0 && skip_first_arg) {
+      continue;
+    }
+
     const char *str = btf_str(func_id.btf, p->name_off);
     if (!str) {
       err = "failed to resolve arguments";
