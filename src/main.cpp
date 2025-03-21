@@ -26,6 +26,7 @@
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_analyser.h"
 #include "ast/passes/recursion_check.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -386,6 +387,7 @@ std::vector<std::string> extra_flags(
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateConfigPass());
+  add(ast::CreateResolveImportsPass({}));
   add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
@@ -749,6 +751,7 @@ static ast::ASTContext buildListProgram(const std::string& search)
       ast::AttachPointList({ ap }), nullptr, nullptr, location());
   ast.root = ast.make_node<ast::Program>("",
                                          nullptr,
+                                         ast::ImportList(),
                                          ast::MapDeclList(),
                                          ast::SubprogList(),
                                          ast::ProbeList({ probe }),
