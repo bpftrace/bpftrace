@@ -352,8 +352,7 @@ static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
 
-static void check_alignment(std::string &orig_name,
-                            std::string &path,
+static void check_alignment(std::string &path,
                             std::string &symbol,
                             uint64_t sym_offset,
                             uint64_t func_offset,
@@ -491,13 +490,8 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
   if (func_offset == 0)
     return true;
 
-  check_alignment(probe_.orig_name,
-                  probe_.path,
-                  symbol,
-                  sym_offset,
-                  func_offset,
-                  safe_mode,
-                  probe_.type);
+  check_alignment(
+      probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
   return true;
 }
 
