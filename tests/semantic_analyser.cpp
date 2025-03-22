@@ -2230,7 +2230,7 @@ TEST(semantic_analyser, tracepoint)
 TEST(semantic_analyser, rawtracepoint)
 {
   test("rawtracepoint:event { 1 }");
-  test("rawtracepoint:event { args }", 1);
+  test("rawtracepoint:event { arg0 }");
 }
 
 #if defined(__x86_64__) || defined(__aarch64__)
@@ -4035,6 +4035,12 @@ stdin:1:17-58: ERROR: skboutput() should be assigned to a variable
 fentry:func_1 { skboutput("one.pcap", args.foo1, 1500, 0); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
+  test_error("kprobe:func_1 { $ret = skboutput(\"one.pcap\", arg1, 1500, 0); }",
+             R"(
+stdin:1:24-60: ERROR: skboutput can not be used with "kprobe" probes
+kprobe:func_1 { $ret = skboutput("one.pcap", arg1, 1500, 0); }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST_F(semantic_analyser_btf, call_percpu_kaddr)
@@ -4076,6 +4082,17 @@ iter:task,iter:task_file { 1 }
 stdin:1:1-10: ERROR: Only single iter attach point is allowed.
 iter:task,f:func_1 { 1 }
 ~~~~~~~~~
+)");
+}
+
+TEST_F(semantic_analyser_btf, rawtracepoint)
+{
+  test("rawtracepoint:event_rt { args.first_real_arg }");
+
+  test_error("rawtracepoint:event_rt { args.bad_arg }", R"(
+stdin:1:26-31: ERROR: Can't find function parameter bad_arg
+rawtracepoint:event_rt { args.bad_arg }
+                         ~~~~~
 )");
 }
 

@@ -776,7 +776,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
              "probe type, e.g. \"probe1 {args}\" is valid while "
              "\"probe1,probe2 {args}\" is not.";
     } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
-               type == ProbeType::uprobe) {
+               type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
       if (type == ProbeType::uprobe &&
           bpftrace_.config_->get(ConfigKeyBool::probe_inline))
         builtin.addError() << "The args builtin can only be used when "
@@ -4002,6 +4002,8 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::iter:
         return false;
     }
+  } else if (func == "skboutput") {
+    return progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
   }
 
   if (type == ProbeType::invalid)
