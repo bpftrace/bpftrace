@@ -19,7 +19,6 @@
 #include "ast/helpers.h"
 #include "ast/pass_manager.h"
 #include "ast/passes/codegen_llvm.h"
-#include "ast/passes/config_analyser.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
@@ -385,7 +384,6 @@ std::vector<std::string> extra_flags(
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
-  add(ast::CreateConfigPass());
   add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
