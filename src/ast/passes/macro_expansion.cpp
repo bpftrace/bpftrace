@@ -5,6 +5,7 @@
 #include "ast/context.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/visitor.h"
+#include "bpftrace.h"
 
 #include "log.h"
 
@@ -34,7 +35,7 @@ private:
 // Expands macros into their call sites.
 class MacroExpansion : public Visitor<MacroExpansion> {
 public:
-  MacroExpansion(ASTContext &ast);
+  MacroExpansion(ASTContext &ast, BPFtrace &b);
 
   using Visitor<MacroExpansion>::replace;
   Expression *replace(Call *call, void *ret);
@@ -43,6 +44,7 @@ public:
 
 private:
   ASTContext &ast_;
+  BPFtrace &bpftrace_;
   std::unordered_map<std::string, Macro *> macros_;
   std::unordered_set<std::string> called_;
 };
@@ -124,13 +126,24 @@ Expression *MacroSpecializer::specialize(Macro &macro, const Call &call)
   return ast_.diagnostics().ok() ? macro.expr : nullptr;
 }
 
-MacroExpansion::MacroExpansion(ASTContext &ast) : ast_(ast)
+MacroExpansion::MacroExpansion(ASTContext &ast, BPFtrace &b)
+    : ast_(ast), bpftrace_(b)
 {
 }
 
 void MacroExpansion::run()
 {
+  bool unstable_macro = bpftrace_.config_->get(ConfigKeyBool::unstable_macro);
+
   for (Macro *macro : ast_.root->macros) {
+    if (!unstable_macro) {
+      macro->addError()
+          << "Hygienic macros are not enabled by default. To enable "
+             "this unstable feature, set this config flag to 1 "
+             "e.g. unstable_macro=1";
+      return;
+    }
+
     macros_[macro->name] = macro;
   }
 
@@ -163,8 +176,8 @@ Expression *MacroExpansion::replace(Call *call, [[maybe_unused]] void *ret)
 
 Pass CreateMacroExpansionPass()
 {
-  auto fn = [](ASTContext &ast) {
-    MacroExpansion expander(ast);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    MacroExpansion expander(ast, b);
     expander.run();
   };
 
