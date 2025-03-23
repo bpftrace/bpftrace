@@ -16,6 +16,7 @@ Config::Config(bool has_cmd)
     { ConfigKeyBool::probe_inline, { .value = false } },
     { ConfigKeyBool::print_maps_on_exit, { .value = true } },
     { ConfigKeyBool::unstable_map_decl, { .value = false } },
+    { ConfigKeyBool::unstable_macro, { .value = false } },
 #ifndef HAVE_BLAZESYM
     { ConfigKeyBool::use_blazesym, { .value = false } },
 #else
