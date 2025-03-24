@@ -48,6 +48,7 @@ add_library(libbpftrace STATIC
   lockdown.cpp
   tracepoint_format_parser.cpp
 )
+add_dependencies(libbpftrace stdlib)
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")
 
@@ -223,5 +224,6 @@ add_subdirectory(ast)
 add_subdirectory(cxxdemangler)
 add_subdirectory(debugfs)
 add_subdirectory(resources)
+add_subdirectory(stdlib)
 add_subdirectory(tracefs)
 add_subdirectory(util)
