@@ -294,7 +294,8 @@ void Printer::visit(AssignConfigVarStatement &assignment)
 
   ++depth_;
   std::string indentVar(depth_, ' ');
-  out_ << indentVar << "config var: " << assignment.config_var << std::endl;
+  out_ << indentVar << "config var: " << assignment.config_var->ident
+       << std::endl;
   visit(assignment.expr);
   --depth_;
 }

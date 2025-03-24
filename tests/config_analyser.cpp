@@ -118,23 +118,23 @@ TEST(config_analyser, config)
 TEST(config_analyser, config_error)
 {
   test("config = { BAD_CONFIG=1 } BEGIN { }",
-       R"(stdin:1:12-23: ERROR: Unrecognized config variable: BAD_CONFIG
+       R"(stdin:1:12-22: ERROR: Unrecognized config variable: BAD_CONFIG
 config = { BAD_CONFIG=1 } BEGIN { }
-           ~~~~~~~~~~~
+           ~~~~~~~~~~
 )",
        false);
   test(
-      "config = { BPFTRACE_MAX_PROBES=\"hello\" } BEGIN { }",
-      R"(stdin:1:12-32: ERROR: Invalid type for BPFTRACE_MAX_PROBES. Type: string. Expected Type: int
-config = { BPFTRACE_MAX_PROBES="hello" } BEGIN { }
-           ~~~~~~~~~~~~~~~~~~~~
+      "config = { BPFTRACE_MAX_PROBES = \"hello\" } BEGIN { }",
+      R"(stdin:1:34-41: ERROR: Invalid type for BPFTRACE_MAX_PROBES. Type: string. Expected Type: int
+config = { BPFTRACE_MAX_PROBES = "hello" } BEGIN { }
+                                 ~~~~~~~
 )",
       false);
   test(
       "config = { max_ast_nodes=1 } BEGIN { }",
-      R"(stdin:1:12-26: ERROR: max_ast_nodes can only be set as an environment variable
+      R"(stdin:1:12-25: ERROR: max_ast_nodes can only be set as an environment variable
 config = { max_ast_nodes=1 } BEGIN { }
-           ~~~~~~~~~~~~~~
+           ~~~~~~~~~~~~~
 )",
       false);
 }

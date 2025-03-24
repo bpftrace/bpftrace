@@ -234,12 +234,10 @@ AssignVarStatement::AssignVarStatement(Diagnostics &d,
 }
 
 AssignConfigVarStatement::AssignConfigVarStatement(Diagnostics &d,
-                                                   std::string config_var,
+                                                   Identifier *config_var,
                                                    Expression *expr,
                                                    Location &&loc)
-    : Statement(d, std::move(loc)),
-      config_var(std::move(config_var)),
-      expr(expr)
+    : Statement(d, std::move(loc)), config_var(config_var), expr(expr)
 {
 }
 

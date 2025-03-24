@@ -377,11 +377,11 @@ public:
 class AssignConfigVarStatement : public Statement {
 public:
   AssignConfigVarStatement(Diagnostics &d,
-                           std::string config_var,
+                           Identifier *config_var,
                            Expression *expr,
                            Location &&loc);
 
-  std::string config_var;
+  Identifier *config_var = nullptr;
   Expression *expr = nullptr;
 };
 
