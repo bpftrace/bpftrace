@@ -26,7 +26,7 @@ jobs:
         determinate: true
     - uses: DeterminateSystems/flakehub-cache-action@v1
     - name: clang-format
-      run: nix develop --command git clang-format --diff origin/master
+      run: nix develop --command git clang-format --diff origin/master --extensions cpp,h
 
   build_test:
     runs-on: ubuntu-latest

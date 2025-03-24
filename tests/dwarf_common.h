@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 namespace {
-#include "data/dwarf_data.h"
+#include "data/data_source_dwarf.h"
 } // namespace
 
 class test_dwarf : public ::testing::Test {
@@ -16,7 +16,7 @@ protected:
   static void SetUpTestSuite()
   {
     std::ofstream file(bin_, std::ios::trunc | std::ios::binary);
-    file.write(reinterpret_cast<const char *>(dwarf_data), dwarf_data_len);
+    file.write(reinterpret_cast<const char *>(dwarf_data), sizeof(dwarf_data));
     file.close();
     ASSERT_TRUE(file);
 

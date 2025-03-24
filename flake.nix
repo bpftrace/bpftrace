@@ -146,6 +146,7 @@
 
                 nativeBuildInputs = [
                   pkgs.bison
+                  pkgs.bpftools
                   pkgs."llvmPackages_${toString llvmVersion}".clang
                   pkgs.cmake
                   pkgs.flex

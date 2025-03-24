@@ -1,8 +1,0 @@
-#pragma once
-
-constexpr inline unsigned char dwarf_data[] = {
-${DWARF_DATA}
-};
-constexpr inline unsigned int dwarf_data_len = sizeof(dwarf_data) / sizeof(dwarf_data[0]);
-
-constexpr inline const char *dwarf_data_cxx_path = "${DWARF_DATA_CXX_PATH}";
