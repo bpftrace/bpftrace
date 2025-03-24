@@ -1025,6 +1025,7 @@ int main(int argc, char* argv[])
       out.write(obj.data.data(), obj.data.size());
     }));
   }
+  pm.add(ast::CreateExternObjectPass());
   pm.add(ast::CreateLinkPass());
 
   auto pmresult = pm.run();

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ast/pass_manager.h"
+#include "ast/passes/link.h"
 #include "usdt.h"
 
 namespace bpftrace::ast {
@@ -57,9 +58,6 @@ Pass CreateObjectPass();
 // Dumps `BpfObject` as disassembled bytecode.
 Pass CreateDumpASMPass(std::ostream &out);
 
-// Produces the final output `BpfBytecode` object from `BpfObject`.
-Pass CreateLinkPass();
-
 // AllCompilePasses returns a vector of passes representing all compile passes,
 // in the expected order.
 inline std::vector<Pass> AllCompilePasses(
@@ -72,6 +70,7 @@ inline std::vector<Pass> AllCompilePasses(
   passes.emplace_back(CreateVerifyPass());
   passes.emplace_back(CreateOptimizePass());
   passes.emplace_back(CreateObjectPass());
+  passes.emplace_back(CreateExternObjectPass());
   passes.emplace_back(CreateLinkPass());
   return passes;
 }
