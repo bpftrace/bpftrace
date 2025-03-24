@@ -1024,9 +1024,13 @@ int main(int argc, char* argv[])
 
   auto pmresult = pm.run();
   if (!pmresult || !ast.diagnostics().ok()) {
+    // Emits errors and warnings
     ast.diagnostics().emit(std::cerr);
     return 1;
   }
+
+  // Emits warnings
+  ast.diagnostics().emit(std::cout);
 
   if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
     // Note: this should use the fully-linked version in the future, but

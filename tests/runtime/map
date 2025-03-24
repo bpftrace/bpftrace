@@ -17,3 +17,7 @@ NAME map declaration percpulruhash
 PROG config = { unstable_map_decl=1 } let @a = percpulruhash(1); BEGIN { @a[1] = count(); @a[2] = count(); exit(); }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT @a[2]: 1
+
+NAME map declaration unused
+PROG config = { unstable_map_decl=1 } let @a = percpuhash(1); BEGIN { exit(); }
+EXPECT_REGEX .*WARNING: Unused map: @a.*
