@@ -4880,18 +4880,18 @@ Pass CreateLLVMInitPass()
 Pass CreateCompilePass(
     std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper)
 {
-  return Pass::create(
-      "compile",
-      [usdt_helper](ASTContext &ast,
-                    BPFtrace &bpftrace,
-                    CompileContext &ctx) mutable {
-        USDTHelper default_usdt;
-        if (!usdt_helper) {
-          usdt_helper = std::ref(default_usdt);
-        }
-        CodegenLLVM llvm(ast, bpftrace, *ctx.context, usdt_helper->get());
-        return CompiledModule(llvm.compile());
-      });
+  return Pass::create("compile",
+                      [usdt_helper](ASTContext &ast,
+                                    BPFtrace &bpftrace,
+                                    CompileContext &ctx) mutable {
+                        USDTHelper default_usdt;
+                        if (!usdt_helper) {
+                          usdt_helper = std::ref(default_usdt);
+                        }
+                        CodegenLLVM llvm(
+                            ast, bpftrace, *ctx.context, usdt_helper->get());
+                        return CompiledModule(llvm.compile());
+                      });
 }
 
 Pass CreateVerifyPass()
@@ -4991,16 +4991,6 @@ Pass CreateDumpASMPass([[maybe_unused]] std::ostream &out)
     if (auto rc = ::pclose(objdump)) {
       LOG(WARNING) << "llvm-objdump did not exit cleanly: status " << rc;
     }
-  });
-}
-
-Pass CreateLinkPass()
-{
-  return Pass::create("link", [](BpfObject &obj) {
-    // For now, this is effectively a no-op. It merely
-    // unwraps the type into a `BpfBytecode` object. In the
-    // future, this can link additonal external components.
-    return BpfBytecode{ obj.data };
   });
 }
 
