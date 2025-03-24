@@ -50,9 +50,9 @@ void ConfigAnalyser::log_type_error(SizedType &type,
                                     Type expected_type,
                                     AssignConfigVarStatement &assignment)
 {
-  assignment.addError() << "Invalid type for " << assignment.config_var
-                        << ". Type: " << type.GetTy()
-                        << ". Expected Type: " << expected_type;
+  assignment.expr->addError()
+      << "Invalid type for " << assignment.config_var->ident
+      << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
@@ -82,8 +82,9 @@ void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
   } else if (val == 1) {
     config_setter_.set(key, true);
   } else {
-    assignment.addError() << "Invalid value for " << assignment.config_var
-                          << ". Needs to be 0 or 1. Value: " << val;
+    assignment.expr->addError()
+        << "Invalid value for " << assignment.config_var->ident
+        << ". Needs to be 0 or 1. Value: " << val;
   }
 }
 
@@ -165,20 +166,21 @@ void ConfigAnalyser::visit(StackMode &mode)
 void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 {
   Visitor<ConfigAnalyser>::visit(assignment);
-  std::string &raw_ident = assignment.config_var;
+  std::string &raw_ident = assignment.config_var->ident;
 
   std::string err_msg;
   const auto maybeConfigKey = bpftrace_.config_->get_config_key(raw_ident,
                                                                 err_msg);
 
   if (!maybeConfigKey.has_value()) {
-    assignment.addError() << err_msg;
+    assignment.config_var->addError() << err_msg;
     return;
   }
 
   if (!assignment.expr->is_literal) {
-    assignment.addError() << "Assignment for " << assignment.config_var
-                          << " must be literal.";
+    assignment.expr->addError()
+        << "Assignment for " << assignment.config_var->ident
+        << " must be literal.";
     return;
   }
 
@@ -187,7 +189,8 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   std::visit([&](auto key) { set_config(assignment, key); }, configKey);
 
   if (bpftrace_.config_->is_unstable(configKey)) {
-    assignment.addWarning() << "Script is using an unstable feature: " << raw_ident;
+    assignment.config_var->addWarning()
+        << "Script is using an unstable feature: " << raw_ident;
   }
 }
 

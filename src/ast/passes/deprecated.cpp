@@ -88,7 +88,7 @@ static std::vector<DeprecatedName> DEPRECATED_CONFIGS = {
 
 void DeprecatedAnalyser::visit(AssignConfigVarStatement &assign)
 {
-  check(DEPRECATED_CONFIGS, assign.config_var, assign);
+  check(DEPRECATED_CONFIGS, assign.config_var->ident, assign);
 }
 
 Pass CreateDeprecatedPass()

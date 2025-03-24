@@ -16,12 +16,12 @@ AFTER ./testprogs/uprobe_test
 
 NAME bad config
 RUN {{BPFTRACE}} -e 'config = { bad_config=raw } BEGIN {}'
-EXPECT stdin:1:12-23: ERROR: Unrecognized config variable: bad_config
+EXPECT stdin:1:12-22: ERROR: Unrecognized config variable: bad_config
 WILL_FAIL
 
 NAME env only config
 RUN {{BPFTRACE}} -e 'config = { debug_output=1 } BEGIN {}'
-EXPECT stdin:1:12-25: ERROR: debug_output can only be set as an environment variable
+EXPECT stdin:1:12-24: ERROR: debug_output can only be set as an environment variable
 WILL_FAIL
 
 NAME maps are printed by default

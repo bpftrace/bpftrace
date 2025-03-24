@@ -163,6 +163,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::StatementList> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
+%type <ast::Identifier *> raw_ident
 
 
 %left COMMA
@@ -295,7 +296,7 @@ config_assign_stmt_list:
                 ;
 
 config_assign_stmt:
-                IDENT ASSIGN expr   { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @2); }
+                raw_ident ASSIGN primary_expr   { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
                 ;
 
 subprog:
@@ -483,7 +484,7 @@ var_decl_stmt:
         ;
 
 primary_expr:
-                IDENT              { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
+                raw_ident          { $$ = $1; }
         |       int                { $$ = $1; }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       STACK_MODE         { $$ = driver.ctx.make_node<ast::StackMode>($1, @$); }
@@ -662,6 +663,10 @@ ident:
         |       CALL          { $$ = $1; }
         |       CALL_BUILTIN  { $$ = $1; }
         |       STACK_MODE    { $$ = $1; }
+                ;
+
+raw_ident:
+                IDENT         { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;
 
 struct_field:
