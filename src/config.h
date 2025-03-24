@@ -157,6 +157,16 @@ public:
   std::optional<ConfigKey> get_config_key(const std::string &str,
                                           std::string &err);
 
+  bool is_unstable(ConfigKey key);
+  std::map<ConfigKey, std::string> reverse_config_map()
+  {
+    std::map<ConfigKey, std::string> reversed_map;
+    for (const auto &[key, value] : CONFIG_KEY_MAP) {
+      reversed_map[value] = key;
+    }
+    return reversed_map;
+  }
+
   friend class ConfigSetter;
 
 private:
