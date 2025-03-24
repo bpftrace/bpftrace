@@ -1,3 +1,5 @@
+#pragma once
+
 #include <functional>
 
 namespace bpftrace::util {
