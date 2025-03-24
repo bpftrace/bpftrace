@@ -185,6 +185,10 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   auto configKey = maybeConfigKey.value();
 
   std::visit([&](auto key) { set_config(assignment, key); }, configKey);
+
+  if (bpftrace_.config_->is_unstable(configKey)) {
+    assignment.addWarning() << "Script is using an unstable feature: " << raw_ident;
+  }
 }
 
 Pass CreateConfigPass()

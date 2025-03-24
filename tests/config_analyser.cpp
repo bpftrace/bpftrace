@@ -1,12 +1,14 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::config_analyser {
 
 using ::testing::_;
+using ::testing::HasSubstr;
 
 void test(BPFtrace &bpftrace,
           const std::string &input,
@@ -20,8 +22,7 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
-                .add(ast::AllParsePasses())
-                .add(ast::CreateSemanticPass())
+                .add(CreateParsePass())
                 .add(ast::CreateConfigPass())
                 .run();
   ASSERT_TRUE(bool(ok)) << msg.str();
@@ -36,6 +37,45 @@ void test(BPFtrace &bpftrace,
     ast.diagnostics().emit(out);
     EXPECT_EQ(out.str(), expected_error);
   }
+}
+
+ast::ASTContext test_for_warning(BPFtrace &bpftrace,
+                                 const std::string &input,
+                                 const std::string &warning,
+                                 bool invert)
+{
+  ast::ASTContext ast("stdin", input);
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateConfigPass())
+                .run();
+  EXPECT_TRUE(bool(ok));
+
+  std::stringstream out;
+  ast.diagnostics().emit(out);
+  if (invert)
+    EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
+  else
+    EXPECT_THAT(out.str(), HasSubstr(warning));
+
+  return ast;
+}
+
+ast::ASTContext test_for_warning(const std::string &input,
+                                 const std::string &warning)
+{
+  auto bpftrace = get_mock_bpftrace();
+  return test_for_warning(*bpftrace, input, warning, false);
+}
+
+ast::ASTContext test_for_no_warning(const std::string &input,
+                                    const std::string &warning)
+{
+  auto bpftrace = get_mock_bpftrace();
+  return test_for_warning(*bpftrace, input, warning, true);
 }
 
 void test(const std::string &input, bool expected_result)
@@ -122,6 +162,16 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_->get(ConfigKeyUserSymbolCacheType::default_),
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_->get(ConfigKeyInt::log_size), 150);
+}
+
+TEST(config_analyser, config_unstable)
+{
+  test_for_warning("config = { unstable_map_decl=1 } BEGIN { }",
+                   "Script is using an unstable feature: unstable_map_decl");
+  test_for_warning("config = { unstable_map_decl=0 } BEGIN { }",
+                   "Script is using an unstable feature: unstable_map_decl");
+  test_for_no_warning("config = { stack_mode=perf } BEGIN { }",
+                      "Script is using an unstable feature: unstable_map_decl");
 }
 
 } // namespace bpftrace::test::config_analyser

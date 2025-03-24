@@ -120,6 +120,15 @@ std::optional<ConfigKey> Config::get_config_key(const std::string &str,
   return std::make_optional<ConfigKey>(found->second);
 }
 
+bool Config::is_unstable(ConfigKey key)
+{
+  static const std::string_view unstable_prefix = "unstable_";
+  static const std::map<ConfigKey, std::string> reversed_map =
+      reverse_config_map();
+  const std::string &config_str = reversed_map.at(key);
+  return config_str.starts_with(unstable_prefix);
+}
+
 bool ConfigSetter::set_stack_mode(const std::string &s)
 {
   auto stack_mode = Config::get_stack_mode(s);
