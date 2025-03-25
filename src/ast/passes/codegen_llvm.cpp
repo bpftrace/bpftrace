@@ -494,7 +494,11 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
       b_(llvm_ctx, *module_, bpftrace, async_ids_),
       debug_(*module_)
 {
+#if LLVM_VERSION_MAJOR >= 21
+  module_->setTargetTriple(Triple(LLVMTargetTriple));
+#else
   module_->setTargetTriple(LLVMTargetTriple);
+#endif
   module_->setDataLayout(getTargetMachine()->createDataLayout());
 
   debug_.createCompileUnit(dwarf::DW_LANG_C,
