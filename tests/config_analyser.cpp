@@ -1,6 +1,5 @@
 #include "ast/passes/config_analyser.h"
-#include "ast/passes/parser.h"
-#include "ast/passes/semantic_analyser.h"
+#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -20,8 +19,7 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
-                .add(ast::AllParsePasses())
-                .add(ast::CreateSemanticPass())
+                .add(CreateParsePass())
                 .add(ast::CreateConfigPass())
                 .run();
   ASSERT_TRUE(bool(ok)) << msg.str();

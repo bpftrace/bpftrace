@@ -15,8 +15,8 @@
 
 using namespace bpftrace;
 
-// Since `YY_INPUT` cannot access the `driver` variable, `source` and `curr` 
-// are defined as global variables. They are marked as thread_local to 
+// Since `YY_INPUT` cannot access the `driver` variable, `source` and `curr`
+// are defined as global variables. They are marked as thread_local to
 // ensure thread safety during lexical analysis.
 static thread_local const std::string *source;
 static thread_local size_t curr;
@@ -51,6 +51,7 @@ int_type        bool|(u)?int(8|16|32|64)
 builtin_type    void|(u)?(min|max|sum|count|avg|stats)_t|probe_t|username|lhist_t|hist_t|usym_t|ksym_t|timestamp|macaddr_t|cgroup_path_t|strerror_t|kstack_t|ustack_t
 sized_type      string|inet|buffer
 subprog         fn
+macro           macro
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack|nsecs
@@ -87,6 +88,7 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, driver.loc); }
 {call}                  { return Parser::make_CALL(yytext, driver.loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, driver.loc); }
 {subprog}               { return Parser::make_SUBPROG(yytext, driver.loc); }
+{macro}                 { return Parser::make_MACRO(yytext, driver.loc); }
 {int}|{hex}|{exponent}  {
                           try
                           {

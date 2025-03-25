@@ -344,16 +344,35 @@ Subprog::Subprog(Diagnostics &d,
 {
 }
 
+Macro::Macro(Diagnostics &d,
+             std::string name,
+             ExpressionList &&args,
+             Expression *expr,
+             Location &&loc)
+    : Node(d, std::move(loc)),
+      name(std::move(name)),
+      args(std::move(args)),
+      expr(expr)
+{
+}
+
+Macro::Macro(Diagnostics &d, std::string name, Expression *expr, Location &&loc)
+    : Node(d, std::move(loc)), name(std::move(name)), expr(expr)
+{
+}
+
 Program::Program(Diagnostics &d,
                  std::string c_definitions,
                  Config *config,
                  MapDeclList &&map_decls,
+                 MacroList &&macros,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  Location &&loc)
     : Node(d, std::move(loc)),
       c_definitions(std::move(c_definitions)),
       config(config),
+      macros(std::move(macros)),
       functions(std::move(functions)),
       probes(std::move(probes)),
       map_decls(std::move(map_decls))
