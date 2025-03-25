@@ -9,12 +9,36 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
-- Remove '-kk' command line opt, surface some BPF errors by default, and make '-k' surface probe read errors
-  - [#3784](https://github.com/bpftrace/bpftrace/pull/3784)
 - Drop DWARF support (userspace and kernel)
   - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
 - Removed config option 'symbol_source' - it no longer has any effect
   - [#3925](https://github.com/bpftrace/bpftrace/pull/3925)
+#### Added
+- Use blazesym for user space address symbolization
+  - [#3884](https://github.com/bpftrace/bpftrace/pull/3884)
+- Add simple block expressions
+  - [#3780](https://github.com/bpftrace/bpftrace/pull/3780)
+- Add map declaration syntax (behind an "unstable" config flag)
+  - [#3863](https://github.com/bpftrace/bpftrace/pull/3863)
+- Add license config to specify BPF license
+  - [#3905](https://github.com/bpftrace/bpftrace/pull/3905)
+#### Changed
+- `-p` CLI flag now applies to all probes (except BEGIN/END)
+  - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
+- Introduce automatic session probes
+  - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
+#### Deprecated
+#### Removed
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+
+## [0.23.0] 2025-03-25
+
+#### Breaking Changes
+- Remove '-kk' command line opt, surface some BPF errors by default, and make '-k' surface probe read errors
+  - [#3784](https://github.com/bpftrace/bpftrace/pull/3784)
 #### Added
 - `offsetof()` now supports sub fields e.g. `offsetof(struct Foo, bar.a.b);`
   - [#3761](https://github.com/bpftrace/bpftrace/pull/3761)
@@ -25,7 +49,6 @@ and this project adheres to
 - `blazesym` will be used for address symbolication if found during build
   - [#3760](https://github.com/bpftrace/bpftrace/pull/3760)
   - [#3787](https://github.com/bpftrace/bpftrace/pull/3787)
-  - [#3884](https://github.com/bpftrace/bpftrace/pull/3884)
 - Published aarch64 appimage builds from master
   - [#3795](https://github.com/bpftrace/bpftrace/pull/3795)
 - Add ability to cast int to an enum
@@ -34,12 +57,6 @@ and this project adheres to
   - [#3811](https://github.com/bpftrace/bpftrace/pull/3811)
 - Add support for LLVM 20
   - [#3841](https://github.com/bpftrace/bpftrace/pull/3841)
-- Add simple block expressions
-  - [#3780](https://github.com/bpftrace/bpftrace/pull/3780)
-- Add map declaration syntax (behind an "unstable" config flag)
-  - [#3863](https://github.com/bpftrace/bpftrace/pull/3863)
-- Add license config to specify BPF license
-  - [#3905](https://github.com/bpftrace/bpftrace/pull/3905)
 #### Changed
 - `probe` builtin is now represented as a string type
   - [#3638](https://github.com/bpftrace/bpftrace/pull/3638)
@@ -51,12 +68,8 @@ and this project adheres to
   - [#3752](https://github.com/bpftrace/bpftrace/pull/3752)
 - Increase default values for max_bpf_progs and max_probes
   - [#3808](https://github.com/bpftrace/bpftrace/pull/3808)
-- `-p` CLI flag now applies to all probes (except BEGIN/END)
-  - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
 - Allow use of variables before they are assigned
   - [#3832](https://github.com/bpftrace/bpftrace/pull/3832)
-- Introduce automatic session probes
-  - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 14 and 15
