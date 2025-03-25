@@ -1,4 +1,7 @@
-# bpftrace
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/bpftrace_Full_Logo-White.svg"/>
+  <img alt="bpftrace" src="images/bpftrace_Full_Logo-Black.svg" width="100%"/>
+</picture>
 
 [![Build Status](https://github.com/bpftrace/bpftrace/actions/workflows/ci.yml/badge.svg)](https://github.com/bpftrace/bpftrace/actions/workflows/ci.yml)
 [![IRC#bpftrace](https://img.shields.io/badge/IRC-bpftrace-blue.svg)](https://webchat.oftc.net/?channels=bpftrace)
