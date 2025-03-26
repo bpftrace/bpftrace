@@ -63,6 +63,6 @@ private:
 };
 
 // The attachpoints are expanded in their own separate pass.
-Pass CreateParseAttachpointsPass();
+Pass CreateParseAttachpointsPass(bool listing = false);
 
 } // namespace bpftrace::ast
