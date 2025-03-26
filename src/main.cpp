@@ -867,9 +867,9 @@ int main(int argc, char* argv[])
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(bpftrace)
-                  .add(ast::CreateParseAttachpointsPass())
+                  .add(ast::CreateParseAttachpointsPass(args.listing))
                   .add(CreateParseBTFPass())
-                  .add(ast::CreateSemanticPass(true))
+                  .add(ast::CreateSemanticPass(args.listing))
                   .run();
     if (!ok || !ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
@@ -939,6 +939,21 @@ int main(int argc, char* argv[])
   pm.put(bpftrace);
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
+  if (args.listing) {
+    pm.add(CreateParsePass())
+        .add(ast::CreateParseAttachpointsPass(args.listing))
+        .add(CreateParseBTFPass())
+        .add(ast::CreateSemanticPass(args.listing));
+
+    auto ok = pm.run();
+    if (!ok || !ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+    bpftrace.probe_matcher_->list_probes(ast.root);
+    return 0;
+  }
+
   // Wrap all added passes in passes that dump the intermediate state. These
   // could dump intermediate objects from the context as well, but preserve
   // existing behavior for now.
@@ -952,16 +967,6 @@ int main(int argc, char* argv[])
   // Start with all the basic parsing steps.
   for (auto& pass : ast::AllParsePasses(std::move(flags))) {
     addPass(std::move(pass));
-  }
-
-  if (args.listing) {
-    auto ok = pm.run();
-    if (!ok || !ast.diagnostics().ok()) {
-      ast.diagnostics().emit(std::cerr);
-      return 1;
-    }
-    bpftrace.probe_matcher_->list_probes(ast.root);
-    return 0;
   }
 
   switch (args.build_mode) {

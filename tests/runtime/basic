@@ -140,6 +140,11 @@ RUN {{BPFTRACE}} -l "rawtracepoint:*"
 EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
+NAME it lists iter with regex filter
+RUN {{BPFTRACE}} -l "iter:*"
+EXPECT_REGEX iter:.*
+TIMEOUT 1
+
 NAME it only lists probes in the program
 RUN {{BPFTRACE}} -l -e 'fentry:vmlinux:vfs_read { exit(); }'
 EXPECT fentry:vmlinux:vfs_read

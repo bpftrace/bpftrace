@@ -780,10 +780,11 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
   return OK;
 }
 
-Pass CreateParseAttachpointsPass()
+// Note: listing changes the parsing semantics for attach points
+Pass CreateParseAttachpointsPass(bool listing)
 {
-  return Pass::create("attachpoints", [](ASTContext &ast, BPFtrace &b) {
-    AttachPointParser ap_parser(ast, b, false);
+  return Pass::create("attachpoints", [listing](ASTContext &ast, BPFtrace &b) {
+    AttachPointParser ap_parser(ast, b, listing);
     ap_parser.parse();
   });
 }
