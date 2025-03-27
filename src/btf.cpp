@@ -499,6 +499,17 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
   return args;
 }
 
+std::optional<Struct> BTF::resolve_raw_tracepoint_args(const std::string &func,
+                                                       std::string &err)
+{
+  for (const auto &prefix : RT_BTF_PREFIXES) {
+    if (auto args = resolve_args(prefix + func, false, true, true, err)) {
+      return args;
+    }
+  }
+  return std::nullopt;
+}
+
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 {
   std::string funcs;
@@ -529,7 +540,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
     if (btf_vlen(t) > arch::max_arg() + 1)
       continue;
 
-    funcs += btf_obj.name + ":" + std::string(func_name) + "\n";
+    funcs += btf_obj.name + ":" + func_name + "\n";
   }
 
   return funcs;
@@ -543,9 +554,67 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
   return funcs;
 }
 
+std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
+{
+  std::set<std::string> func_set;
+  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
+
+  for (id = start_id(btf_obj.btf); id <= max; id++) {
+    const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
+
+    if (!t)
+      continue;
+
+    if (!btf_is_func(t))
+      continue;
+
+    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
+    std::string func_name = str;
+
+    t = btf__type_by_id(btf_obj.btf, t->type);
+    if (!t || !btf_is_func_proto(t)) {
+      /* bad.. */
+      LOG(ERROR) << func_name << " function does not have FUNC_PROTO record";
+      break;
+    }
+
+    if (btf_vlen(t) > arch::max_arg() + 1)
+      continue;
+
+    bool found = false;
+    for (const auto &prefix : RT_BTF_PREFIXES) {
+      if (func_name.starts_with(prefix)) {
+        found = true;
+        func_name.erase(0, prefix.length());
+        break;
+      }
+    }
+
+    if (!found)
+      continue;
+
+    func_set.insert(btf_obj.name + ":" + func_name + "\n");
+  }
+
+  std::string funcs;
+  for (const auto &func : func_set) {
+    funcs += func;
+  }
+  return funcs;
+}
+
+std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints() const
+{
+  auto funcs = std::make_unique<std::stringstream>();
+  for (const auto &btf_obj : btf_objects)
+    *funcs << get_all_raw_tracepoints_from_btf(btf_obj);
+  return funcs;
+}
+
 std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     const BTFObj &btf_obj,
-    const std::set<std::string> &funcs) const
+    const std::set<std::string> &funcs,
+    bool is_raw_tracepoint) const
 {
   __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
   std::string type = std::string("");
@@ -572,7 +641,20 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
       continue;
 
     const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
-    std::string func_name = btf_obj.name + ":" + str;
+    std::string func_name;
+
+    if (is_raw_tracepoint) {
+      std::string modified_func = str;
+
+      for (const auto &prefix : RT_BTF_PREFIXES) {
+        if (modified_func.starts_with(prefix)) {
+          modified_func.erase(0, prefix.length());
+        }
+      }
+      func_name = btf_obj.name + ":" + modified_func;
+    } else {
+      func_name = btf_obj.name + ":" + str;
+    }
 
     if (!funcs.contains(func_name))
       continue;
@@ -626,7 +708,8 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
 }
 
 std::map<std::string, std::vector<std::string>> BTF::get_params(
-    const std::set<std::string> &funcs) const
+    const std::set<std::string> &funcs,
+    bool is_raw_tracepoint) const
 {
   std::map<std::string, std::vector<std::string>> params;
   auto all_resolved = [&params](const std::string &f) {
@@ -637,7 +720,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     if (std::ranges::all_of(funcs, all_resolved))
       break;
 
-    auto mod_params = get_params_from_btf(btf_obj, funcs);
+    auto mod_params = get_params_from_btf(btf_obj, funcs, is_raw_tracepoint);
     params.insert(mod_params.begin(), mod_params.end());
   }
 

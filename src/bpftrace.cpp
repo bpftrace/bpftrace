@@ -1914,6 +1914,14 @@ const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const
   return traceable_funcs_;
 }
 
+const util::FuncsModulesMap &BPFtrace::get_raw_tracepoints() const
+{
+  if (raw_tracepoints_.empty())
+    raw_tracepoints_ = util::parse_rawtracepoints();
+
+  return raw_tracepoints_;
+}
+
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
   const auto &funcs = get_traceable_funcs();
@@ -1926,6 +1934,14 @@ std::unordered_set<std::string> BPFtrace::get_func_modules(
   const auto &funcs = get_traceable_funcs();
   auto mod = funcs.find(func_name);
   return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
+}
+
+std::unordered_set<std::string> BPFtrace::get_raw_tracepoint_modules(
+    const std::string &name) const
+{
+  const auto &rts = get_raw_tracepoints();
+  auto mod = rts.find(name);
+  return mod != rts.end() ? mod->second : std::unordered_set<std::string>();
 }
 
 const struct stat &BPFtrace::get_pidns_self_stat() const
@@ -2015,7 +2031,8 @@ bool BPFtrace::has_btf_data() const
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to
 // identify modules whose BTF we need to parse.
-// Currently, this is useful for fentry/fexit, k(ret)probes, and tracepoints.
+// Currently, this is useful for fentry/fexit, k(ret)probes, tracepoints,
+// and raw tracepoints
 std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
 {
   std::set<std::string> modules;
@@ -2023,6 +2040,7 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
     for (const auto &ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
+          probe_type == ProbeType::rawtracepoint ||
           ((probe_type == ProbeType::kprobe ||
             probe_type == ProbeType::kretprobe) &&
            !ap->target.empty())) {
@@ -2030,7 +2048,9 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
           for (const auto &match : probe_matcher_->get_matches_for_ap(*ap)) {
             std::string func = match;
             util::erase_prefix(func);
-            auto match_modules = get_func_modules(func);
+            auto match_modules = probe_type == ProbeType::rawtracepoint
+                                     ? get_raw_tracepoint_modules(func)
+                                     : get_func_modules(func);
             modules.insert(match_modules.begin(), match_modules.end());
           }
         } else

@@ -170,6 +170,8 @@ public:
   virtual bool is_traceable_func(const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
+  virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
+      const std::string &name) const;
   virtual const struct stat &get_pidns_self_stat() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
@@ -199,6 +201,7 @@ public:
   // For each helper, list of all generated call sites.
   std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;
   const util::FuncsModulesMap &get_traceable_funcs() const;
+  const util::FuncsModulesMap &get_raw_tracepoints() const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::optional<int> sigusr1_prog_fd_;
@@ -294,7 +297,7 @@ private:
   // Needs to be mutable to allow lazy loading of the mapping from const lookup
   // functions.
   mutable util::FuncsModulesMap traceable_funcs_;
-
+  mutable util::FuncsModulesMap raw_tracepoints_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 

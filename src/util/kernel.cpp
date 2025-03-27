@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include "btf.h"
 #include "debugfs/debugfs.h"
 #include "log.h"
 #include "tracefs/tracefs.h"
@@ -266,6 +267,41 @@ FuncsModulesMap parse_traceable_funcs()
     auto addr_func_mod = split_addrrange_symbol_module(line);
     if (result.find(std::get<1>(addr_func_mod)) != result.end()) {
       result.erase(std::get<1>(addr_func_mod));
+    }
+  }
+
+  return result;
+}
+
+FuncsModulesMap parse_rawtracepoints()
+{
+  // Using "available_filter_functions" here because they have the correct
+  // module for the prefixed raw tracepoints e.g. in "available_events"
+  // there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
+  // and shows up as "__probestub_check_mmio_spte [kvm]" in
+  // "available_filter_functions"
+  const std::string ff_path = tracefs::available_filter_functions();
+
+  std::ifstream available_funs(ff_path);
+  if (available_funs.fail()) {
+    LOG(V1) << "Error while reading traceable functions from " << ff_path
+            << ": " << strerror(errno);
+    return {};
+  }
+
+  FuncsModulesMap result;
+  std::string line;
+  while (std::getline(available_funs, line)) {
+    auto func_mod = split_symbol_module(line);
+    if (func_mod.second.empty())
+      func_mod.second = "vmlinux";
+
+    for (const auto &prefix : RT_BTF_PREFIXES) {
+      if (func_mod.first.starts_with(prefix)) {
+        func_mod.first.erase(0, prefix.length());
+        result[func_mod.first].insert(func_mod.second);
+        break;
+      }
     }
   }
 

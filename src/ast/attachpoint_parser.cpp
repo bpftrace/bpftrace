@@ -765,16 +765,24 @@ AttachPointParser::State AttachPointParser::iter_parser()
 
 AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
 {
-  if (parts_.size() != 2) {
+  if (parts_.size() != 2 && parts_.size() != 3) {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    return argument_count_error(1);
+    return argument_count_error(2, 1);
   }
 
-  ap_->func = parts_[1];
+  if (parts_.size() == 3) {
+    ap_->target = parts_[1];
+    ap_->func = parts_[2];
+  } else {
+    // This is to maintain backwards compatibility with older scripts
+    // that couldn't include a target for a raw tracepoint.
+    ap_->target = "*";
+    ap_->func = parts_[1];
+  }
 
-  if (util::has_wildcard(ap_->func))
+  if (util::has_wildcard(ap_->func) || util::has_wildcard(ap_->target))
     ap_->expansion = ExpansionType::FULL;
 
   return OK;

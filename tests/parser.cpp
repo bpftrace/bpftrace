@@ -1402,6 +1402,28 @@ tracepoint { 1 }
 )");
 }
 
+TEST(Parser, rawtracepoint_probe)
+{
+  test("rawtracepoint:sched:sched_switch { 1 }",
+       "Program\n"
+       " rawtracepoint:sched:sched_switch\n"
+       "  int: 1\n");
+  test("rawtracepoint:* { 1 }",
+       "Program\n"
+       " rawtracepoint:*:*\n"
+       "  int: 1\n");
+  test("rawtracepoint:f { 1 }",
+       "Program\n"
+       " rawtracepoint:*:f\n"
+       "  int: 1\n");
+
+  test_parse_failure("rawtracepoint { 1 }", R"(
+stdin:1:1-14: ERROR: rawtracepoint probe type requires 2 or 1 arguments, found 0
+rawtracepoint { 1 }
+~~~~~~~~~~~~~
+)");
+}
+
 TEST(Parser, profile_probe)
 {
   test("profile:ms:997 { 1 }",

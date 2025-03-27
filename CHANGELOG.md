@@ -14,6 +14,8 @@ and this project adheres to
   - [#3950](https://github.com/bpftrace/bpftrace/pull/3950)
 - Removed config option 'symbol_source' - it no longer has any effect
   - [#3925](https://github.com/bpftrace/bpftrace/pull/3925)
+- Rawtracepoints now require kernel BTF
+  - [#3944](https://github.com/bpftrace/bpftrace/pull/3944)
 #### Added
 - Use blazesym for user space address symbolization
   - [#3884](https://github.com/bpftrace/bpftrace/pull/3884)
@@ -25,6 +27,8 @@ and this project adheres to
   - [#3905](https://github.com/bpftrace/bpftrace/pull/3905)
 - Rawtracepoints can now use `args` builtin and list params
   - [#3918](https://github.com/bpftrace/bpftrace/pull/3918)
+- Add ability to specify rawtracepoint modules
+  - [#3944](https://github.com/bpftrace/bpftrace/pull/3944)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
