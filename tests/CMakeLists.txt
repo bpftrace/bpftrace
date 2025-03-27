@@ -31,6 +31,7 @@ add_executable(bpftrace_test
   async_action.cpp
   bpfbytecode.cpp
   bpftrace.cpp
+  btf.cpp
   child.cpp
   clang_parser.cpp
   named_param.cpp
@@ -79,6 +80,7 @@ target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_link_libraries(bpftrace_test libbpftrace)
+target_link_libraries(bpftrace_test btf)
 
 target_compile_definitions(bpftrace_test PRIVATE ${BPFTRACE_FLAGS})
 

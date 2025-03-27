@@ -46,7 +46,7 @@ add_library(ast STATIC
 add_dependencies(ast parser)
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(ast PRIVATE debugfs tracefs util stdlib ${LIBBPF_LIBRARIES})
-target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
+target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser btf)
 
 if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
   MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
