@@ -425,13 +425,25 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_missing
 PROG rawtracepoint:nonsense { print("hit"); exit(); }
-EXPECT ERROR: No BTF found for nonsense
+EXPECT No probes to attach
+REQUIRES_FEATURE btf
 WILL_FAIL
 
 NAME rawtracepoint_wildcard
 PROG rawtracepoint:sys_* { printf("SUCCESS %d\n", gid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep
+
+NAME rawtracepoint_module_wildcard
+PROG rawtracepoint:vmlinu*:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+AFTER ./testprogs/syscall nanosleep 1e8
+
+NAME rawtracepoint_module_missing
+PROG rawtracepoint:nonsense:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT ERROR: No BTF found for nonsense:sys_exit
+REQUIRES_FEATURE btf
+WILL_FAIL
 
 # Test that we get at least two characters out
 NAME rawtracepoint args

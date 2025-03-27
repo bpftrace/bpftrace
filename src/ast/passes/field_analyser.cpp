@@ -249,13 +249,8 @@ void FieldAnalyser::resolve_args(Probe &probe)
               func, probe_type == ProbeType::fexit, true, false, err);
 
         } else if (probe_type == ProbeType::rawtracepoint) {
-          for (const auto &prefix : RT_BTF_PREFIXES) {
-            maybe_ap_args = bpftrace_.btf_->resolve_args(
-                prefix + ap->func, false, false, true, err);
-            if (maybe_ap_args.has_value()) {
-              break;
-            }
-          }
+          maybe_ap_args = bpftrace_.btf_->resolve_raw_tracepoint_args(func,
+                                                                      err);
         } else { // uprobe
           Dwarf *dwarf = bpftrace_.get_dwarf(target);
           if (dwarf)
@@ -286,13 +281,8 @@ void FieldAnalyser::resolve_args(Probe &probe)
         maybe_probe_args = bpftrace_.btf_->resolve_args(
             ap->func, probe_type == ProbeType::fexit, true, false, err);
       } else if (probe_type == ProbeType::rawtracepoint) {
-        for (const auto &prefix : RT_BTF_PREFIXES) {
-          maybe_probe_args = bpftrace_.btf_->resolve_args(
-              prefix + ap->func, false, false, true, err);
-          if (maybe_probe_args.has_value()) {
-            break;
-          }
-        }
+        maybe_probe_args = bpftrace_.btf_->resolve_raw_tracepoint_args(ap->func,
+                                                                       err);
       } else { // uprobe
         Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
         if (dwarf) {

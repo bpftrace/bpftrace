@@ -18,6 +18,7 @@ using FuncsModulesMap =
     std::unordered_map<std::string, std::unordered_set<std::string>>;
 
 FuncsModulesMap parse_traceable_funcs();
+FuncsModulesMap parse_rawtracepoints();
 
 struct KConfig {
   KConfig();

@@ -1477,7 +1477,7 @@ profile:hz:99 { @[tid] = count(); }
 === rawtracepoint
 
 .variants
-* `rawtracepoint:event`
+* `rawtracepoint[:module]:event`
 
 .short name
 * `rt`
@@ -1488,7 +1488,7 @@ The reason why you might want to use raw tracepoints over normal tracepoints is 
 `rawtracepoint` arguments can be accessed via the `argN` builtins AND via the `args` builtin.
 
 ----
-rawtracepoint:kfree_skb {
+rawtracepoint:vmlinux:kfree_skb {
   printf("%llx %llx\n", arg0, args.skb);
 }
 ----
