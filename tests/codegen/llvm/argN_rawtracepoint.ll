@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @rawtracepoint_sched_switch_1(ptr %0) section "s_rawtracepoint_sched_switch_1" !dbg !56 {
+define i64 @rawtracepoint_vmlinux_sched_switch_1(ptr %0) section "s_rawtracepoint_vmlinux_sched_switch_1" !dbg !56 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -104,7 +104,7 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
 !54 = !{!0, !7, !26, !40}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "rawtracepoint_sched_switch_1", linkageName: "rawtracepoint_sched_switch_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
+!56 = distinct !DISubprogram(name: "rawtracepoint_vmlinux_sched_switch_1", linkageName: "rawtracepoint_vmlinux_sched_switch_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
 !57 = !DISubroutineType(types: !58)
 !58 = !{!24, !59}
 !59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

@@ -150,7 +150,7 @@ void check_rawtracepoint(Probe &p,
   EXPECT_EQ(ProbeType::rawtracepoint, p.type);
   EXPECT_EQ(func, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ("rawtracepoint:" + func, p.name);
+  EXPECT_EQ("rawtracepoint:vmlinux:" + func, p.name);
 }
 
 void check_profile(Probe &p,
@@ -1260,34 +1260,41 @@ TEST_F(bpftrace_bad_btf, parse_invalid_btf)
 
 TEST(bpftrace, add_probes_rawtracepoint)
 {
-  StrictMock<MockBPFtrace> bpftrace;
-  parse_probe("rawtracepoint:sched_switch {}", bpftrace);
+  auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->btf_ = nullptr;
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_file(tracefs::available_events()))
+      .Times(1);
 
-  ASSERT_EQ(1U, bpftrace.get_probes().size());
-  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+  parse_probe("rawtracepoint:event_rt {}", *bpftrace);
 
-  std::string probe_orig_name = "rawtracepoint:sched_switch";
-  check_rawtracepoint(bpftrace.get_probes().at(0),
-                      "sched_switch",
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "rawtracepoint:*:event_rt";
+  check_rawtracepoint(bpftrace->get_probes().at(0),
+                      "event_rt",
                       probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_rawtracepoint_wildcard)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->btf_ = nullptr;
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_file(tracefs::available_events()))
       .Times(1);
 
-  parse_probe(("rawtracepoint:sched_* {}"), *bpftrace);
+  parse_probe(("rawtracepoint:event_* {}"), *bpftrace);
 
-  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 }
 
 TEST(bpftrace, add_probes_rawtracepoint_wildcard_no_matches)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->btf_ = nullptr;
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_file(tracefs::available_events()))
       .Times(1);
