@@ -77,7 +77,7 @@ TempFile::~TempFile()
 
 Result<OK> TempFile::write_all(std::span<const char> bytes)
 {
-  auto b = std::as_bytes(bytes);
+  const auto b = std::as_bytes(bytes);
   int done = 0;
   int left = bytes.size();
   while (left > 0) {
