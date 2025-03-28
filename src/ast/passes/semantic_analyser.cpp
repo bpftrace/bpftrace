@@ -3609,11 +3609,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (ap.mode[i - 1] == ap.mode[i])
         ap.addError() << "watchpoint modes may not be duplicated";
     }
-    const auto invalid_modes = arch::invalid_watchpoint_modes();
-    if (std::ranges::any_of(invalid_modes,
-
-                            [&](const auto &mode) { return mode == ap.mode; }))
+    if (!arch::is_watchpoint_mode_valid(ap.mode)) {
       ap.addError() << "invalid watchpoint mode: " << ap.mode;
+    }
   } else if (ap.provider == "hardware") {
     if (ap.target.empty())
       ap.addError() << "hardware probe must have a hardware event name";

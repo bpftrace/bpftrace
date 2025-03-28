@@ -1,5 +1,4 @@
 #include "arch.h"
-#include "utils.h"
 
 #include <array>
 #include <set>
@@ -90,10 +89,9 @@ std::string name()
   return std::string("s390x");
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+bool is_watchpoint_mode_valid(const std::string &mode)
 {
-  throw FatalUserException(
-      "Watchpoints are not supported on this architecture");
+  return false; // Not supported.
 }
 
 int get_kernel_ptr_width()

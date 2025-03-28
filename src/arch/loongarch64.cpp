@@ -1,5 +1,4 @@
 #include "arch.h"
-#include "utils.h"
 
 #include <algorithm>
 #include <array>
@@ -147,10 +146,9 @@ std::string name()
   return std::string("loongarch64");
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+bool is_watchpoint_mode_valid(const std::string &mode)
 {
-  throw FatalUserException(
-      "Watchpoints are not supported on this architecture");
+  return false; // Not suppored.
 }
 
 int get_kernel_ptr_width()

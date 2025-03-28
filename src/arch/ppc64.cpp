@@ -2,6 +2,7 @@
 
 #include <array>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 #define ARG_REGISTERS 8
@@ -124,15 +125,15 @@ std::string name()
 #endif // __BYTE_ORDER__
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+bool is_watchpoint_mode_valid(const std::string &mode)
 {
   // See PowerISA Book III v3.1B, Section 5.4.4 and 10.4
-  return std::vector<std::string>{
-    "x",
-    "rx",
-    "wx",
-    "rwx",
+  static std::unordered_set<std::string> valid_modes = {
+    "r",
+    "w",
+    "rw",
   };
+  return valid_modes.contains(mode);
 }
 
 int get_kernel_ptr_width()

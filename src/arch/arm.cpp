@@ -4,6 +4,7 @@
 #include <array>
 #include <cstring>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <sys/utsname.h>
 
@@ -197,14 +198,16 @@ std::string name()
   return std::string(is_arm64() ? "arm64" : "arm");
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+bool is_watchpoint_mode_valid(const std::string& mode)
 {
-  // See arch/arm/kernel/hw_breakpoint.c:arch_build_bp_info in kernel source
-  return std::vector<std::string>{
-    "rx",
-    "wx",
-    "rwx",
+  // See arch/arm/kernel/hw_breakpoint.c:arch_build_bp_info in kernel source.
+  static std::unordered_set<std::string> valid_modes = {
+    "r",
+    "w",
+    "x",
+    "rw",
   };
+  return valid_modes.contains(mode);
 }
 
 int get_kernel_ptr_width()
