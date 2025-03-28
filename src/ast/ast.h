@@ -608,11 +608,26 @@ private:
 };
 using SubprogList = std::vector<Subprog *>;
 
+class Import : public Node {
+public:
+  Import(Diagnostics &d, std::string name, Location &&loc);
+
+  const std::string &name() const
+  {
+    return name_;
+  }
+
+private:
+  std::string name_;
+};
+using ImportList = std::vector<Import *>;
+
 class Program : public Node {
 public:
   Program(Diagnostics &d,
           std::string c_definitions,
           Config *config,
+          ImportList &&imports,
           MapDeclList &&map_decls,
           SubprogList &&functions,
           ProbeList &&probes,
@@ -620,6 +635,7 @@ public:
 
   std::string c_definitions;
   Config *config = nullptr;
+  ImportList imports;
   SubprogList functions;
   ProbeList probes;
   MapDeclList map_decls;
