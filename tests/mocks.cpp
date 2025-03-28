@@ -39,7 +39,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                                   "notsched:bar\n"
                                   "file:filename\n"
                                   "tcp:some_tcp_tp\n"
-                                  "btf:tag\n";
+                                  "btf:tag\n"
+                                  "vmlinux:event_rt\n";
         return std::unique_ptr<std::istream>(
             new std::istringstream(tracepoints));
       });

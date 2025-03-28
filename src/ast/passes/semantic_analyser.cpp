@@ -3535,8 +3535,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target.empty() || ap.func.empty())
       ap.addError() << "tracepoint probe must have a target";
   } else if (ap.provider == "rawtracepoint") {
-    if (!ap.target.empty())
-      ap.addError() << "rawtracepoint should not have a target";
     if (ap.func.empty())
       ap.addError() << "rawtracepoint should be attached to a function";
   } else if (ap.provider == "profile") {

@@ -34,9 +34,10 @@ namespace bpftrace {
 // "__probestub_" seems to be the most accurate in terms of getting the params
 // but it wasn't added until May 2023 so older kernels might not have it,
 // which is why we also check "__traceiter_" (as needed).
-// "btf_trace_" prefix, which we use to validate if we can attach to this
-// tracepoint is a typedef that eventually resolves to a FUNC_PROTO
-// but the params for this do not have names, which is what we need.
+// "btf_trace_" prefix, which is what the kernel uses for raw tracepoints, we
+// use in bpfprogram.cpp to validate if we can attach to this raw tracepoint.
+// The BTF for "btf_trace_" is a typedef that eventually resolves to a
+// FUNC_PROTO but the params for this do not have names, which is what we need.
 // "__probestub_" was added here:
 // https://lore.kernel.org/all/168507471874.913472.17214624519622959593.stgit@mhiramat.roam.corp.google.com/
 // "__traceiter_" was added here:
@@ -89,14 +90,18 @@ public:
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_funcs() const;
   std::unordered_set<std::string> get_all_iters() const;
+  std::unique_ptr<std::istream> get_all_raw_tracepoints() const;
   std::map<std::string, std::vector<std::string>> get_params(
-      const std::set<std::string>& funcs) const;
+      const std::set<std::string>& funcs,
+      bool is_raw_tracepoint = false) const;
 
   std::optional<Struct> resolve_args(const std::string& func,
                                      bool ret,
                                      bool check_traceable,
                                      bool skip_first_arg,
                                      std::string& err);
+  std::optional<Struct> resolve_raw_tracepoint_args(const std::string& func,
+                                                    std::string& err);
   void resolve_fields(SizedType& type);
 
   int get_btf_id(std::string_view func,
@@ -118,9 +123,11 @@ private:
   std::string dump_defs_from_btf(const struct btf* btf,
                                  std::unordered_set<std::string>& types) const;
   std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
+  std::string get_all_raw_tracepoints_from_btf(const BTFObj& btf_obj) const;
   std::map<std::string, std::vector<std::string>> get_params_from_btf(
       const BTFObj& btf_obj,
-      const std::set<std::string>& funcs) const;
+      const std::set<std::string>& funcs,
+      bool is_raw_tracepoint) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
   std::unordered_set<std::string> get_all_iters_from_btf(
       const struct btf* btf) const;

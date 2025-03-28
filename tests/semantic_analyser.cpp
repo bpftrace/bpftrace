@@ -2231,6 +2231,7 @@ TEST(semantic_analyser, rawtracepoint)
 {
   test("rawtracepoint:event { 1 }");
   test("rawtracepoint:event { arg0 }");
+  test("rawtracepoint:mod:event { arg0 }");
 }
 
 #if defined(__x86_64__) || defined(__aarch64__)

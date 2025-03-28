@@ -131,8 +131,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::rawtracepoint: {
-      symbol_stream = get_symbols_from_file(tracefs::available_events());
-      symbol_stream = adjust_rawtracepoint(*symbol_stream);
+      if (bpftrace_->has_btf_data())
+        symbol_stream = bpftrace_->btf_->get_all_raw_tracepoints();
+      else {
+        symbol_stream = get_symbols_from_file(tracefs::available_events());
+      }
       break;
     }
     case ProbeType::usdt: {
@@ -426,32 +429,12 @@ FuncParamLists ProbeMatcher::get_iters_params(
 FuncParamLists ProbeMatcher::get_rawtracepoint_params(
     const std::set<std::string>& raw_tps)
 {
-  std::vector<std::string> prefixes;
-  for (const auto& prefix : RT_BTF_PREFIXES) {
-    prefixes.emplace_back("vmlinux:" + prefix);
-  }
-
-  std::set<std::string> prefixed_tps;
-  for (const auto& rtp : raw_tps) {
-    for (const auto& prefix : prefixes) {
-      prefixed_tps.insert(prefix + rtp);
-    }
-  }
-  FuncParamLists prefixed_params = bpftrace_->btf_->get_params(prefixed_tps);
-  FuncParamLists params;
-  for (auto& [key, val] : prefixed_params) {
-    for (const auto& prefix : prefixes) {
-      if (key.find(prefix) != std::string::npos) {
-        std::string rtp = key;
-        rtp.erase(0, prefix.length());
-        params[rtp] = std::move(val);
-        // delete `int retval`
-        params[rtp].pop_back();
-        // delete `void *`
-        params[rtp].erase(params[rtp].begin());
-        break;
-      }
-    }
+  FuncParamLists params = bpftrace_->btf_->get_params(raw_tps, true);
+  for (auto rt : raw_tps) {
+    // delete `int retval`
+    params[rt].pop_back();
+    // delete `void *`
+    params[rt].erase(params[rt].begin());
   }
   return params;
 }
@@ -517,8 +500,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
         search_input = attach_point.func;
       break;
     }
-    case ProbeType::iter:
     case ProbeType::rawtracepoint: {
+      search_input = attach_point.target + ":" + attach_point.func;
+      break;
+    }
+    case ProbeType::iter: {
       search_input = attach_point.func;
       break;
     }
@@ -602,21 +588,6 @@ void ProbeMatcher::list_structs(const std::string& search)
 
   for (const auto& match : get_matches_in_set(search_input, structs))
     std::cout << match << std::endl;
-}
-
-std::unique_ptr<std::istream> ProbeMatcher::adjust_rawtracepoint(
-    std::istream& symbol_list) const
-{
-  auto new_list = std::make_unique<std::stringstream>();
-  std::string line;
-  while (std::getline(symbol_list, line, '\n')) {
-    if ((line.find("syscalls:sys_enter_") != std::string::npos) ||
-        (line.find("syscalls:sys_exit_") != std::string::npos))
-      continue;
-    util::erase_prefix(line);
-    *new_list << line << "\n";
-  }
-  return new_list;
 }
 
 } // namespace bpftrace

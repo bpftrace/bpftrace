@@ -483,9 +483,10 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
     case ProbeType::fentry:
     case ProbeType::fexit:
     case ProbeType::tracepoint:
-      // Tracepoint, uprobe, and fentry/fexit probes specify both a target
-      // (category for tracepoints, binary for uprobes, and kernel module
-      // for fentry/fexit and a function name.
+    case ProbeType::rawtracepoint:
+      // Tracepoint, raw tracepoint, uprobe, and fentry/fexit probes specify
+      // both a target (category for tracepoints, binary for uprobes, and
+      // kernel module for fentry/fexit and a function name.
       ap.func = match;
       ap.target = util::erase_prefix(ap.func);
       break;
@@ -502,9 +503,6 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
       // function
       ap.func = match;
       util::erase_prefix(ap.func);
-      break;
-    case ProbeType::rawtracepoint:
-      ap.func = match;
       break;
     case ProbeType::software:
     case ProbeType::hardware:
