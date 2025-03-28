@@ -4,14 +4,13 @@
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "struct.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::clang_parser {
-
-#include "btf_common.h"
 
 static ast::CDefinitions parse(
     const std::string &input,

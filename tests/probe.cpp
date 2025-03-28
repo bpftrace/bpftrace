@@ -8,13 +8,12 @@
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "btf.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::probe {
-
-#include "btf_common.h"
 
 using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;

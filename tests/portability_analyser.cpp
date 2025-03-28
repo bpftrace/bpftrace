@@ -3,13 +3,12 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/semantic_analyser.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::portability_analyser {
-
-#include "btf_common.h"
 
 using ::testing::_;
 
