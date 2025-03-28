@@ -1,7 +1,7 @@
-#include "arch.h"
-
 #include <algorithm>
 #include <array>
+
+#include "arch.h"
 
 // SP + 8 points to the first argument that is passed on the stack
 enum { ARG0_STACK = 8 };
@@ -86,15 +86,15 @@ std::string name()
   return "x86_64";
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+const std::unordered_set<std::string> &watchpoint_modes()
 {
-  // See intel developer manual, Volume 3, section 17.2.4
-  return std::vector<std::string>{
-    "r",
-    "rx",
-    "wx",
-    "rwx",
+  // See intel developer manual, Volume 3, section 17.2.4.
+  static std::unordered_set<std::string> valid_modes = {
+    "rw",
+    "w",
+    "x",
   };
+  return valid_modes;
 }
 
 int get_kernel_ptr_width()
