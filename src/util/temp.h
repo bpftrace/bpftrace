@@ -54,7 +54,7 @@ public:
     return path_;
   }
 
-  Result<OK> write_all(std::span<char> bytes);
+  Result<OK> write_all(std::span<const char> bytes);
 
 private:
   TempFile(std::filesystem::path &&path, int fd)

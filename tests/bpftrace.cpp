@@ -9,6 +9,7 @@
 #include "ast/passes/probe_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "tracefs/tracefs.h"
@@ -17,8 +18,6 @@
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::bpftrace {
-
-#include "btf_common.h"
 
 using ::testing::ContainerEq;
 using ::testing::Contains;

@@ -9,14 +9,13 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::semantic_analyser {
-
-#include "btf_common.h"
 
 using ::testing::_;
 using ::testing::HasSubstr;
