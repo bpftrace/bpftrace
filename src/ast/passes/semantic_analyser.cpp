@@ -21,6 +21,7 @@
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
+#include "util/format.h"
 #include "util/paths.h"
 #include "util/system.h"
 #include "util/wildcard.h"
@@ -3476,11 +3477,20 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (ap.mode[i - 1] == ap.mode[i])
         ap.addError() << "watchpoint modes may not be duplicated";
     }
-    const auto invalid_modes = arch::invalid_watchpoint_modes();
-    if (std::ranges::any_of(invalid_modes,
-
-                            [&](const auto &mode) { return mode == ap.mode; }))
-      ap.addError() << "invalid watchpoint mode: " << ap.mode;
+    const auto &modes = arch::watchpoint_modes();
+    if (!modes.contains(ap.mode)) {
+      if (modes.empty()) {
+        // There are no valid modes.
+        ap.addError() << "watchpoints not supported";
+      } else {
+        // Build a suitable error with hint.
+        auto &err = ap.addError();
+        err << "invalid watchpoint mode: " << ap.mode;
+        err.addHint() << "supported modes: "
+                      << util::str_join(std::vector(modes.begin(), modes.end()),
+                                        ",");
+      }
+    }
   } else if (ap.provider == "hardware") {
     if (ap.target.empty())
       ap.addError() << "hardware probe must have a hardware event name";

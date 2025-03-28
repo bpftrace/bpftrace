@@ -1,8 +1,8 @@
-#include "arch.h"
-
 #include <array>
 #include <set>
 #include <vector>
+
+#include "arch.h"
 
 #define ARG_REGISTERS 8
 // For little endian 64 bit, sp + 32 + 8 regs save area + argX
@@ -124,15 +124,15 @@ std::string name()
 #endif // __BYTE_ORDER__
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+const std::unordered_set<std::string> &watchpoint_modes()
 {
   // See PowerISA Book III v3.1B, Section 5.4.4 and 10.4
-  return std::vector<std::string>{
-    "x",
-    "rx",
-    "wx",
-    "rwx",
+  static std::unordered_set<std::string> valid_modes = {
+    "r",
+    "w",
+    "rw",
   };
+  return valid_modes;
 }
 
 int get_kernel_ptr_width()

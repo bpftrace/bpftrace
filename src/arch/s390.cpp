@@ -1,9 +1,8 @@
-#include "arch.h"
-#include "util/exceptions.h"
-
 #include <array>
 #include <set>
 #include <vector>
+
+#include "arch.h"
 
 #define ARG_REGISTERS 5
 // For s390x, r2-r6 registers are used as function arguments, then the extra
@@ -90,10 +89,9 @@ std::string name()
   return std::string("s390x");
 }
 
-std::vector<std::string> invalid_watchpoint_modes()
+const std::unordered_set<std::string> &watchpoint_modes()
 {
-  throw util::FatalUserException(
-      "Watchpoints are not supported on this architecture");
+  return {}; // Not supported.
 }
 
 int get_kernel_ptr_width()
