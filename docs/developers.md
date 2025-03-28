@@ -18,6 +18,17 @@ submitting your change and seeing the CI fail.
 
 The Nix build is documented in [nix.md](./nix.md).
 
+### VS Code
+
+A devcontainer configuration is provided which wraps Nix. This uses the
+[https://marketplace.visualstudio.com/items?itemName=mkhl.direnv](direnv extension)
+to automatically enter the default devshell. This works out-of-the-box for
+GitHub codespaces, and can be configured with the remote development extensions.
+
+> [!IMPORTANT]
+> Be patient when the environment is first built, and when the `direnv` extension
+> is first initialized. Nix must download and build necessary prerequisites.
+
 ### Distro build
 
 The "distro build" is the more traditional way to build bpftrace. It relies on
