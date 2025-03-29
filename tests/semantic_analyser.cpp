@@ -4914,4 +4914,24 @@ let @a = percpuarray(10); BEGIN { @a = count(); }
 )");
 }
 
+TEST(semantic_analyser, call_unknown_function)
+{
+  test_error("kprobe:sys_open { myfunc() }", R"(
+stdin:1:19-27: ERROR: Unknown function: 'myfunc'
+kprobe:sys_open { myfunc() }
+                  ~~~~~~~~
+)");
+
+  // Check that incorrect call on a reserved name is caught.
+  //
+  // NB: this error is actually generated from the parser, not
+  // semantic analysis. We've only left this test here b/c eventually
+  // all the checks will move out of the parser.
+  test_error("k:f { probe(); }", R"(
+stdin:1:7-12: ERROR: Unknown function: probe
+k:f { probe(); }
+      ~~~~~
+)");
+}
+
 } // namespace bpftrace::test::semantic_analyser
