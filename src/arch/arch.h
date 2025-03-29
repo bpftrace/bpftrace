@@ -13,8 +13,10 @@ int pc_offset();
 int sp_offset();
 int arg_stack_offset();
 std::string name();
-// Each string is lexicographically sorted by character
-std::vector<std::string> invalid_watchpoint_modes();
+
+// Determine if the given watchpoint mode is valid.
+bool is_watchpoint_mode_valid(const std::string &mode);
+
 // Returns the width in bits of kernel pointers.
 int get_kernel_ptr_width();
 
