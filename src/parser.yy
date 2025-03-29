@@ -326,7 +326,7 @@ macros:
         |       %empty       { $$ = ast::MacroList{}; }
 
 macro:
-                MACRO IDENT "(" macro_args ")" "{" expr "}" { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $7, @$); }
+                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
 
 macro_args:
                 macro_args "," map { $$ = std::move($1); $$.push_back($3); }
