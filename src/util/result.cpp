@@ -2,7 +2,7 @@
 
 #include "util/result.h"
 
-namespace bpftrace {
+namespace llvm {
 
 std::ostream& operator<<(std::ostream& out, const llvm::Error& err)
 {
@@ -12,4 +12,4 @@ std::ostream& operator<<(std::ostream& out, const llvm::Error& err)
   return out;
 }
 
-} // namespace bpftrace
+} // namespace llvm
