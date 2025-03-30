@@ -9,8 +9,9 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
-- Drop DWARF support (userspace and kernel)
+- Drop majority of DWARF support. Only uprobe argument parsing remains.
   - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
+  - [#3950](https://github.com/bpftrace/bpftrace/pull/3950)
 - Removed config option 'symbol_source' - it no longer has any effect
   - [#3925](https://github.com/bpftrace/bpftrace/pull/3925)
 #### Added
