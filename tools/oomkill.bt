@@ -15,7 +15,6 @@
  * USAGE: oomkill.bt
  *
  * Copyright 2018 Netflix, Inc.
- * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 07-Sep-2018	Brendan Gregg	Created this.
  */
