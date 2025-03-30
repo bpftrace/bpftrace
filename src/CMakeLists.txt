@@ -22,6 +22,7 @@ add_library(runtime STATIC
   child.cpp
   config.cpp
   disasm.cpp
+  dwarf_parser.cpp
   format_string.cpp
   globalvars.cpp
   log.cpp

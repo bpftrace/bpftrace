@@ -100,7 +100,6 @@ public:
   bool has_prog_fentry();
   bool has_module_btf();
   bool has_iter(std::string name);
-  bool has_kernel_dwarf();
 
   bool has_kernel_func(Kfunc kfunc);
 

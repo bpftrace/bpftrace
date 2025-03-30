@@ -111,6 +111,7 @@ private:
       const std::set<std::string> &tracepoints);
 
   FuncParamLists get_iters_params(const std::set<std::string> &iters);
+  FuncParamLists get_uprobe_params(const std::set<std::string> &uprobes);
   FuncParamLists get_rawtracepoint_params(const std::set<std::string> &raw_tps);
 };
 } // namespace bpftrace

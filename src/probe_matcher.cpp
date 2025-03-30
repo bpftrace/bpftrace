@@ -8,6 +8,7 @@
 #include "bpftrace.h"
 #include "btf.h"
 #include "cxxdemangler/cxxdemangler.h"
+#include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "scopeguard.h"
@@ -456,6 +457,28 @@ FuncParamLists ProbeMatcher::get_rawtracepoint_params(
   return params;
 }
 
+FuncParamLists ProbeMatcher::get_uprobe_params(
+    const std::set<std::string>& uprobes)
+{
+  FuncParamLists params;
+  static std::set<std::string> warned_paths;
+
+  for (const auto& match : uprobes) {
+    std::string fun = match;
+    std::string path = util::erase_prefix(fun);
+    auto dwarf = Dwarf::GetFromBinary(nullptr, path);
+    if (dwarf)
+      params.emplace(match, dwarf->get_function_params(fun));
+    else {
+      if (warned_paths.insert(path).second)
+        LOG(WARNING) << "No DWARF found for \"" << path << "\""
+                     << ", cannot show parameter info";
+    }
+  }
+
+  return params;
+}
+
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
   for (auto* probe : prog->probes) {
@@ -469,10 +492,12 @@ void ProbeMatcher::list_probes(ast::Program* prog)
         else if (probe_type == ProbeType::fentry ||
                  probe_type == ProbeType::fexit)
           param_lists = bpftrace_->btf_->get_params(matches);
-        else if (probe_type == ProbeType::rawtracepoint) {
+        else if (probe_type == ProbeType::rawtracepoint)
           param_lists = get_rawtracepoint_params(matches);
-        } else if (probe_type == ProbeType::iter)
+        else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
+        else if (probe_type == ProbeType::uprobe)
+          param_lists = get_uprobe_params(matches);
       }
 
       for (const auto& match : matches) {
