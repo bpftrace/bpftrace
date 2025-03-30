@@ -4,9 +4,9 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace::test::field_analyser {
-
 #include "btf_common.h"
+
+namespace bpftrace::test::field_analyser {
 
 using ::testing::_;
 
