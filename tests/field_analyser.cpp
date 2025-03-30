@@ -13,27 +13,27 @@ namespace bpftrace::test::field_analyser {
 
 using ::testing::_;
 
-void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
+void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
 {
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   ast::ASTContext ast("stdin", input);
-  auto ok = ast::PassManager()
-                .put(ast)
-                .put(bpftrace)
-                .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass())
-                .add(ast::CreateFieldAnalyserPass())
-                .run();
-  ASSERT_TRUE(bool(ok)) << msg.str();
-  EXPECT_EQ(int(!ast.diagnostics().ok()), expected_result);
+  auto result = ast::PassManager()
+                    .put(ast)
+                    .put(bpftrace)
+                    .add(CreateParsePass())
+                    .add(ast::CreateParseAttachpointsPass())
+                    .add(ast::CreateFieldAnalyserPass())
+                    .run();
+  ASSERT_TRUE(bool(result)) << msg.str();
+  EXPECT_EQ(ast.diagnostics().ok(), ok);
 }
 
-void test(const std::string &input, int expected_result = 0)
+void test(const std::string &input, bool ok = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, input, expected_result);
+  test(*bpftrace, input, ok);
 }
 
 class field_analyser_btf : public test_btf {};
@@ -42,22 +42,22 @@ TEST_F(field_analyser_btf, fentry_args)
 {
   // func_1 and func_2 have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test("fentry:func_1, fentry:func_2 { }", 0);
+  test("fentry:func_1, fentry:func_2 { }", true);
   // func_1 and func_2 have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("fentry:func_1, fentry:func_2 { $x = args.foo; }", 1);
+  test("fentry:func_1, fentry:func_2 { $x = args.foo; }", false);
   // func_2 and func_3 have same args -> PASS
-  test("fentry:func_2, fentry:func_3 { }", 0);
+  test("fentry:func_2, fentry:func_3 { }", true);
   // func_2 and func_3 have same args -> PASS
-  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", 0);
+  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", true);
   // aaa does not exist -> FAIL
-  test("fentry:func_2, fentry:aaa { $x = args.foo1; }", 1);
+  test("fentry:func_2, fentry:aaa { $x = args.foo1; }", false);
   // func_* have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test("fentry:func_* { }", 0);
+  test("fentry:func_* { }", true);
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("fentry:func_* { $x = args.foo1; }", 1);
+  test("fentry:func_* { $x = args.foo1; }", false);
 }
 
 TEST_F(field_analyser_btf, btf_types)
@@ -70,7 +70,7 @@ TEST_F(field_analyser_btf, btf_types)
        "  @x2 = (struct Foo2 *) curtask;\n"
        "  @x3 = (struct Foo3 *) curtask;\n"
        "}",
-       0);
+       true);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
@@ -139,7 +139,7 @@ TEST_F(field_analyser_btf, btf_arrays)
        "BEGIN {\n"
        "  @ = (struct Arrays *) 0;\n"
        "}",
-       0);
+       true);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
   auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
@@ -200,7 +200,7 @@ TEST_F(field_analyser_btf, DISABLED_btf_arrays_multi_dim)
        "BEGIN {\n"
        "  @ = (struct Arrays *) 0;\n"
        "}",
-       0);
+       true);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
   auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
@@ -267,7 +267,7 @@ TEST_F(field_analyser_btf, arrays_compound_data)
        "  $x = (struct ArrayWithCompoundData *) 0;\n"
        "  $x->data[0]->foo1->a\n"
        "}",
-       0);
+       true);
   test_arrays_compound_data(bpftrace);
 }
 
@@ -280,7 +280,7 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
        "  @x1 = ((struct Foo3 *) curtask);\n"
        "  @x3 = @x1->foo2;\n"
        "}",
-       0);
+       true);
 
   // @x1->foo2 should do 2 things:
   // - add struct Foo2 (without resolving its fields)
@@ -305,7 +305,7 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
        "fentry:func_1 {\n"
        "  @foo2 = args.foo3[0].foo2;\n"
        "}",
-       0);
+       true);
 
   // args.foo3[0].foo2 should do 2 things:
   // - add struct Foo2 (without resolving its fields)
@@ -406,36 +406,36 @@ class field_analyser_dwarf : public test_dwarf {};
 TEST_F(field_analyser_dwarf, uprobe_args)
 {
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(uprobe + ":func_1 { $x = args.a; }", 0);
-  test(uprobe + ":func_2 { $x = args.b; }", 0);
+  test(uprobe + ":func_1 { $x = args.a; }", true);
+  test(uprobe + ":func_2 { $x = args.b; }", true);
   // Backwards compatibility
-  test(uprobe + ":func_1 { $x = args->a; }", 0);
+  test(uprobe + ":func_1 { $x = args->a; }", true);
 
   // func_1 and func_2 have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", 0);
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", true);
   // func_1 and func_2 have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args.a; }", 1);
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args.a; }", false);
   // func_2 and func_3 have same args -> PASS
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", 0);
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", true);
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", true);
 
   // Probes with wildcards (need non-mock BPFtrace)
   BPFtrace bpftrace;
   // func_* have different args, but none of them
   // is used in probe code, so we're good -> PASS
-  test(bpftrace, uprobe + ":func_* { }", 0);
+  test(bpftrace, uprobe + ":func_* { }", true);
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test(bpftrace, uprobe + ":func_* { $x = args.a; }", 1);
+  test(bpftrace, uprobe + ":func_* { $x = args.a; }", false);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   BPFtrace bpftrace;
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", 0);
+  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", true);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
   auto str = bpftrace.structs.Lookup("struct Foo1").lock();
@@ -465,7 +465,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   std::string uprobe = "uprobe:" + std::string(bin_);
   test(bpftrace,
        uprobe + ":func_1 { @ = ((struct task_struct *)curtask)->pid; }",
-       0);
+       true);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
@@ -539,7 +539,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
 TEST(field_analyser_subprog, struct_cast)
 {
-  test("struct x { int a; } fn f(): void { $s = (struct x *)0; }", 0);
+  test("struct x { int a; } fn f(): void { $s = (struct x *)0; }", true);
 }
 
 #endif // HAVE_LIBDW
