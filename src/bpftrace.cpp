@@ -1942,6 +1942,25 @@ const struct stat &BPFtrace::get_pidns_self_stat() const
   return pidns;
 }
 
+Dwarf *BPFtrace::get_dwarf(const std::string &filename)
+{
+  auto dwarf = dwarves_.find(filename);
+  if (dwarf == dwarves_.end()) {
+    dwarf =
+        dwarves_.emplace(filename, Dwarf::GetFromBinary(this, filename)).first;
+  }
+  return dwarf->second.get();
+}
+
+Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
+{
+  auto probe_type = probetype(attachpoint.provider);
+  if (probe_type != ProbeType::uprobe && probe_type != ProbeType::uretprobe)
+    return nullptr;
+
+  return get_dwarf(attachpoint.target);
+}
+
 int BPFtrace::create_pcaps()
 {
   for (auto arg : resources.skboutput_args_) {
