@@ -13,7 +13,6 @@ Config::Config(bool has_cmd)
   config_map_ = {
     { ConfigKeyBool::cpp_demangle, { .value = true } },
     { ConfigKeyBool::lazy_symbolication, { .value = false } },
-    { ConfigKeyBool::probe_inline, { .value = false } },
     { ConfigKeyBool::print_maps_on_exit, { .value = true } },
     { ConfigKeyBool::unstable_map_decl, { .value = false } },
 #ifndef HAVE_BLAZESYM
