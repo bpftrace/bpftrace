@@ -84,12 +84,19 @@
           # Download statically linked vmtest binary
           arch = pkgs.lib.strings.removeSuffix "-linux" system;
           vmtestVersion = "0.18.0";
+          # Architecture-specific SHA values.
+          # You can get the sha by using the trick above and running `nix develop --system aarch64-linux`.
+          # It'll error out on the actual build, but the SHA check is done before that.
+          vmtestSha = {
+            "x86_64" = "sha256:1wv49fq7n820jj7zyvbvrrzg2vwvyy8kb3gfw1lg55rzfqzhl9v3";
+            "aarch64" = "sha256:1nsq32bn6pd1gmij1qlry8ydn4gp0jdcqs030ba6yh2c30rhi02d";
+          };
           vmtest = pkgs.stdenv.mkDerivation {
             name = "vmtest";
             version = vmtestVersion;
             src = builtins.fetchurl {
               url = "https://github.com/danobi/vmtest/releases/download/v${vmtestVersion}/vmtest-${arch}";
-              sha256 = "sha256:1wv49fq7n820jj7zyvbvrrzg2vwvyy8kb3gfw1lg55rzfqzhl9v3";
+              sha256 = vmtestSha.${arch};
             };
             # Remove all other phases b/c we already have a prebuilt binary
             phases = [ "installPhase" ];
