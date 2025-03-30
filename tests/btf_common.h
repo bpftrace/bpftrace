@@ -5,96 +5,59 @@
 #include <unistd.h>
 
 #include "data/btf_data.h"
+#include "util/temp.h"
 #include "gtest/gtest.h"
 
-namespace {
-constexpr std::array<uint8_t, 4> INVALID_BTF_DATA = { 0xDE, 0xAD, 0xBE, 0xEF };
-
-bool create_tmp_with_data(char *path,
-                          const unsigned char *data,
-                          unsigned int data_len)
-{
-  if (!path)
-    return false;
-
-  int fd = mkstemp(path);
-  if (fd < 0) {
-    std::remove(path);
-    return false;
-  }
-
-  if (write(fd, data, data_len) != data_len) {
-    close(fd);
-    std::remove(path);
-    return false;
-  }
-
-  close(fd);
-  return true;
-}
-} // namespace
+using bpftrace::util::TempFile;
 
 class test_btf : public ::testing::Test {
 protected:
   void SetUp() override
   {
-    // BTF data file
-    char *btf_path = strdup("/tmp/btf_dataXXXXXX");
-    if (create_tmp_with_data(btf_path, btf_data, btf_data_len)) {
-      setenv("BPFTRACE_BTF", btf_path, true);
-      btf_path_ = btf_path;
-    }
+    auto f1 = TempFile::create();
+    ASSERT_TRUE(bool(f1));
+    ASSERT_TRUE(bool(f1->write_all({ btf_data, btf_data_len })));
+    setenv("BPFTRACE_BTF", f1->path().c_str(), true);
+    btf_path.emplace(std::move(*f1));
 
-    // available functions file
-    char *funcs_path = strdup("/tmp/available_filter_functionsXXXXXX");
-    if (create_tmp_with_data(funcs_path, func_list, func_list_len)) {
-      setenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST", funcs_path, true);
-      funcs_path_ = funcs_path;
-    }
+    auto f2 = TempFile::create();
+    ASSERT_TRUE(bool(f2));
+    ASSERT_TRUE(bool(f2->write_all({ func_list, func_list_len })));
+    funcs_path.emplace(std::move(*f1));
+    setenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST", f2->path().c_str(), true);
   }
 
   void TearDown() override
   {
-    // clear the environment and remove the temp files
+    // clear the environment and remove the temp files.
     unsetenv("BPFTRACE_BTF");
+    btf_path.reset();
     unsetenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
-    if (btf_path_) {
-      std::remove(btf_path_);
-      ::free(btf_path_);
-    }
-    if (funcs_path_) {
-      std::remove(funcs_path_);
-      ::free(funcs_path_);
-    }
+    funcs_path.reset();
   }
 
-  char *btf_path_ = nullptr;
-  char *funcs_path_ = nullptr;
+  std::optional<TempFile> btf_path;
+  std::optional<TempFile> funcs_path;
 };
 
 class test_bad_btf : public ::testing::Test {
 protected:
   void SetUp() override
   {
-    // BTF data file
-    char *btf_path = strdup("/tmp/btf_dataXXXXXX");
-    if (create_tmp_with_data(btf_path,
-                             INVALID_BTF_DATA.data(),
-                             INVALID_BTF_DATA.size())) {
-      setenv("BPFTRACE_BTF", btf_path, true);
-      btf_path_ = btf_path;
-    }
+    auto f1 = TempFile::create();
+    ASSERT_TRUE(bool(f1));
+    static std::vector<char> invalid = { 0xDE, 0xAD, 0xBE, 0xEF };
+    ASSERT_TRUE(bool(f1->write_all({ invalid.data(), invalid.size() })));
+    setenv("BPFTRACE_BTF", f1->path().c_str(), true);
+    btf_path.emplace(std::move(*f1));
   }
 
   void TearDown() override
   {
-    // clear the environment and remove the temp files
+    // clear the environment and remove the temp files.
     unsetenv("BPFTRACE_BTF");
-    if (btf_path_) {
-      std::remove(btf_path_);
-      ::free(btf_path_);
-    }
+    btf_path.reset();
   }
 
-  char *btf_path_ = nullptr;
+  std::optional<TempFile> btf_path;
 };
