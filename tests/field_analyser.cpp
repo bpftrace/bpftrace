@@ -5,6 +5,9 @@
 #include "gtest/gtest.h"
 
 #include "btf_common.h"
+#ifdef HAVE_LIBDW
+#include "dwarf_common.h"
+#endif // HAVE_LIBDW
 
 namespace bpftrace::test::field_analyser {
 
@@ -395,5 +398,150 @@ TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
   EXPECT_EQ(record->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(record->GetField("c").offset, 4);
 }
+
+#ifdef HAVE_LIBDW
+
+class field_analyser_dwarf : public test_dwarf {};
+
+TEST_F(field_analyser_dwarf, uprobe_args)
+{
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(uprobe + ":func_1 { $x = args.a; }", 0);
+  test(uprobe + ":func_2 { $x = args.b; }", 0);
+  // Backwards compatibility
+  test(uprobe + ":func_1 { $x = args->a; }", 0);
+
+  // func_1 and func_2 have different args, but none of them
+  // is used in probe code, so we're good -> PASS
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", 0);
+  // func_1 and func_2 have different args, one of them
+  // is used in probe code, we can't continue -> FAIL
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args.a; }", 1);
+  // func_2 and func_3 have same args -> PASS
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", 0);
+
+  // Probes with wildcards (need non-mock BPFtrace)
+  BPFtrace bpftrace;
+  // func_* have different args, but none of them
+  // is used in probe code, so we're good -> PASS
+  test(bpftrace, uprobe + ":func_* { }", 0);
+  // func_* have different args, one of them
+  // is used in probe code, we can't continue -> FAIL
+  test(bpftrace, uprobe + ":func_* { $x = args.a; }", 1);
+}
+
+TEST_F(field_analyser_dwarf, parse_struct)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", 0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
+  auto str = bpftrace.structs.Lookup("struct Foo1").lock();
+
+  ASSERT_TRUE(str->HasFields());
+  ASSERT_EQ(str->fields.size(), 3);
+  ASSERT_EQ(str->size, 16);
+
+  ASSERT_TRUE(str->HasField("a"));
+  ASSERT_TRUE(str->GetField("a").type.IsIntTy());
+  ASSERT_EQ(str->GetField("a").type.GetSize(), 4);
+  ASSERT_EQ(str->GetField("a").offset, 0);
+
+  ASSERT_TRUE(str->HasField("b"));
+  ASSERT_TRUE(str->GetField("b").type.IsIntTy());
+  ASSERT_EQ(str->GetField("b").type.GetSize(), 1);
+  ASSERT_EQ(str->GetField("b").offset, 4);
+
+  ASSERT_TRUE(str->HasField("c"));
+  ASSERT_TRUE(str->GetField("c").type.IsIntTy());
+  ASSERT_EQ(str->GetField("c").type.GetSize(), 8);
+}
+
+TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
+{
+  BPFtrace bpftrace;
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(bpftrace,
+       uprobe + ":func_1 { @ = ((struct task_struct *)curtask)->pid; }",
+       0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
+  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+
+  // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
+  // return from function so that these are in fact checked accesses.
+  //
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
+  ASSERT_TRUE(task_struct->HasField("a"));
+  EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());
+  EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
+  ASSERT_TRUE(task_struct->GetField("a").bitfield.has_value());
+
+  EXPECT_TRUE(task_struct->GetField("a").offset == 8 ||
+              task_struct->GetField("a").offset == 9);
+  if (task_struct->GetField("a").offset == 8) { // DWARF < 4
+    EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 12U);
+    EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+  } else { // DWARF >= 4
+    EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x2U);
+    EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 4U);
+    EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+  }
+
+  ASSERT_TRUE(task_struct->HasField("b"));
+  EXPECT_TRUE(task_struct->GetField("b").type.IsIntTy());
+  EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
+  ASSERT_TRUE(task_struct->GetField("b").bitfield.has_value());
+
+  EXPECT_TRUE(task_struct->GetField("b").offset == 8 ||
+              task_struct->GetField("b").offset == 10);
+  if (task_struct->GetField("b").offset == 8) { // DWARF < 4
+    EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 20U);
+    EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+  } else { // DWARF >= 4
+    EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x1U);
+    EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 4U);
+    EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+  }
+
+  ASSERT_TRUE(task_struct->HasField("c"));
+  EXPECT_TRUE(task_struct->GetField("c").type.IsIntTy());
+  EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
+  ASSERT_TRUE(task_struct->GetField("c").bitfield.has_value());
+
+  EXPECT_TRUE(task_struct->GetField("c").offset == 8 ||
+              task_struct->GetField("c").offset == 10);
+
+  if (task_struct->GetField("c").offset == 8) { // DWARF < 4
+    EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 21U);
+    EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+  } else { // DWARF >= 4
+    EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x1U);
+    EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 5U);
+    EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+  }
+
+  ASSERT_TRUE(task_struct->HasField("d"));
+  EXPECT_TRUE(task_struct->GetField("d").type.IsIntTy());
+  EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
+  EXPECT_EQ(task_struct->GetField("d").offset, 12);
+  ASSERT_TRUE(task_struct->GetField("d").bitfield.has_value());
+  EXPECT_EQ(task_struct->GetField("d").bitfield->read_bytes, 0x3U);
+  EXPECT_EQ(task_struct->GetField("d").bitfield->access_rshift, 0U);
+  EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
+  // NOLINTEND(bugprone-unchecked-optional-access)
+}
+
+TEST(field_analyser_subprog, struct_cast)
+{
+  test("struct x { int a; } fn f(): void { $s = (struct x *)0; }", 0);
+}
+
+#endif // HAVE_LIBDW
 
 } // namespace bpftrace::test::field_analyser
