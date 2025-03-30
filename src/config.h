@@ -24,7 +24,6 @@ enum class ConfigSource {
 enum class ConfigKeyBool {
   cpp_demangle,
   lazy_symbolication,
-  probe_inline,
   print_maps_on_exit,
   use_blazesym,
   unstable_map_decl,
@@ -92,7 +91,6 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
   { "on_stack_limit", ConfigKeyInt::on_stack_limit },
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
-  { "probe_inline", ConfigKeyBool::probe_inline },
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
   { "missing_probes", ConfigKeyMissingProbes::default_ },
