@@ -157,6 +157,34 @@ else()
   target_link_libraries(runtime ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
 
+if (LIBDW_FOUND)
+  if(STATIC_LINKING)
+    find_package(LibBz2)
+    find_package(LibEbl)
+
+    add_library(LIBBZ2 STATIC IMPORTED)
+    set_property(TARGET LIBBZ2 PROPERTY IMPORTED_LOCATION ${LIBBZ2_LIBRARIES})
+
+    add_library(LIBDW STATIC IMPORTED)
+    set_property(TARGET LIBDW PROPERTY IMPORTED_LOCATION ${LIBDW_LIBRARIES})
+
+    set(LIBDW_LIBS LIBBZ2 LIBELF LIBLZMA)
+
+    if (${LIBEBL_FOUND})
+      # libebl is not necessary on some systems (e.g. Alpine)
+      add_library(LIBEBL STATIC IMPORTED)
+      set_property(TARGET LIBEBL PROPERTY IMPORTED_LOCATION ${LIBEBL_LIBRARIES})
+      set(LIBDW_LIBS ${LIBDW_LIBS} LIBEBL)
+    endif()
+
+    target_link_libraries(LIBDW INTERFACE ${LIBDW_LIBS})
+
+    target_link_libraries(runtime LIBDW)
+  else()
+    target_link_libraries(runtime ${LIBDW_LIBRARIES})
+  endif()
+endif()
+
 # Support for std::filesystem
 # GCC version <9 and Clang (all versions) require -lstdc++fs
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9")

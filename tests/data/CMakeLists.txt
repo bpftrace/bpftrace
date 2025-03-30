@@ -8,7 +8,6 @@ find_program(LLVM_OBJCOPY
   REQUIRED)
 find_program(NM nm REQUIRED)
 find_program(AWK awk REQUIRED)
-find_program(STRIP strip REQUIRED)
 
 # Build data_source.o and inject BTF into it
 set(DATA_SOURCE_C ${CMAKE_CURRENT_SOURCE_DIR}/data_source.c)
@@ -56,6 +55,40 @@ add_custom_command(
   COMMAND nm ${DATA_SOURCE_O} | awk -v ORS=\\\\n "$2 == \"T\" { print $3 }" > ${FUNC_LIST_HEX}
   VERBATIM
   DEPENDS ${DATA_SOURCE_DEPS})
+
+if(${LIBDW_FOUND})
+  # Generate dwarf_exe from data_source.o.
+  # We embed an executable to satisfy semantic analyser checks on executable || shared_object.
+  set(DWARF_DATA_EXE ${CMAKE_CURRENT_BINARY_DIR}/dwarf_data_exe)
+  add_custom_command(
+    OUTPUT ${DWARF_DATA_EXE}
+    COMMAND gcc -o ${DWARF_DATA_EXE} ${DATA_SOURCE_O}
+    DEPENDS data_source_o)
+
+  # Generate dwarf_data.hex from dwarf_exe
+  set(DWARF_DATA_HEX ${CMAKE_CURRENT_BINARY_DIR}/dwarf_data.hex)
+  add_custom_command(
+    OUTPUT ${DWARF_DATA_HEX}
+    COMMAND xxd -i < ${DWARF_DATA_EXE} > ${DWARF_DATA_HEX}
+    DEPENDS ${DWARF_DATA_EXE})
+
+  set(CONFIGURE_DWARF_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/configure_dwarf_headers.cmake)
+  set(DWARF_DATA_H_IN ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_data.h.in)
+  set(DWARF_DATA_H ${CMAKE_CURRENT_BINARY_DIR}/dwarf_data.h)
+
+  add_custom_command(
+    OUTPUT ${DWARF_DATA_H}
+    COMMAND
+      ${CMAKE_COMMAND}
+      -DFUNC_LIST_HEX=${FUNC_LIST_HEX}
+      -DDWARF_DATA_HEX=${DWARF_DATA_HEX}
+      -DDWARF_DATA_H_IN=${DWARF_DATA_H_IN}
+      -DDWARF_DATA_H=${DWARF_DATA_H}
+      -P ${CONFIGURE_DWARF_HEADERS}
+    DEPENDS ${FUNC_LIST_HEX} ${DWARF_DATA_HEX} ${CONFIGURE_DWARF_HEADERS})
+
+  add_custom_target(debuginfo_dwarf_data DEPENDS ${DWARF_DATA_H})
+endif()
 
 set(CONFIGURE_BTF_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/configure_btf_headers.cmake)
 set(BTF_DATA_H_IN ${CMAKE_CURRENT_SOURCE_DIR}/btf_data.h.in)

@@ -267,6 +267,7 @@ Use specific OS build sections listed earlier if available.
 - Asciidoctor
 - LLVM & Clang 10.0+ development packages
 - LibElf
+- LibDw
 - Binutils development package
 - Libcereal
 - Kernel requirements described earlier
