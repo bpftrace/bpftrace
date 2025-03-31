@@ -256,44 +256,4 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
   EXPECT_THAT(bpftrace.btf_set_, Contains("TASK_COMM_LEN"));
 }
 
-static void test(const std::string &input,
-                 std::function<void(ast::ASTContext &)> validate)
-{
-  BPFtrace bpftrace;
-  ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
-  driver.parse();
-  ASSERT_TRUE(ast.diagnostics().ok());
-
-  validate(ast);
-}
-
-TEST(tracepoint_format_parser, args_field_access)
-{
-  ast::TracepointArgsVisitor visitor;
-
-  test("BEGIN { args.f1->f2->f3 }", [&](ast::ASTContext &ast) {
-    visitor.visit(*ast.root->probes.at(0));
-    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 3);
-  });
-
-  // Should work via intermediary variable, too
-  test("BEGIN { $x = args.f1; $x->f2->f3 }", [&](ast::ASTContext &ast) {
-    visitor.visit(*ast.root->probes.at(0));
-    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 3);
-  });
-
-  // "args" used without field access => level should be 0
-  test("BEGIN { args }", [&](ast::ASTContext &ast) {
-    visitor.visit(*ast.root->probes.at(0));
-    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, 0);
-  });
-
-  // "args" not used => level should be -1
-  test("BEGIN { x->f1->f2->f3 }", [&](ast::ASTContext &ast) {
-    visitor.visit(*ast.root->probes.at(0));
-    EXPECT_EQ(ast.root->probes.at(0)->tp_args_structs_level, -1);
-  });
-}
-
 } // namespace bpftrace::test::tracepoint_format_parser

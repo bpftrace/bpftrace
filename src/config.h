@@ -47,7 +47,6 @@ public:
   uint64_t max_map_keys = 4096;
   uint64_t max_probes = 1024;
   uint64_t max_strlen = 1024;
-  uint64_t max_type_res_iterations = 0;
   uint64_t on_stack_limit = 32;
   uint64_t perf_rb_pages = 64;
   std::string license = "GPL";

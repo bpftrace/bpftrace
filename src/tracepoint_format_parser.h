@@ -9,36 +9,6 @@
 
 namespace bpftrace {
 
-namespace ast {
-
-class TracepointArgsVisitor : public Visitor<TracepointArgsVisitor> {
-public:
-  using Visitor<TracepointArgsVisitor>::visit;
-  void visit(Builtin &builtin)
-  {
-    Visitor<TracepointArgsVisitor>::visit(builtin);
-
-    if (builtin.ident == "args" && probe_->tp_args_structs_level == -1)
-      probe_->tp_args_structs_level = 0;
-  };
-  void visit(FieldAccess &acc)
-  {
-    Visitor<TracepointArgsVisitor>::visit(acc);
-
-    if (probe_->tp_args_structs_level >= 0)
-      probe_->tp_args_structs_level++;
-  };
-  void visit(Probe &probe)
-  {
-    probe_ = &probe;
-    Visitor<TracepointArgsVisitor>::visit(probe);
-  };
-
-private:
-  Probe *probe_;
-};
-} // namespace ast
-
 class TracepointFormatParser {
 public:
   static bool parse(ast::ASTContext &ctx, BPFtrace &bpftrace);

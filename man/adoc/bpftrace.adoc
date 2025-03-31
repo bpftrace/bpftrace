@@ -3698,13 +3698,6 @@ The maximum length (in bytes) for values created by `str()`, `buf()` and `path()
 This limit is necessary because BPF requires the size of all dynamically-read strings (and similar) to be declared up front. This is the size for all strings (and similar) in bpftrace unless specified at the call site.
 There is no artificial limit on what you can tune this to. But you may be wasting resources (memory and cpu) if you make this too high.
 
-==== max_type_res_iterations
-
-Default: 0
-
-Maximum number of levels of nested field accesses for tracepoint args.
-0 is unlimited.
-
 ==== missing_probes
 
 Default: `warn`
