@@ -130,40 +130,6 @@ private:
 
 std::ostream &operator<<(std::ostream &os, const Fields &t);
 
-} // namespace bpftrace
-
-namespace std {
-template <>
-struct hash<bpftrace::Struct> {
-  size_t operator()(const bpftrace::Struct &s) const
-  {
-    size_t hash = std::hash<int>()(s.size);
-    for (const auto &field : s.fields)
-      bpftrace::util::hash_combine(hash, field.type);
-    return hash;
-  }
-};
-
-template <>
-struct hash<shared_ptr<bpftrace::Struct>> {
-  size_t operator()(const std::shared_ptr<bpftrace::Struct> &s_ptr) const
-  {
-    return std::hash<bpftrace::Struct>()(*s_ptr);
-  }
-};
-
-template <>
-struct equal_to<shared_ptr<bpftrace::Struct>> {
-  bool operator()(const std::shared_ptr<bpftrace::Struct> &lhs,
-                  const std::shared_ptr<bpftrace::Struct> &rhs) const
-  {
-    return *lhs == *rhs;
-  }
-};
-} // namespace std
-
-namespace bpftrace {
-
 class StructManager {
 public:
   // struct map manipulation
