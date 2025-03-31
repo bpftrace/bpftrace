@@ -244,7 +244,6 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "max_map_keys", CONFIG_FIELD_PARSER(max_map_keys) },
   { "max_probes", CONFIG_FIELD_PARSER(max_probes) },
   { "max_strlen", CONFIG_FIELD_PARSER(max_strlen) },
-  { "max_type_res_iterations", CONFIG_FIELD_PARSER(max_type_res_iterations) },
   { "on_stack_limit", CONFIG_FIELD_PARSER(on_stack_limit) },
   { "perf_rb_pages", CONFIG_FIELD_PARSER(perf_rb_pages) },
   { "stack_mode", CONFIG_FIELD_PARSER(stack_mode) },

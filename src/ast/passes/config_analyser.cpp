@@ -26,6 +26,7 @@ private:
 
 static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
   "symbol_source",
+  "max_type_res_iterations",
 };
 
 void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
