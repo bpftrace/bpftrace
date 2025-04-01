@@ -22,7 +22,7 @@ TEST(async_action, join)
   memset(buffer, 0, total_size);
 
   auto *join = reinterpret_cast<AsyncEvent::Join *>(buffer);
-  uint64_t action_id = asyncactionint(AsyncAction::join);
+  auto action_id = static_cast<uint64_t>(AsyncAction::join);
   uint64_t join_id = 0;
   memcpy(&join->action_id, &action_id, sizeof(action_id));
   memcpy(&join->join_id, &join_id, sizeof(join_id));
@@ -50,7 +50,7 @@ TEST(async_action, time)
 
   // The first format
   {
-    AsyncEvent::Time time_event(asyncactionint(AsyncAction::time), 0);
+    AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
     time_handler(bpftrace.get(), &time_event);
 
     std::regex pattern(R"(\d{4}-\d{2}-\d{2})");
@@ -60,7 +60,7 @@ TEST(async_action, time)
 
   // The second format
   {
-    AsyncEvent::Time time_event(asyncactionint(AsyncAction::time), 1);
+    AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 1);
     time_handler(bpftrace.get(), &time_event);
 
     std::regex pattern(R"(\d{2}:\d{2}:\d{2})");
@@ -70,7 +70,7 @@ TEST(async_action, time)
 
   // The third format
   {
-    AsyncEvent::Time time_event(asyncactionint(AsyncAction::time), 2);
+    AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 2);
     time_handler(bpftrace.get(), &time_event);
 
     std::regex pattern(R"([A-Za-z]+, \d{2} [A-Za-z]+ \d{4})");
@@ -87,7 +87,7 @@ TEST(async_action, time_invalid_format)
   std::string very_long_format(bpftrace::async_action::MAX_TIME_STR_LEN, 'X');
   very_long_format = "%Y-%m-%d " + very_long_format;
   bpftrace->resources.time_args.emplace_back(very_long_format);
-  AsyncEvent::Time time_event(asyncactionint(AsyncAction::time), 0);
+  AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
 
   testing::internal::CaptureStderr();
 
