@@ -60,10 +60,6 @@ public:
   }
 };
 
-// LLVM has its own set of stream classes and wrappers. Provide a simple
-// wrapper that supports `std::ostream` for convenience.
-std::ostream& operator<<(std::ostream& out, const llvm::Error& err);
-
 // All errors are constructed using `make_error<...>` with the error class.
 template <typename E, typename... Ts>
 auto make_error(Ts... args)
@@ -115,3 +111,11 @@ Result<> handleErrors(Result<T>&& ok, Ts&&... args)
 }
 
 }; // namespace bpftrace
+
+namespace llvm {
+
+// LLVM has its own set of stream classes and wrappers. Provide a simple
+// wrapper that supports `std::ostream` for convenience.
+std::ostream& operator<<(std::ostream& out, const Error& err);
+
+} // namespace llvm
