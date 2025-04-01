@@ -9,9 +9,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 #include <cereal/access.hpp>
+#include <cereal/types/variant.hpp>
 
 namespace bpftrace {
 
@@ -149,15 +151,18 @@ private:
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
   std::string name_; // name of this type, for named types like struct and enum
-  std::weak_ptr<Struct> inner_struct_; // inner struct for records and tuples
-                                       // the actual Struct object is owned by
-                                       // StructManager
+  std::variant<std::shared_ptr<Struct>, std::weak_ptr<Struct>>
+      inner_struct_; // inner struct for records and tuples: if a shared_ptr, it
+                     // is an anonymous type, if it is a weak_ptr, then it is
+                     // owned by the `StructManager`.
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
-  bool ctx_ = false;                                   // Is bpf program context
-  std::unordered_set<std::string> btf_type_tags_;      // Only populated for
-                                                       // Type::pointer
+  bool ctx_ = false;                              // Is bpf program context
+  std::unordered_set<std::string> btf_type_tags_; // Only populated for
+                                                  // Type::pointer
   size_t num_elements_ = 0; // Only populated for array types
+
+  std::shared_ptr<Struct> inner_struct() const;
 
   friend class cereal::access;
   template <typename Archive>
@@ -186,7 +191,7 @@ public:
   const Field &GetField(const std::string &name) const;
   Field &GetField(ssize_t n) const;
   ssize_t GetFieldCount() const;
-  std::weak_ptr<const Struct> GetStruct() const;
+  std::shared_ptr<const Struct> GetStruct() const;
 
   // Required alignment for this type when used inside a tuple
   ssize_t GetInTupleAlignment() const;
@@ -476,10 +481,12 @@ public:
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
+  friend SizedType CreateRecord(const std::string &name);
+  friend SizedType CreateRecord(std::shared_ptr<Struct> &&record);
   friend SizedType CreateRecord(const std::string &name,
                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
-  friend SizedType CreateTuple(std::weak_ptr<Struct> tuple);
+  friend SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 };
 // Type helpers
 
@@ -505,8 +512,10 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
 
+SizedType CreateRecord(const std::string &name);
+SizedType CreateRecord(std::shared_ptr<Struct> &&record);
 SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record);
-SizedType CreateTuple(std::weak_ptr<Struct> tuple);
+SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());

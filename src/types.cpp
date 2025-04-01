@@ -144,7 +144,7 @@ bool SizedType::IsEqual(const SizedType &t) const
            *t.GetElementTy() == *GetElementTy();
 
   if (IsTupleTy())
-    return *t.GetStruct().lock() == *GetStruct().lock();
+    return *t.inner_struct() == *inner_struct();
 
   return type_ == t.GetTy() && GetSize() == t.GetSize() &&
          is_signed_ == t.is_signed_;
@@ -416,11 +416,30 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
   return ty;
 }
 
+SizedType CreateRecord(const std::string &name)
+{
+  assert(!name.empty());
+  auto ty = SizedType(Type::record, 0);
+  ty.name_ = name;
+  return ty;
+}
+
+SizedType CreateRecord(std::shared_ptr<Struct> &&record)
+{
+  // A local anonymous record.
+  assert(record);
+  auto ty = SizedType(Type::record, record->size);
+  ty.inner_struct_ = std::move(record);
+  return ty;
+}
+
 SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
 {
-  auto ty = SizedType(Type::record, record.expired() ? 0 : record.lock()->size);
+  // A named type, stored in the `StructManager`.
+  assert(!name.empty() && !record.expired());
+  auto ty = SizedType(Type::record, record.lock()->size);
   ty.name_ = name;
-  ty.inner_struct_ = record;
+  ty.inner_struct_ = std::move(record);
   return ty;
 }
 
@@ -507,10 +526,10 @@ SizedType CreateTimestamp()
   return { Type::timestamp, 16 };
 }
 
-SizedType CreateTuple(std::weak_ptr<Struct> tuple)
+SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 {
-  auto s = SizedType(Type::tuple, tuple.lock()->size);
-  s.inner_struct_ = tuple;
+  auto s = SizedType(Type::tuple, tuple->size);
+  s.inner_struct_ = std::move(tuple);
   return s;
 }
 
@@ -544,7 +563,7 @@ bool SizedType::IsSigned() const
 std::vector<Field> &SizedType::GetFields() const
 {
   assert(IsTupleTy() || IsRecordTy());
-  return inner_struct_.lock()->fields;
+  return inner_struct()->fields;
 }
 
 Field &SizedType::GetField(ssize_t n) const
@@ -552,13 +571,13 @@ Field &SizedType::GetField(ssize_t n) const
   assert(IsTupleTy() || IsRecordTy());
   if (n >= GetFieldCount())
     throw util::FatalUserException("Getfield(): out of bounds");
-  return inner_struct_.lock()->fields[n];
+  return inner_struct()->fields[n];
 }
 
 ssize_t SizedType::GetFieldCount() const
 {
   assert(IsTupleTy() || IsRecordTy());
-  return inner_struct_.lock()->fields.size();
+  return inner_struct()->fields.size();
 }
 
 void SizedType::DumpStructure(std::ostream &os)
@@ -568,7 +587,7 @@ void SizedType::DumpStructure(std::ostream &os)
     os << "tuple";
   else
     os << "struct";
-  inner_struct_.lock()->Dump(os);
+  inner_struct()->Dump(os);
 }
 
 ssize_t SizedType::GetInTupleAlignment() const
@@ -577,7 +596,7 @@ ssize_t SizedType::GetInTupleAlignment() const
     return 1;
 
   if (IsTupleTy() || IsRecordTy())
-    return inner_struct_.lock()->align;
+    return inner_struct()->align;
 
   if (GetSize() <= 2)
     return GetSize();
@@ -592,19 +611,34 @@ ssize_t SizedType::GetInTupleAlignment() const
 bool SizedType::HasField(const std::string &name) const
 {
   assert(IsRecordTy());
-  return inner_struct_.lock()->HasField(name);
+  return inner_struct()->HasField(name);
 }
 
 const Field &SizedType::GetField(const std::string &name) const
 {
   assert(IsRecordTy());
-  return inner_struct_.lock()->GetField(name);
+  return inner_struct()->GetField(name);
 }
 
-std::weak_ptr<const Struct> SizedType::GetStruct() const
+std::shared_ptr<Struct> SizedType::inner_struct() const
 {
   assert(IsRecordTy() || IsTupleTy());
-  return inner_struct_;
+  return std::visit(
+      [](const auto &v) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
+                                     std::weak_ptr<Struct>>) {
+          return v.lock();
+        } else {
+          return v;
+        }
+      },
+      inner_struct_);
+}
+
+std::shared_ptr<const Struct> SizedType::GetStruct() const
+{
+  assert(IsRecordTy() || IsTupleTy());
+  return inner_struct();
 }
 
 bool SizedType::IsSameSizeRecursive(const SizedType &t) const
@@ -693,7 +727,7 @@ size_t hash<bpftrace::SizedType>::operator()(
       bpftrace::util::hash_combine(hash, type.GetNumElements());
       break;
     case bpftrace::Type::tuple:
-      bpftrace::util::hash_combine(hash, *type.GetStruct().lock());
+      bpftrace::util::hash_combine(hash, *type.GetStruct());
       break;
     // No default case (explicitly skip all remaining types instead) to get
     // a compiler warning when we add a new type
