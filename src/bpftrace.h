@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "ast/ast.h"
-#include "ast/location.h"
 #include "ast/pass_manager.h"
 #include "attached_probe.h"
 #include "bpfbytecode.h"

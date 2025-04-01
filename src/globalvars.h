@@ -1,15 +1,38 @@
 #pragma once
 
-#include <optional>
-#include <string>
-
-#include "bpftrace.h"
-#include "types.h"
-
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
-namespace bpftrace::globalvars {
+#include "types.h"
+
+namespace bpftrace {
+
+class BPFtrace;
+class Config;
+class RequiredResources;
+
+namespace globalvars {
+
+enum class GlobalVar {
+  // Number of online CPUs at runtime, used for metric aggregation for functions
+  // like sum and avg
+  NUM_CPUS,
+  // Max CPU ID returned by bpf_get_smp_processor_id, used for simulating
+  // per-CPU maps in read-write global variables
+  MAX_CPU_ID,
+  // Scratch buffers used to avoid BPF stack allocation limits
+  FMT_STRINGS_BUFFER,
+  TUPLE_BUFFER,
+  GET_STR_BUFFER,
+  READ_MAP_VALUE_BUFFER,
+  WRITE_MAP_VALUE_BUFFER,
+  VARIABLE_BUFFER,
+  MAP_KEY_BUFFER,
+};
 
 std::string to_string(GlobalVar global_var);
 std::optional<GlobalVar> from_string(std::string_view name);
@@ -82,4 +105,5 @@ SizedType get_type(GlobalVar global_var,
                    const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
 
-} // namespace bpftrace::globalvars
+} // namespace globalvars
+} // namespace bpftrace

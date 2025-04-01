@@ -1272,7 +1272,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *perfdata = b_.CreateGetJoinMap(failure_callback, call.loc);
 
     // arg0
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
+    b_.CreateStore(b_.getInt64(static_cast<int64_t>(AsyncAction::join)),
+                   perfdata);
     b_.CreateStore(b_.getInt64(async_ids_.join()),
                    b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8)));
 
@@ -1516,7 +1517,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     // Fill in exit struct.
     b_.CreateStore(
-        b_.getInt64(asyncactionint(AsyncAction::exit)),
+        b_.getInt64(static_cast<int64_t>(AsyncAction::exit)),
         b_.CreateGEP(exit_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
     Value *code = b_.getInt8(0);
@@ -1592,11 +1593,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                 buf,
                                 { b_.getInt64(0), b_.getInt32(0) });
     if (call.func == "clear")
-      b_.CreateStore(b_.GetIntSameSize(asyncactionint(AsyncAction::clear),
+      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(AsyncAction::clear),
                                        elements.at(0)),
                      aa_ptr);
     else
-      b_.CreateStore(b_.GetIntSameSize(asyncactionint(AsyncAction::zero),
+      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(AsyncAction::zero),
                                        elements.at(0)),
                      aa_ptr);
 
@@ -1660,7 +1661,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(time_struct, call.func + "_t");
 
     b_.CreateStore(
-        b_.GetIntSameSize(asyncactionint(AsyncAction::time), elements.at(0)),
+        b_.GetIntSameSize(static_cast<int64_t>(AsyncAction::time),
+                          elements.at(0)),
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
     b_.CreateStore(
@@ -1773,7 +1775,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     size_t struct_size = datalayout().getTypeAllocSize(unwatch_struct);
 
     b_.CreateStore(
-        b_.getInt64(asyncactionint(AsyncAction::watchpoint_detach)),
+        b_.getInt64(static_cast<int64_t>(AsyncAction::watchpoint_detach)),
         b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     b_.CreateStore(
         b_.CreateIntCast(scoped_addr.value(),
@@ -1818,7 +1820,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                     data,
                                     { b_.getInt64(0), b_.getInt32(2) });
 
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::skboutput)),
+    b_.CreateStore(b_.getInt64(static_cast<int64_t>(AsyncAction::skboutput)),
                    aid_addr);
     b_.CreateStore(b_.getInt64(async_ids_.skb_output()), id_addr);
     b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
@@ -3919,7 +3921,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   Value *id_offset = b_.CreateGEP(fmt_struct,
                                   fmt_args,
                                   { b_.getInt32(0), b_.getInt32(0) });
-  b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
+  b_.CreateStore(b_.getInt64(id + static_cast<int>(async_action)), id_offset);
 
   for (size_t i = 1; i < call.vargs.size(); i++) {
     Expression &arg = *call.vargs.at(i);
@@ -3981,7 +3983,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
 
   // Fill in perf event struct
   b_.CreateStore(
-      b_.getInt64(asyncactionint(AsyncAction::watchpoint_attach)),
+      b_.getInt64(static_cast<int64_t>(AsyncAction::watchpoint_attach)),
       b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
   b_.CreateStore(
       b_.getInt64(async_ids_.watchpoint()),
@@ -4008,7 +4010,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
 
   // store asyncactionid:
   b_.CreateStore(
-      b_.getInt64(asyncactionint(AsyncAction::print)),
+      b_.getInt64(static_cast<int64_t>(AsyncAction::print)),
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
   int id = bpftrace_.resources.maps_info.at(map.ident).id;
@@ -4065,7 +4067,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 
   // Store asyncactionid:
   b_.CreateStore(
-      b_.getInt64(asyncactionint(AsyncAction::print_non_map)),
+      b_.getInt64(static_cast<int64_t>(AsyncAction::print_non_map)),
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
   // Store print id

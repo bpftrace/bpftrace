@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <unistd.h>
 
 #include "log.h"
 #include "util/exceptions.h"

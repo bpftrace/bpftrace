@@ -1,18 +1,18 @@
 #pragma once
 
-#include "bpffeature.h"
-#include "bpfmap.h"
-#include "bpfprogram.h"
-#include "config.h"
-#include "required_resources.h"
-#include "types.h"
-
 #include <bpf/libbpf.h>
 #include <cereal/access.hpp>
 #include <map>
 #include <span>
 #include <string>
 #include <vector>
+
+#include "bpffeature.h"
+#include "bpfmap.h"
+#include "bpfprogram.h"
+#include "config.h"
+#include "probe_types.h"
+#include "required_resources.h"
 
 namespace bpftrace {
 

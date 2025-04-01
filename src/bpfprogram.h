@@ -1,11 +1,11 @@
 #pragma once
 
+#include <bpf/libbpf.h>
+
 #include "bpffeature.h"
 #include "btf.h"
 #include "config.h"
-#include "types.h"
-
-#include <bpf/libbpf.h>
+#include "probe_types.h"
 
 namespace bpftrace {
 

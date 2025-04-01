@@ -13,6 +13,7 @@
 
 #include "ast/location.h"
 #include "format_string.h"
+#include "globalvars.h"
 #include "struct.h"
 #include "types.h"
 

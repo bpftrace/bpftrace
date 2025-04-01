@@ -8,7 +8,7 @@
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
-#include "types.h"
+#include "probe_types.h"
 #include "usdt.h"
 
 namespace bpftrace {

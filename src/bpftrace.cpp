@@ -204,7 +204,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto *bpftrace = static_cast<BPFtrace *>(cb_cookie);
   auto *arg_data = data_aligned.data();
 
-  auto printf_id = *reinterpret_cast<uint64_t *>(arg_data);
+  auto printf_id = AsyncAction(*reinterpret_cast<uint64_t *>(arg_data));
 
   int err;
 
@@ -219,12 +219,12 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 
   // async actions
-  if (printf_id == asyncactionint(AsyncAction::exit)) {
+  if (printf_id == AsyncAction::exit) {
     auto *exit = static_cast<AsyncEvent::Exit *>(data);
     BPFtrace::exit_code = exit->exit_code;
     bpftrace->request_finalize();
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::print)) {
+  } else if (printf_id == AsyncAction::print) {
     auto *print = static_cast<AsyncEvent::Print *>(data);
     const auto &map = bpftrace->bytecode_.getMap(print->mapid);
 
@@ -234,7 +234,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       LOG(BUG) << "Could not print map with ident \"" << map.name()
                << "\", err=" << std::to_string(err);
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::print_non_map)) {
+  } else if (printf_id == AsyncAction::print_non_map) {
     auto *print = static_cast<AsyncEvent::PrintNonMap *>(data);
     const SizedType &ty = bpftrace->resources.non_map_print_args.at(
         print->print_id);
@@ -246,7 +246,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->out_->value(*bpftrace, ty, bytes);
 
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::clear)) {
+  } else if (printf_id == AsyncAction::clear) {
     auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
     const auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
 
@@ -255,7 +255,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       LOG(BUG) << "Could not clear map with ident \"" << map.name()
                << "\", err=" << std::to_string(err);
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::zero)) {
+  } else if (printf_id == AsyncAction::zero) {
     auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
     const auto &map = bpftrace->bytecode_.getMap(mapevent->mapid);
 
@@ -264,7 +264,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       LOG(BUG) << "Could not zero map with ident \"" << map.name()
                << "\", err=" << std::to_string(err);
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::time)) {
+  } else if (printf_id == AsyncAction::time) {
     char timestr[64]; // not respecting config_->get(ConfigKeyInt::max_strlen)
     time_t t;
     struct tm tmp;
@@ -281,7 +281,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
     bpftrace->out_->message(MessageType::time, timestr, false);
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::join)) {
+  } else if (printf_id == AsyncAction::join) {
     uint64_t join_id = *(static_cast<uint64_t *>(data) + 1);
     const auto *delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
@@ -296,14 +296,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
     bpftrace->out_->message(MessageType::join, joined.str());
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::helper_error)) {
+  } else if (printf_id == AsyncAction::helper_error) {
     auto *helpererror = static_cast<AsyncEvent::HelperError *>(data);
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
     bpftrace->out_->helper_error(return_value, info);
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach)) {
+  } else if (printf_id == AsyncAction::watchpoint_attach) {
     bool abort = false;
     auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
     uint64_t probe_idx = watchpoint->watchpoint_idx;
@@ -368,7 +368,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       std::abort();
 
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::watchpoint_detach)) {
+  } else if (printf_id == AsyncAction::watchpoint_detach) {
     auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
     uint64_t addr = unwatch->addr;
 
@@ -383,7 +383,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->attached_probes_.erase(it.begin(), it.end());
 
     return;
-  } else if (printf_id == asyncactionint(AsyncAction::skboutput)) {
+  } else if (printf_id == AsyncAction::skboutput) {
     struct hdr_t {
       uint64_t aid;
       uint64_t id;
@@ -398,15 +398,15 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->write_pcaps(
         hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
     return;
-  } else if (printf_id >= asyncactionint(AsyncAction::syscall) &&
-             printf_id < asyncactionint(AsyncAction::syscall) +
-                             RESERVED_IDS_PER_ASYNCACTION) {
+  } else if (printf_id >= AsyncAction::syscall &&
+             printf_id <= AsyncAction::syscall_end) {
     if (bpftrace->safe_mode_) {
       throw util::FatalUserException(
           "syscall() not allowed in safe mode. Use '--unsafe'.");
     }
 
-    auto id = printf_id - asyncactionint(AsyncAction::syscall);
+    auto id = static_cast<size_t>(printf_id) -
+              static_cast<size_t>(AsyncAction::syscall);
     auto &fmt = std::get<0>(bpftrace->resources.system_args[id]);
     auto &args = std::get<1>(bpftrace->resources.system_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
@@ -416,8 +416,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                                 fmt.format_str(arg_values).c_str()),
                             false);
     return;
-  } else if (printf_id >= asyncactionint(AsyncAction::cat)) {
-    auto id = printf_id - asyncactionint(AsyncAction::cat);
+  } else if (printf_id >= AsyncAction::cat &&
+             printf_id <= AsyncAction::cat_end) {
+    auto id = static_cast<size_t>(printf_id) -
+              static_cast<size_t>(AsyncAction::cat);
     auto &fmt = std::get<0>(bpftrace->resources.cat_args[id]);
     auto &args = std::get<1>(bpftrace->resources.cat_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
@@ -429,16 +431,21 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
     return;
+  } else if (printf_id >= AsyncAction::printf &&
+             printf_id <= AsyncAction::printf_end) {
+    auto id = static_cast<size_t>(printf_id) -
+              static_cast<size_t>(AsyncAction::printf);
+    auto &fmt = std::get<0>(bpftrace->resources.printf_args[id]);
+    auto &args = std::get<1>(bpftrace->resources.printf_args[id]);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+    bpftrace->out_->message(MessageType::printf,
+                            fmt.format_str(arg_values),
+                            false);
+    return;
+  } else {
+    LOG(WARNING) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
   }
-
-  // printf
-  auto &fmt = std::get<0>(bpftrace->resources.printf_args[printf_id]);
-  auto &args = std::get<1>(bpftrace->resources.printf_args[printf_id]);
-  auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-  bpftrace->out_->message(MessageType::printf,
-                          fmt.format_str(arg_values),
-                          false);
 }
 
 int ringbuf_printer(void *cb_cookie, void *data, size_t size)

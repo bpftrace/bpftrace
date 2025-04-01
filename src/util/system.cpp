@@ -2,6 +2,7 @@
 #include <array>
 #include <filesystem>
 #include <fstream>
+#include <linux/limits.h>
 #include <map>
 #include <unordered_set>
 

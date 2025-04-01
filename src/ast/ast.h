@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "diagnostic.h"
+#include "probe_types.h"
 #include "types.h"
 #include "usdt.h"
 

@@ -4,6 +4,7 @@
 
 #include "log.h"
 #include "struct.h"
+#include "types.h"
 #include "util/exceptions.h"
 
 namespace bpftrace {

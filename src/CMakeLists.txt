@@ -28,6 +28,7 @@ add_library(runtime STATIC
   log.cpp
   output.cpp
   probe_matcher.cpp
+  probe_types.cpp
   procmon.cpp
   printf.cpp
   run_bpftrace.cpp

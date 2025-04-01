@@ -1,12 +1,12 @@
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <elf.h>
-#include <map>
 #include <sys/mman.h>
 
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
+#include "required_resources.h"
 #include "types.h"
 #include "util/exceptions.h"
 

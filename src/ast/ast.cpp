@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "ast/context.h"
-#include "ast/helpers.h"
 #include "log.h"
 #include "util/format.h"
 
