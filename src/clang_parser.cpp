@@ -536,8 +536,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           // No need to worry about redefined types b/c we should have already
           // checked clang diagnostics. The diagnostics will tell us if we have
           // duplicated types.
-          structs.Lookup(ptypestr).lock()->AddField(
-              ident, sized_type, offset, bitfield, is_data_loc);
+          str->AddField(ident, sized_type, offset, bitfield, is_data_loc);
         }
 
         return CXChildVisit_Recurse;

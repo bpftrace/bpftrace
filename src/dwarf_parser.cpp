@@ -286,9 +286,9 @@ std::vector<std::string> Dwarf::get_function_params(
   return result;
 }
 
-Struct Dwarf::resolve_args(const std::string &function)
+std::shared_ptr<Struct> Dwarf::resolve_args(const std::string &function)
 {
-  Struct result(0, false);
+  auto result = std::make_shared<Struct>(0, false);
   int i = 0;
   for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
@@ -298,8 +298,8 @@ Struct Dwarf::resolve_args(const std::string &function)
     const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
                                  ? dwarf_diename(&param_die)
                                  : "";
-    result.AddField(name, arg_type, result.size, std::nullopt, false);
-    result.size += arg_type.GetSize();
+    result->AddField(name, arg_type, result->size, std::nullopt, false);
+    result->size += arg_type.GetSize();
   }
   return result;
 }
