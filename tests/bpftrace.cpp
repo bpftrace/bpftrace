@@ -1040,8 +1040,8 @@ TEST(bpftrace, sort_by_key_int_int)
 {
   StrictMock<MockBPFtrace> bpftrace;
 
-  SizedType key = CreateTuple(bpftrace.structs.AddTuple(
-      { CreateInt64(), CreateInt64(), CreateInt64() }));
+  SizedType key = CreateTuple(
+      Struct::CreateTuple({ CreateInt64(), CreateInt64(), CreateInt64() }));
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       values_by_key = {
@@ -1091,9 +1091,9 @@ TEST(bpftrace, sort_by_key_str_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   SizedType key = CreateTuple(
-      bpftrace.structs.AddTuple({ CreateString(STRING_SIZE),
-                                  CreateString(STRING_SIZE),
-                                  CreateString(STRING_SIZE) }));
+      Struct::CreateTuple({ CreateString(STRING_SIZE),
+                            CreateString(STRING_SIZE),
+                            CreateString(STRING_SIZE) }));
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       values_by_key = {
@@ -1124,7 +1124,7 @@ TEST(bpftrace, sort_by_key_int_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   SizedType key = CreateTuple(
-      bpftrace.structs.AddTuple({ CreateUInt64(), CreateString(STRING_SIZE) }));
+      Struct::CreateTuple({ CreateUInt64(), CreateString(STRING_SIZE) }));
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       values_by_key = {

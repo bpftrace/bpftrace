@@ -2770,7 +2770,7 @@ void SemanticAnalyser::visit(For &f)
     return;
   }
 
-  f.decl->type = CreateTuple(bpftrace_.structs.AddTuple({ *mapkey, *mapval }));
+  f.decl->type = CreateTuple(Struct::CreateTuple({ *mapkey, *mapval }));
 
   scope_stack_.push_back(&f);
 
@@ -2806,8 +2806,7 @@ void SemanticAnalyser::visit(For &f)
     ctx_types.push_back(CreatePointer(var.type, AddrSpace::bpf));
     ctx_idents.push_back(var.ident);
   }
-  f.ctx_type = CreateRecord(
-      "", bpftrace_.structs.AddAnonymousStruct(ctx_types, ctx_idents));
+  f.ctx_type = CreateRecord(Struct::CreateRecord(ctx_types, ctx_idents));
 }
 
 void SemanticAnalyser::visit(FieldAccess &acc)
@@ -2858,7 +2857,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  std::map<std::string, std::weak_ptr<const Struct>> structs;
+  std::map<std::string, std::shared_ptr<const Struct>> structs;
 
   if (type.is_tparg) {
     auto *probe = get_probe(acc);
@@ -2878,8 +2877,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       for (const auto &match : matches) {
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);
-        structs[tracepoint_struct] = bpftrace_.structs.Lookup(
-            tracepoint_struct);
+        structs[tracepoint_struct] =
+            bpftrace_.structs.Lookup(tracepoint_struct).lock();
       }
     }
   } else {
@@ -2888,7 +2887,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   for (auto it : structs) {
     std::string cast_type = it.first;
-    const auto record = it.second.lock();
+    const auto record = it.second;
     if (!record->HasField(acc.field)) {
       acc.addError() << "Struct/union of type '" << cast_type
                      << "' does not contain " << "a field named '" << acc.field
@@ -3053,7 +3052,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
     elements.emplace_back(elem->type);
   }
 
-  tuple.type = CreateTuple(bpftrace_.structs.AddTuple(elements));
+  tuple.type = CreateTuple(Struct::CreateTuple(elements));
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -4083,7 +4082,7 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
       SizedType keytype = create_key_type(field.type, node);
       elements.push_back(std::move(keytype));
     }
-    new_key_type = CreateTuple(bpftrace_.structs.AddTuple(elements));
+    new_key_type = CreateTuple(Struct::CreateTuple(elements));
   } else if (expr_type.IsIntegerTy()) {
     // Store all integer values as 64-bit in map keys, so that there will
     // be space for any integer in the map key later
@@ -4169,7 +4168,7 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
       new_elems.push_back(type.GetField(i).type);
     }
     if (updated) {
-      type = CreateTuple(bpftrace_.structs.AddTuple(new_elems));
+      type = CreateTuple(Struct::CreateTuple(new_elems));
     }
     return updated;
   }
@@ -4196,7 +4195,7 @@ SizedType SemanticAnalyser::create_merged_tuple(const SizedType &left,
                                                                : rightTy);
     }
   }
-  return CreateTuple(bpftrace_.structs.AddTuple(new_elems));
+  return CreateTuple(Struct::CreateTuple(new_elems));
 }
 
 void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
@@ -4207,15 +4206,17 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
     inner_type = inner_type->GetPointeeTy();
     pointer_level++;
   }
-  if (inner_type->IsRecordTy() && inner_type->GetStruct().expired()) {
-    auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName());
-    if (struct_type.expired())
+  if (inner_type->IsRecordTy() && !inner_type->GetStruct()) {
+    auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName()).lock();
+    if (!struct_type) {
       node.addError() << "Cannot resolve unknown type \""
                       << inner_type->GetName() << "\"\n";
-    type = CreateRecord(inner_type->GetName(), struct_type);
-    while (pointer_level > 0) {
-      type = CreatePointer(type);
-      pointer_level--;
+    } else {
+      type = CreateRecord(inner_type->GetName(), struct_type);
+      while (pointer_level > 0) {
+        type = CreatePointer(type);
+        pointer_level--;
+      }
     }
   }
 }

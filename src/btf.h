@@ -92,11 +92,11 @@ public:
   std::map<std::string, std::vector<std::string>> get_params(
       const std::set<std::string>& funcs) const;
 
-  std::optional<Struct> resolve_args(const std::string& func,
-                                     bool ret,
-                                     bool check_traceable,
-                                     bool skip_first_arg,
-                                     std::string& err);
+  std::shared_ptr<Struct> resolve_args(const std::string& func,
+                                       bool ret,
+                                       bool check_traceable,
+                                       bool skip_first_arg,
+                                       std::string& err);
   void resolve_fields(SizedType& type);
 
   int get_btf_id(std::string_view func,
@@ -106,7 +106,9 @@ public:
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
   SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
-  void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
+  void resolve_fields(const BTFId& type_id,
+                      std::shared_ptr<Struct> record,
+                      __u32 start_offset);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
                                                  const struct btf* btf);
   BTF::BTFId find_id(const std::string& name,
