@@ -5,6 +5,7 @@
 
 #include "ast/ast.h"
 #include "bpftrace.h"
+#include "scopeguard.h"
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
 #include "util/format.h"
@@ -27,12 +28,9 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
   if (probes_with_tracepoint.empty())
     return true;
 
-  ast::TracepointArgsVisitor n;
   if (!bpftrace.has_btf_data())
     program->c_definitions += "#include <linux/types.h>\n";
   for (ast::Probe *probe : probes_with_tracepoint) {
-    n.visit(*probe);
-
     for (ast::AttachPoint *ap : probe->attach_points) {
       if (ap->provider == "tracepoint") {
         std::string &category = ap->target;
@@ -60,11 +58,10 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
               return false;
             }
           }
-
-          if (probe->tp_args_structs_level <= 0) {
+          SCOPE_EXIT
+          {
             globfree(&glob_result);
-            continue;
-          }
+          };
 
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
@@ -87,7 +84,6 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
               TracepointFormatParser::struct_list.insert(struct_name);
             }
           }
-          globfree(&glob_result);
         } else {
           // single tracepoint
           std::ifstream format_file(format_file_path.c_str());
@@ -123,9 +119,6 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
             else
               continue;
           }
-
-          if (probe->tp_args_structs_level <= 0)
-            continue;
 
           // Check to avoid adding the same struct more than once to definitions
           std::string struct_name = get_struct_name(category, event_name);

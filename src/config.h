@@ -21,6 +21,11 @@ enum class ConfigSource {
   script,
 };
 
+// Indicates that the key is no longer used.
+enum class ConfigKeyDeprecated {
+  max_type_res_iterations,
+};
+
 enum class ConfigKeyBool {
   cpp_demangle,
   lazy_symbolication,
@@ -37,7 +42,6 @@ enum class ConfigKeyInt {
   max_map_keys,
   max_probes,
   max_strlen,
-  max_type_res_iterations,
   on_stack_limit,
   perf_rb_pages,
 };
@@ -69,7 +73,8 @@ enum class ConfigKeyMissingProbes {
   default_,
 };
 
-using ConfigKey = std::variant<ConfigKeyBool,
+using ConfigKey = std::variant<ConfigKeyDeprecated,
+                               ConfigKeyBool,
                                ConfigKeyInt,
                                ConfigKeyString,
                                ConfigKeyStackMode,
@@ -89,7 +94,6 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "max_map_keys", ConfigKeyInt::max_map_keys },
   { "max_probes", ConfigKeyInt::max_probes },
   { "max_strlen", ConfigKeyInt::max_strlen },
-  { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
   { "on_stack_limit", ConfigKeyInt::on_stack_limit },
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
   { "stack_mode", ConfigKeyStackMode::default_ },
@@ -99,6 +103,9 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "use_blazesym", ConfigKeyBool::use_blazesym },
   { "unstable_import", ConfigKeyBool::unstable_import },
   { "unstable_map_decl", ConfigKeyBool::unstable_map_decl },
+
+  // Deprecated: parsed and ignored.
+  { "max_type_res_iterations", ConfigKeyDeprecated::max_type_res_iterations },
 };
 
 // These are not tracked by the config class

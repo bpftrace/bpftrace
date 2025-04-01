@@ -30,6 +30,8 @@ private:
   BPFtrace &bpftrace_;
   ConfigSetter config_setter_;
 
+  void set_config(AssignConfigVarStatement &assignment,
+                  ConfigKeyDeprecated key);
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyInt key);
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyBool key);
   void set_config(AssignConfigVarStatement &assignment, ConfigKeyString key);
@@ -53,6 +55,12 @@ void ConfigAnalyser::log_type_error(SizedType &type,
   assignment.expr->addError()
       << "Invalid type for " << assignment.config_var->ident
       << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
+}
+
+void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,
+                                [[maybe_unused]] ConfigKeyDeprecated key)
+{
+  assignment.expr->addWarning() << "Configuration is no longer used.";
 }
 
 void ConfigAnalyser::set_config(AssignConfigVarStatement &assignment,

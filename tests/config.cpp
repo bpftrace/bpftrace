@@ -33,9 +33,6 @@ TEST(Config, get_and_set)
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_strlen, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::max_strlen), 10);
 
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_type_res_iterations, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_type_res_iterations), 10);
-
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::perf_rb_pages, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::perf_rb_pages), 10);
 

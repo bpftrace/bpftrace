@@ -27,8 +27,6 @@ Config::Config(bool has_cmd)
     { ConfigKeyInt::max_map_keys, { .value = static_cast<uint64_t>(4096) } },
     { ConfigKeyInt::max_probes, { .value = static_cast<uint64_t>(1024) } },
     { ConfigKeyInt::max_strlen, { .value = static_cast<uint64_t>(1024) } },
-    { ConfigKeyInt::max_type_res_iterations,
-      { .value = static_cast<uint64_t>(0) } },
     { ConfigKeyInt::on_stack_limit, { .value = static_cast<uint64_t>(32) } },
     { ConfigKeyInt::perf_rb_pages, { .value = static_cast<uint64_t>(64) } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },

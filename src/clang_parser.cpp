@@ -52,8 +52,7 @@ private:
   std::unordered_set<std::string> get_incomplete_types();
   // Iteratively check for incomplete types, pull their definitions from BTF,
   // and update the input files with the definitions.
-  void resolve_incomplete_types_from_btf(BPFtrace &bpftrace,
-                                         const ast::ProbeList &probes);
+  void resolve_incomplete_types_from_btf(BPFtrace &bpftrace);
 
   // Collect names of types defined by typedefs that are in non-included
   // headers as they may pose problems for clang parser.
@@ -604,34 +603,27 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types()
   return type_data.incomplete_types;
 }
 
-void ClangParser::resolve_incomplete_types_from_btf(
-    BPFtrace &bpftrace,
-    const ast::ProbeList &probes)
+void ClangParser::resolve_incomplete_types_from_btf(BPFtrace &bpftrace)
 {
-  // Resolution of incomplete types must run at least once, maximum should be
-  // the number of levels of nested field accesses for tracepoint args.
-  // The maximum number of iterations can be also controlled by the
-  // BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable (0 is unlimited).
-  uint64_t field_lvl = 1;
-  for (const auto &probe : probes)
-    if (probe->tp_args_structs_level > static_cast<int>(field_lvl))
-      field_lvl = probe->tp_args_structs_level;
-
-  unsigned max_iterations = std::max(
-      bpftrace.config_->get(ConfigKeyInt::max_type_res_iterations), field_lvl);
-
-  bool check_incomplete_types = true;
-  for (unsigned i = 0; i < max_iterations && check_incomplete_types; i++) {
+  std::unordered_set<std::string> last_incomplete;
+  while (true) {
     // Collect incomplete types and retrieve their definitions from BTF.
     auto incomplete_types = get_incomplete_types();
-    size_t types_cnt = bpftrace.btf_set_.size();
+
+    // No need to continue if nothing is incomplete.
+    if (incomplete_types.size() == 0) {
+      break;
+    }
+    // It is an error to attempt to continue if we've converge on a set of
+    // incomplete types which is not changing.
+    if (incomplete_types == last_incomplete) {
+      break;
+    }
+
     bpftrace.btf_set_.insert(incomplete_types.cbegin(),
                              incomplete_types.cend());
-
     input_files.back() = get_btf_generated_header(bpftrace);
-
-    // No need to continue if no more types were added
-    check_incomplete_types = types_cnt != bpftrace.btf_set_.size();
+    last_incomplete = std::move(incomplete_types);
   }
 }
 
@@ -713,7 +705,7 @@ bool ClangParser::parse(ast::Program *program,
       btf_conflict = true;
 
     if (!btf_conflict) {
-      resolve_incomplete_types_from_btf(bpftrace, program->probes);
+      resolve_incomplete_types_from_btf(bpftrace);
 
       if (handler.parse_file("definitions.h", args, input_files, false) &&
           handler.has_redefinition_error())

@@ -305,10 +305,6 @@ static void parse_env(BPFtrace& bpftrace)
     config_setter.set(ConfigKeyInt::perf_rb_pages, x);
   });
 
-  util::get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
-  });
-
   util::get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
     config_setter.set(ConfigKeyInt::max_cat_bytes, x);
   });
