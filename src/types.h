@@ -698,8 +698,6 @@ enum class AsyncAction {
 
 uint64_t asyncactionint(AsyncAction a);
 
-enum class PositionalParameterType { positional, count };
-
 namespace globalvars {
 
 enum class GlobalVar {

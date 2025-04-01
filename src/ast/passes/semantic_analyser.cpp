@@ -92,6 +92,7 @@ public:
   using Visitor<SemanticAnalyser>::visit;
   void visit(Integer &integer);
   void visit(PositionalParameter &param);
+  void visit(PositionalParameterCount &param);
   void visit(String &string);
   void visit(StackMode &mode);
   void visit(Identifier &identifier);
@@ -364,37 +365,31 @@ void SemanticAnalyser::visit(PositionalParameter &param)
     param.is_in_str = true;
     has_pos_param_ = true;
   }
-  switch (param.ptype) {
-    case PositionalParameterType::positional:
-      if (param.n <= 0)
-        param.addError() << "$"
-                         << std::to_string(param.n) +
-                                " is not a valid parameter";
-      if (is_final_pass()) {
-        std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        auto param_int = util::get_int_from_str(pstr);
-        if (!param_int.has_value() && !param.is_in_str) {
-          param.addError() << "$" << param.n << " used numerically but given \""
-                           << pstr << "\". Try using str($" << param.n << ").";
-        }
-        if (param_int && std::holds_alternative<uint64_t>(*param_int)) {
-          param.type = CreateUInt64();
-        }
-        // string allocated in bpf stack. See codegen.
-        if (param.is_in_str)
-          param.type.SetAS(AddrSpace::kernel);
-      }
-      break;
-    case PositionalParameterType::count:
-      if (param.is_in_str) {
-        param.addError() << "use $#, not str($#)";
-      }
-      break;
-    default:
-      param.addError() << "unknown parameter type";
-      param.type = CreateNone();
-      break;
+  if (param.n <= 0)
+    param.addError() << "$"
+                     << std::to_string(param.n) + " is not a valid parameter";
+  if (is_final_pass()) {
+    std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
+    auto param_int = util::get_int_from_str(pstr);
+    if (!param_int.has_value() && !param.is_in_str) {
+      param.addError() << "$" << param.n << " used numerically but given \""
+                       << pstr << "\". Try using str($" << param.n << ").";
+    }
+    if (param_int && std::holds_alternative<uint64_t>(*param_int)) {
+      param.type = CreateUInt64();
+    }
+    // string allocated in bpf stack. See codegen.
+    if (param.is_in_str)
+      param.type.SetAS(AddrSpace::kernel);
   }
+}
+
+void SemanticAnalyser::visit(PositionalParameterCount &param)
+{
+  if (func_ == "str") {
+    param.addError() << "use $#, not str($#)";
+  }
+  param.type = CreateUInt64();
 }
 
 void SemanticAnalyser::visit(String &string)
@@ -1086,9 +1081,12 @@ void SemanticAnalyser::visit(Call &call)
       call.type = CreateString(strlen);
 
       if (has_pos_param_) {
-        if (dynamic_cast<PositionalParameter *>(arg))
+        // Although I'm not entirely sure why, historically the `$#` parameter
+        // has not been allowed to use the same `str` mechanism or the mechanism
+        // described below. It is not clear how `$#` is used.
+        if (dynamic_cast<PositionalParameter *>(arg)) {
           call.is_literal = true;
-        else {
+        } else {
           auto *binop = dynamic_cast<Binop *>(arg);
           if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
                           dynamic_cast<PositionalParameter *>(binop->right)))) {

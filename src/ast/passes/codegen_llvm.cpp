@@ -187,6 +187,7 @@ public:
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
   ScopedExpr visit(PositionalParameter &param);
+  ScopedExpr visit(PositionalParameterCount &param);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -467,30 +468,26 @@ ScopedExpr CodegenLLVM::visit(Integer &integer)
 
 ScopedExpr CodegenLLVM::visit(PositionalParameter &param)
 {
-  switch (param.ptype) {
-    case PositionalParameterType::positional: {
-      std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-      if (!param.is_in_str) {
-        if (param.type.IsSigned()) {
-          return ScopedExpr(b_.getInt64(std::stoll(pstr, nullptr, 0)));
-        } else {
-          return ScopedExpr(b_.getInt64(std::stoull(pstr, nullptr, 0)));
-        }
-      } else {
-        auto *string_param = llvm::dyn_cast<GlobalVariable>(
-            module_->getOrInsertGlobal(
-                pstr, ArrayType::get(b_.getInt8Ty(), pstr.length() + 1)));
-        string_param->setInitializer(
-            ConstantDataArray::getString(module_->getContext(), pstr));
-        return ScopedExpr(b_.CreatePtrToInt(string_param, b_.getInt64Ty()));
-      }
+  std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
+  if (!param.is_in_str) {
+    if (param.type.IsSigned()) {
+      return ScopedExpr(b_.getInt64(std::stoll(pstr, nullptr, 0)));
+    } else {
+      return ScopedExpr(b_.getInt64(std::stoull(pstr, nullptr, 0)));
     }
-    case PositionalParameterType::count:
-      return ScopedExpr(b_.getInt64(bpftrace_.num_params()));
-    default:
-      LOG(BUG) << "unknown positional parameter type";
-      __builtin_unreachable();
+  } else {
+    auto *string_param = llvm::dyn_cast<GlobalVariable>(
+        module_->getOrInsertGlobal(
+            pstr, ArrayType::get(b_.getInt8Ty(), pstr.length() + 1)));
+    string_param->setInitializer(
+        ConstantDataArray::getString(module_->getContext(), pstr));
+    return ScopedExpr(b_.CreatePtrToInt(string_param, b_.getInt64Ty()));
   }
+}
+
+ScopedExpr CodegenLLVM::visit([[maybe_unused]] PositionalParameterCount &param)
+{
+  return ScopedExpr(b_.getInt64(bpftrace_.num_params()));
 }
 
 ScopedExpr CodegenLLVM::visit(String &string)

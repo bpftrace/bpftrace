@@ -40,11 +40,15 @@ Identifier::Identifier(Diagnostics &d, std::string ident, Location &&loc)
 {
 }
 
-PositionalParameter::PositionalParameter(Diagnostics &d,
-                                         PositionalParameterType ptype,
-                                         long n,
-                                         Location &&loc)
-    : Expression(d, std::move(loc)), ptype(ptype), n(n)
+PositionalParameter::PositionalParameter(Diagnostics &d, long n, Location &&loc)
+    : Expression(d, std::move(loc)), n(n)
+{
+  is_literal = true;
+}
+
+PositionalParameterCount::PositionalParameterCount(Diagnostics &d,
+                                                   Location &&loc)
+    : Expression(d, std::move(loc))
 {
   is_literal = true;
 }
