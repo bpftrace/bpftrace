@@ -443,8 +443,6 @@ FuncParamLists ProbeMatcher::get_rawtracepoint_params(
 {
   FuncParamLists params = bpftrace_->btf_->get_params(raw_tps, true);
   for (auto rt : raw_tps) {
-    // delete `int retval`
-    params[rt].pop_back();
     // delete `void *`
     params[rt].erase(params[rt].begin());
   }

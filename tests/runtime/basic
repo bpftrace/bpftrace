@@ -63,6 +63,16 @@ EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+# The BTF FUNC_PROTOs for rawtracepoint params have an unnecessary initial
+# void * and a retval that can't be used so make sure they are not
+# included in the listing output
+NAME it doesn't list the first rawtracepoint param or retval
+RUN {{BPFTRACE}} -lv "rawtracepoint:consume_skb"
+EXPECT_NONE void * __data
+EXPECT_NONE int retval
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists fentry params
 RUN {{BPFTRACE}} -lv "fentry:*"
 EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
