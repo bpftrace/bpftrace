@@ -132,11 +132,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::rawtracepoint: {
-      if (bpftrace_->has_btf_data()) {
-        symbol_stream = bpftrace_->btf_->get_all_raw_tracepoints();
-      } else {
-        symbol_stream = get_symbols_from_raw_tracepoints();
-      }
+      symbol_stream = get_symbols_from_raw_tracepoints();
       break;
     }
     case ProbeType::usdt: {
@@ -153,14 +149,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::fentry:
     case ProbeType::fexit: {
-      // If BTF is not parsed, yet, read available_filter_functions instead.
-      // This is useful as we will use the result to extract the list of
-      // potentially used kernel modules and then only parse BTF for them.
-      if (bpftrace_->has_btf_data())
-        symbol_stream = bpftrace_->btf_->get_all_funcs();
-      else {
-        symbol_stream = get_symbols_from_traceable_funcs(true);
-      }
+      symbol_stream = get_symbols_from_traceable_funcs(true);
       break;
     }
     case ProbeType::iter: {

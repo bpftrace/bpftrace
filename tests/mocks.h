@@ -29,6 +29,8 @@ public:
   MOCK_CONST_METHOD2(get_func_symbols_from_file,
                      std::unique_ptr<std::istream>(std::optional<int> pid,
                                                    const std::string &path));
+  MOCK_CONST_METHOD0(get_symbols_from_raw_tracepoints,
+                     std::unique_ptr<std::istream>());
 #pragma GCC diagnostic pop
 };
 

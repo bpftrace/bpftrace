@@ -25,9 +25,18 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
     std::string ksyms = "kernel_mod:func_in_mod\n"
                         "kernel_mod:other_func_in_mod\n"
                         "other_kernel_mod:func_in_mod\n"
-                        "vmlinux:queued_spin_lock_slowpath\n";
+                        "vmlinux:queued_spin_lock_slowpath\n"
+                        "vmlinux:func_1\n"
+                        "vmlinux:func_2\n"
+                        "vmlinux:func_3\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
+  });
+
+  ON_CALL(matcher, get_symbols_from_raw_tracepoints()).WillByDefault([]() {
+    std::string tracepoints = "vmlinux:event_rt\n"
+                              "vmlinux:sched_switch\n";
+    return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
   });
 
   ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
@@ -39,8 +48,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                                   "notsched:bar\n"
                                   "file:filename\n"
                                   "tcp:some_tcp_tp\n"
-                                  "btf:tag\n"
-                                  "vmlinux:event_rt\n";
+                                  "btf:tag\n";
         return std::unique_ptr<std::istream>(
             new std::istringstream(tracepoints));
       });

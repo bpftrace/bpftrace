@@ -88,9 +88,7 @@ public:
   SizedType get_var_type(const std::string& var_name);
 
   std::set<std::string> get_all_structs() const;
-  std::unique_ptr<std::istream> get_all_funcs() const;
   std::unordered_set<std::string> get_all_iters() const;
-  std::unique_ptr<std::istream> get_all_raw_tracepoints() const;
   std::map<std::string, std::vector<std::string>> get_params(
       const std::set<std::string>& funcs,
       bool is_raw_tracepoint = false) const;
@@ -122,8 +120,6 @@ private:
 
   std::string dump_defs_from_btf(const struct btf* btf,
                                  std::unordered_set<std::string>& types) const;
-  std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
-  std::string get_all_raw_tracepoints_from_btf(const BTFObj& btf_obj) const;
   std::map<std::string, std::vector<std::string>> get_params_from_btf(
       const BTFObj& btf_obj,
       const std::set<std::string>& funcs,
