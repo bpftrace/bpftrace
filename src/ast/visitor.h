@@ -40,7 +40,11 @@ public:
   {
     return default_value();
   }
-  R visit(PositionalParameter &integer __attribute__((__unused__)))
+  R visit(PositionalParameter &param __attribute__((__unused__)))
+  {
+    return default_value();
+  }
+  R visit(PositionalParameterCount &param __attribute__((__unused__)))
   {
     return default_value();
   }
@@ -324,6 +328,7 @@ public:
     return tryVisitAndReplace<Expression,
                               Integer *,
                               PositionalParameter *,
+                              PositionalParameterCount *,
                               String *,
                               StackMode *,
                               Identifier *,

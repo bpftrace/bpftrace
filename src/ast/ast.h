@@ -131,14 +131,15 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(Diagnostics &d,
-                               PositionalParameterType ptype,
-                               long n,
-                               Location &&loc);
+  explicit PositionalParameter(Diagnostics &d, long n, Location &&loc);
 
-  PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
+};
+
+class PositionalParameterCount : public Expression {
+public:
+  explicit PositionalParameterCount(Diagnostics &d, Location &&loc);
 };
 
 class String : public Expression {

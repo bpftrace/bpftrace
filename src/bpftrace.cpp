@@ -1885,21 +1885,20 @@ std::optional<int64_t> BPFtrace::get_int_literal(
       return integer->n;
     else if (const auto *pos_param =
                  dynamic_cast<const ast::PositionalParameter *>(expr)) {
-      if (pos_param->ptype == PositionalParameterType::positional) {
-        auto param_str = get_param(pos_param->n, false);
-        auto param_int = util::get_int_from_str(param_str);
-        if (!param_int.has_value()) {
-          // This case has to be handled at a higher layer, and it is also
-          // duplicated exactly in the semantic analyzer.
-          return std::nullopt;
-        }
-        if (std::holds_alternative<int64_t>(*param_int)) {
-          return std::get<int64_t>(*param_int);
-        } else {
-          return static_cast<int64_t>(std::get<uint64_t>(*param_int));
-        }
-      } else
-        return static_cast<int64_t>(num_params());
+      auto param_str = get_param(pos_param->n, false);
+      auto param_int = util::get_int_from_str(param_str);
+      if (!param_int.has_value()) {
+        // This case has to be handled at a higher layer, and it is also
+        // duplicated exactly in the semantic analyzer.
+        return std::nullopt;
+      }
+      if (std::holds_alternative<int64_t>(*param_int)) {
+        return std::get<int64_t>(*param_int);
+      } else {
+        return static_cast<int64_t>(std::get<uint64_t>(*param_int));
+      }
+    } else {
+      return static_cast<int64_t>(num_params());
     }
   }
 

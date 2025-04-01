@@ -153,6 +153,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Map *> map
 %type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
+%type <ast::PositionalParameterCount *> param_count
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
@@ -356,11 +357,6 @@ attach_point_def:
         |       attach_point_def RBRACKET { $$ = $1 + "]"; }
         |       attach_point_def param
                 {
-                  if ($2->ptype != PositionalParameterType::positional)
-                  {
-                    error(@$, "Not a positional parameter");
-                    YYERROR;
-                  }
                   // "Un-parse" the positional parameter back into text so
                   // we can give it to the AttachPointParser. This is kind of
                   // a hack but there doesn't look to be any other way.
@@ -380,14 +376,17 @@ param:
                         try {
                           long n = std::stol($1.substr(1, $1.size()-1));
                           if (n == 0) throw std::exception();
-                          $$ = driver.ctx.make_node<ast::PositionalParameter>(PositionalParameterType::positional, n, @$);
+                          $$ = driver.ctx.make_node<ast::PositionalParameter>(n, @$);
                         } catch (std::exception const& e) {
                           error(@1, "param " + $1 + " is out of integer range [1, " +
                                 std::to_string(std::numeric_limits<long>::max()) + "]");
                           YYERROR;
                         }
                       }
-        |       PARAMCOUNT { $$ = driver.ctx.make_node<ast::PositionalParameter>(PositionalParameterType::count, 0, @$); }
+                ;
+
+param_count:
+                PARAMCOUNT { $$ = driver.ctx.make_node<ast::PositionalParameterCount>(@$); }
                 ;
 
 /*
@@ -431,6 +430,7 @@ jump_stmt:
 loop_stmt:
                 UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
         |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
+        |       UNROLL "(" param_count ")" block     { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
         |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1); }
                 ;
 
@@ -492,6 +492,7 @@ primary_expr:
         |       CALL_BUILTIN       { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
+        |       param_count        { $$ = $1; }
         |       map_or_var         { $$ = $1; }
         |       "(" vargs "," expr ")"
                 {
