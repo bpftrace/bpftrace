@@ -656,7 +656,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
       func_name = btf_obj.name + ":" + str;
     }
 
-    if (!funcs.contains(func_name))
+    if (!funcs.contains(func_name) || params.contains(func_name))
       continue;
 
     t = btf__type_by_id(btf_obj.btf, t->type);
@@ -684,7 +684,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
       params[func_name].push_back(type + " " + arg_name);
     }
 
-    if (!t->type)
+    if (!t->type || is_raw_tracepoint)
       continue;
 
     // set by dump_printf callback
