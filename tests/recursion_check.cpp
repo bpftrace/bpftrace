@@ -10,7 +10,6 @@ void test(const std::string& input, bool has_recursion_check)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
-  bpftrace.btf_ = nullptr;
 
   ast::ASTContext ast("stdin", input);
 
