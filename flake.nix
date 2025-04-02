@@ -146,7 +146,7 @@
 
                 nativeBuildInputs = [
                   pkgs.bison
-                  pkgs.clang
+                  pkgs."llvmPackages_${toString llvmVersion}".clang
                   pkgs.cmake
                   pkgs.flex
                   pkgs.gcc
@@ -188,9 +188,12 @@
               };
 
           # Define lambda that returns a devShell derivation with extra test-required packages
-          # given the bpftrace package derivation as input
+          # given the bpftrace LLVM version as input
           mkBpftraceDevShell =
-            pkg:
+            llvmVersion:
+            let
+              pkg = self.packages.${system}."bpftrace-llvm${toString llvmVersion}";
+            in
               with pkgs;
               pkgs.mkShell {
                 buildInputs = [
@@ -198,7 +201,7 @@
                   binutils
                   bpftools
                   coreutils
-                  clang-tools  # Needed for the nix-aware "wrapped" clang-tidy
+                  pkgs."llvmPackages_${toString llvmVersion}".clang-tools # Needed for the nix-aware "wrapped" clang-tidy
                   gawk
                   git
                   gnugrep
@@ -206,7 +209,7 @@
                   iproute2
                   kmod
                   # For git-clang-format
-                  libclang.python
+                  pkgs."llvmPackages_${toString llvmVersion}".libclang.python
                   nftables
                   procps
                   python3
@@ -318,11 +321,11 @@
           devShells = rec {
             default = self.devShells.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
-            bpftrace-llvm20 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm20;
-            bpftrace-llvm19 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm19;
-            bpftrace-llvm18 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm18;
-            bpftrace-llvm17 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm17;
-            bpftrace-llvm16 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm16;
+            bpftrace-llvm20 = mkBpftraceDevShell 20;
+            bpftrace-llvm19 = mkBpftraceDevShell 19;
+            bpftrace-llvm18 = mkBpftraceDevShell 18;
+            bpftrace-llvm17 = mkBpftraceDevShell 17;
+            bpftrace-llvm16 = mkBpftraceDevShell 16;
 
             # Note that we depend on LLVM 18 explicitly for the fuzz shell, and
             # this is managed separately. The version of LLVM used to build the

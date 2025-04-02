@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Runs clang-tidy against the codebase.
 # Requires nix.
@@ -16,7 +16,7 @@ SCRIPT_NAME=$0
 FIX=
 
 function run() {
-  nix develop --command "$@"
+  nix develop ".#bpftrace-llvm19" --command "$@"
 }
 
 usage() {
