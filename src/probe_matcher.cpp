@@ -438,17 +438,6 @@ FuncParamLists ProbeMatcher::get_iters_params(
   return params;
 }
 
-FuncParamLists ProbeMatcher::get_rawtracepoint_params(
-    const std::set<std::string>& raw_tps)
-{
-  FuncParamLists params = bpftrace_->btf_->get_params(raw_tps, true);
-  for (auto rt : raw_tps) {
-    // delete `void *`
-    params[rt].erase(params[rt].begin());
-  }
-  return params;
-}
-
 FuncParamLists ProbeMatcher::get_uprobe_params(
     const std::set<std::string>& uprobes)
 {
@@ -485,7 +474,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
                  probe_type == ProbeType::fexit)
           param_lists = bpftrace_->btf_->get_params(matches);
         else if (probe_type == ProbeType::rawtracepoint)
-          param_lists = get_rawtracepoint_params(matches);
+          param_lists = bpftrace_->btf_->get_rawtracepoint_params(matches);
         else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
         else if (probe_type == ProbeType::uprobe)
