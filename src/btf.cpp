@@ -611,7 +611,7 @@ std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints() const
   return funcs;
 }
 
-std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
+FuncParamLists BTF::get_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &funcs) const
 {
@@ -629,7 +629,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     return {};
   }
 
-  std::map<std::string, std::vector<std::string>> params;
+  FuncParamLists params;
   for (id = start_id(btf_obj.btf); id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
 
@@ -693,10 +693,9 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
   return params;
 }
 
-std::map<std::string, std::vector<std::string>> BTF::
-    get_raw_tracepoints_params_from_btf(
-        const BTFObj &btf_obj,
-        const std::set<std::string> &rawtracepoints) const
+FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
+    const BTFObj &btf_obj,
+    const std::set<std::string> &rawtracepoints) const
 {
   __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
   std::string type = std::string("");
@@ -712,7 +711,7 @@ std::map<std::string, std::vector<std::string>> BTF::
     return {};
   }
 
-  std::map<std::string, std::vector<std::string>> params;
+  FuncParamLists params;
   for (id = start_id(btf_obj.btf); id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
 
@@ -775,11 +774,10 @@ std::map<std::string, std::vector<std::string>> BTF::
   return params;
 }
 
-std::map<std::string, std::vector<std::string>> BTF::get_params_impl(
-    const std::set<std::string> &funcs,
-    bool is_rawtracepoints) const
+FuncParamLists BTF::get_params_impl(const std::set<std::string> &funcs,
+                                    bool is_rawtracepoints) const
 {
-  std::map<std::string, std::vector<std::string>> params;
+  FuncParamLists params;
   auto all_resolved = [&params](const std::string &f) {
     return params.contains(f);
   };
@@ -797,13 +795,12 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_impl(
   return params;
 }
 
-std::map<std::string, std::vector<std::string>> BTF::get_params(
-    const std::set<std::string> &funcs) const
+FuncParamLists BTF::get_params(const std::set<std::string> &funcs) const
 {
   return get_params_impl(funcs, false);
 }
 
-std::map<std::string, std::vector<std::string>> BTF::get_rawtracepoint_params(
+FuncParamLists BTF::get_rawtracepoint_params(
     const std::set<std::string> &rawtracepoints) const
 {
   return get_params_impl(rawtracepoints, true);
