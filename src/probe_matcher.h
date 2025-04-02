@@ -97,8 +97,8 @@ private:
       const std::string &target) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_raw_tracepoints()
-      const;
+  virtual std::unique_ptr<std::istream> get_fentry_symbols() const;
+  virtual std::unique_ptr<std::istream> get_raw_tracepoint_symbols() const;
 
   std::unique_ptr<std::istream> get_iter_symbols() const;
 

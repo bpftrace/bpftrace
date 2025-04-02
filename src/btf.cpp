@@ -43,7 +43,11 @@ __s32 BTF::start_id(const struct btf *btf) const
   return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
 }
 
-BTF::BTF(const std::set<std::string> &modules)
+BTF::BTF() : BTF(nullptr)
+{
+}
+
+BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
 {
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
@@ -54,8 +58,15 @@ BTF::BTF(const std::set<std::string> &modules)
       LOG(WARNING) << "BTF: failed to parse BTF from " << path;
       return;
     }
-  } else
-    load_kernel_btfs(modules);
+  } else {
+    vmlinux_btf = btf__load_vmlinux_btf();
+    if (libbpf_get_error(vmlinux_btf)) {
+      LOG(V1) << "BTF: failed to find BTF data for vmlinux: "
+              << strerror(errno);
+      return;
+    }
+    btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
+  }
 
   if (btf_objects.empty()) {
     LOG(V1) << "BTF: failed to find BTF data";
@@ -73,16 +84,9 @@ BTF::~BTF()
     btf__free(btf_obj.btf);
 }
 
-void BTF::load_kernel_btfs(const std::set<std::string> &modules)
+void BTF::load_module_btfs(const std::set<std::string> &modules)
 {
-  vmlinux_btf = btf__load_vmlinux_btf();
-  if (libbpf_get_error(vmlinux_btf)) {
-    LOG(V1) << "BTF: failed to find BTF data for vmlinux: " << strerror(errno);
-    return;
-  }
-  btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
-
-  if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
+  if ((bpftrace_ && !bpftrace_->feature_->has_module_btf()) || state != OK)
     return;
 
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
@@ -128,6 +132,8 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
                   .name = mod_name });
     }
   }
+
+  state = OK_MODULES_LOADED;
 }
 
 static void dump_printf(void *ctx, const char *fmt, va_list args)
@@ -1073,7 +1079,7 @@ ast::Pass CreateParseBTFPass()
 {
   return ast::Pass::create(
       "btf", []([[maybe_unused]] ast::ASTContext &ast, BPFtrace &b) {
-        b.parse_btf(b.list_modules(ast));
+        b.parse_module_btf(b.list_modules(ast));
       });
 }
 

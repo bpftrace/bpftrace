@@ -45,6 +45,21 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
             new std::istringstream(tracepoints));
       });
 
+  ON_CALL(matcher, get_raw_tracepoint_symbols()).WillByDefault([]() {
+    std::string rawtracepoints = "vmlinux:event_rt\n"
+                                 "vmlinux:sched_switch\n";
+    return std::unique_ptr<std::istream>(
+        new std::istringstream(rawtracepoints));
+  });
+
+  ON_CALL(matcher, get_fentry_symbols()).WillByDefault([]() {
+    std::string funcs = "vmlinux:func_1\n"
+                        "vmlinux:func_2\n"
+                        "vmlinux:func_3\n"
+                        "vmlinux:queued_spin_lock_slowpath\n";
+    return std::unique_ptr<std::istream>(new std::istringstream(funcs));
+  });
+
   std::string sh_usyms = "/bin/sh:first_open\n"
                          "/bin/sh:second_open\n"
                          "/bin/sh:open_as_well\n"
@@ -87,8 +102,6 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 {
   bpftrace.delta_taitime_ = timespec{};
-
-  bpftrace.parse_btf({ "vmlinux" });
   // Fill in some default tracepoint struct definitions
   bpftrace.structs.Add("struct _tracepoint_sched_sched_one", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one")
