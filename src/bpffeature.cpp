@@ -110,7 +110,7 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
 
   std::optional<unsigned> btf_id;
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf()) {
-    btf_id = btf_.get_btf_id(name, "vmlinux");
+    btf_id = btf_->get_btf_id(name, "vmlinux");
   }
 
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING) {
@@ -242,7 +242,7 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
 
 bool BPFfeature::has_btf()
 {
-  return btf_.has_data();
+  return btf_->has_data();
 }
 
 bool BPFfeature::has_btf_func_global()
@@ -674,7 +674,7 @@ out_false:
 
 bool BPFfeature::has_fentry()
 {
-  return has_prog_fentry() && btf_.has_data();
+  return has_prog_fentry() && btf_->has_data();
 }
 
 bool BPFfeature::has_module_btf()
@@ -727,7 +727,7 @@ bool BPFfeature::has_kernel_func(Kfunc kfunc)
   if (find_kfunc != available_kernel_funcs_.end())
     return find_kfunc->second;
 
-  bool result = btf_.get_btf_id(kfunc_name(kfunc), "") >= 0;
+  bool result = btf_->get_btf_id(kfunc_name(kfunc), "") >= 0;
   available_kernel_funcs_.emplace(kfunc, result);
   return result;
 }

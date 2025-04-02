@@ -1244,13 +1244,12 @@ class bpftrace_bad_btf : public test_bad_btf {};
 TEST_F(bpftrace_bad_btf, parse_invalid_btf)
 {
   BPFtrace bpftrace;
-  bpftrace.parse_btf({});
   EXPECT_FALSE(bpftrace.has_btf_data());
 }
 
 TEST_F(bpftrace_btf, add_probes_rawtracepoint)
 {
-  auto bpftrace = get_strict_mock_bpftrace();
+  auto bpftrace = get_mock_bpftrace();
   parse_probe("rawtracepoint:event_rt {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1261,12 +1260,12 @@ TEST_F(bpftrace_btf, add_probes_rawtracepoint)
   EXPECT_EQ(ProbeType::rawtracepoint, probe.type);
   EXPECT_EQ("event_rt", probe.attach_point);
   EXPECT_EQ("rawtracepoint:*:event_rt", probe.orig_name);
-  EXPECT_EQ("rawtracepoint:event_rt", probe.name);
+  EXPECT_EQ("rawtracepoint:vmlinux:event_rt", probe.name);
 }
 
 TEST_F(bpftrace_btf, add_probes_rawtracepoint_wildcard)
 {
-  auto bpftrace = get_strict_mock_bpftrace();
+  auto bpftrace = get_mock_bpftrace();
   parse_probe(("rawtracepoint:event_* {}"), *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -1275,7 +1274,7 @@ TEST_F(bpftrace_btf, add_probes_rawtracepoint_wildcard)
 
 TEST_F(bpftrace_btf, add_probes_rawtracepoint_wildcard_no_matches)
 {
-  auto bpftrace = get_strict_mock_bpftrace();
+  auto bpftrace = get_mock_bpftrace();
   parse_probe("rawtracepoint:typo_* {}", *bpftrace);
 
   ASSERT_EQ(0U, bpftrace->get_probes().size());

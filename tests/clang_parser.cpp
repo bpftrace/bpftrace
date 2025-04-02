@@ -5,6 +5,7 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "mocks.h"
 #include "struct.h"
 #include "gtest/gtest.h"
 
@@ -624,24 +625,23 @@ class clang_parser_btf : public test_btf {};
 
 TEST_F(clang_parser_btf, btf)
 {
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
+  auto bpftrace = get_mock_bpftrace();
   parse("struct Foo { "
         "  struct Foo1 f1;"
         "  struct Foo2 f2;"
         "  struct Foo3 f3;"
         "  struct task_struct t;"
         "}",
-        bpftrace);
+        *bpftrace);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo3"));
-  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
-  auto foo1 = bpftrace.structs.Lookup("struct Foo1").lock();
-  auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
-  auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
-  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo1"));
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo2"));
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo3"));
+  ASSERT_TRUE(bpftrace->structs.Has("struct task_struct"));
+  auto foo1 = bpftrace->structs.Lookup("struct Foo1").lock();
+  auto foo2 = bpftrace->structs.Lookup("struct Foo2").lock();
+  auto foo3 = bpftrace->structs.Lookup("struct Foo3").lock();
+  auto task_struct = bpftrace->structs.Lookup("struct task_struct").lock();
 
   EXPECT_EQ(foo1->size, 16);
   ASSERT_EQ(foo1->fields.size(), 3U);
@@ -707,12 +707,11 @@ TEST_F(clang_parser_btf, btf)
 // Disabled because BTF flattens multi-dimensional arrays #3082.
 TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
 {
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
-  parse("struct Foo { struct Arrays a; };", bpftrace);
+  auto bpftrace = get_mock_bpftrace();
+  parse("struct Foo { struct Arrays a; };", *bpftrace);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
-  auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Arrays"));
+  auto arrs = bpftrace->structs.Lookup("struct Arrays").lock();
 
   ASSERT_TRUE(arrs->HasField("multi_dim"));
   EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
@@ -740,15 +739,14 @@ TEST(clang_parser, btf_unresolved_typedef)
 {
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
   // extract it from there
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
-  if (!bpftrace.has_btf_data())
+  auto bpftrace = get_mock_bpftrace();
+  if (!bpftrace->has_btf_data())
     GTEST_SKIP();
 
-  parse("struct Foo { size_t x; };", bpftrace);
+  parse("struct Foo { size_t x; };", *bpftrace);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
-  auto foo = bpftrace.structs.Lookup("struct Foo").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo"));
+  auto foo = bpftrace->structs.Lookup("struct Foo").lock();
 
   EXPECT_EQ(foo->size, 8);
   ASSERT_EQ(foo->fields.size(), 1U);
@@ -762,31 +760,30 @@ TEST(clang_parser, btf_unresolved_typedef)
 TEST_F(clang_parser_btf, btf_type_override)
 {
   // It should be possible to override types from BTF, ...
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
+  auto bpftrace = get_mock_bpftrace();
   parse("struct Foo1 { int a; };\n",
-        bpftrace,
+        *bpftrace,
         true,
         "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
-  auto foo1 = bpftrace.structs.Lookup("struct Foo1").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo1"));
+  auto foo1 = bpftrace->structs.Lookup("struct Foo1").lock();
   ASSERT_EQ(foo1->fields.size(), 1U);
   ASSERT_TRUE(foo1->HasField("a"));
 
   // ... however, in such case, no other types are taken from BTF and the
   // following will fail since Foo2 will be undefined
-  bpftrace.btf_set_.clear();
+  bpftrace->btf_set_.clear();
   parse("struct Foo1 { struct Foo2 foo2; };\n",
-        bpftrace,
+        *bpftrace,
         false,
         "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
 
   // Here, Foo1 redefinition will take place when resolving incomplete types
   // (since Foo3 contains a pointer to Foo1)
-  bpftrace.btf_set_.clear();
+  bpftrace->btf_set_.clear();
   parse("struct Foo1 { struct Foo2 foo2; };\n",
-        bpftrace,
+        *bpftrace,
         false,
         "kprobe:sys_read { @x1 = ((struct Foo3 *)curtask); }");
 }

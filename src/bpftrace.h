@@ -103,7 +103,8 @@ public:
            BPFnofeature no_feature = BPFnofeature(),
            std::unique_ptr<Config> config = std::make_unique<Config>())
       : out_(std::move(o)),
-        feature_(std::make_unique<BPFfeature>(no_feature)),
+        btf_(std::make_shared<BTF>(this)),
+        feature_(std::make_unique<BPFfeature>(no_feature, btf_)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(util::get_possible_cpus().size()),
         max_cpu_id_(util::get_max_cpu_id()),
@@ -176,7 +177,7 @@ public:
 
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
 
-  void parse_btf(const std::set<std::string> &modules);
+  void parse_module_btf(const std::set<std::string> &modules);
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
@@ -209,6 +210,7 @@ public:
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
   std::unique_ptr<Output> out_;
+  std::shared_ptr<BTF> btf_;
   std::unique_ptr<BPFfeature> feature_;
 
   bool resolve_user_symbols_ = true;
@@ -231,7 +233,6 @@ public:
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
 
-  std::unique_ptr<BTF> btf_;
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;

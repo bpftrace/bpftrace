@@ -177,6 +177,8 @@ static void info(BPFnofeature no_feature)
   struct utsname utsname;
   uname(&utsname);
 
+  auto btf = std::make_shared<bpftrace::BTF>(nullptr);
+
   std::cout << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
             << utsname.version << std::endl
@@ -186,7 +188,7 @@ static void info(BPFnofeature no_feature)
   std::cout << BuildInfo::report();
 
   std::cout << std::endl;
-  std::cout << BPFfeature(no_feature).report();
+  std::cout << BPFfeature(no_feature, btf).report();
 }
 
 static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
@@ -848,7 +850,6 @@ int main(int argc, char* argv[])
 
     if (is_type_name(args.search)) {
       // Print structure definitions
-      bpftrace.parse_btf({});
       bpftrace.probe_matcher_->list_structs(args.search);
       return 0;
     }

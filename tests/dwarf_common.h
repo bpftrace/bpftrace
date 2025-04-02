@@ -8,10 +8,12 @@
 #include <stdexcept>
 
 namespace {
+#include "btf_common.h"
+#include "data/btf_data.h"
 #include "data/dwarf_data.h"
 } // namespace
 
-class test_dwarf : public ::testing::Test {
+class test_dwarf : public test_btf {
 protected:
   static void SetUpTestSuite()
   {
