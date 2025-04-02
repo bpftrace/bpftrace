@@ -90,9 +90,9 @@ public:
   SizedType get_var_type(const std::string& var_name);
 
   std::set<std::string> get_all_structs() const;
-  std::unique_ptr<std::istream> get_all_funcs() const;
+  std::unique_ptr<std::istream> get_all_funcs();
   std::unordered_set<std::string> get_all_iters() const;
-  std::unique_ptr<std::istream> get_all_raw_tracepoints() const;
+  std::unique_ptr<std::istream> get_all_raw_tracepoints();
   FuncParamLists get_params(const std::set<std::string>& funcs) const;
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
@@ -150,6 +150,8 @@ private:
   std::vector<BTFObj> btf_objects;
   enum state state = NODATA;
   BPFtrace* bpftrace_ = nullptr;
+  std::string all_funcs_;
+  std::string all_rawtracepoints_;
 };
 
 inline bool BTF::has_data() const

@@ -546,12 +546,14 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
   return funcs;
 }
 
-std::unique_ptr<std::istream> BTF::get_all_funcs() const
+std::unique_ptr<std::istream> BTF::get_all_funcs()
 {
-  auto funcs = std::make_unique<std::stringstream>();
+  if (!all_funcs_.empty()) {
+    return std::make_unique<std::stringstream>(all_funcs_);
+  }
   for (const auto &btf_obj : btf_objects)
-    *funcs << get_all_funcs_from_btf(btf_obj);
-  return funcs;
+    all_funcs_ += get_all_funcs_from_btf(btf_obj);
+  return std::make_unique<std::stringstream>(all_funcs_);
 }
 
 std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
@@ -603,12 +605,14 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
   return funcs;
 }
 
-std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints() const
+std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints()
 {
-  auto funcs = std::make_unique<std::stringstream>();
+  if (!all_rawtracepoints_.empty()) {
+    return std::make_unique<std::stringstream>(all_rawtracepoints_);
+  }
   for (const auto &btf_obj : btf_objects)
-    *funcs << get_all_raw_tracepoints_from_btf(btf_obj);
-  return funcs;
+    all_rawtracepoints_ += get_all_raw_tracepoints_from_btf(btf_obj);
+  return std::make_unique<std::stringstream>(all_rawtracepoints_);
 }
 
 FuncParamLists BTF::get_params_from_btf(
