@@ -92,8 +92,9 @@ public:
   std::unordered_set<std::string> get_all_iters() const;
   std::unique_ptr<std::istream> get_all_raw_tracepoints() const;
   std::map<std::string, std::vector<std::string>> get_params(
-      const std::set<std::string>& funcs,
-      bool is_raw_tracepoint = false) const;
+      const std::set<std::string>& funcs) const;
+  std::map<std::string, std::vector<std::string>> get_rawtracepoint_params(
+      const std::set<std::string>& rawtracepoints) const;
 
   std::optional<Struct> resolve_args(const std::string& func,
                                      bool ret,
@@ -124,10 +125,15 @@ private:
                                  std::unordered_set<std::string>& types) const;
   std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
   std::string get_all_raw_tracepoints_from_btf(const BTFObj& btf_obj) const;
+  std::map<std::string, std::vector<std::string>> get_params_impl(
+      const std::set<std::string>& funcs,
+      bool is_rawtracepoints) const;
   std::map<std::string, std::vector<std::string>> get_params_from_btf(
       const BTFObj& btf_obj,
-      const std::set<std::string>& funcs,
-      bool is_raw_tracepoint) const;
+      const std::set<std::string>& funcs) const;
+  std::map<std::string, std::vector<std::string>> get_raw_tracepoints_params_from_btf(
+      const BTFObj& btf_obj,
+      const std::set<std::string>& rawtracepoints) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
   std::unordered_set<std::string> get_all_iters_from_btf(
       const struct btf* btf) const;
