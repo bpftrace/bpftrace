@@ -131,11 +131,26 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = get_symbols_from_file(tracefs::available_events());
       break;
     }
+    // The two `has_btf_data` checks below for fentry/fexit/rawtracepoints
+    // are more about ordering than system properties.
+    // Initially, before BTF is loaded and we want to determine what modules to
+    // load BTF from we check "/sys/kernel/tracing/available_filter_functions".
+    // Then we check the BTF to filter out functions from that list that don't
+    // have any BTF definitions.
     case ProbeType::rawtracepoint: {
       if (bpftrace_->has_btf_data()) {
         symbol_stream = bpftrace_->btf_->get_all_raw_tracepoints();
       } else {
         symbol_stream = get_symbols_from_raw_tracepoints();
+      }
+      break;
+    }
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
+      if (bpftrace_->has_btf_data())
+        symbol_stream = bpftrace_->btf_->get_all_funcs();
+      else {
+        symbol_stream = get_symbols_from_traceable_funcs(true);
       }
       break;
     }
@@ -149,18 +164,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::hardware: {
       symbol_stream = get_symbols_from_list(HW_PROBE_LIST);
-      break;
-    }
-    case ProbeType::fentry:
-    case ProbeType::fexit: {
-      // If BTF is not parsed, yet, read available_filter_functions instead.
-      // This is useful as we will use the result to extract the list of
-      // potentially used kernel modules and then only parse BTF for them.
-      if (bpftrace_->has_btf_data())
-        symbol_stream = bpftrace_->btf_->get_all_funcs();
-      else {
-        symbol_stream = get_symbols_from_traceable_funcs(true);
-      }
       break;
     }
     case ProbeType::iter: {
