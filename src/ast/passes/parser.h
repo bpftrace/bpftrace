@@ -28,7 +28,6 @@ inline std::vector<Pass> AllParsePasses(
   // set during the clang parse to expand identifiers within the lexer.
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateParseAttachpointsPass());
-  passes.emplace_back(CreateParseBTFPass());
   return passes;
 }
 
