@@ -59,7 +59,6 @@ class BTF {
   // We're currently storing its name and BTF id.
   struct BTFObj {
     struct btf* btf;
-    __u32 id;
     std::string name;
   };
 

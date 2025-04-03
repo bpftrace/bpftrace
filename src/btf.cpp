@@ -48,8 +48,7 @@ BTF::BTF(const std::set<std::string> &modules)
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
-    btf_objects.push_back(
-        BTFObj{ .btf = btf__parse_raw(path), .id = 0, .name = "" });
+    btf_objects.push_back(BTFObj{ .btf = btf__parse_raw(path), .name = "" });
     vmlinux_btf = btf_objects.back().btf;
     if (!vmlinux_btf) {
       LOG(WARNING) << "BTF: failed to parse BTF from " << path;
@@ -81,8 +80,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     LOG(V1) << "BTF: failed to find BTF data for vmlinux: " << strerror(errno);
     return;
   }
-  btf_objects.push_back(
-      BTFObj{ .btf = vmlinux_btf, .id = 0, .name = "vmlinux" });
+  btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
 
   if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
     return;
@@ -124,12 +122,9 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     if (!info.kernel_btf)
       continue;
 
-    if (mod_name == "vmlinux") {
-      btf_objects.front().id = id;
-    } else if (modules.contains(mod_name)) {
+    if (modules.contains(mod_name)) {
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
-                  .id = id,
                   .name = mod_name });
     }
   }
