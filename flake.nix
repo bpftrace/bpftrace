@@ -151,6 +151,7 @@
                   pkgs.flex
                   pkgs.gcc
                   pkgs.ninja
+                  pkgs.pkg-config
                 ];
 
                 buildInputs = [
@@ -166,6 +167,7 @@
                   pkgs.libffi
                   pkgs.libopcodes
                   pkgs.libpcap
+                  pkgs.systemdLibs
                   pkgs.libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
@@ -177,6 +179,7 @@
                 # Release flags
                 cmakeFlags = [
                   "-DCMAKE_BUILD_TYPE=Release"
+                  "-DENABLE_SYSTEMD=1"
                 ];
 
                 # Technically not needed cuz package name matches mainProgram, but
