@@ -88,6 +88,9 @@ enum Options {
   DEBUG,
   DRY_RUN,
 };
+
+constexpr auto FULL_SEARCH = "*:*";
+
 } // namespace
 
 void usage(std::ostream& out)
@@ -682,14 +685,14 @@ Args parse_args(int argc, char* argv[])
   if (args.listing) {
     // Expect zero or one positional arguments
     if (optind == argc) {
-      args.search = "*:*";
+      args.search = FULL_SEARCH;
     } else if (optind == argc - 1) {
       std::string val(argv[optind]);
       if (std::filesystem::exists(val)) {
         args.filename = val;
       } else {
         if (val == "*") {
-          args.search = "*:*";
+          args.search = FULL_SEARCH;
         } else {
           args.search = val;
         }
@@ -848,12 +851,6 @@ int main(int argc, char* argv[])
   if (args.listing && args.script.empty() && args.filename.empty()) {
     check_is_root();
 
-    if (is_type_name(args.search)) {
-      // Print structure definitions
-      bpftrace.probe_matcher_->list_structs(args.search);
-      return 0;
-    }
-
     if (args.search.find(".") != std::string::npos &&
         args.search.find_first_of(":*") == std::string::npos) {
       LOG(WARNING)
@@ -862,9 +859,11 @@ int main(int argc, char* argv[])
           << args.search << "\' as a search pattern.";
     }
 
+    bool is_search_a_type = is_type_name(args.search);
+
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
-    ast = buildListProgram(args.search);
+    ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
 
     // Parse and expand all the attachpoints. We don't need to descend into the
     // actual driver here, since we know that the program is already formed.
@@ -880,7 +879,12 @@ int main(int argc, char* argv[])
       return 1;
     }
 
-    bpftrace.probe_matcher_->list_probes(ast.root);
+    if (is_search_a_type) {
+      bpftrace.probe_matcher_->list_structs(args.search);
+    } else {
+      bpftrace.probe_matcher_->list_probes(ast.root);
+    }
+
     return 0;
   }
 
