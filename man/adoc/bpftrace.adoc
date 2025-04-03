@@ -4153,7 +4153,8 @@ iscsid is sleeping.
 
 === Systemd support
 
-To run bpftrace in the background using systemd::
+If bpftrace has been built with `-DENABLE_SYSTEMD=1`, one can run bpftrace in
+the background using systemd::
 ----
 # systemd-run --unit=bpftrace --service-type=notify bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
 ----
