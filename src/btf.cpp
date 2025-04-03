@@ -773,8 +773,11 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
   return params;
 }
 
-FuncParamLists BTF::get_params_impl(const std::set<std::string> &funcs,
-                                    bool is_rawtracepoints) const
+FuncParamLists BTF::get_params_impl(
+    const std::set<std::string> &funcs,
+    std::function<FuncParamLists(const BTFObj &btf_obj,
+                                 const std::set<std::string> &funcs)>
+        get_param_btf_cb) const
 {
   FuncParamLists params;
   auto all_resolved = [&params](const std::string &f) {
@@ -785,9 +788,7 @@ FuncParamLists BTF::get_params_impl(const std::set<std::string> &funcs,
     if (std::ranges::all_of(funcs, all_resolved))
       break;
 
-    auto mod_params = is_rawtracepoints
-                          ? get_raw_tracepoints_params_from_btf(btf_obj, funcs)
-                          : get_params_from_btf(btf_obj, funcs);
+    auto mod_params = get_param_btf_cb(btf_obj, funcs);
     params.insert(mod_params.begin(), mod_params.end());
   }
 
@@ -796,13 +797,20 @@ FuncParamLists BTF::get_params_impl(const std::set<std::string> &funcs,
 
 FuncParamLists BTF::get_params(const std::set<std::string> &funcs) const
 {
-  return get_params_impl(funcs, false);
+  return get_params_impl(
+      funcs, [this](const BTFObj &btf_obj, const std::set<std::string> &funcs) {
+        return get_params_from_btf(btf_obj, funcs);
+      });
 }
 
 FuncParamLists BTF::get_rawtracepoint_params(
     const std::set<std::string> &rawtracepoints) const
 {
-  return get_params_impl(rawtracepoints, true);
+  return get_params_impl(
+      rawtracepoints,
+      [this](const BTFObj &btf_obj, const std::set<std::string> &funcs) {
+        return get_raw_tracepoints_params_from_btf(btf_obj, funcs);
+      });
 }
 
 std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const

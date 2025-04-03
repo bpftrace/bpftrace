@@ -125,8 +125,11 @@ private:
                                  std::unordered_set<std::string>& types) const;
   std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
   std::string get_all_raw_tracepoints_from_btf(const BTFObj& btf_obj) const;
-  FuncParamLists get_params_impl(const std::set<std::string>& funcs,
-                                 bool is_rawtracepoints) const;
+  FuncParamLists get_params_impl(
+      const std::set<std::string>& funcs,
+      std::function<FuncParamLists(const BTFObj& btf_obj,
+                                   const std::set<std::string>& funcs)>
+          get_param_btf_cb) const;
   FuncParamLists get_params_from_btf(const BTFObj& btf_obj,
                                      const std::set<std::string>& funcs) const;
   FuncParamLists get_raw_tracepoints_params_from_btf(
