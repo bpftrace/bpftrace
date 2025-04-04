@@ -49,6 +49,21 @@ BTF::BTF() : BTF(nullptr)
 
 BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
 {
+}
+
+BTF::~BTF()
+{
+  for (auto &btf_obj : btf_objects)
+    btf__free(btf_obj.btf);
+}
+
+void BTF::load_vmlinux_btf()
+{
+  if (state != INIT) {
+    // Don't attempt to reload vmlinux even if it fails below
+    return;
+  }
+  state = ERROR;
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
@@ -75,18 +90,14 @@ BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
 
   vmlinux_btf_size = static_cast<__s32>(type_cnt(vmlinux_btf));
 
-  state = OK;
-}
-
-BTF::~BTF()
-{
-  for (auto &btf_obj : btf_objects)
-    btf__free(btf_obj.btf);
+  state = VMLINUX_LOADED;
 }
 
 void BTF::load_module_btfs(const std::set<std::string> &modules)
 {
-  if ((bpftrace_ && !bpftrace_->feature_->has_module_btf()) || state != OK)
+  load_vmlinux_btf();
+  if ((bpftrace_ && !bpftrace_->feature_->has_module_btf()) ||
+      state != VMLINUX_LOADED)
     return;
 
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
@@ -133,7 +144,7 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
     }
   }
 
-  state = OK_MODULES_LOADED;
+  state = VMLINUX_AND_MODULES_LOADED;
 }
 
 static void dump_printf(void *ctx, const char *fmt, va_list args)
@@ -239,7 +250,7 @@ std::string BTF::dump_defs_from_btf(
   return ret;
 }
 
-std::string BTF::c_def(const std::unordered_set<std::string> &set) const
+std::string BTF::c_def(const std::unordered_set<std::string> &set)
 {
   if (!has_data())
     return {};
