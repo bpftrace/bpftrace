@@ -1,12 +1,54 @@
+NAME map indexed
+PROG BEGIN { @a[0] = 0; @a[1] = 1; exit(); }
+EXPECT @a[0]: 0
+EXPECT @a[1]: 1
+
+NAME map scalar
+PROG BEGIN { @a = 0; exit(); }
+EXPECT @a: 0
+
+NAME map auto scalar
+PROG BEGIN { @a[0] = 0; exit(); }
+EXPECT @a: 0
+
+NAME map auto different index
+PROG BEGIN { @a[1] = 0; exit(); }
+EXPECT @a[1]: 0
+
+NAME map auto scalar decl
+PROG config = { unstable_map_decl=1 } let @a = hash(1); BEGIN { @a[0] = 0; exit(); }
+EXPECT @a: 0
+
+NAME map auto scalar decl disables
+PROG config = { unstable_map_decl=1 } let @a = hash(1); BEGIN { @a[1] = 0; exit(); }
+EXPECT @a[1]: 0
+
+# Unfortunately there are some issues when evicting lruhash entries. We can't
+# know exactly which elements will be present. See #3992 for more information.
 NAME map declaration lruhash
-PROG config = { unstable_map_decl=1 } let @a = lruhash(1); BEGIN { @a[1] = 1; @a[2] = 2; exit(); }
+PROG config = { unstable_map_decl=1 } let @a = lruhash(2); BEGIN { @a[0] = 0; @a[1] = 1; @a[2] = 2; exit(); }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
-EXPECT @a[2]: 2
+EXPECT_REGEX @a\[.\]: .
+
+NAME map declaration lruhash
+PROG config = { unstable_map_decl=1 } let @a = lruhash(1); BEGIN { @a[1] = 1; exit(); }
+EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
+EXPECT @a[1]: 1
+
+NAME map declaration lruhash scalar
+PROG config = { unstable_map_decl=1 } let @a = lruhash(1); BEGIN { @a[0] = 1; exit(); }
+EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
+EXPECT @a: 1
 
 NAME map declaration hash
 PROG config = { unstable_map_decl=1 } let @a = hash(1); BEGIN { @a[1] = 1; @a[2] = 2; exit(); }
 EXPECT_REGEX .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
+
+NAME map declaration hash scalar
+PROG config = { unstable_map_decl=1 } let @a = hash(1); BEGIN { @a[0] = 0; @a[0] = 1; exit(); }
+EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
+EXPECT @a: 1
 
 NAME map declaration percpuhash
 PROG config = { unstable_map_decl=1 } let @a = percpuhash(1); BEGIN { @a[1] = count(); @a[2] = count(); exit(); }

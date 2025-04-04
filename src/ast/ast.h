@@ -205,8 +205,10 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(ASTContext &ctx, std::string ident, Location &&loc);
-  Map(ASTContext &ctx, std::string ident, Expression &expr, Location &&loc);
+  explicit Map(ASTContext &ctx,
+               std::string ident,
+               Expression *expr,
+               Location &&loc);
 
   std::string ident;
   Expression *key_expr = nullptr;

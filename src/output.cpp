@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <bpf/libbpf.h>
 #include <iomanip>
+#include <string>
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "output.h"
+#include "required_resources.h"
 #include "util/format.h"
 #include "util/stats.h"
 
@@ -553,14 +555,16 @@ void Output::map_hist_contents(
     auto key_str = map_key_to_str(bpftrace, map, key);
     std::string val_str;
     if (map_type.IsHistTy()) {
-      if (!map_info.hist_bits_arg.has_value())
+      if (!std::holds_alternative<HistogramArgs>(map_info.detail))
         LOG(BUG) << "call to hist with missing \"bits\" argument";
-      val_str = hist_to_str(value, div, *map_info.hist_bits_arg);
+      val_str = hist_to_str(value,
+                            div,
+                            std::get<HistogramArgs>(map_info.detail).bits);
     } else {
-      const auto &args = map_info.lhist_args;
-      if (!args.has_value())
+      if (!std::holds_alternative<LinearHistogramArgs>(map_info.detail))
         LOG(BUG) << "call to lhist with missing arguments";
-      val_str = lhist_to_str(value, args->min, args->max, args->step);
+      const auto &args = std::get<LinearHistogramArgs>(map_info.detail);
+      val_str = lhist_to_str(value, args.min, args.max, args.step);
     }
     map_key_val(map_type, key_str, val_str);
   }
@@ -866,8 +870,9 @@ std::string TextOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  const auto &key_type = bpftrace.resources.maps_info.at(map.name()).key_type;
-  if (key_type.IsNoneTy())
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
+  const auto &key_type = map_info.key_type;
+  if (map_info.is_scalar || key_type.IsNoneTy())
     return map.name();
 
   return map.name() + "[" + map_key_str(bpftrace, key_type, key) + "]";
@@ -950,16 +955,17 @@ void JsonOutput::map(
   if (values_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
 
   out_ << R"({"type": ")" << MessageType::map << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (!map_key.IsNoneTy()) // check if this map has keys
+  // check if this map has keys
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "{";
 
   map_contents(bpftrace, map, top, div, values_by_key);
 
-  if (!map_key.IsNoneTy())
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1061,17 +1067,18 @@ void JsonOutput::map_hist(
   if (total_counts_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
 
   out_ << R"({"type": ")" << MessageType::hist << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (!map_key.IsNoneTy()) // check if this map has keys
+  // check if this map has keys
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "{";
 
   map_hist_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
-  if (!map_key.IsNoneTy())
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1087,16 +1094,17 @@ void JsonOutput::map_stats(
   if (values_by_key.empty())
     return;
 
-  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key_type;
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
 
   out_ << R"({"type": ")" << MessageType::stats << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  if (!map_key.IsNoneTy()) // check if this map has keys
+  // check if this map has keys
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "{";
 
   map_stats_contents(bpftrace, map, top, div, values_by_key);
 
-  if (!map_key.IsNoneTy())
+  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1193,11 +1201,12 @@ std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  const auto &key_type = bpftrace.resources.maps_info.at(map.name()).key_type;
-  if (key_type.IsNoneTy()) {
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
+  const auto &map_key = map_info.key_type;
+  if (map_info.is_scalar || map_key.IsNoneTy()) {
     return "";
   }
-  return "\"" + json_escape(map_key_str(bpftrace, key_type, key)) + "\"";
+  return "\"" + json_escape(map_key_str(bpftrace, map_key, key)) + "\"";
 }
 
 void JsonOutput::map_key_val(const SizedType &map_type __attribute__((unused)),

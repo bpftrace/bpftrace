@@ -46,7 +46,7 @@ TEST(CollectNodes, indirect)
 TEST(CollectNodes, none)
 {
   ASTContext ctx;
-  auto &map = *ctx.make_node<Map>("myvar", bpftrace::location{});
+  auto &map = *ctx.make_node<Map>("myvar", nullptr, bpftrace::location{});
   auto &unop = *ctx.make_node<Unop>(
       Operator::INCREMENT, &map, false, bpftrace::location{});
 

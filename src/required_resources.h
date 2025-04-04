@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <cereal/access.hpp>
+#include <cereal/types/variant.hpp>
 
 #include "ast/location.h"
 #include "format_string.h"
@@ -59,14 +60,38 @@ private:
   }
 };
 
+struct HistogramArgs {
+  long bits = -1;
+  bool scalar = true;
+
+  bool operator==(const HistogramArgs &other)
+  {
+    return bits == other.bits && scalar == other.scalar;
+  }
+  bool operator!=(const HistogramArgs &other)
+  {
+    return !(*this == other);
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(bits, scalar);
+  }
+};
+
 struct LinearHistogramArgs {
   long min = -1;
   long max = -1;
   long step = -1;
+  bool scalar = true;
 
   bool operator==(const LinearHistogramArgs &other)
   {
-    return min == other.min && max == other.max && step == other.step;
+    return min == other.min && max == other.max && step == other.step &&
+           scalar == other.scalar;
   }
   bool operator!=(const LinearHistogramArgs &other)
   {
@@ -78,31 +103,25 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(min, max, step);
+    archive(min, max, step, scalar);
   }
 };
 
 struct MapInfo {
   SizedType key_type;
   SizedType value_type;
-  std::optional<LinearHistogramArgs> lhist_args;
-  std::optional<int> hist_bits_arg;
+  std::variant<std::monostate, HistogramArgs, LinearHistogramArgs> detail;
   int id = -1;
   int max_entries = -1;
   libbpf::bpf_map_type bpf_type = libbpf::BPF_MAP_TYPE_HASH;
+  bool is_scalar = false;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key_type,
-            value_type,
-            lhist_args,
-            hist_bits_arg,
-            id,
-            max_entries,
-            bpf_type);
+    archive(key_type, value_type, detail, id, max_entries, bpf_type, is_scalar);
   }
 };
 

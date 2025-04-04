@@ -79,13 +79,12 @@ TEST(required_resources, round_trip_map_info)
     MapInfo info{
       .key_type = CreateNone(),
       .value_type = CreateInet(3),
-      .lhist_args =
+      .detail =
           LinearHistogramArgs{
               .min = 99,
               .max = 123,
               .step = 33,
           },
-      .hist_bits_arg = 1,
     };
     info.key_type = CreateInt32();
     RequiredResources r;
@@ -107,16 +106,10 @@ TEST(required_resources, round_trip_map_info)
     EXPECT_TRUE(map_info.key_type.IsIntegerTy());
     EXPECT_EQ(map_info.key_type.GetSize(), 4);
 
-    // clang-tidy does not recognize ASSERT_*() terminates testcase
-    // NOLINTBEGIN(bugprone-unchecked-optional-access)
-    ASSERT_TRUE(map_info.lhist_args.has_value());
-    EXPECT_EQ(map_info.lhist_args->min, 99);
-    EXPECT_EQ(map_info.lhist_args->max, 123);
-    EXPECT_EQ(map_info.lhist_args->step, 33);
-    // NOLINTEND(bugprone-unchecked-optional-access)
-
-    EXPECT_TRUE(map_info.hist_bits_arg.has_value());
-    EXPECT_EQ(map_info.hist_bits_arg, 1);
+    const auto &lhist_args = std::get<LinearHistogramArgs>(map_info.detail);
+    EXPECT_EQ(lhist_args.min, 99);
+    EXPECT_EQ(lhist_args.max, 123);
+    EXPECT_EQ(lhist_args.step, 33);
   }
 }
 
