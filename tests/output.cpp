@@ -17,10 +17,9 @@ TEST(TextOutput, lhist_no_suffix)
   bpftrace.resources.maps_info["@mymap"] = MapInfo{
     .key_type = CreateNone(),
     .value_type = SizedType{ Type::lhist_t, 8 },
-    .lhist_args = LinearHistogramArgs{ .min = 610000,
-                                       .max = 670000,
-                                       .step = 10000 },
-    .hist_bits_arg = {},
+    .detail = LinearHistogramArgs{ .min = 610000,
+                                   .max = 670000,
+                                   .step = 10000 },
     .id = {}
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
@@ -65,10 +64,7 @@ TEST(TextOutput, lhist_suffix)
   bpftrace.resources.maps_info["@mymap"] = MapInfo{
     .key_type = CreateNone(),
     .value_type = SizedType{ Type::lhist_t, 8 },
-    .lhist_args = LinearHistogramArgs{ .min = 0,
-                                       .max = 5 * 1024,
-                                       .step = 1024 },
-    .hist_bits_arg = {},
+    .detail = LinearHistogramArgs{ .min = 0, .max = 5 * 1024, .step = 1024 },
     .id = {}
   };
   BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
