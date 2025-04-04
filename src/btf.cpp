@@ -89,10 +89,43 @@ void BTF::load_vmlinux_btf()
   state = OK;
 }
 
+bool BTF::has_module_btf()
+{
+  if (has_module_btf_.has_value())
+    return *has_module_btf_;
+
+  char name[64];
+  struct bpf_btf_info info = {};
+  info.name = reinterpret_cast<uintptr_t>(name);
+  info.name_len = sizeof(name);
+  __u32 id = 0, info_len = sizeof(info);
+  int err = 0, fd = -1;
+
+  err = bpf_btf_get_next_id(id, &id);
+  if (err)
+    goto not_support;
+
+  fd = bpf_btf_get_fd_by_id(id);
+  if (fd < 0)
+    goto not_support;
+
+  err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
+  close(fd);
+  if (err)
+    goto not_support;
+
+  has_module_btf_ = true;
+  return *has_module_btf_;
+
+not_support:
+  has_module_btf_ = false;
+  return *has_module_btf_;
+}
+
 void BTF::load_module_btfs(const std::set<std::string> &modules)
 {
   load_vmlinux_btf();
-  if ((bpftrace_ && !bpftrace_->feature_->has_module_btf()) || state != OK)
+  if ((bpftrace_ && !has_module_btf()) || state != OK)
     return;
 
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object

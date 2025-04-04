@@ -74,6 +74,7 @@ public:
   ~BTF();
 
   bool has_data();
+  bool has_module_btf();
   bool modules_loaded() const;
   size_t objects_cnt() const
   {
@@ -154,6 +155,7 @@ private:
   std::string all_rawtracepoints_;
   bool vmlinux_loaded_ = false;
   bool modules_loaded_ = false;
+  std::optional<bool> has_module_btf_;
 };
 
 inline bool BTF::has_data()
