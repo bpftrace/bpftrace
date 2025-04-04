@@ -283,25 +283,25 @@ void ResourceAnalyser::visit(Call &call)
     resources_.strftime_args.push_back(get_literal_string(*call.vargs.at(0)));
   } else if (call.func == "print") {
     constexpr auto nonmap_headroom = sizeof(AsyncEvent::PrintNonMap);
-    auto &arg = *call.vargs.at(0);
-    if (!arg.is_map) {
-      resources_.non_map_print_args.push_back(arg.type);
+    auto *arg = call.vargs.at(0);
+    if (auto *map = dynamic_cast<Map *>(arg)) {
+      if (map->key_expr) {
+        resources_.non_map_print_args.push_back(map->type);
 
-      const size_t fmtstring_args_size = nonmap_headroom + arg.type.GetSize();
-      if (exceeds_stack_limit(fmtstring_args_size)) {
-        resources_.max_fmtstring_args_size = std::max<uint64_t>(
-            resources_.max_fmtstring_args_size, fmtstring_args_size);
-      }
-    } else {
-      auto &map = static_cast<Map &>(arg);
-      if (map.key_expr) {
-        resources_.non_map_print_args.push_back(map.type);
-
-        const size_t fmtstring_args_size = nonmap_headroom + map.type.GetSize();
+        const size_t fmtstring_args_size = nonmap_headroom +
+                                           map->type.GetSize();
         if (exceeds_stack_limit(fmtstring_args_size)) {
           resources_.max_fmtstring_args_size = std::max<uint64_t>(
               resources_.max_fmtstring_args_size, fmtstring_args_size);
         }
+      }
+    } else {
+      resources_.non_map_print_args.push_back(arg->type);
+
+      const size_t fmtstring_args_size = nonmap_headroom + arg->type.GetSize();
+      if (exceeds_stack_limit(fmtstring_args_size)) {
+        resources_.max_fmtstring_args_size = std::max<uint64_t>(
+            resources_.max_fmtstring_args_size, fmtstring_args_size);
       }
     }
   } else if (call.func == "cgroup_path") {
@@ -329,9 +329,9 @@ void ResourceAnalyser::visit(Call &call)
   }
 
   if (call.func == "print" || call.func == "clear" || call.func == "zero") {
-    auto &arg = *call.vargs.at(0);
-    if (arg.is_map) {
-      auto &name = static_cast<Map &>(arg).ident;
+    auto *arg = call.vargs.at(0);
+    if (auto *map = dynamic_cast<Map *>(arg)) {
+      auto &name = map->ident;
       auto &map_info = resources_.maps_info[name];
       if (map_info.id == -1)
         map_info.id = next_map_id_++;

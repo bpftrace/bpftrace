@@ -1542,10 +1542,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.SetInsertPoint(deadcode);
     return ScopedExpr();
   } else if (call.func == "print") {
-    auto &arg = *call.vargs.at(0);
-    if (arg.is_map) {
-      auto &map = static_cast<Map &>(arg);
-      if (map.key_expr)
+    auto *arg = call.vargs.at(0);
+    if (auto *map = dynamic_cast<Map *>(arg)) {
+      if (map->key_expr)
         createPrintNonMapCall(call, async_ids_.non_map_print());
       else
         createPrintMapCall(call);
@@ -4383,12 +4382,11 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
   SizedType &type = unop.expr->type;
   uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
 
-  if (unop.expr->is_map) {
-    auto &map = static_cast<Map &>(*unop.expr);
-    auto scoped_key = getMapKey(map);
+  if (auto *map = dynamic_cast<Map *>(unop.expr)) {
+    auto scoped_key = getMapKey(*map);
     Value *oldval = b_.CreateMapLookupElem(
-        ctx_, map, scoped_key.value(), unop.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
+        ctx_, *map, scoped_key.value(), unop.loc);
+    AllocaInst *newval = b_.CreateAllocaBPF(map->type, map->ident + "_newval");
     if (is_increment)
       b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
@@ -4396,18 +4394,17 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
       b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
     b_.CreateMapUpdateElem(
-        ctx_, map.ident, scoped_key.value(), newval, unop.loc);
+        ctx_, map->ident, scoped_key.value(), newval, unop.loc);
 
     Value *value;
     if (unop.is_post_op)
       value = oldval;
     else
-      value = b_.CreateLoad(b_.GetType(map.type), newval);
+      value = b_.CreateLoad(b_.GetType(map->type), newval);
     b_.CreateLifetimeEnd(newval);
     return ScopedExpr(value);
-  } else if (unop.expr->is_variable) {
-    auto &var = static_cast<Variable &>(*unop.expr);
-    const auto &variable = getVariable(var.ident);
+  } else if (auto *var = dynamic_cast<Variable *>(unop.expr)) {
+    const auto &variable = getVariable(var->ident);
     Value *oldval = b_.CreateLoad(variable.type, variable.value);
     Value *newval;
     if (is_increment)

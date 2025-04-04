@@ -109,20 +109,17 @@ MapDeclStatement::MapDeclStatement(Diagnostics &d,
 Map::Map(Diagnostics &d, std::string ident, Location &&loc)
     : Expression(d, std::move(loc)), ident(std::move(ident))
 {
-  is_map = true;
 }
 
 Map::Map(Diagnostics &d, std::string ident, Expression &expr, Location &&loc)
     : Expression(d, std::move(loc)), ident(std::move(ident)), key_expr(&expr)
 {
-  is_map = true;
   key_expr->key_for_map = this;
 }
 
 Variable::Variable(Diagnostics &d, std::string ident, Location &&loc)
     : Expression(d, std::move(loc)), ident(std::move(ident))
 {
-  is_variable = true;
 }
 
 Binop::Binop(Diagnostics &d,
