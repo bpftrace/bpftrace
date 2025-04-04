@@ -2980,8 +2980,6 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
 
 ScopedExpr CodegenLLVM::visit(For &f)
 {
-  auto &map = static_cast<Map &>(*f.expr);
-
   Value *ctx = b_.getInt64(0);
   llvm::Type *ctx_t = nullptr;
 
@@ -3004,7 +3002,7 @@ ScopedExpr CodegenLLVM::visit(For &f)
 
   scope_stack_.push_back(&f);
   b_.CreateForEachMapElem(
-      ctx_, map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
+      ctx_, *f.map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
   scope_stack_.pop_back();
 
   return ScopedExpr();
@@ -4675,10 +4673,9 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
     key = b_.CreateLoad(b_.GetType(key_type), key, "key");
   }
 
-  auto &map = static_cast<Map &>(*f.expr);
-  auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+  auto map_info = bpftrace_.resources.maps_info.find(f.map->ident);
   if (map_info == bpftrace_.resources.maps_info.end()) {
-    LOG(BUG) << "map name: \"" << map.ident << "\" not found";
+    LOG(BUG) << "map name: \"" << f.map->ident << "\" not found";
   }
 
   auto &val_type = f.decl->type.GetField(1).type;
@@ -4687,7 +4684,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key_type)) {
     val = b_.CreatePerCpuMapAggElems(
-        ctx_, map, callback->getArg(1), map_val_type, map.loc);
+        ctx_, *f.map, callback->getArg(1), map_val_type, f.map->loc);
   } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

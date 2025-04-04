@@ -2693,15 +2693,9 @@ void SemanticAnalyser::visit(For &f)
                               decl_name;
   }
 
-  // Validate expr
-  if (!f.expr->is_map) {
-    f.expr->addError() << "Loop expression must be a map";
-    return;
-  }
-  Map &map = static_cast<Map &>(*f.expr);
-
-  if (!map.type.IsMapIterableTy()) {
-    f.expr->addError() << "Loop expression does not support type: " << map.type;
+  if (!f.map->type.IsMapIterableTy()) {
+    f.map->addError() << "Loop expression does not support type: "
+                      << f.map->type;
     return;
   }
 
@@ -2714,8 +2708,8 @@ void SemanticAnalyser::visit(For &f)
                  << "' statement is not allowed in a for-loop";
   }
 
-  map.skip_key_validation = true;
-  visit(map);
+  f.map->skip_key_validation = true;
+  visit(f.map);
 
   if (!ctx_.diagnostics().ok())
     return;
@@ -2756,15 +2750,15 @@ void SemanticAnalyser::visit(For &f)
 
   // Create type for the loop's decl
   // Iterating over a map provides a tuple: (map_key, map_val)
-  auto *mapkey = get_map_key_type(map);
-  auto *mapval = get_map_type(map);
+  auto *mapkey = get_map_key_type(*f.map);
+  auto *mapval = get_map_type(*f.map);
 
   if (!mapval)
     return;
 
   if (!mapkey || mapkey->IsNoneTy()) {
     if (is_final_pass()) {
-      map.addError()
+      f.map->addError()
           << "Maps used as for-loop expressions must have keys to iterate over";
     }
     return;

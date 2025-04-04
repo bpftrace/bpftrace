@@ -471,18 +471,18 @@ class For : public Statement {
 public:
   For(Diagnostics &d,
       Variable *decl,
-      Expression *expr,
+      Map *map,
       StatementList &&stmts,
       Location &&loc)
       : Statement(d, std::move(loc)),
         decl(decl),
-        expr(expr),
+        map(map),
         stmts(std::move(stmts))
   {
   }
 
   Variable *decl = nullptr;
-  Expression *expr = nullptr;
+  Map *map = nullptr;
   StatementList stmts;
   SizedType ctx_type;
 };
