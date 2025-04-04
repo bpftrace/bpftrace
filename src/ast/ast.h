@@ -235,11 +235,6 @@ public:
   std::string ident;
   Expression *key_expr = nullptr;
   SizedType key_type;
-  bool skip_key_validation = false;
-  // This is for a feature check on reading per-cpu maps
-  // which involve calling map_lookup_percpu_elem
-  // https://github.com/bpftrace/bpftrace/issues/3755
-  bool is_read = true;
 };
 
 class Variable : public Expression {
