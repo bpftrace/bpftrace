@@ -329,14 +329,14 @@ static bool IsValidVarDeclType(const SizedType &ty)
 bool SemanticAnalyser::is_valid_assignment(const Expression *target,
                                            const Expression *expr)
 {
-  if (expr->is_map) {
+  if (const auto *map = dynamic_cast<const Map *>(expr)) {
     // Prevent assigning aggregations to another map.
     if (expr->type.IsMultiKeyMapTy())
       return false;
     // Prevent declaring a map copying another aggregate map.
     if (const auto *target_map = dynamic_cast<const Map *>(target)) {
       bool map_has_type = get_map_type(*target_map);
-      if (expr->type.IsCastableMapTy() && !map_has_type)
+      if (map->type.IsCastableMapTy() && !map_has_type)
         return false;
     }
     // Preventing folding of non-castable maps.
@@ -830,21 +830,19 @@ void SemanticAnalyser::visit(Call &call)
   func_setter scope_bound_func_setter{ *this, call.func };
 
   for (size_t i = 0; i < call.vargs.size(); ++i) {
-    auto &expr = *call.vargs[i];
+    auto *expr = call.vargs[i];
     func_arg_idx_ = i;
 
-    if (expr.is_map) {
-      Map &map = static_cast<Map &>(expr);
-
+    if (auto *map = dynamic_cast<Map *>(expr)) {
       // If the map is indexed, don't skip key validation
-      if (map.key_expr == nullptr) {
+      if (map->key_expr == nullptr) {
         // These calls expect just a map reference for the first argument
         if ((call.func == "delete" || call.func == "has_key") && i == 0) {
-          map.skip_key_validation = true;
-          map.is_read = false;
+          map->skip_key_validation = true;
+          map->is_read = false;
         } else if (skip_key_validation(call)) {
-          map.skip_key_validation = true;
-          map.is_read = false;
+          map->skip_key_validation = true;
+          map->is_read = false;
         }
       }
     }
@@ -983,7 +981,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "delete") {
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 2)) {
-      if (!call.vargs.at(0)->is_map) {
+      if (dynamic_cast<Map *>(call.vargs.at(0)) == nullptr) {
         call.vargs.at(0)->addError() << DELETE_ERROR;
       } else {
         Map &map = static_cast<Map &>(*call.vargs.at(0));
@@ -1018,16 +1016,13 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "has_key") {
     if (check_varargs(call, 2, 2)) {
       auto &arg0 = *call.vargs.at(0);
-      if (!arg0.is_map) {
-        arg0.addError() << "has_key() expects the first argument to be a map";
-      } else {
-        Map &map = static_cast<Map &>(arg0);
-        if (map.key_expr) {
+      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+        if (map->key_expr) {
           arg0.addError()
               << "has_key() expects the first argument to be a map. Not a map "
                  "value expression.";
         }
-        auto *mapkey = get_map_key_type(map);
+        auto *mapkey = get_map_key_type(*map);
         if (mapkey) {
           if (mapkey->IsNoneTy()) {
             arg0.addError()
@@ -1037,12 +1032,14 @@ void SemanticAnalyser::visit(Call &call)
             auto &arg1 = *call.vargs.at(1);
             SizedType new_key_type = create_key_type(arg1.type, arg1);
             update_current_key(*mapkey, new_key_type);
-            validate_new_key(*mapkey, new_key_type, map.ident, arg1);
+            validate_new_key(*mapkey, new_key_type, map->ident, arg1);
           }
         }
-        // Note: if the map key is null after the final pass we'll
-        // get an error in the Map visitor about the whole map being undefined
-        // so no need to add a second, similar error here.
+        // Note: if the map key is null after the final pass we'll get an error
+        // in the Map visitor about the whole map being undefined so no need to
+        // add a second, similar error here.
+      } else {
+        arg0.addError() << "has_key() expects the first argument to be a map";
       }
     }
     // TODO: this should be a bool type but that type is currently broken
@@ -1406,35 +1403,34 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
   } else if (call.func == "print") {
     check_assignment(call, false, false, false);
-    if (in_loop() && is_final_pass() && call.vargs.at(0)->is_map) {
-      call.addWarning()
-          << "Due to it's asynchronous nature using 'print()' in a loop can "
-             "lead to unexpected behavior. The map will likely be updated "
-             "before the runtime can 'print' it.";
-    }
     if (check_varargs(call, 1, 3)) {
-      auto &arg = *call.vargs.at(0);
-      if (arg.is_map) {
-        Map &map = static_cast<Map &>(arg);
-        if (map.key_expr) {
+      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+        if (map->key_expr) {
           if (call.vargs.size() > 1) {
             call.addError() << "Single-value (i.e. indexed) map "
                                "print cannot take additional "
                                "arguments.";
-          } else if (map.type.IsMultiKeyMapTy()) {
+          } else if (map->type.IsMultiKeyMapTy()) {
             call.addError()
-                << "Map type " << map.type
+                << "Map type " << map->type
                 << " cannot print the value of individual keys. You must print "
                    "the whole map.";
           }
         }
 
         if (is_final_pass()) {
+          if (in_loop()) {
+            call.addWarning() << "Due to it's asynchronous nature using "
+                                 "'print()' in a loop can "
+                                 "lead to unexpected behavior. The map will "
+                                 "likely be updated "
+                                 "before the runtime can 'print' it.";
+          }
           if (call.vargs.size() > 1)
             check_arg(call, Type::integer, 1, true);
           if (call.vargs.size() > 2)
             check_arg(call, Type::integer, 2, true);
-          if (map.type.IsStatsTy() && call.vargs.size() > 1) {
+          if (map->type.IsStatsTy() && call.vargs.size() > 1) {
             call.addWarning()
                 << "print()'s top and div arguments are ignored when used on "
                    "stats() maps.";
@@ -1447,16 +1443,15 @@ void SemanticAnalyser::visit(Call &call)
       // through the non-map printing mechanism.
       //
       // We rely on the fact that semantic analysis enforces types like count(),
-      // min(), max(), etc. to be assigned directly to a map. This ensures that
-      // the previous `arg.is_map` arm is hit first.
-      else if (arg.type.IsPrintableTy()) {
+      // min(), max(), etc. to be assigned directly to a map.
+      else if (call.vargs.at(0)->type.IsPrintableTy()) {
         if (call.vargs.size() != 1)
           call.addError() << "Non-map print() only takes 1 argument, "
                           << call.vargs.size() << " found";
       } else {
         if (is_final_pass())
-          call.addError() << arg.type << " type passed to " << call.func
-                          << "() is not printable";
+          call.addError() << call.vargs.at(0)->type << " type passed to "
+                          << call.func << "() is not printable";
       }
     }
   } else if (call.func == "cgroup_path") {
@@ -1468,42 +1463,37 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "clear") {
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs.at(0);
-      if (!arg.is_map)
-        call.addError() << "clear() expects a map to be provided";
-      else {
-        Map &map = static_cast<Map &>(arg);
-        if (map.key_expr) {
+      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+        if (map->key_expr) {
           call.addError() << "The map passed to " << call.func
                           << "() should not be " << "indexed by a key";
         }
       }
+    } else {
+      call.addError() << "clear() expects a map to be provided";
     }
   } else if (call.func == "zero") {
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs.at(0);
-      if (!arg.is_map)
-        call.addError() << "zero() expects a map to be provided";
-      else {
-        Map &map = static_cast<Map &>(arg);
-        if (map.key_expr) {
+      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+        if (map->key_expr) {
           call.addError() << "The map passed to " << call.func
                           << "() should not be " << "indexed by a key";
         }
+      } else {
+        call.addError() << "zero() expects a map to be provided";
       }
     }
   } else if (call.func == "len") {
     if (check_nargs(call, 1)) {
-      auto &arg = *call.vargs.at(0);
-      if (arg.is_map) {
-        Map &map = static_cast<Map &>(arg);
-        if (map.key_expr) {
+      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+        if (map->key_expr) {
           call.addError() << "The map passed to " << call.func
                           << "() should not be " << "indexed by a key";
         }
-      } else if (!arg.type.IsStack())
+      } else if (!call.vargs.at(0)->type.IsStack()) {
         call.addError() << "len() expects a map or stack to be provided";
+      }
       call.type = CreateInt64();
     }
   } else if (call.func == "time") {
@@ -1737,8 +1727,8 @@ If you're seeing errors, try clamping the string sizes. For example:
         // cap length
         check_arg(call, Type::integer, 2, false);
         // cap offset, default is 0
-        // some tracepoints like dev_queue_xmit will output ethernet header, set
-        // offset to 14 bytes can exclude this header
+        // some tracepoints like dev_queue_xmit will output ethernet header,
+        // set offset to 14 bytes can exclude this header
         check_arg(call, Type::integer, 3, false);
       }
     }
@@ -1933,7 +1923,7 @@ void SemanticAnalyser::visit(Map &map)
   bool key_is_map = false;
   if (map.key_expr) {
     visit(map.key_expr);
-    key_is_map = map.key_expr->is_map;
+    key_is_map = dynamic_cast<Map *>(map.key_expr) != nullptr;
     new_key_type = create_key_type(map.key_expr->type, *map.key_expr);
   }
 
@@ -2403,16 +2393,13 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Operator::INCREMENT || unop.op == Operator::DECREMENT) {
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
-    if (!unop.expr->is_map && !unop.expr->is_variable) {
+    if (auto *map = dynamic_cast<Map *>(unop.expr)) {
+      auto *maptype = get_map_type(*map);
+      if (!maptype)
+        assign_map_type(*map, CreateInt64());
+    } else if (dynamic_cast<Variable *>(unop.expr) == nullptr) {
       unop.addError() << "The " << opstr(unop)
                       << " operator must be applied to a map or variable";
-    }
-
-    if (unop.expr->is_map) {
-      Map &map = static_cast<Map &>(*unop.expr);
-      auto *maptype = get_map_type(map);
-      if (!maptype)
-        assign_map_type(map, CreateInt64());
     }
   }
 
@@ -3101,7 +3088,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   // existing map of int. Enables the following: `@x = 1; @y = count(); @x = @y`
   const bool map_contains_int = map_type_before && map_type_before->IsIntTy();
   const bool expr_is_map_with_castable_agg =
-      assignment.expr->is_map && assignment.expr->type.IsCastableMapTy();
+      dynamic_cast<Map *>(assignment.expr) != nullptr &&
+      assignment.expr->type.IsCastableMapTy();
   if (map_contains_int && expr_is_map_with_castable_agg) {
     assignment.expr = ctx_.make_node<Cast>(*map_type_before,
                                            assignment.expr,
@@ -3185,7 +3173,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 
   const bool expr_is_map_with_castable_agg =
-      assignment.expr->is_map && assignment.expr->type.IsCastableMapTy();
+      dynamic_cast<Map *>(assignment.expr) != nullptr &&
+      assignment.expr->type.IsCastableMapTy();
   if (expr_is_map_with_castable_agg) {
     assignment.expr = ctx_.make_node<Cast>(CreateInt64(),
                                            assignment.expr,

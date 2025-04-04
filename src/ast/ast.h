@@ -113,8 +113,6 @@ public:
   Map *map = nullptr;      // Only set when this expression is assigned to a map
   Variable *var = nullptr; // Set when this expression is assigned to a variable
   bool is_literal = false;
-  bool is_variable = false;
-  bool is_map = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
