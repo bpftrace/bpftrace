@@ -77,6 +77,7 @@ public:
   ~BTF();
 
   bool has_data();
+  bool has_module_btf();
   bool modules_loaded() const;
   size_t objects_cnt() const
   {
@@ -157,6 +158,7 @@ private:
   BPFtrace* bpftrace_ = nullptr;
   std::string all_funcs_;
   std::string all_rawtracepoints_;
+  std::optional<bool> has_module_btf_;
 };
 
 inline bool BTF::has_data()
