@@ -110,9 +110,12 @@ public:
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
 std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
 
+static auto bpf_nofeature = BPFnofeature();
+static auto btf_obj = BTF(nullptr);
+
 class MockBPFfeature : public BPFfeature {
 public:
-  MockBPFfeature(bool has_features = true)
+  MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
   {
     has_send_signal_ = std::make_optional<bool>(has_features);
     has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);

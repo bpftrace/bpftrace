@@ -103,8 +103,8 @@ public:
            BPFnofeature no_feature = BPFnofeature(),
            std::unique_ptr<Config> config = std::make_unique<Config>())
       : out_(std::move(o)),
-        btf_(std::make_shared<BTF>(this)),
-        feature_(std::make_unique<BPFfeature>(no_feature, btf_)),
+        btf_(std::make_unique<BTF>(this)),
+        feature_(std::make_unique<BPFfeature>(no_feature, *btf_)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(util::get_possible_cpus().size()),
         max_cpu_id_(util::get_max_cpu_id()),
@@ -210,7 +210,7 @@ public:
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
   std::unique_ptr<Output> out_;
-  std::shared_ptr<BTF> btf_;
+  std::unique_ptr<BTF> btf_;
   std::unique_ptr<BPFfeature> feature_;
 
   bool resolve_user_symbols_ = true;

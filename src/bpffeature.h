@@ -70,8 +70,8 @@ protected:
 
 class BPFfeature {
 public:
-  BPFfeature(BPFnofeature& no_feature, std::shared_ptr<BTF> btf)
-      : no_feature_(no_feature), btf_(std::move(btf))
+  BPFfeature(BPFnofeature& no_feature, BTF& btf)
+      : no_feature_(no_feature), btf_(btf)
   {
   }
   BPFfeature() = default;
@@ -167,7 +167,7 @@ private:
   bool try_load_btf(const void* btf_data, size_t btf_size);
 
   BPFnofeature no_feature_;
-  std::shared_ptr<BTF> btf_;
+  BTF& btf_;
 };
 
 #undef DEFINE_PROG_TEST

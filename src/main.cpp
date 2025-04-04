@@ -180,7 +180,7 @@ static void info(BPFnofeature no_feature)
   struct utsname utsname;
   uname(&utsname);
 
-  auto btf = std::make_shared<bpftrace::BTF>(nullptr);
+  auto btf = bpftrace::BTF(nullptr);
 
   std::cout << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
