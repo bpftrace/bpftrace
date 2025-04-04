@@ -211,7 +211,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
 {
   for (auto *ap : probe.attach_points) {
     // load probe arguments into a special record type "struct <probename>_args"
-    Struct probe_args;
+    std::shared_ptr<Struct> probe_args;
 
     auto probe_type = probetype(ap->provider);
     if (probe_type != ProbeType::fentry && probe_type != ProbeType::fexit &&
@@ -232,82 +232,76 @@ void FieldAnalyser::resolve_args(Probe &probe)
 
       // ... and check if they share same arguments.
 
-      Struct ap_args;
+      std::shared_ptr<Struct> ap_args;
       for (const auto &match : matches) {
         // Both uprobes and fentry have a target (binary for uprobes, kernel
         // module for fentry).
         std::string func = match;
         std::string target = util::erase_prefix(func);
-        std::optional<Struct> maybe_ap_args = std::nullopt;
         std::string err;
 
         // Trying to attach to multiple fentry. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and
         // continue with other functions.
         if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-          maybe_ap_args = bpftrace_.btf_->resolve_args(
+          ap_args = bpftrace_.btf_->resolve_args(
               func, probe_type == ProbeType::fexit, true, false, err);
 
         } else if (probe_type == ProbeType::rawtracepoint) {
-          maybe_ap_args = bpftrace_.btf_->resolve_raw_tracepoint_args(func,
-                                                                      err);
+          ap_args = bpftrace_.btf_->resolve_raw_tracepoint_args(func, err);
         } else { // uprobe
           Dwarf *dwarf = bpftrace_.get_dwarf(target);
           if (dwarf)
-            maybe_ap_args = dwarf->resolve_args(func);
+            ap_args = dwarf->resolve_args(func);
           else
             ap->addWarning() << "No debuginfo found for " << target;
         }
 
-        if (!maybe_ap_args.has_value()) {
+        if (!ap_args) {
           ap->addWarning() << probetypeName(probe_type) << ap->func << ": "
                            << err;
           continue;
         }
-        ap_args = std::move(*maybe_ap_args);
 
-        if (probe_args.size == -1)
+        if (!probe_args)
           probe_args = ap_args;
-        else if (ap_args != probe_args) {
+        else if (*ap_args != *probe_args) {
           ap->addError() << "Probe has attach points with mixed arguments";
           break;
         }
       }
     } else {
-      std::optional<Struct> maybe_probe_args = std::nullopt;
       std::string err;
       // Resolving args for an explicit function failed, print an error and fail
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        maybe_probe_args = bpftrace_.btf_->resolve_args(
+        probe_args = bpftrace_.btf_->resolve_args(
             ap->func, probe_type == ProbeType::fexit, true, false, err);
+
       } else if (probe_type == ProbeType::rawtracepoint) {
-        maybe_probe_args = bpftrace_.btf_->resolve_raw_tracepoint_args(ap->func,
-                                                                       err);
+        probe_args = bpftrace_.btf_->resolve_raw_tracepoint_args(ap->func, err);
       } else { // uprobe
         Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
         if (dwarf) {
-          maybe_probe_args = dwarf->resolve_args(ap->func);
+          probe_args = dwarf->resolve_args(ap->func);
         } else {
           ap->addWarning() << "No debuginfo found for " << ap->target;
         }
-        if (maybe_probe_args &&
-            static_cast<int>(maybe_probe_args->fields.size()) >
-                (arch::max_arg() + 1)) {
+        if (probe_args && probe_args->fields.size() >
+                              static_cast<size_t>(arch::max_arg() + 1)) {
           ap->addError() << "\'args\' builtin is not supported for "
                          << "probes with stack-passed arguments.";
         }
       }
 
-      if (!maybe_probe_args.has_value()) {
+      if (!probe_args) {
         ap->addError() << probetypeName(probe_type) << ap->func << ": " << err;
         return;
       }
-      probe_args = std::move(*maybe_probe_args);
     }
 
     // check if we already stored arguments for this probe
     auto args = bpftrace_.structs.Lookup(probe.args_typename()).lock();
-    if (args && *args != probe_args) {
+    if (args && *args != *probe_args) {
       // we did, and it's different...trigger the error
       ap->addError() << "Probe has attach points with mixed arguments";
     } else {

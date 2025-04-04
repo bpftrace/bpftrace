@@ -411,28 +411,28 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-std::optional<Struct> BTF::resolve_args(const std::string &func,
-                                        bool ret,
-                                        bool check_traceable,
-                                        bool skip_first_arg,
-                                        std::string &err)
+std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
+                                          bool ret,
+                                          bool check_traceable,
+                                          bool skip_first_arg,
+                                          std::string &err)
 {
   if (!has_data()) {
     err = "BTF data not available";
-    return std::nullopt;
+    return nullptr;
   }
 
   auto func_id = find_id(func, BTF_KIND_FUNC);
   if (!func_id.btf) {
     err = "no BTF data for " + func;
-    return std::nullopt;
+    return nullptr;
   }
 
   const struct btf_type *t = btf__type_by_id(func_id.btf, func_id.id);
   t = btf__type_by_id(func_id.btf, t->type);
   if (!t || !btf_is_func_proto(t)) {
     err = func + " is not a function";
-    return std::nullopt;
+    return nullptr;
   }
 
   if (check_traceable) {
@@ -444,7 +444,7 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
         err = "function not traceable (probably it is "
               "inlined or marked as \"notrace\")";
       }
-      return std::nullopt;
+      return nullptr;
     }
   }
 
@@ -453,10 +453,10 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
   if (vlen > arch::max_arg() + 1) {
     err = "functions with more than 6 parameters are "
           "not supported.";
-    return std::nullopt;
+    return nullptr;
   }
 
-  Struct args(0, false);
+  auto args = std::make_shared<Struct>(0, false);
   int j = 0;
   int arg_idx = 0;
   __u32 type_size = 0;
@@ -468,18 +468,18 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     const char *str = btf_str(func_id.btf, p->name_off);
     if (!str) {
       err = "failed to resolve arguments";
-      return std::nullopt;
+      return nullptr;
     }
 
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
-    args.AddField(str, stype, args.size, std::nullopt, false);
+    args->AddField(str, stype, args->size, std::nullopt, false);
     // fentry args are stored in a u64 array.
     // Note that it's ok to represent them by a struct as we will use GEP with
     // funcarg_idx to access them in codegen.
     type_size = btf__resolve_size(func_id.btf, p->type);
-    args.size += type_size;
+    args->size += type_size;
     arg_idx += std::ceil(static_cast<float>(type_size) / static_cast<float>(8));
   }
 
@@ -487,22 +487,23 @@ std::optional<Struct> BTF::resolve_args(const std::string &func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
-    args.AddField(RETVAL_FIELD_NAME, stype, args.size, std::nullopt, false);
+    args->AddField(RETVAL_FIELD_NAME, stype, args->size, std::nullopt, false);
     // fentry args (incl. retval) are stored in a u64 array
-    args.size += btf__resolve_size(func_id.btf, t->type);
+    args->size += btf__resolve_size(func_id.btf, t->type);
   }
   return args;
 }
 
-std::optional<Struct> BTF::resolve_raw_tracepoint_args(const std::string &func,
-                                                       std::string &err)
+std::shared_ptr<Struct> BTF::resolve_raw_tracepoint_args(
+    const std::string &func,
+    std::string &err)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
     if (auto args = resolve_args(prefix + func, false, true, true, err)) {
       return args;
     }
   }
-  return std::nullopt;
+  return nullptr;
 }
 
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
@@ -992,7 +993,7 @@ void BTF::resolve_fields(SizedType &type)
   if (!type_id.btf)
     return;
 
-  resolve_fields(type_id, record.get(), 0);
+  resolve_fields(type_id, std::move(record), 0);
 }
 
 static std::optional<Bitfield> resolve_bitfield(
@@ -1008,7 +1009,7 @@ static std::optional<Bitfield> resolve_bitfield(
 }
 
 void BTF::resolve_fields(const BTFId &type_id,
-                         Struct *record,
+                         std::shared_ptr<Struct> record,
                          __u32 start_offset)
 {
   const auto *btf_type = btf__type_by_id(type_id.btf, type_id.id);

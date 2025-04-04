@@ -59,14 +59,14 @@ bool Bitfield::operator!=(const Bitfield &other) const
 
 // Creates a struct or tuple with the given field types.
 // If field_names is empty then all fields with be created without names.
-std::unique_ptr<Struct> Struct::CreateRecord(
+std::shared_ptr<Struct> Struct::CreateRecord(
     const std::vector<SizedType> &fields,
     const std::vector<std::string_view> &field_names)
 {
   assert(field_names.empty() || field_names.size() == fields.size());
 
   // See llvm::StructLayout::StructLayout source
-  auto record = std::make_unique<Struct>(0);
+  auto record = std::make_shared<Struct>(0);
   ssize_t offset = 0;
   ssize_t struct_align = 1;
 
@@ -99,7 +99,7 @@ std::unique_ptr<Struct> Struct::CreateRecord(
   return record;
 }
 
-std::unique_ptr<Struct> Struct::CreateTuple(
+std::shared_ptr<Struct> Struct::CreateTuple(
     const std::vector<SizedType> &fields)
 {
   return CreateRecord(fields, {});
@@ -175,22 +175,23 @@ std::weak_ptr<Struct> StructManager::Add(const std::string &name,
                                          bool allow_override)
 {
   auto [it, inserted] = struct_map_.insert(
-      { name, std::make_unique<Struct>(size, allow_override) });
+      { name, std::make_shared<Struct>(size, allow_override) });
   if (!inserted)
     throw util::FatalUserException("Type redefinition: type with name \'" +
                                    name + "\' already exists");
   return it->second;
 }
 
-void StructManager::Add(const std::string &name, Struct &&record)
+void StructManager::Add(const std::string &name,
+                        std::shared_ptr<Struct> &&record)
 {
-  struct_map_[name] = std::make_shared<Struct>(std::move(record));
+  struct_map_[name] = std::move(record);
 }
 
 std::weak_ptr<Struct> StructManager::Lookup(const std::string &name) const
 {
   auto s = struct_map_.find(name);
-  return s != struct_map_.end() ? s->second : std::weak_ptr<Struct>();
+  return s != struct_map_.end() ? s->second : nullptr;
 }
 
 std::weak_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
@@ -198,33 +199,13 @@ std::weak_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
                                                  bool allow_override)
 {
   auto s = struct_map_.insert(
-      { name, std::make_unique<Struct>(size, allow_override) });
+      { name, std::make_shared<Struct>(size, allow_override) });
   return s.first->second;
 }
 
 bool StructManager::Has(const std::string &name) const
 {
   return struct_map_.contains(name);
-}
-
-std::weak_ptr<Struct> StructManager::AddAnonymousStruct(
-    const std::vector<SizedType> &fields,
-    const std::vector<std::string_view> &field_names)
-{
-  auto t = anonymous_types_.insert(Struct::CreateRecord(fields, field_names));
-  return *t.first;
-}
-
-std::weak_ptr<Struct> StructManager::AddTuple(
-    const std::vector<SizedType> &fields)
-{
-  auto t = anonymous_types_.insert(Struct::CreateTuple(fields));
-  return *t.first;
-}
-
-size_t StructManager::GetTuplesCnt() const
-{
-  return anonymous_types_.size();
 }
 
 const Field *StructManager::GetProbeArg(const ast::Probe &probe,

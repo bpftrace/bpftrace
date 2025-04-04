@@ -34,12 +34,11 @@ TEST(types, to_str)
 
   EXPECT_EQ(to_str(CreateArray(2, CreateInt8())), "int8[2]");
 
-  auto record = std::weak_ptr<Struct>();
-  EXPECT_EQ(to_str(CreateRecord("hello", record)), "hello");
+  EXPECT_EQ(to_str(CreateRecord("hello")), "hello");
 
   std::shared_ptr<Struct> tuple = Struct::CreateTuple(
       { CreateInt8(), CreateString(10) });
-  EXPECT_EQ(to_str(CreateTuple(tuple)), "(int8,string[10])");
+  EXPECT_EQ(to_str(CreateTuple(std::move(tuple))), "(int8,string[10])");
 
   EXPECT_EQ(to_str(CreateSum(true)), "sum_t");
   EXPECT_EQ(to_str(CreateSum(false)), "usum_t");

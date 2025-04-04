@@ -3639,7 +3639,7 @@ TEST(semantic_analyser, tuple_assign_var)
 {
   BPFtrace bpftrace;
   SizedType ty = CreateTuple(
-      bpftrace.structs.AddTuple({ CreateInt64(), CreateString(6) }));
+      Struct::CreateTuple({ CreateInt64(), CreateString(6) }));
   auto ast = test(
       bpftrace, true, R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_", 0);
 
@@ -3666,13 +3666,13 @@ TEST(semantic_analyser, tuple_assign_map)
 
   // $t = (1, 3, 3, 7);
   auto *assignment = static_cast<ast::AssignMapStatement *>(stmts.at(0));
-  ty = CreateTuple(bpftrace.structs.AddTuple(
+  ty = CreateTuple(Struct::CreateTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
   EXPECT_EQ(ty, assignment->map->type);
 
   // $t = (0, 0, 0, 0);
   assignment = static_cast<ast::AssignMapStatement *>(stmts.at(1));
-  ty = CreateTuple(bpftrace.structs.AddTuple(
+  ty = CreateTuple(Struct::CreateTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
   EXPECT_EQ(ty, assignment->map->type);
 }
@@ -3682,9 +3682,8 @@ TEST(semantic_analyser, tuple_nested)
 {
   BPFtrace bpftrace;
   SizedType ty_inner = CreateTuple(
-      bpftrace.structs.AddTuple({ CreateInt64(), CreateInt64() }));
-  SizedType ty = CreateTuple(
-      bpftrace.structs.AddTuple({ CreateInt64(), ty_inner }));
+      Struct::CreateTuple({ CreateInt64(), CreateInt64() }));
+  SizedType ty = CreateTuple(Struct::CreateTuple({ CreateInt64(), ty_inner }));
   auto ast = test(bpftrace, true, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
 
   auto &stmts = ast.root->probes.at(0)->block->stmts;
@@ -3692,14 +3691,6 @@ TEST(semantic_analyser, tuple_nested)
   // $t = (1, "str");
   auto *assignment = static_cast<ast::AssignVarStatement *>(stmts.at(0));
   EXPECT_EQ(ty, assignment->var->type);
-}
-
-TEST(semantic_analyser, tuple_types_unique)
-{
-  auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, R"_(BEGIN { $t = (1, "hello"); $t = (4, "other"); })_");
-
-  EXPECT_EQ(bpftrace->structs.GetTuplesCnt(), 1UL);
 }
 
 TEST(semantic_analyser, multi_pass_type_inference_zero_size_int)

@@ -4779,21 +4779,28 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
     return fun;
 
   std::string err;
-  auto maybe_func_type = bpftrace_.btf_->resolve_args(
+  auto func_struct = bpftrace_.btf_->resolve_args(
       func_name, true, false, false, err);
-  if (!maybe_func_type.has_value()) {
+  if (!func_struct) {
     call.addError() << "Unknown kernel function: " << func_name;
     return nullptr;
   }
 
+  Struct debug_args;
   std::vector<llvm::Type *> args;
-  for (auto &field : maybe_func_type->fields) {
-    if (field.name != RETVAL_FIELD_NAME)
+  for (auto &field : func_struct->fields) {
+    if (field.name != RETVAL_FIELD_NAME) {
       args.push_back(b_.GetType(field.type, false));
+      debug_args.AddField(field.name,
+                          field.type,
+                          field.offset,
+                          field.bitfield,
+                          field.is_data_loc);
+    }
   }
 
   FunctionType *func_type = FunctionType::get(
-      b_.GetType(maybe_func_type->GetField(RETVAL_FIELD_NAME).type, false),
+      b_.GetType(func_struct->GetField(RETVAL_FIELD_NAME).type, false),
       args,
       false);
 
@@ -4804,15 +4811,8 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
   fun->setSection(".ksyms");
   fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
 
-  // Copy args and remove the last field (retval) as we pass it to
-  // createFunctionDebugInfo separately
-  Struct debug_args = *maybe_func_type; // copy here
-  debug_args.fields.pop_back();
   debug_.createFunctionDebugInfo(
-      *fun,
-      maybe_func_type->GetField(RETVAL_FIELD_NAME).type,
-      debug_args,
-      true);
+      *fun, func_struct->GetField(RETVAL_FIELD_NAME).type, debug_args, true);
 
   return fun;
 }

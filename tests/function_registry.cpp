@@ -79,7 +79,7 @@ protected:
         CreateNone(),
         {
             Param{ "a",
-                   CreateTuple(structs_.AddTuple(
+                   CreateTuple(Struct::CreateTuple(
                        { CreateInt32(), CreateString(64) })) },
         });
 
@@ -267,11 +267,11 @@ TEST_F(TestFunctionRegistryPopulated, unique_string)
 TEST_F(TestFunctionRegistryPopulated, unique_tuple)
 {
   auto tuple1 = CreateTuple(
-      structs_.AddTuple({ CreateInt16(), CreateString(64) }));
+      Struct::CreateTuple({ CreateInt16(), CreateString(64) }));
   auto tuple2 = CreateTuple(
-      structs_.AddTuple({ CreateInt32(), CreateString(64) }));
+      Struct::CreateTuple({ CreateInt32(), CreateString(64) }));
   auto tuple3 = CreateTuple(
-      structs_.AddTuple({ CreateInt64(), CreateString(64) }));
+      Struct::CreateTuple({ CreateInt64(), CreateString(64) }));
 
   test("unique_tuple", { tuple1 }, unique_tuple_);
   test("unique_tuple", { tuple2 }, unique_tuple_);
@@ -292,7 +292,7 @@ HINT: Candidate function:
 
 TEST_F(TestFunctionRegistryPopulated, unique_struct)
 {
-  auto exact_struct = structs_.Lookup("unique_struct_arg");
+  auto exact_struct = structs_.Lookup("unique_struct_arg").lock();
 
   auto compatible_struct =
       structs_.Add("same_layout_as_unique_struct_arg", 8).lock();

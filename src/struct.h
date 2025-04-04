@@ -81,7 +81,12 @@ struct Struct {
 
   bool allow_override = true;
 
-  Struct() = default;
+  Struct() = default; // Used for serialization.
+  Struct(const Struct &other) = delete;
+  Struct &operator=(const Struct &other) = delete;
+  Struct(Struct &&other) = default;
+  Struct &operator=(Struct &&other) = default;
+
   explicit Struct(int size, bool allow_override = true)
       : size(size), allow_override(allow_override)
   {
@@ -97,10 +102,10 @@ struct Struct {
   bool HasFields() const;
   void ClearFields();
 
-  static std::unique_ptr<Struct> CreateRecord(
+  static std::shared_ptr<Struct> CreateRecord(
       const std::vector<SizedType> &fields,
       const std::vector<std::string_view> &field_names);
-  static std::unique_ptr<Struct> CreateTuple(
+  static std::shared_ptr<Struct> CreateTuple(
       const std::vector<SizedType> &fields);
   void Dump(std::ostream &os);
 
@@ -125,58 +130,18 @@ private:
 
 std::ostream &operator<<(std::ostream &os, const Fields &t);
 
-} // namespace bpftrace
-
-namespace std {
-template <>
-struct hash<bpftrace::Struct> {
-  size_t operator()(const bpftrace::Struct &s) const
-  {
-    size_t hash = std::hash<int>()(s.size);
-    for (const auto &field : s.fields)
-      bpftrace::util::hash_combine(hash, field.type);
-    return hash;
-  }
-};
-
-template <>
-struct hash<shared_ptr<bpftrace::Struct>> {
-  size_t operator()(const std::shared_ptr<bpftrace::Struct> &s_ptr) const
-  {
-    return std::hash<bpftrace::Struct>()(*s_ptr);
-  }
-};
-
-template <>
-struct equal_to<shared_ptr<bpftrace::Struct>> {
-  bool operator()(const std::shared_ptr<bpftrace::Struct> &lhs,
-                  const std::shared_ptr<bpftrace::Struct> &rhs) const
-  {
-    return *lhs == *rhs;
-  }
-};
-} // namespace std
-
-namespace bpftrace {
-
 class StructManager {
 public:
   // struct map manipulation
   std::weak_ptr<Struct> Add(const std::string &name,
                             size_t size,
                             bool allow_override = true);
-  void Add(const std::string &name, Struct &&record);
+  void Add(const std::string &name, std::shared_ptr<Struct> &&record);
   std::weak_ptr<Struct> Lookup(const std::string &name) const;
   std::weak_ptr<Struct> LookupOrAdd(const std::string &name,
                                     size_t size,
                                     bool allow_override = true);
   bool Has(const std::string &name) const;
-
-  std::weak_ptr<Struct> AddAnonymousStruct(
-      const std::vector<SizedType> &fields,
-      const std::vector<std::string_view> &field_names);
-  std::weak_ptr<Struct> AddTuple(const std::vector<SizedType> &fields);
-  size_t GetTuplesCnt() const;
 
   // probe args lookup
   const Field *GetProbeArg(const ast::Probe &probe,
@@ -184,7 +149,6 @@ public:
 
 private:
   std::map<std::string, std::shared_ptr<Struct>> struct_map_;
-  std::unordered_set<std::shared_ptr<Struct>> anonymous_types_;
 };
 
 } // namespace bpftrace

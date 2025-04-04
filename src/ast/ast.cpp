@@ -603,7 +603,7 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)
 {
-  SizedType result = CreateRecord(ident, std::weak_ptr<Struct>());
+  SizedType result = CreateRecord(ident);
   for (int i = 0; i < pointer_level; i++)
     result = CreatePointer(result);
   return result;

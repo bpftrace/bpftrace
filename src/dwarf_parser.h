@@ -25,7 +25,7 @@ public:
 
   std::vector<std::string> get_function_params(
       const std::string &function) const;
-  Struct resolve_args(const std::string &function);
+  std::shared_ptr<Struct> resolve_args(const std::string &function);
 
   SizedType get_stype(const std::string &type_name) const;
   void resolve_fields(const SizedType &type) const;
@@ -86,9 +86,10 @@ public:
     return {};
   }
 
-  Struct resolve_args(const std::string &function __attribute__((unused)))
+  std::shared_ptr<Struct> resolve_args(const std::string &function
+                                       __attribute__((unused)))
   {
-    return {};
+    return nullptr;
   }
 
   SizedType get_stype(const std::string &type_name
