@@ -2425,6 +2425,19 @@ kprobe:f { @y = avg(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )");
+  test_error("kprobe:f { @y = stats(5); @x = @y; }", R"(
+stdin:1:27-34: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+kprobe:f { @y = stats(5); @x = @y; }
+                          ~~~~~~~
+)");
+  test_error("kprobe:f { @x = 1; @y = stats(5); @x = @y; }", R"(
+stdin:1:35-42: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+kprobe:f { @x = 1; @y = stats(5); @x = @y; }
+                                  ~~~~~~~
+stdin:1:35-37: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'int64'
+kprobe:f { @x = 1; @y = stats(5); @x = @y; }
+                                  ~~
+)");
 
   test("kprobe:f { @ = count(); if (@ > 0) { print((1)); } }");
   test("kprobe:f { @ = sum(5); if (@ > 0) { print((1)); } }");

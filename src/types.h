@@ -459,15 +459,20 @@ public:
   }
   bool IsMapIterableTy() const
   {
-    return !IsMultiOutputMapTy();
+    if (IsMultiKeyMapTy()) {
+      return false;
+    }
+    if (NeedsPercpuMap() && !IsCastableMapTy()) {
+      return false;
+    }
+    return true;
   }
 
-  // These are special map value types that can't be reduced to a single value
-  // and output multiple lines when printed
-  bool IsMultiOutputMapTy() const
+  // These are special map value types that use multiple keys to store a single
+  // logical value (from the user perspective).
+  bool IsMultiKeyMapTy() const
   {
-    return type_ == Type::hist_t || type_ == Type::lhist_t ||
-           type_ == Type::stats_t;
+    return type_ == Type::hist_t || type_ == Type::lhist_t;
   }
 
   bool NeedsPercpuMap() const;

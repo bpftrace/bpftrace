@@ -330,8 +330,8 @@ bool SemanticAnalyser::is_valid_assignment(const Expression *target,
                                            const Expression *expr)
 {
   if (expr->is_map) {
-    // Prevent assigning multi-output aggregations to another map.
-    if (expr->type.IsMultiOutputMapTy())
+    // Prevent assigning aggregations to another map.
+    if (expr->type.IsMultiKeyMapTy())
       return false;
     // Prevent declaring a map copying another aggregate map.
     if (const auto *target_map = dynamic_cast<const Map *>(target)) {
@@ -339,6 +339,9 @@ bool SemanticAnalyser::is_valid_assignment(const Expression *target,
       if (expr->type.IsCastableMapTy() && !map_has_type)
         return false;
     }
+    // Preventing folding of non-castable maps.
+    if (!expr->type.IsCastableMapTy() && expr->type.NeedsPercpuMap())
+      return false;
   }
   return true;
 }
@@ -1418,7 +1421,7 @@ void SemanticAnalyser::visit(Call &call)
             call.addError() << "Single-value (i.e. indexed) map "
                                "print cannot take additional "
                                "arguments.";
-          } else if (map.type.IsMultiOutputMapTy()) {
+          } else if (map.type.IsMultiKeyMapTy()) {
             call.addError()
                 << "Map type " << map.type
                 << " cannot print the value of individual keys. You must print "
@@ -3039,7 +3042,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
     // creation. Cast already emits the error.
     if (elem->type.IsNoneTy() || elem->type.GetSize() == 0) {
       return;
-    } else if (elem->type.IsMultiOutputMapTy()) {
+    } else if (elem->type.IsMultiKeyMapTy()) {
       elem->addError() << "Map type " << elem->type
                        << " cannot exist inside a tuple.";
     }
