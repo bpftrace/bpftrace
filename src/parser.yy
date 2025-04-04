@@ -447,7 +447,7 @@ loop_stmt:
                 ;
 
 for_stmt:
-                FOR "(" var ":" expr ")" block       { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+                FOR "(" var ":" map ")" block        { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
                 ;
 
 if_stmt:

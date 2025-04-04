@@ -372,11 +372,7 @@ void Printer::visit(For &for_loop)
   out_ << indent << " decl\n";
   ++depth_;
   visit(for_loop.decl);
-  --depth_;
-
-  out_ << indent << " expr\n";
-  ++depth_;
-  visit(for_loop.expr);
+  visit(for_loop.map);
   --depth_;
 
   out_ << indent << " stmts\n";

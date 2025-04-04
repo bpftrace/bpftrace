@@ -185,7 +185,7 @@ public:
   R visit(For &for_loop)
   {
     visitAndReplace(&for_loop.decl);
-    visitAndReplace(&for_loop.expr);
+    visitAndReplace(&for_loop.map);
     visitImpl(for_loop.stmts);
     return default_value();
   }
