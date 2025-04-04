@@ -10,7 +10,6 @@
  * This is a bpftrace version of the bcc tool of the same name.
  *
  * Copyright 2018 Netflix, Inc.
- * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  */

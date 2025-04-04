@@ -5,7 +5,6 @@
  * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
  *
  * Copyright (c) 2019 Brendan Gregg.
- * Licensed under the Apache License, Version 2.0 (the "License").
  * This was originally created for the BPF Performance Tools book
  * published by Addison Wesley. ISBN-13: 9780136554820
  * When copying or porting, include this comment.

@@ -12,7 +12,6 @@
  * This is a bpftrace version of a DTraceToolkit tool.
  *
  * Copyright 2018 Netflix, Inc.
- * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 10-Sep-2018	Brendan Gregg	Created this.
  */

@@ -14,7 +14,6 @@
  * For Linux 5.17+ (see tools/old for script for lower versions).
  *
  * Copyright (c) 2018 Dale Hamel.
- * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 23-Nov-2018	Dale Hamel	created this.
  * 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
