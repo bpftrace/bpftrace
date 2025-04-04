@@ -73,14 +73,14 @@ public:
   BTF(BPFtrace* bpftrace);
   ~BTF();
 
-  bool has_data() const;
+  bool has_data();
   bool modules_loaded() const;
   size_t objects_cnt() const
   {
     return btf_objects.size();
   }
   void load_module_btfs(const std::set<std::string>& modules);
-  std::string c_def(const std::unordered_set<std::string>& set) const;
+  std::string c_def(const std::unordered_set<std::string>& set);
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const BTFId& type_id, const std::string& field);
   SizedType get_stype(const std::string& type_name);
@@ -108,6 +108,7 @@ public:
                  __u32 kind = BTF_KIND_FUNC) const;
 
 private:
+  void load_vmlinux_btf();
   SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
   void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
@@ -151,11 +152,14 @@ private:
   BPFtrace* bpftrace_ = nullptr;
   std::string all_funcs_;
   std::string all_rawtracepoints_;
+  bool vmlinux_loaded_ = false;
   bool modules_loaded_ = false;
 };
 
-inline bool BTF::has_data() const
+inline bool BTF::has_data()
 {
+  // This can be called multiple times and won't reload vmlinux
+  load_vmlinux_btf();
   return state == OK;
 }
 

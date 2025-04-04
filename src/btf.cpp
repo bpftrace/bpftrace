@@ -45,6 +45,21 @@ __s32 BTF::start_id(const struct btf *btf) const
 
 BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
 {
+}
+
+BTF::~BTF()
+{
+  for (auto &btf_obj : btf_objects)
+    btf__free(btf_obj.btf);
+}
+
+void BTF::load_vmlinux_btf()
+{
+  if (vmlinux_loaded_) {
+    // Don't attempt to reload vmlinux even if it fails below
+    return;
+  }
+  vmlinux_loaded_ = true;
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
@@ -74,14 +89,9 @@ BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
   state = OK;
 }
 
-BTF::~BTF()
-{
-  for (auto &btf_obj : btf_objects)
-    btf__free(btf_obj.btf);
-}
-
 void BTF::load_module_btfs(const std::set<std::string> &modules)
 {
+  load_vmlinux_btf();
   if ((bpftrace_ && !bpftrace_->feature_->has_module_btf()) || state != OK)
     return;
 
@@ -235,7 +245,7 @@ std::string BTF::dump_defs_from_btf(
   return ret;
 }
 
-std::string BTF::c_def(const std::unordered_set<std::string> &set) const
+std::string BTF::c_def(const std::unordered_set<std::string> &set)
 {
   if (!has_data())
     return {};
