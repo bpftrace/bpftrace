@@ -98,7 +98,6 @@ public:
   bool has_uprobe_multi();
   bool has_skb_output();
   bool has_prog_fentry();
-  bool has_module_btf();
   bool has_iter(std::string name);
   // These are virtual so they can be overridden in tests by the mock
   virtual bool has_fentry();
@@ -142,7 +141,6 @@ protected:
   std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_prog_fentry_;
-  std::optional<bool> has_module_btf_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;
 
