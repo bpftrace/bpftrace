@@ -32,14 +32,6 @@ void test(const std::string &input, const std::string &output)
   test(*bpftrace, input, output);
 }
 
-TEST(deprecated, symbol_source)
-{
-  test("config = { symbol_source=\"symbol_table\" } BEGIN { }",
-       "symbol_source is deprecated and has no effect");
-  test("config = { symbol_source=\"zzz\" } BEGIN { }",
-       "symbol_source is deprecated and has no effect");
-}
-
 TEST(deprecated, sarg)
 {
   test("BEGIN { sarg0 }", "sarg* is deprecated");

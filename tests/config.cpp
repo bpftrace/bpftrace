@@ -1,138 +1,87 @@
 #include "config.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test {
 
-TEST(Config, get_and_set)
+using ::bpftrace::Config;
+using ::testing::HasSubstr;
+
+TEST(Config, set)
 {
-  auto config = Config();
-  auto config_setter = ConfigSetter(config, ConfigSource::env_var);
-
-  // check all the keys
-  EXPECT_TRUE(config_setter.set(ConfigKeyBool::cpp_demangle, true));
-  EXPECT_EQ(config.get(ConfigKeyBool::cpp_demangle), true);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyBool::lazy_symbolication, true));
-  EXPECT_EQ(config.get(ConfigKeyBool::lazy_symbolication), true);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::log_size, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::log_size), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_cat_bytes, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_cat_bytes), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_map_keys, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_map_keys), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_probes, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_probes), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_bpf_progs, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_bpf_progs), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_strlen, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_strlen), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_type_res_iterations, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_type_res_iterations), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::perf_rb_pages, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::perf_rb_pages), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyString::str_trunc_trailer, "str"));
-  EXPECT_EQ(config.get(ConfigKeyString::str_trunc_trailer), "str");
-
-  EXPECT_TRUE(config_setter.set(StackMode::bpftrace));
-  EXPECT_EQ(config.get(ConfigKeyStackMode::default_), StackMode::bpftrace);
+  Config config;
 
   // Test that this is also true by default, as a requirement.
-  EXPECT_TRUE(config.get(ConfigKeyBool::print_maps_on_exit));
-  EXPECT_TRUE(config_setter.set(ConfigKeyBool::print_maps_on_exit, false));
-  EXPECT_EQ(config.get(ConfigKeyBool::print_maps_on_exit), false);
+  EXPECT_TRUE(config.print_maps_on_exit);
 
-  EXPECT_TRUE(config_setter.set(UserSymbolCacheType::per_program));
-  EXPECT_EQ(config.get(ConfigKeyUserSymbolCacheType::default_),
-            UserSymbolCacheType::per_program);
+  // Check that bool parsing works.
+  EXPECT_FALSE(bool(config.set("print_maps_on_exit", "invalid")));
+  EXPECT_TRUE(bool(config.set("print_maps_on_exit", "false")));
+  EXPECT_FALSE(config.print_maps_on_exit);
+  EXPECT_TRUE(bool(config.set("print_maps_on_exit", "true")));
+  EXPECT_TRUE(config.print_maps_on_exit);
 
-  EXPECT_TRUE(config_setter.set(ConfigMissingProbes::ignore));
-  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
-            ConfigMissingProbes::ignore);
+  // Check that int parsing works.
+  EXPECT_TRUE(bool(config.set("log_size", "100")));
+  EXPECT_EQ(config.log_size, 100);
+  EXPECT_TRUE(bool(config.set("log_size", 101)));
+  EXPECT_EQ(config.log_size, 101);
+  EXPECT_FALSE(bool(config.set("log_size", "invalid")));
+  EXPECT_EQ(config.log_size, 101);
+
+  // Check that string parsing works.
+  EXPECT_TRUE(bool(config.set("str_trunc_trailer", "oh, no! we lost bytes!")));
+  EXPECT_EQ(config.str_trunc_trailer, "oh, no! we lost bytes!");
+  EXPECT_TRUE(bool(config.set("str_trunc_trailer", 0)));
+  EXPECT_EQ(config.str_trunc_trailer, "0");
+
+  // Check that enum parsing works.
+  EXPECT_FALSE(bool(config.set("stack_mode", "invalid")));
+  EXPECT_FALSE(bool(config.set("stack_mode", 0)));
+  EXPECT_TRUE(bool(config.set("stack_mode", "bpftrace")));
+  EXPECT_EQ(config.stack_mode, StackMode::bpftrace);
+  EXPECT_TRUE(bool(config.set("stack_mode", "raw")));
+  EXPECT_EQ(config.stack_mode, StackMode::raw);
+
+  EXPECT_FALSE(bool(config.set("cache_user_symbols", "invalid")));
+  EXPECT_TRUE(bool(config.set("cache_user_symbols", "NONE")));
+  EXPECT_EQ(config.user_symbol_cache_type, UserSymbolCacheType::none);
+
+  EXPECT_EQ(config.missing_probes, ConfigMissingProbes::warn);
+  EXPECT_FALSE(bool(config.set("missing_probes", "invalid")));
+  EXPECT_TRUE(bool(config.set("missing_probes", "error")));
+  EXPECT_EQ(config.missing_probes, ConfigMissingProbes::error);
+}
+
+TEST(Config, key_finding)
+{
+  Config config;
+
+  EXPECT_TRUE(bool(config.set("log_size", 0)));
+  EXPECT_TRUE(bool(config.set("Log_Size", 0)));
+  EXPECT_TRUE(bool(config.set("bpftrace_log_sIze", 0)));
+  EXPECT_TRUE(bool(config.set("BPFTRACE_LOG_SIZE", 0)));
+}
+
+static void test_lookup_error(const std::string &key,
+                              uint64_t v,
+                              const std::string &err)
+{
+  Config config;
+  auto ok = config.set(key, v);
+  ASSERT_FALSE(bool(ok));
+  std::stringstream ss;
+  ss << ok.takeError();
+  EXPECT_THAT(ss.str(), HasSubstr(err));
 }
 
 TEST(Config, get_config_key)
 {
-  auto config = Config();
-  std::string err_msg;
-  EXPECT_TRUE(config.get_config_key("log_size", err_msg).has_value());
-  EXPECT_TRUE(config.get_config_key("Log_Size", err_msg).has_value());
-  EXPECT_TRUE(config.get_config_key("bpftrace_log_sIze", err_msg).has_value());
-  EXPECT_TRUE(config.get_config_key("BPFTRACE_LOG_SIZE", err_msg).has_value());
-
-  // check the error message
-  EXPECT_FALSE(config.get_config_key("logsize", err_msg).has_value());
-  EXPECT_EQ(err_msg, "Unrecognized config variable: logsize");
-
-  EXPECT_FALSE(config.get_config_key("max_ast_nodes", err_msg).has_value());
-  EXPECT_EQ(err_msg,
-            "max_ast_nodes can only be set as an environment variable");
-}
-
-TEST(ConfigSetter, set_stack_mode)
-{
-  auto config = Config();
-  auto config_setter = ConfigSetter(config, ConfigSource::env_var);
-
-  EXPECT_FALSE(config_setter.set_stack_mode("invalid"));
-  EXPECT_TRUE(config_setter.set_stack_mode("raw"));
-  EXPECT_EQ(config.get(ConfigKeyStackMode::default_), StackMode::raw);
-}
-
-TEST(ConfigSetter, set_user_symbol_cache_type)
-{
-  auto config = Config();
-  auto config_setter = ConfigSetter(config, ConfigSource::env_var);
-
-  EXPECT_FALSE(config_setter.set_user_symbol_cache_type("invalid"));
-  EXPECT_TRUE(config_setter.set_user_symbol_cache_type("NONE"));
-  EXPECT_EQ(config.get(ConfigKeyUserSymbolCacheType::default_),
-            UserSymbolCacheType::none);
-}
-
-TEST(ConfigSetter, set_missing_probes)
-{
-  auto config = Config();
-  auto config_setter = ConfigSetter(config, ConfigSource::script);
-
-  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
-            ConfigMissingProbes::warn);
-  EXPECT_FALSE(config_setter.set_missing_probes_config("invalid"));
-  EXPECT_TRUE(config_setter.set_missing_probes_config("error"));
-  EXPECT_EQ(config.get(ConfigKeyMissingProbes::default_),
-            ConfigMissingProbes::error);
-}
-
-TEST(ConfigSetter, source_precedence)
-{
-  auto config = Config();
-  auto config_setter_env = ConfigSetter(config, ConfigSource::env_var);
-  auto config_setter_script = ConfigSetter(config, ConfigSource::script);
-
-  // env var takes precedence over script
-  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::max_map_keys, 10));
-  EXPECT_FALSE(config_setter_script.set(ConfigKeyInt::max_map_keys, 11));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_map_keys), 10);
-
-  EXPECT_TRUE(config_setter_script.set(ConfigKeyInt::max_cat_bytes, 19));
-  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::max_cat_bytes, 20));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_cat_bytes), 20);
-}
-
-TEST(ConfigSetter, same_source_cannot_set_twice)
-{
-  auto config = Config();
-  auto config_setter = ConfigSetter(config, ConfigSource::env_var);
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_map_keys, 10));
-  EXPECT_FALSE(config_setter.set(ConfigKeyInt::max_map_keys, 11));
+  test_lookup_error("logsize", 1, "logsize: not a known configuration option");
+  test_lookup_error(
+      "max_ast_nodes",
+      1,
+      "max_ast_nodes: can only be set as an environment variable");
 }
 
 } // namespace bpftrace::test

@@ -1,59 +1,30 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <unordered_set>
 
 #include "config.h"
 #include "log.h"
 #include "types.h"
+#include "util/int_parser.h"
 
 namespace bpftrace {
 
-Config::Config(bool has_cmd)
+char ParseError::ID;
+char RenameError::ID;
+
+void ParseError::log(llvm::raw_ostream &OS) const
 {
-  config_map_ = {
-    { ConfigKeyBool::cpp_demangle, { .value = true } },
-    { ConfigKeyBool::lazy_symbolication, { .value = false } },
-    { ConfigKeyBool::print_maps_on_exit, { .value = true } },
-    { ConfigKeyBool::unstable_import, { .value = false } },
-    { ConfigKeyBool::unstable_map_decl, { .value = false } },
-#ifndef HAVE_BLAZESYM
-    { ConfigKeyBool::use_blazesym, { .value = false } },
-#else
-    { ConfigKeyBool::use_blazesym, { .value = true } },
-#endif
-    { ConfigKeyInt::log_size, { .value = static_cast<uint64_t>(1000000) } },
-    { ConfigKeyInt::max_bpf_progs, { .value = static_cast<uint64_t>(1024) } },
-    { ConfigKeyInt::max_cat_bytes, { .value = static_cast<uint64_t>(10240) } },
-    { ConfigKeyInt::max_map_keys, { .value = static_cast<uint64_t>(4096) } },
-    { ConfigKeyInt::max_probes, { .value = static_cast<uint64_t>(1024) } },
-    { ConfigKeyInt::max_strlen, { .value = static_cast<uint64_t>(1024) } },
-    { ConfigKeyInt::max_type_res_iterations,
-      { .value = static_cast<uint64_t>(0) } },
-    { ConfigKeyInt::on_stack_limit, { .value = static_cast<uint64_t>(32) } },
-    { ConfigKeyInt::perf_rb_pages, { .value = static_cast<uint64_t>(64) } },
-    { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },
-    { ConfigKeyString::license, { .value = std::string("GPL") } },
-    { ConfigKeyString::str_trunc_trailer, { .value = std::string("..") } },
-    { ConfigKeyMissingProbes::default_,
-      { .value = ConfigMissingProbes::warn } },
-    // by default, cache user symbols per program if ASLR is disabled on system
-    // or `-c` option is given
-    { ConfigKeyUserSymbolCacheType::default_,
-      { .value = (has_cmd || !is_aslr_enabled())
-                     ? UserSymbolCacheType::per_program
-                     : UserSymbolCacheType::per_pid } },
-  };
+  OS << key_ << ": " << detail_;
 }
 
-bool Config::can_set(ConfigSource prevSource, ConfigSource source)
+void RenameError::log(llvm::raw_ostream &OS) const
 {
-  return prevSource == ConfigSource::default_ ||
-         (prevSource == ConfigSource::script &&
-          source == ConfigSource::env_var);
+  OS << "key has been renamed to '" << name_ << "'";
 }
 
 // /proc/sys/kernel/randomize_va_space >= 1
-bool Config::is_aslr_enabled()
+static bool is_aslr_enabled()
 {
   std::string randomize_va_space_file = "/proc/sys/kernel/randomize_va_space";
 
@@ -73,110 +44,311 @@ bool Config::is_aslr_enabled()
   return true;
 }
 
-std::map<std::string, StackMode> get_stack_mode_map()
+Config::Config(bool has_cmd)
+    : user_symbol_cache_type((has_cmd || !is_aslr_enabled())
+                                 ? UserSymbolCacheType::per_program
+                                 : UserSymbolCacheType::per_pid) {};
+
+static std::string tolower(const std::string &original)
 {
-  std::map<std::string, StackMode> result;
-  for (const auto &mode : STACK_MODE_NAME_MAP) {
-    result.emplace(mode.second, mode.first);
-  }
-  return result;
+  std::string lower(original);
+  std::ranges::transform(lower, lower.begin(), [](unsigned char c) {
+    return std::tolower(c);
+  });
+  return lower;
 }
 
-std::optional<StackMode> Config::get_stack_mode(const std::string &s)
-{
-  static auto stack_mode_map = get_stack_mode_map();
-  auto found = stack_mode_map.find(s);
-  if (found != stack_mode_map.end()) {
-    return std::make_optional(found->second);
+template <>
+struct ConfigParser<uint64_t> {
+  Result<OK> parse(const std::string &key,
+                   uint64_t *target,
+                   const std::string &s)
+  {
+    try {
+      // If this can be parsed as a literal integer, then we take that.
+      *target = util::to_uint(s, 0);
+      return OK();
+    } catch (const std::exception &e) {
+      // Don't bother with the exception, just include the original string.
+      return make_error<ParseError>(key, "expecting a number, got " + s);
+    }
   }
-  return std::nullopt;
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   uint64_t *target,
+                   uint64_t v)
+  {
+    *target = v;
+    return OK();
+  }
+};
+
+template <>
+struct ConfigParser<bool> {
+  Result<OK> parse(const std::string &key,
+                   bool *target,
+                   const std::string &original)
+  {
+    std::string s = tolower(original);
+    if (s == "1" || s == "true" || s == "on" || s == "yes") {
+      *target = true;
+      return OK();
+    } else if (s == "0" || s == "false" || s == "off" || s == "no") {
+      *target = false;
+      return OK();
+    } else {
+      return make_error<ParseError>(
+          key, "Invalid bool value: valid values are true, false, 1 or 0.");
+    }
+  }
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   bool *target,
+                   uint64_t v)
+  {
+    if (v != 0) {
+      *target = true;
+      return OK();
+    } else {
+      *target = false;
+      return OK();
+    }
+  }
+};
+
+template <>
+struct ConfigParser<std::string> {
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   std::string *target,
+                   const std::string &s)
+  {
+    *target = s;
+    return OK();
+  }
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   std::string *target,
+                   uint64_t v)
+  {
+    std::stringstream ss;
+    ss << v;
+    *target = ss.str();
+    return OK();
+  }
+};
+
+template <>
+struct ConfigParser<UserSymbolCacheType> {
+  Result<OK> parse(const std::string &key,
+                   UserSymbolCacheType *target,
+                   const std::string &original)
+  {
+    std::string s = tolower(original);
+    if (s == "1") {
+      return OK(); // Leave as the default.
+    } else if (s == "per_pid") {
+      *target = UserSymbolCacheType::per_pid;
+      return OK();
+    } else if (s == "per_program") {
+      *target = UserSymbolCacheType::per_program;
+      return OK();
+    } else if (s == "none" || s == "0") {
+      *target = UserSymbolCacheType::none;
+      return OK();
+    } else {
+      return make_error<ParseError>(
+          key,
+          "Invalid value for cache_user_symbols: valid values are PER_PID, "
+          "PER_PROGRAM, and NONE.");
+    }
+  }
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   UserSymbolCacheType *target,
+                   uint64_t v)
+  {
+    if (v == 0) {
+      *target = UserSymbolCacheType::none;
+      return OK();
+    } else {
+      // Leave as the default.
+      return OK();
+    }
+  }
+};
+
+template <>
+struct ConfigParser<ConfigMissingProbes> {
+  Result<OK> parse(const std::string &key,
+                   ConfigMissingProbes *target,
+                   const std::string &original)
+  {
+    std::string s = tolower(original);
+    if (s == "ignore") {
+      *target = ConfigMissingProbes::ignore;
+      return OK();
+    } else if (s == "warn") {
+      *target = ConfigMissingProbes::warn;
+      return OK();
+    } else if (s == "error") {
+      *target = ConfigMissingProbes::error;
+      return OK();
+    } else {
+      return make_error<ParseError>(key,
+                                    "Invalid value for missing_probes: valid "
+                                    "values are ignore, warn, and error.");
+    }
+  }
+  Result<OK> parse(const std::string &key,
+                   [[maybe_unused]] ConfigMissingProbes *target,
+                   [[maybe_unused]] uint64_t v)
+  {
+    return make_error<ParseError>(key,
+                                  "Invalid value for missing_probes: valid "
+                                  "values are ignore, warn, and error.");
+  }
+};
+
+struct AnyParser {
+  using KeyType = const std::string &;
+  std::function<Result<OK>(KeyType, Config *, uint64_t)> integer;
+  std::function<Result<OK>(KeyType, Config *, const std::string &)> string;
+};
+
+template <typename T>
+AnyParser parser(T fn)
+{
+  // The passed function should return a pointer to the field. We extract
+  // the type of the returned field, and match against the parser.
+  using R = std::remove_pointer_t<decltype(fn(static_cast<Config *>(nullptr)))>;
+  return AnyParser{
+    .integer =
+        [fn](const std::string &k, Config *c, uint64_t value) {
+          ConfigParser<R> parser;
+          return parser.parse(k, fn(c), value);
+        },
+    .string =
+        [fn](const std::string &k, Config *c, const std::string &s) {
+          ConfigParser<R> parser;
+          return parser.parse(k, fn(c), s);
+        },
+  };
 }
 
-std::optional<ConfigKey> Config::get_config_key(const std::string &str,
-                                                std::string &err)
+// This map construsts all the different parsers.
+#define CONFIG_FIELD_PARSER(x) parser([](Config *config) { return &config->x; })
+const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
+  { "cache_user_symbols", CONFIG_FIELD_PARSER(user_symbol_cache_type) },
+  { "cpp_demangle", CONFIG_FIELD_PARSER(cpp_demangle) },
+  { "lazy_symbolication", CONFIG_FIELD_PARSER(lazy_symbolication) },
+  { "license", CONFIG_FIELD_PARSER(license) },
+  { "log_size", CONFIG_FIELD_PARSER(log_size) },
+  { "max_bpf_progs", CONFIG_FIELD_PARSER(max_bpf_progs) },
+  { "max_cat_bytes", CONFIG_FIELD_PARSER(max_cat_bytes) },
+  { "max_map_keys", CONFIG_FIELD_PARSER(max_map_keys) },
+  { "max_probes", CONFIG_FIELD_PARSER(max_probes) },
+  { "max_strlen", CONFIG_FIELD_PARSER(max_strlen) },
+  { "max_type_res_iterations", CONFIG_FIELD_PARSER(max_type_res_iterations) },
+  { "on_stack_limit", CONFIG_FIELD_PARSER(on_stack_limit) },
+  { "perf_rb_pages", CONFIG_FIELD_PARSER(perf_rb_pages) },
+  { "stack_mode", CONFIG_FIELD_PARSER(stack_mode) },
+  { "str_trunc_trailer", CONFIG_FIELD_PARSER(str_trunc_trailer) },
+  { "missing_probes", CONFIG_FIELD_PARSER(missing_probes) },
+  { "print_maps_on_exit", CONFIG_FIELD_PARSER(print_maps_on_exit) },
+  { "use_blazesym", CONFIG_FIELD_PARSER(use_blazesym) },
+  { "unstable_import", CONFIG_FIELD_PARSER(unstable_import) },
+  { "unstable_map_decl", CONFIG_FIELD_PARSER(unstable_map_decl) },
+};
+
+// These symbols are deprecated, and have been remapped elsewhere.
+const std::map<std::string, std::string> DEPRECATED = {
+  { "strlen", "max_strlen" },
+  { "no_cpp_demangle", "cpp_demangle" },
+  { "cat_bytes_max", "max_cat_bytes" },
+  { "map_keys_max", "max_map_keys" },
+};
+
+// These are configuration names that are consumed elsewhere. We use this only
+// to check if we should produce a more helpful error for the user.
+const std::unordered_set<std::string> ENV_ONLY = {
+  "btf",           "debug_output",   "kernel_build", "kernel_source",
+  "max_ast_nodes", "verify_llvm_ir", "vmlinux",
+};
+
+// This is applied for all environment variables, and will also be accepted
+// as part of the general configuration key (in lower case only).
+constexpr std::string ENV_PREFIX = "bpftrace_";
+
+static std::string restore(const std::string &original_key)
 {
-  std::string maybe_key = str;
-  static const std::string prefix = "bpftrace_";
-  std::ranges::transform(maybe_key,
-
-                         maybe_key.begin(),
-                         [](unsigned char c) { return std::tolower(c); });
-
-  if (maybe_key.starts_with(prefix)) {
-    maybe_key = maybe_key.substr(prefix.length());
+  std::string key = tolower(original_key);
+  if (key.starts_with(ENV_PREFIX)) {
+    key = key.substr(ENV_PREFIX.length());
   }
-  if (ENV_ONLY.contains(maybe_key)) {
-    err = maybe_key + " can only be set as an environment variable";
-    return std::nullopt;
-  }
-
-  auto found = CONFIG_KEY_MAP.find(maybe_key);
-
-  if (found == CONFIG_KEY_MAP.end()) {
-    err = "Unrecognized config variable: " + str;
-    return std::nullopt;
-  }
-
-  return std::make_optional<ConfigKey>(found->second);
+  return key;
 }
 
-bool Config::is_unstable(ConfigKey key)
+static Result<AnyParser> lookup(const std::string &original_key)
 {
-  static const std::string_view unstable_prefix = "unstable_";
-  static const std::map<ConfigKey, std::string> reversed_map =
-      reverse_config_map();
-  const std::string &config_str = reversed_map.at(key);
-  return config_str.starts_with(unstable_prefix);
-}
-
-bool ConfigSetter::set_stack_mode(const std::string &s)
-{
-  auto stack_mode = Config::get_stack_mode(s);
-  if (stack_mode.has_value())
-    return config_.set(ConfigKeyStackMode::default_,
-                       stack_mode.value(),
-                       source_);
-
-  LOG(ERROR) << s << " is not a valid StackMode";
-  return false;
-}
-
-// Note: options 0 and 1 are for compatibility with older versions of bpftrace
-bool ConfigSetter::set_user_symbol_cache_type(const std::string &s)
-{
-  UserSymbolCacheType usct;
-  if (s == "PER_PID") {
-    usct = UserSymbolCacheType::per_pid;
-  } else if (s == "PER_PROGRAM") {
-    usct = UserSymbolCacheType::per_program;
-  } else if (s == "1") {
-    // use the default
-    return true;
-  } else if (s == "NONE" || s == "0") {
-    usct = UserSymbolCacheType::none;
-  } else {
-    LOG(ERROR) << "Invalid value for cache_user_symbols: valid values are "
-                  "PER_PID, PER_PROGRAM, and NONE.";
-    return false;
+  auto key = restore(original_key);
+  auto it = CONFIG_KEY_MAP.find(key);
+  if (it == CONFIG_KEY_MAP.end()) {
+    auto dep = DEPRECATED.find(key);
+    if (dep != DEPRECATED.end()) {
+      return make_error<RenameError>(dep->second);
+    }
+    auto env = ENV_ONLY.find(key);
+    if (env != ENV_ONLY.end()) {
+      return make_error<ParseError>(
+          original_key, "can only be set as an environment variable");
+    }
+    return make_error<ParseError>(original_key,
+                                  "not a known configuration option");
   }
-  return config_.set(ConfigKeyUserSymbolCacheType::default_, usct, source_);
+
+  return it->second;
 }
 
-bool ConfigSetter::set_missing_probes_config(const std::string &s)
+Result<OK> Config::set(const std::string &original_key, const std::string &val)
 {
-  ConfigMissingProbes mp;
-  if (s == "ignore") {
-    mp = ConfigMissingProbes::ignore;
-  } else if (s == "warn") {
-    mp = ConfigMissingProbes::warn;
-  } else if (s == "error") {
-    mp = ConfigMissingProbes::error;
-  } else {
-    LOG(ERROR) << "Invalid value for missing_probes: valid values are "
-                  "\"ignore\", \"warn\", and \"error\".";
-    return false;
+  auto parser = lookup(original_key);
+  if (!parser) {
+    return parser.takeError();
   }
-  return config_.set(ConfigKeyMissingProbes::default_, mp, source_);
+  return parser->string(original_key, this, val);
+}
+
+Result<OK> Config::set(const std::string &original_key, uint64_t val)
+{
+  auto parser = lookup(original_key);
+  if (!parser) {
+    return parser.takeError();
+  }
+  return parser->integer(original_key, this, val);
+}
+
+constexpr std::string UNSTABLE_PREFIX = "unstable_";
+
+bool Config::is_unstable(const std::string &original_key)
+{
+  auto key = restore(original_key);
+  return key.starts_with(UNSTABLE_PREFIX);
+}
+
+Result<OK> Config::load_environment()
+{
+  // Scan all known keys by their environment variable name, and if it is
+  // present then set from the environment value.
+  for (const auto &[key, _] : CONFIG_KEY_MAP) {
+    std::string env = ENV_PREFIX + key;
+    std::ranges::transform(env, env.begin(), [](unsigned char c) {
+      return std::toupper(c);
+    });
+    const auto *cenv = getenv(env.c_str());
+    if (cenv) {
+      auto ok = set(key, std::string(cenv));
+      if (!ok) {
+        return ok.takeError();
+      }
+    }
+  }
+  return OK();
 }
 
 } // namespace bpftrace

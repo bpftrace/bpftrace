@@ -1,3 +1,4 @@
+#include "types.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <sstream>
@@ -72,7 +73,7 @@ Usyms::~Usyms()
 
 void Usyms::cache_bcc(const std::string &elf_file)
 {
-  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  const auto cache_type = config_.user_symbol_cache_type;
   // preload symbol table for executable to make it available even if the
   // binary is not present at symbol resolution time
   // note: this only makes sense with ASLR disabled, since with ASLR offsets
@@ -95,14 +96,14 @@ struct blaze_symbolizer *Usyms::create_symbolizer() const
 {
   blaze_symbolizer_opts opts = {
     .type_size = sizeof(opts),
-    .demangle = config_.get(ConfigKeyBool::cpp_demangle),
+    .demangle = config_.cpp_demangle,
   };
   return blaze_symbolizer_new_opts(&opts);
 }
 
 void Usyms::cache_blazesym(const std::string &elf_file)
 {
-  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  auto cache_type = config_.user_symbol_cache_type;
   if (cache_type == UserSymbolCacheType::none)
     return;
 
@@ -142,7 +143,7 @@ void Usyms::cache_blazesym(const std::string &elf_file)
 void Usyms::cache(const std::string &elf_file)
 {
 #ifdef HAVE_BLAZESYM
-  if (config_.get(ConfigKeyBool::use_blazesym)) {
+  if (config_.use_blazesym) {
     cache_blazesym(elf_file);
     return;
   }
@@ -156,7 +157,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
                                bool show_offset,
                                bool show_module)
 {
-  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  const auto cache_type = config_.user_symbol_cache_type;
   struct bcc_symbol usym;
   std::ostringstream symbol;
   void *psyms = nullptr;
@@ -220,7 +221,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
       if (usym.demangle_name != usym.name)
         ::free(const_cast<char *>(usym.demangle_name));
     };
-    if (config_.get(ConfigKeyBool::cpp_demangle))
+    if (config_.cpp_demangle)
       symbol << usym.demangle_name;
     else
       symbol << usym.name;
@@ -254,7 +255,7 @@ std::optional<std::string> Usyms::resolve_blazesym_impl(
       return std::nullopt;
   }
 
-  auto cache_type = config_.get(ConfigKeyUserSymbolCacheType::default_);
+  auto cache_type = config_.user_symbol_cache_type;
   SCOPE_EXIT
   {
     if (cache_type == UserSymbolCacheType::none) {
@@ -331,7 +332,7 @@ std::string Usyms::resolve(uint64_t addr,
                            bool show_module)
 {
 #ifdef HAVE_BLAZESYM
-  if (config_.get(ConfigKeyBool::use_blazesym))
+  if (config_.use_blazesym)
     return resolve_blazesym(addr, pid, pid_exe, show_offset, show_module);
 #endif
   return resolve_bcc(addr, pid, pid_exe, show_offset, show_module);
@@ -342,7 +343,7 @@ struct bcc_symbol_option &Usyms::get_symbol_opts()
   static struct bcc_symbol_option symopts = {
     .use_debug_file = 1,
     .check_debug_file_crc = 1,
-    .lazy_symbolize = config_.get(ConfigKeyBool::lazy_symbolication) ? 1 : 0,
+    .lazy_symbolize = config_.lazy_symbolication ? 1 : 0,
     .use_symbol_type = BCC_SYM_ALL_TYPES,
   };
 

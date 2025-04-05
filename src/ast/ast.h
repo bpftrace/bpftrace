@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "diagnostic.h"
@@ -129,13 +130,6 @@ public:
   explicit String(ASTContext &ctx, std::string str, Location &&loc);
 
   std::string str;
-};
-
-class StackMode : public Expression {
-public:
-  explicit StackMode(ASTContext &ctx, std::string mode, Location &&loc);
-
-  std::string mode;
 };
 
 class Identifier : public Expression {
@@ -356,16 +350,21 @@ public:
   Expression *expr = nullptr;
 };
 
-class AssignConfigVarStatement : public Statement {
+class AssignConfigVarStatement : public Node {
 public:
   AssignConfigVarStatement(ASTContext &ctx,
-                           Identifier *config_var,
-                           Expression *expr,
+                           std::string var,
+                           uint64_t value,
+                           Location &&loc);
+  AssignConfigVarStatement(ASTContext &ctx,
+                           std::string var,
+                           std::string value,
                            Location &&loc);
 
-  Identifier *config_var = nullptr;
-  Expression *expr = nullptr;
+  std::string var;
+  std::variant<uint64_t, std::string> value;
 };
+using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
 
 class Block : public Expression {
 public:
@@ -472,14 +471,14 @@ public:
   SizedType ctx_type;
 };
 
-class Config : public Statement {
+class Config : public Node {
 public:
-  Config(ASTContext &ctx, StatementList &&stmts, Location &&loc)
-      : Statement(ctx, std::move(loc)), stmts(std::move(stmts))
+  Config(ASTContext &ctx, ConfigStatementList &&stmts, Location &&loc)
+      : Node(ctx, std::move(loc)), stmts(std::move(stmts))
   {
   }
 
-  StatementList stmts;
+  ConfigStatementList stmts;
 };
 
 class Probe;

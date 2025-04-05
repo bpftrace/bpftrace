@@ -182,8 +182,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
 {
   std::unordered_map<std::string_view, std::vector<char>> log_bufs;
   for (auto &[name, prog] : programs_) {
-    log_bufs[name] = std::vector<char>(config.get(ConfigKeyInt::log_size),
-                                       '\0');
+    log_bufs[name] = std::vector<char>(config.log_size, '\0');
     auto &log_buf = log_bufs[name];
     bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
   }
@@ -236,7 +235,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
       if (err_pos != std::string_view::npos) {
         LOG(ERROR) << "Your bpftrace program cannot load because you are using "
                       "a license that is non-GPL compatible. License: "
-                   << config.get(ConfigKeyString::license);
+                   << config.license;
         LOG(HINT)
             << "Read more about BPF programs and licensing: "
                "https://docs.kernel.org/bpf/"

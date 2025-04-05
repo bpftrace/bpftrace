@@ -442,8 +442,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps)
     if (!sym.start) {
       const std::string msg = "Could not resolve symbol: " + probe_.path + ":" +
                               symbol;
-      auto missing_probes = bpftrace_.config_->get(
-          ConfigKeyMissingProbes::default_);
+      const auto missing_probes = bpftrace_.config_->missing_probes;
       if (!has_multiple_aps || missing_probes == ConfigMissingProbes::error) {
         throw util::FatalUserException(msg + ", cannot attach probe.");
       } else {
@@ -610,8 +609,7 @@ void AttachedProbe::attach_kprobe()
   // If the user requested to ignore warnings on non-existing probes and the
   // function is not traceable, do not even try to attach as that would yield
   // warnings from BCC which we don't want to see.
-  if (bpftrace_.config_->get(ConfigKeyMissingProbes::default_) ==
-          ConfigMissingProbes::ignore &&
+  if (bpftrace_.config_->missing_probes == ConfigMissingProbes::ignore &&
       probe_.name != probe_.orig_name &&
       (!funcname.empty() || probe_.address != 0) &&
       !bpftrace_.is_traceable_func(funcname))
@@ -637,8 +635,7 @@ void AttachedProbe::attach_kprobe()
 
   if (perf_event_fd < 0) {
     if (probe_.orig_name != probe_.name &&
-        bpftrace_.config_->get(ConfigKeyMissingProbes::default_) ==
-            ConfigMissingProbes::warn) {
+        bpftrace_.config_->missing_probes == ConfigMissingProbes::warn) {
       // a wildcard expansion couldn't probe something, just print a warning
       // as this is normal for some kernel functions (eg, do_debug())
       LOG(WARNING) << "could not attach probe " << probe_.name << ", skipping.";
