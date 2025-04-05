@@ -11,15 +11,18 @@ TEST_F(codegen_btf, call_len_for_each_map_elem)
 {
   auto bpftrace = get_mock_bpftrace();
   auto feature = std::make_unique<MockBPFfeature>();
-  feature->mock_missing_kernel_func(Kfunc::bpf_map_sum_elem_count);
+  feature->add_to_available_kernel_funcs(Kfunc::bpf_map_sum_elem_count, false);
   bpftrace->feature_ = std::move(feature);
-
   test(*bpftrace, PROG, NAME);
 }
 
 TEST_F(codegen_btf, call_len_map_sum_elem_count)
 {
-  test(PROG, NAME);
+  auto bpftrace = get_mock_bpftrace();
+  auto feature = std::make_unique<MockBPFfeature>();
+  feature->add_to_available_kernel_funcs(Kfunc::bpf_map_sum_elem_count, true);
+  bpftrace->feature_ = std::move(feature);
+  test(*bpftrace, PROG, NAME);
 }
 
 TEST_F(codegen_btf, call_len_ustack_kstack)

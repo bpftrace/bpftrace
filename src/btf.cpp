@@ -43,8 +43,23 @@ __s32 BTF::start_id(const struct btf *btf) const
   return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
 }
 
-BTF::BTF(const std::set<std::string> &modules)
+BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
 {
+}
+
+BTF::~BTF()
+{
+  for (auto &btf_obj : btf_objects)
+    btf__free(btf_obj.btf);
+}
+
+void BTF::load_vmlinux_btf()
+{
+  if (vmlinux_loaded_) {
+    // Don't attempt to reload vmlinux even if it fails below
+    return;
+  }
+  vmlinux_loaded_ = true;
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
@@ -54,8 +69,15 @@ BTF::BTF(const std::set<std::string> &modules)
       LOG(WARNING) << "BTF: failed to parse BTF from " << path;
       return;
     }
-  } else
-    load_kernel_btfs(modules);
+  } else {
+    vmlinux_btf = btf__load_vmlinux_btf();
+    if (libbpf_get_error(vmlinux_btf)) {
+      LOG(V1) << "BTF: failed to find BTF data for vmlinux: "
+              << strerror(errno);
+      return;
+    }
+    btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
+  }
 
   if (btf_objects.empty()) {
     LOG(V1) << "BTF: failed to find BTF data";
@@ -67,22 +89,43 @@ BTF::BTF(const std::set<std::string> &modules)
   state = OK;
 }
 
-BTF::~BTF()
+bool BTF::has_module_btf()
 {
-  for (auto &btf_obj : btf_objects)
-    btf__free(btf_obj.btf);
+  if (has_module_btf_.has_value())
+    return *has_module_btf_;
+
+  char name[64];
+  struct bpf_btf_info info = {};
+  info.name = reinterpret_cast<uintptr_t>(name);
+  info.name_len = sizeof(name);
+  __u32 id = 0, info_len = sizeof(info);
+  int err = 0, fd = -1;
+
+  err = bpf_btf_get_next_id(id, &id);
+  if (err)
+    goto not_support;
+
+  fd = bpf_btf_get_fd_by_id(id);
+  if (fd < 0)
+    goto not_support;
+
+  err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
+  close(fd);
+  if (err)
+    goto not_support;
+
+  has_module_btf_ = true;
+  return *has_module_btf_;
+
+not_support:
+  has_module_btf_ = false;
+  return *has_module_btf_;
 }
 
-void BTF::load_kernel_btfs(const std::set<std::string> &modules)
+void BTF::load_module_btfs(const std::set<std::string> &modules)
 {
-  vmlinux_btf = btf__load_vmlinux_btf();
-  if (libbpf_get_error(vmlinux_btf)) {
-    LOG(V1) << "BTF: failed to find BTF data for vmlinux: " << strerror(errno);
-    return;
-  }
-  btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
-
-  if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
+  load_vmlinux_btf();
+  if ((bpftrace_ && !has_module_btf()) || state != OK)
     return;
 
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
@@ -128,6 +171,8 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
                   .name = mod_name });
     }
   }
+
+  modules_loaded_ = true;
 }
 
 static void dump_printf(void *ctx, const char *fmt, va_list args)
@@ -233,7 +278,7 @@ std::string BTF::dump_defs_from_btf(
   return ret;
 }
 
-std::string BTF::c_def(const std::unordered_set<std::string> &set) const
+std::string BTF::c_def(const std::unordered_set<std::string> &set)
 {
   if (!has_data())
     return {};
@@ -1072,7 +1117,7 @@ ast::Pass CreateParseBTFPass()
 {
   return ast::Pass::create(
       "btf", []([[maybe_unused]] ast::ASTContext &ast, BPFtrace &b) {
-        b.parse_btf(b.list_modules(ast));
+        b.parse_module_btf(b.list_modules(ast));
       });
 }
 

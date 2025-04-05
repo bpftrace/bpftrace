@@ -4,6 +4,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
+#include "btf.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -27,6 +28,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .put<BPFtrace>(*bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(CreateParseBTFPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())

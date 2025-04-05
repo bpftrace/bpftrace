@@ -70,7 +70,8 @@ protected:
 
 class BPFfeature {
 public:
-  BPFfeature(BPFnofeature& no_feature) : no_feature_(no_feature)
+  BPFfeature(BPFnofeature& no_feature, BTF& btf)
+      : no_feature_(no_feature), btf_(btf)
   {
   }
   BPFfeature() = default;
@@ -95,13 +96,12 @@ public:
   bool has_kprobe_multi();
   bool has_kprobe_session();
   bool has_uprobe_multi();
-  bool has_fentry();
   bool has_skb_output();
   bool has_prog_fentry();
-  bool has_module_btf();
   bool has_iter(std::string name);
-
-  bool has_kernel_func(Kfunc kfunc);
+  // These are virtual so they can be overridden in tests by the mock
+  virtual bool has_fentry();
+  virtual bool has_kernel_func(Kfunc kfunc);
 
   std::string report();
 
@@ -141,7 +141,6 @@ protected:
   std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_prog_fentry_;
-  std::optional<bool> has_module_btf_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;
 
@@ -165,9 +164,8 @@ private:
       int* outfd = nullptr);
   bool try_load_btf(const void* btf_data, size_t btf_size);
 
-  BTF btf_ = BTF({ "vmlinux" });
-
   BPFnofeature no_feature_;
+  BTF& btf_;
 };
 
 #undef DEFINE_PROG_TEST
