@@ -311,7 +311,7 @@ public:
   // Expression and Statement, but can be removed by encoding this type
   // information into the AST directly.
   template <typename Orig, typename T, typename... Ts>
-  R tryVisitAndReplace(Orig **node)
+  R tryVisitAndReplaceOne(Orig **node)
   {
     if (auto *t = dynamic_cast<T>(*node)) {
       if constexpr (!std::is_void_v<R>) {
@@ -327,6 +327,24 @@ public:
       return tryVisitAndReplace<Orig, Ts...>(node);
     }
     return default_value();
+  }
+  template <typename Orig, typename T, typename... Ts>
+  R tryVisitAndReplace(Orig **node)
+  {
+    // Note that this will effectively visit the node as the concrete type
+    // (e.g. `Map`), and then subsequently we need to check for replacement
+    // based on the abstract type (e.g. `Expression*`). This is because one
+    // `Expression*` can be swapped for another `Expression*`.
+    Impl *impl = static_cast<Impl *>(this);
+    if constexpr (!std::is_void_v<R>) {
+      auto rval = tryVisitAndReplaceOne<Orig, T, Ts...>(node);
+      *node = impl->replace(*node, &rval);
+      return rval;
+    } else {
+      tryVisitAndReplaceOne<Orig, T, Ts...>(node);
+      *node = impl->replace(*node, nullptr);
+      return default_value();
+    }
   }
   R visitAndReplace(Expression **expr)
   {
