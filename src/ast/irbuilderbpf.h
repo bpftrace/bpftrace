@@ -332,10 +332,6 @@ private:
   llvm::Type *getKernelPointerStorageTy();
   llvm::Type *getUserPointerStorageTy();
   void CreateRingbufOutput(Value *data, size_t size, const Location &loc);
-  void CreatePerfEventOutput(Value *ctx,
-                             Value *data,
-                             size_t size,
-                             const Location &loc);
 
   void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
   void createPerCpuMinMax(AllocaInst *ret,

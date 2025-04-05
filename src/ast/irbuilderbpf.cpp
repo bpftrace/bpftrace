@@ -2133,11 +2133,7 @@ void IRBuilderBPF::CreateOutput(Value *ctx,
   assert(ctx && ctx->getType() == getPtrTy());
   assert(data && data->getType()->isPointerTy());
 
-  if (bpftrace_.feature_->has_map_ringbuf()) {
-    CreateRingbufOutput(data, size, loc);
-  } else {
-    CreatePerfEventOutput(ctx, data, size, loc);
-  }
+  CreateRingbufOutput(data, size, loc);
 }
 
 void IRBuilderBPF::CreateRingbufOutput(Value *data,
@@ -2269,32 +2265,6 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
   CreateLifetimeEnd(value);
-}
-
-void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
-                                         Value *data,
-                                         size_t size,
-                                         const Location &loc)
-{
-  Value *map_ptr = GetMapVar(to_string(MapType::PerfEvent));
-
-  Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
-  Value *size_val = getInt64(size);
-
-  // long bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,
-  //                            u64 flags, void *data, u64 size)
-  FunctionType *perfoutput_func_type = FunctionType::get(getInt64Ty(),
-                                                         { getPtrTy(),
-                                                           map_ptr->getType(),
-                                                           getInt64Ty(),
-                                                           data->getType(),
-                                                           getInt64Ty() },
-                                                         false);
-  CreateHelperCall(libbpf::BPF_FUNC_perf_event_output,
-                   perfoutput_func_type,
-                   { ctx, map_ptr, flags_val, data, size_val },
-                   "perf_event_output",
-                   loc);
 }
 
 void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,
