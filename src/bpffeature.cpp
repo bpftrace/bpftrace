@@ -617,7 +617,6 @@ std::string BPFfeature::report()
     { "array", to_str(has_map_array()) },
     { "percpu array", to_str(has_map_percpu_array()) },
     { "stack_trace", to_str(has_map_stack_trace()) },
-    { "perf_event_array", to_str(has_map_perf_event_array()) },
     { "ringbuf", to_str(has_map_ringbuf()) }
   };
 

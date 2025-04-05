@@ -20,6 +20,8 @@ and this project adheres to
   - [#3999](https://github.com/bpftrace/bpftrace/pull/3999)
 - Error by default if any probe fails to attach
   - [#4097](https://github.com/bpftrace/bpftrace/pull/4097)
+- Require BPF_MAP_TYPE_RINGBUF to be available
+  - [#3974](https://github.com/bpftrace/bpftrace/pull/3974)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)

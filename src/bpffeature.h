@@ -108,7 +108,6 @@ public:
   DEFINE_MAP_TEST(hash, libbpf::BPF_MAP_TYPE_HASH);
   DEFINE_MAP_TEST(percpu_array, libbpf::BPF_MAP_TYPE_PERCPU_ARRAY);
   DEFINE_MAP_TEST(stack_trace, libbpf::BPF_MAP_TYPE_STACK_TRACE);
-  DEFINE_MAP_TEST(perf_event_array, libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   DEFINE_MAP_TEST(ringbuf, libbpf::BPF_MAP_TYPE_RINGBUF);
   DEFINE_HELPER_TEST(send_signal, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(override_return, libbpf::BPF_PROG_TYPE_KPROBE);

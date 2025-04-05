@@ -250,21 +250,9 @@ private:
   int create_pcaps();
   void close_pcaps();
   int setup_output(void *ctx);
-  int setup_perf_events(void *ctx);
+  int setup_skboutput_perf_buffer(void *ctx);
   void setup_ringbuf(void *ctx);
   int setup_event_loss();
-  // when the ringbuf feature is available, enable ringbuf for built-ins like
-  // printf, cat.
-  bool is_ringbuf_enabled() const
-  {
-    return feature_->has_map_ringbuf();
-  }
-  // when the ringbuf feature is unavailable or built-in skboutput is used,
-  // enable perf_event
-  bool is_perf_event_enabled() const
-  {
-    return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
-  }
   std::vector<std::string> resolve_ksym_stack(uint64_t addr,
                                               bool show_offset,
                                               bool perf_mode,
@@ -277,7 +265,7 @@ private:
                                               bool show_debug_info);
   void teardown_output();
   void poll_output(Output &out, bool drain = false);
-  int poll_perf_events();
+  int poll_skboutput_events();
   void handle_event_loss(Output &out);
   int print_map_hist(Output &out,
                      const BpfMap &map,

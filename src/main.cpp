@@ -1001,6 +1001,12 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
+  if (!bpftrace.feature_->has_map_ringbuf()) {
+    LOG(ERROR) << "Your kernel is too old and is missing the "
+                  "BPF_MAP_TYPE_RINGBUF, which bpftrace requires.";
+    return 1;
+  }
+
   auto& bytecode = pmresult->get<BpfBytecode>();
   return run_bpftrace(bpftrace, *output, bytecode);
 }
