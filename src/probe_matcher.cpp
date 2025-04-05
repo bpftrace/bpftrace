@@ -138,20 +138,12 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     // Then we check the BTF to filter out functions from that list that don't
     // have any BTF definitions.
     case ProbeType::rawtracepoint: {
-      if (bpftrace_->has_btf_data()) {
-        symbol_stream = bpftrace_->btf_->get_all_raw_tracepoints();
-      } else {
-        symbol_stream = get_symbols_from_raw_tracepoints();
-      }
+      symbol_stream = get_raw_tracepoint_symbols();
       break;
     }
     case ProbeType::fentry:
     case ProbeType::fexit: {
-      if (bpftrace_->has_btf_data())
-        symbol_stream = bpftrace_->btf_->get_all_funcs();
-      else {
-        symbol_stream = get_symbols_from_traceable_funcs(true);
-      }
+      symbol_stream = get_fentry_symbols();
       break;
     }
     case ProbeType::usdt: {
@@ -249,15 +241,27 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
   return std::make_unique<std::istringstream>(funcs);
 }
 
-std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_raw_tracepoints()
-    const
+std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
 {
-  std::string rts;
-  for (const auto& rt_mod : bpftrace_->get_raw_tracepoints()) {
-    for (const auto& mod : rt_mod.second)
-      rts += mod + ":" + rt_mod.first + "\n";
+  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded())
+    return bpftrace_->btf_->get_all_funcs();
+  else {
+    return get_symbols_from_traceable_funcs(true);
   }
-  return std::make_unique<std::istringstream>(rts);
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const
+{
+  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
+    return bpftrace_->btf_->get_all_raw_tracepoints();
+  } else {
+    std::string rts;
+    for (const auto& rt_mod : bpftrace_->get_raw_tracepoints()) {
+      for (const auto& mod : rt_mod.second)
+        rts += mod + ":" + rt_mod.first + "\n";
+    }
+    return std::make_unique<std::istringstream>(rts);
+  }
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(

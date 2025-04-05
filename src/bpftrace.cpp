@@ -2018,14 +2018,14 @@ bool BPFtrace::write_pcaps(uint64_t id,
   return writer->write(ns, pkt, size);
 }
 
-void BPFtrace::parse_btf(const std::set<std::string> &modules)
+void BPFtrace::parse_module_btf(const std::set<std::string> &modules)
 {
-  btf_ = std::make_unique<BTF>(this, modules);
+  btf_->load_module_btfs(modules);
 }
 
 bool BPFtrace::has_btf_data() const
 {
-  return btf_ && btf_->has_data();
+  return btf_->has_data();
 }
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to
