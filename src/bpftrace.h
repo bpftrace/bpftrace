@@ -266,17 +266,10 @@ private:
   int setup_perf_events();
   void setup_ringbuf();
   int setup_event_loss();
-  // when the ringbuf feature is available, enable ringbuf for built-ins like
-  // printf, cat.
-  bool is_ringbuf_enabled() const
-  {
-    return feature_->has_map_ringbuf();
-  }
-  // when the ringbuf feature is unavailable or built-in skboutput is used,
-  // enable perf_event
+  // when the built-in skboutput is used enable perf_event
   bool is_perf_event_enabled() const
   {
-    return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
+    return resources.needs_perf_event_map;
   }
   void teardown_output();
   void poll_output(bool drain = false);

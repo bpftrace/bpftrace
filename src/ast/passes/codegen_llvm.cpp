@@ -4212,8 +4212,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateUInt64());
   }
 
-  if (!bpftrace_.feature_->has_map_ringbuf() ||
-      required_resources.needs_perf_event_map) {
+  if (required_resources.needs_perf_event_map) {
     createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         util::get_online_cpus().size(),
@@ -4221,22 +4220,20 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateInt32());
   }
 
-  if (bpftrace_.feature_->has_map_ringbuf()) {
     auto entries = bpftrace_.config_->get(ConfigKeyInt::perf_rb_pages) * 4096;
     createMapDefinition(to_string(MapType::Ringbuf),
                         libbpf::BPF_MAP_TYPE_RINGBUF,
                         entries,
                         CreateNone(),
                         CreateNone());
-  }
 
-  int loss_cnt_key_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_key_) * 8;
-  int loss_cnt_val_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_val_) * 8;
-  createMapDefinition(to_string(MapType::EventLossCounter),
-                      libbpf::BPF_MAP_TYPE_ARRAY,
-                      1,
-                      CreateInt(loss_cnt_key_size),
-                      CreateInt(loss_cnt_val_size));
+    int loss_cnt_key_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_key_) * 8;
+    int loss_cnt_val_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_val_) * 8;
+    createMapDefinition(to_string(MapType::EventLossCounter),
+                        libbpf::BPF_MAP_TYPE_ARRAY,
+                        1,
+                        CreateInt(loss_cnt_key_size),
+                        CreateInt(loss_cnt_val_size));
 }
 
 void CodegenLLVM::generate_global_vars(

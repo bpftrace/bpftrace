@@ -1042,9 +1042,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
 int BPFtrace::setup_output()
 {
-  if (is_ringbuf_enabled()) {
-    setup_ringbuf();
-  }
+  setup_ringbuf();
   int err = setup_event_loss();
   if (err)
     return err;
@@ -1116,8 +1114,7 @@ int BPFtrace::setup_event_loss()
 
 void BPFtrace::teardown_output()
 {
-  if (is_ringbuf_enabled())
-    ring_buffer__free(ringbuf_);
+  ring_buffer__free(ringbuf_);
 
   if (is_perf_event_enabled())
     // Calls perf_reader_free() on all open perf buffers.
@@ -1128,7 +1125,7 @@ void BPFtrace::poll_output(bool drain)
 {
   int ready;
   bool do_poll_perf_event = is_perf_event_enabled();
-  bool do_poll_ringbuf = is_ringbuf_enabled();
+  bool do_poll_ringbuf = true;
   auto should_retry = [](int ready) {
     // epoll_wait will set errno to EINTR if an interrupt received, it is
     // retryable if not caused by SIGINT. ring_buffer__poll does not set errno,
