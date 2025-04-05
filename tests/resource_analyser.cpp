@@ -38,8 +38,8 @@ void test(const std::string &input,
           std::optional<uint64_t> on_stack_limit = std::nullopt)
 {
   auto bpftrace = get_mock_bpftrace();
-  auto configs = ConfigSetter(*bpftrace->config_, ConfigSource::script);
-  configs.set(ConfigKeyInt::on_stack_limit, on_stack_limit.value_or(0));
+  bpftrace->config_->on_stack_limit = on_stack_limit.value_or(0);
+
   test(*bpftrace, input, expected_result, out);
 }
 

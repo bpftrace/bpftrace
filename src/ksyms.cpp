@@ -109,7 +109,7 @@ std::string Ksyms::resolve_blazesym(uint64_t addr, bool show_offset)
 std::string Ksyms::resolve(uint64_t addr, bool show_offset)
 {
 #ifdef HAVE_BLAZESYM
-  if (config_.get(ConfigKeyBool::use_blazesym))
+  if (config_.use_blazesym)
     return resolve_blazesym(addr, show_offset);
 #endif
   return resolve_bcc(addr, show_offset);

@@ -277,7 +277,7 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
                           CreateArray(resources.max_tuple_size, CreateInt8()));
     case bpftrace::globalvars::GlobalVar::GET_STR_BUFFER: {
       assert(resources.str_buffers > 0);
-      const auto max_strlen = bpftrace_config.get(ConfigKeyInt::max_strlen);
+      const auto max_strlen = bpftrace_config.max_strlen;
       return make_rw_type(resources.str_buffers,
                           CreateArray(max_strlen, CreateInt8()));
     }

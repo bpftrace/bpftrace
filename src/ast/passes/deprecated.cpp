@@ -13,7 +13,6 @@ public:
   using Visitor<DeprecatedAnalyser>::visit;
   void visit(Builtin &builtin);
   void visit(Call &call);
-  void visit(AssignConfigVarStatement &assign);
 };
 
 struct DeprecatedName {
@@ -76,19 +75,6 @@ static std::vector<DeprecatedName> DEPRECATED_CALLS = {};
 void DeprecatedAnalyser::visit(Call &call)
 {
   check(DEPRECATED_CALLS, call.func, call);
-}
-
-static std::vector<DeprecatedName> DEPRECATED_CONFIGS = {
-  {
-      .old_name = "symbol_source",
-      .new_name = {},
-      .deleted = true,
-  },
-};
-
-void DeprecatedAnalyser::visit(AssignConfigVarStatement &assign)
-{
-  check(DEPRECATED_CONFIGS, assign.config_var->ident, assign);
 }
 
 Pass CreateDeprecatedPass()

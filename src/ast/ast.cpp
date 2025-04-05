@@ -32,12 +32,6 @@ String::String(ASTContext &ctx, std::string str, Location &&loc)
   is_literal = true;
 }
 
-StackMode::StackMode(ASTContext &ctx, std::string mode, Location &&loc)
-    : Expression(ctx, std::move(loc)), mode(std::move(mode))
-{
-  is_literal = true;
-}
-
 Builtin::Builtin(ASTContext &ctx, std::string ident, Location &&loc)
     : Expression(ctx, std::move(loc)), ident(std::move(ident))
 {
@@ -248,10 +242,18 @@ AssignVarStatement::AssignVarStatement(ASTContext &ctx,
 }
 
 AssignConfigVarStatement::AssignConfigVarStatement(ASTContext &ctx,
-                                                   Identifier *config_var,
-                                                   Expression *expr,
+                                                   std::string var,
+                                                   uint64_t value,
                                                    Location &&loc)
-    : Statement(ctx, std::move(loc)), config_var(config_var), expr(expr)
+    : Node(ctx, std::move(loc)), var(std::move(var)), value(std::move(value))
+{
+}
+
+AssignConfigVarStatement::AssignConfigVarStatement(ASTContext &ctx,
+                                                   std::string var,
+                                                   std::string value,
+                                                   Location &&loc)
+    : Node(ctx, std::move(loc)), var(std::move(var)), value(std::move(value))
 {
 }
 

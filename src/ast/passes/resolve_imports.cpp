@@ -31,7 +31,7 @@ private:
 
 void ResolveImports::visit(Import &imp)
 {
-  if (!bpftrace_.config_->get(ConfigKeyBool::unstable_import)) {
+  if (!bpftrace_.config_->unstable_import) {
     imp.addError() << "Imports are not enabled by default. To enable "
                       "this unstable feature, set this config flag to 1 "
                       "e.g. unstable_import=1";

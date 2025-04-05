@@ -263,105 +263,6 @@ static std::optional<struct timespec> get_delta_taitime()
   return get_delta_with_boottime(CLOCK_TAI);
 }
 
-static void parse_env(BPFtrace& bpftrace)
-{
-  ConfigSetter config_setter(*bpftrace.config_, ConfigSource::env_var);
-  util::get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_strlen, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
-    LOG(WARNING) << "BPFTRACE_STRLEN is deprecated. Use "
-                    "BPFTRACE_MAX_STRLEN instead.";
-    config_setter.set(ConfigKeyInt::max_strlen, x);
-  });
-
-  if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
-    config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
-
-  util::get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
-    config_setter.set(ConfigKeyBool::cpp_demangle, x);
-  });
-
-  util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
-                         [&](bool x) { bpftrace.debug_output_ = x; });
-
-  util::get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
-    config_setter.set(ConfigKeyBool::lazy_symbolication, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_map_keys, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_probes, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_bpf_progs, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::log_size, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::perf_rb_pages, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
-    config_setter.set(ConfigKeyInt::max_cat_bytes, x);
-  });
-
-  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS")) {
-    const std::string s(env_p);
-    if (!config_setter.set_user_symbol_cache_type(s))
-      exit(1);
-  }
-
-  util::get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
-                           [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
-
-  if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE")) {
-    if (!config_setter.set_stack_mode(stack_mode))
-      exit(1);
-  }
-
-  util::get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
-    LOG(WARNING) << "BPFTRACE_NO_CPP_DEMANGLE is deprecated. Use "
-                    "BPFTRACE_CPP_DEMANGLE=0 instead.";
-    config_setter.set(ConfigKeyBool::cpp_demangle, !x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
-    LOG(WARNING) << "BPFTRACE_CAT_BYTES_MAX is deprecated. Use "
-                    "BPFTRACE_MAX_CAT_BYTES instead.";
-    config_setter.set(ConfigKeyInt::max_cat_bytes, x);
-  });
-
-  util::get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
-    LOG(WARNING) << "BPFTRACE_MAP_KEYS_MAX is deprecated. Use "
-                    "BPFTRACE_MAX_MAP_KEYS instead.";
-    config_setter.set(ConfigKeyInt::max_map_keys, x);
-  });
-
-  util::get_bool_env_var("BPFTRACE_USE_BLAZESYM", [&](bool x) {
-#ifndef HAVE_BLAZESYM
-    if (x) {
-      LOG(ERROR) << "BPFTRACE_USE_BLAZESYM requires blazesym support enabled "
-                    "during build.";
-      exit(1);
-    }
-#endif
-    config_setter.set(ConfigKeyBool::use_blazesym, x);
-  });
-}
-
 std::vector<std::string> extra_flags(
     BPFtrace& bpftrace,
     const std::vector<std::string>& include_dirs,
@@ -403,6 +304,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 
 void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
 {
+  add(ast::CreateConfigPass());
   add(ast::CreateSemanticPass());
   add(ast::CreatePortabilityPass());
   add(ast::CreateResourcePass());
@@ -809,7 +711,13 @@ int main(int argc, char* argv[])
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
   BPFtrace bpftrace(std::move(output), args.no_feature, std::move(config));
 
-  parse_env(bpftrace);
+  // Most configuration can be applied during the configuration pass, however
+  // we need to extract a few bits of configuration up front, because they may
+  // affect the actual compilation process.
+  util::get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                           [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
+  util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
+                         [&](bool x) { bpftrace.debug_output_ = x; });
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;

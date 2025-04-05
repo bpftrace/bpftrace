@@ -2662,7 +2662,7 @@ TEST(Parser, config)
 Program
  config
   =
-   config var: blah
+   var: blah
    int: 5
  BEGIN
 )");
@@ -2671,7 +2671,7 @@ Program
 Program
  config
   =
-   config var: blah
+   var: blah
    int: 5
  BEGIN
 )");
@@ -2680,10 +2680,10 @@ Program
 Program
  config
   =
-   config var: blah
+   var: blah
    int: 5
   =
-   config var: zoop
+   var: zoop
    string: a
  BEGIN
 )");

@@ -1,6 +1,7 @@
 #include "ast/passes/config_analyser.h"
 #include "driver.h"
 #include "mocks.h"
+#include "types.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::config_analyser {
@@ -116,50 +117,56 @@ TEST(config_analyser, config)
 TEST(config_analyser, config_error)
 {
   test("config = { BAD_CONFIG=1 } BEGIN { }",
-       R"(stdin:1:12-22: ERROR: Unrecognized config variable: BAD_CONFIG
+       R"(stdin:1:12-24: ERROR: BAD_CONFIG: not a known configuration option
 config = { BAD_CONFIG=1 } BEGIN { }
-           ~~~~~~~~~~
+           ~~~~~~~~~~~~
 )",
        false);
   test(
       "config = { BPFTRACE_MAX_PROBES = \"hello\" } BEGIN { }",
-      R"(stdin:1:34-41: ERROR: Invalid type for BPFTRACE_MAX_PROBES. Type: string. Expected Type: int
+      R"(stdin:1:12-41: ERROR: BPFTRACE_MAX_PROBES: expecting a number, got hello
 config = { BPFTRACE_MAX_PROBES = "hello" } BEGIN { }
-                                 ~~~~~~~
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )",
       false);
   test(
       "config = { max_ast_nodes=1 } BEGIN { }",
-      R"(stdin:1:12-25: ERROR: max_ast_nodes can only be set as an environment variable
+      R"(stdin:1:12-27: ERROR: max_ast_nodes: can only be set as an environment variable
 config = { max_ast_nodes=1 } BEGIN { }
-           ~~~~~~~~~~~~~
+           ~~~~~~~~~~~~~~~
 )",
       false);
+}
+
+TEST(config_analyser, deprecated)
+{
+  test_for_warning("config = { symbol_source=\"symbol_table\" } BEGIN { }",
+                   "symbol_source is deprecated and has no effect");
+  test_for_warning("config = { symbol_source=\"zzz\" } BEGIN { }",
+                   "symbol_source is deprecated and has no effect");
 }
 
 TEST(config_analyser, config_setting)
 {
   auto bpftrace = get_mock_bpftrace();
 
-  EXPECT_NE(bpftrace->config_->get(ConfigKeyInt::max_map_keys), 9);
+  EXPECT_NE(bpftrace->config_->max_map_keys, 9);
   test(*bpftrace, "config = { BPFTRACE_MAX_MAP_KEYS=9 } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_->get(ConfigKeyInt::max_map_keys), 9);
+  EXPECT_EQ(bpftrace->config_->max_map_keys, 9);
 
-  EXPECT_NE(bpftrace->config_->get(ConfigKeyStackMode::default_),
-            StackMode::perf);
+  EXPECT_NE(bpftrace->config_->stack_mode, StackMode::perf);
   test(*bpftrace, "config = { stack_mode=perf } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_->get(ConfigKeyStackMode::default_),
-            StackMode::perf);
+  EXPECT_EQ(bpftrace->config_->stack_mode, StackMode::perf);
 
-  EXPECT_NE(bpftrace->config_->get(ConfigKeyUserSymbolCacheType::default_),
+  EXPECT_NE(bpftrace->config_->user_symbol_cache_type,
             UserSymbolCacheType::per_program);
-  EXPECT_NE(bpftrace->config_->get(ConfigKeyInt::log_size), 150);
+  EXPECT_NE(bpftrace->config_->log_size, 150);
   test(*bpftrace,
        "config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\"; log_size=150 "
        "} BEGIN { }");
-  EXPECT_EQ(bpftrace->config_->get(ConfigKeyUserSymbolCacheType::default_),
+  EXPECT_EQ(bpftrace->config_->user_symbol_cache_type,
             UserSymbolCacheType::per_program);
-  EXPECT_EQ(bpftrace->config_->get(ConfigKeyInt::log_size), 150);
+  EXPECT_EQ(bpftrace->config_->log_size, 150);
 }
 
 TEST(config_analyser, config_unstable)

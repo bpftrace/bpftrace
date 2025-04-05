@@ -60,10 +60,6 @@ public:
   {
     return default_value();
   }
-  R visit(StackMode &mode __attribute__((__unused__)))
-  {
-    return default_value();
-  }
   R visit(Variable &var __attribute__((__unused__)))
   {
     return default_value();
@@ -151,9 +147,9 @@ public:
     visitAndReplace(&assignment.expr);
     return default_value();
   }
-  R visit(AssignConfigVarStatement &assignment)
+  R visit(AssignConfigVarStatement &assignment __attribute__((__unused__)))
   {
-    return visitAndReplace(&assignment.expr);
+    return default_value();
   }
   R visit(VarDeclStatement &decl)
   {
@@ -353,7 +349,6 @@ public:
                               PositionalParameter *,
                               PositionalParameterCount *,
                               String *,
-                              StackMode *,
                               Identifier *,
                               Builtin *,
                               Call *,
@@ -378,13 +373,11 @@ public:
                               VarDeclStatement *,
                               AssignMapStatement *,
                               AssignVarStatement *,
-                              AssignConfigVarStatement *,
                               If *,
                               Unroll *,
                               Jump *,
                               While *,
-                              For *,
-                              Config *>(stmt);
+                              For *>(stmt);
   }
 
 private:

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cereal/access.hpp>
+#include <cereal/types/variant.hpp>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -12,8 +14,8 @@
 #include <variant>
 #include <vector>
 
-#include <cereal/access.hpp>
-#include <cereal/types/variant.hpp>
+#include "config_parser.h"
+#include "util/result.h"
 
 namespace bpftrace {
 
@@ -82,6 +84,33 @@ const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
   { StackMode::bpftrace, "bpftrace" },
   { StackMode::perf, "perf" },
   { StackMode::raw, "raw" },
+};
+
+template <>
+struct ConfigParser<StackMode> {
+  Result<OK> parse(const std::string &key,
+                   StackMode *target,
+                   const std::string &s)
+  {
+    // Scan to through and match against a valid name.
+    for (const auto &[mode, name] : STACK_MODE_NAME_MAP) {
+      if (s == name) {
+        *target = mode;
+        return OK();
+      }
+    }
+    return make_error<ParseError>(key,
+                                  "Invalid value for stack_mode: valid "
+                                  "values are bpftrace, raw and perf.");
+  }
+  Result<OK> parse(const std::string &key,
+                   [[maybe_unused]] StackMode *target,
+                   [[maybe_unused]] uint64_t v)
+  {
+    return make_error<ParseError>(key,
+                                  "Invalid value for stack_mode: valid "
+                                  "values are bpftrace, raw and perf.");
+  }
 };
 
 struct StackType {

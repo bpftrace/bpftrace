@@ -71,12 +71,6 @@ void Printer::visit(String &string)
   out_ << indent << "string: " << ss.str() << type(string.type) << std::endl;
 }
 
-void Printer::visit(StackMode &mode)
-{
-  std::string indent(depth_, ' ');
-  out_ << indent << "stack_mode: " << mode.mode << type(mode.type) << std::endl;
-}
-
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');
@@ -290,9 +284,16 @@ void Printer::visit(AssignConfigVarStatement &assignment)
 
   ++depth_;
   std::string indentVar(depth_, ' ');
-  out_ << indentVar << "config var: " << assignment.config_var->ident
-       << std::endl;
-  visit(assignment.expr);
+  out_ << indentVar << "var: " << assignment.var << std::endl;
+  std::visit(
+      [&](auto &v) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(v)>, std::string>) {
+          out_ << indentVar << "string: " << v << std::endl;
+        } else {
+          out_ << indentVar << "int: " << v << std::endl;
+        }
+      },
+      assignment.value);
   --depth_;
 }
 
