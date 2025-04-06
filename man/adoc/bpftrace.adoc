@@ -3804,6 +3804,15 @@ Default: auto
 
 Colorize the bpftrace log output message. Valid values are auto, always and never.
 
+==== BPFTRACE_HIDE_LOG_MSG
+
+Default: None
+
+Suppress expected error and warning outputs during test execution. This environment variable only takes effect when
+running bpftrace unit tests. When set to "1", it captures and hides expected error outputs in tests, displaying the
+captured output only if the test fails. This helps maintain clean test output while still allowing relevant error
+messages to be viewed during test failure debugging.
+
 == Advanced Topics
 
 === Address Spaces
