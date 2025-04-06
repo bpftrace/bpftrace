@@ -6,7 +6,6 @@
  * ssllatency shows handshake latency stats and distribution.
  *
  * Copyright (c) 2021 Tao Xu.
- * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 17-Dec-2021	Tao Xu	created this.
  */
