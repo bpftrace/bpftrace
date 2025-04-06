@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include <unordered_set>
 
 namespace bpftrace::arch {
 
@@ -13,8 +13,10 @@ int pc_offset();
 int sp_offset();
 int arg_stack_offset();
 std::string name();
-// Each string is lexicographically sorted by character
-std::vector<std::string> invalid_watchpoint_modes();
+
+// Returns the set of valid watchpoint modes.
+const std::unordered_set<std::string> &watchpoint_modes();
+
 // Returns the width in bits of kernel pointers.
 int get_kernel_ptr_width();
 
