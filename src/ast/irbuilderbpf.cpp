@@ -80,11 +80,11 @@ constexpr uint32_t PROC_PID_INIT_INO = 0xeffffffc;
 Value *IRBuilderBPF::CreateGetPid(Value *ctx, const location &loc)
 {
   const auto &pidns = bpftrace_.get_pidns_self_stat();
-  if (pidns.st_ino != PROC_PID_INIT_INO) {
+  if (pidns && pidns->st_ino != PROC_PID_INIT_INO) {
     // Get namespaced target PID when we're running in a namespace
     AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
     CreateGetNsPidTgid(
-        ctx, getInt64(pidns.st_dev), getInt64(pidns.st_ino), res, loc);
+        ctx, getInt64(pidns->st_dev), getInt64(pidns->st_ino), res, loc);
     Value *pid = CreateLoad(
         getInt32Ty(),
         CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(0) }));
@@ -101,11 +101,11 @@ Value *IRBuilderBPF::CreateGetPid(Value *ctx, const location &loc)
 Value *IRBuilderBPF::CreateGetTid(Value *ctx, const location &loc)
 {
   const auto &pidns = bpftrace_.get_pidns_self_stat();
-  if (pidns.st_ino != PROC_PID_INIT_INO) {
+  if (pidns && pidns->st_ino != PROC_PID_INIT_INO) {
     // Get namespaced target TID when we're running in a namespace
     AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
     CreateGetNsPidTgid(
-        ctx, getInt64(pidns.st_dev), getInt64(pidns.st_ino), res, loc);
+        ctx, getInt64(pidns->st_dev), getInt64(pidns->st_ino), res, loc);
     Value *tid = CreateLoad(
         getInt32Ty(),
         CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(1) }));
