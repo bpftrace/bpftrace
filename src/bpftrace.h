@@ -166,7 +166,7 @@ public:
       const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
       const std::string &name) const;
-  virtual const struct stat &get_pidns_self_stat() const;
+  virtual const std::optional<struct stat> &get_pidns_self_stat() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
 

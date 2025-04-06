@@ -1917,14 +1917,17 @@ std::unordered_set<std::string> BPFtrace::get_raw_tracepoint_modules(
   return mod != rts.end() ? mod->second : std::unordered_set<std::string>();
 }
 
-const struct stat &BPFtrace::get_pidns_self_stat() const
+const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
 {
-  static struct stat pidns = []() -> auto {
+  static std::optional<struct stat> pidns = []() -> std::optional<struct stat> {
     struct stat s;
-    if (::stat("/proc/self/ns/pid", &s))
+    if (::stat("/proc/self/ns/pid", &s)) {
+      if (errno == ENOENT)
+        return std::nullopt;
       throw std::runtime_error(
           std::string("Failed to stat /proc/self/ns/pid: ") +
           std::strerror(errno));
+    }
     return s;
   }();
 
