@@ -10,6 +10,7 @@ add_library(compiler_core STATIC
   struct.cpp
   types.cpp
 )
+add_dependencies(compiler_core parser)
 
 add_library(runtime STATIC
   attached_probe.cpp

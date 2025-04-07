@@ -34,6 +34,7 @@ add_library(ast STATIC
   passes/recursion_check.cpp
 )
 
+add_dependencies(ast parser)
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(ast PRIVATE debugfs tracefs util)
 target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)

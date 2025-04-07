@@ -4,7 +4,6 @@
 #include <map>
 #include <vector>
 
-#include "ast/location.h"
 #include "bpfmap.h"
 #include "required_resources.h"
 #include "types.h"

@@ -39,6 +39,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix build failures due to missing location.hh
+  - [#3987](https://github.com/bpftrace/bpftrace/pull/3987)
 #### Security
 #### Docs
 #### Tools
