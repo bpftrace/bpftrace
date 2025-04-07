@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "ast/ast.h"
-#include "ast/location.h"
 #include "types.h"
 #include "util/hash.h"
 

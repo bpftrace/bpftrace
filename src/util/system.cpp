@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <filesystem>
 #include <fstream>
 #include <map>

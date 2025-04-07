@@ -8,8 +8,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ast/location.h"
-
 namespace bpftrace {
 
 namespace LogColor {
