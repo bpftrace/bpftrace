@@ -21,6 +21,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/map_sugar.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
@@ -783,6 +784,7 @@ int main(int argc, char* argv[])
                   .put(bpftrace)
                   .add(ast::CreateParseAttachpointsPass(args.listing))
                   .add(CreateParseBTFPass())
+                  .add(ast::CreateMapSugarPass())
                   .add(ast::CreateSemanticPass(args.listing))
                   .run();
     if (!ok || !ast.diagnostics().ok()) {
@@ -862,6 +864,7 @@ int main(int argc, char* argv[])
     pm.add(CreateParsePass())
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
+        .add(ast::CreateMapSugarPass())
         .add(ast::CreateSemanticPass(args.listing));
 
     auto ok = pm.run();

@@ -1,6 +1,7 @@
 #include "ast/passes/portability_analyser.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/map_sugar.h"
 #include "ast/passes/semantic_analyser.h"
 #include "driver.h"
 #include "mocks.h"
@@ -24,6 +25,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreatePortabilityPass())

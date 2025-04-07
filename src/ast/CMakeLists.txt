@@ -23,6 +23,7 @@ add_library(ast STATIC
   passes/field_analyser.cpp
   passes/fold_literals.cpp
   passes/link.cpp
+  passes/map_sugar.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/probe_analyser.cpp

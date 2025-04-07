@@ -1,4 +1,3 @@
-#include "semantic_analyser.h"
 #include <arpa/inet.h>
 
 #include <algorithm>
@@ -12,6 +11,8 @@
 #include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "ast/helpers.h"
+#include "ast/passes/map_sugar.h"
+#include "ast/passes/semantic_analyser.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -76,13 +77,48 @@ private:
   int num_passes_ = 1;
 };
 
+struct arg_type_spec {
+  Type type = Type::integer;
+  bool literal = false;
+
+  // This indicates that this is just a placeholder as we use the index in the
+  // vector of arg_type_spec as the number argument to check.
+  bool skip_check = false;
+};
+
+struct map_type_spec {
+  // This indicates that the argument must be a map type. The given function
+  // may be called to determine the map type.
+  std::function<SizedType(const Call &call)> type;
+};
+
+struct map_key_spec {
+  // This indicates that the argument is a key expression for another map
+  // argument, which is found in argument `map_index`.
+  size_t map_index;
+};
+
+struct call_spec {
+  size_t min_args = 0;
+  size_t max_args = 0;
+  // NOLINTBEGIN(readability-redundant-member-init)
+  std::vector<std::variant<arg_type_spec, map_type_spec, map_key_spec>>
+      arg_types = {};
+  // NOLINTEND(readability-redundant-member-init)
+};
+
 class SemanticAnalyser : public Visitor<SemanticAnalyser> {
 public:
   explicit SemanticAnalyser(ASTContext &ctx,
                             BPFtrace &bpftrace,
+                            MapMetadata &map_metadata,
                             bool has_child = true,
                             bool listing = false)
-      : ctx_(ctx), bpftrace_(bpftrace), listing_(listing), has_child_(has_child)
+      : ctx_(ctx),
+        bpftrace_(bpftrace),
+        map_metadata_(map_metadata),
+        listing_(listing),
+        has_child_(has_child)
   {
   }
 
@@ -110,6 +146,7 @@ public:
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(TupleAccess &acc);
+  void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(ExprStatement &expr);
@@ -128,20 +165,30 @@ private:
   ASTContext &ctx_;
   PassTracker pass_tracker_;
   BPFtrace &bpftrace_;
+  MapMetadata &map_metadata_;
   bool listing_;
 
   bool is_final_pass() const;
   bool is_first_pass() const;
 
-  void check_assignment(const Call &call, bool want_map, bool want_var);
+  [[nodiscard]] bool check_arg(const Call &call,
+                               size_t index,
+                               const arg_type_spec &spec);
+  [[nodiscard]] bool check_arg(const Call &call,
+                               size_t index,
+                               const map_type_spec &spec);
+  [[nodiscard]] bool check_arg(const Call &call,
+                               size_t index,
+                               const map_key_spec &spec);
   [[nodiscard]] bool check_call(const Call &call);
   [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
   [[nodiscard]] bool check_varargs(const Call &call,
                                    size_t min_nargs,
                                    size_t max_nargs);
+
   bool check_arg(const Call &call,
                  Type type,
-                 int arg_num,
+                 size_t index,
                  bool want_literal = false);
   bool check_symbol(const Call &call, int arg_num);
   bool check_available(const Call &call, const AttachPoint &ap);
@@ -150,11 +197,12 @@ private:
 
   Probe *get_probe(Node &node, std::string name = "");
 
-  bool is_valid_assignment(const Expression *target, const Expression *expr);
+  bool is_valid_assignment(const Expression *expr, bool map_without_type);
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
-  void assign_map_type(const Map &map, const SizedType &type);
+  void assign_map_type(Map &map, const SizedType &type);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
+  void reconcile_map_key(Map *map, Expression *key_expr);
   void update_current_key(SizedType &current_key_type,
                           const SizedType &new_key_type);
   void validate_new_key(const SizedType &current_key_type,
@@ -210,114 +258,105 @@ private:
 
 } // namespace
 
-// clang-format off
-enum class ReturnKind {
-  MAP,
-  VAR,
-  NONE,
-};
-
-struct arg_type_spec {
-  Type type = Type::integer;
-  bool literal = false;
-  // This indicates that this is just a placeholder
-  // as we use the index in the vector of arg_type_spec
-  // as the number argument to check
-  bool skip_check = false;
-};
-
-struct call_spec {
-  size_t min_args = 0;
-  size_t max_args = 0;
-  bool has_return = false;
-  ReturnKind return_kind = ReturnKind::NONE;
-  // NOLINTBEGIN(readability-redundant-member-init)
-  std::vector<arg_type_spec> arg_types = {};
-  // NOLINTEND(readability-redundant-member-init)
-};
-
 static const std::map<std::string, call_spec> CALL_SPEC = {
   { "avg",
-    { .min_args=1,
-      .max_args=1,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
-      .arg_types={
-        { .type=Type::integer } } } },
-  { "bswap",
-    { .min_args=1,
-      .max_args=1 } },
+    { .min_args = 3,
+      .max_args = 3,
+      .arg_types = { map_type_spec{
+                         .type = std::function<SizedType(const ast::Call &)>(
+                             [](const ast::Call &call) -> SizedType {
+                               return CreateAvg(
+                                   call.vargs.at(2)->type.IsSigned());
+                             }) },
+                     map_key_spec{ .map_index = 0 },
+                     arg_type_spec{ .type = Type::integer } } } },
+  { "bswap", { .min_args = 1, .max_args = 1 } },
   { "buf",
     { .min_args=1,
       .max_args=2,
       .arg_types={
-        { .skip_check=true },
-        { .type=Type::integer } } } },
+        arg_type_spec{ .skip_check=true },
+        arg_type_spec{ .type=Type::integer } } } },
   { "cat",
     { .min_args=1,
       .max_args=128,
-      .has_return=true,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "cgroupid",
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "cgroup_path",
     { .min_args=1,
       .max_args=2,
       .arg_types={
-        { .type=Type::integer },
-        { .type=Type::string } } } },
+        arg_type_spec{ .type=Type::integer },
+        arg_type_spec{ .type=Type::string } } } },
   { "clear",
     { .min_args=1,
       .max_args=1,
-      .has_return=true } },
+      .arg_types={
+        map_type_spec{},
+      }
+      } },
   { "count",
-    { .min_args=0,
-      .max_args=0,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP } },
+    { .min_args=2,
+      .max_args=2,
+      .arg_types={
+        map_type_spec{
+          .type = std::function<SizedType(const Call&)>([](const ast::Call&) -> SizedType { return CreateCount(true); })
+        },
+        map_key_spec{ .map_index=0 },
+      }
+       } },
   { "debugf",
     { .min_args=1,
       .max_args=128,
-      .has_return=true,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "delete",
-    { .min_args=1,
+    { .min_args=2,
       .max_args=2,
-      .has_return=true } },
+      .arg_types={
+        map_type_spec{},
+        map_key_spec{ .map_index=0 },
+      }
+       } },
   { "exit",
     { .min_args=0,
       .max_args=1,
-      .has_return=true,
       .arg_types={
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::integer } } } },
   { "has_key",
     { .min_args=2,
-      .max_args=2 } },
-  { "hist",
-    { .min_args=1,
       .max_args=2,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
       .arg_types={
-        { .type=Type::integer },
-        { .type=Type::integer, .literal=true } } } },
+        map_type_spec{},
+        map_key_spec{ .map_index=0 },
+      }
+    } },
+  { "hist",
+    { .min_args=3,
+      .max_args=4,
+      .arg_types={
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([]([[maybe_unused]] const ast::Call &call) -> SizedType { return CreateHist(); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer },
+        arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "join",
     { .min_args=1,
       .max_args=2,
-      .has_return=true,
       .arg_types={
-        { .skip_check=true },
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .skip_check=true },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "kaddr",
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "kptr",
     { .min_args=1,
       .max_args=1 } },
@@ -329,74 +368,82 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1 } },
   { "len",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      // This cannot be checked without overloading: it requires *either* a
+      // stack type, or a non-scalar map.
+    } },
   { "lhist",
-    { .min_args=4,
-      .max_args=4,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
+    { .min_args=6,
+      .max_args=6,
       .arg_types={
-        { .type=Type::integer },
-        { .type=Type::integer, .literal=true },
-        { .type=Type::integer, .literal=true },
-        { .type=Type::integer, .literal=true } } } },
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([]([[maybe_unused]] const ast::Call &call) -> SizedType { return CreateLhist(); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer },
+        arg_type_spec{ .type=Type::integer, .literal=true },
+        arg_type_spec{ .type=Type::integer, .literal=true },
+        arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "macaddr",
     { .min_args=1,
       .max_args=1 } },
   { "max",
-    { .min_args=1,
-      .max_args=1,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
+    { .min_args=3,
+      .max_args=3,
       .arg_types={
-        { .type=Type::integer } } } },
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateMax(call.vargs.at(2)->type.IsSigned()); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer } } } },
   { "min",
-    { .min_args=1,
-      .max_args=1,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
+    { .min_args=3,
+      .max_args=3,
       .arg_types={
-        { .type=Type::integer } } } },
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateMin(call.vargs.at(2)->type.IsSigned()); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer } } } },
   { "nsecs",
     { .min_args=0,
       .max_args=1,
       .arg_types={
-        { .type=Type::timestamp_mode } } } },
+        arg_type_spec{ .type=Type::timestamp_mode } } } },
   { "ntop",
     { .min_args=1,
       .max_args=2 } },
   { "override",
     { .min_args=1,
       .max_args=1,
-      .has_return=true,
       .arg_types={
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::integer } } } },
   { "path",
     { .min_args=1,
       .max_args=2,
       .arg_types={
-        { .skip_check=true },
-        { .type=Type::integer, .literal=true } } } },
+        arg_type_spec{ .skip_check=true },
+        arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "percpu_kaddr",
     { .min_args=1,
       .max_args=2,
       .arg_types={
-        { .type=Type::string, .literal=true },
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::string, .literal=true },
+        arg_type_spec{ .type=Type::integer } } } },
   { "print",
     { .min_args=1,
       .max_args=3,
-      .has_return=true,
       .arg_types={
-        { .skip_check=true },
-        { .type=Type::integer, .literal=true },
-        { .type=Type::integer, .literal=true } } } },
+        // This may be a pure map or not.
+        arg_type_spec{ .skip_check=true },
+        arg_type_spec{ .type=Type::integer, .literal=true },
+        arg_type_spec{ .type=Type::integer, .literal=true } } } },
+
   { "printf",
     { .min_args=1,
       .max_args=128,
-      .has_return=true,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "pton",
     { .min_args=1,
       .max_args=1 } },
@@ -404,90 +451,90 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "signal",
     { .min_args=1,
       .max_args=1,
-      .has_return=true } },
+       } },
   { "skboutput",
     { .min_args=4,
       .max_args=4,
-      .has_return=true,
-      .return_kind=ReturnKind::VAR,
       .arg_types={
-        { .type=Type::string, .literal=true }, // pcap file name
-        { .type=Type::pointer },      // *skb
-        { .type=Type::integer },      // cap length
+        arg_type_spec{ .type=Type::string, .literal=true }, // pcap file name
+        arg_type_spec{ .type=Type::pointer },      // *skb
+        arg_type_spec{ .type=Type::integer },      // cap length
         // cap offset, default is 0
         // some tracepoints like dev_queue_xmit will output ethernet header,
         // set offset to 14 bytes can exclude this header
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::integer } } } },
   { "stats",
-    { .min_args=1,
-      .max_args=1,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
+    { .min_args=3,
+      .max_args=3,
       .arg_types={
-        { .type=Type::integer } } } },
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateStats(call.vargs.at(2)->type.IsSigned()); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer } } } },
   { "str",
     { .min_args=1,
       .max_args=2,
       .arg_types={
-        { .skip_check=true },
-        { .type=Type::integer } } } },
+        arg_type_spec{ .skip_check=true },
+        arg_type_spec{ .type=Type::integer } } } },
   { "strerror",
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::integer } } } },
   { "strftime",
     { .min_args=2,
       .max_args=2,
       .arg_types={
-          { .type=Type::string, .literal=true },
-          { .type=Type::integer } } } },
+          arg_type_spec{ .type=Type::string, .literal=true },
+          arg_type_spec{ .type=Type::integer } } } },
   { "strcontains",
     { .min_args=2,
       .max_args=2,
       .arg_types={
-          { .type=Type::string, .literal=false },
-          { .type=Type::string, .literal=false } } } },
+          arg_type_spec{ .type=Type::string, .literal=false },
+          arg_type_spec{ .type=Type::string, .literal=false } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
       .arg_types={
-          { .type=Type::string },
-          { .type=Type::string },
-          { .type=Type::integer, .literal=true } } } },
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "sum",
-    { .min_args=1,
-      .max_args=1,
-      .has_return=true,
-      .return_kind=ReturnKind::MAP,
+    { .min_args=3,
+      .max_args=3,
       .arg_types={
-        { .type=Type::integer } } } },
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateSum(call.vargs.at(2)->type.IsSigned()); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer } } } },
   { "system",
     { .min_args=1,
       .max_args=128,
-      .has_return=true,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "time",
     { .min_args=0,
       .max_args=1,
-      .has_return=true,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "uaddr",
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::string, .literal=true } } } },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "unwatch",
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        { .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::integer } } } },
   { "uptr",
     { .min_args=1,
       .max_args=1 } },
@@ -500,13 +547,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "zero",
     { .min_args=1,
       .max_args=1,
-      .has_return=true } },
+      .arg_types={
+        map_type_spec{},
+      } } },
 };
 // clang-format on
-
-static constexpr std::string_view DELETE_ERROR =
-    "delete() expects a map for the first argument and a key for the second "
-    "argument e.g. `delete(@my_map, 1);`";
 
 static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
 {
@@ -612,22 +657,18 @@ static bool IsValidVarDeclType(const SizedType &ty)
 // However, if the assigned map already contains integers, we implicitly cast
 // the aggregation into an integer to retrieve its value, so this is valid:
 // `@a = count(); @b = 0; @b = @a`
-bool SemanticAnalyser::is_valid_assignment(const Expression *target,
-                                           const Expression *expr)
+bool SemanticAnalyser::is_valid_assignment(const Expression *expr,
+                                           bool map_without_type)
 {
-  if (const auto *map = dynamic_cast<const Map *>(expr)) {
-    // Prevent assigning aggregations to another map.
-    if (expr->type.IsMultiKeyMapTy())
-      return false;
-    // Prevent declaring a map copying another aggregate map.
-    if (const auto *target_map = dynamic_cast<const Map *>(target)) {
-      bool map_has_type = get_map_type(*target_map);
-      if (map->type.IsCastableMapTy() && !map_has_type)
-        return false;
-    }
-    // Preventing folding of non-castable maps.
-    if (!expr->type.IsCastableMapTy() && expr->type.NeedsPercpuMap())
-      return false;
+  // Prevent assigning aggregations to another map.
+  if (expr->type.IsMultiKeyMapTy()) {
+    return false;
+  } else if (expr->type.NeedsPercpuMap() && !expr->type.IsCastableMapTy()) {
+    return false;
+  } else if (expr->type.IsCastableMapTy() && map_without_type) {
+    return false;
+  } else if (is_final_pass() && expr->type.IsNoneTy()) {
+    return false;
   }
   return true;
 }
@@ -697,7 +738,6 @@ void SemanticAnalyser::visit(Identifier &identifier)
     if (ok) {
       identifier.type = CreateStack(true, StackType{ .mode = mode });
     } else {
-      identifier.type = CreateNone();
       identifier.addError() << "Unknown identifier: '" + identifier.ident + "'";
     }
   }
@@ -1033,18 +1073,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
                          << type << " used here)";
     }
   } else {
-    builtin.type = CreateNone();
     builtin.addError() << "Unknown builtin variable: '" << builtin.ident << "'";
   }
 }
-
-namespace {
-bool skip_key_validation(const Call &call)
-{
-  return call.func == "print" || call.func == "clear" || call.func == "zero" ||
-         call.func == "len";
-}
-} // namespace
 
 void SemanticAnalyser::visit(Call &call)
 {
@@ -1076,24 +1107,8 @@ void SemanticAnalyser::visit(Call &call)
   func_setter scope_bound_func_setter{ *this, call.func };
 
   for (size_t i = 0; i < call.vargs.size(); ++i) {
-    auto *expr = call.vargs[i];
     func_arg_idx_ = i;
-
-    if (auto *map = dynamic_cast<Map *>(expr)) {
-      // If the map is indexed, don't skip key validation
-      if (map->key_expr == nullptr) {
-        // These calls expect just a map reference for the first argument
-        if ((call.func == "delete" || call.func == "has_key") && i == 0) {
-          map->skip_key_validation = true;
-          map->is_read = false;
-        } else if (skip_key_validation(call)) {
-          map->skip_key_validation = true;
-          map->is_read = false;
-        }
-      }
-    }
-
-    visit(expr);
+    visit(call.vargs.at(i));
   }
 
   if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -1110,11 +1125,11 @@ void SemanticAnalyser::visit(Call &call)
   }
 
   if (call.func == "hist") {
-    if (call.vargs.size() == 1) {
+    if (call.vargs.size() == 3) {
       call.vargs.push_back(
           ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
     } else {
-      const auto *bits = dynamic_cast<Integer *>(call.vargs.at(1));
+      const auto *bits = dynamic_cast<Integer *>(call.vargs.at(3));
       if (!bits) {
         // Bug here as the validity of the integer literal is already checked by
         // check_arg above.
@@ -1128,9 +1143,9 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateHist();
   } else if (call.func == "lhist") {
     if (is_final_pass()) {
-      Expression *min_arg = call.vargs.at(1);
-      Expression *max_arg = call.vargs.at(2);
-      Expression *step_arg = call.vargs.at(3);
+      Expression *min_arg = call.vargs.at(3);
+      Expression *max_arg = call.vargs.at(4);
+      Expression *step_arg = call.vargs.at(5);
       auto *min = dynamic_cast<Integer *>(min_arg);
       auto *max = dynamic_cast<Integer *>(max_arg);
       auto *step = dynamic_cast<Integer *>(step_arg);
@@ -1171,7 +1186,6 @@ void SemanticAnalyser::visit(Call &call)
             << step->value << " for range " << (max->value - min->value) << ")";
       }
     }
-    call.type = CreateLhist();
   } else if (call.func == "count") {
     call.type = CreateCount(true);
   } else if (call.func == "sum") {
@@ -1185,64 +1199,8 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "stats") {
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
-    if (dynamic_cast<Map *>(call.vargs.at(0)) == nullptr) {
-      call.vargs.at(0)->addError() << DELETE_ERROR;
-    } else {
-      Map &map = static_cast<Map &>(*call.vargs.at(0));
-      if (call.vargs.size() == 1) {
-        if (map.key_expr) {
-          // We're modifying the AST here to support the deprecated delete
-          // API. Once we remove the old API, we can delete this.
-          call.vargs.push_back(map.key_expr);
-          map.key_expr = nullptr;
-        } else if (is_final_pass()) {
-          auto *map_key_type = get_map_key_type(map);
-          if (map_key_type && !map_key_type->IsNoneTy()) {
-            call.vargs.at(0)->addError() << DELETE_ERROR;
-          }
-        }
-      } else {
-        if (map.key_expr) {
-          call.vargs.at(0)->addError()
-              << "delete() expects a map with no keys for the first argument";
-        }
-        auto *map_key_type = get_map_key_type(map);
-        if (map_key_type) {
-          auto &arg1 = *call.vargs.at(1);
-          SizedType new_key_type = create_key_type(arg1.type, arg1);
-          update_current_key(*map_key_type, new_key_type);
-          validate_new_key(*map_key_type, new_key_type, map.ident, arg1);
-        }
-      }
-    }
-    call.type = CreateNone();
+    // Leave as `none`.
   } else if (call.func == "has_key") {
-    auto &arg0 = *call.vargs.at(0);
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-      if (map->key_expr) {
-        arg0.addError()
-            << "has_key() expects the first argument to be a map. Not a map "
-               "value expression.";
-      }
-      auto *mapkey = get_map_key_type(*map);
-      if (mapkey) {
-        if (mapkey->IsNoneTy()) {
-          arg0.addError()
-              << "has_key() only accepts maps that have keys. No scalar maps "
-                 "e.g. `@a = 1;`";
-        } else {
-          auto &arg1 = *call.vargs.at(1);
-          SizedType new_key_type = create_key_type(arg1.type, arg1);
-          update_current_key(*mapkey, new_key_type);
-          validate_new_key(*mapkey, new_key_type, map->ident, arg1);
-        }
-      }
-      // Note: if the map key is null after the final pass we'll get an error
-      // in the Map visitor about the whole map being undefined so no need to
-      // add a second, similar error here.
-    } else {
-      arg0.addError() << "has_key() expects the first argument to be a map";
-    }
     // TODO: this should be a bool type but that type is currently broken
     // as a value for variables and maps
     // https://github.com/bpftrace/bpftrace/issues/3502
@@ -1515,28 +1473,14 @@ void SemanticAnalyser::visit(Call &call)
     }
     if (call.func == "debugf" && is_final_pass()) {
       call.addWarning()
-          << "The debugf() builtin is not recommended for production use. For "
+          << "The debugf() builtin is not recommended for production use. "
+             "For "
              "more information see bpf_trace_printk in bpf-helpers(7).";
     }
-
-    call.type = CreateNone();
   } else if (call.func == "exit") {
-    // ok
+    // Leave as `none`.
   } else if (call.func == "print") {
     if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-      if (map->key_expr) {
-        if (call.vargs.size() > 1) {
-          call.addError() << "Single-value (i.e. indexed) map "
-                             "print cannot take additional "
-                             "arguments.";
-        } else if (map->type.IsMultiKeyMapTy()) {
-          call.addError()
-              << "Map type " << map->type
-              << " cannot print the value of individual keys. You must print "
-                 "the whole map.";
-        }
-      }
-
       if (is_final_pass()) {
         if (in_loop()) {
           call.addWarning() << "Due to it's asynchronous nature using "
@@ -1559,7 +1503,12 @@ void SemanticAnalyser::visit(Call &call)
     //
     // We rely on the fact that semantic analysis enforces types like count(),
     // min(), max(), etc. to be assigned directly to a map.
-    else if (call.vargs.at(0)->type.IsPrintableTy()) {
+    else if (call.vargs.at(0)->type.IsMultiKeyMapTy()) {
+      call.addError()
+          << "Map type " << call.vargs.at(0)->type
+          << " cannot print the value of individual keys. You must print "
+             "the whole map.";
+    } else if (call.vargs.at(0)->type.IsPrintableTy()) {
       if (call.vargs.size() != 1)
         call.addError() << "Non-map print() only takes 1 argument, "
                         << call.vargs.size() << " found";
@@ -1571,35 +1520,17 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "cgroup_path") {
     call.type = CreateCgroupPath();
   } else if (call.func == "clear") {
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-      if (map->key_expr) {
-        call.addError() << "The map passed to " << call.func
-                        << "() should not be " << "indexed by a key";
-      }
-    } else {
-      call.addError() << "clear() expects a map to be provided";
-    }
+    // Leave as `none`.
   } else if (call.func == "zero") {
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-      if (map->key_expr) {
-        call.addError() << "The map passed to " << call.func
-                        << "() should not be " << "indexed by a key";
-      }
-    } else {
-      call.addError() << "zero() expects a map to be provided";
-    }
+    // Leave as `none`.
   } else if (call.func == "len") {
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-      if (map->key_expr) {
-        call.addError() << "The map passed to " << call.func
-                        << "() should not be " << "indexed by a key";
-      }
-    } else if (!call.vargs.at(0)->type.IsStack()) {
+    if (dynamic_cast<Map *>(call.vargs.at(0)) == nullptr &&
+        !call.vargs.at(0)->type.IsStack()) {
       call.addError() << "len() expects a map or stack to be provided";
     }
     call.type = CreateInt64();
   } else if (call.func == "time") {
-    // ok
+    // Leave as `none`.
   } else if (call.func == "strftime") {
     call.type = CreateTimestamp();
     if (is_final_pass()) {
@@ -1618,7 +1549,6 @@ void SemanticAnalyser::visit(Call &call)
       call.addError()
           << "BPF_FUNC_send_signal not available for your kernel version";
     }
-
     auto &arg = *call.vargs.at(0);
     if (auto *sig = dynamic_cast<String *>(&arg)) {
       if (signal_name_to_num(sig->value) < 1) {
@@ -1645,11 +1575,11 @@ void SemanticAnalyser::visit(Call &call)
           << "BPF_FUNC_d_path not available for your kernel version";
     }
 
-      // Argument for path can be both record and pointer.
-      // It's pointer when it's passed directly from the probe
-      // argument, like: path(args.path))
-      // It's record when it's referenced as object pointer
-      // member, like: path(args.filp->f_path))
+    // Argument for path can be both record and pointer.
+    // It's pointer when it's passed directly from the probe
+    // argument, like: path(args.path))
+    // It's record when it's referenced as object pointer
+    // member, like: path(args.filp->f_path))
     auto &arg = *call.vargs.at(0);
     if (arg.type.GetTy() != Type::record && arg.type.GetTy() != Type::pointer) {
       call.addError() << "path() only supports pointer or record argument ("
@@ -1729,8 +1659,7 @@ If you're seeing errors, try clamping the string sizes. For example:
     call.type = call.vargs.front()->type;
     call.type.SetAS(as);
   } else if (call.func == "macaddr") {
-    auto &arg = call.vargs.at(0);
-
+    auto *arg = call.vargs.at(0);
     if (!arg->type.IsIntTy() && !arg->type.IsArrayTy() &&
         !arg->type.IsByteArray() && !arg->type.IsPtrTy())
       call.addError() << call.func
@@ -1747,8 +1676,7 @@ If you're seeing errors, try clamping the string sizes. For example:
 
     call.type = CreateMacAddress();
   } else if (call.func == "unwatch") {
-    // Return type cannot be used
-    call.type = SizedType(Type::none, 0);
+    // Leave as `none`.
   } else if (call.func == "bswap") {
     Expression *arg = call.vargs.at(0);
     if (!arg->type.IsIntTy()) {
@@ -1756,7 +1684,6 @@ If you're seeing errors, try clamping the string sizes. For example:
                       << arg->type.GetTy() << " provided)";
       return;
     }
-
     call.type = CreateUInt(arg->type.GetIntBitWidth());
   } else if (call.func == "skboutput") {
     if (!bpftrace_.feature_->has_skb_output()) {
@@ -1783,7 +1710,6 @@ If you're seeing errors, try clamping the string sizes. For example:
     }
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
-    call.type = CreateNone();
   }
 }
 
@@ -1907,7 +1833,7 @@ void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
   }
 
   if (is_final_pass() && key.IsNoneTy()) {
-    node.addError() << "Invalid expression for assignment: ";
+    node.addError() << "Invalid map key type: " << key;
   }
 }
 
@@ -1945,71 +1871,25 @@ void SemanticAnalyser::visit(MapDeclStatement &decl)
 
 void SemanticAnalyser::visit(Map &map)
 {
-  SizedType new_key_type = CreateNone();
-  bool key_is_map = false;
-  if (map.key_expr) {
-    visit(map.key_expr);
-    key_is_map = dynamic_cast<Map *>(map.key_expr) != nullptr;
-    new_key_type = create_key_type(map.key_expr->type, *map.key_expr);
+  auto val = map_val_.find(map.ident);
+  if (val != map_val_.end()) {
+    map.type = val->second;
+  }
+  auto key = map_key_.find(map.ident);
+  if (key != map_key_.end()) {
+    map.key_type = key->second;
   }
 
-  if (!map.skip_key_validation) {
-    if (const auto &key = map_key_.find(map.ident); key != map_key_.end()) {
-      if (map.key_expr) {
-        update_current_key(key->second, new_key_type);
-        validate_new_key(key->second, new_key_type, map.ident, map);
-      } else {
-        if (!key->second.IsNoneTy()) {
-          map.addError()
-              << "Argument mismatch for " << map.ident << ": "
-              << "trying to access with no arguments when map expects "
-                 "arguments: "
-                 "'"
-              << key->second << "'";
-        }
-      }
-    } else {
-      // If the key used is a map, we might not have the type of it yet
-      // e.g. `BEGIN { @mymap[@i] = "hello"; @i = 1; }`
-      if (!key_is_map || !new_key_type.IsNoneTy()) {
-        map_key_.insert({ map.ident, new_key_type });
-      }
-    }
-  }
-
-  auto search_val = map_val_.find(map.ident);
-  if (search_val != map_val_.end()) {
-    map.type = search_val->second;
-
-    if (map.is_read && map.type.IsCastableMapTy() &&
-        !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
-      map.addError()
-          << "Missing required kernel feature: map_lookup_percpu_elem";
-    }
-  } else {
-    // If there is no record of any assignment after the first pass
-    // then it's safe to say this map is undefined
-    if (!is_first_pass()) {
-      map.addError() << "Undefined map: " << map.ident;
-    }
-    pass_tracker_.inc_num_unresolved();
-    map.type = CreateNone();
-  }
-
-  auto map_key_search_val = map_key_.find(map.ident);
-  if (map_key_search_val != map_key_.end()) {
-    map.key_type = map_key_search_val->second;
-  } else {
-    map.key_type = CreateNone();
-  }
-
+  // Note that the naked `Map` node actually gets no type, the type
+  // is applied to the node at the `MapAccess` level.
   if (is_final_pass()) {
     auto found_kind = bpf_map_type_.find(map.ident);
     if (found_kind != bpf_map_type_.end()) {
       if (!bpf_map_types_compatible(map.type,
-                                    map.key_type,
+                                    map_metadata_.scalar[map.ident],
                                     found_kind->second)) {
-        auto map_type = get_bpf_map_type(map.type, map.key_type);
+        auto map_type = get_bpf_map_type(map.type,
+                                         map_metadata_.scalar[map.ident]);
         map.addError() << "Incompatible map types. Type from declaration: "
                        << get_bpf_map_type_str(found_kind->second)
                        << ". Type from value/key type: "
@@ -2030,7 +1910,6 @@ void SemanticAnalyser::visit(Variable &var)
   }
 
   var.addError() << "Undefined or undeclared variable: " << var.ident;
-  var.type = CreateNone();
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
@@ -2071,15 +1950,13 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     arr.type = *type.GetElementTy();
   else if (type.IsPtrTy())
     arr.type = *type.GetPointeeTy();
-  else
-    arr.type = CreateNone();
   arr.type.is_internal = type.is_internal;
   arr.type.SetAS(type.GetAS());
 
-  // BPF verifier cannot track BTF information for double pointers so we cannot
-  // propagate is_btftype for arrays of pointers and we need to reset it on the
-  // array type as well. Indexing a pointer as an array also can't be verified,
-  // so the same applies there.
+  // BPF verifier cannot track BTF information for double pointers so we
+  // cannot propagate is_btftype for arrays of pointers and we need to reset
+  // it on the array type as well. Indexing a pointer as an array also can't
+  // be verified, so the same applies there.
   if (arr.type.IsPtrTy() || type.IsPtrTy())
     type.is_btftype = false;
   arr.type.is_btftype = type.is_btftype;
@@ -2100,8 +1977,8 @@ void SemanticAnalyser::visit(TupleAccess &acc)
 
   bool valid_idx = acc.index < type.GetFields().size();
 
-  // We may not have inferred the full type of the tuple yet in early passes so
-  // wait until the final pass.
+  // We may not have inferred the full type of the tuple yet in early passes
+  // so wait until the final pass.
   if (!valid_idx && is_final_pass()) {
     acc.addError() << "Invalid tuple index: " << acc.index << ". Found "
                    << type.GetFields().size() << " elements in tuple.";
@@ -2347,7 +2224,8 @@ void SemanticAnalyser::visit(Binop &binop)
   else if (addr_lhs != AddrSpace::none) {
     binop.type.SetAS(addr_lhs);
   } else {
-    // In case rhs is none, then this triggers warning in selectProbeReadHelper.
+    // In case rhs is none, then this triggers warning in
+    // selectProbeReadHelper.
     binop.type.SetAS(addr_rhs);
   }
 
@@ -2363,8 +2241,8 @@ void SemanticAnalyser::visit(Binop &binop)
     // This case is caught earlier, just here for readability of the if/else
     // flow
   }
-  // Compare type here, not the sized type as we it needs to work on strings of
-  // different lengths
+  // Compare type here, not the sized type as we it needs to work on strings
+  // of different lengths
   else if (lht.GetTy() != rht.GetTy()) {
     auto &err = binop.addError();
     err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
@@ -2385,10 +2263,14 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Operator::INCREMENT || unop.op == Operator::DECREMENT) {
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
-    if (auto *map = dynamic_cast<Map *>(unop.expr)) {
-      auto *maptype = get_map_type(*map);
-      if (!maptype)
-        assign_map_type(*map, CreateInt64());
+    if (auto *acc = dynamic_cast<MapAccess *>(unop.expr)) {
+      auto *maptype = get_map_type(*acc->map);
+      if (!maptype) {
+        // Doing increments or decrements on the map type implements that
+        // it is done on an integer. Maps are always coerced into larger
+        // integers, so this should not conflict with different assignments.
+        assign_map_type(*acc->map, CreateInt64());
+      }
     } else if (dynamic_cast<Variable *>(unop.expr) == nullptr) {
       unop.addError() << "The " << opstr(unop)
                       << " operator must be applied to a map or variable";
@@ -2583,9 +2465,12 @@ void SemanticAnalyser::visit(For &f)
   if (!bpftrace_.feature_->has_helper_for_each_map_elem()) {
     f.addError() << "Missing required kernel feature: for_each_map_elem";
   }
+  if (!is_first_pass() && !map_val_.contains(f.map->ident)) {
+    f.map->addError() << "Undefined map: " << f.map->ident;
+  }
 
-  // For-loops are implemented using the bpf_for_each_map_elem helper function,
-  // which requires them to be rewritten into a callback style.
+  // For-loops are implemented using the bpf_for_each_map_elem helper
+  // function, which requires them to be rewritten into a callback style.
   //
   // Pseudo code for the transformation we apply:
   //
@@ -2688,15 +2573,14 @@ void SemanticAnalyser::visit(For &f)
                  << "' statement is not allowed in a for-loop";
   }
 
-  f.map->skip_key_validation = true;
   visit(f.map);
 
   if (!ctx_.diagnostics().ok())
     return;
 
-  // Collect a list of unique variables which are referenced in the loop's body
-  // and declared before the loop. These will be passed into the loop callback
-  // function as the context parameter.
+  // Collect a list of unique variables which are referenced in the loop's
+  // body and declared before the loop. These will be passed into the loop
+  // callback function as the context parameter.
   std::unordered_set<std::string> found_vars;
   // Only do this on the first pass because variables declared later
   // in a script will get added to the outer scope, which these do not
@@ -2733,16 +2617,8 @@ void SemanticAnalyser::visit(For &f)
   auto *mapkey = get_map_key_type(*f.map);
   auto *mapval = get_map_type(*f.map);
 
-  if (!mapval)
+  if (!mapkey || !mapval)
     return;
-
-  if (!mapkey || mapkey->IsNoneTy()) {
-    if (is_final_pass()) {
-      f.map->addError()
-          << "Maps used as for-loop expressions must have keys to iterate over";
-    }
-    return;
-  }
 
   f.decl->type = CreateTuple(Struct::CreateTuple({ *mapkey, *mapval }));
 
@@ -2871,8 +2747,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       if (field.type.IsPtrTy()) {
         const auto &tags = field.type.GetBtfTypeTags();
-        // Currently only "rcu" is safe. "percpu", for example, requires special
-        // unwrapping with `bpf_per_cpu_ptr` which is not yet supported.
+        // Currently only "rcu" is safe. "percpu", for example, requires
+        // special unwrapping with `bpf_per_cpu_ptr` which is not yet
+        // supported.
         static const std::string_view allowed_tag = "rcu";
         for (const auto &tag : tags) {
           if (tag != allowed_tag) {
@@ -2898,6 +2775,45 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       if (type.is_tparg && field.offset < 8)
         acc.addError()
             << "BPF does not support accessing common tracepoint fields";
+    }
+  }
+}
+
+void SemanticAnalyser::visit(MapAccess &acc)
+{
+  visit(acc.map);
+  visit(acc.key);
+  reconcile_map_key(acc.map, acc.key);
+
+  auto search_val = map_val_.find(acc.map->ident);
+  if (search_val != map_val_.end()) {
+    if (acc.map->type.IsCastableMapTy() &&
+        !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
+      acc.addError()
+          << "Missing required kernel feature: map_lookup_percpu_elem";
+    }
+    acc.type = search_val->second;
+  } else {
+    // If there is no record of any assignment after the first pass
+    // then it's safe to say this map is undefined.
+    if (!is_first_pass()) {
+      acc.addError() << "Undefined map: " << acc.map->ident;
+    }
+    pass_tracker_.inc_num_unresolved();
+  }
+}
+
+void SemanticAnalyser::reconcile_map_key(Map *map, Expression *key_expr)
+{
+  SizedType new_key_type = create_key_type(key_expr->type, *key_expr);
+
+  if (const auto &key = map_key_.find(map->ident); key != map_key_.end()) {
+    update_current_key(key->second, new_key_type);
+    validate_new_key(key->second, new_key_type, map->ident, *key_expr);
+  } else {
+    if (!new_key_type.IsNoneTy()) {
+      map_key_.insert({ map->ident, new_key_type });
+      map->key_type = new_key_type;
     }
   }
 }
@@ -3046,43 +2962,46 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
 
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
-  assignment.map->is_read = false;
   visit(assignment.map);
+  visit(assignment.key);
   visit(assignment.expr);
 
+  reconcile_map_key(assignment.map, assignment.key);
   const auto *map_type_before = get_map_type(*assignment.map);
-  if (!is_valid_assignment(assignment.map, assignment.expr)) {
-    const auto &type = assignment.expr->type;
-    auto hint = AGGREGATE_HINTS.find(type.GetTy());
-    if (hint == AGGREGATE_HINTS.end())
-      LOG(BUG) << "Missing assignment hint";
-
-    auto &err = assignment.addError();
-    err << "Map value '" << type
-        << "' cannot be assigned from one map to another. "
-           "The function that returns this type must be called directly e.g. `"
-        << assignment.map->ident << " = " << hint->second << ";`.";
-
-    if (const auto *expr_map = dynamic_cast<const Map *>(assignment.expr)) {
-      if (type.IsCastableMapTy()) {
-        err.addHint()
-            << "Add a cast to integer if you want the value of the aggregate, "
-            << "e.g. `" << assignment.map->ident << " = (int64)"
-            << expr_map->ident << ";`.";
-      }
-    }
-  }
 
   // Add an implicit cast when copying the value of an aggregate map to an
-  // existing map of int. Enables the following: `@x = 1; @y = count(); @x = @y`
+  // existing map of int. Enables the following: `@x = 1; @y = count(); @x =
+  // @y`
   const bool map_contains_int = map_type_before && map_type_before->IsIntTy();
-  const bool expr_is_map_with_castable_agg =
-      dynamic_cast<Map *>(assignment.expr) != nullptr &&
-      assignment.expr->type.IsCastableMapTy();
-  if (map_contains_int && expr_is_map_with_castable_agg) {
+  if (map_contains_int && assignment.expr->type.IsCastableMapTy()) {
     assignment.expr = ctx_.make_node<Cast>(*map_type_before,
                                            assignment.expr,
                                            Location(assignment.expr->loc));
+  }
+
+  if (!is_valid_assignment(assignment.expr, map_type_before == nullptr)) {
+    auto &err = assignment.addError();
+    const auto &type = assignment.expr->type;
+    auto hint = AGGREGATE_HINTS.find(type.GetTy());
+    if (hint == AGGREGATE_HINTS.end()) {
+      err << "Not a valid assignment: " << type.GetTy();
+    } else {
+      err << "Map value '" << type
+          << "' cannot be assigned from one map to another. "
+             "The function that returns this type must be called directly "
+             "e.g. "
+             "`"
+          << assignment.map->ident << " = " << hint->second << ";`.";
+
+      if (const auto *acc = dynamic_cast<const MapAccess *>(assignment.expr)) {
+        if (type.IsCastableMapTy()) {
+          err.addHint() << "Add a cast to integer if you want the value of the "
+                           "aggregate, "
+                        << "e.g. `" << assignment.map->ident << " = (int64)"
+                        << acc->map->ident << ";`.";
+        }
+      }
+    }
   }
 
   assign_map_type(*assignment.map, assignment.expr->type);
@@ -3146,6 +3065,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       assignment.addError()
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
+  } else if (type.IsNoneTy()) {
+    pass_tracker_.inc_num_unresolved();
   }
 }
 
@@ -3156,18 +3077,18 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     visit(assignment.var_decl_stmt);
   }
 
-  if (!is_valid_assignment(assignment.var, assignment.expr)) {
-    assignment.addError() << "Map value '" << assignment.expr->type
-                          << "' cannot be assigned to a scratch variable.";
-  }
-
-  const bool expr_is_map_with_castable_agg =
-      dynamic_cast<Map *>(assignment.expr) != nullptr &&
-      assignment.expr->type.IsCastableMapTy();
-  if (expr_is_map_with_castable_agg) {
+  if (assignment.expr->type.IsCastableMapTy()) {
     assignment.expr = ctx_.make_node<Cast>(CreateInt64(),
                                            assignment.expr,
                                            Location(assignment.expr->loc));
+  }
+
+  if (!is_valid_assignment(assignment.expr, false)) {
+    if (is_final_pass()) {
+      assignment.addError() << "Value '" << assignment.expr->type
+                            << "' cannot be assigned to a scratch variable.";
+    }
+    return;
   }
 
   Node *var_scope = nullptr;
@@ -3398,10 +3319,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
           !util::has_wildcard(ap.func) &&
           !bpftrace_.is_traceable_func(ap.func)) {
-        ap.addWarning()
-            << ap.func
-            << " is not traceable (either non-existing, inlined, or marked as "
-               "\"notrace\"); attaching to it will likely fail";
+        ap.addWarning() << ap.func
+                        << " is not traceable (either non-existing, inlined, "
+                           "or marked as "
+                           "\"notrace\"); attaching to it will likely fail";
       }
     }
   } else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
@@ -3487,9 +3408,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       for (auto &path : util::resolve_binary_path(ap.target))
         USDTHelper::probes_for_path(path);
     } else {
-      ap.addError()
-          << "usdt probe must specify at least path or pid to probe. To target "
-             "all paths/pids set the path to '*'.";
+      ap.addError() << "usdt probe must specify at least path or pid to "
+                       "probe. To target "
+                       "all paths/pids set the path to '*'.";
     }
   } else if (ap.provider == "tracepoint") {
     if (ap.target.empty() || ap.func.empty())
@@ -3726,33 +3647,42 @@ bool SemanticAnalyser::is_first_pass() const
   return pass_tracker_.get_num_passes() == 1;
 }
 
-void SemanticAnalyser::check_assignment(const Call &call,
-                                        bool want_map,
-                                        bool want_var)
+bool SemanticAnalyser::check_arg(const Call &call,
+                                 size_t index,
+                                 const arg_type_spec &spec)
 {
-  if (want_map && want_var) {
-    if (!call.map && !call.var) {
-      call.addError() << call.func
-                      << "() should be assigned to a map or a variable";
-      return;
+  if (spec.skip_check) {
+    return true;
+  }
+  return check_arg(call, spec.type, index, spec.literal);
+}
+
+bool SemanticAnalyser::check_arg(const Call &call,
+                                 size_t index,
+                                 [[maybe_unused]] const map_type_spec &spec)
+{
+  if (auto *map = dynamic_cast<Map *>(call.vargs.at(index))) {
+    if (spec.type) {
+      SizedType type = spec.type(call);
+      assign_map_type(*map, type);
     }
-  } else if (want_map) {
-    if (!call.map) {
-      call.addError() << call.func << "() should be directly assigned to a map";
-      return;
-    }
-  } else if (want_var) {
-    if (!call.var) {
-      call.addError() << call.func << "() should be assigned to a variable";
-      return;
-    }
+    return true;
+  }
+  call.vargs.at(index)->addError() << call.func << "() expects a map argument";
+  return false;
+}
+
+bool SemanticAnalyser::check_arg(const Call &call,
+                                 size_t index,
+                                 const map_key_spec &spec)
+{
+  if (auto *map = dynamic_cast<Map *>(call.vargs.at(spec.map_index))) {
+    // This reconciles the argument if the other one is a map, but otherwise
+    // we don't specifically emit an error. `map_type_spec` above does that.
+    reconcile_map_key(map, call.vargs.at(index));
+    return true;
   } else {
-    if (call.map || call.var || call.key_for_map) {
-      call.addError()
-          << call.func
-          << "() should not be used in an assignment or as a map key";
-      return;
-    }
+    return false;
   }
 }
 
@@ -3761,12 +3691,6 @@ bool SemanticAnalyser::check_call(const Call &call)
   auto spec = CALL_SPEC.find(call.func);
   if (spec == CALL_SPEC.end()) {
     return true;
-  }
-
-  if (spec->second.has_return) {
-    check_assignment(call,
-                     spec->second.return_kind == ReturnKind::MAP,
-                     spec->second.return_kind == ReturnKind::VAR);
   }
 
   auto ret = true;
@@ -3780,14 +3704,10 @@ bool SemanticAnalyser::check_call(const Call &call)
     return ret;
   }
 
-  for (size_t i = 0; i < spec->second.arg_types.size(); ++i) {
-    auto check = spec->second.arg_types.at(i);
-    if (check.skip_check || call.vargs.size() <= i) {
-      continue;
-    }
-    if (!check_arg(call, check.type, i, check.literal)) {
-      ret = false;
-    }
+  for (size_t i = 0; i < spec->second.arg_types.size() && i < call.vargs.size();
+       ++i) {
+    std::visit([&](const auto &v) { ret = ret && check_arg(call, i, v); },
+               spec->second.arg_types.at(i));
   }
 
   return ret;
@@ -3798,6 +3718,10 @@ bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::stringstream err;
   auto nargs = call.vargs.size();
+  assert(nargs >= call.injected_args);
+  assert(expected_nargs >= call.injected_args);
+  nargs -= call.injected_args;
+  expected_nargs -= call.injected_args;
 
   if (nargs != expected_nargs) {
     if (expected_nargs == 0)
@@ -3822,6 +3746,12 @@ bool SemanticAnalyser::check_varargs(const Call &call,
 {
   std::stringstream err;
   auto nargs = call.vargs.size();
+  assert(nargs >= call.injected_args);
+  assert(min_nargs >= call.injected_args);
+  assert(max_nargs >= call.injected_args);
+  nargs -= call.injected_args;
+  min_nargs -= call.injected_args;
+  max_nargs -= call.injected_args;
 
   if (nargs < min_nargs) {
     if (min_nargs == 1)
@@ -3851,14 +3781,14 @@ bool SemanticAnalyser::check_varargs(const Call &call,
 // Checks an argument passed to a function is of the correct type.
 //
 // This function does not check that the function has the correct number of
-// arguments. Either check_nargs() or check_varargs() should be called first to
-// validate this.
+// arguments. Either check_nargs() or check_varargs() should be called first
+// to validate this.
 bool SemanticAnalyser::check_arg(const Call &call,
                                  Type type,
-                                 int arg_num,
+                                 size_t index,
                                  bool want_literal)
 {
-  auto &arg = *call.vargs.at(arg_num);
+  auto &arg = *call.vargs.at(index);
   bool is_literal = dynamic_cast<Integer *>(&arg) != nullptr ||
                     dynamic_cast<NegativeInteger *>(&arg) != nullptr ||
                     dynamic_cast<String *>(&arg) != nullptr;
@@ -4006,11 +3936,10 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
   return nullptr;
 }
 
-// assign_map_type
-//
-//   Semantic analysis for assigning a value of the provided type
-//   to the given map.
-void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
+// Semantic analysis for assigning a value of the provided type to the given
+// map. The type within the passes `Map` node will be updated to reflect the
+// new type, if available.
+void SemanticAnalyser::assign_map_type(Map &map, const SizedType &type)
 {
   const std::string &map_ident = map.ident;
 
@@ -4032,17 +3961,18 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
                      << "' when map already contains a value of type '"
                      << *maptype << "'";
     }
-
     if (maptype->IsStringTy() || maptype->IsTupleTy())
       update_string_size(*maptype, type);
+    map.type = *maptype;
   } else {
-    // This map hasn't been seen before
+    // This map hasn't been seen before.
     map_val_.insert({ map_ident, type });
     if (map_val_[map_ident].IsIntTy()) {
       // Store all integer values as 64-bit in maps, so that there will
-      // be space for any integer to be assigned to the map later
+      // be space for any integer to be assigned to the map later.
       map_val_[map_ident].SetSize(8);
     }
+    map.type = map_val_[map_ident];
   }
 }
 
@@ -4110,8 +4040,8 @@ void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
     if (current_key_type.IsTupleTy() || current_key_type.IsIntegerTy() ||
         current_key_type.IsStringTy()) {
       // This should always be true as map integer keys default to 64 bits
-      // and strings get resized (this happens recursively into tuples as well)
-      // but keep this here just in case we add larger ints and need to
+      // and strings get resized (this happens recursively into tuples as
+      // well) but keep this here just in case we add larger ints and need to
       // update the map int logic
       if (!new_key_type.FitsInto(current_key_type)) {
         valid = false;
@@ -4213,9 +4143,9 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
 
 Pass CreateSemanticPass(bool listing)
 {
-  auto fn = [listing](ASTContext &ast, BPFtrace &b) {
+  auto fn = [listing](ASTContext &ast, BPFtrace &b, MapMetadata &mm) {
     SemanticAnalyser semantics(
-        ast, b, !b.cmd_.empty() || b.child_ != nullptr, listing);
+        ast, b, mm, !b.cmd_.empty() || b.child_ != nullptr, listing);
     semantics.analyse();
   };
 
