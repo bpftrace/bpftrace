@@ -89,8 +89,10 @@ oct_esc  [0-7]{1,3}
 {int}|{hex}|{exponent}  {
                           try
                           {
+                            // Note that we have no unsigned integers in the lexer, these
+                            // are purely derived as a result of folding constants.
                             auto res = util::to_uint(yytext, 0);
-                            return Parser::make_INT(res, driver.loc);
+                            return Parser::make_UNSIGNED_INT(res, driver.loc);
                           }
                           catch (const std::exception &e)
                           {

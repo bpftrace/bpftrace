@@ -40,6 +40,10 @@ public:
   {
     return default_value();
   }
+  R visit(NegativeInteger &integer __attribute__((__unused__)))
+  {
+    return default_value();
+  }
   R visit(PositionalParameter &param __attribute__((__unused__)))
   {
     return default_value();
@@ -311,7 +315,9 @@ public:
   {
     if (auto *t = dynamic_cast<T>(*node)) {
       if constexpr (!std::is_void_v<R>) {
+        // NOLINTBEGIN(readability-qualified-auto)
         auto rval = visitAndReplace(&t);
+        // NOLINTEND(readability-qualified-auto)
         *node = static_cast<Orig *>(t); // Copy the modification.
         return rval;
       } else {
@@ -333,7 +339,9 @@ public:
     // `Expression*` can be swapped for another `Expression*`.
     Impl *impl = static_cast<Impl *>(this);
     if constexpr (!std::is_void_v<R>) {
+      // NOLINTBEGIN(readability-qualified-auto)
       auto rval = tryVisitAndReplaceOne<Orig, T, Ts...>(node);
+      // NOLINTEND(readability-qualified-auto)
       *node = impl->replace(*node, &rval);
       return rval;
     } else {
@@ -346,6 +354,7 @@ public:
   {
     return tryVisitAndReplace<Expression,
                               Integer *,
+                              NegativeInteger *,
                               PositionalParameter *,
                               PositionalParameterCount *,
                               String *,

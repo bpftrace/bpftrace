@@ -273,8 +273,7 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
 
       // Expand the positional param in-place and decrement idx so that the next
       // iteration takes the first char of the expansion
-      raw = raw.substr(0, idx) + bpftrace_.get_param(param_idx, true) +
-            raw.substr(i);
+      raw = raw.substr(0, idx) + bpftrace_.get_param(param_idx) + raw.substr(i);
       idx--;
     } else
       argument += raw[idx];
