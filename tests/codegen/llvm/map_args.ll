@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64 }
+%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
@@ -42,6 +42,11 @@ entry:
   %arg3 = load volatile i64, ptr %12, align 8
   %13 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
   store i64 %arg3, ptr %13, align 8
+  %14 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %15 = getelementptr i64, ptr %14, i64 9
+  %arg4 = load volatile i64, ptr %15, align 8
+  %16 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 4
+  store i64 %arg4, ptr %16, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %args, i64 0)
@@ -88,9 +93,9 @@ attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !20 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !22, size: 64, offset: 192)
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
-!23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 224, elements: !24)
+!23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 288, elements: !24)
 !24 = !{!25}
-!25 = !DISubrange(count: 28, lowerBound: 0)
+!25 = !DISubrange(count: 36, lowerBound: 0)
 !26 = !DIGlobalVariableExpression(var: !27, expr: !DIExpression())
 !27 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !28, isLocal: false, isDefinition: true)
 !28 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !29)
