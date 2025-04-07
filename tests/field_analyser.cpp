@@ -326,50 +326,50 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
 {
   BPFtrace bpftrace;
   bpftrace.parse_btf({});
-  test(bpftrace, "kprobe:sys_read { @ = curtask->pid; }");
+  test(bpftrace, "fentry:func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }");
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
-  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo4"));
+  auto foo4 = bpftrace.structs.Lookup("struct Foo4").lock();
 
   // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
   // return from function so that these are in fact checked accesses.
   //
   // NOLINTBEGIN(bugprone-unchecked-optional-access)
-  ASSERT_TRUE(task_struct->HasField("a"));
-  EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
-  EXPECT_EQ(task_struct->GetField("a").offset, 9);
-  ASSERT_TRUE(task_struct->GetField("a").bitfield.has_value());
-  EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x2U);
-  EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 4U);
-  EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+  ASSERT_TRUE(foo4->HasField("a"));
+  EXPECT_TRUE(foo4->GetField("a").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("a").type.GetSize(), 4U);
+  EXPECT_EQ(foo4->GetField("a").offset, 9);
+  ASSERT_TRUE(foo4->GetField("a").bitfield.has_value());
+  EXPECT_EQ(foo4->GetField("a").bitfield->read_bytes, 0x2U);
+  EXPECT_EQ(foo4->GetField("a").bitfield->access_rshift, 4U);
+  EXPECT_EQ(foo4->GetField("a").bitfield->mask, 0xFFU);
 
-  ASSERT_TRUE(task_struct->HasField("b"));
-  EXPECT_TRUE(task_struct->GetField("b").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
-  EXPECT_EQ(task_struct->GetField("b").offset, 10);
-  ASSERT_TRUE(task_struct->GetField("b").bitfield.has_value());
-  EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x1U);
-  EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 4U);
-  EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+  ASSERT_TRUE(foo4->HasField("b"));
+  EXPECT_TRUE(foo4->GetField("b").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("b").type.GetSize(), 4U);
+  EXPECT_EQ(foo4->GetField("b").offset, 10);
+  ASSERT_TRUE(foo4->GetField("b").bitfield.has_value());
+  EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 4U);
+  EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
 
-  ASSERT_TRUE(task_struct->HasField("c"));
-  EXPECT_TRUE(task_struct->GetField("c").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
-  EXPECT_EQ(task_struct->GetField("c").offset, 10);
-  ASSERT_TRUE(task_struct->GetField("c").bitfield.has_value());
-  EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x1U);
-  EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 5U);
-  EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+  ASSERT_TRUE(foo4->HasField("c"));
+  EXPECT_TRUE(foo4->GetField("c").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("c").type.GetSize(), 4U);
+  EXPECT_EQ(foo4->GetField("c").offset, 10);
+  ASSERT_TRUE(foo4->GetField("c").bitfield.has_value());
+  EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 5U);
+  EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
 
-  ASSERT_TRUE(task_struct->HasField("d"));
-  EXPECT_TRUE(task_struct->GetField("d").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
-  EXPECT_EQ(task_struct->GetField("d").offset, 12);
-  ASSERT_TRUE(task_struct->GetField("d").bitfield.has_value());
-  EXPECT_EQ(task_struct->GetField("d").bitfield->read_bytes, 0x3U);
-  EXPECT_EQ(task_struct->GetField("d").bitfield->access_rshift, 0U);
-  EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
+  ASSERT_TRUE(foo4->HasField("d"));
+  EXPECT_TRUE(foo4->GetField("d").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("d").type.GetSize(), 4U);
+  EXPECT_EQ(foo4->GetField("d").offset, 12);
+  ASSERT_TRUE(foo4->GetField("d").bitfield.has_value());
+  EXPECT_EQ(foo4->GetField("d").bitfield->read_bytes, 0x3U);
+  EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo4->GetField("d").bitfield->mask, 0xFFFFFU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
@@ -464,76 +464,76 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   BPFtrace bpftrace;
   std::string uprobe = "uprobe:" + std::string(bin_);
   test(bpftrace,
-       uprobe + ":func_1 { @ = ((struct task_struct *)curtask)->pid; }",
+       uprobe + ":func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }",
        true);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
-  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo4"));
+  auto foo4 = bpftrace.structs.Lookup("struct Foo4").lock();
 
   // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
   // return from function so that these are in fact checked accesses.
   //
   // NOLINTBEGIN(bugprone-unchecked-optional-access)
-  ASSERT_TRUE(task_struct->HasField("a"));
-  EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
-  ASSERT_TRUE(task_struct->GetField("a").bitfield.has_value());
+  ASSERT_TRUE(foo4->HasField("a"));
+  EXPECT_TRUE(foo4->GetField("a").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("a").type.GetSize(), 4U);
+  ASSERT_TRUE(foo4->GetField("a").bitfield.has_value());
 
-  EXPECT_TRUE(task_struct->GetField("a").offset == 8 ||
-              task_struct->GetField("a").offset == 9);
-  if (task_struct->GetField("a").offset == 8) { // DWARF < 4
-    EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x3U);
-    EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 12U);
-    EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+  EXPECT_TRUE(foo4->GetField("a").offset == 8 ||
+              foo4->GetField("a").offset == 9);
+  if (foo4->GetField("a").offset == 8) { // DWARF < 4
+    EXPECT_EQ(foo4->GetField("a").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(foo4->GetField("a").bitfield->access_rshift, 12U);
+    EXPECT_EQ(foo4->GetField("a").bitfield->mask, 0xFFU);
   } else { // DWARF >= 4
-    EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x2U);
-    EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 4U);
-    EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+    EXPECT_EQ(foo4->GetField("a").bitfield->read_bytes, 0x2U);
+    EXPECT_EQ(foo4->GetField("a").bitfield->access_rshift, 4U);
+    EXPECT_EQ(foo4->GetField("a").bitfield->mask, 0xFFU);
   }
 
-  ASSERT_TRUE(task_struct->HasField("b"));
-  EXPECT_TRUE(task_struct->GetField("b").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
-  ASSERT_TRUE(task_struct->GetField("b").bitfield.has_value());
+  ASSERT_TRUE(foo4->HasField("b"));
+  EXPECT_TRUE(foo4->GetField("b").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("b").type.GetSize(), 4U);
+  ASSERT_TRUE(foo4->GetField("b").bitfield.has_value());
 
-  EXPECT_TRUE(task_struct->GetField("b").offset == 8 ||
-              task_struct->GetField("b").offset == 10);
-  if (task_struct->GetField("b").offset == 8) { // DWARF < 4
-    EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x3U);
-    EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 20U);
-    EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+  EXPECT_TRUE(foo4->GetField("b").offset == 8 ||
+              foo4->GetField("b").offset == 10);
+  if (foo4->GetField("b").offset == 8) { // DWARF < 4
+    EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 20U);
+    EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
   } else { // DWARF >= 4
-    EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x1U);
-    EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 4U);
-    EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+    EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x1U);
+    EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 4U);
+    EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
   }
 
-  ASSERT_TRUE(task_struct->HasField("c"));
-  EXPECT_TRUE(task_struct->GetField("c").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
-  ASSERT_TRUE(task_struct->GetField("c").bitfield.has_value());
+  ASSERT_TRUE(foo4->HasField("c"));
+  EXPECT_TRUE(foo4->GetField("c").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("c").type.GetSize(), 4U);
+  ASSERT_TRUE(foo4->GetField("c").bitfield.has_value());
 
-  EXPECT_TRUE(task_struct->GetField("c").offset == 8 ||
-              task_struct->GetField("c").offset == 10);
+  EXPECT_TRUE(foo4->GetField("c").offset == 8 ||
+              foo4->GetField("c").offset == 10);
 
-  if (task_struct->GetField("c").offset == 8) { // DWARF < 4
-    EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x3U);
-    EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 21U);
-    EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+  if (foo4->GetField("c").offset == 8) { // DWARF < 4
+    EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x3U);
+    EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 21U);
+    EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
   } else { // DWARF >= 4
-    EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x1U);
-    EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 5U);
-    EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+    EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x1U);
+    EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 5U);
+    EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
   }
 
-  ASSERT_TRUE(task_struct->HasField("d"));
-  EXPECT_TRUE(task_struct->GetField("d").type.IsIntTy());
-  EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
-  EXPECT_EQ(task_struct->GetField("d").offset, 12);
-  ASSERT_TRUE(task_struct->GetField("d").bitfield.has_value());
-  EXPECT_EQ(task_struct->GetField("d").bitfield->read_bytes, 0x3U);
-  EXPECT_EQ(task_struct->GetField("d").bitfield->access_rshift, 0U);
-  EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
+  ASSERT_TRUE(foo4->HasField("d"));
+  EXPECT_TRUE(foo4->GetField("d").type.IsIntTy());
+  EXPECT_EQ(foo4->GetField("d").type.GetSize(), 4U);
+  EXPECT_EQ(foo4->GetField("d").offset, 12);
+  ASSERT_TRUE(foo4->GetField("d").bitfield.has_value());
+  EXPECT_EQ(foo4->GetField("d").bitfield->read_bytes, 0x3U);
+  EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo4->GetField("d").bitfield->mask, 0xFFFFFU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
 

@@ -630,18 +630,18 @@ TEST_F(clang_parser_btf, btf)
         "  struct Foo1 f1;"
         "  struct Foo2 f2;"
         "  struct Foo3 f3;"
-        "  struct task_struct t;"
+        "  struct Foo4 f4;"
         "}",
         bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo3"));
-  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo4"));
   auto foo1 = bpftrace.structs.Lookup("struct Foo1").lock();
   auto foo2 = bpftrace.structs.Lookup("struct Foo2").lock();
   auto foo3 = bpftrace.structs.Lookup("struct Foo3").lock();
-  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+  auto foo4 = bpftrace.structs.Lookup("struct Foo4").lock();
 
   EXPECT_EQ(foo1->size, 16);
   ASSERT_EQ(foo1->fields.size(), 3U);
@@ -684,14 +684,14 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_TRUE(foo3->HasField("foo1"));
   ASSERT_TRUE(foo3->HasField("foo2"));
 
-  EXPECT_EQ(task_struct->size, 16);
-  ASSERT_EQ(task_struct->fields.size(), 7U);
-  ASSERT_TRUE(task_struct->HasField("pid"));
-  ASSERT_TRUE(task_struct->HasField("pgid"));
-  ASSERT_TRUE(task_struct->HasField("a"));
-  ASSERT_TRUE(task_struct->HasField("b"));
-  ASSERT_TRUE(task_struct->HasField("c"));
-  ASSERT_TRUE(task_struct->HasField("d"));
+  EXPECT_EQ(foo4->size, 16);
+  ASSERT_EQ(foo4->fields.size(), 7U);
+  ASSERT_TRUE(foo4->HasField("pid"));
+  ASSERT_TRUE(foo4->HasField("pgid"));
+  ASSERT_TRUE(foo4->HasField("a"));
+  ASSERT_TRUE(foo4->HasField("b"));
+  ASSERT_TRUE(foo4->HasField("c"));
+  ASSERT_TRUE(foo4->HasField("d"));
 
   auto foo1_field = foo3->GetField("foo1");
   auto foo2_field = foo3->GetField("foo2");
