@@ -22,6 +22,7 @@ add_library(ast STATIC
   passes/return_path_analyser.cpp
 )
 
+add_dependencies(ast parser)
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
 
