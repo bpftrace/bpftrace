@@ -90,10 +90,9 @@ std::string to_string(MapType t)
   return {}; // unreached
 }
 
-libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type,
-                                      const SizedType &key_type)
+libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type, bool scalar)
 {
-  if (val_type.IsCountTy() && key_type.IsNoneTy()) {
+  if (val_type.IsCountTy() && scalar) {
     return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
   } else if (val_type.NeedsPercpuMap()) {
     return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
@@ -134,18 +133,18 @@ void add_bpf_map_types_hint(std::stringstream &hint)
   }
 }
 
-bool is_array_map(const SizedType &val_type, const SizedType &key_type)
+bool is_array_map(const SizedType &val_type, bool scalar)
 {
-  auto map_type = get_bpf_map_type(val_type, key_type);
+  auto map_type = get_bpf_map_type(val_type, scalar);
   return map_type == libbpf::BPF_MAP_TYPE_ARRAY ||
          map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
 }
 
 bool bpf_map_types_compatible(const SizedType &val_type,
-                              const SizedType &key_type,
+                              bool scalar,
                               libbpf::bpf_map_type kind)
 {
-  auto kind_from_stype = get_bpf_map_type(val_type, key_type);
+  auto kind_from_stype = get_bpf_map_type(val_type, scalar);
   if (kind_from_stype == kind) {
     return true;
   }

@@ -657,7 +657,10 @@ TIMEOUT 3
 
 NAME map len keyless
 PROG BEGIN { @ = 0; printf("map len: %d\n", len(@)); exit(); }
-EXPECT map len: 1
+EXPECT stdin:1:40-45: ERROR: call to len() expects a map with explicit keys (non-scalar map)
+       BEGIN { @ = 0; printf("map len: %d\n", len(@)); exit(); }
+                                              ~~~~~
+WILL_FAIL
 
 NAME percpu_kaddr
 PROG BEGIN { printf("processes: %d\n", *percpu_kaddr("process_counts", 0)); exit(); }

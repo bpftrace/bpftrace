@@ -306,14 +306,16 @@ DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
                                     const SizedType &value_type,
                                     libbpf::bpf_map_type map_type)
 {
-  // No-key maps use '0' as the key.
-  // - BPF requires 4-byte keys for array maps
-  // - bpftrace uses 8 bytes for the implicit '0' key in hash maps
-  if (key_type.IsNoneTy())
-    return (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
-            map_type == libbpf::BPF_MAP_TYPE_ARRAY)
-               ? getInt32Ty()
-               : getInt64Ty();
+  // BPF requires 4-byte keys for array maps.
+  if (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
+      map_type == libbpf::BPF_MAP_TYPE_ARRAY) {
+    assert(key_type.IsIntTy());
+    return getInt32Ty();
+  }
+  if (map_type == libbpf::BPF_MAP_TYPE_RINGBUF) {
+    assert(key_type.IsNoneTy());
+    return getInt64Ty();
+  }
 
   // Some map types need an extra 8-byte key.
   if (value_type.IsHistTy() || value_type.IsLhistTy()) {

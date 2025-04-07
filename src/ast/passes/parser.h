@@ -4,6 +4,7 @@
 #include "ast/pass_manager.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/map_sugar.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "driver.h"
@@ -28,6 +29,7 @@ inline std::vector<Pass> AllParsePasses(
   // set during the clang parse to expand identifiers within the lexer.
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateParseAttachpointsPass());
+  passes.emplace_back(CreateMapSugarPass());
   return passes;
 }
 
