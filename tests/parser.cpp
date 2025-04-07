@@ -469,7 +469,8 @@ TEST(Parser, variable_assign)
        " kprobe:sys_open\n"
        "  =\n"
        "   variable: $x\n"
-       "   int: -1\n");
+       "   -\n"
+       "    int: 1\n");
 
   char in_cstr[128];
   char out_cstr[128];
@@ -481,8 +482,9 @@ TEST(Parser, variable_assign)
            " kprobe:sys_open\n"
            "  =\n"
            "   variable: $x\n"
-           "   int: %ld\n",
-           LONG_MIN);
+           "   -\n"
+           "    int: %lu\n",
+           static_cast<unsigned long>(LONG_MAX) + 1);
   test(std::string(in_cstr), std::string(out_cstr));
 }
 

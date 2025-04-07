@@ -1,6 +1,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -36,6 +37,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateSemanticPass())
                 .run();
   EXPECT_TRUE(bool(ok));
@@ -91,6 +93,7 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateSemanticPass())
                 .run();
 
@@ -770,7 +773,7 @@ kprobe:f { lhist(-10, -10, 10, 1); }
            ~~~~~~~~~~~~~~~~~~~~~~
 )");
   test_error("kprobe:f { @ = lhist(-10, -10, 10, 1); }", R"(
-stdin:1:16-38: ERROR: lhist() min must be non-negative (provided min -10)
+stdin:1:16-38: ERROR: lhist: invalid min value (must be non-negative literal)
 kprobe:f { @ = lhist(-10, -10, 10, 1); }
                ~~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -1249,7 +1252,7 @@ TEST(semantic_analyser, call_str)
   test("kprobe:f { str(arg0); }");
   test("kprobe:f { @x = str(arg0); }");
   test("kprobe:f { str(); }", 1);
-  test("kprobe:f { str(\"hello\"); }", 1);
+  test("kprobe:f { str(\"hello\"); }");
 }
 
 TEST(semantic_analyser, call_str_2_lit)
@@ -2741,20 +2744,19 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%d\", $3); }");
 
   // Pointer arithmetic in str() for parameters
-  // Only str($1 + CONST) where CONST <= strlen($1) should be allowed
   test(bpftrace, "kprobe:f { printf(\"%s\", str($1 + 1)); }");
   test(bpftrace, "kprobe:f { printf(\"%s\", str(1 + $1)); }");
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 + 4)); }", 2);
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 * 2)); }", 2);
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 + 1 + 1)); }", 1);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 + 4)); }");
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 * 2)); }");
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($1 + 1 + 1)); }");
 
   // Parameters are not required to exist to be used:
   test(bpftrace, "kprobe:f { printf(\"%s\", str($4)); }");
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }");
 
   test(bpftrace, "kprobe:f { printf(\"%d\", $#); }");
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 1);
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($#+1)); }", 1);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }");
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($#+1)); }");
 
   // Parameters can be used as string literals
   test(bpftrace, "kprobe:f { printf(\"%d\", cgroupid(str($2))); }");
@@ -2763,8 +2765,9 @@ TEST(semantic_analyser, positional_parameters)
   auto *stmt = static_cast<ast::ExprStatement *>(
       ast.root->probes.at(0)->block->stmts.at(0));
   auto *pp = static_cast<ast::PositionalParameter *>(stmt->expr);
-  EXPECT_EQ(CreateUInt64(), pp->type);
-  EXPECT_TRUE(pp->is_literal);
+
+  // The default for non-overflowing integers is signed.
+  EXPECT_EQ(CreateInt64(), pp->type);
 
   bpftrace.add_param("0999");
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 2);
@@ -2892,24 +2895,25 @@ TEST(semantic_analyser, signed_int_division_warnings)
 {
   bool invert = true;
   std::string msg = "signed operands";
-  test_for_warning("kprobe:f { @ = -1 / 1 }", msg);
-  test_for_warning("kprobe:f { @ = 1 / -1 }", msg);
+  test_for_warning("kprobe:f { @x = -1; @y = @x / 1 }", msg);
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = @x / -1 }", msg);
 
-  // These should not trigger a warning
-  test_for_warning("kprobe:f { @ = 1 / 1 }", msg, invert);
-  test_for_warning("kprobe:f { @ = -(1 / 1) }", msg, invert);
+  // These should not trigger a warning. Note that we need to assign to a map
+  // in order to ensure that they are typed. Literals are not yet typed.
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = @x / 1 }", msg, invert);
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = -(@x / 1) }", msg, invert);
 }
 
 TEST(semantic_analyser, signed_int_modulo_warnings)
 {
   bool invert = true;
   std::string msg = "signed operands";
-  test_for_warning("kprobe:f { @ = -1 % 1 }", msg);
-  test_for_warning("kprobe:f { @ = 1 % -1 }", msg);
+  test_for_warning("kprobe:f { @x = -1; @y = @x % 1 }", msg);
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = @x % -1 }", msg);
 
-  // These should not trigger a warning
-  test_for_warning("kprobe:f { @ = 1 % 1 }", msg, invert);
-  test_for_warning("kprobe:f { @ = -(1 % 1) }", msg, invert);
+  // These should not trigger a warning. See above re: types.
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = @x % 1 }", msg, invert);
+  test_for_warning("kprobe:f { @x = (uint64)1; @y = -(@x % 1) }", msg, invert);
 }
 
 TEST(semantic_analyser, map_as_lookup_table)

@@ -26,7 +26,14 @@ std::string Printer::type(const SizedType &ty)
 void Printer::visit(Integer &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "int: " << integer.n << type(integer.type) << std::endl;
+  out_ << indent << "int: " << integer.value << type(integer.type) << std::endl;
+}
+
+void Printer::visit(NegativeInteger &integer)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "signed int: " << integer.value << type(integer.type)
+       << std::endl;
 }
 
 void Printer::visit(PositionalParameter &param)
@@ -46,7 +53,7 @@ void Printer::visit(String &string)
   std::string indent(depth_, ' ');
   std::stringstream ss;
 
-  for (char c : string.str) {
+  for (char c : string.value) {
     // the argument of isprint() must be an unsigned char or EOF
     int code = static_cast<unsigned char>(c);
     if (std::isprint(code)) {

@@ -35,6 +35,7 @@ add_executable(bpftrace_test
   collect_nodes.cpp
   deprecated.cpp
   field_analyser.cpp
+  fold_literals.cpp
   function_registry.cpp
   location.cpp
   log.cpp
