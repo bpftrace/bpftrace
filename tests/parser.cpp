@@ -2939,8 +2939,8 @@ Program
   test("BEGIN { let $x: int8; }", R"(
 Program
  BEGIN
-  decl
-   variable: $x :: [int8]
+  decl :: [int8]
+   variable: $x
 )");
 
   test("BEGIN { let $x = 1; }", R"(
@@ -2954,8 +2954,8 @@ Program
   test("BEGIN { let $x: int8 = 1; }", R"(
 Program
  BEGIN
-  decl
-   variable: $x :: [int8]
+  decl :: [int8]
+   variable: $x
    int: 1
 )");
 

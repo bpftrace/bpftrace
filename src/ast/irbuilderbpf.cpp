@@ -732,7 +732,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          const Location &loc)
 {
   assert(ctx && ctx->getType() == getPtrTy());
-  return CreateMapLookupElem(ctx, map.ident, key, map.type, loc);
+  return CreateMapLookupElem(ctx, map.ident, key, map.value_type, loc);
 }
 
 Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
@@ -1434,7 +1434,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                                ctx,
                                getInt64(offset * sizeof(uintptr_t)),
                                "load_register");
-    AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
+    AllocaInst *dst = CreateAllocaBPF(builtin.builtin_type, builtin.ident);
     Value *index_offset = nullptr;
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
       int ioffset = arch::offset(argument->index_register_name);
@@ -2233,7 +2233,6 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     const Location &loc)
 {
   CallInst *call = CreateMapLookup(map, key);
-  SizedType &type = map.type;
 
   llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
@@ -2246,7 +2245,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  AllocaInst *value = CreateAllocaBPF(map.value_type, "lookup_elem_val");
   Value *condition = CreateICmpNE(CreateIntCast(call, getPtrTy(), true),
                                   GetNull(),
                                   "map_lookup_cond");

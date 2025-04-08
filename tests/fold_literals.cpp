@@ -37,7 +37,7 @@ void test(const std::string& input,
   if (!output.empty() || !warn.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     if (!output.empty()) {
-      EXPECT_THAT(out.str(), HasSubstr("BEGIN\n  " + output + "\n"))
+      EXPECT_THAT(out.str(), HasSubstr("BEGIN\n  " + output))
           << msg.str() << out.str();
     }
     if (!warn.empty()) {

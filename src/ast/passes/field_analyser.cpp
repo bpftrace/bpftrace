@@ -172,20 +172,25 @@ void FieldAnalyser::visit(MapAccess &acc)
 void FieldAnalyser::visit(Cast &cast)
 {
   visit(cast.expr);
-  resolve_type(cast.type);
+  resolve_type(cast.cast_type);
 }
 
 void FieldAnalyser::visit(Sizeof &szof)
 {
-  visit(szof.expr);
-  resolve_type(szof.argtype);
+  if (std::holds_alternative<SizedType>(szof.record)) {
+    resolve_type(std::get<SizedType>(szof.record));
+  } else {
+    visit(szof.record);
+  }
 }
 
 void FieldAnalyser::visit(Offsetof &offof)
 {
-  if (offof.expr)
-    visit(*offof.expr);
-  resolve_type(offof.record);
+  if (std::holds_alternative<SizedType>(offof.record)) {
+    resolve_type(std::get<SizedType>(offof.record));
+  } else {
+    visit(offof.record);
+  }
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
@@ -199,7 +204,7 @@ void FieldAnalyser::visit(AssignMapStatement &assignment)
 void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
   visit(assignment.expr);
-  var_types_.emplace(assignment.var->ident, sized_type_);
+  var_types_.emplace(assignment.var()->ident, sized_type_);
 }
 
 void FieldAnalyser::visit(Unop &unop)

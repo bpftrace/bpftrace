@@ -273,7 +273,7 @@ public:
   bool IsSameSizeRecursive(const SizedType &t) const;
   bool FitsInto(const SizedType &t) const;
 
-  bool IsPrintableTy()
+  bool IsPrintableTy() const
   {
     return type_ != Type::none && type_ != Type::stack_mode &&
            type_ != Type::timestamp_mode &&

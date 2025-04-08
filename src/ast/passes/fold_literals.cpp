@@ -9,30 +9,20 @@ namespace bpftrace::ast {
 
 namespace {
 
-class LiteralFolder : public Visitor<LiteralFolder, Expression *> {
+class LiteralFolder : public Visitor<LiteralFolder, std::optional<Expression>> {
 public:
   LiteralFolder(ASTContext &ast, BPFtrace &bpftrace)
       : ast_(ast), bpftrace_(bpftrace) {};
 
-  using Visitor<LiteralFolder, Expression *>::visit;
+  using Visitor<LiteralFolder, std::optional<Expression>>::visit;
 
-  template <typename T>
-  T *replace(T *node, [[maybe_unused]] Expression **result)
-  {
-    if constexpr (std::is_same_v<T, Expression>) {
-      if (*result != nullptr && *result != node) {
-        return *result;
-      }
-    }
-    return node;
-  }
-
-  Expression *visit(Cast &cast);
-  Expression *visit(Unop &op);
-  Expression *visit(Binop &op);
-  Expression *visit(PositionalParameterCount &param);
-  Expression *visit(PositionalParameter &param);
-  Expression *visit(Call &call);
+  std::optional<Expression> visit(Cast &cast);
+  std::optional<Expression> visit(Unop &op);
+  std::optional<Expression> visit(Binop &op);
+  std::optional<Expression> visit(PositionalParameterCount &param);
+  std::optional<Expression> visit(PositionalParameter &param);
+  std::optional<Expression> visit(Call &call);
+  std::optional<Expression> visit(Expression &expr);
 
 private:
   ASTContext &ast_;
@@ -179,17 +169,17 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
   __builtin_unreachable();
 }
 
-Expression *LiteralFolder::visit(Cast &cast)
+std::optional<Expression> LiteralFolder::visit(Cast &cast)
 {
-  visitAndReplace(&cast.expr);
-  return nullptr;
+  visit(cast.expr);
+  return std::nullopt;
 }
 
-Expression *LiteralFolder::visit(Unop &op)
+std::optional<Expression> LiteralFolder::visit(Unop &op)
 {
-  visitAndReplace(&op.expr);
+  visit(op.expr);
 
-  if (auto *integer = dynamic_cast<Integer *>(op.expr)) {
+  if (auto *integer = op.expr.as<Integer>()) {
     if (op.op == Operator::BNOT) {
       // Still positive.
       return ast_.make_node<Integer>(~integer->value, Location(op.loc));
@@ -201,7 +191,7 @@ Expression *LiteralFolder::visit(Unop &op)
       if (integer->value >
           static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1) {
         op.addError() << "negative value will underflow";
-        return nullptr;
+        return std::nullopt;
       }
       // Carefully make the conversion. We need to ensure that this does not
       // overflow/underflow while doing the math.
@@ -216,7 +206,7 @@ Expression *LiteralFolder::visit(Unop &op)
         return ast_.make_node<NegativeInteger>(value, Location(op.loc));
       }
     }
-  } else if (auto *integer = dynamic_cast<NegativeInteger *>(op.expr)) {
+  } else if (auto *integer = op.expr.as<NegativeInteger>()) {
     if (op.op == Operator::BNOT) {
       // Always positive.
       return ast_.make_node<Integer>(static_cast<uint64_t>(~integer->value),
@@ -235,24 +225,24 @@ Expression *LiteralFolder::visit(Unop &op)
                                      Location(op.loc));
     }
   }
-  return nullptr;
+  return std::nullopt;
 }
 
-Expression *LiteralFolder::visit(Binop &op)
+std::optional<Expression> LiteralFolder::visit(Binop &op)
 {
-  visitAndReplace(&op.left);
-  visitAndReplace(&op.right);
+  visit(op.left);
+  visit(op.right);
 
   // Check for string cases.
-  auto *str = dynamic_cast<String *>(op.left);
-  auto *other = op.right;
+  auto *str = op.left.as<String>();
+  auto other = op.right;
   if (str == nullptr) {
-    str = dynamic_cast<String *>(op.right);
+    str = op.right.as<String>();
     other = op.left;
   }
   if (str) {
     // For whatever reason you are allowed to fold "foo"+3.
-    auto *integer = dynamic_cast<Integer *>(other);
+    auto *integer = other.as<Integer>();
     if (op.op == Operator::PLUS && integer) {
       if (integer->value >= static_cast<uint64_t>(str->value.size())) {
         op.addWarning() << "literal string will always be empty";
@@ -263,15 +253,15 @@ Expression *LiteralFolder::visit(Binop &op)
     }
 
     // Check for another string.
-    auto *rs = dynamic_cast<String *>(other);
+    auto *rs = other.as<String>();
     if (!rs) {
       // Let's just make sure it's not a negative literal.
-      if (dynamic_cast<NegativeInteger *>(other)) {
+      if (other.is<NegativeInteger>()) {
         op.addError() << "illegal literal operation with strings";
       }
       // This is a mix of a string and something else. This may be a runtime
       // type, and we need to leave it up to the semantic analysis.
-      return nullptr;
+      return std::nullopt;
     }
 
     switch (op.op) {
@@ -304,16 +294,16 @@ Expression *LiteralFolder::visit(Binop &op)
       default:
         // What are they tring to do?
         op.addError() << "illegal literal operation with strings";
-        return nullptr;
+        return std::nullopt;
     }
   }
 
   // Handle all integer cases.
   std::optional<std::variant<uint64_t, int64_t>> result;
-  auto *lu = dynamic_cast<Integer *>(op.left);
-  auto *ls = dynamic_cast<NegativeInteger *>(op.left);
-  auto *ru = dynamic_cast<Integer *>(op.right);
-  auto *rs = dynamic_cast<NegativeInteger *>(op.right);
+  auto *lu = op.left.as<Integer>();
+  auto *ls = op.left.as<NegativeInteger>();
+  auto *ru = op.right.as<Integer>();
+  auto *rs = op.right.as<NegativeInteger>();
 
   // Only allow operations when we can safely marshall to two of the same type.
   // Then `eval_binop` effectively handles all overflow/underflow calculations.
@@ -331,17 +321,17 @@ Expression *LiteralFolder::visit(Binop &op)
     }
   } else {
     // This is not an integer expression at all.
-    return nullptr;
+    return std::nullopt;
   }
 
   if (!result) {
     // This is not a valid expression.
     op.addError() << "unable to fold literals due to overflow or underflow";
-    return nullptr;
+    return std::nullopt;
   }
 
   return std::visit(
-      [&](const auto &v) -> Expression * {
+      [&](const auto &v) -> Expression {
         if constexpr (std::is_same_v<std::decay_t<decltype(v)>, uint64_t>) {
           return ast_.make_node<Integer>(v, Location(op.loc));
         } else {
@@ -351,13 +341,13 @@ Expression *LiteralFolder::visit(Binop &op)
       result.value());
 }
 
-Expression *LiteralFolder::visit(PositionalParameterCount &param)
+std::optional<Expression> LiteralFolder::visit(PositionalParameterCount &param)
 {
   // This is always an unsigned integer value.
   return ast_.make_node<Integer>(bpftrace_.num_params(), Location(param.loc));
 }
 
-Expression *LiteralFolder::visit(PositionalParameter &param)
+std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
 {
   // By default, we treat parameters as integer literals if we can, and
   // rely on the user to have an explicit `str` cast.
@@ -381,7 +371,7 @@ Expression *LiteralFolder::visit(PositionalParameter &param)
   }
 }
 
-Expression *LiteralFolder::visit(Call &call)
+std::optional<Expression> LiteralFolder::visit(Call &call)
 {
   // If this is the string function, then we can evaluate the given literal
   // as a string (e.g. this covers str(0) and str($3)).
@@ -390,11 +380,11 @@ Expression *LiteralFolder::visit(Call &call)
 
     // First, we need to check if this directly wraps a positional parameter.
     // If yes, then we prevent it from expanding to zero as is the default.
-    if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs.at(0))) {
+    if (auto *param = call.vargs.at(0).as<PositionalParameter>()) {
       call.vargs[0] = ast_.make_node<String>(bpftrace_.get_param(param->n),
                                              Location(param->loc));
-    } else if (auto *binop = dynamic_cast<Binop *>(call.vargs.at(0))) {
-      auto *param = dynamic_cast<PositionalParameter *>(binop->left);
+    } else if (auto *binop = call.vargs.at(0).as<Binop>()) {
+      auto *param = binop->left.as<PositionalParameter>();
       if (param && binop->op == Operator::PLUS) {
         binop->left = ast_.make_node<String>(bpftrace_.get_param(param->n),
                                              Location(param->loc));
@@ -402,41 +392,50 @@ Expression *LiteralFolder::visit(Call &call)
     }
 
     // Now we can expand normally.
-    Visitor<LiteralFolder, Expression *>::visit(call);
+    Visitor<LiteralFolder, std::optional<Expression>>::visit(call);
 
     // If this is an integer of some kind, then fold it into a string.
-    if (auto *n = dynamic_cast<Integer *>(call.vargs.at(0))) {
+    if (auto *n = call.vargs.at(0).as<Integer>()) {
       std::stringstream ss;
       ss << n->value;
       s = ss.str();
-    } else if (auto *n = dynamic_cast<NegativeInteger *>(call.vargs.at(0))) {
+    } else if (auto *n = call.vargs.at(0).as<NegativeInteger>()) {
       std::stringstream ss;
       ss << n->value;
       s = ss.str();
-    } else if (auto *str = dynamic_cast<String *>(call.vargs.at(0))) {
+    } else if (auto *str = call.vargs.at(0).as<String>()) {
       s = str->value;
     } else {
-      return nullptr;
+      return std::nullopt;
     }
 
     // Handle optional truncation.
     if (call.vargs.size() >= 2) {
-      if (auto *n = dynamic_cast<Integer *>(call.vargs.at(1))) {
+      if (auto *n = call.vargs.at(1).as<Integer>()) {
         // Truncate the string.
         if (s.size() >= n->value) {
           s = s.substr(0, n->value);
         }
       } else {
-        return nullptr;
+        return std::nullopt;
       }
     }
     return ast_.make_node<String>(s, Location(call.loc));
   } else {
     // Visit normally.
-    Visitor<LiteralFolder, Expression *>::visit(call);
+    Visitor<LiteralFolder, std::optional<Expression>>::visit(call);
   }
 
-  return nullptr;
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(Expression &expr)
+{
+  auto r = Visitor<LiteralFolder, std::optional<Expression>>::visit(expr.value);
+  if (r) {
+    expr.value = r->value;
+  }
+  return std::nullopt;
 }
 
 Pass CreateFoldLiteralsPass()
