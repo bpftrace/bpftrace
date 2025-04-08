@@ -31,8 +31,8 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
   if (subprog.return_type.IsVoidTy())
     return true;
 
-  for (Statement *stmt : subprog.stmts) {
-    if (visit(*stmt))
+  for (auto &stmt : subprog.stmts) {
+    if (visit(stmt))
       return true;
   }
   subprog.addError() << "Not all code paths returned a value";
@@ -47,7 +47,7 @@ bool ReturnPathAnalyser::visit(Jump &jump)
 bool ReturnPathAnalyser::visit(If &if_node)
 {
   bool result = false;
-  for (Statement *stmt : if_node.if_block->stmts) {
+  for (auto &stmt : if_node.if_block->stmts) {
     if (visit(stmt))
       result = true;
   }
@@ -59,7 +59,7 @@ bool ReturnPathAnalyser::visit(If &if_node)
   // True if both blocks have a return.
   // False if else block has no return (or there is no else block).
   return std::ranges::any_of(if_node.else_block->stmts,
-                             [this](auto *stmt) { return visit(stmt); });
+                             [this](auto &stmt) { return visit(stmt); });
 }
 
 Pass CreateReturnPathPass()

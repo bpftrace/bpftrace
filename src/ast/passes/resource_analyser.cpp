@@ -58,7 +58,8 @@ private:
 
   bool exceeds_stack_limit(size_t size);
 
-  void maybe_allocate_map_key_buffer(const Map &map, Expression *key_expr);
+  void maybe_allocate_map_key_buffer(const Map &map,
+                                     const Expression &key_expr);
 
   void update_map_info(Map &map);
   void update_variable_info(Variable &var);
@@ -87,12 +88,6 @@ static ProbeType single_provider_type_postsema(Probe *probe)
   }
 
   return ProbeType::invalid;
-}
-
-static std::string get_literal_string(Expression &expr)
-{
-  auto &str = static_cast<String &>(expr);
-  return str.value;
 }
 
 ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace, MapMetadata &mm)
@@ -194,7 +189,7 @@ void ResourceAnalyser::visit(Call &call)
     // NOTE: the same logic can be found in the semantic_analyser pass
     for (auto it = call.vargs.begin() + 1; it != call.vargs.end(); it++) {
       // Promote to 64-bit if it's not an aggregate type
-      SizedType ty = (*it)->type; // copy
+      SizedType ty = it->type(); // copy
       if (!ty.IsAggregate() && !ty.IsTimestampTy())
         ty.SetSize(8);
 
@@ -225,7 +220,7 @@ void ResourceAnalyser::visit(Call &call)
           static_cast<uint64_t>(tuple_size));
     }
 
-    auto fmtstr = get_literal_string(*call.vargs.at(0));
+    auto fmtstr = call.vargs.at(0).as<String>()->value;
     if (call.func == "printf") {
       if (probe_ != nullptr &&
           single_provider_type_postsema(probe_) == ProbeType::iter) {
@@ -241,7 +236,7 @@ void ResourceAnalyser::visit(Call &call)
       resources_.cat_args.emplace_back(fmtstr, tuple->fields);
     }
   } else if (call.func == "join") {
-    auto delim = call.vargs.size() > 1 ? get_literal_string(*call.vargs.at(1))
+    auto delim = call.vargs.size() > 1 ? call.vargs.at(1).as<String>()->value
                                        : " ";
     resources_.join_args.push_back(delim);
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
@@ -249,8 +244,8 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
-    Map *map = dynamic_cast<Map *>(call.vargs.at(0));
-    uint64_t bits = static_cast<Integer *>(call.vargs.at(3))->value;
+    Map *map = call.vargs.at(0).as<Map>();
+    uint64_t bits = call.vargs.at(3).as<Integer>()->value;
     auto args = HistogramArgs{
       .bits = static_cast<long>(bits),
     };
@@ -265,13 +260,13 @@ void ResourceAnalyser::visit(Call &call)
       call.addError() << "Different bits in a single hist unsupported";
     }
   } else if (call.func == "lhist") {
-    Map *map = dynamic_cast<Map *>(call.vargs.at(0));
-    Expression &min_arg = *call.vargs.at(3);
-    Expression &max_arg = *call.vargs.at(4);
-    Expression &step_arg = *call.vargs.at(5);
-    auto &min = dynamic_cast<Integer &>(min_arg);
-    auto &max = dynamic_cast<Integer &>(max_arg);
-    auto &step = dynamic_cast<Integer &>(step_arg);
+    Map *map = call.vargs.at(0).as<Map>();
+    Expression &min_arg = call.vargs.at(3);
+    Expression &max_arg = call.vargs.at(4);
+    Expression &step_arg = call.vargs.at(5);
+    auto &min = *min_arg.as<Integer>();
+    auto &max = *max_arg.as<Integer>();
+    auto &step = *step_arg.as<Integer>();
     auto args = LinearHistogramArgs{
       .min = static_cast<long>(min.value),
       .max = static_cast<long>(max.value),
@@ -289,17 +284,17 @@ void ResourceAnalyser::visit(Call &call)
     }
   } else if (call.func == "time") {
     if (!call.vargs.empty())
-      resources_.time_args.push_back(get_literal_string(*call.vargs.at(0)));
+      resources_.time_args.push_back(call.vargs.at(0).as<String>()->value);
     else
       resources_.time_args.emplace_back("%H:%M:%S\n");
   } else if (call.func == "strftime") {
-    resources_.strftime_args.push_back(get_literal_string(*call.vargs.at(0)));
+    resources_.strftime_args.push_back(call.vargs.at(0).as<String>()->value);
   } else if (call.func == "print") {
     constexpr auto nonmap_headroom = sizeof(AsyncEvent::PrintNonMap);
-    auto *arg = call.vargs.at(0);
-    if (dynamic_cast<Map *>(arg) == nullptr) {
-      resources_.non_map_print_args.push_back(arg->type);
-      const size_t fmtstring_args_size = nonmap_headroom + arg->type.GetSize();
+    auto &arg = call.vargs.at(0);
+    if (!arg.is<Map>()) {
+      resources_.non_map_print_args.push_back(arg.type());
+      const size_t fmtstring_args_size = nonmap_headroom + arg.type().GetSize();
       if (exceeds_stack_limit(fmtstring_args_size)) {
         resources_.max_fmtstring_args_size = std::max<uint64_t>(
             resources_.max_fmtstring_args_size, fmtstring_args_size);
@@ -308,29 +303,26 @@ void ResourceAnalyser::visit(Call &call)
   } else if (call.func == "cgroup_path") {
     if (call.vargs.size() > 1)
       resources_.cgroup_path_args.push_back(
-          get_literal_string(*call.vargs.at(1)));
+          call.vargs.at(1).as<String>()->value);
     else
       resources_.cgroup_path_args.emplace_back("*");
   } else if (call.func == "skboutput") {
-    auto &file_arg = *call.vargs.at(0);
-    auto &file = static_cast<String &>(file_arg);
+    const auto &file = call.vargs.at(0).as<String>()->value;
+    const auto &offset = call.vargs.at(3).as<Integer>()->value;
 
-    auto &offset_arg = *call.vargs.at(3);
-    auto &offset = static_cast<Integer &>(offset_arg);
-
-    resources_.skboutput_args_.emplace_back(file.value, offset.value);
+    resources_.skboutput_args_.emplace_back(file, offset);
     resources_.needs_perf_event_map = true;
   } else if (call.func == "delete") {
-    auto &arg0 = *call.vargs.at(0);
-    auto &map = static_cast<Map &>(arg0);
-    if (exceeds_stack_limit(map.type.GetSize())) {
+    auto &arg0 = call.vargs.at(0);
+    auto &map = *arg0.as<Map>();
+    if (exceeds_stack_limit(map.value_type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
-          resources_.max_write_map_value_size, map.type.GetSize());
+          resources_.max_write_map_value_size, map.value_type.GetSize());
     }
   }
 
   if (call.func == "print" || call.func == "clear" || call.func == "zero") {
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+    if (auto *map = call.vargs.at(0).as<Map>()) {
       auto &name = map->ident;
       auto &map_info = resources_.maps_info[name];
       if (map_info.id == -1)
@@ -359,7 +351,7 @@ void ResourceAnalyser::visit(Call &call)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
   if (call.func == "lhist" || call.func == "hist") {
-    auto &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    auto &map = *call.vargs.at(0).as<Map>();
     // Allocation is always needed for lhist/hist. But we need to allocate
     // space for both map key and the bucket ID from a call to linear/log2
     // functions.
@@ -370,8 +362,8 @@ void ResourceAnalyser::visit(Call &call)
                                              map_key_size);
     }
   } else if (call.func == "has_key") {
-    auto &map = *dynamic_cast<Map *>(call.vargs.at(0));
-    auto *key_expr = call.vargs.at(1);
+    auto &map = *call.vargs.at(0).as<Map>();
+    auto &key_expr = call.vargs.at(1);
     // has_key does not work on scalar maps (e.g. @a = 1), so we
     // don't need to check if map.key_expr is set
     if (needMapKeyAllocation(map, key_expr) &&
@@ -381,8 +373,8 @@ void ResourceAnalyser::visit(Call &call)
                                              map.key_type.GetSize());
     }
   } else if (call.func == "delete") {
-    auto &map = *dynamic_cast<Map *>(call.vargs.at(0));
-    auto *key_expr = call.vargs.at(1);
+    auto &map = *call.vargs.at(0).as<Map>();
+    auto &key_expr = call.vargs.at(1);
     const auto deleteNeedMapKeyAllocation = needMapKeyAllocation(map, key_expr);
     // delete always expects a map and key, so we don't need to check if
     // map.key_expr is set
@@ -425,10 +417,10 @@ void ResourceAnalyser::visit(MapAccess &acc)
   visit(acc.map);
   visit(acc.key);
 
-  if (exceeds_stack_limit(acc.type.GetSize())) {
+  if (exceeds_stack_limit(acc.type().GetSize())) {
     resources_.read_map_value_buffers++;
     resources_.max_read_map_value_size = std::max(
-        resources_.max_read_map_value_size, acc.type.GetSize());
+        resources_.max_read_map_value_size, acc.type().GetSize());
   }
   maybe_allocate_map_key_buffer(*acc.map, acc.key);
 }
@@ -437,10 +429,10 @@ void ResourceAnalyser::visit(Tuple &tuple)
 {
   Visitor<ResourceAnalyser>::visit(tuple);
 
-  if (exceeds_stack_limit(tuple.type.GetSize())) {
+  if (exceeds_stack_limit(tuple.tuple_type.GetSize())) {
     resources_.tuple_buffers++;
     resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                         tuple.type.GetSize());
+                                         tuple.tuple_type.GetSize());
   }
 }
 
@@ -449,10 +441,10 @@ void ResourceAnalyser::visit(For &f)
   Visitor<ResourceAnalyser>::visit(f);
 
   // Need tuple per for loop to store key and value
-  if (exceeds_stack_limit(f.decl->type.GetSize())) {
+  if (exceeds_stack_limit(f.decl->type().GetSize())) {
     resources_.tuple_buffers++;
     resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                         f.decl->type.GetSize());
+                                         f.decl->type().GetSize());
   }
 }
 
@@ -484,9 +476,10 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   // The `MapAccess` validated the read limit, we know this to be
   // a write, so we validate the write limit.
   if (needAssignMapStatementAllocation(assignment)) {
-    if (exceeds_stack_limit(assignment.map->type.GetSize())) {
+    if (exceeds_stack_limit(assignment.map->value_type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
-          resources_.max_write_map_value_size, assignment.map->type.GetSize());
+          resources_.max_write_map_value_size,
+          assignment.map->value_type.GetSize());
     }
   }
   maybe_allocate_map_key_buffer(*assignment.map, assignment.key);
@@ -501,7 +494,7 @@ void ResourceAnalyser::visit(Ternary &ternary)
   // allocate a result temporary, but not on the stack b/c a big string would
   // blow it up. So we need a scratch buffer for it.
 
-  if (ternary.type.IsStringTy()) {
+  if (ternary.result_type.IsStringTy()) {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
@@ -515,10 +508,10 @@ void ResourceAnalyser::update_variable_info(Variable &var)
   // in other modules at the expense of memory over-allocation. Otherwise,
   // we would need to track scopes like SemanticAnalyser and CodegenLLVM
   // and duplicate scope tracking in a third module.
-  if (exceeds_stack_limit(var.type.GetSize())) {
+  if (exceeds_stack_limit(var.var_type.GetSize())) {
     resources_.variable_buffers++;
     resources_.max_variable_size = std::max(resources_.max_variable_size,
-                                            var.type.GetSize());
+                                            var.var_type.GetSize());
   }
 }
 
@@ -526,7 +519,7 @@ void ResourceAnalyser::visit(AssignVarStatement &assignment)
 {
   Visitor<ResourceAnalyser>::visit(assignment);
 
-  update_variable_info(*assignment.var);
+  update_variable_info(*assignment.var());
 }
 
 void ResourceAnalyser::visit(VarDeclStatement &decl)
@@ -549,7 +542,7 @@ bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 void ResourceAnalyser::update_map_info(Map &map)
 {
   auto &map_info = resources_.maps_info[map.ident];
-  map_info.value_type = map.type;
+  map_info.value_type = map.value_type;
   map_info.key_type = map.key_type;
   map_info.is_scalar = map_metadata_.scalar[map.ident];
 
@@ -563,7 +556,7 @@ void ResourceAnalyser::update_map_info(Map &map)
     // hist() and lhist() transparently create additional elements in whatever
     // map they are assigned to. So even if the map looks like it has no keys,
     // multiple keys are necessary.
-    if (!map.type.IsMultiKeyMapTy() && map_info.is_scalar) {
+    if (!map.type().IsMultiKeyMapTy() && map_info.is_scalar) {
       map_info.max_entries = 1;
     } else {
       map_info.max_entries = bpftrace_.config_->max_map_keys;
@@ -572,7 +565,7 @@ void ResourceAnalyser::update_map_info(Map &map)
 }
 
 void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map,
-                                                     Expression *key_expr)
+                                                     const Expression &key_expr)
 {
   const auto map_key_size = map.key_type.GetSize();
   if (needMapKeyAllocation(map, key_expr) &&

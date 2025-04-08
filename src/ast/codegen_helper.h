@@ -34,6 +34,6 @@ inline AddrSpace find_addrspace_stack(const SizedType &ty)
 
 bool needAssignMapStatementAllocation(const AssignMapStatement &assignment);
 
-bool needMapKeyAllocation(const Map &map, Expression *key_expr);
+bool needMapKeyAllocation(const Map &map, const Expression &key_expr);
 
 } // namespace bpftrace::ast
