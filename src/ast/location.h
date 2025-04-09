@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -12,14 +14,15 @@ namespace bpftrace::ast {
 
 class ASTSource;
 
-// Location is a source location. This effectively wraps an `ASTSource` and
-// allows for a full source context to be produced.
-class Location {
+// SourceLocation refers to a single location in a source file.
+//
+// It does not contain any additional context.
+class SourceLocation {
 public:
-  Location() = default;
-  Location(const Location &) = default;
-  Location &operator=(const Location &) = default;
-  Location(location loc, std::shared_ptr<ASTSource> source = {});
+  SourceLocation() = default;
+  SourceLocation(const SourceLocation &) = default;
+  SourceLocation &operator=(const SourceLocation &) = default;
+  SourceLocation(location loc, std::shared_ptr<ASTSource> source = {});
 
   // Canonical filename.
   std::string filename() const;
@@ -46,35 +49,11 @@ public:
     return column_range_.first;
   };
 
-  // Joining Locations; both *must* be from the same source context. This
-  // essentially selects the full superset of both locations. If we want to
-  // represent the idea of multiple related locations, they should be
-  // represented separately as multiple `Location` objects.
-  Location operator+(const Location &other) const
-  {
-    assert(source_.get() == other.source_.get());
-    range_t lines = line_range_;
-    range_t columns = column_range_;
-    if (other.line_range_.first < lines.first) {
-      lines.first = other.line_range_.first;
-      columns.first = other.column_range_.first;
-    } else if (other.line_range_.first == lines.first) {
-      columns.first = std::min(columns.first, other.column_range_.first);
-    }
-    if (other.line_range_.second > lines.second) {
-      lines.second = other.line_range_.second;
-      columns.second = other.column_range_.second;
-    } else if (other.line_range_.second == lines.second) {
-      columns.second = std::max(columns.second, other.column_range_.second);
-    }
-    return { std::move(lines), std::move(columns), source_ };
-  }
-
 private:
   using range_t = std::pair<unsigned int, unsigned int>;
-  Location(range_t &&lines,
-           range_t &&columns,
-           std::shared_ptr<ASTSource> source)
+  SourceLocation(range_t &&lines,
+                 range_t &&columns,
+                 std::shared_ptr<ASTSource> source)
       : line_range_(std::move(lines)),
         column_range_(std::move(columns)),
         source_(std::move(source)) {};
@@ -82,6 +61,56 @@ private:
   range_t line_range_;
   range_t column_range_;
   std::shared_ptr<ASTSource> source_;
+};
+
+class LocationChain;
+using Location = std::shared_ptr<LocationChain>;
+
+// LocationChain is what is used to represent a canonical location in the AST.
+// It is a effectively a linked list of source locations, where each link is
+// annotated by some additional amount of context.
+//
+// Note that each LocationChain should be wrapped as a `shared_ptr`, and the
+// `Location` alias should be the way that it is referred to broadly.
+class LocationChain {
+public:
+  // See the `parent` field below.
+  struct Parent {
+    Parent(Location &&loc) : loc(std::move(loc)) {};
+    std::stringstream msg;
+    const Location loc;
+  };
+
+  LocationChain(const SourceLocation &loc) : current(loc) {};
+
+  // See above.
+  std::string filename() const
+  {
+    return current.filename();
+  }
+  std::string source_location() const
+  {
+    return current.source_location();
+  }
+  std::vector<std::string> source_context() const
+  {
+    return current.source_context();
+  }
+  unsigned int line() const
+  {
+    return current.line();
+  }
+  unsigned int column() const
+  {
+    return current.column();
+  }
+
+  // This may be modified for a node, typically when copying. For example, when
+  // copying a node you may automatically modify the location in order to
+  // inject a parent that has "expanded from <...>". When these are displayed as
+  // diagnostics, they are unpacked in reverse.
+  std::optional<Parent> parent;
+  const SourceLocation current;
 };
 
 } // namespace bpftrace::ast

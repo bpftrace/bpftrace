@@ -12,7 +12,7 @@ class Driver;
 
 namespace ast {
 
-class Location;
+class SourceLocation;
 class Node;
 class Program;
 
@@ -35,7 +35,7 @@ public:
 private:
   std::vector<std::string> lines_;
 
-  friend class Location;
+  friend class SourceLocation;
 };
 
 // Manages the lifetime of AST nodes.
@@ -53,7 +53,7 @@ public:
   template <NodeType T, typename... Args>
   constexpr T *make_node(Args &&...args)
   {
-    auto uniq_ptr = std::make_unique<T>(*diagnostics_,
+    auto uniq_ptr = std::make_unique<T>(*this,
                                         wrap(std::forward<Args>(args))...);
     auto *raw_ptr = uniq_ptr.get();
     nodes_.push_back(std::move(uniq_ptr));
@@ -83,7 +83,7 @@ private:
   }
   Location wrap(location loc)
   {
-    return { loc, source_ };
+    return std::make_shared<LocationChain>(SourceLocation(loc, source_));
   };
 
   std::vector<std::unique_ptr<Node>> nodes_;
@@ -91,6 +91,7 @@ private:
   std::shared_ptr<ASTSource> source_;
 
   friend class bpftrace::Driver;
+  friend class Node;
 };
 
 } // namespace ast

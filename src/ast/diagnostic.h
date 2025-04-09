@@ -42,6 +42,9 @@ public:
     return hint_;
   }
 
+  // Add additional context for the error.
+  std::stringstream& addContext(Location loc);
+
   template <typename T>
   Diagnostic& operator<<(const T& t)
   {
@@ -52,7 +55,7 @@ public:
 private:
   std::stringstream msg_;
   std::stringstream hint_;
-  const Location loc_;
+  Location loc_;
 };
 
 class Diagnostics {

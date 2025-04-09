@@ -64,7 +64,7 @@ enum class ExpansionType {
 
 class Node {
 public:
-  Node(Diagnostics &d, Location &&loc) : diagnostics_(d), loc(loc) {};
+  Node(ASTContext &ctx, Location &&loc) : ctx_(ctx), loc(loc) {};
   virtual ~Node() = default;
 
   Node(const Node &) = delete;
@@ -72,27 +72,11 @@ public:
   Node(Node &&) = delete;
   Node &operator=(Node &&) = delete;
 
-  template <typename... Args>
-  Diagnostic &addError(Args &...args) const
-  {
-    if constexpr (sizeof...(Args) == 0) {
-      return diagnostics_.addError(loc);
-    } else {
-      return diagnostics_.addError(loc + (args.loc + ...));
-    }
-  }
-  template <typename... Args>
-  Diagnostic &addWarning(Args &...args) const
-  {
-    if constexpr (sizeof...(Args) == 0) {
-      return diagnostics_.addWarning(loc);
-    } else {
-      return diagnostics_.addWarning(loc + (args.loc + ...));
-    }
-  }
+  Diagnostic &addError() const;
+  Diagnostic &addWarning() const;
 
 private:
-  Diagnostics &diagnostics_;
+  ASTContext &ctx_;
 
 public:
   // This is temporarily accessible by other classes because we don't have a
@@ -105,7 +89,7 @@ class Map;
 class Variable;
 class Expression : public Node {
 public:
-  Expression(Diagnostics &d, Location &&loc) : Node(d, std::move(loc)) {};
+  Expression(ASTContext &ctx, Location &&loc) : Node(ctx, std::move(loc)) {};
   ~Expression() override = default;
 
   SizedType type;
@@ -118,7 +102,7 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(Diagnostics &d,
+  explicit Integer(ASTContext &ctx,
                    int64_t n,
                    Location &&loc,
                    bool is_negative = true);
@@ -129,7 +113,7 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(Diagnostics &d, long n, Location &&loc);
+  explicit PositionalParameter(ASTContext &ctx, long n, Location &&loc);
 
   long n;
   bool is_in_str = false;
@@ -137,33 +121,33 @@ public:
 
 class PositionalParameterCount : public Expression {
 public:
-  explicit PositionalParameterCount(Diagnostics &d, Location &&loc);
+  explicit PositionalParameterCount(ASTContext &ctx, Location &&loc);
 };
 
 class String : public Expression {
 public:
-  explicit String(Diagnostics &d, std::string str, Location &&loc);
+  explicit String(ASTContext &ctx, std::string str, Location &&loc);
 
   std::string str;
 };
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(Diagnostics &d, std::string mode, Location &&loc);
+  explicit StackMode(ASTContext &ctx, std::string mode, Location &&loc);
 
   std::string mode;
 };
 
 class Identifier : public Expression {
 public:
-  explicit Identifier(Diagnostics &d, std::string ident, Location &&loc);
+  explicit Identifier(ASTContext &ctx, std::string ident, Location &&loc);
 
   std::string ident;
 };
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(Diagnostics &d, std::string ident, Location &&loc);
+  explicit Builtin(ASTContext &ctx, std::string ident, Location &&loc);
 
   std::string ident;
   int probe_id;
@@ -178,8 +162,8 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(Diagnostics &d, std::string func, Location &&loc);
-  Call(Diagnostics &d,
+  explicit Call(ASTContext &ctx, std::string func, Location &&loc);
+  Call(ASTContext &ctx,
        std::string func,
        ExpressionList &&vargs,
        Location &&loc);
@@ -190,8 +174,8 @@ public:
 
 class Sizeof : public Expression {
 public:
-  Sizeof(Diagnostics &d, SizedType type, Location &&loc);
-  Sizeof(Diagnostics &d, Expression *expr, Location &&loc);
+  Sizeof(ASTContext &ctx, SizedType type, Location &&loc);
+  Sizeof(ASTContext &ctx, Expression *expr, Location &&loc);
 
   Expression *expr = nullptr;
   SizedType argtype;
@@ -199,11 +183,11 @@ public:
 
 class Offsetof : public Expression {
 public:
-  Offsetof(Diagnostics &d,
+  Offsetof(ASTContext &ctx,
            SizedType record,
            std::vector<std::string> &field,
            Location &&loc);
-  Offsetof(Diagnostics &d,
+  Offsetof(ASTContext &ctx,
            Expression *expr,
            std::vector<std::string> &field,
            Location &&loc);
@@ -215,7 +199,7 @@ public:
 
 class MapDeclStatement : public Node {
 public:
-  explicit MapDeclStatement(Diagnostics &d,
+  explicit MapDeclStatement(ASTContext &ctx,
                             std::string ident,
                             std::string bpf_type,
                             int max_entries,
@@ -227,8 +211,8 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(Diagnostics &d, std::string ident, Location &&loc);
-  Map(Diagnostics &d, std::string ident, Expression &expr, Location &&loc);
+  explicit Map(ASTContext &ctx, std::string ident, Location &&loc);
+  Map(ASTContext &ctx, std::string ident, Expression &expr, Location &&loc);
 
   std::string ident;
   Expression *key_expr = nullptr;
@@ -242,14 +226,14 @@ public:
 
 class Variable : public Expression {
 public:
-  explicit Variable(Diagnostics &d, std::string ident, Location &&loc);
+  explicit Variable(ASTContext &ctx, std::string ident, Location &&loc);
 
   std::string ident;
 };
 
 class Binop : public Expression {
 public:
-  Binop(Diagnostics &d,
+  Binop(ASTContext &ctx,
         Expression *left,
         Operator op,
         Expression *right,
@@ -262,7 +246,7 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(Diagnostics &d,
+  Unop(ASTContext &ctx,
        Operator op,
        Expression *expr,
        bool is_post_op,
@@ -275,7 +259,7 @@ public:
 
 class FieldAccess : public Expression {
 public:
-  FieldAccess(Diagnostics &d,
+  FieldAccess(ASTContext &ctx,
               Expression *expr,
               std::string field,
               Location &&loc);
@@ -286,7 +270,7 @@ public:
 
 class ArrayAccess : public Expression {
 public:
-  ArrayAccess(Diagnostics &d,
+  ArrayAccess(ASTContext &ctx,
               Expression *expr,
               Expression *indexpr,
               Location &&loc);
@@ -297,7 +281,7 @@ public:
 
 class TupleAccess : public Expression {
 public:
-  TupleAccess(Diagnostics &d, Expression *expr, ssize_t index, Location &&loc);
+  TupleAccess(ASTContext &ctx, Expression *expr, ssize_t index, Location &&loc);
 
   Expression *expr = nullptr;
   ssize_t index;
@@ -305,28 +289,28 @@ public:
 
 class Cast : public Expression {
 public:
-  Cast(Diagnostics &d, SizedType type, Expression *expr, Location &&loc);
+  Cast(ASTContext &ctx, SizedType type, Expression *expr, Location &&loc);
 
   Expression *expr = nullptr;
 };
 
 class Tuple : public Expression {
 public:
-  Tuple(Diagnostics &d, ExpressionList &&elems, Location &&loc);
+  Tuple(ASTContext &ctx, ExpressionList &&elems, Location &&loc);
 
   ExpressionList elems;
 };
 
 class Statement : public Node {
 public:
-  Statement(Diagnostics &d, Location &&loc) : Node(d, std::move(loc)) {};
+  Statement(ASTContext &ctx, Location &&loc) : Node(ctx, std::move(loc)) {};
 };
 
 using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
-  explicit ExprStatement(Diagnostics &d, Expression *expr, Location &&loc);
+  explicit ExprStatement(ASTContext &ctx, Expression *expr, Location &&loc);
 
   Expression *expr = nullptr;
 };
@@ -335,11 +319,11 @@ using MapDeclList = std::vector<MapDeclStatement *>;
 
 class VarDeclStatement : public Statement {
 public:
-  VarDeclStatement(Diagnostics &d,
+  VarDeclStatement(ASTContext &ctx,
                    Variable *var,
                    SizedType type,
                    Location &&loc);
-  VarDeclStatement(Diagnostics &d, Variable *var, Location &&loc);
+  VarDeclStatement(ASTContext &ctx, Variable *var, Location &&loc);
 
   Variable *var = nullptr;
   bool set_type = false;
@@ -347,7 +331,7 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Diagnostics &d,
+  AssignMapStatement(ASTContext &ctx,
                      Map *map,
                      Expression *expr,
                      Location &&loc);
@@ -358,11 +342,11 @@ public:
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Diagnostics &d,
+  AssignVarStatement(ASTContext &ctx,
                      Variable *var,
                      Expression *expr,
                      Location &&loc);
-  AssignVarStatement(Diagnostics &d,
+  AssignVarStatement(ASTContext &ctx,
                      VarDeclStatement *var_decl_stmt,
                      Expression *expr,
                      Location &&loc);
@@ -374,7 +358,7 @@ public:
 
 class AssignConfigVarStatement : public Statement {
 public:
-  AssignConfigVarStatement(Diagnostics &d,
+  AssignConfigVarStatement(ASTContext &ctx,
                            Identifier *config_var,
                            Expression *expr,
                            Location &&loc);
@@ -385,8 +369,8 @@ public:
 
 class Block : public Expression {
 public:
-  Block(Diagnostics &d, StatementList &&stmts, Location &&loc);
-  Block(Diagnostics &d,
+  Block(ASTContext &ctx, StatementList &&stmts, Location &&loc);
+  Block(ASTContext &ctx,
         StatementList &&stmts,
         Expression *expr,
         Location &&loc);
@@ -399,7 +383,7 @@ public:
 
 class If : public Statement {
 public:
-  If(Diagnostics &d,
+  If(ASTContext &ctx,
      Expression *cond,
      Block *if_block,
      Block *else_block,
@@ -412,7 +396,7 @@ public:
 
 class Unroll : public Statement {
 public:
-  Unroll(Diagnostics &d, Expression *expr, Block *block, Location &&loc);
+  Unroll(ASTContext &ctx, Expression *expr, Block *block, Location &&loc);
 
   long int var = 0;
   Expression *expr = nullptr;
@@ -421,12 +405,15 @@ public:
 
 class Jump : public Statement {
 public:
-  Jump(Diagnostics &d, JumpType ident, Expression *return_value, Location &&loc)
-      : Statement(d, std::move(loc)), ident(ident), return_value(return_value)
+  Jump(ASTContext &ctx,
+       JumpType ident,
+       Expression *return_value,
+       Location &&loc)
+      : Statement(ctx, std::move(loc)), ident(ident), return_value(return_value)
   {
   }
-  Jump(Diagnostics &d, JumpType ident, Location &&loc)
-      : Statement(d, std::move(loc)), ident(ident), return_value(nullptr)
+  Jump(ASTContext &ctx, JumpType ident, Location &&loc)
+      : Statement(ctx, std::move(loc)), ident(ident), return_value(nullptr)
   {
   }
 
@@ -436,14 +423,14 @@ public:
 
 class Predicate : public Node {
 public:
-  explicit Predicate(Diagnostics &d, Expression *expr, Location &&loc);
+  explicit Predicate(ASTContext &ctx, Expression *expr, Location &&loc);
 
   Expression *expr = nullptr;
 };
 
 class Ternary : public Expression {
 public:
-  Ternary(Diagnostics &d,
+  Ternary(ASTContext &ctx,
           Expression *cond,
           Expression *left,
           Expression *right,
@@ -456,8 +443,8 @@ public:
 
 class While : public Statement {
 public:
-  While(Diagnostics &d, Expression *cond, Block *block, Location &&loc)
-      : Statement(d, std::move(loc)), cond(cond), block(block)
+  While(ASTContext &ctx, Expression *cond, Block *block, Location &&loc)
+      : Statement(ctx, std::move(loc)), cond(cond), block(block)
   {
   }
 
@@ -467,12 +454,12 @@ public:
 
 class For : public Statement {
 public:
-  For(Diagnostics &d,
+  For(ASTContext &ctx,
       Variable *decl,
       Map *map,
       StatementList &&stmts,
       Location &&loc)
-      : Statement(d, std::move(loc)),
+      : Statement(ctx, std::move(loc)),
         decl(decl),
         map(map),
         stmts(std::move(stmts))
@@ -487,8 +474,8 @@ public:
 
 class Config : public Statement {
 public:
-  Config(Diagnostics &d, StatementList &&stmts, Location &&loc)
-      : Statement(d, std::move(loc)), stmts(std::move(stmts))
+  Config(ASTContext &ctx, StatementList &&stmts, Location &&loc)
+      : Statement(ctx, std::move(loc)), stmts(std::move(stmts))
   {
   }
 
@@ -498,7 +485,7 @@ public:
 class Probe;
 class AttachPoint : public Node {
 public:
-  AttachPoint(Diagnostics &d,
+  AttachPoint(ASTContext &ctx,
               std::string raw_input,
               bool ignore_invalid,
               Location &&loc);
@@ -548,7 +535,7 @@ using AttachPointList = std::vector<AttachPoint *>;
 
 class Probe : public Node {
 public:
-  Probe(Diagnostics &d,
+  Probe(ASTContext &ctx,
         AttachPointList &&attach_points,
         Predicate *pred,
         Block *block,
@@ -576,7 +563,7 @@ using ProbeList = std::vector<Probe *>;
 
 class SubprogArg : public Node {
 public:
-  SubprogArg(Diagnostics &d, std::string name, SizedType type, Location &&loc);
+  SubprogArg(ASTContext &ctx, std::string name, SizedType type, Location &&loc);
 
   std::string name() const;
   SizedType type;
@@ -588,7 +575,7 @@ using SubprogArgList = std::vector<SubprogArg *>;
 
 class Subprog : public Node {
 public:
-  Subprog(Diagnostics &d,
+  Subprog(ASTContext &ctx,
           std::string name,
           SizedType return_type,
           SubprogArgList &&args,
@@ -608,7 +595,7 @@ using SubprogList = std::vector<Subprog *>;
 
 class Import : public Node {
 public:
-  Import(Diagnostics &d, std::string name, Location &&loc);
+  Import(ASTContext &ctx, std::string name, Location &&loc);
 
   const std::string &name() const
   {
@@ -622,7 +609,7 @@ using ImportList = std::vector<Import *>;
 
 class Program : public Node {
 public:
-  Program(Diagnostics &d,
+  Program(ASTContext &ctx,
           std::string c_definitions,
           Config *config,
           ImportList &&imports,

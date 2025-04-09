@@ -2446,9 +2446,15 @@ kprobe:f { @x = 1; @y = stats(5); @x = @y; }
   test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
   test_error("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", R"(
-stdin:1:28-34: ERROR: Type mismatch for '>': comparing 'hist_t' with 'int64'
+stdin:1:31-32: ERROR: Type mismatch for '>': comparing hist_t with int64
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
-                           ~~~~~~
+                              ~
+stdin:1:28-30: ERROR: left (hist_t)
+kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
+                           ~~
+stdin:1:33-34: ERROR: right (int64)
+kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
+                                ~
 )");
   test_error("kprobe:f { @ = count(); @ += 5 }", R"(
 stdin:1:25-26: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count_t'
@@ -3571,7 +3577,7 @@ TEST(semantic_analyser, pointer_compare)
   test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t == $y); })_");
 
   test_for_warning("k:f { $a = (int8*) 1; $b = (int16*) 2; $c = ($a == $b) }",
-                   "comparison of distinct pointer types ('int8, 'int16')");
+                   "comparison of distinct pointer types: int8, int16");
 }
 
 // Basic functionality test
