@@ -23,8 +23,8 @@ TEST(Location, single_line)
   auto &call = *ast.make_node<ast::Call>("foo", loc);
   auto &err = call.addError();
 
-  EXPECT_EQ(err.loc().source_location(), "testfile:3:9-13");
-  EXPECT_EQ(err.loc().source_context(),
+  EXPECT_EQ(err.loc()->source_location(), "testfile:3:9-13");
+  EXPECT_EQ(err.loc()->source_context(),
             std::vector<std::string>({
                 "  print(1, 2);",
                 "        ~~~~",
@@ -40,8 +40,8 @@ TEST(Location, multi_line)
   auto &call = *ast.make_node<ast::Call>("foo", loc);
   auto &err = call.addError();
 
-  EXPECT_EQ(err.loc().source_location(), "testfile:3-4");
-  EXPECT_EQ(err.loc().source_context(),
+  EXPECT_EQ(err.loc()->source_location(), "testfile:3-4");
+  EXPECT_EQ(err.loc()->source_context(),
             std::vector<std::string>({
                 "  print(1, 2);",
                 "  print(1, 2, 3, 4);",

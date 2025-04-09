@@ -2185,10 +2185,10 @@ void SemanticAnalyser::binop_int(Binop &binop)
       auto len = bpftrace_.get_param(pos_param->n, true).length();
       if (!offset || binop.op != Operator::PLUS || offset->n < 0 ||
           static_cast<size_t>(offset->n) > len) {
-        binop.addError(*binop.right)
-            << "only addition of a single constant less or equal to the "
-            << "length of $" << pos_param->n << " (which is " << len << ")"
-            << " is allowed inside str()";
+        auto &err = binop.addError();
+        err << "only addition of a single constant less or equal to the "
+            << "length of $" << pos_param->n << " is allowed inside str()";
+        err.addContext(binop.right->loc) << "constant is " << len;
       }
     }
   }
@@ -2258,9 +2258,11 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
         const auto *le = lht.GetPointeeTy();
         const auto *re = rht.GetPointeeTy();
         if (*le != *re) {
-          binop.left->addWarning(*binop.right)
-              << "comparison of distinct pointer types ('" << *le << ", '"
-              << *re << "')";
+          auto &warn = binop.addWarning();
+          warn << "comparison of distinct pointer types: " << *le << ", "
+               << *re;
+          warn.addContext(binop.left->loc) << "left (" << *le << ")";
+          warn.addContext(binop.right->loc) << "right (" << *re << ")";
         }
       }
     } else if (logical) {
@@ -2364,9 +2366,11 @@ void SemanticAnalyser::visit(Binop &binop)
   // Compare type here, not the sized type as we it needs to work on strings of
   // different lengths
   else if (lht.GetTy() != rht.GetTy()) {
-    binop.left->addError(*binop.right)
-        << "Type mismatch for '" << opstr(binop) << "': comparing '" << lht
-        << "' with '" << rht << "'";
+    auto &err = binop.addError();
+    err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
+        << " with " << rht;
+    err.addContext(binop.left->loc) << "left (" << lht << ")";
+    err.addContext(binop.right->loc) << "right (" << rht << ")";
   }
   // Also allow combination like reg("sp") + 8
   else if (binop.op != Operator::EQ && binop.op != Operator::NE) {
@@ -2381,9 +2385,10 @@ void SemanticAnalyser::visit(Binop &binop)
     auto lit_len = bpftrace_.get_string_literal(lit).size();
     auto str_len = str->type.GetSize();
     if (lit_len > str_len) {
-      binop.left->addWarning(*binop.right)
-          << "The literal is longer than the variable string (size=" << str_len
+      auto &err = binop.addWarning();
+      err << "The literal is longer than the variable string (size=" << str_len
           << "), condition will always be false";
+      err.addContext(binop.right->loc) << "literal size is " << lit_len;
     }
   }
 }

@@ -1,202 +1,215 @@
-#include "ast/ast.h"
-
 #include <algorithm>
 #include <utility>
 
+#include "ast/ast.h"
 #include "ast/context.h"
-#include "ast/helpers.h"
 #include "log.h"
 #include "util/format.h"
 
 namespace bpftrace::ast {
 
+Diagnostic &Node::addError() const
+{
+  return ctx_.diagnostics_->addError(loc);
+}
+
+Diagnostic &Node::addWarning() const
+{
+  return ctx_.diagnostics_->addWarning(loc);
+}
+
 static constexpr std::string_view ENUM = "enum ";
 
-Integer::Integer(Diagnostics &d, int64_t n, Location &&loc, bool is_negative)
-    : Expression(d, std::move(loc)), n(n), is_negative(is_negative)
+Integer::Integer(ASTContext &ctx, int64_t n, Location &&loc, bool is_negative)
+    : Expression(ctx, std::move(loc)), n(n), is_negative(is_negative)
 {
   is_literal = true;
 }
 
-String::String(Diagnostics &d, std::string str, Location &&loc)
-    : Expression(d, std::move(loc)), str(std::move(str))
+String::String(ASTContext &ctx, std::string str, Location &&loc)
+    : Expression(ctx, std::move(loc)), str(std::move(str))
 {
   is_literal = true;
 }
 
-StackMode::StackMode(Diagnostics &d, std::string mode, Location &&loc)
-    : Expression(d, std::move(loc)), mode(std::move(mode))
+StackMode::StackMode(ASTContext &ctx, std::string mode, Location &&loc)
+    : Expression(ctx, std::move(loc)), mode(std::move(mode))
 {
   is_literal = true;
 }
 
-Builtin::Builtin(Diagnostics &d, std::string ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(std::move(ident))
+Builtin::Builtin(ASTContext &ctx, std::string ident, Location &&loc)
+    : Expression(ctx, std::move(loc)), ident(std::move(ident))
 {
 }
 
-Identifier::Identifier(Diagnostics &d, std::string ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(std::move(ident))
+Identifier::Identifier(ASTContext &ctx, std::string ident, Location &&loc)
+    : Expression(ctx, std::move(loc)), ident(std::move(ident))
 {
 }
 
-PositionalParameter::PositionalParameter(Diagnostics &d, long n, Location &&loc)
-    : Expression(d, std::move(loc)), n(n)
+PositionalParameter::PositionalParameter(ASTContext &ctx,
+                                         long n,
+                                         Location &&loc)
+    : Expression(ctx, std::move(loc)), n(n)
 {
   is_literal = true;
 }
 
-PositionalParameterCount::PositionalParameterCount(Diagnostics &d,
+PositionalParameterCount::PositionalParameterCount(ASTContext &ctx,
                                                    Location &&loc)
-    : Expression(d, std::move(loc))
+    : Expression(ctx, std::move(loc))
 {
   is_literal = true;
 }
 
-Call::Call(Diagnostics &d, std::string func, Location &&loc)
-    : Expression(d, std::move(loc)), func(std::move(func))
+Call::Call(ASTContext &ctx, std::string func, Location &&loc)
+    : Expression(ctx, std::move(loc)), func(std::move(func))
 {
 }
 
-Call::Call(Diagnostics &d,
+Call::Call(ASTContext &ctx,
            std::string func,
            ExpressionList &&vargs,
            Location &&loc)
-    : Expression(d, std::move(loc)),
+    : Expression(ctx, std::move(loc)),
       func(std::move(func)),
       vargs(std::move(vargs))
 {
 }
 
-Sizeof::Sizeof(Diagnostics &d, SizedType type, Location &&loc)
-    : Expression(d, std::move(loc)), argtype(std::move(type))
+Sizeof::Sizeof(ASTContext &ctx, SizedType type, Location &&loc)
+    : Expression(ctx, std::move(loc)), argtype(std::move(type))
 {
 }
 
-Sizeof::Sizeof(Diagnostics &d, Expression *expr, Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr)
+Sizeof::Sizeof(ASTContext &ctx, Expression *expr, Location &&loc)
+    : Expression(ctx, std::move(loc)), expr(expr)
 {
 }
 
-Offsetof::Offsetof(Diagnostics &d,
+Offsetof::Offsetof(ASTContext &ctx,
                    SizedType record,
                    std::vector<std::string> &field,
                    Location &&loc)
-    : Expression(d, std::move(loc)), record(std::move(record)), field(field)
+    : Expression(ctx, std::move(loc)), record(std::move(record)), field(field)
 {
 }
 
-Offsetof::Offsetof(Diagnostics &d,
+Offsetof::Offsetof(ASTContext &ctx,
                    Expression *expr,
                    std::vector<std::string> &field,
                    Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), field(field)
+    : Expression(ctx, std::move(loc)), expr(expr), field(field)
 {
 }
 
-MapDeclStatement::MapDeclStatement(Diagnostics &d,
+MapDeclStatement::MapDeclStatement(ASTContext &ctx,
                                    std::string ident,
                                    std::string bpf_type,
                                    int max_entries,
                                    Location &&loc)
-    : Node(d, std::move(loc)),
+    : Node(ctx, std::move(loc)),
       ident(std::move(ident)),
       bpf_type(std::move(bpf_type)),
       max_entries(max_entries)
 {
 }
 
-Map::Map(Diagnostics &d, std::string ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(std::move(ident))
+Map::Map(ASTContext &ctx, std::string ident, Location &&loc)
+    : Expression(ctx, std::move(loc)), ident(std::move(ident))
 {
 }
 
-Map::Map(Diagnostics &d, std::string ident, Expression &expr, Location &&loc)
-    : Expression(d, std::move(loc)), ident(std::move(ident)), key_expr(&expr)
+Map::Map(ASTContext &ctx, std::string ident, Expression &expr, Location &&loc)
+    : Expression(ctx, std::move(loc)), ident(std::move(ident)), key_expr(&expr)
 {
   key_expr->key_for_map = this;
 }
 
-Variable::Variable(Diagnostics &d, std::string ident, Location &&loc)
-    : Expression(d, std::move(loc)), ident(std::move(ident))
+Variable::Variable(ASTContext &ctx, std::string ident, Location &&loc)
+    : Expression(ctx, std::move(loc)), ident(std::move(ident))
 {
 }
 
-Binop::Binop(Diagnostics &d,
+Binop::Binop(ASTContext &ctx,
              Expression *left,
              Operator op,
              Expression *right,
              Location &&loc)
-    : Expression(d, std::move(loc)), left(left), right(right), op(op)
+    : Expression(ctx, std::move(loc)), left(left), right(right), op(op)
 {
 }
 
-Unop::Unop(Diagnostics &d,
+Unop::Unop(ASTContext &ctx,
            Operator op,
            Expression *expr,
            bool is_post_op,
            Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), op(op), is_post_op(is_post_op)
+    : Expression(ctx, std::move(loc)),
+      expr(expr),
+      op(op),
+      is_post_op(is_post_op)
 {
 }
 
-Ternary::Ternary(Diagnostics &d,
+Ternary::Ternary(ASTContext &ctx,
                  Expression *cond,
                  Expression *left,
                  Expression *right,
                  Location &&loc)
-    : Expression(d, std::move(loc)), cond(cond), left(left), right(right)
+    : Expression(ctx, std::move(loc)), cond(cond), left(left), right(right)
 {
 }
 
-FieldAccess::FieldAccess(Diagnostics &d,
+FieldAccess::FieldAccess(ASTContext &ctx,
                          Expression *expr,
                          std::string field,
                          Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), field(std::move(field))
+    : Expression(ctx, std::move(loc)), expr(expr), field(std::move(field))
 {
 }
 
-ArrayAccess::ArrayAccess(Diagnostics &d,
+ArrayAccess::ArrayAccess(ASTContext &ctx,
                          Expression *expr,
                          Expression *indexpr,
                          Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), indexpr(indexpr)
+    : Expression(ctx, std::move(loc)), expr(expr), indexpr(indexpr)
 {
 }
 
-TupleAccess::TupleAccess(Diagnostics &d,
+TupleAccess::TupleAccess(ASTContext &ctx,
                          Expression *expr,
                          ssize_t index,
                          Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr), index(index)
+    : Expression(ctx, std::move(loc)), expr(expr), index(index)
 {
 }
 
-Cast::Cast(Diagnostics &d,
+Cast::Cast(ASTContext &ctx,
            SizedType cast_type,
            Expression *expr,
            Location &&loc)
-    : Expression(d, std::move(loc)), expr(expr)
+    : Expression(ctx, std::move(loc)), expr(expr)
 {
   type = cast_type;
 }
 
-Tuple::Tuple(Diagnostics &d, ExpressionList &&elems, Location &&loc)
-    : Expression(d, std::move(loc)), elems(std::move(elems))
+Tuple::Tuple(ASTContext &ctx, ExpressionList &&elems, Location &&loc)
+    : Expression(ctx, std::move(loc)), elems(std::move(elems))
 {
 }
 
-ExprStatement::ExprStatement(Diagnostics &d, Expression *expr, Location &&loc)
-    : Statement(d, std::move(loc)), expr(expr)
+ExprStatement::ExprStatement(ASTContext &ctx, Expression *expr, Location &&loc)
+    : Statement(ctx, std::move(loc)), expr(expr)
 {
 }
 
-AssignMapStatement::AssignMapStatement(Diagnostics &d,
+AssignMapStatement::AssignMapStatement(ASTContext &ctx,
                                        Map *map,
                                        Expression *expr,
                                        Location &&loc)
-    : Statement(d, std::move(loc)), map(map), expr(expr)
+    : Statement(ctx, std::move(loc)), map(map), expr(expr)
 {
   // If this is a block expression, then we skip through that and actually set
   // the map on the underlying expression. This is done recursively. It is only
@@ -213,20 +226,20 @@ AssignMapStatement::AssignMapStatement(Diagnostics &d,
   value->map = map;
 };
 
-AssignVarStatement::AssignVarStatement(Diagnostics &d,
+AssignVarStatement::AssignVarStatement(ASTContext &ctx,
                                        Variable *var,
                                        Expression *expr,
                                        Location &&loc)
-    : Statement(d, std::move(loc)), var(var), expr(expr)
+    : Statement(ctx, std::move(loc)), var(var), expr(expr)
 {
   expr->var = var;
 }
 
-AssignVarStatement::AssignVarStatement(Diagnostics &d,
+AssignVarStatement::AssignVarStatement(ASTContext &ctx,
                                        VarDeclStatement *var_decl_stmt,
                                        Expression *expr,
                                        Location &&loc)
-    : Statement(d, std::move(loc)),
+    : Statement(ctx, std::move(loc)),
       var_decl_stmt(var_decl_stmt),
       var(var_decl_stmt->var),
       expr(expr)
@@ -234,93 +247,93 @@ AssignVarStatement::AssignVarStatement(Diagnostics &d,
   expr->var = var;
 }
 
-AssignConfigVarStatement::AssignConfigVarStatement(Diagnostics &d,
+AssignConfigVarStatement::AssignConfigVarStatement(ASTContext &ctx,
                                                    Identifier *config_var,
                                                    Expression *expr,
                                                    Location &&loc)
-    : Statement(d, std::move(loc)), config_var(config_var), expr(expr)
+    : Statement(ctx, std::move(loc)), config_var(config_var), expr(expr)
 {
 }
 
-VarDeclStatement::VarDeclStatement(Diagnostics &d,
+VarDeclStatement::VarDeclStatement(ASTContext &ctx,
                                    Variable *var,
                                    SizedType type,
                                    Location &&loc)
-    : Statement(d, std::move(loc)), var(var), set_type(true)
+    : Statement(ctx, std::move(loc)), var(var), set_type(true)
 {
   var->type = std::move(type);
 }
 
-VarDeclStatement::VarDeclStatement(Diagnostics &d,
+VarDeclStatement::VarDeclStatement(ASTContext &ctx,
                                    Variable *var,
                                    Location &&loc)
-    : Statement(d, std::move(loc)), var(var)
+    : Statement(ctx, std::move(loc)), var(var)
 {
   var->type = CreateNone();
 }
 
-Predicate::Predicate(Diagnostics &d, Expression *expr, Location &&loc)
-    : Node(d, std::move(loc)), expr(expr)
+Predicate::Predicate(ASTContext &ctx, Expression *expr, Location &&loc)
+    : Node(ctx, std::move(loc)), expr(expr)
 {
 }
 
-AttachPoint::AttachPoint(Diagnostics &d,
+AttachPoint::AttachPoint(ASTContext &ctx,
                          std::string raw_input,
                          bool ignore_invalid,
                          Location &&loc)
-    : Node(d, std::move(loc)),
+    : Node(ctx, std::move(loc)),
       raw_input(std::move(raw_input)),
       ignore_invalid(ignore_invalid)
 {
 }
 
-Block::Block(Diagnostics &d, StatementList &&stmts, Location &&loc)
-    : Expression(d, std::move(loc)), stmts(std::move(stmts))
+Block::Block(ASTContext &ctx, StatementList &&stmts, Location &&loc)
+    : Expression(ctx, std::move(loc)), stmts(std::move(stmts))
 {
 }
 
-Block::Block(Diagnostics &d,
+Block::Block(ASTContext &ctx,
              StatementList &&stmts,
              Expression *expr,
              Location &&loc)
-    : Expression(d, std::move(loc)), stmts(std::move(stmts)), expr(expr)
+    : Expression(ctx, std::move(loc)), stmts(std::move(stmts)), expr(expr)
 {
 }
 
-If::If(Diagnostics &d,
+If::If(ASTContext &ctx,
        Expression *cond,
        Block *if_block,
        Block *else_block,
        Location &&loc)
-    : Statement(d, std::move(loc)),
+    : Statement(ctx, std::move(loc)),
       cond(cond),
       if_block(if_block),
       else_block(else_block)
 {
 }
 
-Unroll::Unroll(Diagnostics &d, Expression *expr, Block *block, Location &&loc)
-    : Statement(d, std::move(loc)), expr(expr), block(block)
+Unroll::Unroll(ASTContext &ctx, Expression *expr, Block *block, Location &&loc)
+    : Statement(ctx, std::move(loc)), expr(expr), block(block)
 {
 }
 
-Probe::Probe(Diagnostics &d,
+Probe::Probe(ASTContext &ctx,
              AttachPointList &&attach_points,
              Predicate *pred,
              Block *block,
              Location &&loc)
-    : Node(d, std::move(loc)),
+    : Node(ctx, std::move(loc)),
       attach_points(std::move(attach_points)),
       pred(pred),
       block(block)
 {
 }
 
-SubprogArg::SubprogArg(Diagnostics &d,
+SubprogArg::SubprogArg(ASTContext &ctx,
                        std::string name,
                        SizedType type,
                        Location &&loc)
-    : Node(d, std::move(loc)), type(std::move(type)), name_(std::move(name))
+    : Node(ctx, std::move(loc)), type(std::move(type)), name_(std::move(name))
 {
 }
 
@@ -329,13 +342,13 @@ std::string SubprogArg::name() const
   return name_;
 }
 
-Subprog::Subprog(Diagnostics &d,
+Subprog::Subprog(ASTContext &ctx,
                  std::string name,
                  SizedType return_type,
                  SubprogArgList &&args,
                  StatementList &&stmts,
                  Location &&loc)
-    : Node(d, std::move(loc)),
+    : Node(ctx, std::move(loc)),
       args(std::move(args)),
       return_type(std::move(return_type)),
       stmts(std::move(stmts)),
@@ -343,12 +356,12 @@ Subprog::Subprog(Diagnostics &d,
 {
 }
 
-Import::Import(Diagnostics &d, std::string name, Location &&loc)
-    : Node(d, std::move(loc)), name_(std::move(name))
+Import::Import(ASTContext &ctx, std::string name, Location &&loc)
+    : Node(ctx, std::move(loc)), name_(std::move(name))
 {
 }
 
-Program::Program(Diagnostics &d,
+Program::Program(ASTContext &ctx,
                  std::string c_definitions,
                  Config *config,
                  ImportList &&imports,
@@ -356,7 +369,7 @@ Program::Program(Diagnostics &d,
                  SubprogList &&functions,
                  ProbeList &&probes,
                  Location &&loc)
-    : Node(d, std::move(loc)),
+    : Node(ctx, std::move(loc)),
       c_definitions(std::move(c_definitions)),
       config(config),
       imports(std::move(imports)),

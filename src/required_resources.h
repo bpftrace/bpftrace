@@ -31,11 +31,11 @@ public:
   // serialized and used by a separate runtime.
   HelperErrorInfo(int func_id, const ast::Location &loc)
       : func_id(func_id),
-        filename(loc.filename()),
-        line(loc.line()),
-        column(loc.column()),
-        source_location(loc.source_location()),
-        source_context(loc.source_context())
+        filename(loc->filename()),
+        line(loc->line()),
+        column(loc->column()),
+        source_location(loc->source_location()),
+        source_context(loc->source_context())
   {
   }
 

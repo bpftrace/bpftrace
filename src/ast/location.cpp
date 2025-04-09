@@ -6,14 +6,14 @@
 
 namespace bpftrace::ast {
 
-Location::Location(location loc, std::shared_ptr<ASTSource> source)
+SourceLocation::SourceLocation(location loc, std::shared_ptr<ASTSource> source)
     : line_range_(loc.begin.line, loc.end.line),
       column_range_(loc.begin.column, loc.end.column),
       source_(std::move(source))
 {
 }
 
-std::string Location::filename() const
+std::string SourceLocation::filename() const
 {
   if (source_) {
     return source_->filename;
@@ -21,7 +21,7 @@ std::string Location::filename() const
   return "";
 }
 
-std::string Location::source_location() const
+std::string SourceLocation::source_location() const
 {
   std::stringstream ss;
   if (source_) {
@@ -36,7 +36,7 @@ std::string Location::source_location() const
   return ss.str();
 }
 
-std::vector<std::string> Location::source_context() const
+std::vector<std::string> SourceLocation::source_context() const
 {
   std::vector<std::string> result;
 
