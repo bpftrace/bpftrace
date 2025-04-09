@@ -84,4 +84,15 @@ std::vector<std::string> SourceLocation::source_context() const
   return result;
 }
 
+Location operator+(const Location &orig, const Location &expansion)
+{
+  if (expansion == nullptr) {
+    return orig;
+  }
+  auto nlink = std::make_shared<LocationChain>(expansion->current);
+  nlink->parent.emplace(LocationChain::Parent(Location(orig)));
+  nlink->parent->msg << "expanded from";
+  return nlink;
+}
+
 } // namespace bpftrace::ast
