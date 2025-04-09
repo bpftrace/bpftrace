@@ -935,6 +935,8 @@ However, it's best practice to declare maps up front as using the default can le
 **Warning** this feature is experimental and may be subject to changes.
 It also requires the 'unstable_map_decl' config being set to 1.
 
+**Warning** The "lru" variants of hash and percpuhash evict the approximately least recently used elements. In other words, users should not rely on the accuracy on the part of the eviction algorithm. Adding a single new element may cause one or multiple elements to be deleted if the map is at capacity. link:https://docs.ebpf.io/linux/map-type/BPF_MAP_TYPE_LRU_HASH/[Read more about LRU internals].
+
 ==== Maps without Explicit Keys
 
 Values can be assigned directly to maps without a key (sometimes refered to as scalar maps).
