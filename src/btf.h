@@ -105,7 +105,7 @@ public:
                                        std::string& err);
   std::shared_ptr<Struct> resolve_raw_tracepoint_args(const std::string& func,
                                                       std::string& err);
-  void resolve_fields(SizedType& type);
+  void resolve_fields(const SizedType& type);
 
   int get_btf_id(std::string_view func,
                  std::string_view mod,

@@ -1026,7 +1026,7 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
   return -1;
 }
 
-void BTF::resolve_fields(SizedType &type)
+void BTF::resolve_fields(const SizedType &type)
 {
   if (!type.IsRecordTy())
     return;

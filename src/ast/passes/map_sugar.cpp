@@ -12,33 +12,6 @@ class MapDefaultKey : public Visitor<MapDefaultKey> {
 public:
   explicit MapDefaultKey(ASTContext &ast) : ast_(ast) {};
 
-  template <typename T>
-  T *replace(T *node, [[maybe_unused]] void *result)
-  {
-    if constexpr (std::is_same_v<T, Expression>) {
-      // Replace with an indexed map. Note that we don't visit for calls that
-      // are exempt from this. This applies to all expressions in the tree,
-      // including `lhist` and `hist`, which are treated in a special way
-      // subsequently.
-      if (auto *map = dynamic_cast<Map *>(node)) {
-        auto *index = ast_.make_node<Integer>(0, Location(map->loc));
-        return ast_.make_node<MapAccess>(map, index, Location(map->loc));
-      }
-      return node;
-    } else if constexpr (std::is_same_v<T, Statement>) {
-      // Replace with a statement that has the default index, in the same way as
-      // above. This will be type-checked during semantic analysis.
-      if (auto *map = dynamic_cast<AssignScalarMapStatement *>(node)) {
-        auto *index = ast_.make_node<Integer>(0, Location(map->loc));
-        return ast_.make_node<AssignMapStatement>(
-            map->map, index, map->expr, Location(node->loc));
-      }
-      return node;
-    } else {
-      return Visitor<MapDefaultKey>::replace<T>(node, result);
-    }
-  }
-
   using Visitor<MapDefaultKey>::visit;
   void visit(Call &call);
   void visit(For &for_loop);
@@ -46,6 +19,9 @@ public:
   void visit(MapAccess &acc);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
+  void visit(Expression &expr);
+  void visit(Statement &stmt);
+
   void check(Map &map, bool indexed);
 
 private:
@@ -63,26 +39,10 @@ class MapAssignmentCall : public Visitor<MapAssignmentCall> {
 public:
   explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {};
 
-  template <typename T>
-  T *replace(T *node, [[maybe_unused]] void *result)
-  {
-    if constexpr (std::is_same_v<T, Statement>) {
-      // Any assignments that are direct calls to special functions may
-      // be rewritten to simply be the function expression.
-      if (auto *assign = dynamic_cast<AssignMapStatement *>(node)) {
-        return checkAssignment(assign);
-      }
-      return node;
-    } else {
-      return Visitor<MapAssignmentCall>::replace<T>(node, result);
-    }
-  }
-
   using Visitor<MapAssignmentCall>::visit;
   void visit(Call &call);
   void visit(AssignMapStatement &assign);
-
-  Statement *checkAssignment(AssignMapStatement *assign);
+  void visit(Statement &stmt);
 
 private:
   ASTContext &ast_;
@@ -109,20 +69,47 @@ void MapDefaultKey::visit(Map &map)
 void MapDefaultKey::visit(MapAccess &acc)
 {
   check(*acc.map, true);
-  visitAndReplace(&acc.key);
+  visit(acc.key);
 }
 
 void MapDefaultKey::visit(AssignScalarMapStatement &assign)
 {
   check(*assign.map, false);
-  visitAndReplace(&assign.expr);
+  visit(assign.expr);
 }
 
 void MapDefaultKey::visit(AssignMapStatement &assign)
 {
   check(*assign.map, true);
-  visitAndReplace(&assign.key);
-  visitAndReplace(&assign.expr);
+  visit(assign.key);
+  visit(assign.expr);
+}
+
+void MapDefaultKey::visit(Expression &expr)
+{
+  Visitor<MapDefaultKey>::visit(expr);
+
+  // Replace with an indexed map. Note that we don't visit for calls that
+  // are exempt from this. This applies to all expressions in the tree,
+  // including `lhist` and `hist`, which are treated in a special way
+  // subsequently.
+  if (auto *map = expr.as<Map>()) {
+    auto *index = ast_.make_node<Integer>(0, Location(map->loc));
+    expr.value = ast_.make_node<MapAccess>(map, index, Location(map->loc));
+  }
+}
+
+void MapDefaultKey::visit(Statement &stmt)
+{
+  Visitor<MapDefaultKey>::visit(stmt);
+
+  // Replace with a statement that has the default index, in the same way as
+  // above. This will be type-checked during semantic analysis.
+  if (auto *map = stmt.as<AssignScalarMapStatement>()) {
+    auto *index = ast_.make_node<Integer>(0, Location(map->loc));
+    stmt.value = ast_.make_node<AssignMapStatement>(
+        map->map, index, map->expr, Location(map->loc));
+  }
 }
 
 void MapDefaultKey::check(Map &map, bool indexed)
@@ -149,7 +136,7 @@ void MapDefaultKey::visit(Call &call)
   // *either* a pure map, or a map access. Later passes will figure out what to
   // do with this, as they may have parametric behavior (as with print).
   if (RAW_MAP_ARG.contains(call.func) && call.vargs.size() >= 1) {
-    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+    if (auto *map = call.vargs.at(0).as<Map>()) {
       // Check our functions for consistency. These are effectively builtins
       // that require that map to have keys (conditionally for delete).
       if (call.func == "delete") {
@@ -161,10 +148,10 @@ void MapDefaultKey::visit(Call &call)
       }
     } else {
       // Process the argument.
-      visitAndReplace(&call.vargs[0]);
+      visit(call.vargs[0]);
     }
     for (size_t i = 1; i < call.vargs.size(); i++) {
-      visitAndReplace(&call.vargs.at(i));
+      visit(call.vargs.at(i));
     }
   } else {
     Visitor<MapDefaultKey>::visit(call);
@@ -183,14 +170,13 @@ void MapFunctionAliases::visit(Call &call)
   // `delete(@[key])` syntax but rewrite this under the hood.
   if (call.func == "delete") {
     if (call.vargs.size() == 1) {
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        call.func = "clear";
+      if (auto *map = call.vargs.at(0).as<Map>()) {
         call.vargs.clear();
-        call.vargs.push_back(map);
-      } else if (auto *access = dynamic_cast<MapAccess *>(call.vargs.at(0))) {
+        call.vargs.emplace_back(map);
+      } else if (auto *access = call.vargs.at(0).as<MapAccess>()) {
         call.vargs.clear();
-        call.vargs.push_back(access->map);
-        call.vargs.push_back(access->key);
+        call.vargs.emplace_back(access->map);
+        call.vargs.emplace_back(access->key);
         call.injected_args += 1;
       }
     }
@@ -203,23 +189,28 @@ static std::unordered_set<std::string> ASSIGN_REWRITE = {
   "hist", "lhist", "count", "sum", "min", "max", "avg", "stats",
 };
 
-static Expression *injectMap(Expression *expr, Map *map, Expression *key)
+static std::optional<Expression> injectMap(Expression expr,
+                                           Map *map,
+                                           Expression key)
 {
-  if (auto *call = dynamic_cast<Call *>(expr)) {
+  if (auto *call = expr.as<Call>()) {
     if (ASSIGN_REWRITE.contains(call->func)) {
-      std::vector<Expression *> args = std::move(call->vargs);
-      call->vargs.push_back(map);
-      call->vargs.push_back(key);
+      auto args = std::move(call->vargs);
+      call->vargs.emplace_back(map);
+      call->vargs.emplace_back(key);
       call->injected_args += 2;
       call->vargs.insert(call->vargs.end(), args.begin(), args.end());
       return call;
     }
-  } else if (auto *block = dynamic_cast<Block *>(expr)) {
-    if (block->expr != nullptr && injectMap(block->expr, map, key) != nullptr) {
-      return block;
+  } else if (auto *block = expr.as<Block>()) {
+    if (block->expr) {
+      auto expr = injectMap(block->expr.value(), map, key);
+      if (expr) {
+        return block;
+      }
     }
   }
-  return nullptr;
+  return std::nullopt;
 }
 
 void MapAssignmentCall::visit(Call &call)
@@ -234,7 +225,7 @@ void MapAssignmentCall::visit(AssignMapStatement &assign)
 {
   // Don't visit the expression directly if it's a call. These are the things
   // that are okay and we will rewrite, but evaluate everything else.
-  if (auto *call = dynamic_cast<Call *>(assign.expr)) {
+  if (auto *call = assign.expr.as<Call>()) {
     for (auto &arg : call->vargs) {
       visit(arg);
     }
@@ -243,15 +234,20 @@ void MapAssignmentCall::visit(AssignMapStatement &assign)
   }
 }
 
-Statement *MapAssignmentCall::checkAssignment(AssignMapStatement *assign)
+void MapAssignmentCall::visit(Statement &stmt)
 {
-  auto *expr = injectMap(assign->expr, assign->map, assign->key);
-  if (expr != nullptr) {
-    // We injected a call, and can flatten the statement.
-    return ast_.make_node<ExprStatement>(expr, Location(expr->loc));
-  }
+  Visitor<MapAssignmentCall>::visit(stmt);
 
-  return assign;
+  // Any assignments that are direct calls to special functions may
+  // be rewritten to simply be the function expression.
+  if (auto *assign = stmt.as<AssignMapStatement>()) {
+    auto expr = injectMap(assign->expr, assign->map, assign->key);
+    if (expr) {
+      // We injected a call, and can flatten the statement.
+      stmt.value = ast_.make_node<ExprStatement>(expr.value(),
+                                                 Location(assign->loc));
+    }
+  }
 }
 
 Pass CreateMapSugarPass()

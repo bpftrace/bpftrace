@@ -59,19 +59,19 @@ bool probe_needs_pid_filter(AttachPoint *ap)
 
 } // namespace
 
-static Statement *create_pid_filter(ASTContext &ast,
-                                    int pid,
-                                    const Location &loc)
+static Statement create_pid_filter(ASTContext &ast,
+                                   int pid,
+                                   const Location &loc)
 {
   return ast.make_node<If>(
       ast.make_node<Binop>(ast.make_node<Builtin>("pid", Location(loc)),
                            Operator::NE,
                            ast.make_node<Integer>(pid, Location(loc)),
                            Location(loc)),
-      ast.make_node<Block>(std::vector<Statement *>{ ast.make_node<Jump>(
+      ast.make_node<Block>(std::vector<Statement>{ ast.make_node<Jump>(
                                JumpType::RETURN, Location(loc)) },
                            Location(loc)),
-      ast.make_node<Block>(std::vector<Statement *>{}, Location(loc)),
+      ast.make_node<Block>(std::vector<Statement>{}, Location(loc)),
       Location(loc));
 }
 

@@ -26,26 +26,25 @@ std::string Printer::type(const SizedType &ty)
 void Printer::visit(Integer &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "int: " << integer.value << type(integer.type) << std::endl;
+  out_ << indent << "int: " << integer.value << std::endl;
 }
 
 void Printer::visit(NegativeInteger &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "signed int: " << integer.value << type(integer.type)
-       << std::endl;
+  out_ << indent << "signed int: " << integer.value << std::endl;
 }
 
 void Printer::visit(PositionalParameter &param)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "param: $" << param.n << type(param.type) << std::endl;
+  out_ << indent << "param: $" << param.n << std::endl;
 }
 
-void Printer::visit(PositionalParameterCount &param)
+void Printer::visit([[maybe_unused]] PositionalParameterCount &param)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "param: $#" << type(param.type) << std::endl;
+  out_ << indent << "param: $#" << std::endl;
 }
 
 void Printer::visit(String &string)
@@ -75,27 +74,29 @@ void Printer::visit(String &string)
     }
   }
 
-  out_ << indent << "string: " << ss.str() << type(string.type) << std::endl;
+  out_ << indent << "string: " << ss.str() << type(string.string_type)
+       << std::endl;
 }
 
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "builtin: " << builtin.ident << type(builtin.type)
+  out_ << indent << "builtin: " << builtin.ident << type(builtin.builtin_type)
        << std::endl;
 }
 
 void Printer::visit(Identifier &identifier)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "identifier: " << identifier.ident << type(identifier.type)
-       << std::endl;
+  out_ << indent << "identifier: " << identifier.ident
+       << type(identifier.ident_type) << std::endl;
 }
 
 void Printer::visit(Call &call)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "call: " << call.func << type(call.type) << std::endl;
+  out_ << indent << "call: " << call.func << type(call.return_type)
+       << std::endl;
 
   ++depth_;
   visit(call.vargs);
@@ -105,26 +106,26 @@ void Printer::visit(Call &call)
 void Printer::visit(Sizeof &szof)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "sizeof: " << type(szof.type) << std::endl;
+  out_ << indent << "sizeof: " << type(szof.type()) << std::endl;
 
   ++depth_;
-  visit(szof.expr);
+  visit(szof.record);
   --depth_;
 }
 
 void Printer::visit(Offsetof &offof)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "offsetof: " << type(offof.type) << std::endl;
+  out_ << indent << "offsetof: " << type(offof.type()) << std::endl;
 
   ++depth_;
   std::string indentParam(depth_, ' ');
 
   // Print the args
-  if (offof.expr) {
-    visit(*offof.expr);
+  if (std::holds_alternative<Expression>(offof.record)) {
+    visit(std::get<Expression>(offof.record));
   } else {
-    out_ << indentParam << offof.record << std::endl;
+    out_ << indentParam << type(std::get<SizedType>(offof.record)) << std::endl;
   }
 
   for (const auto &field : offof.field) {
@@ -151,14 +152,14 @@ void Printer::visit(Map &map)
   // going to be marked as `is_ctx`, not have an associated address space.
   std::string indent(depth_, ' ');
   out_ << indent << "map: " << map.ident;
-  if (!map.key_type.IsNoneTy() || !map.type.IsNoneTy()) {
+  if (!map.key_type.IsNoneTy() || !map.key_type.IsNoneTy()) {
     out_ << " :: ";
   }
   if (!map.key_type.IsNoneTy()) {
     out_ << "[" << map.key_type << "]";
   }
-  if (!map.type.IsNoneTy()) {
-    out_ << map.type;
+  if (!map.value_type.IsNoneTy()) {
+    out_ << map.value_type;
   }
   out_ << std::endl;
 }
@@ -166,13 +167,14 @@ void Printer::visit(Map &map)
 void Printer::visit(Variable &var)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "variable: " << var.ident << type(var.type) << std::endl;
+  out_ << indent << "variable: " << var.ident << type(var.var_type)
+       << std::endl;
 }
 
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << opstr(binop) << type(binop.type) << std::endl;
+  out_ << indent << opstr(binop) << type(binop.result_type) << std::endl;
 
   ++depth_;
   visit(binop.left);
@@ -183,7 +185,7 @@ void Printer::visit(Binop &binop)
 void Printer::visit(Unop &unop)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << opstr(unop) << type(unop.type) << std::endl;
+  out_ << indent << opstr(unop) << type(unop.result_type) << std::endl;
 
   ++depth_;
   visit(unop.expr);
@@ -193,7 +195,7 @@ void Printer::visit(Unop &unop)
 void Printer::visit(Ternary &ternary)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "?:" << type(ternary.type) << std::endl;
+  out_ << indent << "?:" << type(ternary.result_type) << std::endl;
 
   ++depth_;
   visit(ternary.cond);
@@ -205,7 +207,7 @@ void Printer::visit(Ternary &ternary)
 void Printer::visit(FieldAccess &acc)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "." << type(acc.type) << std::endl;
+  out_ << indent << "." << type(acc.field_type) << std::endl;
 
   ++depth_;
   visit(acc.expr);
@@ -217,7 +219,7 @@ void Printer::visit(FieldAccess &acc)
 void Printer::visit(ArrayAccess &arr)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "[]" << type(arr.type) << std::endl;
+  out_ << indent << "[]" << type(arr.element_type) << std::endl;
 
   ++depth_;
   visit(arr.expr);
@@ -228,7 +230,7 @@ void Printer::visit(ArrayAccess &arr)
 void Printer::visit(TupleAccess &acc)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "." << type(acc.type) << std::endl;
+  out_ << indent << "." << type(acc.element_type) << std::endl;
 
   ++depth_;
   visit(acc.expr);
@@ -240,7 +242,7 @@ void Printer::visit(TupleAccess &acc)
 void Printer::visit(MapAccess &acc)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "[]" << type(acc.type) << std::endl;
+  out_ << indent << "[]" << type(acc.type()) << std::endl;
 
   ++depth_;
   visit(acc.map);
@@ -251,7 +253,7 @@ void Printer::visit(MapAccess &acc)
 void Printer::visit(Cast &cast)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "(" << cast.type << ")" << std::endl;
+  out_ << indent << "(" << cast.type() << ")" << std::endl;
 
   ++depth_;
   visit(cast.expr);
@@ -261,7 +263,7 @@ void Printer::visit(Cast &cast)
 void Printer::visit(Tuple &tuple)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "tuple:" << type(tuple.type) << std::endl;
+  out_ << indent << "tuple:" << type(tuple.type()) << std::endl;
 
   ++depth_;
   visit(tuple.elems);
@@ -302,8 +304,8 @@ void Printer::visit(AssignVarStatement &assignment)
 {
   std::string indent(depth_, ' ');
 
-  if (assignment.var_decl_stmt) {
-    visit(assignment.var_decl_stmt);
+  if (std::holds_alternative<VarDeclStatement *>(assignment.var_decl)) {
+    visit(std::get<VarDeclStatement *>(assignment.var_decl));
     ++depth_;
     visit(assignment.expr);
     --depth_;
@@ -311,7 +313,7 @@ void Printer::visit(AssignVarStatement &assignment)
     out_ << indent << "=" << std::endl;
 
     ++depth_;
-    visit(assignment.var);
+    visit(std::get<Variable *>(assignment.var_decl));
     visit(assignment.expr);
     --depth_;
   }
@@ -473,12 +475,12 @@ void Printer::visit(Probe &probe)
 void Printer::visit(Subprog &subprog)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << subprog.name() << ": " << subprog.return_type;
+  out_ << indent << subprog.name << ": " << subprog.return_type;
 
   out_ << "(";
   for (size_t i = 0; i < subprog.args.size(); i++) {
     auto &arg = subprog.args.at(i);
-    out_ << arg->name() << " : " << arg->type;
+    out_ << arg->name << " : " << arg->type;
     if (i < subprog.args.size() - 1)
       out_ << ", ";
   }
@@ -492,7 +494,7 @@ void Printer::visit(Subprog &subprog)
 void Printer::visit(Import &imp)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "import " << imp.name() << std::endl;
+  out_ << indent << "import " << imp.name << std::endl;
 }
 
 void Printer::visit(Program &program)
@@ -519,6 +521,11 @@ void Printer::visit(Program &program)
   visit(program.functions);
   visit(program.probes);
   --depth_;
+}
+
+void Printer::visit(const SizedType &ty)
+{
+  out_ << type(ty);
 }
 
 } // namespace bpftrace::ast

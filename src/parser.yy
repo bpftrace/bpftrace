@@ -144,8 +144,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
-%type <ast::Expression *> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
-%type <ast::Expression *> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
+%type <ast::Expression> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
+%type <ast::Expression> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList> vargs
 %type <ast::Subprog *> subprog
 %type <ast::SubprogArg *> subprog_arg
@@ -161,7 +161,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
-%type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
+%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
 %type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
@@ -532,7 +532,7 @@ postfix_expr:
                 primary_expr                   { $$ = $1; }
 /* pointer  */
         |       postfix_expr DOT external_name { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @2); }
-        |       postfix_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>(driver.ctx.make_node<ast::Unop>(ast::Operator::MUL, $1, false, @2), $3, @$); }
+        |       postfix_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>(driver.ctx.make_node<ast::Unop>($1, ast::Operator::MUL, false, @2), $3, @$); }
 /* tuple  */
         |       tuple_access_expr              { $$ = $1; }
 /* array  */
@@ -540,12 +540,12 @@ postfix_expr:
         |       call                           { $$ = $1; }
         |       sizeof_expr                    { $$ = $1; }
         |       offsetof_expr                  { $$ = $1; }
-        |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
-        |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
-        |       map      INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
-        |       map      DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
-        |       map_expr INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
-        |       map_expr DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
+        |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
+        |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
+        |       map      INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
+        |       map      DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
+        |       map_expr INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
+        |       map_expr DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
 /* errors */
         |       INCREMENT ident                { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
         |       DECREMENT ident                { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
@@ -561,14 +561,14 @@ block_expr:
                 ;
 
 unary_expr:
-                unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($1, $2, false, @1); }
+                unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($2, $1, false, @1); }
         |       postfix_expr         { $$ = $1; }
-        |       INCREMENT var        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
-        |       DECREMENT var        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
-        |       INCREMENT map        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
-        |       DECREMENT map        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
-        |       INCREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
-        |       DECREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
+        |       INCREMENT var        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
+        |       DECREMENT var        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
+        |       INCREMENT map        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
+        |       DECREMENT map        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
+        |       INCREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
+        |       DECREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
         |       block_expr           { $$ = $1; }
 /* errors */
         |       ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }

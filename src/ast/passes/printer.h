@@ -54,6 +54,7 @@ public:
   void visit(Subprog &subprog);
   void visit(Import &imp);
   void visit(Program &program);
+  void visit(const SizedType &type);
 
 private:
   std::ostream &out_;
