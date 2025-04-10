@@ -66,10 +66,8 @@ add_executable(bpftrace_test
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
 add_subdirectory(data)
-if(${LIBDW_FOUND})
-  add_dependencies(bpftrace_test debuginfo_dwarf_data)
-endif()
-add_dependencies(bpftrace_test debuginfo_btf_data)
+add_dependencies(bpftrace_test data_source_btf data_source_funcs)
+add_dependencies(bpftrace data_source_dwarf)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

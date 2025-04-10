@@ -53,6 +53,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR}/src)
 include_directories(${CMAKE_BINARY_DIR})
 
 # Ninja buffers output so gcc/clang think it's not an interactive session.

@@ -10,6 +10,7 @@ RUN apk add --update \
   bcc-static \
   binutils-dev \
   bison \
+  bpftool \
   bzip2-static \
   build-base \
   cereal \
