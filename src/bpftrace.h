@@ -138,12 +138,8 @@ public:
                         StackType stack_type,
                         int indent = 0);
   std::string resolve_buf(const char *buf, size_t size);
-  std::string resolve_ksym(uint64_t addr, bool show_offset = false);
-  std::string resolve_usym(uint64_t addr,
-                           int32_t pid,
-                           int32_t probe_id,
-                           bool show_offset = false,
-                           bool show_module = false);
+  std::string resolve_ksym(uint64_t addr);
+  std::string resolve_usym(uint64_t addr, int32_t pid, int32_t probe_id);
   std::string resolve_inet(int af, const uint8_t *inet) const;
   std::string resolve_uid(uint64_t addr) const;
   std::string resolve_timestamp(uint32_t mode,
@@ -212,7 +208,6 @@ public:
   std::unique_ptr<BTF> btf_;
   std::unique_ptr<BPFfeature> feature_;
 
-  bool resolve_user_symbols_ = true;
   bool safe_mode_ = true;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
@@ -278,6 +273,16 @@ private:
   {
     return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
   }
+  std::vector<std::string> resolve_ksym_stack(uint64_t addr,
+                                              bool show_offset,
+                                              bool perf_mode,
+                                              bool show_debug_info);
+  std::vector<std::string> resolve_usym_stack(uint64_t addr,
+                                              int32_t pid,
+                                              int32_t probe_id,
+                                              bool show_offset,
+                                              bool perf_mode,
+                                              bool show_debug_info);
   void teardown_output();
   void poll_output(bool drain = false);
   int poll_perf_events();
