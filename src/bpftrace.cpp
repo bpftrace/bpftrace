@@ -624,10 +624,10 @@ void BPFtrace::add_param(const std::string &param)
   params_.emplace_back(param);
 }
 
-std::string BPFtrace::get_param(size_t i, bool is_str) const
+std::string BPFtrace::get_param(size_t i) const
 {
   if (params_.size() < i) {
-    return is_str ? "" : "0";
+    return "";
   }
   return params_.at(i - 1);
 }
@@ -1854,54 +1854,6 @@ void BPFtrace::sort_by_key(
                      key.GetSize()) < 0;
     });
   }
-}
-
-std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
-{
-  if (expr->is_literal) {
-    if (const auto *string = dynamic_cast<const ast::String *>(expr))
-      return string->str;
-    else if (const auto *str_call = dynamic_cast<const ast::Call *>(expr)) {
-      // Positional parameters in the form str($1) can be used as literals
-      if (str_call->func == "str") {
-        if (const auto *pos_param =
-                dynamic_cast<const ast::PositionalParameter *>(
-                    str_call->vargs.at(0)))
-          return get_param(pos_param->n, true);
-      }
-    }
-  }
-
-  LOG(ERROR) << "Expected string literal, got " << expr->type;
-  return "";
-}
-
-std::optional<int64_t> BPFtrace::get_int_literal(
-    const ast::Expression *expr) const
-{
-  if (expr->is_literal) {
-    if (const auto *integer = dynamic_cast<const ast::Integer *>(expr))
-      return integer->n;
-    else if (const auto *pos_param =
-                 dynamic_cast<const ast::PositionalParameter *>(expr)) {
-      auto param_str = get_param(pos_param->n, false);
-      auto param_int = util::get_int_from_str(param_str);
-      if (!param_int.has_value()) {
-        // This case has to be handled at a higher layer, and it is also
-        // duplicated exactly in the semantic analyzer.
-        return std::nullopt;
-      }
-      if (std::holds_alternative<int64_t>(*param_int)) {
-        return std::get<int64_t>(*param_int);
-      } else {
-        return static_cast<int64_t>(std::get<uint64_t>(*param_int));
-      }
-    } else {
-      return static_cast<int64_t>(num_params());
-    }
-  }
-
-  return std::nullopt;
 }
 
 const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const

@@ -32,7 +32,7 @@ static int read_from_source(char* buf, size_t max_size);
 int_size (([uU])|([uU]?[lL]?[lL]))
 
 /* Number with underscores in it, e.g. 1_000_000 */
-int      [0-9]([0-9_]*[0-9])?{int_size}?
+int      -?[0-9]([0-9_]*[0-9])?{int_size}?
 hex      0[xX][0-9a-fA-F]+
 /* scientific notation, e.g. 2e4 or 1e6 */
 exponent {int}[eE]{int}
@@ -89,8 +89,13 @@ oct_esc  [0-7]{1,3}
 {int}|{hex}|{exponent}  {
                           try
                           {
-                            auto res = util::to_uint(yytext, 0);
-                            return Parser::make_INT(res, driver.loc);
+                            if (yytext[0] == '-') {
+                              auto res = util::to_int(yytext, 0);
+                              return Parser::make_SIGNED_INT(res, driver.loc);
+                            } else {
+                              auto res = util::to_uint(yytext, 0);
+                              return Parser::make_UNSIGNED_INT(res, driver.loc);
+                            }
                           }
                           catch (const std::exception &e)
                           {

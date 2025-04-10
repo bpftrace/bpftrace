@@ -10,7 +10,7 @@
 %define define_location_comparison
 %define parse.assert
 %define parse.trace
-%expect 4
+%expect 3
 
 %define parse.error verbose
 
@@ -117,7 +117,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
-%token <int64_t> INT "integer"
+%token <int64_t> SIGNED_INT "signed integer"
+%token <uint64_t> UNSIGNED_INT "unsigned integer"
 %token <std::string> STACK_MODE "stack_mode"
 %token <std::string> CONFIG "config"
 %token <std::string> UNROLL "unroll"
@@ -132,7 +133,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
-
 
 %type <ast::Operator> unary_op compound_op
 %type <std::string> attach_point_def c_definitions ident keyword external_name
@@ -150,7 +150,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Subprog *> subprog
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
-%type <ast::Integer *> int
 %type <ast::Map *> map
 %type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
@@ -247,7 +246,7 @@ type:
                         $$ = CreateBuffer(0);
                     }
                 }
-        |       SIZED_TYPE "[" INT "]" {
+        |       SIZED_TYPE "[" UNSIGNED_INT "]" {
                     if ($1 == "string") {
                         $$ = CreateString($3);
                     } else if ($1 == "inet") {
@@ -256,10 +255,10 @@ type:
                         $$ = CreateBuffer($3);
                     }
                 }
-        |       int_type "[" INT "]" {
+        |       int_type "[" UNSIGNED_INT "]" {
                   $$ = CreateArray($3, $1);
                 }
-        |       struct_type "[" INT "]" {
+        |       struct_type "[" UNSIGNED_INT "]" {
                   $$ = CreateArray($3, $1);
                 }
         |       int_type "[" "]" {
@@ -311,9 +310,9 @@ config_assign_stmt_list:
                 ;
 
 config_assign_stmt:
-                IDENT ASSIGN STRING { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN IDENT  { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN INT    { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+                IDENT ASSIGN UNSIGNED_INT { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN IDENT        { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN STRING       { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
                 ;
 
 subprog:
@@ -361,16 +360,20 @@ attach_point_def:
                 attach_point_def ident    { $$ = $1 + $2; }
                 // Since we're double quoting the STRING for the benefit of the
                 // AttachPointParser, we have to make sure we re-escape any double
-                // quotes.
-        |       attach_point_def STRING   { $$ = $1 + "\"" + std::regex_replace($2, std::regex("\""), "\\\"") + "\""; }
-        |       attach_point_def PATH     { $$ = $1 + $2; }
-        |       attach_point_def INT      { $$ = $1 + std::to_string($2); }
-        |       attach_point_def COLON    { $$ = $1 + ":"; }
-        |       attach_point_def DOT      { $$ = $1 + "."; }
-        |       attach_point_def PLUS     { $$ = $1 + "+"; }
-        |       attach_point_def MUL      { $$ = $1 + "*"; }
-        |       attach_point_def LBRACKET { $$ = $1 + "["; }
-        |       attach_point_def RBRACKET { $$ = $1 + "]"; }
+                // quotes. Note that this is a general escape hatch for many cases,
+                // since we can't handle the general parsing and unparsing of e.g.
+                // integer types that use `_` separators, or exponential notation,
+                // or hex vs. non-hex representation etc.
+        |       attach_point_def STRING       { $$ = $1 + "\"" + std::regex_replace($2, std::regex("\""), "\\\"") + "\""; }
+        |       attach_point_def SIGNED_INT   { $$ = $1 + std::to_string($2); }
+        |       attach_point_def UNSIGNED_INT { $$ = $1 + std::to_string($2); }
+        |       attach_point_def PATH         { $$ = $1 + $2; }
+        |       attach_point_def COLON        { $$ = $1 + ":"; }
+        |       attach_point_def DOT          { $$ = $1 + "."; }
+        |       attach_point_def PLUS         { $$ = $1 + "+"; }
+        |       attach_point_def MUL          { $$ = $1 + "*"; }
+        |       attach_point_def LBRACKET     { $$ = $1 + "["; }
+        |       attach_point_def RBRACKET     { $$ = $1 + "]"; }
         |       attach_point_def param
                 {
                   // "Un-parse" the positional parameter back into text so
@@ -444,10 +447,8 @@ jump_stmt:
                 ;
 
 loop_stmt:
-                UNROLL "(" int ")" block             { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
-        |       UNROLL "(" param ")" block           { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
-        |       UNROLL "(" param_count ")" block     { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
-        |       WHILE  "(" expr ")" block            { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1); }
+                UNROLL "(" expr ")" block { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
+        |       WHILE  "(" expr ")" block { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1); }
                 ;
 
 for_stmt:
@@ -491,7 +492,7 @@ map_decl_list:
         ;
 
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN INT RPAREN { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
+                LET MAP ASSIGN IDENT LPAREN UNSIGNED_INT RPAREN { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
         ;
 
 var_decl_stmt:
@@ -501,7 +502,8 @@ var_decl_stmt:
 
 primary_expr:
                 raw_ident          { $$ = $1; }
-        |       int                { $$ = $1; }
+        |       SIGNED_INT         { $$ = driver.ctx.make_node<ast::NegativeInteger>($1, @$); }
+        |       UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       BUILTIN            { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
         |       CALL_BUILTIN       { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
@@ -538,7 +540,7 @@ postfix_expr:
 
 /* Tuple factored out so we can use it in the tuple field assignment error */
 tuple_access_expr:
-                postfix_expr DOT INT      { $$ = driver.ctx.make_node<ast::TupleAccess>($1, $3, @3); }
+                postfix_expr DOT UNSIGNED_INT { $$ = driver.ctx.make_node<ast::TupleAccess>($1, $3, @3); }
                 ;
 
 block_expr:
@@ -649,11 +651,6 @@ offsetof_expr:
                 OFFSETOF "(" struct_type "," struct_field ")"      { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
                 /* For example: offsetof(*curtask, comm) */
         |       OFFSETOF "(" expr "," struct_field ")"             { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
-                ;
-
-int:
-                MINUS INT    { $$ = driver.ctx.make_node<ast::Integer>((int64_t)(~(uint64_t)($2) + 1), @$, true); }
-        |       INT          { $$ = driver.ctx.make_node<ast::Integer>($1, @$, false); }
                 ;
 
 keyword:

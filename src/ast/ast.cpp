@@ -20,16 +20,19 @@ Diagnostic &Node::addWarning() const
 
 static constexpr std::string_view ENUM = "enum ";
 
-Integer::Integer(ASTContext &ctx, int64_t n, Location &&loc, bool is_negative)
-    : Expression(ctx, std::move(loc)), n(n), is_negative(is_negative)
+Integer::Integer(ASTContext &ctx, int64_t n, Location &&loc)
+    : Expression(ctx, std::move(loc)), value(n)
 {
-  is_literal = true;
+}
+
+NegativeInteger::NegativeInteger(ASTContext &ctx, int64_t n, Location &&loc)
+    : Expression(ctx, std::move(loc)), value(n)
+{
 }
 
 String::String(ASTContext &ctx, std::string str, Location &&loc)
-    : Expression(ctx, std::move(loc)), str(std::move(str))
+    : Expression(ctx, std::move(loc)), value(std::move(str))
 {
-  is_literal = true;
 }
 
 Builtin::Builtin(ASTContext &ctx, std::string ident, Location &&loc)
@@ -47,14 +50,12 @@ PositionalParameter::PositionalParameter(ASTContext &ctx,
                                          Location &&loc)
     : Expression(ctx, std::move(loc)), n(n)
 {
-  is_literal = true;
 }
 
 PositionalParameterCount::PositionalParameterCount(ASTContext &ctx,
                                                    Location &&loc)
     : Expression(ctx, std::move(loc))
 {
-  is_literal = true;
 }
 
 Call::Call(ASTContext &ctx, std::string func, Location &&loc)

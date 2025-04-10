@@ -162,11 +162,9 @@ public:
       const std::vector<Field> &args,
       uint8_t *arg_data);
   void add_param(const std::string &param);
-  std::string get_param(size_t index, bool is_str) const;
+  std::string get_param(size_t index) const;
   size_t num_params() const;
   void request_finalize();
-  std::string get_string_literal(const ast::Expression *expr) const;
-  std::optional<int64_t> get_int_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
   virtual bool is_traceable_func(const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_func_modules(

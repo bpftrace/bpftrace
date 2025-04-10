@@ -1,6 +1,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -36,6 +37,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateSemanticPass())
                 .run();
   EXPECT_TRUE(bool(ok));
@@ -91,6 +93,7 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .add(CreateClangPass())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateSemanticPass())
                 .run();
 
@@ -2767,7 +2770,6 @@ TEST(semantic_analyser, positional_parameters)
       ast.root->probes.at(0)->block->stmts.at(0));
   auto *pp = static_cast<ast::PositionalParameter *>(stmt->expr);
   EXPECT_EQ(CreateUInt64(), pp->type);
-  EXPECT_TRUE(pp->is_literal);
 
   bpftrace.add_param("0999");
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 2);

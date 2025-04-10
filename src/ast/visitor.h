@@ -40,6 +40,10 @@ public:
   {
     return default_value();
   }
+  R visit(NegativeInteger &integer __attribute__((__unused__)))
+  {
+    return default_value();
+  }
   R visit(PositionalParameter &param __attribute__((__unused__)))
   {
     return default_value();
@@ -346,6 +350,7 @@ public:
   {
     return tryVisitAndReplace<Expression,
                               Integer *,
+                              NegativeInteger *,
                               PositionalParameter *,
                               PositionalParameterCount *,
                               String *,

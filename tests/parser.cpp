@@ -3059,7 +3059,7 @@ stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
 )");
 
   test_parse_failure("let @a = hash(); BEGIN { $x; }", R"(
-stdin:1:10-16: ERROR: syntax error, unexpected ), expecting integer
+stdin:1:10-16: ERROR: syntax error, unexpected ), expecting unsigned integer
 let @a = hash(); BEGIN { $x; }
          ~~~~~~
 )");

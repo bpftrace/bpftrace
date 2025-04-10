@@ -186,8 +186,7 @@ public:
 
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
-  ScopedExpr visit(PositionalParameter &param);
-  ScopedExpr visit(PositionalParameterCount &param);
+  ScopedExpr visit(NegativeInteger &integer);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -463,40 +462,22 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
 
 ScopedExpr CodegenLLVM::visit(Integer &integer)
 {
-  return ScopedExpr(b_.getInt64(integer.n));
+  return ScopedExpr(b_.getInt64(integer.value));
 }
 
-ScopedExpr CodegenLLVM::visit(PositionalParameter &param)
+ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
 {
-  std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-  if (!param.is_in_str) {
-    if (param.type.IsSigned()) {
-      return ScopedExpr(b_.getInt64(std::stoll(pstr, nullptr, 0)));
-    } else {
-      return ScopedExpr(b_.getInt64(std::stoull(pstr, nullptr, 0)));
-    }
-  } else {
-    auto *string_param = llvm::dyn_cast<GlobalVariable>(
-        module_->getOrInsertGlobal(
-            pstr, ArrayType::get(b_.getInt8Ty(), pstr.length() + 1)));
-    string_param->setInitializer(
-        ConstantDataArray::getString(module_->getContext(), pstr));
-    return ScopedExpr(b_.CreatePtrToInt(string_param, b_.getInt64Ty()));
-  }
-}
-
-ScopedExpr CodegenLLVM::visit([[maybe_unused]] PositionalParameterCount &param)
-{
-  return ScopedExpr(b_.getInt64(bpftrace_.num_params()));
+  return ScopedExpr(b_.getInt64(integer.value));
 }
 
 ScopedExpr CodegenLLVM::visit(String &string)
 {
-  string.str.resize(string.type.GetSize() - 1);
+  std::string s(string.value);
+  s.resize(string.type.GetSize() - 1);
   auto *string_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-      string.str, ArrayType::get(b_.getInt8Ty(), string.type.GetSize())));
+      s, ArrayType::get(b_.getInt8Ty(), string.type.GetSize())));
   string_var->setInitializer(
-      ConstantDataArray::getString(module_->getContext(), string.str));
+      ConstantDataArray::getString(module_->getContext(), s));
   return ScopedExpr(string_var);
 }
 
@@ -1150,9 +1131,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       length = b_.CreateSelect(
           cmp, proposed_length, max_length, "length.select");
 
-      auto literal_length = bpftrace_.get_int_literal(&arg);
+      auto *literal_length = dynamic_cast<Integer *>(&arg);
       if (literal_length)
-        fixed_buffer_length = *literal_length;
+        fixed_buffer_length = literal_length->value;
     } else {
       auto &arg = *call.vargs.at(0);
       fixed_buffer_length = arg.type.GetNumElements() *
@@ -1226,13 +1207,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(buf);
   } else if (call.func == "kaddr") {
     uint64_t addr;
-    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto name = dynamic_cast<String *>(call.vargs.at(0))->value;
     addr = bpftrace_.resolve_kname(name);
     if (!addr)
       call.addError() << "Failed to resolve kernel symbol: " << name;
     return ScopedExpr(b_.getInt64(addr));
   } else if (call.func == "percpu_kaddr") {
-    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto name = dynamic_cast<String *>(call.vargs.at(0))->value;
     auto *var = DeclareKernelVar(name);
     Value *percpu_ptr;
     if (call.vargs.size() == 1) {
@@ -1243,7 +1224,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
     return ScopedExpr(b_.CreatePtrToInt(percpu_ptr, b_.getInt64Ty()));
   } else if (call.func == "uaddr") {
-    auto name = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto name = dynamic_cast<String *>(call.vargs.at(0))->value;
     struct symbol sym = {};
     int err = bpftrace_.resolve_uname(name,
                                       &sym,
@@ -1254,7 +1235,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(b_.getInt64(sym.address));
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
-    auto path = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto path = dynamic_cast<String *>(call.vargs.at(0))->value;
     cgroupid = util::resolve_cgroupid(path);
     return ScopedExpr(b_.getInt64(cgroupid));
   } else if (call.func == "join") {
@@ -1380,7 +1361,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "pton") {
     auto af_type = AF_INET;
     int addr_size = 4;
-    std::string addr = bpftrace_.get_string_literal(call.vargs.at(0));
+    std::string addr = dynamic_cast<String *>(call.vargs.at(0))->value;
     if (addr.find(":") != std::string::npos) {
       af_type = AF_INET6;
       addr_size = 16;
@@ -1409,7 +1390,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "reg") {
-    auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
+    auto reg_name = dynamic_cast<String *>(call.vargs.at(0))->value;
     int offset = arch::offset(reg_name);
     if (offset == -1) {
       call.addError() << "negative offset on reg() call";
@@ -1692,7 +1673,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // long bpf_send_signal(u32 sig)
     auto &arg = *call.vargs.at(0);
     if (arg.type.IsStringTy()) {
-      auto signame = bpftrace_.get_string_literal(&arg);
+      auto signame = dynamic_cast<String *>(&arg)->value;
       int sigid = signal_name_to_num(signame);
       // Should be caught in semantic analyser
       if (sigid < 1) {
@@ -1712,12 +1693,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "strncmp") {
     auto &left_arg = *call.vargs.at(0);
     auto &right_arg = *call.vargs.at(1);
-    auto size_opt = bpftrace_.get_int_literal(call.vargs.at(2));
-    if (!size_opt.has_value())
-      LOG(BUG) << "Int literal should have been checked in semantic analysis";
-    uint64_t size = std::min({ static_cast<uint64_t>(*size_opt),
-                               left_arg.type.GetSize(),
-                               right_arg.type.GetSize() });
+    auto size_opt = dynamic_cast<Integer *>(call.vargs.at(2))->value;
+    uint64_t size = std::min(
+        { size_opt, left_arg.type.GetSize(), right_arg.type.GetSize() });
 
     auto left_string = visit(&left_arg);
     auto right_string = visit(&right_arg);
@@ -2876,13 +2854,14 @@ ScopedExpr CodegenLLVM::visit(If &if_node)
 
 ScopedExpr CodegenLLVM::visit(Unroll &unroll)
 {
-  for (int i = 0; i < unroll.var; i++) {
+  auto n = dynamic_cast<Integer *>(unroll.expr)->value;
+  for (uint64_t i = 0; i < n; i++) {
     // Make sure to save/restore async ID state b/c we could be processing
     // the same async calls multiple times.
     auto reset_ids = async_ids_.create_reset_ids();
     auto scoped_del = visit(unroll.block);
 
-    if (i != unroll.var - 1)
+    if (i != n - 1)
       reset_ids();
   }
   return ScopedExpr();

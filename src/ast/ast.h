@@ -97,27 +97,25 @@ public:
   Map *key_for_map = nullptr;
   Map *map = nullptr;      // Only set when this expression is assigned to a map
   Variable *var = nullptr; // Set when this expression is assigned to a variable
-  bool is_literal = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(ASTContext &ctx,
-                   int64_t n,
-                   Location &&loc,
-                   bool is_negative = true);
+  explicit Integer(ASTContext &ctx, int64_t n, Location &&loc);
+  const uint64_t value;
+};
 
-  int64_t n;
-  bool is_negative;
+class NegativeInteger : public Expression {
+public:
+  explicit NegativeInteger(ASTContext &ctx, int64_t n, Location &&loc);
+  const int64_t value;
 };
 
 class PositionalParameter : public Expression {
 public:
   explicit PositionalParameter(ASTContext &ctx, long n, Location &&loc);
-
-  long n;
-  bool is_in_str = false;
+  const long n;
 };
 
 class PositionalParameterCount : public Expression {
@@ -128,8 +126,7 @@ public:
 class String : public Expression {
 public:
   explicit String(ASTContext &ctx, std::string str, Location &&loc);
-
-  std::string str;
+  const std::string value;
 };
 
 class Identifier : public Expression {
@@ -399,7 +396,6 @@ class Unroll : public Statement {
 public:
   Unroll(ASTContext &ctx, Expression *expr, Block *block, Location &&loc);
 
-  long int var = 0;
   Expression *expr = nullptr;
   Block *block = nullptr;
 };

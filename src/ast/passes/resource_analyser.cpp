@@ -28,26 +28,19 @@ public:
   using Visitor<MapBounds>::visit;
   void visit(Map &map)
   {
-    if (!map.key_expr) {
-      // This will use an implied key.
-      min[map.ident] = std::min(min[map.ident], static_cast<int64_t>(0));
-      max[map.ident] = std::max(max[map.ident], static_cast<int64_t>(0));
-    } else if (auto *integer = dynamic_cast<Integer *>(map.key_expr)) {
-      min[map.ident] = std::min(min[map.ident], integer->n);
-      max[map.ident] = std::max(max[map.ident], integer->n);
+    if (auto *integer = dynamic_cast<Integer *>(map.key_expr)) {
+      max[map.ident] = std::max(max[map.ident], integer->value);
     } else {
-      min[map.ident] = std::numeric_limits<int64_t>::min();
-      max[map.ident] = std::numeric_limits<int64_t>::max();
+      max[map.ident] = std::numeric_limits<uint64_t>::max();
     }
   }
   bool is_scalar(const std::string &name)
   {
-    return min[name] == 0 && max[name] == 0;
+    return max[name] == 0;
   }
 
 private:
-  std::unordered_map<std::string, int64_t> min;
-  std::unordered_map<std::string, int64_t> max;
+  std::unordered_map<std::string, uint64_t> max;
 };
 
 // Resource analysis pass on AST
@@ -123,7 +116,7 @@ static ProbeType single_provider_type_postsema(Probe *probe)
 static std::string get_literal_string(Expression &expr)
 {
   auto &str = static_cast<String &>(expr);
-  return str.str;
+  return str.value;
 }
 
 ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
@@ -279,8 +272,9 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
+    uint64_t bits = static_cast<Integer *>(call.vargs.at(1))->value;
     auto args = HistogramArgs{
-      .bits = static_cast<Integer *>(call.vargs.at(1))->n,
+      .bits = static_cast<long>(bits),
     };
 
     auto &map_info = resources_.maps_info[call.map->ident];
@@ -295,13 +289,13 @@ void ResourceAnalyser::visit(Call &call)
     Expression &min_arg = *call.vargs.at(1);
     Expression &max_arg = *call.vargs.at(2);
     Expression &step_arg = *call.vargs.at(3);
-    auto &min = static_cast<Integer &>(min_arg);
-    auto &max = static_cast<Integer &>(max_arg);
-    auto &step = static_cast<Integer &>(step_arg);
+    auto &min = dynamic_cast<Integer &>(min_arg);
+    auto &max = dynamic_cast<Integer &>(max_arg);
+    auto &step = dynamic_cast<Integer &>(step_arg);
     auto args = LinearHistogramArgs{
-      .min = min.n,
-      .max = max.n,
-      .step = step.n,
+      .min = static_cast<long>(min.value),
+      .max = static_cast<long>(max.value),
+      .step = static_cast<long>(step.value),
     };
 
     auto &map_info = resources_.maps_info[call.map->ident];
@@ -355,7 +349,7 @@ void ResourceAnalyser::visit(Call &call)
     auto &offset_arg = *call.vargs.at(3);
     auto &offset = static_cast<Integer &>(offset_arg);
 
-    resources_.skboutput_args_.emplace_back(file.str, offset.n);
+    resources_.skboutput_args_.emplace_back(file.value, offset.value);
     resources_.needs_perf_event_map = true;
   } else if (call.func == "delete") {
     auto &arg0 = *call.vargs.at(0);
