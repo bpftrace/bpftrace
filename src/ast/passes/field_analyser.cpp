@@ -29,6 +29,7 @@ public:
   void visit(Variable &var);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
+  void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
@@ -107,8 +108,6 @@ void FieldAnalyser::visit(Builtin &builtin)
 
 void FieldAnalyser::visit(Map &map)
 {
-  visit(map.key_expr);
-
   auto it = var_types_.find(map.ident);
   if (it != var_types_.end())
     sized_type_ = it->second;
@@ -164,6 +163,12 @@ void FieldAnalyser::visit(ArrayAccess &arr)
   }
 }
 
+void FieldAnalyser::visit(MapAccess &acc)
+{
+  visit(acc.key);
+  visit(acc.map); // Leaves sized_type_ as value type.
+}
+
 void FieldAnalyser::visit(Cast &cast)
 {
   visit(cast.expr);
@@ -186,6 +191,7 @@ void FieldAnalyser::visit(Offsetof &offof)
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
   visit(assignment.map);
+  visit(assignment.key);
   visit(assignment.expr);
   var_types_.emplace(assignment.map->ident, sized_type_);
 }

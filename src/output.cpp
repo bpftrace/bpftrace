@@ -872,7 +872,7 @@ std::string TextOutput::map_key_to_str(BPFtrace &bpftrace,
 {
   const auto &map_info = bpftrace.resources.maps_info.at(map.name());
   const auto &key_type = map_info.key_type;
-  if (map_info.is_scalar || key_type.IsNoneTy())
+  if (map_info.is_scalar)
     return map.name();
 
   return map.name() + "[" + map_key_str(bpftrace, key_type, key) + "]";
@@ -959,13 +959,12 @@ void JsonOutput::map(
 
   out_ << R"({"type": ")" << MessageType::map << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  // check if this map has keys
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "{";
 
   map_contents(bpftrace, map, top, div, values_by_key);
 
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1071,14 +1070,13 @@ void JsonOutput::map_hist(
 
   out_ << R"({"type": ")" << MessageType::hist << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  // check if this map has keys
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "{";
 
   map_hist_contents(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1098,13 +1096,12 @@ void JsonOutput::map_stats(
 
   out_ << R"({"type": ")" << MessageType::stats << R"(", "data": {)";
   out_ << "\"" << json_escape(map.name()) << "\": ";
-  // check if this map has keys
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "{";
 
   map_stats_contents(bpftrace, map, top, div, values_by_key);
 
-  if (!map_info.is_scalar && !map_info.key_type.IsNoneTy())
+  if (!map_info.is_scalar)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -1202,11 +1199,10 @@ std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const std::vector<uint8_t> &key) const
 {
   const auto &map_info = bpftrace.resources.maps_info.at(map.name());
-  const auto &map_key = map_info.key_type;
-  if (map_info.is_scalar || map_key.IsNoneTy()) {
+  if (map_info.is_scalar)
     return "";
-  }
-  return "\"" + json_escape(map_key_str(bpftrace, map_key, key)) + "\"";
+
+  return "\"" + json_escape(map_key_str(bpftrace, map_info.key_type, key)) + "\"";
 }
 
 void JsonOutput::map_key_val(const SizedType &map_type __attribute__((unused)),

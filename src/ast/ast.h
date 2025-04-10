@@ -94,9 +94,6 @@ public:
   ~Expression() override = default;
 
   SizedType type;
-  Map *key_for_map = nullptr;
-  Map *map = nullptr;      // Only set when this expression is assigned to a map
-  Variable *var = nullptr; // Set when this expression is assigned to a variable
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -161,6 +158,13 @@ public:
 
   std::string func;
   ExpressionList vargs;
+
+  // Some passes may inject new arguments to the call, which is always
+  // done at the beginning (in order to support variadic arguments) for
+  // later passes. This is a result of "desugaring" some syntax. When this
+  // happens, this number is increased so that later error reporting can
+  // correctly account for this.
+  size_t injected_args = 0;
 };
 
 class Sizeof : public Expression {
@@ -202,19 +206,10 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(ASTContext &ctx,
-               std::string ident,
-               Expression *expr,
-               Location &&loc);
+  explicit Map(ASTContext &ctx, std::string ident, Location &&loc);
 
   std::string ident;
-  Expression *key_expr = nullptr;
   SizedType key_type;
-  bool skip_key_validation = false;
-  // This is for a feature check on reading per-cpu maps
-  // which involve calling map_lookup_percpu_elem
-  // https://github.com/bpftrace/bpftrace/issues/3755
-  bool is_read = true;
 };
 
 class Variable : public Expression {
@@ -280,6 +275,14 @@ public:
   ssize_t index;
 };
 
+class MapAccess : public Expression {
+public:
+  MapAccess(ASTContext &ctx, Map *map, Expression *key, Location &&loc);
+
+  Map *map = nullptr;
+  Expression *key = nullptr;
+};
+
 class Cast : public Expression {
 public:
   Cast(ASTContext &ctx, SizedType type, Expression *expr, Location &&loc);
@@ -322,14 +325,32 @@ public:
   bool set_type = false;
 };
 
+// Scalar map assignment is purely a syntax sugar that is removed by the pass
+// returned by`CreateMapSugarPass`. This is replaced by the expansion of
+// default keys, so that later steps (semantic analysis, code generation),
+// don't need to worry about this. Maps whose accesses are bound to a single
+// key will be automatically collapsed into scalar values on the output side.
+class AssignScalarMapStatement : public Statement {
+public:
+  AssignScalarMapStatement(ASTContext &ctx,
+                           Map *map,
+                           Expression *expr,
+                           Location &&loc);
+
+  Map *map = nullptr;
+  Expression *expr = nullptr;
+};
+
 class AssignMapStatement : public Statement {
 public:
   AssignMapStatement(ASTContext &ctx,
                      Map *map,
+                     Expression *key,
                      Expression *expr,
                      Location &&loc);
 
   Map *map = nullptr;
+  Expression *key = nullptr;
   Expression *expr = nullptr;
 };
 

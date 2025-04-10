@@ -10,7 +10,7 @@
 %define define_location_comparison
 %define parse.assert
 %define parse.trace
-%expect 3
+%expect 4
 
 %define parse.error verbose
 
@@ -145,12 +145,13 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
 %type <ast::Expression *> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
-%type <ast::Expression *> logical_or_expr map_or_var or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
+%type <ast::Expression *> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList> vargs
 %type <ast::Subprog *> subprog
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
 %type <ast::Map *> map
+%type <ast::MapAccess *> map_expr
 %type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
 %type <ast::PositionalParameterCount *> param_count
@@ -471,13 +472,19 @@ assign_stmt:
                   error(@1 + @3, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead.");
                   YYERROR;
                 }
-        |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignMapStatement>($1, $3, @$); }
+        |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignScalarMapStatement>($1, $3, @$); }
+        |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>($1->map, $1->key, $3, @$); }
         |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
         |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
         |       map compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
-                  $$ = driver.ctx.make_node<ast::AssignMapStatement>($1, b, @$);
+                  $$ = driver.ctx.make_node<ast::AssignScalarMapStatement>($1, b, @$);
+                }
+        |       map_expr compound_op expr
+                {
+                  auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
+                  $$ = driver.ctx.make_node<ast::AssignMapStatement>($1->map, $1->key, b, @$);
                 }
         |       var compound_op expr
                 {
@@ -510,7 +517,9 @@ primary_expr:
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
         |       param_count        { $$ = $1; }
-        |       map_or_var         { $$ = $1; }
+        |       var                { $$ = $1; }
+        |       map                { $$ = $1; }
+        |       map_expr           { $$ = $1; }
         |       "(" vargs "," expr ")"
                 {
                   auto &args = $2;
@@ -531,8 +540,12 @@ postfix_expr:
         |       call                           { $$ = $1; }
         |       sizeof_expr                    { $$ = $1; }
         |       offsetof_expr                  { $$ = $1; }
-        |       map_or_var INCREMENT           { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
-        |       map_or_var DECREMENT           { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
+        |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
+        |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
+        |       map      INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
+        |       map      DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
+        |       map_expr INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $1, true, @2); }
+        |       map_expr DECREMENT             { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $1, true, @2); }
 /* errors */
         |       INCREMENT ident                { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
         |       DECREMENT ident                { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
@@ -550,8 +563,12 @@ block_expr:
 unary_expr:
                 unary_op cast_expr   { $$ = driver.ctx.make_node<ast::Unop>($1, $2, false, @1); }
         |       postfix_expr         { $$ = $1; }
-        |       INCREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
-        |       DECREMENT map_or_var { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
+        |       INCREMENT var        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
+        |       DECREMENT var        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
+        |       INCREMENT map        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
+        |       DECREMENT map        { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
+        |       INCREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::INCREMENT, $2, false, @1); }
+        |       DECREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>(ast::Operator::DECREMENT, $2, false, @1); }
         |       block_expr           { $$ = $1; }
 /* errors */
         |       ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
@@ -705,24 +722,21 @@ call:
                 ;
 
 map:
-                MAP               { $$ = driver.ctx.make_node<ast::Map>($1, nullptr, @$); }
-        |       MAP "[" vargs "]" {
+                MAP { $$ = driver.ctx.make_node<ast::Map>($1, @$); }
+
+map_expr:
+                map "[" vargs "]" {
                         if ($3.size() > 1) {
                           auto t = driver.ctx.make_node<ast::Tuple>(std::move($3), @$);
-                          $$ = driver.ctx.make_node<ast::Map>($1, t, @$);
+                          $$ = driver.ctx.make_node<ast::MapAccess>($1, t, @$);
                         } else {
-                          $$ = driver.ctx.make_node<ast::Map>($1, $3.back(), @$);
+                          $$ = driver.ctx.make_node<ast::MapAccess>($1, $3.back(), @$);
                         }
                 }
                 ;
 
 var:
                 VAR { $$ = driver.ctx.make_node<ast::Variable>($1, @$); }
-                ;
-
-map_or_var:
-                var { $$ = $1; }
-        |       map { $$ = $1; }
                 ;
 
 vargs:

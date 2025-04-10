@@ -2,6 +2,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -38,6 +39,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFoldLiteralsPass())
+                .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
                 .run();
   EXPECT_TRUE(bool(ok));
@@ -94,6 +96,7 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFoldLiteralsPass())
+                .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
                 .run();
 
@@ -989,7 +992,7 @@ kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
 )");
 
   test_error("kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }", R"(
-stdin:1:31-55: ERROR: delete() takes up to 2 arguments (3 provided)
+stdin:1:31-55: ERROR: delete() requires 2 arguments (3 provided)
 kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }
                               ~~~~~~~~~~~~~~~~~~~~~~~~
 )");
@@ -1057,9 +1060,9 @@ TEST(semantic_analyser, call_print_map_item)
   test(R"_(BEGIN { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_");
 
   test_error("BEGIN { @x[1] = 1; print(@x[\"asdf\"]); }", R"(
-stdin:1:20-36: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'int64'
+stdin:1:20-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'int64'
 BEGIN { @x[1] = 1; print(@x["asdf"]); }
-                   ~~~~~~~~~~~~~~~~
+                   ~~~~~~~~~~~~~~~
 )");
   test_error("BEGIN { print(@x[2]); }", R"(
 stdin:1:9-20: ERROR: Undefined map: @x
@@ -1067,7 +1070,7 @@ BEGIN { print(@x[2]); }
         ~~~~~~~~~~~
 )");
   test_error("BEGIN { @x[1] = 1; print(@x[1], 3, 5); }", R"(
-stdin:1:20-38: ERROR: Single-value (i.e. indexed) map print cannot take additional arguments.
+stdin:1:20-38: ERROR: Non-map print() only takes 1 argument, 3 found
 BEGIN { @x[1] = 1; print(@x[1], 3, 5); }
                    ~~~~~~~~~~~~~~~~~~
 )");
@@ -3855,8 +3858,8 @@ TEST(semantic_analyser, string_size)
       bpftrace, true, R"_(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})_", 0);
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
-  ASSERT_TRUE(map_assign->map->key_expr->type.IsStringTy());
-  ASSERT_EQ(map_assign->map->key_expr->type.GetSize(), 3UL);
+  ASSERT_TRUE(map_assign->key->type.IsStringTy());
+  ASSERT_EQ(map_assign->key->type.GetSize(), 3UL);
   ASSERT_EQ(map_assign->map->key_type.GetSize(), 6UL);
 
   ast = test(bpftrace,
@@ -3865,11 +3868,11 @@ TEST(semantic_analyser, string_size)
              0);
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
-  ASSERT_TRUE(map_assign->map->key_expr->type.IsTupleTy());
-  ASSERT_TRUE(map_assign->map->key_expr->type.GetField(0).type.IsStringTy());
-  ASSERT_EQ(map_assign->map->key_expr->type.GetField(0).type.GetSize(), 3UL);
+  ASSERT_TRUE(map_assign->key->type.IsTupleTy());
+  ASSERT_TRUE(map_assign->key->type.GetField(0).type.IsStringTy());
+  ASSERT_EQ(map_assign->key->type.GetField(0).type.GetSize(), 3UL);
   ASSERT_EQ(map_assign->map->key_type.GetField(0).type.GetSize(), 6UL);
-  ASSERT_EQ(map_assign->map->key_expr->type.GetSize(), 16UL);
+  ASSERT_EQ(map_assign->key->type.GetSize(), 16UL);
   ASSERT_EQ(map_assign->map->key_type.GetSize(), 16UL);
 
   ast = test(bpftrace,

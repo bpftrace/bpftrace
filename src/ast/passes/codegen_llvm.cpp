@@ -201,6 +201,7 @@ public:
   ScopedExpr visit(FieldAccess &acc);
   ScopedExpr visit(ArrayAccess &arr);
   ScopedExpr visit(TupleAccess &acc);
+  ScopedExpr visit(MapAccess &acc);
   ScopedExpr visit(Cast &cast);
   ScopedExpr visit(Tuple &tuple);
   ScopedExpr visit(ExprStatement &expr);
@@ -223,7 +224,6 @@ public:
   std::unique_ptr<llvm::Module> compile();
 
 private:
-  ScopedExpr getHistMapKey(Map &map, Value *log2, const Location &loc);
   int getNextIndexForProbe();
   ScopedExpr createLogicalAnd(Binop &binop);
   ScopedExpr createLogicalOr(Binop &binop);
@@ -277,10 +277,10 @@ private:
                  const std::string &name,
                  FunctionType *func_type);
 
-  [[nodiscard]] ScopedExpr getMapKey(Map &map);
   [[nodiscard]] ScopedExpr getMapKey(Map &map, Expression *key_expr);
   [[nodiscard]] ScopedExpr getMultiMapKey(
       Map &map,
+      Expression *key_expr,
       const std::vector<Value *> &extra_keys,
       const Location &loc);
 
@@ -783,16 +783,17 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 ScopedExpr CodegenLLVM::visit(Call &call)
 {
   if (call.func == "count") {
-    Map &map = *call.map;
-    auto scoped_key = getMapKey(map);
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    auto scoped_key = getMapKey(map, call.vargs.at(1));
     b_.CreateMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
   } else if (call.func == "sum") {
-    Map &map = *call.map;
-    ScopedExpr scoped_key = getMapKey(map);
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    ScopedExpr scoped_key = getMapKey(map, call.vargs.at(1));
+    ScopedExpr scoped_expr = visit(*call.vargs.at(2));
+
     // promote int to 64-bit
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
@@ -802,11 +803,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
   } else if (call.func == "max" || call.func == "min") {
     bool is_max = call.func == "max";
-    Map &map = *call.map;
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    ScopedExpr scoped_key = getMapKey(map, call.vargs.at(1));
 
-    ScopedExpr scoped_key = getMapKey(map);
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
+    ScopedExpr scoped_expr = visit(*call.vargs.at(2));
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
@@ -906,17 +907,15 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr();
 
   } else if (call.func == "avg" || call.func == "stats") {
-    Map &map = *call.map;
-
-    ScopedExpr scoped_key = getMapKey(map);
-
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    ScopedExpr scoped_key = getMapKey(map, call.vargs.at(1));
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
+    ScopedExpr scoped_expr = visit(call.vargs.at(2));
 
-    ScopedExpr scoped_expr = visit(*call.vargs.front());
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front()->type.IsSigned());
+                                   call.vargs.at(2)->type.IsSigned());
 
     llvm::Type *avg_struct_ty = b_.GetMapValueType(map.type);
 
@@ -991,21 +990,23 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!log2_func_)
       log2_func_ = createLog2Function();
 
-    Map &map = *call.map;
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    ScopedExpr scoped_arg = visit(call.vargs.at(2));
+
     // There is only one log2_func_ so the second argument must be passed
     // as an argument even though it is a constant 0..5
     // Possible optimization is create one function per different value
     // of the second argument.
-    ScopedExpr scoped_arg2 = visit(call.vargs.at(1));
+    ScopedExpr scoped_arg2 = visit(call.vargs.at(3));
     Value *k = b_.CreateIntCast(scoped_arg2.value(), b_.getInt64Ty(), false);
 
-    ScopedExpr scoped_arg = visit(*call.vargs.front());
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_arg.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front()->type.IsSigned());
+                                   call.vargs.at(2)->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr, k }, "log2");
-    ScopedExpr scoped_key = getHistMapKey(map, log2, call.loc);
+    ScopedExpr scoped_key = getMultiMapKey(
+        map, call.vargs.at(1), { log2 }, call.loc);
     b_.CreateMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
@@ -1015,13 +1016,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!linear_func_)
       linear_func_ = createLinearFunction();
 
-    Map &map = *call.map;
+    Map &map = *dynamic_cast<Map *>(call.vargs.at(0));
 
     // prepare arguments
-    auto *value_arg = call.vargs.at(0);
-    auto *min_arg = call.vargs.at(1);
-    auto *max_arg = call.vargs.at(2);
-    auto *step_arg = call.vargs.at(3);
+    auto *value_arg = call.vargs.at(2);
+    auto *min_arg = call.vargs.at(3);
+    auto *max_arg = call.vargs.at(4);
+    auto *step_arg = call.vargs.at(5);
     auto scoped_value_arg = visit(value_arg);
     auto scoped_min_arg = visit(min_arg);
     auto scoped_max_arg = visit(max_arg);
@@ -1030,7 +1031,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     Value *value = b_.CreateIntCast(scoped_value_arg.value(),
                                     b_.getInt64Ty(),
-                                    call.vargs.front()->type.IsSigned());
+                                    call.vargs.at(2)->type.IsSigned());
     Value *min = b_.CreateIntCast(scoped_min_arg.value(),
                                   b_.getInt64Ty(),
                                   false);
@@ -1045,23 +1046,17 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                   { value, min, max, step },
                                   "linear");
 
-    ScopedExpr scoped_key = getHistMapKey(map, linear, call.loc);
+    ScopedExpr scoped_key = getMultiMapKey(
+        map, call.vargs.at(1), { linear }, call.loc);
     b_.CreateMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
 
   } else if (call.func == "delete") {
-    auto &arg0 = *call.vargs.at(0);
-    auto &map = static_cast<Map &>(arg0);
-    // Current API: delete accepts two arguments except in the case of scalar
-    // maps (maps with no keys) in which case it you can just pass it the map
-    // and it will act similar to `clear` e.g. `delete(@scalar);`
-    // Legacy API: delete accepts a single argument that is the map with a
-    // key expression e.g. `delete(@mymap[1, 2]);` or no key if the map
-    // is a scalar
-    auto scoped_key = call.vargs.size() > 1 ? getMapKey(map, call.vargs.at(1))
-                                            : getMapKey(map);
+    auto &map = *dynamic_cast<Map *>(call.vargs.at(0));
+    auto scoped_key = getMapKey(map, call.vargs.at(1));
+
     if (!is_bpf_map_clearable(map_types_[map.ident])) {
       // store zero instead of calling bpf_map_delete_elem()
       auto *val = b_.CreateWriteMapValueAllocation(map.type,
@@ -1520,12 +1515,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.SetInsertPoint(deadcode);
     return ScopedExpr();
   } else if (call.func == "print") {
-    auto *arg = call.vargs.at(0);
-    if (auto *map = dynamic_cast<Map *>(arg)) {
-      if (map->key_expr)
-        createPrintNonMapCall(call, async_ids_.non_map_print());
-      else
-        createPrintMapCall(call);
+    if (dynamic_cast<Map *>(call.vargs.at(0)) != nullptr) {
+      createPrintMapCall(call);
     } else {
       createPrintNonMapCall(call, async_ids_.non_map_print());
     }
@@ -1838,28 +1829,11 @@ ScopedExpr CodegenLLVM::visit(Offsetof &offof)
   return ScopedExpr(b_.getInt64(offset));
 }
 
-ScopedExpr CodegenLLVM::visit(Map &map)
+ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
 {
-  auto scoped_key = getMapKey(map);
-
-  auto map_info = bpftrace_.resources.maps_info.find(map.ident);
-  if (map_info == bpftrace_.resources.maps_info.end()) {
-    LOG(BUG) << "map name: \"" << map.ident << "\" not found";
-  }
-
-  const auto &val_type = map_info->second.value_type;
-  Value *value;
-  if (canAggPerCpuMapElems(val_type, map_info->second.key_type)) {
-    value = b_.CreatePerCpuMapAggElems(
-        ctx_, map, scoped_key.value(), val_type, map.loc);
-  } else {
-    value = b_.CreateMapLookupElem(ctx_, map, scoped_key.value(), map.loc);
-  }
-
-  return ScopedExpr(value, [this, value] {
-    if (dyn_cast<AllocaInst>(value))
-      b_.CreateLifetimeEnd(value);
-  });
+  // This is not currently used in code generation. Code is generated either
+  // via `MapAccess` for reads or via `AssignMapStatement` for writes.
+  return ScopedExpr();
 }
 
 ScopedExpr CodegenLLVM::visit(Variable &var)
@@ -2480,6 +2454,30 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
   }
 }
 
+ScopedExpr CodegenLLVM::visit(MapAccess &acc)
+{
+  auto scoped_key = getMapKey(*acc.map, acc.key);
+
+  auto map_info = bpftrace_.resources.maps_info.find(acc.map->ident);
+  if (map_info == bpftrace_.resources.maps_info.end()) {
+    LOG(BUG) << "map name: \"" << acc.map->ident << "\" not found";
+  }
+
+  const auto &val_type = map_info->second.value_type;
+  Value *value;
+  if (canAggPerCpuMapElems(val_type, map_info->second.key_type)) {
+    value = b_.CreatePerCpuMapAggElems(
+        ctx_, *acc.map, scoped_key.value(), val_type, acc.loc);
+  } else {
+    value = b_.CreateMapLookupElem(ctx_, *acc.map, scoped_key.value(), acc.loc);
+  }
+
+  return ScopedExpr(value, [this, value] {
+    if (dyn_cast<AllocaInst>(value))
+      b_.CreateLifetimeEnd(value);
+  });
+}
+
 ScopedExpr CodegenLLVM::visit(Cast &cast)
 {
   auto scoped_expr = visit(cast.expr);
@@ -2649,49 +2647,47 @@ ScopedExpr CodegenLLVM::visit(ExprStatement &expr)
 
 ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 {
-  Map &map = *assignment.map;
   auto scoped_expr = visit(*assignment.expr);
+  auto scoped_key = getMapKey(*assignment.map, assignment.key);
   Value *expr = scoped_expr.value();
 
-  if (!expr) // Some functions do the assignments themselves.
-    return ScopedExpr();
-
-  auto scoped_key = getMapKey(map);
+  auto &map_type = assignment.map->type;
   auto &expr_type = assignment.expr->type;
   const auto self_alloca = needAssignMapStatementAllocation(assignment);
   Value *value = self_alloca
-                     ? b_.CreateWriteMapValueAllocation(map.type,
-                                                        map.ident + "_val",
+                     ? b_.CreateWriteMapValueAllocation(map_type,
+                                                        assignment.map->ident +
+                                                            "_val",
                                                         assignment.loc)
                      : expr;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
-    if (!expr_type.IsSameSizeRecursive(map.type)) {
-      b_.CreateMemsetBPF(value, b_.getInt8(0), map.type.GetSize());
+    if (!expr_type.IsSameSizeRecursive(map_type)) {
+      b_.CreateMemsetBPF(value, b_.getInt8(0), map_type.GetSize());
       if (expr_type.IsTupleTy()) {
-        createTupleCopy(expr_type, map.type, value, expr);
+        createTupleCopy(expr_type, map_type, value, expr);
       } else if (expr_type.IsStringTy()) {
         b_.CreateMemcpyBPF(value, expr, expr_type.GetSize());
       } else {
-        LOG(BUG) << "Type size mismatch. Map Type Size: " << map.type.GetSize()
+        LOG(BUG) << "Type size mismatch. Map Type Size: " << map_type.GetSize()
                  << " Expression Type Size: " << expr_type.GetSize();
       }
     }
-  } else if (map.type.IsRecordTy() || map.type.IsArrayTy()) {
+  } else if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
     if (!expr_type.is_internal) {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
       b_.CreateProbeRead(
-          ctx_, value, map.type, expr, assignment.loc, expr_type.GetAS());
+          ctx_, value, map_type, expr, assignment.loc, expr_type.GetAS());
     }
   } else {
-    if (map.type.IsIntTy()) {
+    if (assignment.map->type.IsIntTy()) {
       // Integers are always stored as 64-bit in map values
-      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map.type.IsSigned());
+      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map_type.IsSigned());
     }
     b_.CreateStore(expr, value);
   }
   b_.CreateMapUpdateElem(
-      ctx_, map.ident, scoped_key.value(), value, assignment.loc);
+      ctx_, assignment.map->ident, scoped_key.value(), value, assignment.loc);
   if (self_alloca && dyn_cast<AllocaInst>(value))
     b_.CreateLifetimeEnd(value);
   return ScopedExpr();
@@ -3333,87 +3329,70 @@ int CodegenLLVM::getNextIndexForProbe()
   return next_probe_index_++;
 }
 
-ScopedExpr CodegenLLVM::getMapKey(Map &map)
-{
-  return getMapKey(map, map.key_expr);
-}
-
 ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression *key_expr)
 {
   const auto alloca_created_here = needMapKeyAllocation(map, key_expr);
 
-  if (key_expr) {
-    auto scoped_key_expr = visit(key_expr);
-    const auto &key_type = map.key_type;
-    // Allocation needs to be done after recursing via vist(key_expr) so that
-    // we have the expression SSA value.
-    Value *key = alloca_created_here
-                     ? b_.CreateMapKeyAllocation(key_type,
-                                                 map.ident + "_key",
-                                                 key_expr->loc)
-                     : scoped_key_expr.value();
-    if (inBpfMemory(key_expr->type)) {
-      if (!key_expr->type.IsSameSizeRecursive(key_type)) {
-        b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
-        if (key_expr->type.IsTupleTy()) {
-          createTupleCopy(
-              key_expr->type, key_type, key, scoped_key_expr.value());
-        } else if (key_expr->type.IsStringTy()) {
-          b_.CreateMemcpyBPF(key,
-                             scoped_key_expr.value(),
-                             key_expr->type.GetSize());
-        } else {
-          LOG(BUG) << "Type size mismatch. Key Type Size: "
-                   << key_type.GetSize()
-                   << " Expression Type Size: " << key_expr->type.GetSize();
-        }
+  auto scoped_key_expr = visit(key_expr);
+  const auto &key_type = map.key_type;
+  // Allocation needs to be done after recursing via vist(key_expr) so that
+  // we have the expression SSA value.
+  Value *key = alloca_created_here
+                   ? b_.CreateMapKeyAllocation(key_type,
+                                               map.ident + "_key",
+                                               key_expr->loc)
+                   : scoped_key_expr.value();
+  if (inBpfMemory(key_expr->type)) {
+    if (!key_expr->type.IsSameSizeRecursive(key_type)) {
+      b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
+      if (key_expr->type.IsTupleTy()) {
+        createTupleCopy(key_expr->type, key_type, key, scoped_key_expr.value());
+      } else if (key_expr->type.IsStringTy()) {
+        b_.CreateMemcpyBPF(key,
+                           scoped_key_expr.value(),
+                           key_expr->type.GetSize());
       } else {
-        // Call-ee freed
+        LOG(BUG) << "Type size mismatch. Key Type Size: " << key_type.GetSize()
+                 << " Expression Type Size: " << key_expr->type.GetSize();
       }
-    } else if (map.key_type.IsIntTy()) {
-      // Integers are always stored as 64-bit in map keys
+    } else {
+      // Call-ee freed
+    }
+  } else if (map.key_type.IsIntTy()) {
+    // Integers are always stored as 64-bit in map keys
+    b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
+                                    b_.getInt64Ty(),
+                                    key_expr->type.IsSigned()),
+                   key);
+  } else {
+    if (key_expr->type.IsArrayTy() || key_expr->type.IsRecordTy()) {
+      // We need to read the entire array/struct and save it
+      b_.CreateProbeRead(
+          ctx_, key, key_expr->type, scoped_key_expr.value(), key_expr->loc);
+    } else {
       b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
                                       b_.getInt64Ty(),
                                       key_expr->type.IsSigned()),
                      key);
-    } else {
-      if (key_expr->type.IsArrayTy() || key_expr->type.IsRecordTy()) {
-        // We need to read the entire array/struct and save it
-        b_.CreateProbeRead(
-            ctx_, key, key_expr->type, scoped_key_expr.value(), key_expr->loc);
-      } else {
-        b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
-                                        b_.getInt64Ty(),
-                                        key_expr->type.IsSigned()),
-                       key);
-      }
     }
-    // Either way we hold on to the original key, to ensure that its lifetime
-    // lasts as long as it may be accessed.
-    if (alloca_created_here && dyn_cast<AllocaInst>(key)) {
-      return ScopedExpr(key, [this, key, k = std::move(scoped_key_expr)] {
-        b_.CreateLifetimeEnd(key);
-      });
-    }
-    return ScopedExpr(key, std::move(scoped_key_expr));
-  } else {
-    // No map key (e.g., @ = 1;). Use 0 as a key.
-    assert(alloca_created_here);
-    Value *key = b_.CreateMapKeyAllocation(CreateUInt64(),
-                                           map.ident + "_key",
-                                           map.loc);
-    b_.CreateStore(b_.getInt64(0), key);
-    if (dyn_cast<AllocaInst>(key)) {
-      return ScopedExpr(key, [this, key] { b_.CreateLifetimeEnd(key); });
-    }
-    return ScopedExpr(key);
   }
+  // Either way we hold on to the original key, to ensure that its lifetime
+  // lasts as long as it may be accessed.
+  if (alloca_created_here && dyn_cast<AllocaInst>(key)) {
+    return ScopedExpr(key, [this, key, k = std::move(scoped_key_expr)] {
+      b_.CreateLifetimeEnd(key);
+    });
+  }
+  return ScopedExpr(key, std::move(scoped_key_expr));
 }
 
 ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
+                                       Expression *key_expr,
                                        const std::vector<Value *> &extra_keys,
                                        const Location &loc)
 {
+  auto scoped_expr = visit(key_expr);
+
   size_t size = map.key_type.GetSize();
   for (auto *extra_key : extra_keys) {
     size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
@@ -3429,20 +3408,19 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   int offset = 0;
   bool aligned = true;
   // Construct a map key in the stack
-  auto scoped_expr = visit(*map.key_expr);
   Value *offset_val = b_.CreateGEP(key_type,
                                    key,
                                    { b_.getInt64(0), b_.getInt64(offset) });
   size_t map_key_size = map.key_type.GetSize();
-  size_t expr_size = map.key_expr->type.GetSize();
+  size_t expr_size = key_expr->type.GetSize();
 
-  if (inBpfMemory(map.key_expr->type)) {
-    if (!map.key_expr->type.IsSameSizeRecursive(map.key_type)) {
+  if (inBpfMemory(key_expr->type)) {
+    if (!key_expr->type.IsSameSizeRecursive(map.key_type)) {
       b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
-      if (map.key_expr->type.IsTupleTy()) {
+      if (key_expr->type.IsTupleTy()) {
         createTupleCopy(
-            map.key_expr->type, map.key_type, offset_val, scoped_expr.value());
-      } else if (map.key_expr->type.IsStringTy()) {
+            key_expr->type, map.key_type, offset_val, scoped_expr.value());
+      } else if (key_expr->type.IsStringTy()) {
         b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
       } else {
         LOG(BUG) << "Type size mismatch. Key Type Size: "
@@ -3455,20 +3433,17 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
     if ((map_key_size % 8) != 0)
       aligned = false;
   } else {
-    if (map.key_expr->type.IsArrayTy() || map.key_expr->type.IsRecordTy()) {
+    if (key_expr->type.IsArrayTy() || key_expr->type.IsRecordTy()) {
       // Read the array/struct into the key
-      b_.CreateProbeRead(ctx_,
-                         offset_val,
-                         map.key_expr->type,
-                         scoped_expr.value(),
-                         map.key_expr->loc);
+      b_.CreateProbeRead(
+          ctx_, offset_val, key_expr->type, scoped_expr.value(), key_expr->loc);
       if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
       // promote map key to 64-bit:
       Value *key_elem = b_.CreateIntCast(scoped_expr.value(),
                                          b_.getInt64Ty(),
-                                         map.key_expr->type.IsSigned());
+                                         key_expr->type.IsSigned());
       if (aligned)
         b_.CreateStore(key_elem, offset_val);
       else
@@ -3489,23 +3464,6 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   }
 
   return ScopedExpr(key, [this, key] { b_.CreateLifetimeEnd(key); });
-}
-
-ScopedExpr CodegenLLVM::getHistMapKey(Map &map,
-                                      Value *log2,
-                                      const Location &loc)
-{
-  if (map.key_expr)
-    return getMultiMapKey(map, { log2 }, loc);
-
-  auto *key = b_.CreateMapKeyAllocation(CreateUInt64(),
-                                        map.ident + "_key",
-                                        loc);
-  b_.CreateStore(log2, key);
-  return ScopedExpr(key, [this, key] {
-    if (dyn_cast<AllocaInst>(key))
-      b_.CreateLifetimeEnd(key);
-  });
 }
 
 ScopedExpr CodegenLLVM::createLogicalAnd(Binop &binop)
@@ -4358,11 +4316,12 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
   SizedType &type = unop.expr->type;
   uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
 
-  if (auto *map = dynamic_cast<Map *>(unop.expr)) {
-    auto scoped_key = getMapKey(*map);
+  if (auto *acc = dynamic_cast<MapAccess *>(unop.expr)) {
+    auto &map = *acc->map;
+    auto scoped_key = getMapKey(map, acc->key);
     Value *oldval = b_.CreateMapLookupElem(
-        ctx_, *map, scoped_key.value(), unop.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map->type, map->ident + "_newval");
+        ctx_, map, scoped_key.value(), unop.loc);
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
     if (is_increment)
       b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
@@ -4370,13 +4329,13 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
       b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
     b_.CreateMapUpdateElem(
-        ctx_, map->ident, scoped_key.value(), newval, unop.loc);
+        ctx_, map.ident, scoped_key.value(), newval, unop.loc);
 
     Value *value;
     if (unop.is_post_op)
       value = oldval;
     else
-      value = b_.CreateLoad(b_.GetType(map->type), newval);
+      value = b_.CreateLoad(b_.GetType(map.type), newval);
     b_.CreateLifetimeEnd(newval);
     return ScopedExpr(value);
   } else if (auto *var = dynamic_cast<Variable *>(unop.expr)) {
@@ -4657,7 +4616,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_val_type, map_info->second.key_type)) {
     val = b_.CreatePerCpuMapAggElems(
-        ctx_, *f.map, callback->getArg(1), map_val_type, f.map->loc);
+        ctx_, *f.map, callback->getArg(1), map_val_type, f.loc);
   } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

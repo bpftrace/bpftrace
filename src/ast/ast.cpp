@@ -111,17 +111,11 @@ MapDeclStatement::MapDeclStatement(ASTContext &ctx,
 {
 }
 
-Map::Map(ASTContext &ctx,
-         std::string ident,
-         Expression *key_expr,
-         Location &&loc)
+Map::Map(ASTContext &ctx, std::string ident, Location &&loc)
     : Expression(ctx, std::move(loc)),
       ident(std::move(ident)),
       key_expr(key_expr)
 {
-  if (key_expr) {
-    key_expr->key_for_map = this;
-  }
 }
 
 Variable::Variable(ASTContext &ctx, std::string ident, Location &&loc)
@@ -183,6 +177,11 @@ TupleAccess::TupleAccess(ASTContext &ctx,
 {
 }
 
+MapAccess::MapAccess(ASTContext &ctx, Map *map, Expression *key, Location &&loc)
+    : Expression(ctx, std::move(loc)), map(map), key(key)
+{
+}
+
 Cast::Cast(ASTContext &ctx,
            SizedType cast_type,
            Expression *expr,
@@ -202,26 +201,20 @@ ExprStatement::ExprStatement(ASTContext &ctx, Expression *expr, Location &&loc)
 {
 }
 
+AssignScalarMapStatement::AssignScalarMapStatement(ASTContext &ctx,
+                                                   Map *map,
+                                                   Expression *expr,
+                                                   Location &&loc)
+    : Statement(ctx, std::move(loc)), map(map), expr(expr) {};
+
 AssignMapStatement::AssignMapStatement(ASTContext &ctx,
                                        Map *map,
+                                       Expression *key,
                                        Expression *expr,
                                        Location &&loc)
-    : Statement(ctx, std::move(loc)), map(map), expr(expr)
+    : Statement(ctx, std::move(loc)), map(map), key(key), expr(expr)
 {
-  // If this is a block expression, then we skip through that and actually set
-  // the map on the underlying expression. This is done recursively. It is only
-  // done to support functions that need to know the type of the map to which
-  // they are being assigned.
-  Expression *value = expr;
-  while (true) {
-    auto *block = dynamic_cast<Block *>(value);
-    if (block == nullptr) {
-      break;
-    }
-    value = block->expr; // Must be non-null if expression.
-  };
-  value->map = map;
-};
+}
 
 AssignVarStatement::AssignVarStatement(ASTContext &ctx,
                                        Variable *var,
@@ -229,7 +222,6 @@ AssignVarStatement::AssignVarStatement(ASTContext &ctx,
                                        Location &&loc)
     : Statement(ctx, std::move(loc)), var(var), expr(expr)
 {
-  expr->var = var;
 }
 
 AssignVarStatement::AssignVarStatement(ASTContext &ctx,
@@ -241,7 +233,6 @@ AssignVarStatement::AssignVarStatement(ASTContext &ctx,
       var(var_decl_stmt->var),
       expr(expr)
 {
-  expr->var = var;
 }
 
 AssignConfigVarStatement::AssignConfigVarStatement(ASTContext &ctx,

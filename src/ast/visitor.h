@@ -92,9 +92,9 @@ public:
   {
     return default_value();
   }
-  R visit(Map &map)
+  R visit(Map &map __attribute__((__unused__)))
   {
-    return visitAndReplace(&map.key_expr);
+    return default_value();
   }
   R visit(Binop &binop)
   {
@@ -127,6 +127,12 @@ public:
   {
     return visitAndReplace(&acc.expr);
   }
+  R visit(MapAccess &acc)
+  {
+    visitAndReplace(&acc.map);
+    visitAndReplace(&acc.key);
+    return default_value();
+  }
   R visit(Cast &cast)
   {
     return visitAndReplace(&cast.expr);
@@ -139,9 +145,16 @@ public:
   {
     return visitAndReplace(&expr.expr);
   }
+  R visit(AssignScalarMapStatement &assignment)
+  {
+    visitAndReplace(&assignment.map);
+    visitAndReplace(&assignment.expr);
+    return default_value();
+  }
   R visit(AssignMapStatement &assignment)
   {
     visitAndReplace(&assignment.map);
+    visitAndReplace(&assignment.key);
     visitAndReplace(&assignment.expr);
     return default_value();
   }
@@ -366,6 +379,7 @@ public:
                               FieldAccess *,
                               ArrayAccess *,
                               TupleAccess *,
+                              MapAccess *,
                               Cast *,
                               Tuple *,
                               Ternary *,
@@ -376,6 +390,7 @@ public:
     return tryVisitAndReplace<Statement,
                               ExprStatement *,
                               VarDeclStatement *,
+                              AssignScalarMapStatement *,
                               AssignMapStatement *,
                               AssignVarStatement *,
                               If *,
