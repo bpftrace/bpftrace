@@ -957,8 +957,7 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
 
     // skip __safe_trusted suffix struct
     if (suffix___safe_trusted.length() < name.length() &&
-        name.rfind(suffix___safe_trusted) ==
-            (name.length() - suffix___safe_trusted.length()))
+        name.ends_with(suffix___safe_trusted))
       continue;
     if (name.size() > prefix.size() && name.starts_with(prefix)) {
       iter_set.insert(name.substr(prefix.size()));

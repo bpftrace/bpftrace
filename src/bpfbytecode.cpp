@@ -299,12 +299,12 @@ bool BpfBytecode::all_progs_loaded()
 
 bool BpfBytecode::hasMap(MapType internal_type) const
 {
-  return maps_.find(to_string(internal_type)) != maps_.end();
+  return maps_.contains(to_string(internal_type));
 }
 
 bool BpfBytecode::hasMap(const StackType &stack_type) const
 {
-  return maps_.find(stack_type.name()) != maps_.end();
+  return maps_.contains(stack_type.name());
 }
 
 const BpfMap &BpfBytecode::getMap(const std::string &name) const
