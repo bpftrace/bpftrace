@@ -16,7 +16,7 @@ SCRIPT_NAME=$0
 FIX=
 
 function run() {
-  nix develop ".#bpftrace-llvm19" --command "$@"
+  nix develop --command "$@"
 }
 
 usage() {

@@ -265,7 +265,7 @@ FuncsModulesMap parse_traceable_funcs()
   std::ifstream kprobes_blacklist_funs(kprobes_blacklist_path);
   while (std::getline(kprobes_blacklist_funs, line)) {
     auto addr_func_mod = split_addrrange_symbol_module(line);
-    if (result.find(std::get<1>(addr_func_mod)) != result.end()) {
+    if (result.contains(std::get<1>(addr_func_mod))) {
       result.erase(std::get<1>(addr_func_mod));
     }
   }

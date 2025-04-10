@@ -246,8 +246,7 @@ ProbeType probetype(const std::string &probeName)
 
                                 [&probeName](const ProbeItem &p) {
                                   return (p.name == probeName ||
-                                          p.aliases.find(probeName) !=
-                                              p.aliases.end());
+                                          p.aliases.contains(probeName));
                                 });
 
   if (v != PROBE_LIST.end())
@@ -264,8 +263,7 @@ std::string expand_probe_name(const std::string &orig_name)
 
                                 [&orig_name](const ProbeItem &p) {
                                   return (p.name == orig_name ||
-                                          p.aliases.find(orig_name) !=
-                                              p.aliases.end());
+                                          p.aliases.contains(orig_name));
                                 });
 
   if (v != PROBE_LIST.end())

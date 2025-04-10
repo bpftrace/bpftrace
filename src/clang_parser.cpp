@@ -590,8 +590,7 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types()
             cursor_type = clang_getPointeeType(cursor_type);
           if (cursor_type.kind == CXType_Record) {
             auto type_name = get_unqualified_type_name(cursor_type);
-            if (data.complete_types.find(type_name) ==
-                data.complete_types.end())
+            if (!data.complete_types.contains(type_name))
               data.incomplete_types.emplace(std::move(type_name));
           }
         }

@@ -16,6 +16,7 @@ Checks:
   - modernize-*
   - -modernize-avoid-c-arrays
   - -modernize-use-nodiscard
+  - -modernize-use-integer-sign-comparison
   - -modernize-use-trailing-return-type
   - performance-unnecessary-copy-initialization
   - readability-*

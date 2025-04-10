@@ -169,9 +169,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     has_iter_ = true;
 
   // Preload symbol tables if necessary
-  if (resources.probes_using_usym.find(&p) !=
-          resources.probes_using_usym.end() &&
-      util::is_exe(ap.target)) {
+  if (resources.probes_using_usym.contains(&p) && util::is_exe(ap.target)) {
     usyms_.cache(ap.target);
   }
 
