@@ -113,4 +113,6 @@ public:
   const SourceLocation current;
 };
 
+Location operator+(const Location &orig, const Location &expansion);
+
 } // namespace bpftrace::ast

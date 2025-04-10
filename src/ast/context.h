@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <memory>
 #include <vector>
 
@@ -55,6 +56,18 @@ public:
   {
     auto uniq_ptr = std::make_unique<T>(*this,
                                         wrap(std::forward<Args>(args))...);
+    auto *raw_ptr = uniq_ptr.get();
+    nodes_.push_back(std::move(uniq_ptr));
+    return raw_ptr;
+  }
+
+  template <NodeType T>
+  constexpr T *clone_node(const T *other, const Location &loc)
+  {
+    if (other == nullptr) {
+      return nullptr;
+    }
+    auto uniq_ptr = std::make_unique<T>(*this, *other, loc);
     auto *raw_ptr = uniq_ptr.get();
     nodes_.push_back(std::move(uniq_ptr));
     return raw_ptr;
