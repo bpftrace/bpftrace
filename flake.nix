@@ -161,6 +161,7 @@
                   pkgs.asciidoctor
                   pkgs.cereal
                   pkgs.elfutils
+                  pkgs.gbenchmark
                   pkgs.gtest
                   pkgs.libbfd
                   pkgs.libelf

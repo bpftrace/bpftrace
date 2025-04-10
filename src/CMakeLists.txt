@@ -52,7 +52,10 @@ set_target_properties(libbpftrace PROPERTIES PREFIX "")
 
 add_executable(bpftrace
   main.cpp
+  benchmark.cpp
 )
+find_package(benchmark REQUIRED)
+target_link_libraries(bpftrace benchmark::benchmark)
 
 # TODO: Honor `STATIC_LINKING` properly.
 if(LIBBLAZESYM_FOUND)

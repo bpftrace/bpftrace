@@ -31,6 +31,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "benchmark.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "btf.h"
@@ -61,8 +62,9 @@ enum class OutputBufferConfig {
 };
 
 enum class TestMode {
-  UNSET = 0,
+  NONE = 0,
   CODEGEN,
+  BENCHMARK,
 };
 
 enum class BuildMode {
@@ -335,7 +337,7 @@ struct Args {
   bool usdt_file_activation = false;
   int helper_check_level = 1;
   bool no_warnings = false;
-  TestMode test_mode = TestMode::UNSET;
+  TestMode test_mode = TestMode::NONE;
   std::string script;
   std::string search;
   std::string filename;
@@ -465,8 +467,10 @@ Args parse_args(int argc, char* argv[])
         args.helper_check_level = 0;
         break;
       case Options::TEST: // --test
-        if (std::strcmp(optarg, "codegen") == 0)
+        if (std::strcmp(optarg, "codegen") == 0) {
           args.test_mode = TestMode::CODEGEN;
+        } else if (std::strcmp(optarg, "benchmark") == 0)
+          args.test_mode = TestMode::BENCHMARK;
         else {
           LOG(ERROR) << "USAGE: --test can only be 'codegen'.";
           exit(1);
@@ -833,7 +837,7 @@ int main(int argc, char* argv[])
   }
 
   // If we are not running anything, then we don't require root.
-  if (args.test_mode != TestMode::CODEGEN) {
+  if (args.test_mode == TestMode::NONE) {
     check_is_root();
 
     auto lockdown_state = lockdown::detect();
@@ -946,6 +950,15 @@ int main(int argc, char* argv[])
   }
   pm.add(ast::CreateExternObjectPass());
   pm.add(ast::CreateLinkPass());
+
+  if (args.test_mode == TestMode::BENCHMARK) {
+    auto ok = benchmark(pm);
+    if (!ok) {
+      std::cerr << "Benchmark error: " << ok.takeError();
+      return 1;
+    }
+    return 0;
+  }
 
   auto pmresult = pm.run();
   if (!pmresult || !ast.diagnostics().ok()) {
