@@ -1,1 +1,2 @@
 tests/data/data_source.c
+tests/testprogs/usdt_inlined.c

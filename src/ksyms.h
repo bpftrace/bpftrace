@@ -16,7 +16,10 @@ public:
   Ksyms(Ksyms &) = delete;
   Ksyms &operator=(const Ksyms &) = delete;
 
-  std::string resolve(uint64_t addr, bool show_offset);
+  std::vector<std::string> resolve(uint64_t addr,
+                                   bool show_offset,
+                                   bool perf_mode,
+                                   bool show_debug_info);
 
 private:
   const Config &config_;
@@ -25,9 +28,14 @@ private:
 #ifdef HAVE_BLAZESYM
   struct blaze_symbolizer *symbolizer_{ nullptr };
 
-  std::optional<std::string> resolve_blazesym_impl(uint64_t addr,
-                                                   bool show_offset);
-  std::string resolve_blazesym(uint64_t addr, bool show_offset);
+  std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
+                                                 bool show_offset,
+                                                 bool perf_mode,
+                                                 bool show_debug_info);
+  std::vector<std::string> resolve_blazesym(uint64_t addr,
+                                            bool show_offset,
+                                            bool perf_mode,
+                                            bool show_debug_info);
 #endif
 
   std::string resolve_bcc(uint64_t addr, bool show_offset);

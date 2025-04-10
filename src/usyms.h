@@ -23,11 +23,12 @@ public:
   Usyms& operator=(const Usyms&) = delete;
 
   void cache(const std::string& elf_file);
-  std::string resolve(uint64_t addr,
-                      int32_t pid,
-                      const std::string& pid_exe,
-                      bool show_offset,
-                      bool show_module);
+  std::vector<std::string> resolve(uint64_t addr,
+                                   int32_t pid,
+                                   const std::string& pid_exe,
+                                   bool show_offset,
+                                   bool perf_mode,
+                                   bool show_debug_info);
 
 private:
   const Config& config_;
@@ -42,7 +43,7 @@ private:
                           int32_t pid,
                           const std::string& pid_exe,
                           bool show_offset,
-                          bool show_module);
+                          bool perf_mode);
   struct bcc_symbol_option& get_symbol_opts();
 
 #ifdef HAVE_BLAZESYM
@@ -50,16 +51,18 @@ private:
 
   struct blaze_symbolizer* create_symbolizer() const;
   void cache_blazesym(const std::string& elf_file);
-  std::optional<std::string> resolve_blazesym_impl(uint64_t addr,
-                                                   int32_t pid,
-                                                   const std::string& pid_exe,
-                                                   bool show_offset,
-                                                   bool show_module);
-  std::string resolve_blazesym(uint64_t addr,
-                               int32_t pid,
-                               const std::string& pid_exe,
-                               bool show_offset,
-                               bool show_module);
+  std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
+                                                 int32_t pid,
+                                                 const std::string& pid_exe,
+                                                 bool show_offset,
+                                                 bool perf_mode,
+                                                 bool show_debug_info);
+  std::vector<std::string> resolve_blazesym(uint64_t addr,
+                                            int32_t pid,
+                                            const std::string& pid_exe,
+                                            bool show_offset,
+                                            bool perf_mode,
+                                            bool show_debug_info);
 #endif
 };
 

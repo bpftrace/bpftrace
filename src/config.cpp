@@ -252,6 +252,7 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "missing_probes", CONFIG_FIELD_PARSER(missing_probes) },
   { "print_maps_on_exit", CONFIG_FIELD_PARSER(print_maps_on_exit) },
   { "use_blazesym", CONFIG_FIELD_PARSER(use_blazesym) },
+  { "show_debug_info", CONFIG_FIELD_PARSER(show_debug_info) },
   { "unstable_import", CONFIG_FIELD_PARSER(unstable_import) },
   { "unstable_map_decl", CONFIG_FIELD_PARSER(unstable_map_decl) },
 };

@@ -18,32 +18,98 @@
 
 namespace {
 #ifdef HAVE_BLAZESYM
-std::string stringify_addr(uint64_t addr, bool show_module)
+std::string stringify_addr(uint64_t addr, bool perf_mode)
 {
   std::ostringstream symbol;
   symbol << reinterpret_cast<void *>(addr);
-  if (show_module)
+  if (perf_mode)
     symbol << " ([unknown])";
   return symbol.str();
 }
 
-std::string stringify_sym(const blaze_sym *sym,
+std::string stringify_sym(const char *name,
+                          const blaze_symbolize_code_info *code_info,
                           uint64_t addr,
+                          uint64_t sym_addr,
                           bool show_offset,
-                          bool show_module)
+                          const char *sym_module,
+                          bool perf_mode,
+                          bool is_inlined)
 {
   std::ostringstream symbol;
-  symbol << sym->name;
-  if (show_offset)
-    symbol << "+" << addr - sym->addr;
-  if (show_module) {
-    if (sym->module != nullptr)
-      symbol << " (" << sym->module << ")";
+
+  if (is_inlined && !perf_mode) {
+    symbol << "[inlined] ";
+  }
+
+  symbol << name;
+
+  if (show_offset) {
+    symbol << "+" << addr - sym_addr;
+  }
+
+  if (perf_mode) {
+    if (sym_module != nullptr)
+      symbol << " (" << sym_module << ")";
+    else if (is_inlined)
+      symbol << " (inlined)";
     else
       symbol << " ([unknown])";
+
+    // Don't add the file/line if we're in perf mode
+    return symbol.str();
   }
+
+  if (code_info != nullptr) {
+    if (code_info->dir != nullptr && code_info->file != nullptr) {
+      symbol << "@" << code_info->dir << "/" << code_info->file << ":"
+             << code_info->line;
+    } else if (code_info->file != nullptr) {
+      symbol << "@" << code_info->file << ":" << code_info->line;
+    }
+  }
+
   return symbol.str();
 }
+
+void add_symbols(const blaze_sym *sym,
+                 uint64_t addr,
+                 bool show_offset,
+                 bool perf_mode,
+                 std::vector<std::string> &str_syms)
+{
+  if (sym == nullptr || sym->name == nullptr) {
+    return;
+  }
+
+  const struct blaze_symbolize_inlined_fn *inlined;
+
+  // bpftrace prints stacks leaf first so the inlined functions
+  // need to come first in the list (and in reverse order)
+  for (int j = static_cast<int>(sym->inlined_cnt) - 1; j >= 0; j--) {
+    inlined = &sym->inlined[j];
+    if (inlined != nullptr) {
+      str_syms.push_back(stringify_sym(inlined->name,
+                                       &inlined->code_info,
+                                       0,
+                                       0,
+                                       false,
+                                       nullptr,
+                                       perf_mode,
+                                       true));
+    }
+  }
+
+  str_syms.push_back(stringify_sym(sym->name,
+                                   &sym->code_info,
+                                   addr,
+                                   sym->addr,
+                                   show_offset,
+                                   sym->module,
+                                   perf_mode,
+                                   false));
+}
+
 #endif
 } // namespace
 
@@ -96,6 +162,8 @@ struct blaze_symbolizer *Usyms::create_symbolizer() const
 {
   blaze_symbolizer_opts opts = {
     .type_size = sizeof(opts),
+    .code_info = config_.show_debug_info,
+    .inlined_fns = config_.show_debug_info,
     .demangle = config_.cpp_demangle,
   };
   return blaze_symbolizer_new_opts(&opts);
@@ -155,7 +223,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
                                int32_t pid,
                                const std::string &pid_exe,
                                bool show_offset,
-                               bool show_module)
+                               bool perf_mode)
 {
   const auto cache_type = config_.user_symbol_cache_type;
   struct bcc_symbol usym;
@@ -181,7 +249,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
         symbol << sym->second.name;
         if (show_offset)
           symbol << "+" << addr - sym->second.start;
-        if (show_module)
+        if (perf_mode)
           symbol << " (" << pid_exe << ")";
         return symbol.str();
       }
@@ -227,11 +295,11 @@ std::string Usyms::resolve_bcc(uint64_t addr,
       symbol << usym.name;
     if (show_offset)
       symbol << "+" << usym.offset;
-    if (show_module)
+    if (perf_mode)
       symbol << " (" << usym.module << ")";
   } else {
     symbol << reinterpret_cast<void *>(addr);
-    if (show_module)
+    if (perf_mode)
       symbol << " ([unknown])";
   }
 
@@ -242,17 +310,21 @@ std::string Usyms::resolve_bcc(uint64_t addr,
 }
 
 #ifdef HAVE_BLAZESYM
-std::optional<std::string> Usyms::resolve_blazesym_impl(
+std::vector<std::string> Usyms::resolve_blazesym_impl(
     uint64_t addr,
     int32_t pid,
     const std::string &pid_exe,
     bool show_offset,
-    bool show_module)
+    bool perf_mode,
+    bool show_debug_info)
 {
+  std::vector<std::string> str_syms;
+  const blaze_sym *sym;
+
   if (symbolizer_ == nullptr) {
     symbolizer_ = create_symbolizer();
     if (symbolizer_ == nullptr)
-      return std::nullopt;
+      return str_syms;
   }
 
   auto cache_type = config_.user_symbol_cache_type;
@@ -269,73 +341,79 @@ std::optional<std::string> Usyms::resolve_blazesym_impl(
       blaze_symbolize_src_elf src = {
         .type_size = sizeof(src),
         .path = pid_exe.c_str(),
-        // TODO: Enable usage of debug symbols at some point.
-        .debug_syms = false,
+        .debug_syms = show_debug_info,
       };
       const blaze_syms *syms = blaze_symbolize_elf_virt_offsets(
           symbolizer_, &src, &addr, 1);
-      if (syms != nullptr) {
-        SCOPE_EXIT
-        {
-          blaze_syms_free(syms);
-        };
-
-        const blaze_sym *sym = &syms->syms[0];
-        if (sym->name != nullptr)
-          return stringify_sym(sym, addr, show_offset, show_module);
+      if (syms == nullptr) {
+        return str_syms;
       }
+
+      SCOPE_EXIT
+      {
+        blaze_syms_free(syms);
+      };
+
+      sym = &syms->syms[0];
+
+      add_symbols(sym, addr, show_offset, perf_mode, str_syms);
     }
+    return str_syms;
   }
 
   blaze_symbolize_src_process src = {
     .type_size = sizeof(src),
     .pid = static_cast<uint32_t>(pid),
-    // TODO: Enable usage of debug symbols at some point.
-    .debug_syms = false,
+    .debug_syms = show_debug_info,
     .perf_map = true,
   };
 
   const blaze_syms *syms = blaze_symbolize_process_abs_addrs(
       symbolizer_, &src, &addr, 1);
   if (syms == nullptr)
-    return std::nullopt;
+    return str_syms;
   SCOPE_EXIT
   {
     blaze_syms_free(syms);
   };
 
-  const blaze_sym *sym = &syms->syms[0];
-  if (sym->name == nullptr)
-    return std::nullopt;
+  sym = &syms->syms[0];
+  add_symbols(sym, addr, show_offset, perf_mode, str_syms);
 
-  return stringify_sym(sym, addr, show_offset, show_module);
+  return str_syms;
 }
 
-std::string Usyms::resolve_blazesym(uint64_t addr,
-                                    int32_t pid,
-                                    const std::string &pid_exe,
-                                    bool show_offset,
-                                    bool show_module)
+std::vector<std::string> Usyms::resolve_blazesym(uint64_t addr,
+                                                 int32_t pid,
+                                                 const std::string &pid_exe,
+                                                 bool show_offset,
+                                                 bool perf_mode,
+                                                 bool show_debug_info)
 {
-  if (auto sym = resolve_blazesym_impl(
-          addr, pid, pid_exe, show_offset, show_module)) {
-    return *sym;
+  auto syms = resolve_blazesym_impl(
+      addr, pid, pid_exe, show_offset, perf_mode, show_debug_info);
+  if (syms.empty()) {
+    syms.push_back(stringify_addr(addr, perf_mode));
   }
-  return stringify_addr(addr, show_module);
+  return syms;
 }
 #endif
 
-std::string Usyms::resolve(uint64_t addr,
-                           int32_t pid,
-                           const std::string &pid_exe,
-                           bool show_offset,
-                           bool show_module)
+std::vector<std::string> Usyms::resolve(uint64_t addr,
+                                        int32_t pid,
+                                        const std::string &pid_exe,
+                                        bool show_offset,
+                                        bool perf_mode,
+                                        bool show_debug_info)
 {
 #ifdef HAVE_BLAZESYM
   if (config_.use_blazesym)
-    return resolve_blazesym(addr, pid, pid_exe, show_offset, show_module);
+    return resolve_blazesym(
+        addr, pid, pid_exe, show_offset, perf_mode, show_debug_info);
 #endif
-  return resolve_bcc(addr, pid, pid_exe, show_offset, show_module);
+  return std::vector<std::string>{
+    resolve_bcc(addr, pid, pid_exe, show_offset, perf_mode)
+  };
 }
 
 struct bcc_symbol_option &Usyms::get_symbol_opts()

@@ -1493,31 +1493,45 @@ std::string BPFtrace::get_stack(int64_t stackid,
   std::string padding(indent, ' ');
 
   stack << "\n";
-  for (uint32_t i = 0; i < nr_stack_frames; ++i) {
+  for (uint32_t i = 0; i < nr_stack_frames;) {
     uint64_t addr = stack_trace.at(i);
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
+      ++i;
       continue;
     }
-    std::string sym;
+    std::vector<std::string> syms;
     if (!ustack)
-      sym = resolve_ksym(addr, true);
+      syms = resolve_ksym_stack(addr,
+                                true,
+                                stack_type.mode == StackMode::perf,
+                                config_->show_debug_info);
     else
-      sym = resolve_usym(
-          addr, pid, probe_id, true, stack_type.mode == StackMode::perf);
+      syms = resolve_usym_stack(addr,
+                                pid,
+                                probe_id,
+                                true,
+                                stack_type.mode == StackMode::perf,
+                                config_->show_debug_info);
 
-    switch (stack_type.mode) {
-      case StackMode::bpftrace:
-        stack << padding << sym << std::endl;
-        break;
-      case StackMode::perf:
-        stack << "\t" << std::hex << addr << std::dec << " " << sym
-              << std::endl;
-        break;
-      case StackMode::raw:
-        LOG(BUG) << "StackMode::raw should have been processed before "
-                    "symbolication.";
-        break;
+    std::string sym;
+    for (size_t sym_idx = 0; i < nr_stack_frames && sym_idx < syms.size();) {
+      sym = syms.at(sym_idx);
+      switch (stack_type.mode) {
+        case StackMode::bpftrace:
+          stack << padding << sym << std::endl;
+          break;
+        case StackMode::perf:
+          stack << "\t" << std::hex << addr << std::dec << " " << sym
+                << std::endl;
+          break;
+        case StackMode::raw:
+          LOG(BUG) << "StackMode::raw should have been processed before "
+                      "symbolication.";
+          break;
+      }
+      ++i;
+      ++sym_idx;
     }
   }
 
@@ -1607,9 +1621,19 @@ std::string BPFtrace::resolve_buf(const char *buf, size_t size)
   return util::hex_format_buffer(buf, size);
 }
 
-std::string BPFtrace::resolve_ksym(uint64_t addr, bool show_offset)
+std::string BPFtrace::resolve_ksym(uint64_t addr)
 {
-  return ksyms_.resolve(addr, show_offset);
+  auto syms = resolve_ksym_stack(addr, false, false, false);
+  assert(syms.size() == 1);
+  return syms.front();
+}
+
+std::vector<std::string> BPFtrace::resolve_ksym_stack(uint64_t addr,
+                                                      bool show_offset,
+                                                      bool perf_mode,
+                                                      bool show_debug_info)
+{
+  return ksyms_.resolve(addr, show_offset, perf_mode, show_debug_info);
 }
 
 uint64_t BPFtrace::resolve_kname(const std::string &name) const
@@ -1732,38 +1756,39 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t *inet) const
   return addrstr;
 }
 
-std::string BPFtrace::resolve_usym(uint64_t addr,
-                                   int32_t pid,
-                                   int32_t probe_id,
-                                   bool show_offset,
-                                   bool show_module)
+std::string BPFtrace::resolve_usym(uint64_t addr, int32_t pid, int32_t probe_id)
 {
-  if (resolve_user_symbols_) {
-    std::string pid_exe = util::get_pid_exe(pid);
-    if (pid_exe.empty() && probe_id != -1) {
-      // sometimes program cannot be determined from PID, typically when the
-      // process does not exist anymore; in that case, try to get program name
-      // from probe
-      // note: this fails if the probe contains a wildcard, since the probe id
-      // is not generated per match
-      auto probe_full = resolve_probe(probe_id);
-      if (probe_full.find(',') == std::string::npos &&
-          !util::has_wildcard(probe_full)) {
-        // only find program name for probes that contain one program name,
-        // to avoid incorrect symbol resolutions
-        size_t start = probe_full.find(':') + 1;
-        size_t end = probe_full.find(':', start);
-        pid_exe = probe_full.substr(start, end - start);
-      }
+  auto syms = resolve_usym_stack(addr, pid, probe_id, false, false, false);
+  assert(syms.size() == 1);
+  return syms.front();
+}
+
+std::vector<std::string> BPFtrace::resolve_usym_stack(uint64_t addr,
+                                                      int32_t pid,
+                                                      int32_t probe_id,
+                                                      bool show_offset,
+                                                      bool perf_mode,
+                                                      bool show_debug_info)
+{
+  std::string pid_exe = util::get_pid_exe(pid);
+  if (pid_exe.empty() && probe_id != -1) {
+    // sometimes program cannot be determined from PID, typically when the
+    // process does not exist anymore; in that case, try to get program name
+    // from probe
+    // note: this fails if the probe contains a wildcard, since the probe id
+    // is not generated per match
+    auto probe_full = resolve_probe(probe_id);
+    if (probe_full.find(',') == std::string::npos &&
+        !util::has_wildcard(probe_full)) {
+      // only find program name for probes that contain one program name,
+      // to avoid incorrect symbol resolutions
+      size_t start = probe_full.find(':') + 1;
+      size_t end = probe_full.find(':', start);
+      pid_exe = probe_full.substr(start, end - start);
     }
-    return usyms_.resolve(addr, pid, pid_exe, show_offset, show_module);
-  } else {
-    std::ostringstream symbol;
-    symbol << reinterpret_cast<void *>(addr);
-    if (show_module)
-      symbol << " ([unknown])";
-    return symbol.str();
   }
+  return usyms_.resolve(
+      addr, pid, pid_exe, show_offset, perf_mode, show_debug_info);
 }
 
 std::string BPFtrace::resolve_probe(uint64_t probe_id) const

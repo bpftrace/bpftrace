@@ -335,13 +335,20 @@ AFTER ./testprogs/uprobe_loop
 NAME ustack_stack_mode_env_bpftrace
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=bpftrace
-EXPECT_REGEX ^\s+uprobeFunction1\+[0-9]+$
+EXPECT_REGEX ^\s+uprobeFunction1\+[0-9]+@[\w\/]+.c:[0-9]+$
 AFTER ./testprogs/uprobe_loop
 
+# file and line are not available for perf stack mode
 NAME ustack_stack_mode_env_perf
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
 ENV BPFTRACE_STACK_MODE=perf
 EXPECT_REGEX ^\s+[0-9a-f]+ uprobeFunction1\+[0-9]+ \(.*/uprobe_loop\)$
+AFTER ./testprogs/uprobe_loop
+
+NAME ustack_with_no_file_and_line_env_bpftrace
+PROG config = { show_debug_info=0 } u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n", ustack(1)); exit(); }
+ENV BPFTRACE_STACK_MODE=bpftrace
+EXPECT_REGEX ^\s+uprobeFunction1\+[0-9]+$
 AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_raw
@@ -358,12 +365,31 @@ AFTER ./testprogs/uprobe_loop
 
 NAME ustack_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
-PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
+PROG config = { show_debug_info=0 } uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
 EXPECT_REGEX ^\s+test\+[0-9]+\s+test2\+[0-9]+\s+main\+[0-9]+
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
 # The stack output expects prologue to be skipped on uprobes. See kernel:
 # cfa7f3d2c526 ("perf,x86: avoid missing caller address in stack traces captured in uprobe")
 MIN_KERNEL 6.12
+
+NAME ustack_with_inlined_funcs
+RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
+EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s*mywrapper.*
+TIMEOUT 1
+REQUIRES ./testprogs/systemtap_sys_sdt_check
+
+NAME ustack_with_inlined_funcs_with_limit
+RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack(2)); exit(); } }' -c ./testprogs/usdt_inlined
+EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+$
+TIMEOUT 1
+REQUIRES ./testprogs/systemtap_sys_sdt_check
+
+NAME ustack_with_inlined_funcs_env_perf
+RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
+ENV BPFTRACE_STACK_MODE=perf
+EXPECT_REGEX ^\s+[0-9a-f]+ myclock \(inlined\)\s*[0-9a-f]+ mywrapper_inlined \(inlined\)\s*[0-9a-f]+ mywrapper.*
+TIMEOUT 1
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME cat
 PROG i:ms:1 { cat("/proc/uptime"); exit();}
