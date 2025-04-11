@@ -24,7 +24,7 @@ public:
       : std::string_view{ str }
   {
   }
-  constexpr const char *c_str() const noexcept
+  constexpr const_pointer c_str() const noexcept
   {
     return data();
   }

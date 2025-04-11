@@ -17,7 +17,9 @@ TEST(cstring_view, c_string)
   EXPECT_EQ('a', sv[0]);
   EXPECT_EQ('b', sv[1]);
   EXPECT_EQ('c', sv[2]);
-  EXPECT_EQ('\0', sv[3]);
+  // Skip operator[], because accessing the terminator fails
+  // the bound checks for hardened std lib, see #4001.
+  EXPECT_EQ('\0', sv.c_str()[3]);
 }
 
 TEST(cstring_view, std_string)
@@ -30,7 +32,9 @@ TEST(cstring_view, std_string)
   EXPECT_EQ('a', sv[0]);
   EXPECT_EQ('b', sv[1]);
   EXPECT_EQ('c', sv[2]);
-  EXPECT_EQ('\0', sv[3]);
+  // Skip operator[], because accessing the terminator fails
+  // the bound checks for hardened std lib, see #4001.
+  EXPECT_EQ('\0', sv.c_str()[3]);
 }
 
 TEST(cstring_view, std_string_view)
