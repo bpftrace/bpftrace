@@ -1,5 +1,5 @@
 #include "arch.h"
-#include "utils.h"
+#include "util/exceptions.h"
 
 #include <algorithm>
 #include <array>
@@ -154,7 +154,7 @@ std::string name()
 
 std::vector<std::string> invalid_watchpoint_modes()
 {
-  throw FatalUserException(
+  throw util::FatalUserException(
       "Watchpoints are not supported on this architecture");
 }
 
