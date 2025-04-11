@@ -8,6 +8,8 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.23.1] 2025-04-11
+
 #### Fixed
 - Fix build failures due to missing location.hh
   - [#4000](https://github.com/bpftrace/bpftrace/pull/4000)
