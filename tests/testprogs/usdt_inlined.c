@@ -18,9 +18,13 @@ __attribute__((always_inline)) inline static void myclock(int probe_num)
   DTRACE_PROBE2(tracetest, testprobe, tv.tv_sec, on_stack);
 }
 
+__attribute__((always_inline)) inline static void mywrapper_inlined() {
+  myclock(100);
+}
+
 static void mywrapper()
 {
-  myclock(100);
+  mywrapper_inlined();
 }
 
 static void loop()

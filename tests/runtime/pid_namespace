@@ -16,7 +16,7 @@ EXPECT_REGEX_NONE ^pid: 1, tid: 1$
 
 # Both bpftrace and target running inside a PID namespace
 NAME ustack_inside
-RUN unshare --fork --pid --mount-proc bash -c "(./testprogs/uprobe_loop &) && {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'"
+RUN unshare --fork --pid --mount-proc bash -c "(./testprogs/uprobe_loop &) && {{BPFTRACE}} -e 'config = { show_debug_info=0 } uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'"
 EXPECT_REGEX         uprobeFunction1\+\d+$
                      spin\+\d+$
                      main\+\d+$
@@ -29,7 +29,7 @@ MIN_KERNEL 6.12
 # might not be true (e.g. on WSL2), so we skip it if that's not
 # the case.
 NAME ustack_outside
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'
+RUN {{BPFTRACE}} -e 'config = { show_debug_info=0 } uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'
 AFTER unshare --fork --pid --mount-proc bash -c ./testprogs/uprobe_loop
 EXPECT_REGEX         uprobeFunction1\+\d+$
                      spin\+\d+$
