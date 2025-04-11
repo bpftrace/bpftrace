@@ -110,15 +110,17 @@ MapDeclStatement::MapDeclStatement(ASTContext &ctx,
 {
 }
 
-Map::Map(ASTContext &ctx, std::string ident, Location &&loc)
-    : Expression(ctx, std::move(loc)), ident(std::move(ident))
+Map::Map(ASTContext &ctx,
+         std::string ident,
+         Expression *key_expr,
+         Location &&loc)
+    : Expression(ctx, std::move(loc)),
+      ident(std::move(ident)),
+      key_expr(key_expr)
 {
-}
-
-Map::Map(ASTContext &ctx, std::string ident, Expression &expr, Location &&loc)
-    : Expression(ctx, std::move(loc)), ident(std::move(ident)), key_expr(&expr)
-{
-  key_expr->key_for_map = this;
+  if (key_expr) {
+    key_expr->key_for_map = this;
+  }
 }
 
 Variable::Variable(ASTContext &ctx, std::string ident, Location &&loc)

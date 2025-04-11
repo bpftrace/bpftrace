@@ -708,13 +708,13 @@ call:
                 ;
 
 map:
-                MAP               { $$ = driver.ctx.make_node<ast::Map>($1, @$); }
+                MAP               { $$ = driver.ctx.make_node<ast::Map>($1, nullptr, @$); }
         |       MAP "[" vargs "]" {
                         if ($3.size() > 1) {
                           auto t = driver.ctx.make_node<ast::Tuple>(std::move($3), @$);
-                          $$ = driver.ctx.make_node<ast::Map>($1, *t, @$);
+                          $$ = driver.ctx.make_node<ast::Map>($1, t, @$);
                         } else {
-                          $$ = driver.ctx.make_node<ast::Map>($1, *$3.back(), @$);
+                          $$ = driver.ctx.make_node<ast::Map>($1, $3.back(), @$);
                         }
                 }
                 ;

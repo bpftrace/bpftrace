@@ -18,6 +18,38 @@ namespace bpftrace::ast {
 
 namespace {
 
+// Determines if all map accesses are well bounded. If the map is accessed
+// exactly as key zero, then this makes `@` and `@[0]` equivalent.
+//
+// In the future, this could be used to scale maps that are accessed within
+// fixed ranges, for now this is used to determine if the map is a scalar.
+class MapBounds : public Visitor<MapBounds> {
+public:
+  using Visitor<MapBounds>::visit;
+  void visit(Map &map)
+  {
+    if (!map.key_expr) {
+      // This will use an implied key.
+      min[map.ident] = std::min(min[map.ident], static_cast<int64_t>(0));
+      max[map.ident] = std::max(max[map.ident], static_cast<int64_t>(0));
+    } else if (auto *integer = dynamic_cast<Integer *>(map.key_expr)) {
+      min[map.ident] = std::min(min[map.ident], integer->n);
+      max[map.ident] = std::max(max[map.ident], integer->n);
+    } else {
+      min[map.ident] = std::numeric_limits<int64_t>::min();
+      max[map.ident] = std::numeric_limits<int64_t>::max();
+    }
+  }
+  bool is_scalar(const std::string &name)
+  {
+    return min[name] == 0 && max[name] == 0;
+  }
+
+private:
+  std::unordered_map<std::string, int64_t> min;
+  std::unordered_map<std::string, int64_t> max;
+};
+
 // Resource analysis pass on AST
 //
 // This pass collects information on what runtime resources a script needs.
@@ -44,12 +76,15 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
+  void visit(Program &prog);
 
   // This will move the compute resources value, it should be called only
   // after the top-level visit.
   RequiredResources resources();
 
 private:
+  MapBounds map_bounds_;
+
   // Determines whether the given function uses userspace symbol resolution.
   // This is used later for loading the symbol table into memory.
   bool uses_usym_table(const std::string &fun);
@@ -244,14 +279,17 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::NUM_CPUS);
   } else if (call.func == "hist") {
-    auto &map_info = resources_.maps_info[call.map->ident];
-    int bits = static_cast<Integer *>(call.vargs.at(1))->n;
+    auto args = HistogramArgs{
+      .bits = static_cast<Integer *>(call.vargs.at(1))->n,
+    };
 
-    if (map_info.hist_bits_arg.has_value() && *map_info.hist_bits_arg != bits) {
-      call.addError() << "Different bits in a single hist, had "
-                      << *map_info.hist_bits_arg << " now " << bits;
+    auto &map_info = resources_.maps_info[call.map->ident];
+    if (!std::holds_alternative<std::monostate>(map_info.detail) &&
+        (!std::holds_alternative<HistogramArgs>(map_info.detail) ||
+         std::get<HistogramArgs>(map_info.detail) != args)) {
+      call.addError() << "Different bits in a single hist unsupported";
     } else {
-      map_info.hist_bits_arg = bits;
+      map_info.detail.emplace<HistogramArgs>(args);
     }
   } else if (call.func == "lhist") {
     Expression &min_arg = *call.vargs.at(1);
@@ -260,7 +298,6 @@ void ResourceAnalyser::visit(Call &call)
     auto &min = static_cast<Integer &>(min_arg);
     auto &max = static_cast<Integer &>(max_arg);
     auto &step = static_cast<Integer &>(step_arg);
-
     auto args = LinearHistogramArgs{
       .min = min.n,
       .max = max.n,
@@ -268,11 +305,12 @@ void ResourceAnalyser::visit(Call &call)
     };
 
     auto &map_info = resources_.maps_info[call.map->ident];
-
-    if (map_info.lhist_args.has_value() && *map_info.lhist_args != args) {
+    if (!std::holds_alternative<std::monostate>(map_info.detail) &&
+        (!std::holds_alternative<LinearHistogramArgs>(map_info.detail) ||
+         std::get<LinearHistogramArgs>(map_info.detail) != args)) {
       call.addError() << "Different lhist bounds in a single map unsupported";
     } else {
-      map_info.lhist_args = args;
+      map_info.detail.emplace<LinearHistogramArgs>(args);
     }
   } else if (call.func == "time") {
     if (!call.vargs.empty())
@@ -505,6 +543,12 @@ void ResourceAnalyser::visit(Ternary &ternary)
   }
 }
 
+void ResourceAnalyser::visit(Program &prog)
+{
+  map_bounds_.visit(prog);
+  Visitor<ResourceAnalyser>::visit(prog);
+}
+
 void ResourceAnalyser::update_variable_info(Variable &var)
 {
   // Note we don't check if a variable has been declared/assigned before.
@@ -548,24 +592,24 @@ void ResourceAnalyser::update_map_info(Map &map)
   auto &map_info = resources_.maps_info[map.ident];
   map_info.value_type = map.type;
   map_info.key_type = map.key_type;
+  map_info.is_scalar = map_bounds_.is_scalar(map.ident);
 
   auto decl = map_decls_.find(map.ident);
-
-  // hist() and lhist() transparently create additional elements in whatever
-  // map they are assigned to. So even if the map looks like it has no keys,
-  // multiple keys are necessary.
-  if (map_info.key_type.IsNoneTy() && !map_info.value_type.IsHistTy() &&
-      !map_info.value_type.IsLhistTy()) {
-    map_info.max_entries = 1;
-    map_info.bpf_type = get_bpf_map_type(map_info.value_type,
-                                         map_info.key_type);
-  } else if (decl != map_decls_.end()) {
+  if (decl != map_decls_.end()) {
     map_info.bpf_type = decl->second.first;
     map_info.max_entries = decl->second.second;
   } else {
     map_info.bpf_type = get_bpf_map_type(map_info.value_type,
                                          map_info.key_type);
-    map_info.max_entries = bpftrace_.config_->max_map_keys;
+    // hist() and lhist() transparently create additional elements in whatever
+    // map they are assigned to. So even if the map looks like it has no keys,
+    // multiple keys are necessary.
+    if (!map.type.IsMultiKeyMapTy() &&
+        (map_info.key_type.IsNoneTy() || map_info.is_scalar)) {
+      map_info.max_entries = 1;
+    } else {
+      map_info.max_entries = bpftrace_.config_->max_map_keys;
+    }
   }
 }
 
