@@ -326,7 +326,7 @@ def test():
             lambda: shell(
                 ["./tests/bpftrace_test"],
                 cwd=Path(BUILD_DIR),
-                env={"GTEST_COLOR": "yes"},
+                env={"GTEST_COLOR": "yes", "BPFTRACE_HIDE_LOG_MSG": "1"},
             ),
         )
     )
