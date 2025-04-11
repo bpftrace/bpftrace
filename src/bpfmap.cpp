@@ -23,7 +23,7 @@ libbpf::bpf_map_type BpfMap::type() const
   return type_;
 }
 
-cstring_view BpfMap::bpf_name() const
+const std::string &BpfMap::bpf_name() const
 {
   return name_;
 }

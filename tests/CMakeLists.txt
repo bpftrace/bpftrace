@@ -33,7 +33,6 @@ add_executable(bpftrace_test
   clang_parser.cpp
   config.cpp
   collect_nodes.cpp
-  cstring_view.cpp
   deprecated.cpp
   field_analyser.cpp
   function_registry.cpp
