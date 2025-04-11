@@ -11,6 +11,7 @@ set(bpftrace_VERSION_PATCH 0)
 include(GNUInstallDirs)
 
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
+set(HARDENED_STDLIB OFF CACHE BOOL "Enable hardened definitions for standard library")
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
@@ -44,6 +45,13 @@ add_compile_options("-Wdisabled-optimization")
 
 if (WARNINGS_AS_ERRORS)
   add_compile_options("-Werror")
+endif()
+
+if (HARDENED_STDLIB)
+  add_compile_definitions("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
+  add_compile_definitions("-D_GLIBCXX_ASSERTIONS")
+  add_compile_definitions("-D_FORTIFY_SOURCE=3")
+  add_compile_options("-O1")
 endif()
 
 # Clang compiler produces narrowing errors when calling BPF_LD_MAP_FD in the bcc library
