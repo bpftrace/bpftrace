@@ -789,9 +789,6 @@ kprobe:f { @[lhist()] = 1; }
 stdin:1:12-21: ERROR: lhist() requires 4 arguments (0 provided)
 kprobe:f { @[lhist()] = 1; }
            ~~~~~~~~~
-stdin:1:12-21: ERROR: lhist_t cannot be used as a map key
-kprobe:f { @[lhist()] = 1; }
-           ~~~~~~~~~
 )");
   test_error("kprobe:f { if(lhist()) { 123 } }", R"(
 stdin:1:12-22: ERROR: lhist() should be directly assigned to a map
@@ -1163,7 +1160,7 @@ TEST(semantic_analyser, call_has_key)
 
   test_error("kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }",
              R"(
-stdin:1:27-39: ERROR: has_key() requires at least 2 arguments (1 provided)
+stdin:1:27-39: ERROR: has_key() requires 2 arguments (1 provided)
 kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }
                           ~~~~~~~~~~~~
 )");
