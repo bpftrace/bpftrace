@@ -135,10 +135,8 @@ private:
   bool is_final_pass() const;
   bool is_first_pass() const;
 
-  bool check_assignment(const Call &call,
-                        bool want_map,
-                        bool want_var,
-                        bool want_map_key);
+  void check_assignment(const Call &call, bool want_map, bool want_var);
+  [[nodiscard]] bool check_call(const Call &call);
   [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
   [[nodiscard]] bool check_varargs(const Call &call,
                                    size_t min_nargs,
@@ -146,8 +144,7 @@ private:
   bool check_arg(const Call &call,
                  Type type,
                  int arg_num,
-                 bool want_literal = false,
-                 bool fail = true);
+                 bool want_literal = false);
   bool check_symbol(const Call &call, int arg_num);
   bool check_available(const Call &call, const AttachPoint &ap);
 
@@ -215,6 +212,300 @@ private:
 };
 
 } // namespace
+
+// clang-format off
+enum class ReturnKind {
+  MAP,
+  VAR,
+  NONE,
+};
+
+struct arg_type_spec {
+  Type type = Type::integer;
+  bool literal = false;
+  // This indicates that this is just a placeholder
+  // as we use the index in the vector of arg_type_spec
+  // as the number argument to check
+  bool skip_check = false;
+};
+
+struct call_spec {
+  size_t min_args = 0;
+  size_t max_args = 0;
+  bool has_return = false;
+  ReturnKind return_kind = ReturnKind::NONE;
+  // NOLINTBEGIN(readability-redundant-member-init)
+  std::vector<arg_type_spec> arg_types = {};
+  // NOLINTEND(readability-redundant-member-init)
+};
+
+static const std::map<std::string, call_spec> CALL_SPEC = {
+  { "avg",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "bswap",
+    { .min_args=1,
+      .max_args=1 } },
+  { "buf",
+    { .min_args=1,
+      .max_args=2,
+      .arg_types={
+        { .skip_check=true },
+        { .type=Type::integer } } } },
+  { "cat",
+    { .min_args=1,
+      .max_args=128,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "cgroupid",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "cgroup_path",
+    { .min_args=1,
+      .max_args=2,
+      .arg_types={
+        { .type=Type::integer },
+        { .type=Type::string } } } },
+  { "clear",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true } },
+  { "count",
+    { .min_args=0,
+      .max_args=0,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP } },
+  { "debugf",
+    { .min_args=1,
+      .max_args=128,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "delete",
+    { .min_args=1,
+      .max_args=2,
+      .has_return=true } },
+  { "exit",
+    { .min_args=0,
+      .max_args=1,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "has_key",
+    { .min_args=2,
+      .max_args=2 } },
+  { "hist",
+    { .min_args=1,
+      .max_args=2,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer },
+        { .type=Type::integer, .literal=true } } } },
+  { "join",
+    { .min_args=1,
+      .max_args=2,
+      .has_return=true,
+      .arg_types={
+        { .skip_check=true },
+        { .type=Type::string, .literal=true } } } },
+  { "kaddr",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "kptr",
+    { .min_args=1,
+      .max_args=1 } },
+  { "kstack",
+    { .min_args=0,
+      .max_args=2 } },
+  { "ksym",
+    { .min_args=1,
+      .max_args=1 } },
+  { "len",
+    { .min_args=1,
+      .max_args=1 } },
+  { "lhist",
+    { .min_args=4,
+      .max_args=4,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer },
+        { .type=Type::integer, .literal=true },
+        { .type=Type::integer, .literal=true },
+        { .type=Type::integer, .literal=true } } } },
+  { "macaddr",
+    { .min_args=1,
+      .max_args=1 } },
+  { "max",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "min",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "nsecs",
+    { .min_args=0,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::timestamp_mode } } } },
+  { "ntop",
+    { .min_args=1,
+      .max_args=2 } },
+  { "override",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "path",
+    { .min_args=1,
+      .max_args=2,
+      .arg_types={
+        { .skip_check=true },
+        { .type=Type::integer, .literal=true } } } },
+  { "percpu_kaddr",
+    { .min_args=1,
+      .max_args=2,
+      .arg_types={
+        { .type=Type::string, .literal=true },
+        { .type=Type::integer } } } },
+  { "print",
+    { .min_args=1,
+      .max_args=3,
+      .has_return=true,
+      .arg_types={
+        { .skip_check=true },
+        { .type=Type::integer, .literal=true },
+        { .type=Type::integer, .literal=true } } } },
+  { "printf",
+    { .min_args=1,
+      .max_args=128,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "pton",
+    { .min_args=1,
+      .max_args=1 } },
+  { "reg",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "signal",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true } },
+  { "skboutput",
+    { .min_args=4,
+      .max_args=4,
+      .has_return=true,
+      .return_kind=ReturnKind::VAR,
+      .arg_types={
+        { .type=Type::string, .literal=true }, // pcap file name
+        { .type=Type::pointer },      // *skb
+        { .type=Type::integer },      // cap length
+        // cap offset, default is 0
+        // some tracepoints like dev_queue_xmit will output ethernet header,
+        // set offset to 14 bytes can exclude this header
+        { .type=Type::integer } } } },
+  { "stats",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "str",
+    { .min_args=1,
+      .max_args=2,
+      .arg_types={
+        { .skip_check=true },
+        { .type=Type::integer } } } },
+  { "strerror",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "strftime",
+    { .min_args=2,
+      .max_args=2,
+      .arg_types={
+          { .type=Type::string, .literal=true },
+          { .type=Type::integer } } } },
+  { "strcontains",
+    { .min_args=2,
+      .max_args=2,
+      .arg_types={
+          { .type=Type::string, .literal=false },
+          { .type=Type::string, .literal=false } } } },
+  { "strncmp",
+    { .min_args=3,
+      .max_args=3,
+      .arg_types={
+          { .type=Type::string },
+          { .type=Type::string },
+          { .type=Type::integer, .literal=true } } } },
+  { "sum",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true,
+      .return_kind=ReturnKind::MAP,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "system",
+    { .min_args=1,
+      .max_args=128,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "time",
+    { .min_args=0,
+      .max_args=1,
+      .has_return=true,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "uaddr",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::string, .literal=true } } } },
+  { "unwatch",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        { .type=Type::integer } } } },
+  { "uptr",
+    { .min_args=1,
+      .max_args=1 } },
+  { "ustack",
+    { .min_args=0,
+      .max_args=2 } },
+  { "usym",
+    { .min_args=1,
+      .max_args=1 } },
+  { "zero",
+    { .min_args=1,
+      .max_args=1,
+      .has_return=true } },
+};
+// clang-format on
 
 static constexpr std::string_view DELETE_ERROR =
     "delete() expects a map for the first argument and a key for the second "
@@ -851,16 +1142,15 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
 
+  if (!check_call(call)) {
+    return;
+  }
+
   if (call.func == "hist") {
-    check_assignment(call, true, false, false);
-    if (!check_varargs(call, 1, 2))
-      return;
     if (call.vargs.size() == 1) {
       call.vargs.push_back(
           ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
     } else {
-      if (!check_arg(call, Type::integer, 1, true))
-        return;
       const auto bits = bpftrace_.get_int_literal(call.vargs.at(1));
       if (!bits.has_value()) {
         // Bug here as the validity of the integer literal is already checked by
@@ -870,18 +1160,9 @@ void SemanticAnalyser::visit(Call &call)
         call.addError() << call.func << ": bits " << *bits << " must be 0..5";
       }
     }
-    check_arg(call, Type::integer, 0);
 
     call.type = CreateHist();
   } else if (call.func == "lhist") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 4)) {
-      check_arg(call, Type::integer, 0, false);
-      check_arg(call, Type::integer, 1, true);
-      check_arg(call, Type::integer, 2, true);
-      check_arg(call, Type::integer, 3, true);
-    }
-
     if (is_final_pass()) {
       Expression *min_arg = call.vargs.at(1);
       Expression *max_arg = call.vargs.at(2);
@@ -930,168 +1211,132 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateLhist();
   } else if (call.func == "count") {
-    check_assignment(call, true, false, false);
-    (void)check_nargs(call, 0);
-
     call.type = CreateCount(true);
   } else if (call.func == "sum") {
-    bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
-    }
-    call.type = CreateSum(sign);
+    call.type = CreateSum(call.vargs.at(0)->type.IsSigned());
   } else if (call.func == "min") {
-    bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
-    }
-    call.type = CreateMin(sign);
+    call.type = CreateMin(call.vargs.at(0)->type.IsSigned());
   } else if (call.func == "max") {
-    bool sign = false;
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-      sign = call.vargs.at(0)->type.IsSigned();
-    }
-    call.type = CreateMax(sign);
+    call.type = CreateMax(call.vargs.at(0)->type.IsSigned());
   } else if (call.func == "avg") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-    }
     call.type = CreateAvg(true);
   } else if (call.func == "stats") {
-    check_assignment(call, true, false, false);
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::integer, 0);
-    }
     call.type = CreateStats(true);
   } else if (call.func == "delete") {
-    check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 2)) {
-      if (dynamic_cast<Map *>(call.vargs.at(0)) == nullptr) {
-        call.vargs.at(0)->addError() << DELETE_ERROR;
-      } else {
-        Map &map = static_cast<Map &>(*call.vargs.at(0));
-        if (call.vargs.size() == 1) {
-          if (map.key_expr) {
-            // We're modifying the AST here to support the deprecated delete
-            // API. Once we remove the old API, we can delete this.
-            call.vargs.push_back(map.key_expr);
-            map.key_expr = nullptr;
-          } else if (is_final_pass()) {
-            auto *map_key_type = get_map_key_type(map);
-            if (map_key_type && !map_key_type->IsNoneTy()) {
-              call.vargs.at(0)->addError() << DELETE_ERROR;
-            }
-          }
-        } else {
-          if (map.key_expr) {
-            call.vargs.at(0)->addError()
-                << "delete() expects a map with no keys for the first argument";
-          }
+    if (dynamic_cast<Map *>(call.vargs.at(0)) == nullptr) {
+      call.vargs.at(0)->addError() << DELETE_ERROR;
+    } else {
+      Map &map = static_cast<Map &>(*call.vargs.at(0));
+      if (call.vargs.size() == 1) {
+        if (map.key_expr) {
+          // We're modifying the AST here to support the deprecated delete
+          // API. Once we remove the old API, we can delete this.
+          call.vargs.push_back(map.key_expr);
+          map.key_expr = nullptr;
+        } else if (is_final_pass()) {
           auto *map_key_type = get_map_key_type(map);
-          if (map_key_type) {
-            auto &arg1 = *call.vargs.at(1);
-            SizedType new_key_type = create_key_type(arg1.type, arg1);
-            update_current_key(*map_key_type, new_key_type);
-            validate_new_key(*map_key_type, new_key_type, map.ident, arg1);
+          if (map_key_type && !map_key_type->IsNoneTy()) {
+            call.vargs.at(0)->addError() << DELETE_ERROR;
           }
+        }
+      } else {
+        if (map.key_expr) {
+          call.vargs.at(0)->addError()
+              << "delete() expects a map with no keys for the first argument";
+        }
+        auto *map_key_type = get_map_key_type(map);
+        if (map_key_type) {
+          auto &arg1 = *call.vargs.at(1);
+          SizedType new_key_type = create_key_type(arg1.type, arg1);
+          update_current_key(*map_key_type, new_key_type);
+          validate_new_key(*map_key_type, new_key_type, map.ident, arg1);
         }
       }
     }
     call.type = CreateNone();
   } else if (call.func == "has_key") {
-    if (check_varargs(call, 2, 2)) {
-      auto &arg0 = *call.vargs.at(0);
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        if (map->key_expr) {
-          arg0.addError()
-              << "has_key() expects the first argument to be a map. Not a map "
-                 "value expression.";
-        }
-        auto *mapkey = get_map_key_type(*map);
-        if (mapkey) {
-          if (mapkey->IsNoneTy()) {
-            arg0.addError()
-                << "has_key() only accepts maps that have keys. No scalar maps "
-                   "e.g. `@a = 1;`";
-          } else {
-            auto &arg1 = *call.vargs.at(1);
-            SizedType new_key_type = create_key_type(arg1.type, arg1);
-            update_current_key(*mapkey, new_key_type);
-            validate_new_key(*mapkey, new_key_type, map->ident, arg1);
-          }
-        }
-        // Note: if the map key is null after the final pass we'll get an error
-        // in the Map visitor about the whole map being undefined so no need to
-        // add a second, similar error here.
-      } else {
-        arg0.addError() << "has_key() expects the first argument to be a map";
+    auto &arg0 = *call.vargs.at(0);
+    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+      if (map->key_expr) {
+        arg0.addError()
+            << "has_key() expects the first argument to be a map. Not a map "
+               "value expression.";
       }
+      auto *mapkey = get_map_key_type(*map);
+      if (mapkey) {
+        if (mapkey->IsNoneTy()) {
+          arg0.addError()
+              << "has_key() only accepts maps that have keys. No scalar maps "
+                 "e.g. `@a = 1;`";
+        } else {
+          auto &arg1 = *call.vargs.at(1);
+          SizedType new_key_type = create_key_type(arg1.type, arg1);
+          update_current_key(*mapkey, new_key_type);
+          validate_new_key(*mapkey, new_key_type, map->ident, arg1);
+        }
+      }
+      // Note: if the map key is null after the final pass we'll get an error
+      // in the Map visitor about the whole map being undefined so no need to
+      // add a second, similar error here.
+    } else {
+      arg0.addError() << "has_key() expects the first argument to be a map";
     }
     // TODO: this should be a bool type but that type is currently broken
     // as a value for variables and maps
     // https://github.com/bpftrace/bpftrace/issues/3502
     call.type = CreateUInt8();
   } else if (call.func == "str") {
-    if (check_varargs(call, 1, 2)) {
-      auto *arg = call.vargs.at(0);
-      auto &t = arg->type;
-      if (!t.IsIntegerTy() && !t.IsPtrTy()) {
-        call.addError() << call.func
-                        << "() expects an integer or a pointer type as first "
-                        << "argument (" << t << " provided)";
-      }
-
-      auto strlen = bpftrace_.config_->max_strlen;
-      if (call.vargs.size() == 2 && check_arg(call, Type::integer, 1, false)) {
-        auto &size_arg = *call.vargs.at(1);
-        if (size_arg.is_literal) {
-          auto &integer = static_cast<Integer &>(size_arg);
-          long value = integer.n;
-          if (value < 0) {
-            if (is_final_pass())
-              call.addError() << call.func << "cannot use negative length ("
-                              << value << ")";
-          } else if (value > static_cast<int64_t>(strlen)) {
-            if (is_final_pass())
-              call.addWarning() << "length param (" << value
-                                << ") is too long and will be shortened to "
-                                << strlen << " bytes (see BPFTRACE_MAX_STRLEN)";
-          } else {
-            strlen = value;
-          }
-        }
-      }
-
-      call.type = CreateString(strlen);
-
-      if (has_pos_param_) {
-        // Although I'm not entirely sure why, historically the `$#` parameter
-        // has not been allowed to use the same `str` mechanism or the mechanism
-        // described below. It is not clear how `$#` is used.
-        if (dynamic_cast<PositionalParameter *>(arg)) {
-          call.is_literal = true;
-        } else {
-          auto *binop = dynamic_cast<Binop *>(arg);
-          if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
-                          dynamic_cast<PositionalParameter *>(binop->right)))) {
-            // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
-            call.addError()
-                << call.func << "() only accepts positional parameters"
-                << " directly or with a single constant offset added";
-          }
-        }
-      }
-
-      // Required for cases like strncmp(str($1), str(2), 4))
-      call.type.SetAS(AddrSpace::kernel);
+    auto *arg = call.vargs.at(0);
+    auto &t = arg->type;
+    if (!t.IsIntegerTy() && !t.IsPtrTy()) {
+      call.addError() << call.func
+                      << "() expects an integer or a pointer type as first "
+                      << "argument (" << t << " provided)";
     }
+
+    auto strlen = bpftrace_.config_->max_strlen;
+    if (call.vargs.size() == 2) {
+      auto &size_arg = *call.vargs.at(1);
+      if (size_arg.is_literal) {
+        auto &integer = static_cast<Integer &>(size_arg);
+        long value = integer.n;
+        if (value < 0) {
+          if (is_final_pass())
+            call.addError()
+                << call.func << "cannot use negative length (" << value << ")";
+        } else if (value > static_cast<int64_t>(strlen)) {
+          if (is_final_pass())
+            call.addWarning() << "length param (" << value
+                              << ") is too long and will be shortened to "
+                              << strlen << " bytes (see BPFTRACE_MAX_STRLEN)";
+        } else {
+          strlen = value;
+        }
+      }
+    }
+
+    call.type = CreateString(strlen);
+
+    if (has_pos_param_) {
+      // Although I'm not entirely sure why, historically the `$#` parameter
+      // has not been allowed to use the same `str` mechanism or the mechanism
+      // described below. It is not clear how `$#` is used.
+      if (dynamic_cast<PositionalParameter *>(arg)) {
+        call.is_literal = true;
+      } else {
+        auto *binop = dynamic_cast<Binop *>(arg);
+        if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
+                        dynamic_cast<PositionalParameter *>(binop->right)))) {
+          // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
+          call.addError() << call.func
+                          << "() only accepts positional parameters"
+                          << " directly or with a single constant offset added";
+        }
+      }
+    }
+
+    // Required for cases like strncmp(str($1), str(2), 4))
+    call.type.SetAS(AddrSpace::kernel);
     has_pos_param_ = false;
   } else if (call.func == "buf") {
     const uint64_t max_strlen = bpftrace_.config_->max_strlen;
@@ -1101,9 +1346,6 @@ void SemanticAnalyser::visit(Call &call)
                       << max_strlen << " > "
                       << std::numeric_limits<uint32_t>::max() << ")";
     }
-
-    if (!check_varargs(call, 1, 2))
-      return;
 
     auto &arg = *call.vargs.at(0);
     if (is_final_pass() && !(arg.type.IsIntTy() || arg.type.IsStringTy() ||
@@ -1127,9 +1369,6 @@ void SemanticAnalyser::visit(Call &call)
                         << "() expects a length argument for non-array type "
                         << typestr(arg.type.GetTy());
     } else {
-      if (is_final_pass())
-        check_arg(call, Type::integer, 1, false);
-
       auto &size_arg = *call.vargs.at(1);
       if (size_arg.type.IsIntTy() && size_arg.is_literal) {
         auto value = bpftrace_.get_int_literal(&size_arg);
@@ -1159,23 +1398,18 @@ void SemanticAnalyser::visit(Call &call)
     // The result of buf is copied to bpf stack. Hence kernel probe read
     call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "ksym" || call.func == "usym") {
-    if (check_nargs(call, 1)) {
-      // allow symbol lookups on casts (eg, function pointers)
-      auto &arg = *call.vargs.at(0);
-      auto &type = arg.type;
-      if (!type.IsIntegerTy() && !type.IsPtrTy())
-        call.addError() << call.func
-                        << "() expects an integer or pointer argument";
-    }
+    // allow symbol lookups on casts (eg, function pointers)
+    auto &arg = *call.vargs.at(0);
+    auto &type = arg.type;
+    if (!type.IsIntegerTy() && !type.IsPtrTy())
+      call.addError() << call.func
+                      << "() expects an integer or pointer argument";
 
     if (call.func == "ksym")
       call.type = CreateKSym();
     else if (call.func == "usym")
       call.type = CreateUSym();
   } else if (call.func == "ntop") {
-    if (!check_varargs(call, 1, 2))
-      return;
-
     auto *arg = call.vargs.at(0);
     if (call.vargs.size() == 2) {
       arg = call.vargs.at(1);
@@ -1207,8 +1441,6 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateInet(buffer_size);
   } else if (call.func == "pton") {
-    if (!check_nargs(call, 1))
-      return;
     std::string addr = bpftrace_.get_string_literal(call.vargs.at(0));
     int af_type, addr_size;
     // use '.' and ':' to determine the address family
@@ -1234,16 +1466,11 @@ void SemanticAnalyser::visit(Call &call)
       return;
     }
 
-    auto elem_type = CreateUInt8();
-    call.type = CreateArray(addr_size, elem_type);
+    call.type = CreateArray(addr_size, CreateUInt8());
     call.type.SetAS(AddrSpace::kernel);
     call.type.is_internal = true;
   } else if (call.func == "join") {
-    check_assignment(call, false, false, false);
     call.type = CreateNone();
-
-    if (!check_varargs(call, 1, 2))
-      return;
 
     if (!is_final_pass())
       return;
@@ -1253,21 +1480,14 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "() only supports int or pointer arguments" << " ("
                       << arg.type.GetTy() << " provided)";
     }
-
-    if (call.vargs.size() > 1)
-      check_arg(call, Type::string, 1, true);
   } else if (call.func == "reg") {
-    if (check_nargs(call, 1)) {
-      if (check_arg(call, Type::string, 0, true)) {
-        auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
-        int offset = arch::offset(reg_name);
-        ;
-        if (offset == -1) {
-          call.addError() << "'" << reg_name
-                          << "' is not a valid register on this architecture"
-                          << " (" << arch::name() << ")";
-        }
-      }
+    auto reg_name = bpftrace_.get_string_literal(call.vargs.at(0));
+    int offset = arch::offset(reg_name);
+    ;
+    if (offset == -1) {
+      call.addError() << "'" << reg_name
+                      << "' is not a valid register on this architecture"
+                      << " (" << arch::name() << ")";
     }
     call.type = CreateUInt64();
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -1279,22 +1499,13 @@ void SemanticAnalyser::visit(Call &call)
       call.type.SetAS(AddrSpace::kernel);
     }
   } else if (call.func == "kaddr") {
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::string, 0, true);
-    }
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
   } else if (call.func == "percpu_kaddr") {
-    if (check_varargs(call, 1, 2)) {
-      check_arg(call, Type::string, 0, true);
-      if (call.vargs.size() == 2)
-        check_arg(call, Type::integer, 1, false);
-
-      auto symbol = bpftrace_.get_string_literal(call.vargs.at(0));
-      if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
-        call.addError() << "Could not resolve variable \"" << symbol
-                        << "\" from BTF";
-      }
+    auto symbol = bpftrace_.get_string_literal(call.vargs.at(0));
+    if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
+      call.addError() << "Could not resolve variable \"" << symbol
+                      << "\" from BTF";
     }
     call.type = CreateUInt64();
     call.type.SetAS(AddrSpace::kernel);
@@ -1303,9 +1514,7 @@ void SemanticAnalyser::visit(Call &call)
     if (probe == nullptr)
       return;
 
-    if (!check_nargs(call, 1))
-      return;
-    if (!(check_arg(call, Type::string, 0, true) && check_symbol(call, 0)))
+    if (!check_symbol(call, 0))
       return;
 
     std::vector<int> sizes;
@@ -1341,39 +1550,32 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);
   } else if (call.func == "cgroupid") {
-    if (check_nargs(call, 1)) {
-      check_arg(call, Type::string, 0, true);
-    }
     call.type = CreateUInt64();
   } else if (call.func == "printf" || call.func == "system" ||
              call.func == "cat" || call.func == "debugf") {
-    check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 128)) {
-      check_arg(call, Type::string, 0, true);
-      if (is_final_pass()) {
-        // NOTE: the same logic can be found in the resource_analyser pass
-        auto &fmt_arg = *call.vargs.at(0);
-        auto &fmt = static_cast<String &>(fmt_arg);
-        std::vector<Field> args;
-        for (auto iter = call.vargs.begin() + 1; iter != call.vargs.end();
-             iter++) {
-          // NOTE: modifying the type will break the resizing that happens
-          // in the codegen. We have to copy the type here to avoid modification
-          SizedType ty = (*iter)->type;
-          // Promote to 64-bit if it's not an aggregate type
-          if (!ty.IsAggregate() && !ty.IsTimestampTy())
-            ty.SetSize(8);
-          args.push_back(Field{
-              .name = "",
-              .type = ty,
-              .offset = 0,
-              .bitfield = std::nullopt,
-          });
-        }
-        std::string msg = validate_format_string(fmt.str, args, call.func);
-        if (!msg.empty()) {
-          call.addError() << msg;
-        }
+    if (is_final_pass()) {
+      // NOTE: the same logic can be found in the resource_analyser pass
+      auto &fmt_arg = *call.vargs.at(0);
+      auto &fmt = static_cast<String &>(fmt_arg);
+      std::vector<Field> args;
+      for (auto iter = call.vargs.begin() + 1; iter != call.vargs.end();
+           iter++) {
+        // NOTE: modifying the type will break the resizing that happens
+        // in the codegen. We have to copy the type here to avoid modification
+        SizedType ty = (*iter)->type;
+        // Promote to 64-bit if it's not an aggregate type
+        if (!ty.IsAggregate() && !ty.IsTimestampTy())
+          ty.SetSize(8);
+        args.push_back(Field{
+            .name = "",
+            .type = ty,
+            .offset = 0,
+            .bitfield = std::nullopt,
+        });
+      }
+      std::string msg = validate_format_string(fmt.str, args, call.func);
+      if (!msg.empty()) {
+        call.addError() << msg;
       }
     }
     if (call.func == "debugf" && is_final_pass()) {
@@ -1384,121 +1586,88 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateNone();
   } else if (call.func == "exit") {
-    check_assignment(call, false, false, false);
-
-    if (!check_varargs(call, 0, 1))
-      return;
-
-    if (call.vargs.size() == 1)
-      check_arg(call, Type::integer, 0);
+    // ok
   } else if (call.func == "print") {
-    check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 3)) {
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        if (map->key_expr) {
-          if (call.vargs.size() > 1) {
-            call.addError() << "Single-value (i.e. indexed) map "
-                               "print cannot take additional "
-                               "arguments.";
-          } else if (map->type.IsMultiKeyMapTy()) {
-            call.addError()
-                << "Map type " << map->type
-                << " cannot print the value of individual keys. You must print "
-                   "the whole map.";
-          }
+    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+      if (map->key_expr) {
+        if (call.vargs.size() > 1) {
+          call.addError() << "Single-value (i.e. indexed) map "
+                             "print cannot take additional "
+                             "arguments.";
+        } else if (map->type.IsMultiKeyMapTy()) {
+          call.addError()
+              << "Map type " << map->type
+              << " cannot print the value of individual keys. You must print "
+                 "the whole map.";
         }
+      }
 
-        if (is_final_pass()) {
-          if (in_loop()) {
-            call.addWarning() << "Due to it's asynchronous nature using "
-                                 "'print()' in a loop can "
-                                 "lead to unexpected behavior. The map will "
-                                 "likely be updated "
-                                 "before the runtime can 'print' it.";
-          }
-          if (call.vargs.size() > 1)
-            check_arg(call, Type::integer, 1, true);
-          if (call.vargs.size() > 2)
-            check_arg(call, Type::integer, 2, true);
-          if (map->type.IsStatsTy() && call.vargs.size() > 1) {
-            call.addWarning()
-                << "print()'s top and div arguments are ignored when used on "
-                   "stats() maps.";
-          }
+      if (is_final_pass()) {
+        if (in_loop()) {
+          call.addWarning() << "Due to it's asynchronous nature using "
+                               "'print()' in a loop can "
+                               "lead to unexpected behavior. The map will "
+                               "likely be updated "
+                               "before the runtime can 'print' it.";
+        }
+        if (map->type.IsStatsTy() && call.vargs.size() > 1) {
+          call.addWarning()
+              << "print()'s top and div arguments are ignored when used on "
+                 "stats() maps.";
         }
       }
-      // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
-      // non-map value requires being able to serialize the entire value, so
-      // map-backed types like count(), min(), max(), etc. cannot be printed
-      // through the non-map printing mechanism.
-      //
-      // We rely on the fact that semantic analysis enforces types like count(),
-      // min(), max(), etc. to be assigned directly to a map.
-      else if (call.vargs.at(0)->type.IsPrintableTy()) {
-        if (call.vargs.size() != 1)
-          call.addError() << "Non-map print() only takes 1 argument, "
-                          << call.vargs.size() << " found";
-      } else {
-        if (is_final_pass())
-          call.addError() << call.vargs.at(0)->type << " type passed to "
-                          << call.func << "() is not printable";
-      }
+    }
+    // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
+    // non-map value requires being able to serialize the entire value, so
+    // map-backed types like count(), min(), max(), etc. cannot be printed
+    // through the non-map printing mechanism.
+    //
+    // We rely on the fact that semantic analysis enforces types like count(),
+    // min(), max(), etc. to be assigned directly to a map.
+    else if (call.vargs.at(0)->type.IsPrintableTy()) {
+      if (call.vargs.size() != 1)
+        call.addError() << "Non-map print() only takes 1 argument, "
+                        << call.vargs.size() << " found";
+    } else {
+      if (is_final_pass())
+        call.addError() << call.vargs.at(0)->type << " type passed to "
+                        << call.func << "() is not printable";
     }
   } else if (call.func == "cgroup_path") {
     call.type = CreateCgroupPath();
-    if (check_varargs(call, 1, 2)) {
-      check_arg(call, Type::integer, 0, false);
-      call.vargs.size() > 1 && check_arg(call, Type::string, 1, false);
-    }
   } else if (call.func == "clear") {
-    check_assignment(call, false, false, false);
-    if (check_nargs(call, 1)) {
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        if (map->key_expr) {
-          call.addError() << "The map passed to " << call.func
-                          << "() should not be " << "indexed by a key";
-        }
+    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+      if (map->key_expr) {
+        call.addError() << "The map passed to " << call.func
+                        << "() should not be " << "indexed by a key";
       }
     } else {
       call.addError() << "clear() expects a map to be provided";
     }
   } else if (call.func == "zero") {
-    check_assignment(call, false, false, false);
-    if (check_nargs(call, 1)) {
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        if (map->key_expr) {
-          call.addError() << "The map passed to " << call.func
-                          << "() should not be " << "indexed by a key";
-        }
-      } else {
-        call.addError() << "zero() expects a map to be provided";
+    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+      if (map->key_expr) {
+        call.addError() << "The map passed to " << call.func
+                        << "() should not be " << "indexed by a key";
       }
+    } else {
+      call.addError() << "zero() expects a map to be provided";
     }
   } else if (call.func == "len") {
-    if (check_nargs(call, 1)) {
-      if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
-        if (map->key_expr) {
-          call.addError() << "The map passed to " << call.func
-                          << "() should not be " << "indexed by a key";
-        }
-      } else if (!call.vargs.at(0)->type.IsStack()) {
-        call.addError() << "len() expects a map or stack to be provided";
+    if (auto *map = dynamic_cast<Map *>(call.vargs.at(0))) {
+      if (map->key_expr) {
+        call.addError() << "The map passed to " << call.func
+                        << "() should not be " << "indexed by a key";
       }
-      call.type = CreateInt64();
+    } else if (!call.vargs.at(0)->type.IsStack()) {
+      call.addError() << "len() expects a map or stack to be provided";
     }
+    call.type = CreateInt64();
   } else if (call.func == "time") {
-    check_assignment(call, false, false, false);
-    if (check_varargs(call, 0, 1)) {
-      if (is_final_pass()) {
-        if (!call.vargs.empty())
-          check_arg(call, Type::string, 0, true);
-      }
-    }
+    // ok
   } else if (call.func == "strftime") {
     call.type = CreateTimestamp();
-    if (check_varargs(call, 2, 2) && is_final_pass() &&
-        check_arg(call, Type::string, 0, true) &&
-        check_arg(call, Type::integer, 1, false)) {
+    if (is_final_pass()) {
       auto &arg = *call.vargs.at(1);
       call.type.ts_mode = arg.type.ts_mode;
       if (call.type.ts_mode == TimestampMode::monotonic) {
@@ -1513,12 +1682,6 @@ void SemanticAnalyser::visit(Call &call)
     if (!bpftrace_.feature_->has_helper_send_signal()) {
       call.addError()
           << "BPF_FUNC_send_signal not available for your kernel version";
-    }
-
-    check_assignment(call, false, false, false);
-
-    if (!check_varargs(call, 1, 1)) {
-      return;
     }
 
     auto &arg = *call.vargs.at(0);
@@ -1548,36 +1711,30 @@ void SemanticAnalyser::visit(Call &call)
           << "BPF_FUNC_d_path not available for your kernel version";
     }
 
-    if (check_varargs(call, 1, 2)) {
       // Argument for path can be both record and pointer.
       // It's pointer when it's passed directly from the probe
       // argument, like: path(args.path))
       // It's record when it's referenced as object pointer
       // member, like: path(args.filp->f_path))
-      if (!check_arg(call, Type::record, 0, false, false) &&
-          !check_arg(call, Type::pointer, 0, false, false)) {
-        auto &arg = *call.vargs.at(0);
-
-        call.addError() << "path() only supports pointer or record argument ("
-                        << arg.type.GetTy() << " provided)";
-      }
-
-      auto call_type_size = bpftrace_.config_->max_strlen;
-      if (call.vargs.size() == 2) {
-        if (check_arg(call, Type::integer, 1, true)) {
-          auto size = bpftrace_.get_int_literal(call.vargs.at(1));
-          if (size.has_value()) {
-            if (size < 0)
-              call.addError() << "Builtin path requires a non-negative size";
-            call_type_size = size.value();
-          } else {
-            call.addError() << call.func << ": invalid size value";
-          }
-        }
-      }
-
-      call.type = SizedType(Type::string, call_type_size);
+    auto &arg = *call.vargs.at(0);
+    if (arg.type.GetTy() != Type::record && arg.type.GetTy() != Type::pointer) {
+      call.addError() << "path() only supports pointer or record argument ("
+                      << arg.type.GetTy() << " provided)";
     }
+
+    auto call_type_size = bpftrace_.config_->max_strlen;
+    if (call.vargs.size() == 2) {
+      auto size = bpftrace_.get_int_literal(call.vargs.at(1));
+      if (size.has_value()) {
+        if (size < 0)
+          call.addError() << "Builtin path requires a non-negative size";
+        call_type_size = size.value();
+      } else {
+        call.addError() << call.func << ": invalid size value";
+      }
+    }
+
+    call.type = SizedType(Type::string, call_type_size);
 
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
@@ -1588,21 +1745,13 @@ void SemanticAnalyser::visit(Call &call)
     }
   } else if (call.func == "strerror") {
     call.type = CreateStrerror();
-    if (check_nargs(call, 1))
-      check_arg(call, Type::integer, 0, false);
   } else if (call.func == "strncmp") {
-    if (check_nargs(call, 3)) {
-      check_arg(call, Type::string, 0);
-      check_arg(call, Type::string, 1);
-      if (check_arg(call, Type::integer, 2, true)) {
-        auto size = bpftrace_.get_int_literal(call.vargs.at(2));
-        if (size.has_value()) {
-          if (size < 0)
-            call.addError() << "Builtin strncmp requires a non-negative size";
-        } else
-          call.addError() << call.func << ": invalid size value";
-      }
-    }
+    auto size = bpftrace_.get_int_literal(call.vargs.at(2));
+    if (size.has_value()) {
+      if (size < 0)
+        call.addError() << "Builtin strncmp requires a non-negative size";
+    } else
+      call.addError() << call.func << ": invalid size value";
     call.type = CreateUInt64();
   } else if (call.func == "strcontains") {
     static constexpr auto warning = R"(
@@ -1613,16 +1762,11 @@ If you're seeing errors, try clamping the string sizes. For example:
 * `path($ptr, 16)`
 )";
 
-    if (check_nargs(call, 2)) {
-      check_arg(call, Type::string, 0);
-      check_arg(call, Type::string, 1);
-
-      if (is_final_pass()) {
-        auto arg0_sz = call.vargs.at(0)->type.GetSize();
-        auto arg1_sz = call.vargs.at(1)->type.GetSize();
-        if (arg0_sz * arg1_sz > 2000) {
-          call.addWarning() << warning;
-        }
+    if (is_final_pass()) {
+      auto arg0_sz = call.vargs.at(0)->type.GetSize();
+      auto arg1_sz = call.vargs.at(1)->type.GetSize();
+      if (arg0_sz * arg1_sz > 2000) {
+        call.addWarning() << warning;
       }
     }
     call.type = CreateUInt64();
@@ -1636,10 +1780,6 @@ If you're seeing errors, try clamping the string sizes. For example:
           << "BPF_FUNC_override_return not available for your kernel version";
     }
 
-    check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 1)) {
-      check_arg(call, Type::integer, 0, false);
-    }
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kprobe) {
@@ -1647,9 +1787,6 @@ If you're seeing errors, try clamping the string sizes. For example:
       }
     }
   } else if (call.func == "kptr" || call.func == "uptr") {
-    if (!check_nargs(call, 1))
-      return;
-
     // kptr should accept both integer or pointer. Consider case: kptr($1)
     auto &arg = *call.vargs.at(0);
     if (!arg.type.IsIntTy() && !arg.type.IsPtrTy()) {
@@ -1663,9 +1800,6 @@ If you're seeing errors, try clamping the string sizes. For example:
     call.type = call.vargs.front()->type;
     call.type.SetAS(as);
   } else if (call.func == "macaddr") {
-    if (!check_nargs(call, 1))
-      return;
-
     auto &arg = call.vargs.at(0);
 
     if (!arg->type.IsIntTy() && !arg->type.IsArrayTy() &&
@@ -1684,15 +1818,9 @@ If you're seeing errors, try clamping the string sizes. For example:
 
     call.type = CreateMacAddress();
   } else if (call.func == "unwatch") {
-    if (check_nargs(call, 1))
-      check_arg(call, Type::integer, 0);
-
     // Return type cannot be used
     call.type = SizedType(Type::none, 0);
   } else if (call.func == "bswap") {
-    if (!check_nargs(call, 1))
-      return;
-
     Expression *arg = call.vargs.at(0);
     if (!arg->type.IsIntTy()) {
       call.addError() << call.func << "() only supports integer arguments ("
@@ -1706,41 +1834,23 @@ If you're seeing errors, try clamping the string sizes. For example:
       call.addError() << "BPF_FUNC_skb_output is not available for your kernel "
                          "version";
     }
-
-    check_assignment(call, false, true, false);
-    if (check_nargs(call, 4)) {
-      if (is_final_pass()) {
-        // pcap file name
-        check_arg(call, Type::string, 0, true);
-        // *skb
-        check_arg(call, Type::pointer, 1, false);
-        // cap length
-        check_arg(call, Type::integer, 2, false);
-        // cap offset, default is 0
-        // some tracepoints like dev_queue_xmit will output ethernet header,
-        // set offset to 14 bytes can exclude this header
-        check_arg(call, Type::integer, 3, false);
-      }
-    }
     call.type = CreateUInt32();
   } else if (call.func == "nsecs") {
-    if (check_varargs(call, 0, 1)) {
-      call.type = CreateUInt64();
-      call.type.ts_mode = TimestampMode::boot;
-      if (call.vargs.size() == 1 && check_arg(call, Type::timestamp_mode, 0)) {
-        call.type.ts_mode = call.vargs.at(0)->type.ts_mode;
-      }
+    call.type = CreateUInt64();
+    call.type.ts_mode = TimestampMode::boot;
+    if (call.vargs.size() == 1) {
+      call.type.ts_mode = call.vargs.at(0)->type.ts_mode;
+    }
 
-      if (call.type.ts_mode == TimestampMode::tai &&
-          !bpftrace_.feature_->has_helper_ktime_get_tai_ns()) {
-        call.addError()
-            << "Kernel does not support tai timestamp, please try sw_tai";
-      }
-      if (call.type.ts_mode == TimestampMode::sw_tai &&
-          !bpftrace_.delta_taitime_.has_value()) {
-        call.addError() << "Failed to initialize sw_tai in "
-                           "userspace. This is very unexpected.";
-      }
+    if (call.type.ts_mode == TimestampMode::tai &&
+        !bpftrace_.feature_->has_helper_ktime_get_tai_ns()) {
+      call.addError()
+          << "Kernel does not support tai timestamp, please try sw_tai";
+    }
+    if (call.type.ts_mode == TimestampMode::sw_tai &&
+        !bpftrace_.delta_taitime_.has_value()) {
+      call.addError() << "Failed to initialize sw_tai in "
+                         "userspace. This is very unexpected.";
     }
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
@@ -1788,10 +1898,6 @@ void SemanticAnalyser::visit(Offsetof &offof)
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 {
   call.type = CreateStack(kernel);
-  if (!check_varargs(call, 0, 2)) {
-    return;
-  }
-
   StackType stack_type;
   stack_type.mode = bpftrace_.config_->stack_mode;
 
@@ -1825,7 +1931,6 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
         // If two arguments are provided, then the first must be a stack mode.
         call.addError() << "Expected stack mode as first argument";
       }
-
       if (check_arg(call, Type::integer, 1, true)) {
         auto &limit_arg = call.vargs.at(1);
         auto limit = bpftrace_.get_int_literal(limit_arg);
@@ -3726,62 +3831,71 @@ bool SemanticAnalyser::is_first_pass() const
   return pass_tracker_.get_num_passes() == 1;
 }
 
-bool SemanticAnalyser::check_assignment(const Call &call,
+void SemanticAnalyser::check_assignment(const Call &call,
                                         bool want_map,
-                                        bool want_var,
-                                        bool want_map_key)
+                                        bool want_var)
 {
-  if (want_map && want_var && want_map_key) {
-    if (!call.map && !call.var && !call.key_for_map) {
-      call.addError() << call.func
-                      << "() should be assigned to a map or a "
-                         "variable, or be used as a map key";
-      return false;
-    }
-  } else if (want_map && want_var) {
+  if (want_map && want_var) {
     if (!call.map && !call.var) {
       call.addError() << call.func
                       << "() should be assigned to a map or a variable";
-      return false;
-    }
-  } else if (want_map && want_map_key) {
-    if (!call.map && !call.key_for_map) {
-      call.addError()
-          << call.func
-          << "() should be assigned to a map or be used as a map key";
-      return false;
-    }
-  } else if (want_var && want_map_key) {
-    if (!call.var && !call.key_for_map) {
-      call.addError()
-          << call.func
-          << "() should be assigned to a variable or be used as a map key";
-      return false;
+      return;
     }
   } else if (want_map) {
     if (!call.map) {
       call.addError() << call.func << "() should be directly assigned to a map";
-      return false;
+      return;
     }
   } else if (want_var) {
     if (!call.var) {
       call.addError() << call.func << "() should be assigned to a variable";
-      return false;
-    }
-  } else if (want_map_key) {
-    if (!call.key_for_map) {
-      call.addError() << call.func << "() should be used as a map key";
-      return false;
+      return;
     }
   } else {
     if (call.map || call.var || call.key_for_map) {
       call.addError()
           << call.func
           << "() should not be used in an assignment or as a map key";
-      return false;
+      return;
     }
   }
-  return true;
+}
+
+bool SemanticAnalyser::check_call(const Call &call)
+{
+  auto spec = CALL_SPEC.find(call.func);
+  if (spec == CALL_SPEC.end()) {
+    return true;
+  }
+
+  if (spec->second.has_return) {
+    check_assignment(call,
+                     spec->second.return_kind == ReturnKind::MAP,
+                     spec->second.return_kind == ReturnKind::VAR);
+  }
+
+  auto ret = true;
+  if (spec->second.min_args != spec->second.max_args) {
+    ret = check_varargs(call, spec->second.min_args, spec->second.max_args);
+  } else {
+    ret = check_nargs(call, spec->second.min_args);
+  }
+
+  if (!ret) {
+    return ret;
+  }
+
+  for (size_t i = 0; i < spec->second.arg_types.size(); ++i) {
+    auto check = spec->second.arg_types.at(i);
+    if (check.skip_check || call.vargs.size() <= i) {
+      continue;
+    }
+    if (!check_arg(call, check.type, i, check.literal)) {
+      ret = false;
+    }
+  }
+
+  return ret;
 }
 
 // Checks the number of arguments passed to a function is correct.
@@ -3847,29 +3961,24 @@ bool SemanticAnalyser::check_varargs(const Call &call,
 bool SemanticAnalyser::check_arg(const Call &call,
                                  Type type,
                                  int arg_num,
-                                 bool want_literal,
-                                 bool fail)
+                                 bool want_literal)
 {
   auto &arg = *call.vargs.at(arg_num);
   if (want_literal && (!arg.is_literal || arg.type.GetTy() != type)) {
-    if (fail) {
-      call.addError() << call.func << "() expects a " << type << " literal ("
-                      << arg.type.GetTy() << " provided)";
-      if (type == Type::string) {
-        // If the call requires a string literal and a positional parameter is
-        // given, tell user to use str()
-        auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
-        if (pos_param)
-          pos_param->addError() << "Use str($" << pos_param->n << ") to treat $"
-                                << pos_param->n << " as a string";
-      }
+    call.addError() << call.func << "() expects a " << type << " literal ("
+                    << arg.type.GetTy() << " provided)";
+    if (type == Type::string) {
+      // If the call requires a string literal and a positional parameter is
+      // given, tell user to use str()
+      auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
+      if (pos_param)
+        pos_param->addError() << "Use str($" << pos_param->n << ") to treat $"
+                              << pos_param->n << " as a string";
     }
     return false;
   } else if (is_final_pass() && arg.type.GetTy() != type) {
-    if (fail) {
-      call.addError() << call.func << "() only supports " << type
-                      << " arguments (" << arg.type.GetTy() << " provided)";
-    }
+    call.addError() << call.func << "() only supports " << type
+                    << " arguments (" << arg.type.GetTy() << " provided)";
     return false;
   }
   return true;
