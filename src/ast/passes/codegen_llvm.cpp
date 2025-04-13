@@ -1370,9 +1370,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto size_opt = bpftrace_.get_int_literal(call.vargs.at(2));
     if (!size_opt.has_value())
       LOG(BUG) << "Int literal should have been checked in semantic analysis";
-    uint64_t size = std::min({ static_cast<uint64_t>(*size_opt),
-                               left_arg.type.GetSize(),
-                               right_arg.type.GetSize() });
+    uint64_t size = std::min(
+        { static_cast<uint64_t>(*size_opt),
+          static_cast<uint64_t>(left_arg.type.GetSize()),
+          static_cast<uint64_t>(right_arg.type.GetSize()) });
 
     auto left_string = visit(&left_arg);
     auto right_string = visit(&right_arg);
