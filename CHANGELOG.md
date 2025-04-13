@@ -8,6 +8,10 @@ and this project adheres to
 
 ## Unreleased
 
+#### Fixed
+- Fix 32-bit build failures due to missing cast
+  - [#4008](https://github.com/bpftrace/bpftrace/pull/4008)
+
 ## [0.23.1] 2025-04-11
 
 #### Fixed
