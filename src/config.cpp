@@ -273,7 +273,7 @@ const std::unordered_set<std::string> ENV_ONLY = {
 
 // This is applied for all environment variables, and will also be accepted
 // as part of the general configuration key (in lower case only).
-constexpr std::string ENV_PREFIX = "bpftrace_";
+static const std::string ENV_PREFIX = "bpftrace_";
 
 static std::string restore(const std::string &original_key)
 {
@@ -323,10 +323,9 @@ Result<OK> Config::set(const std::string &original_key, uint64_t val)
   return parser->integer(original_key, this, val);
 }
 
-constexpr std::string UNSTABLE_PREFIX = "unstable_";
-
 bool Config::is_unstable(const std::string &original_key)
 {
+  const static std::string UNSTABLE_PREFIX = "unstable_";
   auto key = restore(original_key);
   return key.starts_with(UNSTABLE_PREFIX);
 }
