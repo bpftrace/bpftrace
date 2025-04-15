@@ -46,6 +46,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- Fix biosnoop.bt to print comm from block_io_start probe
+  - [#4013](https://github.com/bpftrace/bpftrace/pull/4013)
 
 ## [0.23.0] 2025-03-25
 
