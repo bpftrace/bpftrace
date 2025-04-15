@@ -34,7 +34,7 @@ hello world
 # レッスン 3. ファイルのオープン
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
@@ -48,7 +48,7 @@ snmpd /proc/net/if_inet6
 - `tracepoint:syscalls:sys_enter_openat` は tracepoint プローブ（カーネルの静的トレーシング）です．これにより `openat()` システムコール呼び出し時にイベントが発生します．Tracepoint の API は安定性が保証されているため，kprobe（カーネルの動的トレーシング，レッスン6で紹介）よりも利用が推奨されます．なお，最近の Linux（カーネル2.26以上）では `open` 関数は常に `openat` システムコールを呼びます．
 - `comm` はビルトイン変数の一つで，現在のプロセス名を保持します．同様のビルトイン変数に pid や tid があります．
 - `args` は対象の tracepoint の全ての引数を含む構造体へのポインタです．この構造体は tracepoint の情報に基づいて bpftrace が自動で生成します．構造体のメンバの情報は `bpftrace -vl tracepoint:syscalls:sys_enter_openat` で調べることができます．
-- `args->filename` は `args` 構造体を参照してメンバ変数 `filename` の値を取得します．
+- `args.filename` は `args` 構造体を参照してメンバ変数 `filename` の値を取得します．
 - `str()` はポインタを文字列に変換します．（訳注：bpftrace はポインタと文字列を別々のものとして扱います．printf("%s") の引数には文字列を与える必要があります． ）
 
 
@@ -78,7 +78,7 @@ Attaching 1 probe...
 # レッスン 5. read() のバイト数の分布
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args->ret); }'
+# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
 Attaching 1 probe...
 ^C
 
@@ -259,7 +259,7 @@ secondary_startup_64+165
 # Lesson 11. ブロック I/O のトレーシング
 
 ```
-# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args->bytes); }'
+# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
 Attaching 1 probe...
 ^C
 
@@ -289,7 +289,7 @@ Attaching 1 probe...
 
 - tracepoint:block: tracepoint の block カテゴリは様々なブロックI/O（ストレージ）イベントをトレースします．
 - block_rq_issue: デバイスに I/O が発行された時にイベントが発生します．
-- args->bytes: Tracepoint の block_rq_issue の引数のメンバ変数で，ブロックI/Oのサイズをバイト単位で表します．
+- args.bytes: Tracepoint の block_rq_issue の引数のメンバ変数で，ブロックI/Oのサイズをバイト単位で表します．
 
 このプローブのコンテキストは重要です．このイベントはデバイスに対して I/O が発行されたときに発生します．これはよくプロセスコンテキストで発生し，その場合ビルトイン変数，例えば comm はそのときのプロセス名を意味しますが，このイベントはカーネルコンテキスト（例えば readahead）でも発生します．この場合 pid や comm は予期しないものになるでしょう．
 
