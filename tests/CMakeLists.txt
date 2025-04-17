@@ -38,6 +38,7 @@ add_executable(bpftrace_test
   field_analyser.cpp
   fold_literals.cpp
   function_registry.cpp
+  imports.cpp
   location.cpp
   log.cpp
   macro_expansion.cpp

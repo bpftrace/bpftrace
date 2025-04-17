@@ -24,10 +24,18 @@ embed(
   DEPENDS base
 )
 
+embed(
+  base_script
+  ${CMAKE_CURRENT_SOURCE_DIR}/base.bt
+  OUTPUT  base_bt.h
+  VAR     base_bt
+  DEPENDS base
+)
+
 # The standard library holds these definitions internally via the headers
 # above. This can be made more dynamic in the future (e.g. using dynamic
 # initializers and registration), but given the size and scope the simpler
 # solution is more desirable for now.
 
 add_library(stdlib STATIC stdlib.cpp)
-add_dependencies(stdlib base_bitcode base_btf)
+add_dependencies(stdlib base_bitcode base_btf base_script)
