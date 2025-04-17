@@ -229,7 +229,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
   std::filesystem::path in_path{ in };
   std::uintmax_t in_file_size = std::filesystem::file_size(in_path, ec);
 
-  if (in_file_size == static_cast<std::uintmax_t>(-1)) {
+  if (ec) {
     LOG(ERROR) << "Failed to stat: " << in << ": " << ec.message();
     return 1;
   }

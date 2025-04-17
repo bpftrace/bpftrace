@@ -34,7 +34,7 @@ static uint32_t _find_version_note(unsigned long base)
 {
   const auto *ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
 
-  for (int i = 0; i < ehdr->e_shnum; i++) {
+  for (Elf64_Half i = 0; i < ehdr->e_shnum; i++) {
     const auto *shdr = reinterpret_cast<const ElfW(Shdr) *>(
         base + ehdr->e_shoff + (i * ehdr->e_shentsize));
 

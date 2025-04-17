@@ -24,7 +24,7 @@ BfdDisasm::BfdDisasm(std::string &path)
     std::filesystem::path fs_path{ path };
     std::uintmax_t file_size = std::filesystem::file_size(fs_path, ec);
 
-    if (file_size != static_cast<std::uintmax_t>(-1)) {
+    if (!ec) {
       size_ = file_size;
     }
   }

@@ -80,7 +80,7 @@ static std::map<GlobalVar, int> find_btf_var_offsets(
     vars_and_offsets[global_var] = -1;
   }
 
-  int i;
+  uint16_t i;
   struct btf_var_secinfo *member;
 
   for (i = 0, member = btf_var_secinfos(section_type);
