@@ -50,7 +50,6 @@ add_library(libbpftrace STATIC
   lockdown.cpp
   tracepoint_format_parser.cpp
 )
-add_dependencies(libbpftrace stdlib)
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")
 

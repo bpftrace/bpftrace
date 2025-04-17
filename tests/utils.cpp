@@ -14,6 +14,7 @@
 #include "util/kernel.h"
 #include "util/math.h"
 #include "util/paths.h"
+#include "util/similar.h"
 #include "util/symbols.h"
 #include "util/system.h"
 #include "util/wildcard.h"
@@ -481,6 +482,18 @@ TEST(utils, cat_file_nonexistent)
   // Verify error message was logged
   EXPECT_THAT(stderr_output, testing::HasSubstr("failed to open file"))
       << "Error message should indicate file opening failure";
+}
+
+TEST(utils, similar)
+{
+  // This is not well-defined, and therefore we cannot include whitebox tests
+  // that go into much detail. These tests provide a generic `very different`
+  // versus `quite similar` sanity baseline.
+  EXPECT_FALSE(is_similar("foo", "bar"));
+  EXPECT_FALSE(is_similar("foo", "baz"));
+  EXPECT_TRUE(is_similar("foo", "foofoo"));
+  EXPECT_TRUE(is_similar("fo", "foo"));
+  EXPECT_TRUE(is_similar("foobar", "fobar"));
 }
 
 } // namespace bpftrace::test::utils

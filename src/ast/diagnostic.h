@@ -26,20 +26,24 @@ public:
   {
     return msg_.str();
   }
-  std::string hint() const
+  std::vector<std::string> hints() const
   {
-    return hint_.str();
+    std::vector<std::string> msgs;
+    for (const auto& hint : hints_) {
+      msgs.emplace_back(hint.str());
+    }
+    return msgs;
   }
   const Location& loc() const
   {
     return loc_;
   }
 
-  // Each diagnostic can potentially have a hint attached, which is how to
+  // Each diagnostic can potentially have hints attached, which is how to
   // effectively resolve this issue.
   std::stringstream& addHint()
   {
-    return hint_;
+    return hints_.emplace_back();
   }
 
   // Add additional context for the error.
@@ -54,7 +58,7 @@ public:
 
 private:
   std::stringstream msg_;
-  std::stringstream hint_;
+  std::vector<std::stringstream> hints_;
   Location loc_;
 };
 

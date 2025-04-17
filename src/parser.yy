@@ -156,7 +156,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::PositionalParameterCount *> param_count
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
-%type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
+%type <std::pair<ast::ProbeList, ast::SubprogList>> body probes_and_subprogs
 %type <ast::MacroList> macros
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
@@ -204,7 +204,7 @@ start:          START_PROGRAM program { driver.result = $2; }
                 ;
 
 program:
-                c_definitions config imports map_decl_list macros probes_and_subprogs END {
+                c_definitions config imports map_decl_list macros body END {
                     $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
                 }
                 ;
@@ -358,6 +358,11 @@ macro_args:
         |       macro_args "," var { $$ = std::move($1); $$.push_back($3); }
         |       map                { $$ = ast::ExpressionList{$1}; }
         |       var                { $$ = ast::ExpressionList{$1}; }
+                ;
+
+body:
+                probes_and_subprogs { $$ = std::move($1); }
+        |       %empty              { $$ = { ast::ProbeList{}, ast::SubprogList{}}; }
                 ;
 
 probes_and_subprogs:

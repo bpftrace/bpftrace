@@ -3,6 +3,7 @@
 
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/link.h"
+#include "ast/passes/resolve_imports.h"
 #include "bpfbytecode.h"
 #include "scopeguard.h"
 #include "util/temp.h"
@@ -17,7 +18,13 @@ void LinkError::log(llvm::raw_ostream &OS) const
 
 Pass CreateExternObjectPass()
 {
-  return Pass::create("extern", []() { return BpfExternObjects(); });
+  return Pass::create("extern", [](Imports &imports) {
+    BpfExternObjects result;
+    for (const auto &[name, obj] : imports.objects) {
+      result.objects.emplace_back(obj.path);
+    }
+    return result;
+  });
 }
 
 Pass CreateLinkPass()

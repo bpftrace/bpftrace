@@ -9,12 +9,14 @@ std::string make_view(const unsigned char* v)
 
 // Embedded file contents.
 #include "stdlib/base_bc.h"
+#include "stdlib/base_bt.h"
 #include "stdlib/base_btf.h"
 
 // Files is the immutable index of embedded files.
 const std::map<std::string, std::string> Stdlib::files = {
   { "stdlib/base.btf", make_view(base_btf) },
   { "stdlib/base.bc", make_view(base_bc) },
+  { "stdlib/base.bt", make_view(base_bt) },
 };
 
 } // namespace bpftrace::stdlib
