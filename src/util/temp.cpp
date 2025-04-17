@@ -64,6 +64,7 @@ Result<OK> TempFile::write_all(std::span<char> bytes)
       return make_error<TempFileError>(path_.string(), err);
     }
     done += rc;
+    left -= rc;
   }
   return OK();
 }
