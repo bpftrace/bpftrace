@@ -31,6 +31,9 @@ Pass CreateLinkPass()
 
         // Otherwise, dump the intermediate object.
         auto object = util::TempFile::create();
+        if (!object) {
+          return object.takeError();
+        }
         auto ok = object->write_all(obj.data);
         if (!ok) {
           return ok.takeError();
@@ -39,6 +42,9 @@ Pass CreateLinkPass()
         // Create an output file on disk. In the future, we may want to accept
         // some flags that allow this file to persist.
         auto output = util::TempFile::create();
+        if (!output) {
+          return output.takeError();
+        }
 
         // In order to craft the final output, since we may have external maps
         // and probes, we delegate the heavy lifting to libbpf. First, we open a
