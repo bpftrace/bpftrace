@@ -2,6 +2,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/config_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
@@ -19,6 +20,7 @@ inline std::vector<Pass> AllParsePasses(
 {
   std::vector<Pass> passes;
   passes.emplace_back(CreateParsePass());
+  passes.emplace_back(CreateConfigPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateParseBTFPass());
