@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <cstring>
 
 #include "bpftrace.h"
 #include "globalvars.h"
@@ -54,7 +55,7 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
       bpf_object__open_mem(elf.data(), elf.size(), &opts));
   if (!bpf_object_)
-    LOG(BUG) << "The produced ELF is not a valid BPF object";
+    LOG(BUG) << "The produced ELF is not a valid BPF object: " << std::strerror(errno);
 
   const auto section_names = globalvars::get_section_names();
 
