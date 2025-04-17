@@ -213,7 +213,7 @@ probe[,probe]
 ----
 
 Probes::
-  A probe specifies the event and event type to attach too. <<Probes, Probes list>>.
+  A probe specifies the event and event type to attach to. <<Probes, Probes list>>.
 
 Predicate::
   The predicate is an optional condition that must be met for the action to be executed.
