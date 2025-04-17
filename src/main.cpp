@@ -295,7 +295,6 @@ std::vector<std::string> extra_flags(
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateConfigPass());
   add(ast::CreateResolveImportsPass({}));
   add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
@@ -309,7 +308,6 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreatePortabilityPass());
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateConfigPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
