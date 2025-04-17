@@ -6,6 +6,7 @@
 namespace bpftrace::stdlib {
 
 class Stdlib {
+public:
   // files is the set of files embedded in the standard library.
   static const std::map<std::string, std::string> files;
 };
