@@ -22,7 +22,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !80 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !81 {
 entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
@@ -71,7 +72,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!77}
-!llvm.module.flags = !{!79}
+!llvm.module.flags = !{!79, !80}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -153,9 +154,10 @@ attributes #0 = { nounwind }
 !77 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !78)
 !78 = !{!0, !7, !26, !35, !49, !62, !69, !73, !75}
 !79 = !{i32 2, !"Debug Info Version", i32 3}
-!80 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !81, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !77, retainedNodes: !84)
-!81 = !DISubroutineType(types: !82)
-!82 = !{!24, !83}
-!83 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!84 = !{!85}
-!85 = !DILocalVariable(name: "ctx", arg: 1, scope: !80, file: !2, type: !83)
+!80 = !{i32 7, !"uwtable", i32 0}
+!81 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !82, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !77, retainedNodes: !85)
+!82 = !DISubroutineType(types: !83)
+!83 = !{!24, !84}
+!84 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!85 = !{!86}
+!86 = !DILocalVariable(name: "ctx", arg: 1, scope: !81, file: !2, type: !84)

@@ -19,7 +19,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !69 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !70 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -117,7 +118,7 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!66}
-!llvm.module.flags = !{!68}
+!llvm.module.flags = !{!68, !69}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -188,9 +189,10 @@ attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !66 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !67)
 !67 = !{!0, !7, !26, !35, !40, !54}
 !68 = !{i32 2, !"Debug Info Version", i32 3}
-!69 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !70, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !66, retainedNodes: !73)
-!70 = !DISubroutineType(types: !71)
-!71 = !{!20, !72}
-!72 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!73 = !{!74}
-!74 = !DILocalVariable(name: "ctx", arg: 1, scope: !69, file: !2, type: !72)
+!69 = !{i32 7, !"uwtable", i32 0}
+!70 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !71, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !66, retainedNodes: !74)
+!71 = !DISubroutineType(types: !72)
+!72 = !{!20, !73}
+!73 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!74 = !{!75}
+!75 = !DILocalVariable(name: "ctx", arg: 1, scope: !70, file: !2, type: !73)

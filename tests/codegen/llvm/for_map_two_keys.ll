@@ -19,7 +19,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !72 {
+; Function Attrs: nounwind
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !73 {
 entry:
   %"@map_val" = alloca i64, align 8
   %tuple = alloca %int64_int64__tuple_t, align 8
@@ -47,7 +48,8 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 i
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !78 {
+; Function Attrs: nounwind
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !79 {
   %"@x_key" = alloca i64, align 8
   %"$kv" = alloca %"(int64,int64)_int64__tuple_t", align 8
   %val = load i64, ptr %2, align 8
@@ -73,7 +75,7 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!69}
-!llvm.module.flags = !{!71}
+!llvm.module.flags = !{!71, !72}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -147,17 +149,18 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !69 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !70)
 !70 = !{!0, !7, !31, !43, !57}
 !71 = !{i32 2, !"Debug Info Version", i32 3}
-!72 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !73, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !69, retainedNodes: !76)
-!73 = !DISubroutineType(types: !74)
-!74 = !{!27, !75}
-!75 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!76 = !{!77}
-!77 = !DILocalVariable(name: "ctx", arg: 1, scope: !72, file: !2, type: !75)
-!78 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !79, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !69, retainedNodes: !81)
-!79 = !DISubroutineType(types: !80)
-!80 = !{!27, !75, !75, !75, !75}
-!81 = !{!82, !83, !84, !85}
-!82 = !DILocalVariable(name: "map", arg: 1, scope: !78, file: !2, type: !75)
-!83 = !DILocalVariable(name: "key", arg: 2, scope: !78, file: !2, type: !75)
-!84 = !DILocalVariable(name: "value", arg: 3, scope: !78, file: !2, type: !75)
-!85 = !DILocalVariable(name: "ctx", arg: 4, scope: !78, file: !2, type: !75)
+!72 = !{i32 7, !"uwtable", i32 0}
+!73 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !74, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !69, retainedNodes: !77)
+!74 = !DISubroutineType(types: !75)
+!75 = !{!27, !76}
+!76 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!77 = !{!78}
+!78 = !DILocalVariable(name: "ctx", arg: 1, scope: !73, file: !2, type: !76)
+!79 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !80, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !69, retainedNodes: !82)
+!80 = !DISubroutineType(types: !81)
+!81 = !{!27, !76, !76, !76, !76}
+!82 = !{!83, !84, !85, !86}
+!83 = !DILocalVariable(name: "map", arg: 1, scope: !79, file: !2, type: !76)
+!84 = !DILocalVariable(name: "key", arg: 2, scope: !79, file: !2, type: !76)
+!85 = !DILocalVariable(name: "value", arg: 3, scope: !79, file: !2, type: !76)
+!86 = !DILocalVariable(name: "ctx", arg: 4, scope: !79, file: !2, type: !76)

@@ -16,7 +16,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !56 {
+; Function Attrs: nounwind
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !57 {
 entry:
   %"$x3" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x3")
@@ -49,7 +50,7 @@ if_end:                                           ; preds = %if_body, %entry
 while_cond:                                       ; preds = %while_body, %if_end
   %1 = load i64, ptr %"$i", align 8
   %true_cond = icmp ne i64 %1, 0
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !62
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !63
 
 while_body:                                       ; preds = %while_cond
   %2 = load i64, ptr %"$i", align 8
@@ -77,7 +78,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) section ".text" !dbg !64 {
+; Function Attrs: nounwind
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !65 {
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
@@ -102,7 +104,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!53}
-!llvm.module.flags = !{!55}
+!llvm.module.flags = !{!55, !56}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -160,19 +162,20 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
 !54 = !{!0, !7, !26, !40}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
-!57 = !DISubroutineType(types: !58)
-!58 = !{!24, !59}
-!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !59)
-!62 = distinct !{!62, !63}
-!63 = !{!"llvm.loop.unroll.disable"}
-!64 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !65, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !53, retainedNodes: !67)
-!65 = !DISubroutineType(types: !66)
-!66 = !{!24, !59, !59, !59, !59}
-!67 = !{!68, !69, !70, !71}
-!68 = !DILocalVariable(name: "map", arg: 1, scope: !64, file: !2, type: !59)
-!69 = !DILocalVariable(name: "key", arg: 2, scope: !64, file: !2, type: !59)
-!70 = !DILocalVariable(name: "value", arg: 3, scope: !64, file: !2, type: !59)
-!71 = !DILocalVariable(name: "ctx", arg: 4, scope: !64, file: !2, type: !59)
+!56 = !{i32 7, !"uwtable", i32 0}
+!57 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!58 = !DISubroutineType(types: !59)
+!59 = !{!24, !60}
+!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!61 = !{!62}
+!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)
+!63 = distinct !{!63, !64}
+!64 = !{!"llvm.loop.unroll.disable"}
+!65 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !66, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !53, retainedNodes: !68)
+!66 = !DISubroutineType(types: !67)
+!67 = !{!24, !60, !60, !60, !60}
+!68 = !{!69, !70, !71, !72}
+!69 = !DILocalVariable(name: "map", arg: 1, scope: !65, file: !2, type: !60)
+!70 = !DILocalVariable(name: "key", arg: 2, scope: !65, file: !2, type: !60)
+!71 = !DILocalVariable(name: "value", arg: 3, scope: !65, file: !2, type: !60)
+!72 = !DILocalVariable(name: "ctx", arg: 4, scope: !65, file: !2, type: !60)

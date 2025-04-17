@@ -15,7 +15,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_sys___1(ptr %0) section "s_kprobe_sys___1" !dbg !51 {
+; Function Attrs: nounwind
+define i64 @kprobe_sys___1(ptr %0) #0 section "s_kprobe_sys___1" !dbg !52 {
 entry:
   %"@_val2" = alloca i64, align 8
   %"@_key1" = alloca i64, align 8
@@ -46,7 +47,8 @@ exit_probe:                                       ; preds = %entry
   ret i64 0
 }
 
-declare !dbg !57 extern_weak i8 @bpf_session_is_return() local_unnamed_addr section ".ksyms"
+; Function Attrs: nounwind
+declare !dbg !58 extern_weak i8 @bpf_session_is_return() local_unnamed_addr #0 section ".ksyms"
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
@@ -58,7 +60,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!48}
-!llvm.module.flags = !{!50}
+!llvm.module.flags = !{!50, !51}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -111,12 +113,13 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !48 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !49)
 !49 = !{!0, !7, !22, !36}
 !50 = !{i32 2, !"Debug Info Version", i32 3}
-!51 = distinct !DISubprogram(name: "kprobe_sys___1", linkageName: "kprobe_sys___1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !55)
-!52 = !DISubroutineType(types: !53)
-!53 = !{!20, !54}
-!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!55 = !{!56}
-!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
-!57 = !DISubprogram(name: "bpf_session_is_return", linkageName: "bpf_session_is_return", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: 0)
-!58 = !DISubroutineType(types: !59)
-!59 = !{!4}
+!51 = !{i32 7, !"uwtable", i32 0}
+!52 = distinct !DISubprogram(name: "kprobe_sys___1", linkageName: "kprobe_sys___1", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !56)
+!53 = !DISubroutineType(types: !54)
+!54 = !{!20, !55}
+!55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!56 = !{!57}
+!57 = !DILocalVariable(name: "ctx", arg: 1, scope: !52, file: !2, type: !55)
+!58 = !DISubprogram(name: "bpf_session_is_return", linkageName: "bpf_session_is_return", scope: !2, file: !2, type: !59, flags: DIFlagPrototyped, spFlags: 0)
+!59 = !DISubroutineType(types: !60)
+!60 = !{!4}

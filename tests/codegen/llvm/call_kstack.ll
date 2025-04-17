@@ -28,7 +28,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !102 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !103 {
 entry:
   %"@z_key" = alloca i64, align 8
   %lookup_stack_scratch_key19 = alloca i32, align 4
@@ -162,7 +163,7 @@ get_stack_fail26:                                 ; preds = %lookup_stack_scratc
   br label %merge_block18
 }
 
-; Function Attrs: alwaysinline
+; Function Attrs: alwaysinline nounwind
 define internal i64 @murmur_hash_2(ptr %0, i8 %1, i64 %2) #1 section "helpers" {
 entry:
   %k = alloca i64, align 8
@@ -249,12 +250,12 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 attributes #0 = { nounwind }
-attributes #1 = { alwaysinline }
+attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!99}
-!llvm.module.flags = !{!101}
+!llvm.module.flags = !{!101, !102}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -358,9 +359,10 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !99 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !100)
 !100 = !{!0, !7, !26, !28, !30, !54, !63, !65, !75, !89}
 !101 = !{i32 2, !"Debug Info Version", i32 3}
-!102 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !103, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !99, retainedNodes: !106)
-!103 = !DISubroutineType(types: !104)
-!104 = !{!20, !105}
-!105 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!106 = !{!107}
-!107 = !DILocalVariable(name: "ctx", arg: 1, scope: !102, file: !2, type: !105)
+!102 = !{i32 7, !"uwtable", i32 0}
+!103 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !104, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !99, retainedNodes: !107)
+!104 = !DISubroutineType(types: !105)
+!105 = !{!20, !106}
+!106 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!107 = !{!108}
+!108 = !DILocalVariable(name: "ctx", arg: 1, scope: !103, file: !2, type: !106)

@@ -445,7 +445,10 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          "Debug Info Version",
                          llvm::DEBUG_METADATA_VERSION);
 
-  // Set license of BPF programs
+  // The unwind table causes problems when linking via libbpf.
+  module_->setUwtable(llvm::UWTableKind::None);
+
+  // Set license of BPF programs.
   const std::string &license = bpftrace_.config_->license;
   auto license_size = license.size() + 1;
   auto *license_var = llvm::dyn_cast<GlobalVariable>(
@@ -3058,6 +3061,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(util::get_section_name(func_name));
+  func->addFnAttr(Attribute::NoUnwind);
   debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
@@ -3630,6 +3634,7 @@ llvm::Function *CodegenLLVM::createLog2Function()
       log2_func_type, llvm::Function::InternalLinkage, "log2", module_.get());
   log2_func->addFnAttr(Attribute::AlwaysInline);
   log2_func->setSection("helpers");
+  log2_func->addFnAttr(Attribute::NoUnwind);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
                                          "entry",
                                          log2_func);
@@ -3738,6 +3743,7 @@ llvm::Function *CodegenLLVM::createLinearFunction()
                                              module_.get());
   linear_func->addFnAttr(Attribute::AlwaysInline);
   linear_func->setSection("helpers");
+  linear_func->addFnAttr(Attribute::NoUnwind);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(),
                                          "entry",
                                          linear_func);
@@ -3906,6 +3912,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(util::get_section_name(func_name));
+  func->addFnAttr(Attribute::NoUnwind);
   debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
@@ -4410,6 +4417,7 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
       module_.get());
   callback->addFnAttr(Attribute::AlwaysInline);
   callback->setSection("helpers");
+  callback->addFnAttr(Attribute::NoUnwind);
 
   auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);
   b_.SetInsertPoint(bb);
@@ -4558,6 +4566,7 @@ llvm::Function *CodegenLLVM::createMapLenCallback()
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
+  callback->addFnAttr(Attribute::NoUnwind);
 
   Struct debug_args;
   debug_args.AddField("map", CreatePointer(CreateInt8()));
@@ -4602,6 +4611,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
+  callback->addFnAttr(Attribute::NoUnwind);
 
   Struct debug_args;
   debug_args.AddField("map", CreatePointer(CreateInt8()));
@@ -4752,6 +4762,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
                                      module_.get());
   fun->setSection(".ksyms");
   fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+  fun->addFnAttr(Attribute::NoUnwind);
 
   debug_.createFunctionDebugInfo(
       *fun, func_struct->GetField(RETVAL_FIELD_NAME).type, debug_args, true);

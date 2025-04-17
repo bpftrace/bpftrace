@@ -14,7 +14,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !45 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
 entry:
   %key = alloca i32, align 4
   %cat_args = alloca %cat_t, align 8
@@ -63,7 +64,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!42}
-!llvm.module.flags = !{!44}
+!llvm.module.flags = !{!44, !45}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -110,9 +111,10 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !42 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !43)
 !43 = !{!0, !7, !22}
 !44 = !{i32 2, !"Debug Info Version", i32 3}
-!45 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !46, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !49)
-!46 = !DISubroutineType(types: !47)
-!47 = !{!41, !48}
-!48 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!49 = !{!50}
-!50 = !DILocalVariable(name: "ctx", arg: 1, scope: !45, file: !2, type: !48)
+!45 = !{i32 7, !"uwtable", i32 0}
+!46 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
+!47 = !DISubroutineType(types: !48)
+!48 = !{!41, !49}
+!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!50 = !{!51}
+!51 = !DILocalVariable(name: "ctx", arg: 1, scope: !46, file: !2, type: !49)
