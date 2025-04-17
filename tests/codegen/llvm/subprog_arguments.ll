@@ -34,7 +34,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!42}
-!llvm.module.flags = !{!44}
+!llvm.module.flags = !{!44, !45}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -81,3 +81,4 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !42 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !43)
 !43 = !{!0, !7, !22}
 !44 = !{i32 2, !"Debug Info Version", i32 3}
+!45 = !{i32 7, !"uwtable", i32 0}

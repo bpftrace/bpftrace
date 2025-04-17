@@ -14,7 +14,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !47 {
+; Function Attrs: nounwind
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !48 {
 entry:
   %per_cpu_ptr = call ptr inttoptr (i64 153 to ptr)(ptr @process_counts, i64 0)
   %1 = ptrtoint ptr %per_cpu_ptr to i64
@@ -24,7 +25,7 @@ entry:
 attributes #0 = { nounwind }
 
 !llvm.dbg.cu = !{!44}
-!llvm.module.flags = !{!46}
+!llvm.module.flags = !{!46, !47}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -73,9 +74,10 @@ attributes #0 = { nounwind }
 !44 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !45)
 !45 = !{!0, !7, !22, !42}
 !46 = !{i32 2, !"Debug Info Version", i32 3}
-!47 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !48, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !51)
-!48 = !DISubroutineType(types: !49)
-!49 = !{!41, !50}
-!50 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!51 = !{!52}
-!52 = !DILocalVariable(name: "ctx", arg: 1, scope: !47, file: !2, type: !50)
+!47 = !{i32 7, !"uwtable", i32 0}
+!48 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !52)
+!49 = !DISubroutineType(types: !50)
+!50 = !{!41, !51}
+!51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!52 = !{!53}
+!53 = !DILocalVariable(name: "ctx", arg: 1, scope: !48, file: !2, type: !51)

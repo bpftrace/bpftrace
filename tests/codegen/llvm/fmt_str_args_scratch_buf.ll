@@ -17,7 +17,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !54 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !55 {
 entry:
   %key = alloca i32, align 4
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
@@ -75,7 +76,7 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!51}
-!llvm.module.flags = !{!53}
+!llvm.module.flags = !{!53, !54}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -131,9 +132,10 @@ attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !52)
 !52 = !{!0, !7, !22, !42, !44}
 !53 = !{i32 2, !"Debug Info Version", i32 3}
-!54 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !55, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !58)
-!55 = !DISubroutineType(types: !56)
-!56 = !{!41, !57}
-!57 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!58 = !{!59}
-!59 = !DILocalVariable(name: "ctx", arg: 1, scope: !54, file: !2, type: !57)
+!54 = !{i32 7, !"uwtable", i32 0}
+!55 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!56 = !DISubroutineType(types: !57)
+!57 = !{!41, !58}
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)

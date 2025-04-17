@@ -15,7 +15,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @BEGIN_1(ptr %0) section "s_BEGIN_1" !dbg !56 {
+; Function Attrs: nounwind
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !57 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -35,7 +36,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
-define i64 @kprobe_f_2(ptr %0) section "s_kprobe_f_2" !dbg !62 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !63 {
 entry:
   %"$s" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
@@ -45,13 +47,14 @@ entry:
   ret i64 0
 }
 
-declare !dbg !65 extern_weak i64 @bpf_map_sum_elem_count(ptr %0) local_unnamed_addr section ".ksyms"
+; Function Attrs: nounwind
+declare !dbg !66 extern_weak i64 @bpf_map_sum_elem_count(ptr %0) local_unnamed_addr #0 section ".ksyms"
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!53}
-!llvm.module.flags = !{!55}
+!llvm.module.flags = !{!55, !56}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -109,18 +112,19 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
 !54 = !{!0, !7, !26, !40}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
-!56 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !60)
-!57 = !DISubroutineType(types: !58)
-!58 = !{!24, !59}
-!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!60 = !{!61}
-!61 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !59)
-!62 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !63)
-!63 = !{!64}
-!64 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !59)
-!65 = !DISubprogram(name: "bpf_map_sum_elem_count", linkageName: "bpf_map_sum_elem_count", scope: !2, file: !2, type: !66, flags: DIFlagPrototyped, spFlags: 0)
-!66 = !DISubroutineType(types: !67)
-!67 = !{!24, !68}
-!68 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !69, size: 64)
-!69 = !DICompositeType(tag: DW_TAG_structure_type, name: "bpf_map", scope: !2, file: !2, elements: !70)
-!70 = !{}
+!56 = !{i32 7, !"uwtable", i32 0}
+!57 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!58 = !DISubroutineType(types: !59)
+!59 = !{!24, !60}
+!60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!61 = !{!62}
+!62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)
+!63 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !64)
+!64 = !{!65}
+!65 = !DILocalVariable(name: "ctx", arg: 1, scope: !63, file: !2, type: !60)
+!66 = !DISubprogram(name: "bpf_map_sum_elem_count", linkageName: "bpf_map_sum_elem_count", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: 0)
+!67 = !DISubroutineType(types: !68)
+!68 = !{!24, !69}
+!69 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !70, size: 64)
+!70 = !DICompositeType(tag: DW_TAG_structure_type, name: "bpf_map", scope: !2, file: !2, elements: !71)
+!71 = !{}

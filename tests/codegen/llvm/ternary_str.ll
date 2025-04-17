@@ -19,7 +19,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !65 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !66 {
 entry:
   %"@x_key" = alloca i64, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
@@ -65,7 +66,7 @@ attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!62}
-!llvm.module.flags = !{!64}
+!llvm.module.flags = !{!64, !65}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -132,9 +133,10 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !62 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !63)
 !63 = !{!0, !7, !26, !40, !53, !55}
 !64 = !{i32 2, !"Debug Info Version", i32 3}
-!65 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !66, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !62, retainedNodes: !69)
-!66 = !DISubroutineType(types: !67)
-!67 = !{!20, !68}
-!68 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!69 = !{!70}
-!70 = !DILocalVariable(name: "ctx", arg: 1, scope: !65, file: !2, type: !68)
+!65 = !{i32 7, !"uwtable", i32 0}
+!66 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !62, retainedNodes: !70)
+!67 = !DISubroutineType(types: !68)
+!68 = !{!20, !69}
+!69 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!70 = !{!71}
+!71 = !DILocalVariable(name: "ctx", arg: 1, scope: !66, file: !2, type: !69)

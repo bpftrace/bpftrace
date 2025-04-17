@@ -16,7 +16,8 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @kprobe_f_1(ptr %0) section "s_kprobe_f_1" !dbg !61 {
+; Function Attrs: nounwind
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !62 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"struct Foo_int32[4]__tuple_t", align 8
@@ -61,7 +62,7 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!58}
-!llvm.module.flags = !{!60}
+!llvm.module.flags = !{!60, !61}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -124,9 +125,10 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !58 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !59)
 !59 = !{!0, !7, !32, !46}
 !60 = !{i32 2, !"Debug Info Version", i32 3}
-!61 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !58, retainedNodes: !65)
-!62 = !DISubroutineType(types: !63)
-!63 = !{!20, !64}
-!64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!65 = !{!66}
-!66 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !64)
+!61 = !{i32 7, !"uwtable", i32 0}
+!62 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !58, retainedNodes: !66)
+!63 = !DISubroutineType(types: !64)
+!64 = !{!20, !65}
+!65 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!66 = !{!67}
+!67 = !DILocalVariable(name: "ctx", arg: 1, scope: !62, file: !2, type: !65)
