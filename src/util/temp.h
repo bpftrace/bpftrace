@@ -27,8 +27,6 @@ private:
 // TempFile provide a convenient RAII wrapper for temporary files. The use of
 // temporary files should be generally discouraged, unless they are necessary
 // to interacting with other libraries or tools.
-//
-// Using `pattern = false` should only be done from `TempDir`.
 class TempFile {
 public:
   static Result<TempFile> create(std::string name = "", bool pattern = true);
