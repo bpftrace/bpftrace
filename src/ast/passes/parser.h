@@ -6,6 +6,7 @@
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/resolve_imports.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "driver.h"
@@ -16,11 +17,13 @@ namespace bpftrace::ast {
 // AllParsePasses returns a vector of passes representing all parser passes, in
 // the expected order. This should be used unless there's a reason not to.
 inline std::vector<Pass> AllParsePasses(
-    std::vector<std::string> &&extra_flags = {})
+    std::vector<std::string> &&extra_flags = {},
+    std::vector<std::string> &&import_paths = {})
 {
   std::vector<Pass> passes;
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateConfigPass());
+  passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateParseBTFPass());

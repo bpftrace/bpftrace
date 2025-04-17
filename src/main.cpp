@@ -295,7 +295,6 @@ std::vector<std::string> extra_flags(
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateResolveImportsPass({}));
   add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
