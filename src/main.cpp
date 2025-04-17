@@ -787,7 +787,10 @@ int main(int argc, char* argv[])
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateSemanticPass(args.listing))
                   .run();
-    if (!ok || !ast.diagnostics().ok()) {
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
@@ -868,7 +871,10 @@ int main(int argc, char* argv[])
         .add(ast::CreateSemanticPass(args.listing));
 
     auto ok = pm.run();
-    if (!ok || !ast.diagnostics().ok()) {
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
@@ -951,8 +957,10 @@ int main(int argc, char* argv[])
   pm.add(ast::CreateLinkPass());
 
   auto pmresult = pm.run();
-  if (!pmresult || !ast.diagnostics().ok()) {
-    // Emits errors and warnings
+  if (!pmresult) {
+    std::cerr << pmresult.takeError() << "\n";
+    return 2;
+  } else if (!ast.diagnostics().ok()) {
     ast.diagnostics().emit(std::cerr);
     return 1;
   }
