@@ -779,7 +779,7 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
         assert(!is_per_cpu);
 
         const auto *data = value.data();
-        auto enum_name = type.GetName();
+        const auto &enum_name = type.GetName();
         uint64_t enum_val;
         switch (type.GetIntBitWidth()) {
           case 64:
