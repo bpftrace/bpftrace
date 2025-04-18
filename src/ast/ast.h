@@ -1098,7 +1098,6 @@ public:
         pred(clone(ctx, other.pred, loc)),
         block(clone(ctx, other.block, loc)),
         need_expansion(other.need_expansion),
-        tp_args_structs_level(other.tp_args_structs_level),
         index_(other.index_) {};
 
   AttachPointList attach_points;
