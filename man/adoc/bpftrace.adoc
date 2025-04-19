@@ -3729,6 +3729,11 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 
+==== show_debug_info
+
+This is only available if the link:https://github.com/libbpf/blazesym[Blazesym] library is available at build time. If it is available this defaults to 1, meaning that when printing ustack and kstack symbols bpftrace will also show (if debug info is available) symbol file and line ('bpftrace' stack mode) and a label if the function was inlined ('bpftrace' and 'perf' stack modes).
+There might be a performance difference when symbolicating, which is the only reason to disable this.
+
 ==== stack_mode
 
 Default: bpftrace
