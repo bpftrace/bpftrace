@@ -6,9 +6,10 @@ FROM fedora:rawhide
 
 RUN dnf install -y \
         asciidoctor \
+        bcc-devel \
         bison \
         binutils-devel \
-        bcc-devel \
+        bpftool \
         cereal-devel \
         clang-devel \
         cmake \

@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     libpcap-dev \
     llvm-dev \
     libclang-dev \
+    linux-tools-common \
     systemtap-sdt-dev \
     zlib1g-dev
 
