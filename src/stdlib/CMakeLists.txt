@@ -1,16 +1,11 @@
 include(BuildBPF)
 include(Embed)
 
-btf_header(vmlinux
-  OUTPUT vmlinux.h
-)
-
 bpf(base
   SOURCE  base.c
   BITCODE base.bc
   OBJECT  base.o
   BTF     base.btf
-  DEPENDS vmlinux
 )
 
 embed(

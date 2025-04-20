@@ -74,7 +74,6 @@ public:
       : no_feature_(no_feature), btf_(btf)
   {
   }
-  BPFfeature() = default;
   virtual ~BPFfeature() = default;
 
   // Due to the unique_ptr usage the generated copy constructor & assignment

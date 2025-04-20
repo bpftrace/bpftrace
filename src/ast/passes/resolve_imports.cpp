@@ -1,18 +1,14 @@
-#include <iostream>
-#include <sstream>
-#include <unordered_set>
-
 #include "ast/passes/resolve_imports.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
-#include "log.h"
 
 namespace bpftrace::ast {
 
 class ResolveImports : public Visitor<ResolveImports> {
 public:
-  ResolveImports(BPFtrace &bpftrace, const std::vector<std::string> &paths)
-      : bpftrace_(bpftrace), paths_(paths) {};
+  ResolveImports(BPFtrace &bpftrace,
+                 [[maybe_unused]] const std::vector<std::string> &paths)
+      : bpftrace_(bpftrace) {};
 
   using Visitor<ResolveImports>::visit;
   void visit(Import &imp);
@@ -25,7 +21,6 @@ public:
 
 private:
   BPFtrace &bpftrace_;
-  const std::vector<std::string> &paths_;
   Imports imports_;
 };
 

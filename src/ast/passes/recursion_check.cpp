@@ -28,8 +28,7 @@ bool is_recursive_func(const std::string &func_name)
 
 class RecursionCheck : public Visitor<RecursionCheck> {
 public:
-  explicit RecursionCheck(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace)
+  explicit RecursionCheck(BPFtrace &bpftrace) : bpftrace_(bpftrace)
   {
   }
 
@@ -37,7 +36,6 @@ public:
   void visit(Program &program);
 
 private:
-  ASTContext &ast_;
   BPFtrace &bpftrace_;
 };
 
@@ -80,7 +78,7 @@ void RecursionCheck::visit(Program &program)
 Pass CreateRecursionCheckPass()
 {
   return Pass::create("RecursionCheck", [](ASTContext &ast, BPFtrace &b) {
-    auto recursion_check = RecursionCheck(ast, b);
+    auto recursion_check = RecursionCheck(b);
     recursion_check.visit(ast.root);
   });
 };
