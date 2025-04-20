@@ -17,17 +17,14 @@ find_program(CLANG
   NAMES clang-${LLVM_VERSION_MAJOR}
   REQUIRED)
 
-function(btf_header NAME)
+function(btf_header NAME SOURCE)
   cmake_parse_arguments(
     ARG
     ""
-    "OUTPUT;SOURCE"
+    "OUTPUT"
     ""
     ${ARGN}
   )
-  if (NOT DEFINED ARG_SOURCE)
-    set(ARG_SOURCE "/sys/kernel/btf/vmlinux")
-  endif ()
   if (NOT DEFINED ARG_OUTPUT)
     set(ARG_OUTPUT "${NAME}.h")
   endif ()

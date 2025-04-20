@@ -1,6 +1,6 @@
 class Parent {
 private:
-  int a;
+  [[maybe_unused]] int a;
 
 protected:
   int b;
