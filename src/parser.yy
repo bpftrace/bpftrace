@@ -118,7 +118,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
 %token <uint64_t> UNSIGNED_INT "integer"
-%token <std::string> STACK_MODE "stack_mode"
 %token <std::string> CONFIG "config"
 %token <std::string> UNROLL "unroll"
 %token <std::string> WHILE "while"
@@ -714,8 +713,6 @@ call:
         |       IDENT "(" vargs ")"          { error(@1, "Unknown function: " + $1); YYERROR;  }
         |       BUILTIN "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
         |       BUILTIN "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       STACK_MODE "(" ")"           { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       STACK_MODE "(" vargs ")"     { error(@1, "Unknown function: " + $1); YYERROR;  }
                 ;
 
 map:
