@@ -47,6 +47,8 @@ and this project adheres to
   - [#3987](https://github.com/bpftrace/bpftrace/pull/3987)
 - Fix 32-bit build failures due to missing cast
   - [#4006](https://github.com/bpftrace/bpftrace/pull/4006)
+- Don't crash if kernel isn't built with PID namespaces
+  - [#3976](https://github.com/bpftrace/bpftrace/pull/3976)
 #### Security
 #### Docs
 #### Tools
