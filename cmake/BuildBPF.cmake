@@ -103,7 +103,7 @@ function(bpf NAME)
     add_custom_command(
       OUTPUT ${ARG_BITCODE}
       DEPENDS ${ARG_SOURCE} ${ARG_DEPENDS}
-      COMMAND ${CLANG} -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
+      COMMAND ${CLANG} -emit-llvm -g -target bpf-pc-linux -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
       VERBATIM
     )
     add_custom_target(${NAME}_gen_bitcode DEPENDS ${ARG_BITCODE})
