@@ -1,7 +1,7 @@
 ; ModuleID = 'bpftrace'
 source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
-target triple = "bpf-pc-linux"
+target triple = "bpf"
 
 %"struct map_t" = type { ptr, ptr }
 %"int64_(string[13],int64)__tuple_t" = type { i64, %"string[13]_int64__tuple_t" }
