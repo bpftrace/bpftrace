@@ -60,6 +60,25 @@
             };
           };
 
+          # gtest-parallel for running tests
+          gtest_parallel = pkgs.stdenv.mkDerivation {
+            name = "gtest-parallel";
+            src = pkgs.fetchFromGitHub {
+              owner = "google";
+              repo = "gtest-parallel";
+              rev = "96f4f904922f9bf66689e749c40f314845baaac8";
+              sha256 = "VUuk5tBTh+aU2dxVWUF1FePWlKUJaWSiGSXk/J5zgHw=";
+            };
+            propagatedBuildInputs = [
+              pkgs.python3
+            ];
+            phases = [ "installPhase" ];
+            installPhase = ''
+              install -m0644 -D $src/gtest_parallel.py $out/bin/gtest_parallel.py
+              install -m755 -D $src/gtest-parallel $out/bin/gtest-parallel
+            '';
+         };
+
           # Download statically linked vmtest binary
           arch = pkgs.lib.strings.removeSuffix "-linux" system;
           vmtestVersion = "0.18.0";
@@ -184,6 +203,7 @@
                   git
                   gnugrep
                   go  # For runtime tests
+                  gtest_parallel
                   iproute2
                   kmod
                   # For git-clang-format
