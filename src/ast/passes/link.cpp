@@ -29,8 +29,14 @@ Pass CreateLinkPass()
           return BpfBytecode{ obj.data };
         }
 
+        // Create a working directory.
+        auto dir = util::TempDir::create();
+        if (!dir) {
+          return dir.takeError();
+        }
+
         // Otherwise, dump the intermediate object.
-        auto object = util::TempFile::create();
+        auto object = dir->create_file();
         if (!object) {
           return object.takeError();
         }
@@ -41,7 +47,7 @@ Pass CreateLinkPass()
 
         // Create an output file on disk. In the future, we may want to accept
         // some flags that allow this file to persist.
-        auto output = util::TempFile::create();
+        auto output = dir->create_file();
         if (!output) {
           return output.takeError();
         }

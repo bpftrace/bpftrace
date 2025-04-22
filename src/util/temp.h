@@ -23,9 +23,11 @@ private:
 // TempFile provide a convenient RAII wrapper for temporary files. The use of
 // temporary files should be generally discouraged, unless they are necessary
 // to interacting with other libraries or tools.
+//
+// Using `pattern = false` should only be done from `TempDir`.
 class TempFile {
 public:
-  static Result<TempFile> create(std::string pattern = "");
+  static Result<TempFile> create(std::string name = "", bool pattern = true);
   ~TempFile();
 
   TempFile(const TempFile &other) = delete;
@@ -58,6 +60,43 @@ private:
 
   std::filesystem::path path_;
   int fd_;
+};
+
+// TempDir provides a wrapper for temporary directories.
+//
+// There is no way to create directories with a fixed name.
+class TempDir {
+public:
+  static Result<TempDir> create(std::string pattern = "");
+  ~TempDir();
+
+  TempDir(const TempDir &other) = delete;
+  TempDir &operator=(const TempDir &other) = delete;
+
+  TempDir(TempDir &&other)
+  {
+    path_ = std::move(other.path_);
+  }
+  TempDir &operator=(TempDir &&other)
+  {
+    path_ = std::move(other.path_);
+    return *this;
+  }
+
+  const std::filesystem::path &path()
+  {
+    return path_;
+  }
+
+  // Creates a temporary file in this directory. Note that `name` need not
+  // contain any `X` characters if `pattern` is true, as these will be appended
+  // as a suffix. The `name` provided should also not have any path components.
+  Result<TempFile> create_file(std::string name = "", bool pattern = true);
+
+private:
+  TempDir(std::filesystem::path &&path) : path_(std::move(path)) {};
+
+  std::filesystem::path path_;
 };
 
 } // namespace bpftrace::util

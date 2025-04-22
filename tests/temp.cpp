@@ -6,6 +6,7 @@
 
 namespace bpftrace::test::types {
 
+using util::TempDir;
 using util::TempFile;
 
 TEST(util, tempfile_no_pattern)
@@ -35,6 +36,33 @@ TEST(util, tempfile_good_pattern)
   ASSERT_TRUE(bool(f2));
   EXPECT_TRUE(f1->path().filename().string().starts_with("testing."));
   EXPECT_TRUE(f2->path().filename().string().starts_with("testing."));
+}
+
+TEST(util, tempdir)
+{
+  auto d = TempDir::create();
+  ASSERT_TRUE(bool(d));
+  auto f1 = d->create_file("foo");
+  auto f2 = d->create_file("bar");
+  auto f3 = d->create_file();
+  ASSERT_TRUE(bool(f1));
+  ASSERT_TRUE(bool(f2));
+  ASSERT_TRUE(bool(f3));
+  EXPECT_TRUE(f1->path().filename().string().starts_with("foo."));
+  EXPECT_TRUE(f2->path().filename().string().starts_with("bar."));
+}
+
+TEST(util, tempdir_no_pattern)
+{
+  auto d = TempDir::create();
+  ASSERT_TRUE(bool(d));
+  auto f1 = d->create_file("foo", false);
+  auto f2 = d->create_file("bar", false);
+  ASSERT_TRUE(bool(f1));
+  ASSERT_TRUE(bool(f2));
+  EXPECT_EQ(f1->path().filename().string(), "foo");
+  EXPECT_EQ(f2->path().filename().string(), "bar");
+  EXPECT_FALSE(bool(d->create_file("foo", false)));
 }
 
 } // namespace bpftrace::test::types
