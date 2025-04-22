@@ -153,7 +153,7 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
     }
 
     // Get BTF object info - needed to determine if this is a kernel module BTF
-    char name[64] = { 0 };
+    char name[64] = {};
     struct bpf_btf_info info = {};
     info.name = reinterpret_cast<uintptr_t>(name);
     info.name_len = sizeof(name);
@@ -242,7 +242,7 @@ std::string BTF::dump_defs_from_btf(
   std::string ret;
   auto *dump = dump_new(btf, dump_printf, &ret);
   if (auto err = libbpf_get_error(dump)) {
-    char err_buf[256] = { 0 };
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
@@ -658,7 +658,7 @@ FuncParamLists BTF::get_params_from_btf(
   std::string type;
   auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
   if (auto err = libbpf_get_error(dump)) {
-    char err_buf[256] = { 0 };
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
@@ -731,7 +731,7 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
   std::string type;
   auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
   if (auto err = libbpf_get_error(dump)) {
-    char err_buf[256] = { 0 };
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
