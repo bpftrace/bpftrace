@@ -42,8 +42,8 @@ namespace bpftrace {
 // https://lore.kernel.org/all/168507471874.913472.17214624519622959593.stgit@mhiramat.roam.corp.google.com/
 // "__traceiter_" was added here:
 // https://lore.kernel.org/all/20200908105743.GW2674@hirez.programming.kicks-ass.net/
-static const std::vector<std::string> RT_BTF_PREFIXES = { "__probestub_",
-                                                          "__traceiter_" };
+static const std::vector<std::string_view> RT_BTF_PREFIXES = { "__probestub_",
+                                                               "__traceiter_" };
 
 class BPFtrace;
 
@@ -85,10 +85,10 @@ public:
   }
   void load_module_btfs(const std::set<std::string>& modules);
   std::string c_def(const std::unordered_set<std::string>& set);
-  std::string type_of(const std::string& name, const std::string& field);
-  std::string type_of(const BTFId& type_id, const std::string& field);
-  SizedType get_stype(const std::string& type_name);
-  SizedType get_var_type(const std::string& var_name);
+  std::string type_of(std::string_view name, std::string_view field);
+  std::string type_of(const BTFId& type_id, std::string_view field);
+  SizedType get_stype(std::string_view type_name);
+  SizedType get_var_type(std::string_view var_name);
 
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_funcs();
@@ -98,12 +98,12 @@ public:
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
 
-  std::shared_ptr<Struct> resolve_args(const std::string& func,
+  std::shared_ptr<Struct> resolve_args(std::string_view func,
                                        bool ret,
                                        bool check_traceable,
                                        bool skip_first_arg,
                                        std::string& err);
-  std::shared_ptr<Struct> resolve_raw_tracepoint_args(const std::string& func,
+  std::shared_ptr<Struct> resolve_raw_tracepoint_args(std::string_view func,
                                                       std::string& err);
   void resolve_fields(const SizedType& type);
 
@@ -119,7 +119,7 @@ private:
                       __u32 start_offset);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
                                                  const struct btf* btf);
-  BTF::BTFId find_id(const std::string& name,
+  BTF::BTFId find_id(std::string_view name,
                      std::optional<__u32> kind = std::nullopt) const;
   __s32 find_id_in_btf(struct btf* btf,
                        std::string_view name,
@@ -148,10 +148,10 @@ private:
   __u32 get_type_tags(std::unordered_set<std::string>& tags,
                       const BTFId& btf_id) const;
 
-  __s32 start_id(const struct btf* btf) const;
+  __u32 start_id(const struct btf* btf) const;
 
   struct btf* vmlinux_btf = nullptr;
-  __s32 vmlinux_btf_size;
+  __u32 vmlinux_btf_size;
   // BTF objects for vmlinux and modules
   std::vector<BTFObj> btf_objects;
   enum state state = INIT;

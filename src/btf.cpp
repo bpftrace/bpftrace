@@ -1,3 +1,4 @@
+#include "scopeguard.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -35,10 +36,11 @@ namespace bpftrace {
 
 static __u32 type_cnt(const struct btf *btf)
 {
-  return btf__type_cnt(btf) - 1;
+  const auto count = btf__type_cnt(btf);
+  return count ? count - 1 : 0;
 }
 
-__s32 BTF::start_id(const struct btf *btf) const
+__u32 BTF::start_id(const struct btf *btf) const
 {
   return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
 }
@@ -88,7 +90,7 @@ void BTF::load_vmlinux_btf()
     return;
   }
 
-  vmlinux_btf_size = static_cast<__s32>(type_cnt(vmlinux_btf));
+  vmlinux_btf_size = type_cnt(vmlinux_btf);
 
   state = VMLINUX_LOADED;
 }
@@ -136,8 +138,7 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
   // IDs, so the only way is to iterate through all loaded BTF objects
   __u32 id = 0;
   while (true) {
-    int err = bpf_btf_get_next_id(id, &id);
-    if (err) {
+    if (bpf_btf_get_next_id(id, &id)) {
       if (errno != ENOENT)
         LOG(V1) << "BTF: failed to iterate modules BTF objects: "
                 << strerror(errno);
@@ -152,27 +153,26 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
     }
 
     // Get BTF object info - needed to determine if this is a kernel module BTF
-    char name[64];
+    char name[64] = {};
     struct bpf_btf_info info = {};
     info.name = reinterpret_cast<uintptr_t>(name);
     info.name_len = sizeof(name);
 
-    __u32 info_len = sizeof(info);
-    err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
+    uint32_t info_len = sizeof(info);
+    auto err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
     close(fd); // close the FD not to leave too many files open
     if (err) {
       LOG(V1) << "BTF: failed to get info for object with id " << id;
       continue;
     }
 
-    auto mod_name = std::string(name);
     if (!info.kernel_btf)
       continue;
 
-    if (modules.contains(mod_name)) {
+    if (modules.contains(name)) {
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
-                  .name = mod_name });
+                  .name = name });
     }
   }
 
@@ -223,62 +223,58 @@ static std::string full_type_str(const struct btf *btf,
   return str;
 }
 
-static std::string btf_type_str(const std::string &type)
+static std::string_view btf_type_str(std::string_view type)
 {
-  return std::regex_replace(type, std::regex("^(struct )|(union )"), "");
+  using namespace std::literals::string_view_literals;
+  if (type.starts_with("struct "))
+    return type.substr("struct "sv.length());
+  if (type.starts_with("union "))
+    return type.substr("union "sv.length());
+  if (type.starts_with("enum "))
+    return type.substr("enum "sv.length());
+  return type;
 }
 
 std::string BTF::dump_defs_from_btf(
     const struct btf *btf,
     std::unordered_set<std::string> &types) const
 {
-  std::string ret = std::string("");
-  struct btf_dump *dump;
-  char err_buf[256];
-  int err;
-
-  dump = dump_new(btf, dump_printf, &ret);
-  err = libbpf_get_error(dump);
-  if (err) {
+  std::string ret;
+  auto *dump = dump_new(btf, dump_printf, &ret);
+  if (auto err = libbpf_get_error(dump)) {
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
   }
-
-  __s32 id, max = static_cast<__s32>(type_cnt(btf));
+  SCOPE_EXIT
+  {
+    btf_dump__free(dump);
+  };
 
   // note that we're always iterating from 1 here as we need to go through the
   // vmlinux BTF entries, too (even for kernel module BTFs)
-  for (id = 1; id <= max && !types.empty(); id++) {
-    const struct btf_type *t = btf__type_by_id(btf, id);
+  for (__u32 id = 1, max = type_cnt(btf); id <= max && !types.empty(); id++) {
+    const auto *t = btf__type_by_id(btf, id);
     if (!t)
       continue;
 
     // Allow users to reference enum values by name to pull in entire enum defs
     if (btf_is_enum(t)) {
-      const struct btf_enum *p = btf_enum(t);
-      uint16_t vlen = btf_vlen(t);
-      for (int e = 0; e < vlen; ++e, ++p) {
-        std::string str = btf_str(btf, p->name_off);
-        auto it = types.find(str);
-        if (it != types.end()) {
+      const auto *p = btf_enum(t);
+      for (__u16 e = 0, vlen = btf_vlen(t); e < vlen; ++e, ++p) {
+        if (types.erase(btf_str(btf, p->name_off))) {
           btf_dump__dump_type(dump, id);
-          types.erase(it);
           break;
         }
       }
     }
 
-    std::string str = full_type_str(btf, t);
-
-    auto it = types.find(str);
-    if (it != types.end()) {
+    if (types.erase(full_type_str(btf, t))) {
       btf_dump__dump_type(dump, id);
-      types.erase(it);
     }
   }
 
-  btf_dump__free(dump);
   return ret;
 }
 
@@ -299,7 +295,7 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set)
   return dump_defs_from_btf(vmlinux_btf, to_dump);
 }
 
-std::string BTF::type_of(const std::string &name, const std::string &field)
+std::string BTF::type_of(std::string_view name, std::string_view field)
 {
   if (!has_data())
     return {};
@@ -313,7 +309,7 @@ std::string BTF::type_of(const std::string &name, const std::string &field)
   return type_of(type_id, field);
 }
 
-std::string BTF::type_of(const BTFId &type_id, const std::string &field)
+std::string BTF::type_of(const BTFId &type_id, std::string_view field)
 {
   if (!has_data())
     return {};
@@ -460,7 +456,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
+std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
                                           bool ret,
                                           bool check_traceable,
                                           bool skip_first_arg,
@@ -473,19 +469,19 @@ std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
 
   auto func_id = find_id(func, BTF_KIND_FUNC);
   if (!func_id.btf) {
-    err = "no BTF data for " + func;
+    err = "no BTF data for " + std::string(func);
     return nullptr;
   }
 
   const struct btf_type *t = btf__type_by_id(func_id.btf, func_id.id);
   t = btf__type_by_id(func_id.btf, t->type);
   if (!t || !btf_is_func_proto(t)) {
-    err = func + " is not a function";
+    err = std::string(func) + " is not a function";
     return nullptr;
   }
 
   if (check_traceable) {
-    if (bpftrace_ && !bpftrace_->is_traceable_func(func)) {
+    if (bpftrace_ && !bpftrace_->is_traceable_func(std::string(func))) {
       if (bpftrace_->get_traceable_funcs().empty()) {
         err = "could not read traceable functions from " +
               tracefs::available_filter_functions() + " (is tracefs mounted?)";
@@ -505,11 +501,9 @@ std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
     return nullptr;
   }
 
-  auto args = std::make_shared<Struct>(0, false);
-  int j = 0;
   int arg_idx = 0;
-  __u32 type_size = 0;
-  for (; j < vlen; j++, p++) {
+  auto args = std::make_shared<Struct>(0, false);
+  for (__u16 j = 0; j < vlen; j++, p++) {
     if (j == 0 && skip_first_arg) {
       continue;
     }
@@ -527,7 +521,7 @@ std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
     // fentry args are stored in a u64 array.
     // Note that it's ok to represent them by a struct as we will use GEP with
     // funcarg_idx to access them in codegen.
-    type_size = btf__resolve_size(func_id.btf, p->type);
+    auto type_size = btf__resolve_size(func_id.btf, p->type);
     args->size += type_size;
     arg_idx += std::ceil(static_cast<float>(type_size) / static_cast<float>(8));
   }
@@ -543,12 +537,12 @@ std::shared_ptr<Struct> BTF::resolve_args(const std::string &func,
   return args;
 }
 
-std::shared_ptr<Struct> BTF::resolve_raw_tracepoint_args(
-    const std::string &func,
-    std::string &err)
+std::shared_ptr<Struct> BTF::resolve_raw_tracepoint_args(std::string_view func,
+                                                         std::string &err)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
-    if (auto args = resolve_args(prefix + func, false, true, true, err)) {
+    if (auto args = resolve_args(
+            std::string(prefix) + std::string(func), false, true, true, err)) {
       return args;
     }
   }
@@ -558,19 +552,17 @@ std::shared_ptr<Struct> BTF::resolve_raw_tracepoint_args(
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 {
   std::string funcs;
-  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
 
-  for (id = start_id(btf_obj.btf); id <= max; id++) {
+  auto id = start_id(btf_obj.btf), max = type_cnt(btf_obj.btf);
+  for (; id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
-
     if (!t)
       continue;
 
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
-    std::string func_name = str;
+    std::string func_name = btf__name_by_offset(btf_obj.btf, t->name_off);
 
     t = btf__type_by_id(btf_obj.btf, t->type);
     if (!t || !btf_is_func_proto(t)) {
@@ -604,19 +596,17 @@ std::unique_ptr<std::istream> BTF::get_all_funcs()
 std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
 {
   std::set<std::string> func_set;
-  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
 
-  for (id = start_id(btf_obj.btf); id <= max; id++) {
+  auto id = start_id(btf_obj.btf), max = type_cnt(btf_obj.btf);
+  for (; id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
-
     if (!t)
       continue;
 
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
-    std::string func_name = str;
+    std::string_view func_name = btf__name_by_offset(btf_obj.btf, t->name_off);
 
     t = btf__type_by_id(btf_obj.btf, t->type);
     if (!t || !btf_is_func_proto(t)) {
@@ -632,7 +622,7 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
     for (const auto &prefix : RT_BTF_PREFIXES) {
       if (func_name.starts_with(prefix)) {
         found = true;
-        func_name.erase(0, prefix.length());
+        func_name.remove_prefix(prefix.length());
         break;
       }
     }
@@ -640,7 +630,8 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
     if (!found)
       continue;
 
-    func_set.insert(btf_obj.name + ":" + func_name + "\n");
+    // TODO: remove the std::string on C++26
+    func_set.insert(btf_obj.name + ':' + std::string(func_name) + '\n');
   }
 
   std::string funcs;
@@ -664,33 +655,31 @@ FuncParamLists BTF::get_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &funcs) const
 {
-  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
-  std::string type = std::string("");
-  struct btf_dump *dump;
-  char err_buf[256];
-  int err;
-
-  dump = dump_new(btf_obj.btf, dump_printf, &type);
-  err = libbpf_get_error(dump);
-  if (err) {
+  std::string type;
+  auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
+  if (auto err = libbpf_get_error(dump)) {
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
   }
+  SCOPE_EXIT
+  {
+    btf_dump__free(dump);
+  };
 
   FuncParamLists params;
-  for (id = start_id(btf_obj.btf); id <= max; id++) {
+  auto id = start_id(btf_obj.btf), max = type_cnt(btf_obj.btf);
+  for (; id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
-
     if (!t)
       continue;
 
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
-    const std::string func_name = btf_obj.name + ":" + std::string{ str };
-
+    const auto func_name = btf_obj.name + ":" +
+                           btf__name_by_offset(btf_obj.btf, t->name_off);
     if (!funcs.contains(func_name))
       continue;
 
@@ -702,16 +691,13 @@ FuncParamLists BTF::get_params_from_btf(
                          decl_opts,
                          .field_name = "");
 
-    const struct btf_param *p;
-    int j;
-
-    for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++) {
-      // set by dump_printf callback
-      type = std::string("");
+    const auto *p = btf_params(t);
+    for (__u16 j = 0, len = btf_vlen(t); j < len; j++, p++) {
       const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
 
-      err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
-      if (err) {
+      // set by dump_printf callback
+      type.clear();
+      if (btf_dump__emit_type_decl(dump, p->type, &decl_opts)) {
         LOG(ERROR) << "failed to dump argument: " << arg_name;
         break;
       }
@@ -723,10 +709,8 @@ FuncParamLists BTF::get_params_from_btf(
       continue;
 
     // set by dump_printf callback
-    type = std::string("");
-
-    err = btf_dump__emit_type_decl(dump, t->type, &decl_opts);
-    if (err) {
+    type.clear();
+    if (btf_dump__emit_type_decl(dump, t->type, &decl_opts)) {
       LOG(ERROR) << "failed to dump return type for: " << func_name;
       break;
     }
@@ -737,8 +721,6 @@ FuncParamLists BTF::get_params_from_btf(
   if (id != (max + 1))
     LOG(ERROR) << "BTF data inconsistency " << id << "," << max;
 
-  btf_dump__free(dump);
-
   return params;
 }
 
@@ -746,42 +728,39 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &rawtracepoints) const
 {
-  __s32 id, max = static_cast<__s32>(type_cnt(btf_obj.btf));
-  std::string type = std::string("");
-  struct btf_dump *dump;
-  char err_buf[256];
-  int err;
-
-  dump = dump_new(btf_obj.btf, dump_printf, &type);
-  err = libbpf_get_error(dump);
-  if (err) {
+  std::string type;
+  auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
+  if (auto err = libbpf_get_error(dump)) {
+    char err_buf[256] = {};
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
   }
+  SCOPE_EXIT
+  {
+    btf_dump__free(dump);
+  };
 
   FuncParamLists params;
-  for (id = start_id(btf_obj.btf); id <= max; id++) {
+  auto id = start_id(btf_obj.btf), max = type_cnt(btf_obj.btf);
+  for (; id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
-
     if (!t)
       continue;
 
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
-    std::string tp_name = str;
-
+    std::string_view tp_name = btf__name_by_offset(btf_obj.btf, t->name_off);
     for (const auto &prefix : RT_BTF_PREFIXES) {
-      if (tp_name.starts_with(prefix)) {
-        tp_name.erase(0, prefix.length());
-      }
+      if (tp_name.starts_with(prefix))
+        tp_name.remove_prefix(prefix.length());
     }
-    tp_name = btf_obj.name + ":" + tp_name;
 
     // Checking multiple prefixes so make sure we don't add duplicates
-    if (!rawtracepoints.contains(tp_name) || params.contains(tp_name))
+    // TODO: remove the std::string ctor on C++26
+    auto mod_tp_name = btf_obj.name + ":" + std::string(tp_name);
+    if (!rawtracepoints.contains(mod_tp_name) || params.contains(mod_tp_name))
       continue;
 
     t = btf__type_by_id(btf_obj.btf, t->type);
@@ -792,33 +771,29 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
                          decl_opts,
                          .field_name = "");
 
-    const struct btf_param *p;
-    int j;
-
-    for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++) {
+    const struct btf_param *p = btf_params(t);
+    for (__u16 j = 0, len = btf_vlen(t); j < len; j++, p++) {
       if (j == 0) {
         // The first param is void *, which is not really part of the
         // rawtracepoint params
         continue;
       }
-      // set by dump_printf callback
-      type = std::string("");
+
       const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
 
-      err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
-      if (err) {
+      // set by dump_printf callback
+      type.clear();
+      if (btf_dump__emit_type_decl(dump, p->type, &decl_opts)) {
         LOG(ERROR) << "failed to dump argument: " << arg_name;
         break;
       }
 
-      params[tp_name].push_back(type + " " + arg_name);
+      params[mod_tp_name].push_back(type + " " + arg_name);
     }
   }
 
   if (id != (max + 1))
     LOG(ERROR) << "BTF data inconsistency " << id << "," << max;
-
-  btf_dump__free(dump);
 
   return params;
 }
@@ -866,41 +841,39 @@ FuncParamLists BTF::get_rawtracepoint_params(
 std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
 {
   std::set<std::string> struct_set;
-  __s32 id, max = static_cast<__s32>(type_cnt(btf));
-  std::string types = std::string("");
-  struct btf_dump *dump;
-  char err_buf[256];
-  int err;
 
-  dump = dump_new(btf, dump_printf, &types);
-  err = libbpf_get_error(dump);
-  if (err) {
+  std::string types;
+  auto *dump = dump_new(btf, dump_printf, &types);
+  if (auto err = libbpf_get_error(dump)) {
+    char err_buf[256] = { 0 };
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return {};
   }
+  SCOPE_EXIT
+  {
+    btf_dump__free(dump);
+  };
 
-  for (id = start_id(btf); id <= max; id++) {
+  auto id = start_id(btf), max = type_cnt(btf);
+  for (; id <= max; id++) {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
     if (!t || !(btf_is_struct(t) || btf_is_union(t) || btf_is_enum(t)))
       continue;
 
     const std::string name = full_type_str(btf, t);
-
     if (name.find("(anon)") != std::string::npos)
       continue;
 
     if (bt_verbose)
       btf_dump__dump_type(dump, id);
     else
-      struct_set.insert(name);
+      struct_set.insert(std::move(name));
   }
 
   if (id != (max + 1))
     LOG(ERROR) << " BTF data inconsistency " << id << "," << max;
-
-  btf_dump__free(dump);
 
   if (bt_verbose) {
     // BTF dump contains definitions of all types in a single string, here we
@@ -941,28 +914,30 @@ std::set<std::string> BTF::get_all_structs() const
 std::unordered_set<std::string> BTF::get_all_iters_from_btf(
     const struct btf *btf) const
 {
-  std::unordered_set<std::string> iter_set;
-  const std::string prefix = "bpf_iter__";
+  constexpr std::string_view prefix = "bpf_iter__";
   // kernel commit 6fcd486b3a0a("bpf: Refactor RCU enforcement in the
   // verifier.") add 'struct bpf_iter__task__safe_trusted'
-  const std::string suffix___safe_trusted = "__safe_trusted";
-  __s32 id, max = static_cast<__s32>(type_cnt(btf));
-  for (id = start_id(btf); id <= max; id++) {
-    const struct btf_type *t = btf__type_by_id(btf, id);
+  constexpr std::string_view suffix___safe_trusted = "__safe_trusted";
 
-    if (!t || !(btf_is_struct(t)))
+  std::unordered_set<std::string> iter_set;
+
+  auto id = start_id(btf), max = type_cnt(btf);
+  for (; id <= max; id++) {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+    if (!t || !btf_is_struct(t))
       continue;
 
-    const std::string name = btf_str(btf, t->name_off);
+    std::string_view name = btf_str(btf, t->name_off);
 
     // skip __safe_trusted suffix struct
-    if (suffix___safe_trusted.length() < name.length() &&
-        name.ends_with(suffix___safe_trusted))
+    if (name.ends_with(suffix___safe_trusted))
       continue;
-    if (name.size() > prefix.size() && name.starts_with(prefix)) {
-      iter_set.insert(name.substr(prefix.size()));
+    if (name.starts_with(prefix)) {
+      name.remove_prefix(prefix.length());
+      iter_set.insert(std::string(name));
     }
   }
+
   return iter_set;
 }
 
@@ -992,12 +967,11 @@ int BTF::get_btf_id(std::string_view func,
   return -1;
 }
 
-BTF::BTFId BTF::find_id(const std::string &name,
-                        std::optional<__u32> kind) const
+BTF::BTFId BTF::find_id(std::string_view name, std::optional<__u32> kind) const
 {
   for (const auto &btf_obj : btf_objects) {
-    __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf, name.c_str(), *kind)
-                    : btf__find_by_name(btf_obj.btf, name.c_str());
+    __s32 id = kind ? btf__find_by_name_kind(btf_obj.btf, name.data(), *kind)
+                    : btf__find_by_name(btf_obj.btf, name.data());
     if (id >= 0)
       return { .btf = btf_obj.btf, .id = static_cast<__u32>(id) };
   }
@@ -1009,17 +983,15 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
                           std::string_view name,
                           std::optional<__u32> kind) const
 {
-  for (__s32 id = start_id(btf), max = static_cast<__s32>(type_cnt(btf));
-       id <= max;
-       ++id) {
+  for (auto id = start_id(btf), max = type_cnt(btf); id <= max; ++id) {
     const struct btf_type *t = btf__type_by_id(btf, id);
     if (!t)
       continue;
     if (kind && btf_kind(t) != *kind)
       continue;
 
-    std::string type_name = btf__name_by_offset(btf, t->name_off);
-    if (type_name == name)
+    const auto *type_name = btf__name_by_offset(btf, t->name_off);
+    if (name == type_name)
       return id;
   }
   return -1;
@@ -1094,7 +1066,7 @@ void BTF::resolve_fields(const BTFId &type_id,
   }
 }
 
-SizedType BTF::get_stype(const std::string &type_name)
+SizedType BTF::get_stype(std::string_view type_name)
 {
   auto btf_name = btf_type_str(type_name);
   auto type_id = find_id(btf_name);
@@ -1104,7 +1076,7 @@ SizedType BTF::get_stype(const std::string &type_name)
   return CreateNone();
 }
 
-SizedType BTF::get_var_type(const std::string &var_name)
+SizedType BTF::get_var_type(std::string_view var_name)
 {
   auto var_id = find_id(var_name, BTF_KIND_VAR);
   if (!var_id.btf)

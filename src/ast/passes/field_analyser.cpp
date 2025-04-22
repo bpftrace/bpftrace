@@ -346,7 +346,7 @@ void FieldAnalyser::resolve_type(SizedType &type)
     inner_type = inner_type->GetPointeeTy();
   if (!inner_type->IsRecordTy())
     return;
-  auto name = inner_type->GetName();
+  const auto &name = inner_type->GetName();
 
   if (probe_) {
     for (auto &ap : probe_->attach_points)
