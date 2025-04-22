@@ -23,7 +23,9 @@ RUN apt-get update && apt-get install -y \
     llvm-dev \
     libclang-dev \
     linux-tools-common \
+    pahole \
     systemtap-sdt-dev \
+    xxd \
     zlib1g-dev
 
 COPY . /src

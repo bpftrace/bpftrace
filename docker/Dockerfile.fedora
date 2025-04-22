@@ -5,6 +5,7 @@
 FROM fedora:rawhide
 
 RUN dnf install -y \
+        awk \
         asciidoctor \
         bcc-devel \
         bison \
@@ -23,7 +24,9 @@ RUN dnf install -y \
         libbpf-devel \
         llvm-devel \
         make \
+        pahole \
         systemtap-sdt-devel \
+        xxd \
         zlib-devel
 
 COPY . /src
