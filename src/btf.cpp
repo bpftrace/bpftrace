@@ -225,12 +225,13 @@ static std::string full_type_str(const struct btf *btf,
 
 static std::string_view btf_type_str(std::string_view type)
 {
+  using namespace std::literals::string_view_literals;
   if (type.starts_with("struct "))
-    return type.substr(strlen("struct "));
+    return type.substr("struct "sv.length());
   if (type.starts_with("union "))
-    return type.substr(strlen("union "));
+    return type.substr("union "sv.length());
   if (type.starts_with("enum "))
-    return type.substr(strlen("enum "));
+    return type.substr("enum "sv.length());
   return type;
 }
 
@@ -629,8 +630,8 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
     if (!found)
       continue;
 
-    func_set.insert(btf_obj.name + ":" + std::string(func_name) +
-                    "\n"); // TODO: remove the std::string on C++26
+    // TODO: remove the std::string on C++26
+    func_set.insert(btf_obj.name + ':' + std::string(func_name) + '\n');
   }
 
   std::string funcs;
@@ -757,10 +758,8 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
     }
 
     // Checking multiple prefixes so make sure we don't add duplicates
-    auto mod_tp_name = btf_obj.name + ":" + std::string(tp_name); // TODO:
-                                                                  // remove the
-                                                                  // std::string
-                                                                  // on C++26
+    // TODO: remove the std::string ctor on C++26
+    auto mod_tp_name = btf_obj.name + ":" + std::string(tp_name);
     if (!rawtracepoints.contains(mod_tp_name) || params.contains(mod_tp_name))
       continue;
 
