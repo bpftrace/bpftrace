@@ -89,6 +89,9 @@ Location operator+(const Location &orig, const Location &expansion)
   if (expansion == nullptr) {
     return orig;
   }
+  if (orig == nullptr) {
+    return expansion;
+  }
   auto nlink = std::make_shared<LocationChain>(expansion->current);
   nlink->parent.emplace(LocationChain::Context(Location(orig)));
   nlink->parent->msg << "expanded from";
