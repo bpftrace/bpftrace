@@ -23,6 +23,7 @@ add_library(ast STATIC
   passes/deprecated.cpp
   passes/field_analyser.cpp
   passes/fold_literals.cpp
+  passes/import_scripts.cpp
   passes/link.cpp
   passes/map_sugar.cpp
   passes/macro_expansion.cpp
