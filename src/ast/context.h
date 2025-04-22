@@ -77,7 +77,7 @@ public:
     return nodes_.size();
   }
 
-  const Diagnostics &diagnostics() const
+  Diagnostics &diagnostics() const
   {
     return *diagnostics_;
   }

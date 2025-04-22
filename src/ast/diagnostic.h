@@ -66,6 +66,16 @@ class Diagnostics {
 public:
   using Severity = Diagnostic::Severity;
 
+  // Note that the state of the diagnostics is really only a vector, which
+  // provides well-defined `move` semantics. After the move, the vector is
+  // guaranteed to be empty, which matches the state required for an empty
+  // Diagnostics object.
+  Diagnostics() = default;
+  Diagnostics(Diagnostics&& other) = default;
+  Diagnostics(const Diagnostics& other) = delete;
+  Diagnostics& operator=(const Diagnostics& other) = delete;
+  Diagnostics& operator=(Diagnostics&& other) = delete;
+
   template <typename... Args>
   Diagnostic& add(Severity severity, Args... args)
   {
@@ -113,6 +123,9 @@ public:
   void emit(std::ostream& out) const;
   void emit(std::ostream& out, Severity s) const;
   void emit(std::ostream& out, Severity s, const Diagnostic& d) const;
+
+  // adds all diagnostics from some other set.
+  void add(Diagnostics&& other);
 
 private:
   void foreach(Severity severity,
