@@ -82,7 +82,5 @@ int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
   ::testing::UnitTest::GetInstance()->listeners().Append(new ThrowListener);
-  ::testing::UnitTest::GetInstance()->listeners().Append(
-      new OutputSuppressorListener);
   return RUN_ALL_TESTS();
 }
