@@ -211,15 +211,14 @@ class Runner(object):
 
         return None
 
-
     @staticmethod
     def run_test(test):
         current_kernel = LooseVersion(os.uname()[2])
-        if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
+        if test.kernel_min and LooseVersion(test.kernel_min) >= current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MIN
 
-        if test.kernel_max and LooseVersion(test.kernel_max) < current_kernel:
+        if test.kernel_max and LooseVersion(test.kernel_max) <= current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MAX
 
