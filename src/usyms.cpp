@@ -404,7 +404,7 @@ std::vector<std::string> Usyms::resolve(uint64_t addr,
                                         const std::string &pid_exe,
                                         bool show_offset,
                                         bool perf_mode,
-                                        bool show_debug_info)
+                                        [[maybe_unused]] bool show_debug_info)
 {
 #ifdef HAVE_BLAZESYM
   if (config_.use_blazesym)

@@ -182,8 +182,8 @@ std::vector<std::string> Ksyms::resolve_blazesym(uint64_t addr,
 
 std::vector<std::string> Ksyms::resolve(uint64_t addr,
                                         bool show_offset,
-                                        bool perf_mode,
-                                        bool show_debug_info)
+                                        [[maybe_unused]] bool perf_mode,
+                                        [[maybe_unused]] bool show_debug_info)
 {
 #ifdef HAVE_BLAZESYM
   if (config_.use_blazesym)
