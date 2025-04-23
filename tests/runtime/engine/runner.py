@@ -7,7 +7,7 @@ import signal
 import sys
 import os
 import time
-from looseversion import LooseVersion
+from packaging.version import parse as parse_version
 import re
 from functools import lru_cache
 
@@ -213,12 +213,12 @@ class Runner(object):
 
     @staticmethod
     def run_test(test):
-        current_kernel = LooseVersion(os.uname()[2])
-        if test.kernel_min and LooseVersion(test.kernel_min) >= current_kernel:
+        current_kernel = parse_version(os.uname()[2])
+        if test.kernel_min and parse_version(test.kernel_min) >= current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MIN
 
-        if test.kernel_max and LooseVersion(test.kernel_max) <= current_kernel:
+        if test.kernel_max and parse_version(test.kernel_max) <= current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MAX
 
