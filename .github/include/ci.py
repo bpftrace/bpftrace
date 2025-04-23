@@ -183,9 +183,19 @@ def test_one(name: str, cond: Callable[[], bool], fn: Callable[[], None]) -> Tes
     status = TestStatus.PASSED
 
     if cond():
-        print(f"\n======= {name} ======")
+        in_ci = truthy(CI)
+        if in_ci:
+            # Start a collapsible section in GitHub Actions logs
+            # For failed tests, we'll omit the endgroup command to keep them expanded
+            print(f"::group::{name}")
+        else:
+            print(f"\n======= {name} ======")
+
         try:
             fn()
+            if in_ci:
+                # Only close the group if the test succeeded
+                print("::endgroup::")
         except subprocess.CalledProcessError as e:
             status = TestStatus.FAILED
     else:
