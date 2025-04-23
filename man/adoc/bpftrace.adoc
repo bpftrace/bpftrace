@@ -1908,6 +1908,12 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | get_current_uid_gid
 | User ID of the current thread, as seen from the init namespace
 
+| username
+| string
+| n/a
+| get_current_uid_gid
+| User name of the current thread, as seen from the init namespace
+
 |===
 
 [#builtins-positional-parameters]
