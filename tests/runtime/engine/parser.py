@@ -181,8 +181,10 @@ class TestParser(object):
             elif item_name == 'CLEANUP':
                 cleanup = line
             elif item_name == 'MIN_KERNEL':
+                line, *_ = line.partition('#')
                 kernel_min = line
             elif item_name == 'MAX_KERNEL':
+                line, *_ = line.partition('#')
                 kernel_max = line
             elif item_name == 'REQUIRES':
                 requirement.append(line)
