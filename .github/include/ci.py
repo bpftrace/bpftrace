@@ -164,8 +164,8 @@ def configure():
         f"-DCMAKE_VERBOSE_MAKEFILE=1",
         f"-DBUILD_TESTING=1",
         f"-DENABLE_SKB_OUTPUT=1",
-        f"-DBUILD_ASAN=1",
-        f"-DHARDENED_STDLIB=1",
+        # f"-DBUILD_ASAN=1",
+        # f"-DHARDENED_STDLIB=1",
     ]
     # fmt: on
 

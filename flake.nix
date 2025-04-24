@@ -214,7 +214,7 @@
                   nftables
                   procps
                   python3
-                  python3Packages.looseversion
+                  python3Packages.packaging
                   qemu_kvm
                   rustc  # For runtime tests
                   strace

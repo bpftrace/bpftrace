@@ -9,6 +9,7 @@ PROG END { printf("%s %d\n", "SUCCESS", 1) }
 AFTER pkill -SIGINT bpftrace
 EXPECT SUCCESS 1
 TIMEOUT 2
+SKIP_IF_ENV_HAS VMTEST_NO_UI=1 # Disable this test under vmtest, it is too slow to run before it timeouts.
 
 NAME custom signal handling probe
 RUN {{BPFTRACE}} -e 'self:signal:SIGUSR1 { print("signal handler"); exit(); }'

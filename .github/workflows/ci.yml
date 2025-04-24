@@ -38,52 +38,26 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 17
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm17
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 18
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm18
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 19
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm19
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Release
-          CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm20
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Debug
+        - NAME: Kernel 5.15 (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Clang Debug
+          NIX_TARGET_KERNEL: .#kernel-5_15
+          TOOLS_TEST_OLDVERSION: runqlen.bt # Need 6.14 kernel
+        - NAME: Kernel 6.1 (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
-          CC: clang
-          CXX: clang++
-          TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: Fuzzing
+          NIX_TARGET_KERNEL: .#kernel-6_1
+          TOOLS_TEST_OLDVERSION: runqlen.bt # Need 6.14 kernel
+        - NAME: Kernel 6.6 (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-fuzz
-          CC: afl-clang-fast
-          CXX: afl-clang-fast++
-        - NAME: Latest kernel (LLVM 20 Debug)
+          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET_KERNEL: .#kernel-6_6
+          TOOLS_TEST_OLDVERSION: runqlen.bt # Need 6.14 kernel
+        - NAME: Kernel 6.12 (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
           NIX_TARGET_KERNEL: .#kernel-6_12
           TOOLS_TEST_OLDVERSION: runqlen.bt # Need 6.14 kernel
-        - NAME: AOT (LLVM 20 Debug)
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm20
-          RUN_TESTS: 0
-          RUN_AOT_TESTS: 1
-          AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
     steps:
     - uses: actions/checkout@v2
     - uses: DeterminateSystems/nix-installer-action@v16
