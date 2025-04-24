@@ -43,10 +43,13 @@ add_compile_options("-Wunreachable-code")
 #add_compile_options("-Wformat=2")
 add_compile_options("-Wdisabled-optimization")
 
-if (HARDENED_STDLIB)
+if(HARDENED_STDLIB)
   add_compile_definitions("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
   add_compile_definitions("-D_GLIBCXX_ASSERTIONS")
-  add_compile_definitions("-D_FORTIFY_SOURCE=1")
+  if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    # _FORTIFY_SOURCE requires at least -O1
+    add_compile_definitions("-D_FORTIFY_SOURCE=3")
+  endif()
 endif()
 
 if (WARNINGS_AS_ERRORS)
