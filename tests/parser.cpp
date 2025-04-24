@@ -2180,6 +2180,24 @@ TEST(Parser, field_access_builtin_type)
        "   timestamp\n");
 }
 
+TEST(Parser, field_access_sized_type)
+{
+  test("kprobe:sys_read { @x.buffer; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   map: @x\n"
+       "   buffer\n");
+
+  test("kprobe:sys_read { @x->string; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   string\n");
+}
+
 TEST(Parser, array_access)
 {
   test("kprobe:sys_read { x[index]; }",

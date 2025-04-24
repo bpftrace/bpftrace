@@ -49,6 +49,8 @@ and this project adheres to
   - [#4006](https://github.com/bpftrace/bpftrace/pull/4006)
 - Don't crash if kernel isn't built with PID namespaces
   - [#3976](https://github.com/bpftrace/bpftrace/pull/3976)
+- Allow sized_type idents to be used for field access
+  - [#4064](https://github.com/bpftrace/bpftrace/pull/4064)
 #### Security
 #### Docs
 #### Tools
