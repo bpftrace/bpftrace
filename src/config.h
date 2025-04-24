@@ -14,6 +14,16 @@ enum class ConfigMissingProbes {
   error,
 };
 
+enum class ConfigUnstable {
+  enable,
+  warn,
+  error,
+};
+
+static const auto UNSTABLE_MACRO = "unstable_macro";
+static const auto UNSTABLE_MAP_DECL = "unstable_map_decl";
+static const auto UNSTABLE_IMPORT = "unstable_import";
+
 class Config {
 public:
   Config(bool has_cmd = false);
@@ -32,9 +42,9 @@ public:
   bool cpp_demangle = true;
   bool lazy_symbolication = true;
   bool print_maps_on_exit = true;
-  bool unstable_macro = false;
-  bool unstable_map_decl = false;
-  bool unstable_import = false;
+  ConfigUnstable unstable_macro = ConfigUnstable::warn;
+  ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
+  ConfigUnstable unstable_import = ConfigUnstable::error;
 #ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
   bool show_debug_info = true;

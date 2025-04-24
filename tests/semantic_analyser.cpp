@@ -4905,7 +4905,6 @@ Program
 TEST(semantic_analyser, map_declarations)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->config_->unstable_map_decl = true;
 
   test(*bpftrace, "let @a = hash(2); BEGIN { @a = 1; }");
   test(*bpftrace, "let @a = lruhash(2); BEGIN { @a = 1; }");
@@ -4962,7 +4961,7 @@ let @a = percpuarray(10); BEGIN { @a = count(); }
 TEST(semantic_analyser, macros)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->config_->unstable_macro = true;
+  bpftrace->config_->unstable_macro = ConfigUnstable::enable;
 
   test_error(*bpftrace,
              "macro set($x) { $x = 1; $x } BEGIN { $a = \"string\"; set($a); }",

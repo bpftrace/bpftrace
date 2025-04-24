@@ -260,17 +260,7 @@ void MacroCollection::visit(Expression &expr)
 
 void MacroCollection::collect_macros()
 {
-  bool unstable_macro = bpftrace_.config_->unstable_macro;
-
   for (Macro *macro : ast_.root->macros) {
-    if (!unstable_macro) {
-      macro->addError()
-          << "Hygienic macros are not enabled by default. To enable "
-             "this unstable feature, set the 'unstable_macro' config flag to 1 "
-             "e.g. unstable_macro=1";
-      return;
-    }
-
     if (macros_.contains(macro->name)) {
       macro->addError() << "Redifinition of macro: " << macro->name;
       return;

@@ -205,6 +205,43 @@ struct ConfigParser<ConfigMissingProbes> {
   }
 };
 
+template <>
+struct ConfigParser<ConfigUnstable> {
+  Result<OK> parse(const std::string &key,
+                   ConfigUnstable *target,
+                   const std::string &original)
+  {
+    std::string s = tolower(original);
+    if (s == "enable" || s == "1" || s == "true" || s == "on" || s == "yes") {
+      *target = ConfigUnstable::enable;
+      return OK();
+    } else if (s == "warn") {
+      *target = ConfigUnstable::warn;
+      return OK();
+    } else if (s == "error" || s == "0" || s == "false" || s == "off" ||
+               s == "no") {
+      *target = ConfigUnstable::error;
+      return OK();
+    } else {
+      return make_error<ParseError>(key,
+                                    "Invalid value for unstable config: valid "
+                                    "values are enable, warn, and error.");
+    }
+  }
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   [[maybe_unused]] ConfigUnstable *target,
+                   [[maybe_unused]] uint64_t v)
+  {
+    if (v != 0) {
+      *target = ConfigUnstable::enable;
+      return OK();
+    } else {
+      *target = ConfigUnstable::error;
+      return OK();
+    }
+  }
+};
+
 struct AnyParser {
   using KeyType = const std::string &;
   std::function<Result<OK>(KeyType, Config *, uint64_t)> integer;
@@ -252,9 +289,9 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "print_maps_on_exit", CONFIG_FIELD_PARSER(print_maps_on_exit) },
   { "use_blazesym", CONFIG_FIELD_PARSER(use_blazesym) },
   { "show_debug_info", CONFIG_FIELD_PARSER(show_debug_info) },
-  { "unstable_import", CONFIG_FIELD_PARSER(unstable_import) },
-  { "unstable_macro", CONFIG_FIELD_PARSER(unstable_macro) },
-  { "unstable_map_decl", CONFIG_FIELD_PARSER(unstable_map_decl) },
+  { UNSTABLE_IMPORT, CONFIG_FIELD_PARSER(unstable_import) },
+  { UNSTABLE_MACRO, CONFIG_FIELD_PARSER(unstable_macro) },
+  { UNSTABLE_MAP_DECL, CONFIG_FIELD_PARSER(unstable_map_decl) },
 };
 
 // These symbols are deprecated, and have been remapped elsewhere.
