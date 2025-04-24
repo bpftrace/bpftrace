@@ -683,6 +683,7 @@ ident:
                 IDENT         { $$ = $1; }
         |       BUILTIN       { $$ = $1; }
         |       BUILTIN_TYPE  { $$ = $1; }
+        |       SIZED_TYPE    { $$ = $1; }
                 ;
 
 raw_ident:
