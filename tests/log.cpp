@@ -120,4 +120,16 @@ TEST(Log, disable_log_type)
   ss.str({});
 }
 
+TEST(LogBugStream, log_bug_should_be_aborted)
+{
+  const std::string content = "I'm gonna die";
+
+  auto output = [&content](int line) {
+    const std::string filename = __FILE__;
+    return "BUG: \\[" + filename + ":" + std::to_string(line) + "\\] " +
+           content;
+  };
+  EXPECT_DEATH(LOG(BUG) << content, output(__LINE__));
+}
+
 } // namespace bpftrace::test::log
