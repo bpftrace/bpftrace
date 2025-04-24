@@ -91,7 +91,10 @@ def sudo() -> Path:
 class FoldOutput:
     """
     GitHub Actions output folding context manager.
-    Will automatically fold output for successful operations and keep output unfolded for failures.
+
+    Will automatically fold output for all operations. In an ideal world we'd
+    like to leave the failed operations unfolded, but there's currently no way
+    to do this in GHA without buffering output.
     """
 
     def __init__(self, name: str):
@@ -107,9 +110,7 @@ class FoldOutput:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """By not returning a value in this function, we propagate exceptions up"""
-        if self.in_ci and exc_type is None:
-            # Only close the group if no exception occurred (success)
+        if self.in_ci:
             print("::endgroup::")
 
 
