@@ -53,6 +53,7 @@ IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWidth: 2
 IndentWrappedFunctionNames: false
+InsertNewlineAtEOF: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd: ''
