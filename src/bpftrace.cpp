@@ -921,6 +921,8 @@ int BPFtrace::run(BpfBytecode bytecode)
     auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
     if (::bpf_prog_test_run_opts(begin_prog.fd(), nullptr))
       return -1;
+
+    LOG(V1) << "Attaching BEGIN";
   }
 
   auto signal_probe = resources.special_probes.find("self_signal");
@@ -1031,6 +1033,8 @@ int BPFtrace::run(BpfBytecode bytecode)
     auto &end_prog = bytecode_.getProgramForProbe((*end_probe).second);
     if (::bpf_prog_test_run_opts(end_prog.fd(), nullptr))
       return -1;
+
+    LOG(V1) << "Attaching END";
   }
 
   poll_output(/* drain */ true);
@@ -1191,6 +1195,7 @@ void BPFtrace::poll_output(bool drain)
           LOG(ERROR) << "Failed to run signal probe";
           return;
         }
+        LOG(V1) << "Attaching self:signal";
       }
     }
   }
