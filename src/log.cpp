@@ -51,6 +51,7 @@ void Log::take_input(LogType type,
   if (is_colorize_) {
     switch (type) {
       case LogType::ERROR:
+      case LogType::BUG:
         color_begin = LogColor::RED;
         color_end = LogColor::RESET;
         break;
