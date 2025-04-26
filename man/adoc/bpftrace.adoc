@@ -2029,7 +2029,7 @@ Tracing block I/O sizes > 0 bytes
 | Async
 
 | <<functions-join, `join`>>
-| Print the array
+| Combine an array of char* into one string and print it
 | Async
 
 | <<functions-kaddr, `kaddr`>>
@@ -2304,7 +2304,7 @@ BEGIN {
 
 *async*
 
-`join` joins all the string array `arr` with `sep` as separator into one string.
+`join` joins a char * `arr` with `sep` as separator into one string. 
 This string will be printed to stdout directly, it cannot be used as string value.
 
 The concatenation of the array members is done in BPF and the printing happens in userspace.
