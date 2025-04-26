@@ -119,4 +119,12 @@ struct Exit {
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
+struct Join {
+  uint64_t action_id;
+  uint64_t join_id;
+  char content[0];
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, uint32_t length);
+} __attribute__((packed));
+
 } // namespace bpftrace::AsyncEvent
