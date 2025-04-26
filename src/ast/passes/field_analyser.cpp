@@ -96,9 +96,28 @@ void FieldAnalyser::visit(Builtin &builtin)
       return;
     resolve_args(*probe_);
 
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, RETVAL_FIELD_NAME);
-    if (arg)
-      sized_type_ = arg->type;
+    // This is different for every single attachpoint. We need to check that
+    // they are sufficiently consistent to be able to annotate a useful type.
+    std::optional<SizedType> retval;
+    for (const auto &ap : probe_->attach_points)
+    {
+      SizedType current_retval = CreateNone();
+      auto args = ap.arg_type;
+      if (args && args->HasField(RETVAL_FIELD_NAME)) {
+        current_retval = args->GetField(RETVAL_FIELD_NAME);
+      }
+      if (!retval) {
+        retval.emplace(std::move(current_retval));
+      } else if (*retval != current_retval) {
+        // We can't use this builtin with these attach points, or need a
+        // dynamic expansion *before* the field analyser can annotate types.
+        builtin.addError() << "type mismatch, attach points have different return values";
+        return;
+      }
+    }
+    if (retval) {
+      sized_type_ = *retval;
+    }
     return;
   }
 
@@ -310,15 +329,9 @@ void FieldAnalyser::resolve_args(Probe &probe)
       }
     }
 
-    // check if we already stored arguments for this probe
-    auto args = bpftrace_.structs.Lookup(probe.args_typename()).lock();
-    if (args && *args != *probe_args) {
-      // we did, and it's different...trigger the error
-      ap->addError() << "Probe has attach points with mixed arguments";
-    } else {
-      // store/save args for each ap for later processing
-      bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
-    }
+    // Arguments are stored as an anonymous type in each individual attach
+    // point.
+    ap->args_type = std::move(probe_args):
   }
 }
 

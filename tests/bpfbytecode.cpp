@@ -36,10 +36,9 @@ TEST(bpfbytecode, create_programs)
 
   auto &program = bytecode.getProgramForProbe(foo);
 
-  EXPECT_EQ(std::string_view{ bpf_program__name(program.bpf_prog()) },
-            "kprobe_foo_1");
+  EXPECT_EQ(std::string_view{ bpf_program__name(program.bpf_prog()) }, "p1_0");
   EXPECT_EQ(std::string_view{ bpf_program__section_name(program.bpf_prog()) },
-            "s_kprobe_foo_1");
+            "probes");
 }
 
 } // namespace bpftrace::test::bpfbytecode

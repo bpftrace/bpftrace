@@ -82,17 +82,11 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
 
 const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
 {
-  auto usdt_location_idx = (probe.type == ProbeType::usdt)
-                               ? std::make_optional<int>(
-                                     probe.usdt_location_idx)
-                               : std::nullopt;
-
-  auto prog = programs_.find(util::get_function_name_for_probe(
-      probe.name, probe.index, usdt_location_idx));
+  auto prog = programs_.find(
+      util::get_function_name_for_probe(probe.index, probe.inline_index));
   if (prog == programs_.end()) {
-    prog = programs_.find(util::get_function_name_for_probe(probe.orig_name,
-                                                            probe.index,
-                                                            usdt_location_idx));
+    prog = programs_.find(
+        util::get_function_name_for_probe(probe.index, probe.inline_index));
   }
 
   if (prog == programs_.end()) {

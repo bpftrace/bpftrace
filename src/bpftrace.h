@@ -114,9 +114,10 @@ public:
   virtual int add_probe(ast::ASTContext &ctx,
                         const ast::AttachPoint &ap,
                         const ast::Probe &p,
-                        int usdt_location_idx = 0);
+                        size_t inline_index = 0);
   Probe generateWatchpointSetupProbe(const ast::AttachPoint &ap,
-                                     const ast::Probe &probe);
+                                     const ast::Probe &probe,
+                                     size_t inline_index = 0);
   int num_probes() const;
   int prerun(Output &out) const;
   int run(Output &out, BpfBytecode bytecode);
@@ -288,7 +289,7 @@ private:
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,
                        const ast::Probe &p,
-                       int usdt_location_idx = 0);
+                       size_t inline_index = 0);
   bool has_iter_ = false;
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;

@@ -124,7 +124,6 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
   auto &ap = *ctx.make_node<AttachPoint>(raw_input,
                                          ignore_invalid,
                                          Location(loc));
-  ap.index_ = index_;
   ap.provider = provider;
   ap.target = target;
   ap.lang = lang;
@@ -212,39 +211,13 @@ std::string AttachPoint::name() const
   return n;
 }
 
-int AttachPoint::index() const
-{
-  return index_;
-}
-
-void AttachPoint::set_index(int index)
-{
-  index_ = index;
-}
-
 std::string Probe::name() const
 {
   std::vector<std::string> ap_names;
   std::ranges::transform(attach_points,
-
                          std::back_inserter(ap_names),
                          [](const AttachPoint *ap) { return ap->name(); });
   return util::str_join(ap_names, ",");
-}
-
-std::string Probe::args_typename() const
-{
-  return "struct " + name() + "_args";
-}
-
-int Probe::index() const
-{
-  return index_;
-}
-
-void Probe::set_index(int index)
-{
-  index_ = index;
 }
 
 bool Probe::has_ap_of_probetype(ProbeType probe_type)

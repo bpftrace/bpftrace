@@ -14,13 +14,13 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
+define i64 @p2_0(ptr %0) #0 section "probes" !dbg !46 {
 entry:
   ret i64 0
 }
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !52 {
+define i64 @p3_0(ptr %0) #0 section "probes" !dbg !52 {
 entry:
   ret i64 0
 }
@@ -76,12 +76,12 @@ attributes #0 = { nounwind }
 !43 = !{!0, !7, !22}
 !44 = !{i32 2, !"Debug Info Version", i32 3}
 !45 = !{i32 7, !"uwtable", i32 0}
-!46 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
+!46 = distinct !DISubprogram(name: "p2_0", linkageName: "p2_0", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
 !47 = !DISubroutineType(types: !48)
 !48 = !{!41, !49}
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !50 = !{!51}
 !51 = !DILocalVariable(name: "ctx", arg: 1, scope: !46, file: !2, type: !49)
-!52 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !53)
+!52 = distinct !DISubprogram(name: "p3_0", linkageName: "p3_0", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !53)
 !53 = !{!54}
 !54 = !DILocalVariable(name: "ctx", arg: 1, scope: !52, file: !2, type: !49)

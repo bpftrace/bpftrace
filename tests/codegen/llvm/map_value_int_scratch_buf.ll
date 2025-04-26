@@ -22,7 +22,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !71 {
+define i64 @p1_0(ptr %0) #0 section "probes" !dbg !71 {
 entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
   %1 = load i64, ptr @max_cpu_id, align 8
@@ -149,7 +149,7 @@ attributes #0 = { nounwind }
 !68 = !{!0, !7, !22, !24, !38, !50, !59, !63, !65}
 !69 = !{i32 2, !"Debug Info Version", i32 3}
 !70 = !{i32 7, !"uwtable", i32 0}
-!71 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !72, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !67, retainedNodes: !75)
+!71 = distinct !DISubprogram(name: "p1_0", linkageName: "p1_0", scope: !2, file: !2, type: !72, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !67, retainedNodes: !75)
 !72 = !DISubroutineType(types: !73)
 !73 = !{!20, !74}
 !74 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

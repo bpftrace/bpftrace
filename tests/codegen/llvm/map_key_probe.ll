@@ -18,7 +18,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_one_1(ptr %0) #0 section "s_tracepoint_sched_sched_one_1" !dbg !59 {
+define i64 @p4_0(ptr %0) #0 section "probes" !dbg !59 {
 entry:
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -54,7 +54,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_two_2(ptr %0) #0 section "s_tracepoint_sched_sched_two_2" !dbg !65 {
+define i64 @p5_0(ptr %0) #0 section "probes" !dbg !65 {
 entry:
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -148,12 +148,12 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !56 = !{!0, !7, !30, !42}
 !57 = !{i32 2, !"Debug Info Version", i32 3}
 !58 = !{i32 7, !"uwtable", i32 0}
-!59 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !63)
+!59 = distinct !DISubprogram(name: "p4_0", linkageName: "p4_0", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !63)
 !60 = !DISubroutineType(types: !61)
 !61 = !{!29, !62}
 !62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !63 = !{!64}
 !64 = !DILocalVariable(name: "ctx", arg: 1, scope: !59, file: !2, type: !62)
-!65 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !66)
+!65 = distinct !DISubprogram(name: "p5_0", linkageName: "p5_0", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !55, retainedNodes: !66)
 !66 = !{!67}
 !67 = !DILocalVariable(name: "ctx", arg: 1, scope: !65, file: !2, type: !62)

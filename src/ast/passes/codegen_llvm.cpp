@@ -4,6 +4,7 @@
 #include <csignal>
 #include <cstdio>
 #include <ctime>
+#include <format>
 
 // Required for LLVM_VERSION_MAJOR.
 #include <llvm/IR/GlobalValue.h>
@@ -220,6 +221,9 @@ public:
   ScopedExpr visit(Program &program);
   ScopedExpr visit(Block &block);
 
+  void generate(Subprog &subprog);
+  size_t generate(Probe &probe, size_t index);
+
   // compile is the primary entrypoint; it will return the generated LLVMModule.
   // Only one call to `compile` is permitted per instantiation.
   std::unique_ptr<llvm::Module> compile();
@@ -266,9 +270,7 @@ private:
   // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
                      const std::string &full_func_id,
-                     const std::string &name,
                      FunctionType *func_type,
-                     std::optional<int> usdt_location_index = std::nullopt,
                      bool dummy = false);
 
   // Generate a probe and register it to the BPFtrace class.
@@ -324,9 +326,7 @@ private:
   // We need a separate "setup" probe per probe because we hard code the index
   // of the "real" probe the setup probe is to be replaced by.
   void generateWatchpointSetupProbe(FunctionType *func_type,
-                                    const std::string &expanded_probe_name,
                                     int arg_num,
-                                    int index,
                                     const Location &loc);
 
   ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
@@ -391,11 +391,7 @@ private:
   std::string probefull_;
   std::string tracepoint_struct_;
   uint64_t probe_count_ = 0;
-  // Probes and attach points are indexed from 1, 0 means no index
-  // (no index is used for probes whose attach points are indexed individually)
-  int next_probe_index_ = 1;
-  // Used if there are duplicate USDT entries
-  int current_usdt_location_index_{ 0 };
+  size_t inline_index_ = 0;
   bool inside_subprog_ = false;
 
   std::vector<Node *> scope_stack_;
@@ -719,7 +715,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
       return ScopedExpr(
           b_.CreateUSDTReadArgument(ctx_,
                                     current_attach_point_,
-                                    current_usdt_location_index_,
+                                    inline_index_,
                                     atoi(builtin.ident.substr(3).c_str()),
                                     builtin,
                                     bpftrace_.pid(),
@@ -2999,9 +2995,7 @@ ScopedExpr CodegenLLVM::visit(Block &block)
 
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
-                                const std::string &name,
                                 FunctionType *func_type,
-                                std::optional<int> usdt_location_index,
                                 bool dummy)
 {
   // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
@@ -3010,13 +3004,11 @@ void CodegenLLVM::generateProbe(Probe &probe,
   if (probe_type == ProbeType::tracepoint)
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
 
-  int index = current_attach_point_->index() ?: probe.index();
-  auto func_name = util::get_function_name_for_probe(name,
-                                                     index,
-                                                     usdt_location_index);
+  auto func_name = util::get_function_name_for_probe(
+      current_attach_point_->index(), inline_index_);
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
-  func->setSection(util::get_section_name(func_name));
+  func->setSection("probes");
   func->addFnAttr(Attribute::NoUnwind);
   debug_.createProbeDebugInfo(*func);
 
@@ -3070,8 +3062,9 @@ void CodegenLLVM::generateProbe(Probe &probe,
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
       !current_attach_point_->func.empty())
-    generateWatchpointSetupProbe(
-        func_type, name, current_attach_point_->address, index, probe.loc);
+    generateWatchpointSetupProbe(func_type,
+                                 current_attach_point_->address,
+                                 probe.loc);
 }
 
 void CodegenLLVM::add_probe(AttachPoint &ap,
@@ -3109,17 +3102,18 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
     // (eg arg0. may not be found in the same offset from the same
     // register in each location)
     auto reset_ids = async_ids_.create_reset_ids();
-    current_usdt_location_index_ = 0;
-    for (int i = 0; i < ap.usdt.num_locations; ++i) {
+    for (inline_index_ = 0;
+         inline_index_ < static_cast<size_t>(ap.usdt.num_locations);
+         inline_index_++) {
       reset_ids();
 
-      std::string full_func_id = name + "_loc" + std::to_string(i);
-      generateProbe(probe, full_func_id, probefull_, func_type, i);
-      bpftrace_.add_probe(ast_, ap, probe, i);
-      current_usdt_location_index_++;
+      std::string full_func_id = std::format("{}_loc{}", name, inline_index_);
+      generateProbe(probe, full_func_id, func_type);
+      bpftrace_.add_probe(ast_, ap, probe, inline_index_);
     }
+    inline_index_ = 0;
   } else {
-    generateProbe(probe, name, probefull_, func_type);
+    generateProbe(probe, name, func_type);
     bpftrace_.add_probe(ast_, ap, probe);
   }
   current_attach_point_ = nullptr;
@@ -3173,7 +3167,6 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
   fpm.addPass(UnreachableBlockElimPass());
   fpm.run(*func, fam);
   scope_stack_.pop_back();
-
   return ScopedExpr();
 }
 
@@ -3272,22 +3265,17 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
 
       for (const auto &match : matches) {
         reset_ids();
-        if (attach_point->index() == 0)
-          attach_point->set_index(getNextIndexForProbe());
-
         auto &match_ap = attach_point->create_expansion_copy(ast_, match);
         add_probe(match_ap, probe, match, func_type);
         generated = true;
       }
     } else {
-      if (probe.index() == 0)
-        probe.set_index(getNextIndexForProbe());
       add_probe(*attach_point, probe, attach_point->name(), func_type);
       generated = true;
     }
   }
   if (!generated) {
-    generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
+    generateProbe(probe, "dummy", func_type, true);
   }
 
   current_attach_point_ = nullptr;
@@ -3301,11 +3289,6 @@ ScopedExpr CodegenLLVM::visit(Program &program)
   for (Probe *probe : program.probes)
     visit(probe);
   return ScopedExpr();
-}
-
-int CodegenLLVM::getNextIndexForProbe()
-{
-  return next_probe_index_++;
 }
 
 ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
@@ -3856,18 +3839,15 @@ void CodegenLLVM::createFormatStringCall(Call &call,
     b_.CreateLifetimeEnd(fmt_args);
 }
 
-void CodegenLLVM::generateWatchpointSetupProbe(
-    FunctionType *func_type,
-    const std::string &expanded_probe_name,
-    int arg_num,
-    int index,
-    const Location &loc)
+void CodegenLLVM::generateWatchpointSetupProbe(FunctionType *func_type,
+                                               int arg_num,
+                                               const Location &loc)
 {
   auto func_name = util::get_function_name_for_watchpoint_setup(
-      expanded_probe_name, index);
+      current_attach_point_->index());
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
-  func->setSection(util::get_section_name(func_name));
+  func->setSection("watchpoints");
   func->addFnAttr(Attribute::NoUnwind);
   debug_.createProbeDebugInfo(*func);
 

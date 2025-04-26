@@ -92,6 +92,14 @@ public:
   // syntax tree in place.
   void clear();
 
+  // generates a unique identifier for this specific context, which can be used
+  // for internal identifiers. This is useful to avoiding binding identifiers
+  // to user-provided data, which may make outputs overly sensitive.
+  size_t next_unique_id()
+  {
+    return next_unique_id_->fetch_add(1);
+  }
+
   Program *root = nullptr;
 
 private:
@@ -111,6 +119,7 @@ private:
   std::vector<std::unique_ptr<Node>> nodes_;
   std::unique_ptr<Diagnostics> diagnostics_;
   std::shared_ptr<ASTSource> source_;
+  std::unique_ptr<std::atomic<size_t>> next_unique_id_;
 
   friend class bpftrace::Driver;
   friend class Node;

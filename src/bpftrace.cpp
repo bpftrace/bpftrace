@@ -69,22 +69,24 @@ BPFtrace::~BPFtrace()
 }
 
 Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
-                                             const ast::Probe &probe)
+                                             const ast::Probe &p,
+                                             size_t inline_index)
 {
   Probe setup_probe;
-  setup_probe.name = util::get_watchpoint_setup_probe_name(ap.name());
+  setup_probe.name = util::get_watchpoint_setup_probe_name(ap.index());
   setup_probe.type = ProbeType::uprobe;
   setup_probe.path = ap.target;
   setup_probe.attach_point = ap.func;
-  setup_probe.orig_name = util::get_watchpoint_setup_probe_name(probe.name());
-  setup_probe.index = ap.index() > 0 ? ap.index() : probe.index();
+  setup_probe.orig_name = p.name();
+  setup_probe.index = ap.index();
+  setup_probe.inline_index = inline_index;
 
   return setup_probe;
 }
 
 Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
                                const ast::Probe &p,
-                               int usdt_location_idx)
+                               size_t inline_index)
 {
   Probe probe;
   probe.path = ap.target;
@@ -99,8 +101,8 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.address = ap.address;
   probe.func_offset = ap.func_offset;
   probe.loc = 0;
-  probe.usdt_location_idx = usdt_location_idx;
-  probe.index = ap.index() ?: p.index();
+  probe.inline_index = inline_index;
+  probe.index = ap.index();
   probe.len = ap.len;
   probe.mode = ap.mode;
   probe.async = ap.async;
@@ -112,10 +114,10 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
 int BPFtrace::add_probe(ast::ASTContext &ctx,
                         const ast::AttachPoint &ap,
                         const ast::Probe &p,
-                        int usdt_location_idx)
+                        size_t inline_index)
 {
   auto type = probetype(ap.provider);
-  auto probe = generate_probe(ap, p, usdt_location_idx);
+  auto probe = generate_probe(ap, p, inline_index);
 
   // Add the new probe(s) to resources
   if (ap.provider == "BEGIN" || ap.provider == "END") {
@@ -131,7 +133,8 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
               type == ProbeType::asyncwatchpoint) &&
              !ap.func.empty()) {
     // (async)watchpoint - generate also the setup probe
-    resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
+    resources.probes.emplace_back(
+        generateWatchpointSetupProbe(ap, p, inline_index));
     resources.watchpoint_probes.emplace_back(std::move(probe));
   } else if (ap.expansion == ast::ExpansionType::MULTI ||
              ap.expansion == ast::ExpansionType::SESSION) {

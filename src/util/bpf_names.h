@@ -1,45 +1,29 @@
 #pragma once
 
-#include <optional>
+#include <format>
 #include <string>
 
 namespace bpftrace::util {
 
 std::string sanitise_bpf_program_name(const std::string &name);
 
-// Generate object file function name for a given probe
-inline std::string get_function_name_for_probe(
-    const std::string &probe_name,
-    int index,
-    std::optional<int> usdt_location_index = std::nullopt)
+// Note that we generate a function name that is completely independent of the
+// probe name, and encodes only the associated (unique) attach point index, as
+// well as a possible inline index (which would have the same attach point).
+inline std::string get_function_name_for_probe(size_t attach_index,
+                                               size_t inline_index)
 {
-  auto ret = sanitise_bpf_program_name(probe_name);
-
-  if (usdt_location_index)
-    ret += "_loc" + std::to_string(*usdt_location_index);
-
-  ret += "_" + std::to_string(index);
-
-  return ret;
+  return std::format("p{}_{}", attach_index, inline_index);
 }
 
-inline std::string get_section_name(const std::string &function_name)
+inline std::string get_watchpoint_setup_probe_name(size_t attach_index)
 {
-  return "s_" + function_name;
+  return std::format("wp_setup_{}", attach_index);
 }
 
-inline std::string get_watchpoint_setup_probe_name(
-    const std::string &probe_name)
+inline std::string get_function_name_for_watchpoint_setup(size_t attach_index)
 {
-  return probe_name + "_wp_setup";
-}
-
-inline std::string get_function_name_for_watchpoint_setup(
-    const std::string &probe_name,
-    int index)
-{
-  return get_function_name_for_probe(
-      get_watchpoint_setup_probe_name(probe_name), index);
+  return get_function_name_for_probe(attach_index, 0);
 }
 
 } // namespace bpftrace::util

@@ -1026,7 +1026,8 @@ public:
                        Location &&loc)
       : Node(ctx, std::move(loc)),
         raw_input(std::move(raw_input)),
-        ignore_invalid(ignore_invalid) {};
+        ignore_invalid(ignore_invalid),
+        unique_id_(ctx.next_unique_id()) {};
   explicit AttachPoint(ASTContext &ctx,
                        const AttachPoint &other,
                        const Location &loc)
@@ -1048,7 +1049,8 @@ public:
         address(other.address),
         func_offset(other.func_offset),
         ignore_invalid(other.ignore_invalid),
-        index_(other.index_) {};
+        args_type(other.args_type),
+        unique_id_(ctx.next_unique_id()) {};
 
   // Currently, the AST node itself is used to store metadata related to probe
   // expansion and attachment. This is done through `create_expansion_copy`
@@ -1082,17 +1084,20 @@ public:
   uint64_t address = 0;
   uint64_t func_offset = 0;
   bool ignore_invalid = false;
+  std::shared_ptr<SizedType> args_type = nullptr;
 
   std::string name() const;
 
   AttachPoint &create_expansion_copy(ASTContext &ctx,
                                      const std::string &match) const;
 
-  int index() const;
-  void set_index(int index);
+  size_t index() const
+  {
+    return unique_id_;
+  }
 
 private:
-  int index_ = 0;
+  size_t unique_id_;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
@@ -1112,24 +1117,18 @@ public:
         attach_points(clone(ctx, other.attach_points, loc)),
         pred(clone(ctx, other.pred, loc)),
         block(clone(ctx, other.block, loc)),
-        need_expansion(other.need_expansion),
-        index_(other.index_) {};
+        need_expansion(other.need_expansion)
+  {
+  }
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
   Block *block = nullptr;
 
   std::string name() const;
-  std::string args_typename() const;
   bool need_expansion = false; // must build a BPF program per wildcard match
 
-  int index() const;
-  void set_index(int index);
-
   bool has_ap_of_probetype(ProbeType probe_type);
-
-private:
-  int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
 
