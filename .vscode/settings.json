@@ -3,5 +3,7 @@
     "clangd.arguments": [
         "-background-index",
         "-compile-commands-dir=${workspaceFolder}/build-vscode"
-    ]
+    ],
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_style": "file"
 }
