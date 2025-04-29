@@ -49,6 +49,7 @@ EXPECT A         B C
 NAME printf_enum_symbolize_tracepoint
 PROG tracepoint:skb:kfree_skb { $r = args->reason; printf("%d %s\n", args->reason, $r); exit() }
 EXPECT_REGEX ^\d+ [A-Z_]+$
+SETUP ip link set lo up
 AFTER ping localhost -c 5
 TIMEOUT 5
 
