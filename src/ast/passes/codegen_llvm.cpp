@@ -236,6 +236,7 @@ private:
 
   void createPrintMapCall(Call &call);
   void createPrintNonMapCall(Call &call, int id);
+  void createJoinCall(Call &call, int id);
 
   void createMapDefinition(const std::string &name,
                            libbpf::bpf_map_type map_type,
@@ -1244,63 +1245,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     cgroupid = util::resolve_cgroupid(path);
     return ScopedExpr(b_.getInt64(cgroupid));
   } else if (call.func == "join") {
-    auto &arg0 = call.vargs.front();
-    auto scoped_arg = visit(arg0);
-    auto addrspace = arg0.type().GetAS();
-
-    llvm::Function *parent = b_.GetInsertBlock()->getParent();
-    BasicBlock *failure_callback = BasicBlock::Create(module_->getContext(),
-                                                      "failure_callback",
-                                                      parent);
-    Value *perfdata = b_.CreateGetJoinMap(failure_callback, call.loc);
-
-    // arg0
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
-    b_.CreateStore(b_.getInt64(async_ids_.join()),
-                   b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8)));
-
-    SizedType elem_type = CreatePointer(CreateInt8(), addrspace);
-    size_t ptr_width = b_.getPointerStorageTy(addrspace)->getIntegerBitWidth();
-    assert(b_.GetType(elem_type) == b_.getInt64Ty());
-
-    // temporary that stores the value of arg[i]
-    Value *value = scoped_arg.value();
-    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
-    b_.CreateProbeRead(ctx_, arr, elem_type, value, call.loc);
-    b_.CreateProbeReadStr(
-        ctx_,
-        b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8 + 8)),
-        bpftrace_.join_argsize_,
-        b_.CreateLoad(b_.getInt64Ty(), arr),
-        addrspace,
-        call.loc);
-
-    for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++) {
-      // advance to the next array element
-      value = b_.CreateAdd(value, b_.getInt64(ptr_width / 8));
-
-      b_.CreateProbeRead(ctx_, arr, elem_type, value, call.loc);
-      b_.CreateProbeReadStr(
-          ctx_,
-          b_.CreateGEP(b_.getInt8Ty(),
-                       perfdata,
-                       b_.getInt64(8 + 8 + (i * bpftrace_.join_argsize_))),
-          bpftrace_.join_argsize_,
-          b_.CreateLoad(b_.getInt64Ty(), arr),
-          addrspace,
-          call.loc);
-    }
-
-    // emit
-    b_.CreateOutput(ctx_,
-                    perfdata,
-                    8 + 8 + (bpftrace_.join_argnum_ * bpftrace_.join_argsize_),
-                    call.loc);
-
-    b_.CreateBr(failure_callback);
-
-    // if we cannot find a valid map value, we will output nothing and continue
-    b_.SetInsertPoint(failure_callback);
+    createJoinCall(call, async_ids_.join());
     return ScopedExpr();
   } else if (call.func == "ksym") {
     // We want to just pass through from the child node.
@@ -4003,6 +3948,72 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   b_.CreateLifetimeEnd(buf);
 }
 
+void CodegenLLVM::createJoinCall(Call &call, int id)
+{
+  auto &arg0 = call.vargs.front();
+  auto scoped_arg = visit(arg0);
+  auto addrspace = arg0.type().GetAS();
+
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *failure_callback = BasicBlock::Create(module_->getContext(),
+                                                    "failure_callback",
+                                                    parent);
+  Value *perfdata = b_.CreateGetJoinMap(failure_callback, call.loc);
+
+  uint32_t content_size = bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
+
+  auto elements = AsyncEvent::Join().asLLVMType(b_, content_size);
+  StructType *join_struct = b_.GetStructType("join_t", elements, true);
+
+  Value *join_data = b_.CreateBitCast(perfdata,
+                                      PointerType::get(join_struct, 0));
+
+  b_.CreateStore(
+      b_.getInt64(asyncactionint(AsyncAction::join)),
+      b_.CreateGEP(join_struct, join_data, { b_.getInt64(0), b_.getInt32(0) }));
+
+  b_.CreateStore(
+      b_.getInt64(id),
+      b_.CreateGEP(join_struct, join_data, { b_.getInt64(0), b_.getInt32(1) }));
+
+  Value *content_ptr = b_.CreateGEP(join_struct,
+                                    join_data,
+                                    { b_.getInt64(0), b_.getInt32(2) });
+
+  SizedType elem_type = CreatePointer(CreateInt8(), addrspace);
+  size_t ptr_width = b_.getPointerStorageTy(addrspace)->getIntegerBitWidth();
+  assert(b_.GetType(elem_type) == b_.getInt64Ty());
+
+  Value *value = scoped_arg.value();
+  AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
+
+  for (unsigned int i = 0; i < bpftrace_.join_argnum_; i++) {
+    if (i > 0) {
+      value = b_.CreateAdd(value, b_.getInt64(ptr_width / 8));
+    }
+
+    b_.CreateProbeRead(ctx_, arr, elem_type, value, call.loc);
+    Value *str_offset = b_.getInt64(
+        static_cast<uint64_t>(i) *
+        static_cast<uint64_t>(bpftrace_.join_argsize_));
+    Value *str_ptr = b_.CreateGEP(b_.getInt8Ty(), content_ptr, str_offset);
+
+    b_.CreateProbeReadStr(ctx_,
+                          str_ptr,
+                          bpftrace_.join_argsize_,
+                          b_.CreateLoad(b_.getInt64Ty(), arr),
+                          addrspace,
+                          call.loc);
+  }
+  size_t header_size = offsetof(AsyncEvent::Join, content); // action_id +
+                                                            // join_id
+  size_t total_size = header_size + content_size;
+  b_.CreateOutput(ctx_, perfdata, total_size, call.loc);
+
+  b_.CreateBr(failure_callback);
+  b_.SetInsertPoint(failure_callback);
+}
+
 void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 {
   auto &arg = call.vargs.at(0);
@@ -4137,7 +4148,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   if (codegen_resources.needs_join_map) {
-    auto value_size = 8 + 8 +
+    auto value_size = offsetof(AsyncEvent::Join, content) +
                       (bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
     SizedType value_type = CreateArray(value_size, CreateInt8());
     createMapDefinition(to_string(MapType::Join),
