@@ -29,8 +29,7 @@ void ProbeAnalyser::visit(Probe &probe)
   // there's another probe with a single multi-expanded kretprobe attach point
   // with the same target. If so, use session expansion if available.
   // Also, we do not allow predicates in any of the probes for now.
-  if (bpftrace_.feature_->has_kprobe_session() &&
-      probe.attach_points.size() == 1 &&
+  if (probe.attach_points.size() == 1 &&
       probetype(probe.attach_points[0]->provider) == ProbeType::kprobe &&
       probe.pred == nullptr) {
     // Session probes use the same attach mechanism as multi probes so the
@@ -51,9 +50,13 @@ void ProbeAnalyser::visit(Probe &probe)
       }
 
       if (ap.target == other_ap.target && ap.func == other_ap.func) {
-        ap.expansion = ExpansionType::SESSION;
-        ap.ret_probe = other_probe;
-        other_ap.expansion = ExpansionType::SESSION;
+        if (bpftrace_.feature_->has_kprobe_session()) {
+          ap.expansion = ExpansionType::SESSION;
+          ap.ret_probe = other_probe;
+          other_ap.expansion = ExpansionType::SESSION;
+        } else {
+          return;
+        }
       }
     }
   }
