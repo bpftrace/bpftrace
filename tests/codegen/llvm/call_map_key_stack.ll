@@ -45,7 +45,7 @@ lookup_success:                                   ; preds = %entry
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
   store i64 1, ptr %initial_value, align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %initial_value, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %initial_value, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
   br label %lookup_merge
 
@@ -72,7 +72,7 @@ lookup_success2:                                  ; preds = %lookup_merge
 lookup_failure3:                                  ; preds = %lookup_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value7)
   store i64 1, ptr %initial_value7, align 8
-  %update_elem8 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %initial_value7, i64 1)
+  %update_elem8 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %initial_value7, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value7)
   br label %lookup_merge4
 

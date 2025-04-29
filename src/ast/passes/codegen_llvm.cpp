@@ -794,7 +794,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   if (call.func == "count") {
     Map &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
@@ -807,7 +807,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
                                    call.vargs.front().type().IsSigned());
-    b_.CreateMapElemAdd(ctx_, map, scoped_key.value(), cast, call.loc);
+    b_.CreatePerCpuMapElemAdd(ctx_, map, scoped_key.value(), cast, call.loc);
     return ScopedExpr();
 
   } else if (call.func == "max" || call.func == "min") {
@@ -1018,7 +1018,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *log2 = b_.CreateCall(log2_func_, { expr, k }, "log2");
     ScopedExpr scoped_key = getMultiMapKey(
         map, call.vargs.at(1), { log2 }, call.loc);
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
@@ -1059,7 +1059,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     ScopedExpr scoped_key = getMultiMapKey(
         map, call.vargs.at(1), { linear }, call.loc);
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
