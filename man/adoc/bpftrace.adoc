@@ -143,9 +143,10 @@ For more details see the <<Listing Probes>> section.
 
 === *--no-feature* _feature,feature,..._
 
-Disable detected features, valid values are::
+Disable use of detected features, valid values are::
 *uprobe_multi* to disable uprobe_multi link +
-*kprobe_multi* to disable kprobe_multi link
+*kprobe_multi* to disable kprobe_multi link +
+*kprobe_session* to disable automatic collapse of kprobe/kretprobe into kprobe session
 
 === *--no-warnings*
 

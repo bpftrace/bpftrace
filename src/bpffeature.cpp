@@ -28,6 +28,7 @@ using util::KernelVersionMethod;
 int BPFnofeature::parse(const char* str)
 {
   for (auto feat : util::split_string(str, ',')) {
+    // Remember to update bpftrace.adoc!
     if (feat == "kprobe_multi") {
       kprobe_multi_ = true;
     } else if (feat == "kprobe_session") {
