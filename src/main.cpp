@@ -115,6 +115,8 @@ void usage(std::ostream& out)
   out << "                   list kernel probes or probes in a program" << std::endl;
   out << "    -p PID         filter actions and enable USDT probes on PID" << std::endl;
   out << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
+  out << "    --no-feature FEATURE[,FEATURE]" << std::endl;
+  out << "                   disable use of detected features" << std::endl;
   out << "    --usdt-file-activation" << std::endl;
   out << "                   activate usdt semaphores based on file path" << std::endl;
   out << "    --unsafe       allow unsafe/destructive functionality" << std::endl;
