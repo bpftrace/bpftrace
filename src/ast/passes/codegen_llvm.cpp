@@ -455,7 +455,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   if (call.func == "count") {
     Map &map = *call.map;
     auto scoped_key = getMapKey(map);
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
@@ -467,7 +467,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
                                    call.vargs.front()->type.IsSigned());
-    b_.CreateMapElemAdd(ctx_, map, scoped_key.value(), cast, call.loc);
+    b_.CreatePerCpuMapElemAdd(ctx_, map, scoped_key.value(), cast, call.loc);
     return ScopedExpr();
 
   } else if (call.func == "max" || call.func == "min") {
@@ -676,7 +676,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                    call.vargs.front()->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, { expr, k }, "log2");
     ScopedExpr scoped_key = getHistMapKey(map, log2, call.loc);
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
@@ -716,7 +716,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                   "linear");
 
     ScopedExpr scoped_key = getHistMapKey(map, linear, call.loc);
-    b_.CreateMapElemAdd(
+    b_.CreatePerCpuMapElemAdd(
         ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();

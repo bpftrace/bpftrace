@@ -2221,24 +2221,24 @@ void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
   CreateLifetimeEnd(key);
 }
 
-void IRBuilderBPF::CreateMapElemInit(Value *ctx,
-                                     Map &map,
-                                     Value *key,
-                                     Value *val,
-                                     const location &loc)
+void IRBuilderBPF::CreatePerCpuMapElemInit(Value *ctx,
+                                           Map &map,
+                                           Value *key,
+                                           Value *val,
+                                           const location &loc)
 {
   AllocaInst *initValue = CreateAllocaBPF(val->getType(), "initial_value");
   CreateStore(val, initValue);
-  CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_NOEXIST);
+  CreateMapUpdateElem(ctx, map.ident, key, initValue, loc, BPF_ANY);
   CreateLifetimeEnd(initValue);
   return;
 }
 
-void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
-                                    Map &map,
-                                    Value *key,
-                                    Value *val,
-                                    const location &loc)
+void IRBuilderBPF::CreatePerCpuMapElemAdd(Value *ctx,
+                                          Map &map,
+                                          Value *key,
+                                          Value *val,
+                                          const location &loc)
 {
   CallInst *call = CreateMapLookup(map, key);
   SizedType &type = map.type;
@@ -2271,7 +2271,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   SetInsertPoint(lookup_failure_block);
 
-  CreateMapElemInit(ctx, map, key, val, loc);
+  CreatePerCpuMapElemInit(ctx, map, key, val, loc);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
