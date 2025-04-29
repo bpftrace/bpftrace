@@ -76,8 +76,8 @@ jobs:
         - NAME: Latest kernel (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
-          NIX_TARGET_KERNEL: .#kernel-6_12
-          TOOLS_TEST_OLDVERSION: runqlen.bt # Need 6.14 kernel
+          NIX_TARGET_KERNEL: .#kernel-6_14
+          TOOLS_TEST_OLDVERSION: runqlen.bt # Need host 6.14 kernel
         - NAME: AOT (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
