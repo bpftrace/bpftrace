@@ -934,7 +934,7 @@ All maps that are not declared in the global scope utilize the default set in th
 However, it's best practice to declare maps up front as using the default can lead to lost map update events (if the map is full) or over allocation of memory if the map is intended to only store a few entries.
 
 **Warning** this feature is experimental and may be subject to changes.
-It also requires the 'unstable_map_decl' config being set to 1.
+It also requires the 'unstable_map_decl' config being set to 1. Stabilization is tracked in link:https://github.com/bpftrace/bpftrace/issues/4077[#4077].
 
 **Warning** The "lru" variants of hash and percpuhash evict the approximately least recently used elements. In other words, users should not rely on the accuracy on the part of the eviction algorithm. Adding a single new element may cause one or multiple elements to be deleted if the map is at capacity. link:https://docs.ebpf.io/linux/map-type/BPF_MAP_TYPE_LRU_HASH/[Read more about LRU internals].
 
@@ -1061,7 +1061,7 @@ BEGIN {
 ----
 
 **Warning** this feature is experimental and may be subject to changes.
-It also requires the 'unstable_macro' config being set to 1.
+It also requires the 'unstable_macro' config being set to 1. Stabilization is tracked in link:https://github.com/bpftrace/bpftrace/issues/4079[#4079].
 
 ==== Per-Thread Variables
 
@@ -2390,7 +2390,7 @@ BEGIN {
 
 *async*
 
-`join` joins a char * `arr` with `sep` as separator into one string. 
+`join` joins a char * `arr` with `sep` as separator into one string.
 This string will be printed to stdout directly, it cannot be used as string value.
 
 The concatenation of the array members is done in BPF and the printing happens in userspace.
