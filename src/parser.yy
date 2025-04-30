@@ -105,6 +105,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> INT_TYPE "integer type"
 %token <std::string> BUILTIN_TYPE "builtin type"
 %token <std::string> SUBPROG "subprog"
+%token <std::string> MACRO "macro"
 %token <std::string> SIZED_TYPE "sized type"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
@@ -146,6 +147,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Subprog *> subprog
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
+%type <ast::Macro *> macro
+%type <ast::ExpressionList> macro_args
 %type <ast::Map *> map
 %type <ast::MapAccess *> map_expr
 %type <ast::MapDeclStatement *> map_decl_stmt
@@ -154,6 +157,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
+%type <ast::MacroList> macros
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
@@ -189,8 +193,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %%
 
 program:
-                c_definitions config imports map_decl_list probes_and_subprogs END {
-                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5.second), std::move($5.first), @$);
+                c_definitions config imports map_decl_list macros probes_and_subprogs END {
+                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
                 }
                 ;
 
@@ -328,6 +332,21 @@ subprog_args:
 
 subprog_arg:
                 VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
+                ;
+
+macros:
+                macros macro { $$ = std::move($1); $$.push_back($2); }
+        |       %empty       { $$ = ast::MacroList{}; }
+
+macro:
+                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+        |       MACRO IDENT "(" ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList{}, $5, @$); }
+
+macro_args:
+                macro_args "," map { $$ = std::move($1); $$.push_back($3); }
+        |       macro_args "," var { $$ = std::move($1); $$.push_back($3); }
+        |       map                { $$ = ast::ExpressionList{$1}; }
+        |       var                { $$ = ast::ExpressionList{$1}; }
                 ;
 
 probes_and_subprogs:

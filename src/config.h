@@ -32,6 +32,7 @@ public:
   bool cpp_demangle = true;
   bool lazy_symbolication = true;
   bool print_maps_on_exit = true;
+  bool unstable_macro = false;
   bool unstable_map_decl = false;
   bool unstable_import = false;
 #ifdef HAVE_BLAZESYM
