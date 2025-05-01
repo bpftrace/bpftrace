@@ -139,6 +139,14 @@ separate minimal programs to test tracing functionality, and argument passing
 hasn't been required. If test programs need arguments, a more sophisticated
 approach will be necessary.
 
+### Comments
+
+Lines starting with a `#` character are treated as comments and are ignored by
+the test framework. This allows you to add explanatory notes or documentation
+within your test files without affecting test execution.
+
+Trailing comments are are not supported.
+
 ### Runtime variables
 
 Runtime variables are placeholders that the runtime test engine will fill out
