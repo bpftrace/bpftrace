@@ -7,7 +7,7 @@ function(embed NAME SOURCE)
     ARG
     ""
     "OUTPUT;HEX;VAR"
-    ""
+    "DEPENDS"
     ${ARGN}
   )
   if (NOT DEFINED ARG_HEX)
@@ -20,14 +20,14 @@ function(embed NAME SOURCE)
     set(ARG_OUTPUT "${NAME}.h")
   endif ()
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
-    COMMAND ${XXD} -i < ${SOURCE} > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
-    DEPENDS ${SOURCE}
+    OUTPUT ${ARG_HEX}
+    COMMAND ${XXD} -i < ${SOURCE} > ${ARG_HEX}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${ARG_DEPENDS}
     VERBATIM
   )
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
+    OUTPUT ${ARG_OUTPUT}
     COMMAND ${CMAKE_COMMAND}
       -DSOURCE=${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
       -DVAR=${ARG_VAR}
@@ -36,13 +36,13 @@ function(embed NAME SOURCE)
       -DTEMPLATE=${CMAKE_SOURCE_DIR}/cmake/Embed.tmpl
       -P ${CMAKE_SOURCE_DIR}/cmake/EmbedRun.cmake
     DEPENDS
-      ${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
+      ${ARG_HEX}
       ${CMAKE_SOURCE_DIR}/cmake/EmbedRun.cmake
       ${CMAKE_SOURCE_DIR}/cmake/Embed.tmpl
     VERBATIM
   )
   add_custom_target(
     ${NAME}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
+    DEPENDS ${ARG_OUTPUT}
   )
 endfunction()

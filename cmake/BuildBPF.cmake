@@ -29,12 +29,12 @@ function(btf_header NAME SOURCE)
     set(ARG_OUTPUT "${NAME}.h")
   endif ()
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
+    OUTPUT ${ARG_OUTPUT}
     COMMAND ${BPFTOOL} btf dump file "${ARG_SOURCE}" format c > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
     VERBATIM
   )
   add_custom_target(${NAME}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
+    DEPENDS ${ARG_OUTPUT}
   )
 endfunction()
 
@@ -52,6 +52,7 @@ function(bpf NAME)
   if (NOT DEFINED ARG_OBJECT)
     set(ARG_OBJECT "${NAME}.o")
   endif ()
+  add_custom_target(${NAME})
   # The joys of BPF & debug tooling 101.
   #
   # The purpose for this function is to generate various types of output for a
@@ -100,51 +101,61 @@ function(bpf NAME)
   # functions. Like the bitcode, this works as expected.
   if (DEFINED ARG_BITCODE)
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
+      OUTPUT ${ARG_BITCODE}
       DEPENDS ${ARG_SOURCE} ${ARG_DEPENDS}
       COMMAND ${CLANG} -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
       VERBATIM
     )
-    list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE})
+    add_custom_target(${NAME}_gen_bitcode DEPENDS ${ARG_BITCODE})
+    add_dependencies(${NAME} ${NAME}_gen_bitcode)
   endif()
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
+    OUTPUT ${ARG_OBJECT}
     DEPENDS ${ARG_SOURCE} ${ARG_DEPENDS}
     # See above: fresh compilation and the use of `gcc`.
     COMMAND ${GCC} -Wno-attributes -g -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
     COMMAND cmake -E env LLVM_OBJCOPY=${LLVM_OBJCOPY} ${PAHOLE} -J ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
     VERBATIM
   )
-  list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT})
+  # You should never depend on the output of a custom command more than once.
+  # Therefore, we define an intermediate target for the object, and depend on
+  # this instead. See [1].
+  # [1] https://discourse.cmake.org/t/how-to-avoid-parallel-build-race-conditions/727
+  add_custom_target(
+    ${NAME}_gen_object
+    DEPENDS ${ARG_OBJECT}
+  )
+  add_dependencies(${NAME} ${NAME}_gen_object)
   if (DEFINED ARG_BINARY)
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY}
-      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
+      OUTPUT ${ARG_BINARY}
+      DEPENDS ${NAME}_gen_object
       COMMAND ${GCC} -g -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
       COMMAND cmake -E env LLVM_OBJCOPY=${LLVM_OBJCOPY} ${PAHOLE} -J ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY}
       VERBATIM
     )
-    list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY})
+    add_custom_target(${NAME}_gen_binary DEPENDS ${ARG_BINARY})
+    add_dependencies(${NAME} ${NAME}_gen_binary)
   endif()
-  list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT})
   if (DEFINED ARG_BTF)
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BTF}
-      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
+      OUTPUT ${ARG_BTF}
+      DEPENDS ${NAME}_gen_object
       # See above re: the use of the `gcc`-compiled object, ignoring the binary.
       COMMAND ${LLVM_OBJCOPY} --dump-section .BTF=${CMAKE_CURRENT_BINARY_DIR}/${ARG_BTF} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
       VERBATIM
     )
-    list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BTF})
+    add_custom_target(${NAME}_gen_btf DEPENDS ${ARG_BTF})
+    add_dependencies(${NAME} ${NAME}_gen_btf)
   endif ()
   if (DEFINED ARG_FUNCTIONS)
     add_custom_command(
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ARG_FUNCTIONS}
-      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
+      OUTPUT ${ARG_FUNCTIONS}
+      DEPENDS ${NAME}_gen_object
       COMMAND ${NM} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT} | ${AWK} -v ORS=\\\\n "$2 == \"T\" { print $3 }" > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_FUNCTIONS}
       VERBATIM
     )
-    list(APPEND ALL_TARGETS ${CMAKE_CURRENT_BINARY_DIR}/${ARG_FUNCTIONS})
+    add_custom_target(${NAME}_gen_functions DEPENDS ${ARG_FUNCTIONS})
+    add_dependencies(${NAME} ${NAME}_gen_functions)
   endif ()
-  add_custom_target(${NAME} DEPENDS ${ALL_TARGETS})
 endfunction()
