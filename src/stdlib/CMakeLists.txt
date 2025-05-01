@@ -11,15 +11,17 @@ bpf(base
 embed(
   base_btf
   base.btf
-  OUTPUT base_btf.h
-  VAR    base_btf
+  OUTPUT  base_btf.h
+  VAR     base_btf
+  DEPENDS base
 )
 
 embed(
   base_bitcode
   base.bc
-  OUTPUT base_bc.h
-  VAR    base_bc
+  OUTPUT  base_bc.h
+  VAR     base_bc
+  DEPENDS base
 )
 
 # The standard library holds these definitions internally via the headers
