@@ -129,7 +129,7 @@ function(bpf NAME)
   if (DEFINED ARG_BINARY)
     add_custom_command(
       OUTPUT ${ARG_BINARY}
-      DEPENDS ${NAME}_gen_object
+      DEPENDS ${ARG_SOURCE} ${NAME}_gen_object
       COMMAND ${GCC} -g -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
       COMMAND cmake -E env LLVM_OBJCOPY=${LLVM_OBJCOPY} ${PAHOLE} -J ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BINARY}
       VERBATIM
@@ -140,7 +140,7 @@ function(bpf NAME)
   if (DEFINED ARG_BTF)
     add_custom_command(
       OUTPUT ${ARG_BTF}
-      DEPENDS ${NAME}_gen_object
+      DEPENDS ${ARG_SOURCE} ${NAME}_gen_object
       # See above re: the use of the `gcc`-compiled object, ignoring the binary.
       COMMAND ${LLVM_OBJCOPY} --dump-section .BTF=${CMAKE_CURRENT_BINARY_DIR}/${ARG_BTF} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT}
       VERBATIM
@@ -151,7 +151,7 @@ function(bpf NAME)
   if (DEFINED ARG_FUNCTIONS)
     add_custom_command(
       OUTPUT ${ARG_FUNCTIONS}
-      DEPENDS ${NAME}_gen_object
+      DEPENDS ${ARG_SOURCE} ${NAME}_gen_object
       COMMAND ${NM} ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OBJECT} | ${AWK} -v ORS=\\\\n "$2 == \"T\" { print $3 }" > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_FUNCTIONS}
       VERBATIM
     )
