@@ -19,8 +19,7 @@ std::string stringify_addr(uint64_t addr)
 #ifdef HAVE_BLAZESYM
 std::string stringify_ksym(const char *name,
                            const blaze_symbolize_code_info *code_info,
-                           uint64_t addr,
-                           uint64_t sym_addr,
+                           uint64_t offset,
                            bool show_offset,
                            bool perf_mode,
                            bool is_inlined)
@@ -34,7 +33,7 @@ std::string stringify_ksym(const char *name,
   symbol << name;
 
   if (show_offset) {
-    symbol << "+" << addr - sym_addr;
+    symbol << "+" << offset;
   }
 
   if (perf_mode) {
@@ -150,17 +149,12 @@ std::vector<std::string> Ksyms::resolve_blazesym_impl(uint64_t addr,
     inlined = &sym->inlined[j];
     if (inlined != nullptr) {
       str_syms.push_back(stringify_ksym(
-          inlined->name, &inlined->code_info, 0, 0, false, perf_mode, true));
+          inlined->name, &inlined->code_info, 0, false, perf_mode, true));
     }
   }
 
-  str_syms.push_back(stringify_ksym(sym->name,
-                                    &sym->code_info,
-                                    addr,
-                                    sym->addr,
-                                    show_offset,
-                                    perf_mode,
-                                    false));
+  str_syms.push_back(stringify_ksym(
+      sym->name, &sym->code_info, sym->offset, show_offset, perf_mode, false));
 
   return str_syms;
 }
