@@ -29,8 +29,7 @@ std::string stringify_addr(uint64_t addr, bool perf_mode)
 
 std::string stringify_sym(const char *name,
                           const blaze_symbolize_code_info *code_info,
-                          uint64_t addr,
-                          uint64_t sym_addr,
+                          uint64_t offset,
                           bool show_offset,
                           const char *sym_module,
                           bool perf_mode,
@@ -45,7 +44,7 @@ std::string stringify_sym(const char *name,
   symbol << name;
 
   if (show_offset) {
-    symbol << "+" << addr - sym_addr;
+    symbol << "+" << offset;
   }
 
   if (perf_mode) {
@@ -73,7 +72,6 @@ std::string stringify_sym(const char *name,
 }
 
 void add_symbols(const blaze_sym *sym,
-                 uint64_t addr,
                  bool show_offset,
                  bool perf_mode,
                  std::vector<std::string> &str_syms)
@@ -92,7 +90,6 @@ void add_symbols(const blaze_sym *sym,
       str_syms.push_back(stringify_sym(inlined->name,
                                        &inlined->code_info,
                                        0,
-                                       0,
                                        false,
                                        nullptr,
                                        perf_mode,
@@ -102,8 +99,7 @@ void add_symbols(const blaze_sym *sym,
 
   str_syms.push_back(stringify_sym(sym->name,
                                    &sym->code_info,
-                                   addr,
-                                   sym->addr,
+                                   sym->offset,
                                    show_offset,
                                    sym->module,
                                    perf_mode,
@@ -356,7 +352,7 @@ std::vector<std::string> Usyms::resolve_blazesym_impl(
 
       sym = &syms->syms[0];
 
-      add_symbols(sym, addr, show_offset, perf_mode, str_syms);
+      add_symbols(sym, show_offset, perf_mode, str_syms);
     }
     return str_syms;
   }
@@ -378,7 +374,7 @@ std::vector<std::string> Usyms::resolve_blazesym_impl(
   };
 
   sym = &syms->syms[0];
-  add_symbols(sym, addr, show_offset, perf_mode, str_syms);
+  add_symbols(sym, show_offset, perf_mode, str_syms);
 
   return str_syms;
 }
