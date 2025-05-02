@@ -1,8 +1,12 @@
 #pragma once
 
+#include <optional>
+#include <utility>
+
 #include "ast/context.h"
 #include "ast/pass_manager.h"
 #include "bpftrace.h"
+#include "parser.tab.hh"
 
 using yyscan_t = void *;
 
@@ -16,7 +20,8 @@ class Driver {
 public:
   explicit Driver(ast::ASTContext &ctx, BPFtrace &bpftrace, bool debug = false)
       : ctx(ctx), bpftrace(bpftrace), debug(debug) {};
-  void parse();
+  void parse_program();
+  void parse_expr();
   void error(const location &l, const std::string &m);
 
   // These are accessible to the parser and lexer, but are not mutable.
@@ -28,6 +33,15 @@ public:
   location loc;
   std::string struct_type;
   std::string buffer;
+
+  // This is the token injected into the lexer.
+  std::optional<Parser::symbol_type> token;
+
+  // The final result is available here.
+  std::variant<ast::Program *, ast::Expression> result;
+
+private:
+  void parse(Parser::symbol_type first_token);
 };
 
 ast::Pass CreateParsePass(bool debug = false);

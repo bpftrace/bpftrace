@@ -170,6 +170,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::Identifier *> raw_ident
+%type <ast::Program *> program
 
 
 %left COMMA
@@ -188,13 +189,23 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %right LNOT BNOT
 %left LPAREN RPAREN LBRACKET RBRACKET DOT PTR
 
-%start program
+// In order to support the parsing of full programs and the parsing of just
+// expressions (used while expanding C macros, for example), use the trick
+// described in Bison's FAQ [1].
+// [1] https://www.gnu.org/software/bison/manual/html_node/Multiple-start_002dsymbols.html
+%token START_PROGRAM "program"
+%token START_EXPR "expression"
+%start start
 
 %%
 
+start:          START_PROGRAM program { driver.result = $2; }
+        |       START_EXPR expr       { driver.result = $2; }
+                ;
+
 program:
                 c_definitions config imports map_decl_list macros probes_and_subprogs END {
-                    driver.ctx.root = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
+                    $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
                 }
                 ;
 

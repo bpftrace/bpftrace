@@ -1,5 +1,4 @@
 #include "driver.h"
-#include "parser.tab.hh"
 
 extern void set_source_string(const std::string *s);
 extern int yylex_init(yyscan_t *scanner);
@@ -7,12 +6,16 @@ extern int yylex_destroy(yyscan_t yyscanner);
 
 namespace bpftrace {
 
-void Driver::parse()
+void Driver::parse(Parser::symbol_type first_token)
 {
   // Reset state on every pass.
   loc.initialize();
   struct_type.clear();
   buffer.clear();
+
+  // Push the start token, which indicates that exact context that we should
+  // now be parsing.
+  token.emplace(first_token);
 
   yyscan_t scanner;
   yylex_init(&scanner);
@@ -23,6 +26,19 @@ void Driver::parse()
   set_source_string(&ctx.source_->contents);
   parser.parse();
   yylex_destroy(scanner);
+}
+
+void Driver::parse_program()
+{
+  parse(Parser::make_START_PROGRAM(loc));
+  if (std::holds_alternative<ast::Program *>(result)) {
+    ctx.root = std::get<ast::Program *>(result);
+  }
+}
+
+void Driver::parse_expr()
+{
+  parse(Parser::make_START_EXPR(loc));
 }
 
 void Driver::error(const location &l, const std::string &m)
@@ -36,7 +52,7 @@ ast::Pass CreateParsePass(bool debug)
 {
   return ast::Pass::create("parse", [debug](ast::ASTContext &ast, BPFtrace &b) {
     Driver driver(ast, b, debug);
-    driver.parse();
+    driver.parse_program();
 
     // Before proceeding, ensure that the size of the AST isn't past prescribed
     // limits. This functionality goes back to 80642a994, where it was added in
