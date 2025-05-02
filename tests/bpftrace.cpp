@@ -920,7 +920,7 @@ TEST(bpftrace, trailing_comma)
   Driver driver(ast, *bpftrace);
 
   // Trailing comma is fine
-  driver.parse();
+  driver.parse_program();
   ASSERT_TRUE(ast.diagnostics().ok());
 }
 
@@ -931,7 +931,7 @@ TEST(bpftrace, empty_attachpoint)
   Driver driver(ast, *bpftrace);
 
   // Empty attach point should fail...
-  driver.parse();
+  driver.parse_program();
 
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.

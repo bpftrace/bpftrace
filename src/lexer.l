@@ -66,6 +66,14 @@ oct_esc  [0-7]{1,3}
 
 %%
 
+%{
+  if (driver.token) {
+    auto t = *driver.token;
+    driver.token.reset();
+    return t;
+  }
+%}
+
 {hspace}+               { driver.loc.step(); }
 {vspace}+               { driver.loc.lines(yyleng); driver.loc.step(); }
 

@@ -19,7 +19,7 @@ void test_parse_failure(BPFtrace &bpftrace,
   std::stringstream out;
   ast::ASTContext ast("stdin", input);
   Driver driver(ast, bpftrace);
-  driver.parse();
+  driver.parse_program();
   ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
   ASSERT_FALSE(ast.diagnostics().ok());
@@ -78,7 +78,7 @@ void test(BPFtrace &bpftrace,
   ast::ASTContext ast("stdin", input);
   Driver driver(ast, bpftrace);
 
-  driver.parse();
+  driver.parse_program();
   ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
   std::ostringstream out;
@@ -2253,7 +2253,7 @@ TEST(Parser, unexpected_symbol)
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1 { < }");
   Driver driver(ast, bpftrace);
-  driver.parse();
+  driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2270,7 +2270,7 @@ TEST(Parser, string_with_tab)
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1\t\t\t$a");
   Driver driver(ast, bpftrace);
-  driver.parse();
+  driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2287,7 +2287,7 @@ TEST(Parser, unterminated_string)
   std::stringstream out;
   ast::ASTContext ast("stdin", "kprobe:f { \"asdf }");
   Driver driver(ast, bpftrace);
-  driver.parse();
+  driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2406,7 +2406,7 @@ TEST(Parser, long_param_overflow)
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:100 { @=$111111111111111111111111111 }");
   Driver driver(ast, bpftrace);
-  EXPECT_NO_THROW(driver.parse());
+  EXPECT_NO_THROW(driver.parse_program());
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected = "stdin:1:11-41: ERROR: param "
@@ -2556,7 +2556,7 @@ TEST(Parser, tuple_assignment_error_message)
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1 { @x = (1, 2); $x.1 = 1; }");
   Driver driver(ast, bpftrace);
-  driver.parse();
+  driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -3125,6 +3125,17 @@ stdin:1:8-11: ERROR: syntax error, unexpected identifier, expecting string
 import foo; BEGIN { }
        ~~~
 )");
+}
+
+TEST(Parser, naked_expression)
+{
+  BPFtrace bpftrace;
+  std::stringstream out;
+  ast::ASTContext ast("stdin", "1 + 2 + 3");
+  Driver driver(ast, bpftrace);
+  driver.parse_expr();
+  ASSERT_TRUE(ast.diagnostics().ok());
+  ASSERT_TRUE(std::holds_alternative<ast::Expression>(driver.result));
 }
 
 } // namespace bpftrace::test::parser
