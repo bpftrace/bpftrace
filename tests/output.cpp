@@ -9,9 +9,10 @@ namespace bpftrace::test::output {
 
 TEST(TextOutput, lhist_no_suffix)
 {
+  CDefinitions c_definitions;
   std::stringstream out;
   std::stringstream err;
-  TextOutput output{ out, err };
+  TextOutput output{ c_definitions, out, err };
 
   auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
@@ -57,11 +58,12 @@ TEST(TextOutput, lhist_no_suffix)
 
 TEST(TextOutput, lhist_suffix)
 {
+  CDefinitions c_definitions;
   std::stringstream out;
   std::stringstream err;
-  TextOutput output{ out, err };
+  TextOutput output{ c_definitions, out, err };
 
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
     .key_type = CreateInt64(),
     .value_type = SizedType{ Type::lhist_t, 8 },

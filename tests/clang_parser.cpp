@@ -13,10 +13,10 @@ namespace bpftrace::test::clang_parser {
 
 #include "btf_common.h"
 
-static void parse(const std::string &input,
-                  BPFtrace &bpftrace,
-                  bool result = true,
-                  const std::string &probe = "kprobe:sys_read { 1 }")
+static CDefinitions parse(const std::string &input,
+                          BPFtrace &bpftrace,
+                          bool result = true,
+                          const std::string &probe = "kprobe:sys_read { 1 }")
 {
   auto extended_input = input + probe;
   ast::ASTContext ast("stdin", extended_input);
@@ -29,7 +29,11 @@ static void parse(const std::string &input,
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
                 .run();
-  ASSERT_EQ(ok && ast.diagnostics().ok(), result);
+  EXPECT_EQ(ok && ast.diagnostics().ok(), result);
+  if (ok) {
+    return std::move(ok->get<CDefinitions>());
+  }
+  return {};
 }
 
 TEST(clang_parser, integers)
@@ -94,7 +98,8 @@ TEST(clang_parser, c_union)
 TEST(clang_parser, c_enum)
 {
   BPFtrace bpftrace;
-  parse("enum E { NONE, SOME = 99, }; struct Foo { enum E e; }", bpftrace);
+  auto c_defs = parse("enum E { NONE, SOME = 99, }; struct Foo { enum E e; }",
+                      bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
   auto foo = bpftrace.structs.Lookup("struct Foo").lock();
@@ -107,91 +112,91 @@ TEST(clang_parser, c_enum)
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 0);
 
-  ASSERT_TRUE(bpftrace.enums_.contains("NONE"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["NONE"]), 0);
-  EXPECT_EQ(std::get<1>(bpftrace.enums_["NONE"]), "E");
-  ASSERT_TRUE(bpftrace.enums_.contains("SOME"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["SOME"]), 99);
-  EXPECT_EQ(std::get<1>(bpftrace.enums_["SOME"]), "E");
+  ASSERT_TRUE(c_defs.enums.contains("NONE"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["NONE"]), 0);
+  EXPECT_EQ(std::get<1>(c_defs.enums["NONE"]), "E");
+  ASSERT_TRUE(c_defs.enums.contains("SOME"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["SOME"]), 99);
+  EXPECT_EQ(std::get<1>(c_defs.enums["SOME"]), "E");
 
-  ASSERT_TRUE(bpftrace.enum_defs_.contains("E"));
-  ASSERT_TRUE(bpftrace.enum_defs_["E"].contains(0));
-  EXPECT_EQ(bpftrace.enum_defs_["E"][0], "NONE");
-  ASSERT_TRUE(bpftrace.enum_defs_["E"].contains(99));
-  EXPECT_EQ(bpftrace.enum_defs_["E"][99], "SOME");
+  ASSERT_TRUE(c_defs.enum_defs.contains("E"));
+  ASSERT_TRUE(c_defs.enum_defs["E"].contains(0));
+  EXPECT_EQ(c_defs.enum_defs["E"][0], "NONE");
+  ASSERT_TRUE(c_defs.enum_defs["E"].contains(99));
+  EXPECT_EQ(c_defs.enum_defs["E"][99], "SOME");
 }
 
 TEST(clang_parser, c_enum_anonymous)
 {
   BPFtrace bpftrace;
-  parse(
+  auto c_defs = parse(
       "enum { ANON_A_VARIANT_1 = 0, ANON_A_VARIANT_2, ANON_A_CONFLICT = 99, }; "
       "enum { ANON_B_VARIANT_1 = 0, ANON_B_CONFLICT = 99, }; ",
       bpftrace);
 
-  ASSERT_EQ(bpftrace.enums_.size(), 5);
-  ASSERT_EQ(bpftrace.enum_defs_.size(), 2);
+  ASSERT_EQ(c_defs.enums.size(), 5);
+  ASSERT_EQ(c_defs.enum_defs.size(), 2);
 
   //
   // Check enums_ contains first anonymous enum
   //
 
   // Check first variant present
-  ASSERT_TRUE(bpftrace.enums_.contains("ANON_A_VARIANT_1"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["ANON_A_VARIANT_1"]), 0);
-  auto anon_a_name = std::get<1>(bpftrace.enums_["ANON_A_VARIANT_1"]);
+  ASSERT_TRUE(c_defs.enums.contains("ANON_A_VARIANT_1"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_VARIANT_1"]), 0);
+  auto anon_a_name = std::get<1>(c_defs.enums["ANON_A_VARIANT_1"]);
   ASSERT_FALSE(anon_a_name.empty());
 
   // Check second variant present
-  ASSERT_TRUE(bpftrace.enums_.contains("ANON_A_VARIANT_2"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["ANON_A_VARIANT_2"]), 1);
-  EXPECT_EQ(std::get<1>(bpftrace.enums_["ANON_A_CONFLICT"]), anon_a_name);
+  ASSERT_TRUE(c_defs.enums.contains("ANON_A_VARIANT_2"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_VARIANT_2"]), 1);
+  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_A_CONFLICT"]), anon_a_name);
 
   // Check conflict variant present
-  ASSERT_TRUE(bpftrace.enums_.contains("ANON_A_CONFLICT"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["ANON_A_CONFLICT"]), 99);
-  EXPECT_EQ(std::get<1>(bpftrace.enums_["ANON_A_CONFLICT"]), anon_a_name);
+  ASSERT_TRUE(c_defs.enums.contains("ANON_A_CONFLICT"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_A_CONFLICT"]), 99);
+  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_A_CONFLICT"]), anon_a_name);
 
   //
   // Check enum_defs_ contains first anonymous enum, with ANON_A_CONFLICT
   // value resolving correctly to the this enum and not the other.
   //
 
-  ASSERT_TRUE(bpftrace.enum_defs_.contains(anon_a_name));
-  ASSERT_EQ(bpftrace.enum_defs_[anon_a_name].size(), 3);
-  ASSERT_TRUE(bpftrace.enum_defs_[anon_a_name].contains(0));
-  EXPECT_EQ(bpftrace.enum_defs_[anon_a_name][0], "ANON_A_VARIANT_1");
-  ASSERT_TRUE(bpftrace.enum_defs_[anon_a_name].contains(1));
-  EXPECT_EQ(bpftrace.enum_defs_[anon_a_name][1], "ANON_A_VARIANT_2");
-  ASSERT_TRUE(bpftrace.enum_defs_[anon_a_name].contains(99));
-  EXPECT_EQ(bpftrace.enum_defs_[anon_a_name][99], "ANON_A_CONFLICT");
+  ASSERT_TRUE(c_defs.enum_defs.contains(anon_a_name));
+  ASSERT_EQ(c_defs.enum_defs[anon_a_name].size(), 3);
+  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(0));
+  EXPECT_EQ(c_defs.enum_defs[anon_a_name][0], "ANON_A_VARIANT_1");
+  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(1));
+  EXPECT_EQ(c_defs.enum_defs[anon_a_name][1], "ANON_A_VARIANT_2");
+  ASSERT_TRUE(c_defs.enum_defs[anon_a_name].contains(99));
+  EXPECT_EQ(c_defs.enum_defs[anon_a_name][99], "ANON_A_CONFLICT");
 
   //
   // Check enums_ contains second anonymous enum
   //
 
   // Check first variant present
-  ASSERT_TRUE(bpftrace.enums_.contains("ANON_B_VARIANT_1"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["ANON_B_VARIANT_1"]), 0);
-  auto anon_b_name = std::get<1>(bpftrace.enums_["ANON_B_VARIANT_1"]);
+  ASSERT_TRUE(c_defs.enums.contains("ANON_B_VARIANT_1"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_B_VARIANT_1"]), 0);
+  auto anon_b_name = std::get<1>(c_defs.enums["ANON_B_VARIANT_1"]);
   ASSERT_FALSE(anon_b_name.empty());
 
   // Check conflict variant present
-  ASSERT_TRUE(bpftrace.enums_.contains("ANON_B_CONFLICT"));
-  EXPECT_EQ(std::get<0>(bpftrace.enums_["ANON_B_CONFLICT"]), 99);
-  EXPECT_EQ(std::get<1>(bpftrace.enums_["ANON_B_CONFLICT"]), anon_b_name);
+  ASSERT_TRUE(c_defs.enums.contains("ANON_B_CONFLICT"));
+  EXPECT_EQ(std::get<0>(c_defs.enums["ANON_B_CONFLICT"]), 99);
+  EXPECT_EQ(std::get<1>(c_defs.enums["ANON_B_CONFLICT"]), anon_b_name);
 
   //
   // Check enum_defs_ contains second anonymous enum, with ANON_B_CONFLICT
   // value resolving correctly to the this enum and not the first.
   //
 
-  ASSERT_TRUE(bpftrace.enum_defs_.contains(anon_b_name));
-  ASSERT_EQ(bpftrace.enum_defs_[anon_b_name].size(), 2);
-  ASSERT_TRUE(bpftrace.enum_defs_[anon_b_name].contains(0));
-  EXPECT_EQ(bpftrace.enum_defs_[anon_b_name][0], "ANON_B_VARIANT_1");
-  ASSERT_TRUE(bpftrace.enum_defs_[anon_b_name].contains(99));
-  EXPECT_EQ(bpftrace.enum_defs_[anon_b_name][99], "ANON_B_CONFLICT");
+  ASSERT_TRUE(c_defs.enum_defs.contains(anon_b_name));
+  ASSERT_EQ(c_defs.enum_defs[anon_b_name].size(), 2);
+  ASSERT_TRUE(c_defs.enum_defs[anon_b_name].contains(0));
+  EXPECT_EQ(c_defs.enum_defs[anon_b_name][0], "ANON_B_VARIANT_1");
+  ASSERT_TRUE(c_defs.enum_defs[anon_b_name].contains(99));
+  EXPECT_EQ(c_defs.enum_defs[anon_b_name][99], "ANON_B_CONFLICT");
 }
 
 TEST(clang_parser, integer_ptr)
@@ -603,16 +608,14 @@ TEST(clang_parser, builtin_headers)
 TEST(clang_parser, macro_preprocessor)
 {
   BPFtrace bpftrace;
-  parse("#define FOO size_t\n k:f { 0 }", bpftrace);
-  parse("#define _UNDERSCORE 314\n k:f { 0 }", bpftrace);
 
-  auto &macros = bpftrace.macros_;
+  auto c_defs = parse("#define FOO size_t\n k:f { 0 }", bpftrace);
+  ASSERT_EQ(c_defs.macros.count("FOO"), 1U);
+  EXPECT_EQ(c_defs.macros["FOO"], "size_t");
 
-  ASSERT_EQ(macros.count("FOO"), 1U);
-  EXPECT_EQ(macros["FOO"], "size_t");
-
-  ASSERT_EQ(macros.count("_UNDERSCORE"), 1U);
-  EXPECT_EQ(macros["_UNDERSCORE"], "314");
+  c_defs = parse("#define _UNDERSCORE 314\n k:f { 0 }", bpftrace);
+  ASSERT_EQ(c_defs.macros.count("_UNDERSCORE"), 1U);
+  EXPECT_EQ(c_defs.macros["_UNDERSCORE"], "314");
 }
 
 TEST(clang_parser, parse_fail)

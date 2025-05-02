@@ -46,11 +46,14 @@ std::unique_ptr<Output> prepare_output(const std::string& output_file,
     os = &outputstream;
   }
 
+  // FIXME(#4087): We should serialize the C enum definitions as part of the AOT
+  // payload in order to allow this printing to work.
+  CDefinitions c_definitions;
   std::unique_ptr<Output> output;
   if (output_format.empty() || output_format == "text") {
-    output = std::make_unique<TextOutput>(*os);
+    output = std::make_unique<TextOutput>(c_definitions, *os);
   } else if (output_format == "json") {
-    output = std::make_unique<JsonOutput>(*os);
+    output = std::make_unique<JsonOutput>(c_definitions, *os);
   } else {
     LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
@@ -147,7 +150,7 @@ int main(int argc, char* argv[])
   if (!output)
     return 1;
 
-  BPFtrace bpftrace(std::move(output));
+  BPFtrace bpftrace;
 
   int err = aot::load(bpftrace, argv[0]);
   if (err) {
@@ -155,5 +158,5 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  return run_bpftrace(bpftrace, bpftrace.bytecode_);
+  return run_bpftrace(bpftrace, *output, bpftrace.bytecode_);
 }

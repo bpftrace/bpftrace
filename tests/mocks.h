@@ -39,9 +39,6 @@ public:
 
 class MockBPFtrace : public BPFtrace {
 public:
-  MockBPFtrace(std::unique_ptr<Output> o) : BPFtrace(std::move(o))
-  {
-  }
   std::vector<Probe> get_probes()
   {
     return resources.probes;
@@ -110,9 +107,8 @@ public:
   bool mock_in_init_pid_ns = true;
 };
 
-std::unique_ptr<MockBPFtrace> get_mock_bpftrace(std::ostream &os = std::cout);
-std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace(
-    std::ostream &os = std::cout);
+std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
+std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
 
 static auto bpf_nofeature = BPFnofeature();
 static auto btf_obj = BTF(nullptr);

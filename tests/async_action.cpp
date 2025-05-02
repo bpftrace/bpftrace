@@ -82,11 +82,10 @@ void fill_arg_data(
   offset += sizeof(T);
 }
 
-template <typename... Args>
-void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
-                   AsyncAction id,
-                   std::string &fmt_str,
-                   [[maybe_unused]] Args... args)
+template <AsyncAction id, typename... Args>
+std::string handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
+                          std::string &fmt_str,
+                          [[maybe_unused]] Args... args)
 {
   FormatString fmt(fmt_str);
   std::vector<Field> fields;
@@ -106,24 +105,30 @@ void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
     (fill_arg_data(arg_data.data(), offset, args), ...);
   }
 
+  CDefinitions no_c_defs;
+  std::stringstream out;
+  TextOutput output(no_c_defs, out);
+
+  static_assert((id == AsyncAction::syscall || id == AsyncAction::cat ||
+                 id == AsyncAction::printf) &&
+                "Only support syscall, cat, and printf");
   if (id == AsyncAction::syscall) {
     bpftrace->resources.system_args.emplace_back(fmt, fields);
-    syscall_handler(bpftrace.get(), id, arg_data.data());
+    syscall_handler(*bpftrace, output, id, arg_data.data());
   } else if (id == AsyncAction::cat) {
     bpftrace->resources.cat_args.emplace_back(fmt, fields);
-    cat_handler(bpftrace.get(), id, arg_data.data());
+    cat_handler(*bpftrace, output, id, arg_data.data());
   } else if (id == AsyncAction::printf) {
     bpftrace->resources.printf_args.emplace_back(fmt, fields);
-    printf_handler(bpftrace.get(), id, arg_data.data());
-  } else {
-    FAIL() << "Only support syscall, cat, and printf";
+    printf_handler(*bpftrace, output, id, arg_data.data());
   }
+
+  return out.str();
 }
 
 TEST(async_action, join)
 {
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.join_args.emplace_back(",");
 
   unsigned int content_size = bpftrace->join_argsize_ * bpftrace->join_argnum_;
@@ -145,14 +150,21 @@ TEST(async_action, join)
   memcpy(join->content + bpftrace->join_argsize_, arg2, strlen(arg2) + 1);
   memcpy(join->content + (2 * bpftrace->join_argsize_), arg3, strlen(arg3) + 1);
 
-  join_handler(bpftrace.get(), join);
+  CDefinitions no_c_defs;
+  std::stringstream out;
+  TextOutput output(no_c_defs, out);
+
+  join_handler(*bpftrace, output, join);
   EXPECT_EQ("/bin/ls,-la,/tmp\n", out.str());
 }
 
 TEST(async_action, time)
 {
+  auto bpftrace = get_mock_bpftrace();
+
+  CDefinitions no_c_defs;
   std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  TextOutput output(no_c_defs, out);
 
   bpftrace->resources.time_args.emplace_back("%Y-%m-%d");
   bpftrace->resources.time_args.emplace_back("%H:%M:%S");
@@ -161,7 +173,7 @@ TEST(async_action, time)
   // The first format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"(\d{4}-\d{2}-\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -171,7 +183,7 @@ TEST(async_action, time)
   // The second format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 1);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"(\d{2}:\d{2}:\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -181,7 +193,7 @@ TEST(async_action, time)
   // The third format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 2);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"([A-Za-z]+, \d{2} [A-Za-z]+ \d{4})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -190,8 +202,11 @@ TEST(async_action, time)
 
 TEST(async_action, time_invalid_format)
 {
+  auto bpftrace = get_mock_bpftrace();
+
+  CDefinitions no_c_defs;
   std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  TextOutput output(no_c_defs, out);
 
   // invalid time format string
   std::string very_long_format(bpftrace::async_action::MAX_TIME_STR_LEN, 'X');
@@ -201,7 +216,7 @@ TEST(async_action, time_invalid_format)
 
   testing::internal::CaptureStderr();
 
-  time_handler(bpftrace.get(), &time_event);
+  time_handler(*bpftrace, output, &time_event);
   EXPECT_TRUE(out.str().empty());
 
   std::string log = testing::internal::GetCapturedStderr();
@@ -254,8 +269,11 @@ TEST(async_action, helper_error)
   };
 
   for (const auto &tc : test_cases) {
+    auto bpftrace = get_mock_bpftrace();
+
+    CDefinitions no_c_defs;
     std::stringstream out;
-    auto bpftrace = get_mock_bpftrace(out);
+    TextOutput output(no_c_defs, out);
 
     auto src_loc = ast::SourceLocation(
         location(&tc.filename, tc.line, tc.column));
@@ -269,19 +287,19 @@ TEST(async_action, helper_error)
                                         tc.func_id,
                                         tc.return_value);
 
-    helper_error_handler(bpftrace.get(), &error_event);
+    helper_error_handler(*bpftrace, output, &error_event);
 
-    std::string output = out.str();
-    EXPECT_THAT(output, testing::HasSubstr(tc.expected_substring))
+    auto s = out.str();
+    EXPECT_THAT(s, testing::HasSubstr(tc.expected_substring))
         << "function: " << tc.func_id << " return " << tc.return_value
         << " failed";
 
     std::string expected_loc = std::to_string(tc.line) + ":" +
                                std::to_string(tc.column);
-    EXPECT_THAT(output, testing::HasSubstr(expected_loc))
+    EXPECT_THAT(s, testing::HasSubstr(expected_loc))
         << "Source location not found in output: " << expected_loc;
 
-    EXPECT_THAT(output, testing::HasSubstr(std::to_string(tc.return_value)))
+    EXPECT_THAT(s, testing::HasSubstr(std::to_string(tc.return_value)))
         << "Return value not found in output: " << tc.return_value;
   }
 }
@@ -304,29 +322,31 @@ TEST(async_action, syscall)
   };
 
   for (auto &tc : test_cases) {
-    std::stringstream out;
-    auto bpftrace = get_mock_bpftrace(out);
+    auto bpftrace = get_mock_bpftrace();
     bpftrace->safe_mode_ = false;
 
+    std::string out;
     if (tc.args.has_value()) {
-      handler_proxy(bpftrace, AsyncAction::syscall, tc.cmd, tc.args.value());
+      out = handler_proxy<AsyncAction::syscall>(bpftrace,
+                                                tc.cmd,
+                                                tc.args.value());
     } else {
-      handler_proxy(bpftrace, AsyncAction::syscall, tc.cmd);
+      out = handler_proxy<AsyncAction::syscall>(bpftrace, tc.cmd);
     }
 
-    EXPECT_THAT(out.str(), testing::HasSubstr(tc.expected_substring))
+    EXPECT_THAT(out, testing::HasSubstr(tc.expected_substring))
         << "Syscall output should contain the result of 'echo test'";
   }
 }
 
 TEST(async_action, syscall_safe_mode)
 {
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
   auto cmd = std::string("echo test");
 
+  std::string out;
   try {
-    handler_proxy(bpftrace, AsyncAction::syscall, cmd);
+    out = handler_proxy<AsyncAction::syscall>(bpftrace, cmd);
     FAIL() << "Expected syscall_handler to throw an exception in safe mode";
   } catch (const util::FatalUserException &ex) {
     EXPECT_THAT(std::string(ex.what()),
@@ -338,8 +358,7 @@ TEST(async_action, syscall_safe_mode)
               "mode";
   }
 
-  EXPECT_TRUE(out.str().empty())
-      << "No output should be generated in safe mode";
+  EXPECT_TRUE(out.empty()) << "No output should be generated in safe mode";
 }
 
 TEST(async_action, cat)
@@ -352,15 +371,15 @@ TEST(async_action, cat)
             static_cast<ssize_t>(test_content.length()));
   close(fd);
 
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
   bpftrace->config_->max_cat_bytes = 1024;
 
   auto cmd = std::string("%s/%s");
   std::string basename = std::string(filename).substr(5);
-  handler_proxy(bpftrace, AsyncAction::cat, cmd, "/tmp", basename.c_str());
+  std::string out = handler_proxy<AsyncAction::cat>(
+      bpftrace, cmd, "/tmp", basename.c_str());
 
-  EXPECT_EQ(test_content, out.str())
+  EXPECT_EQ(test_content, out)
       << "cat_handler should output the file content correctly";
 
   std::remove(filename);
@@ -368,8 +387,7 @@ TEST(async_action, cat)
 
 TEST(async_action, printf)
 {
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
 
   std::string format = "Multiple: %s=%d (0x%llx) char=%hhu";
   char expected_buffer[64];
@@ -382,10 +400,10 @@ TEST(async_action, printf)
            'a');
   std::string expected(expected_buffer);
 
-  handler_proxy(
-      bpftrace, AsyncAction::printf, format, "answer", 42, 0xDEADBEEFULL, 'a');
+  std::string out = handler_proxy<AsyncAction::printf>(
+      bpftrace, format, "answer", 42, 0xDEADBEEFULL, 'a');
 
-  EXPECT_EQ(expected, out.str())
+  EXPECT_EQ(expected, out)
       << "printf_handler should format multiple arguments correctly";
 }
 
