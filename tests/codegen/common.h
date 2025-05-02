@@ -5,6 +5,7 @@
 #include <regex>
 
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -63,8 +64,7 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
-                .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())

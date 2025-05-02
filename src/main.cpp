@@ -687,17 +687,6 @@ int main(int argc, char* argv[])
     os = &outputstream;
   }
 
-  std::unique_ptr<Output> output;
-  if (args.output_format.empty() || args.output_format == "text") {
-    output = std::make_unique<TextOutput>(*os);
-  } else if (args.output_format == "json") {
-    output = std::make_unique<JsonOutput>(*os);
-  } else {
-    LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
-               << "Valid formats: 'text', 'json'";
-    exit(1);
-  }
-
   switch (args.obc) {
     case OutputBufferConfig::UNSET:
     case OutputBufferConfig::LINE:
@@ -714,7 +703,7 @@ int main(int argc, char* argv[])
   libbpf_set_print(libbpf_print);
 
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
-  BPFtrace bpftrace(std::move(output), args.no_feature, std::move(config));
+  BPFtrace bpftrace(args.no_feature, std::move(config));
 
   // Most configuration can be applied during the configuration pass, however
   // we need to extract a few bits of configuration up front, because they may
@@ -777,12 +766,14 @@ int main(int argc, char* argv[])
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
+    CDefinitions no_c_defs; // No external C definitions may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into the
     // actual driver here, since we know that the program is already formed.
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(bpftrace)
+                  .put(no_c_defs)
                   .add(ast::CreateParseAttachpointsPass(args.listing))
                   .add(CreateParseBTFPass())
                   .add(ast::CreateMapSugarPass())
@@ -865,7 +856,9 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
+    CDefinitions no_c_defs; // See above.
     pm.add(CreateParsePass())
+        .put(no_c_defs)
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
@@ -980,6 +973,21 @@ int main(int argc, char* argv[])
   if (args.test_mode == TestMode::CODEGEN)
     return 0;
 
+  // Our output requires the parsed C definitions in order to map enum values to
+  // the suitable display name.
+  auto& c_definitions = pmresult->get<CDefinitions>();
+  std::unique_ptr<Output> output;
+  if (args.output_format.empty() || args.output_format == "text") {
+    output = std::make_unique<TextOutput>(c_definitions, *os);
+  } else if (args.output_format == "json") {
+    output = std::make_unique<JsonOutput>(c_definitions, *os);
+  } else {
+    LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
+               << "Valid formats: 'text', 'json'";
+    usage(std::cerr);
+    exit(1);
+  }
+
   auto& bytecode = pmresult->get<BpfBytecode>();
-  return run_bpftrace(bpftrace, bytecode);
+  return run_bpftrace(bpftrace, *output, bytecode);
 }

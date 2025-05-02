@@ -28,17 +28,22 @@ void Driver::parse(Parser::symbol_type first_token)
   yylex_destroy(scanner);
 }
 
-void Driver::parse_program()
+ast::Program *Driver::parse_program()
 {
   parse(Parser::make_START_PROGRAM(loc));
   if (std::holds_alternative<ast::Program *>(result)) {
-    ctx.root = std::get<ast::Program *>(result);
+    return std::get<ast::Program *>(result);
   }
+  return nullptr;
 }
 
-void Driver::parse_expr()
+std::optional<ast::Expression> Driver::parse_expr()
 {
   parse(Parser::make_START_EXPR(loc));
+  if (std::holds_alternative<ast::Expression>(result)) {
+    return std::get<ast::Expression>(result);
+  }
+  return std::nullopt;
 }
 
 void Driver::error(const location &l, const std::string &m)
@@ -51,8 +56,8 @@ void Driver::error(const location &l, const std::string &m)
 ast::Pass CreateParsePass(bool debug)
 {
   return ast::Pass::create("parse", [debug](ast::ASTContext &ast, BPFtrace &b) {
-    Driver driver(ast, b, debug);
-    driver.parse_program();
+    Driver driver(ast, debug);
+    ast.root = driver.parse_program();
 
     // Before proceeding, ensure that the size of the AST isn't past prescribed
     // limits. This functionality goes back to 80642a994, where it was added in

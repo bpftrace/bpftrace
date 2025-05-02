@@ -2,6 +2,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
@@ -31,11 +32,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseTracepointFormatPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangPass(std::move(extra_flags)));
-  // The source and syntax is reparsed because it uses the `macros_` which are
-  // set during the clang parse to expand identifiers within the lexer.
-  passes.emplace_back(CreateParsePass());
-  passes.emplace_back(CreateMacroExpansionPass());
-  passes.emplace_back(CreateParseAttachpointsPass());
+  passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
   return passes;
 }

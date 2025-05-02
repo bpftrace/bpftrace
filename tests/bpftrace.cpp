@@ -916,8 +916,7 @@ TEST(bpftrace, add_probes_hardware)
 TEST(bpftrace, trailing_comma)
 {
   ast::ASTContext ast("stdin", "kprobe:f1, {}");
-  auto bpftrace = get_strict_mock_bpftrace();
-  Driver driver(ast, *bpftrace);
+  Driver driver(ast);
 
   // Trailing comma is fine
   driver.parse_program();
@@ -927,15 +926,15 @@ TEST(bpftrace, trailing_comma)
 TEST(bpftrace, empty_attachpoint)
 {
   ast::ASTContext ast("stdin", "{}");
-  auto bpftrace = get_strict_mock_bpftrace();
-  Driver driver(ast, *bpftrace);
+  Driver driver(ast);
 
   // Empty attach point should fail...
-  driver.parse_program();
+  ast.root = driver.parse_program();
 
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.
-  ast::AttachPointParser ap_parser(ast, *bpftrace, false);
+  StrictMock<MockBPFtrace> bpftrace;
+  ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
   EXPECT_FALSE(ast.diagnostics().ok());
 }

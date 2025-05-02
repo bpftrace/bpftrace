@@ -1,9 +1,9 @@
 #include <climits>
 #include <sstream>
 
-#include "ast/passes/printer.h"
-
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/c_macro_expansion.h"
+#include "ast/passes/printer.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "gtest/gtest.h"
@@ -18,8 +18,8 @@ void test_parse_failure(BPFtrace &bpftrace,
 {
   std::stringstream out;
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
-  driver.parse_program();
+  Driver driver(ast);
+  ast.root = driver.parse_program();
   ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
   ASSERT_FALSE(ast.diagnostics().ok());
@@ -50,7 +50,7 @@ void test_macro_parse_failure(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(CreateClangPass())
-                .add(CreateParsePass())
+                .add(ast::CreateCMacroExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));
 
@@ -76,9 +76,9 @@ void test(BPFtrace &bpftrace,
           std::string_view expected)
 {
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast, bpftrace);
+  Driver driver(ast);
 
-  driver.parse_program();
+  ast.root = driver.parse_program();
   ast::AttachPointParser ap_parser(ast, bpftrace, false);
   ap_parser.parse();
   std::ostringstream out;
@@ -2249,11 +2249,10 @@ TEST(Parser, cstruct_nested)
 
 TEST(Parser, unexpected_symbol)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1 { < }");
-  Driver driver(ast, bpftrace);
-  driver.parse_program();
+  Driver driver(ast);
+  ast.root = driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2266,11 +2265,10 @@ i:s:1 { < }
 
 TEST(Parser, string_with_tab)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1\t\t\t$a");
-  Driver driver(ast, bpftrace);
-  driver.parse_program();
+  Driver driver(ast);
+  ast.root = driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2283,11 +2281,10 @@ i:s:1            $a
 
 TEST(Parser, unterminated_string)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "kprobe:f { \"asdf }");
-  Driver driver(ast, bpftrace);
-  driver.parse_program();
+  Driver driver(ast);
+  ast.root = driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -2402,10 +2399,9 @@ i:s:1 { @="a"++}
 
 TEST(Parser, long_param_overflow)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:100 { @=$111111111111111111111111111 }");
-  Driver driver(ast, bpftrace);
+  Driver driver(ast);
   EXPECT_NO_THROW(driver.parse_program());
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
@@ -2552,11 +2548,10 @@ TEST(Parser, while_loop)
 
 TEST(Parser, tuple_assignment_error_message)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "i:s:1 { @x = (1, 2); $x.1 = 1; }");
-  Driver driver(ast, bpftrace);
-  driver.parse_program();
+  Driver driver(ast);
+  ast.root = driver.parse_program();
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
@@ -3069,12 +3064,21 @@ TEST(Parser, macro_expansion_error)
   test_macro_parse_failure("#define M M+1\n"
                            "BEGIN { M; }",
                            R"(
-stdin:2:9-343: ERROR: Macro recursion limit reached: M, M+1
+M:1:1-2: ERROR: Macro recursion: M
+M+1
+~
+stdin:2:9-10: ERROR: expanded from
 BEGIN { M; }
-        ~~~~
-stdin:2:9-343: ERROR: syntax error, unexpected end of file
+        ~
+)");
+
+  // Invalid macro expression
+  test_macro_parse_failure("#define M {\n"
+                           "BEGIN { M; }",
+                           R"(
+stdin:2:9-10: ERROR: unable to expand macro as an expression: {
 BEGIN { M; }
-        ~~~~
+        ~
 )");
 
   // Large source code doesn't cause any problem
@@ -3084,12 +3088,12 @@ BEGIN { M; }
                            "END { printf(\"" +
                                padding + "\"); }",
                            R"(
-stdin:2:9-343: ERROR: Macro recursion limit reached: M, M+1
+M:1:1-2: ERROR: Macro recursion: M
+M+1
+~
+stdin:2:9-10: ERROR: expanded from
 BEGIN { M; }
-        ~~~~
-stdin:2:9-343: ERROR: syntax error, unexpected end of file
-BEGIN { M; }
-        ~~~~
+        ~
 )");
 }
 
@@ -3129,10 +3133,9 @@ import foo; BEGIN { }
 
 TEST(Parser, naked_expression)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   ast::ASTContext ast("stdin", "1 + 2 + 3");
-  Driver driver(ast, bpftrace);
+  Driver driver(ast);
   driver.parse_expr();
   ASSERT_TRUE(ast.diagnostics().ok());
   ASSERT_TRUE(std::holds_alternative<ast::Expression>(driver.result));

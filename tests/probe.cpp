@@ -23,10 +23,13 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   auto bpftrace = get_mock_bpftrace();
   ast::ASTContext ast("stdin", input);
 
+  CDefinitions no_c_defs; // Output from clang parser.
+
   // N.B. No macro or tracepoint expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
+                .put(no_c_defs)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(CreateParseBTFPass())
