@@ -800,9 +800,9 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
             return {};
         }
 
-        if (bpftrace.enum_defs_.contains(enum_name) &&
-            bpftrace.enum_defs_[enum_name].contains(enum_val)) {
-          return bpftrace.enum_defs_[enum_name][enum_val];
+        if (c_definitions_.enum_defs.contains(enum_name) &&
+            c_definitions_.enum_defs[enum_name].contains(enum_val)) {
+          return c_definitions_.enum_defs[enum_name][enum_val];
         } else {
           // Fall back to something comprehensible in case user somehow
           // tricked the type system into accepting an invalid enum.

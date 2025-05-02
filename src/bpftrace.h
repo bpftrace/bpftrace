@@ -98,11 +98,9 @@ private:
 
 class BPFtrace : public ast::State<"bpftrace"> {
 public:
-  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout),
-           BPFnofeature no_feature = BPFnofeature(),
+  BPFtrace(BPFnofeature no_feature = BPFnofeature(),
            std::unique_ptr<Config> config = std::make_unique<Config>())
-      : out_(std::move(o)),
-        btf_(std::make_unique<BTF>(this)),
+      : btf_(std::make_unique<BTF>(this)),
         feature_(std::make_unique<BPFfeature>(no_feature, *btf_)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(util::get_possible_cpus().size()),
@@ -120,16 +118,16 @@ public:
   Probe generateWatchpointSetupProbe(const ast::AttachPoint &ap,
                                      const ast::Probe &probe);
   int num_probes() const;
-  int prerun() const;
-  int run(BpfBytecode bytecode);
+  int prerun(Output &out) const;
+  int run(Output &out, BpfBytecode bytecode);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
-  int print_maps();
+  int print_maps(Output &out);
   int clear_map(const BpfMap &map);
   int zero_map(const BpfMap &map);
-  int print_map(const BpfMap &map, uint32_t top, uint32_t div);
+  int print_map(Output &out, const BpfMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
                         uint32_t nr_stack_frames,
                         int32_t pid,
@@ -154,6 +152,7 @@ public:
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(
+      Output &output,
       const std::vector<Field> &args,
       uint8_t *arg_data);
   void add_param(const std::string &param);
@@ -187,11 +186,6 @@ public:
   BpfBytecode bytecode_;
   StructManager structs;
   FunctionRegistry functions;
-  std::map<std::string, std::string> macros_;
-  // Map of enum variant_name to (variant_value, enum_name).
-  std::map<std::string, std::tuple<uint64_t, std::string>> enums_;
-  // Map of enum_name to map of variant_value to variant_name.
-  std::map<std::string, std::map<uint64_t, std::string>> enum_defs_;
   // For each helper, list of all generated call sites.
   std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;
   const util::FuncsModulesMap &get_traceable_funcs() const;
@@ -255,9 +249,9 @@ private:
       bool file_activation);
   int create_pcaps();
   void close_pcaps();
-  int setup_output();
-  int setup_perf_events();
-  void setup_ringbuf();
+  int setup_output(void *ctx);
+  int setup_perf_events(void *ctx);
+  void setup_ringbuf(void *ctx);
   int setup_event_loss();
   // when the ringbuf feature is available, enable ringbuf for built-ins like
   // printf, cat.
@@ -282,10 +276,13 @@ private:
                                               bool perf_mode,
                                               bool show_debug_info);
   void teardown_output();
-  void poll_output(bool drain = false);
+  void poll_output(Output &out, bool drain = false);
   int poll_perf_events();
-  void handle_event_loss();
-  int print_map_hist(const BpfMap &map, uint32_t top, uint32_t div);
+  void handle_event_loss(Output &out);
+  int print_map_hist(Output &out,
+                     const BpfMap &map,
+                     uint32_t top,
+                     uint32_t div);
   static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,

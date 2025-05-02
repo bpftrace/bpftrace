@@ -1,6 +1,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/ast.h"
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
@@ -38,8 +39,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
-                .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
@@ -96,9 +96,7 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
-                .add(CreateParsePass())
-                .add(ast::CreateMacroExpansionPass())
-                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())

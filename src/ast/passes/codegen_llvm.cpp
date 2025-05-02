@@ -181,6 +181,7 @@ class CodegenLLVM : public Visitor<CodegenLLVM, ScopedExpr> {
 public:
   explicit CodegenLLVM(ASTContext &ast,
                        BPFtrace &bpftrace,
+                       CDefinitions &c_definitions,
                        LLVMContext &llvm_ctx,
                        USDTHelper &usdt_helper);
 
@@ -371,6 +372,7 @@ private:
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  CDefinitions &c_definitions_;
   LLVMContext &llvm_ctx_;
   USDTHelper &usdt_helper_;
   std::unique_ptr<Module> module_;
@@ -420,10 +422,12 @@ private:
 
 CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          BPFtrace &bpftrace,
+                         CDefinitions &c_definitions,
                          LLVMContext &llvm_ctx,
                          USDTHelper &usdt_helper)
     : ast_(ast),
       bpftrace_(bpftrace),
+      c_definitions_(c_definitions),
       llvm_ctx_(llvm_ctx),
       usdt_helper_(usdt_helper),
       module_(std::make_unique<Module>("bpftrace", llvm_ctx)),
@@ -487,9 +491,9 @@ ScopedExpr CodegenLLVM::visit(String &string)
 // bpftrace you cannot really instantiate a struct.
 ScopedExpr CodegenLLVM::visit(Identifier &identifier)
 {
-  if (bpftrace_.enums_.contains(identifier.ident)) {
+  if (c_definitions_.enums.contains(identifier.ident)) {
     return ScopedExpr(
-        b_.getInt64(std::get<0>(bpftrace_.enums_[identifier.ident])));
+        b_.getInt64(std::get<0>(c_definitions_.enums[identifier.ident])));
   } else {
     LOG(BUG) << "unknown identifier \"" << identifier.ident << "\"";
     __builtin_unreachable();
@@ -4845,13 +4849,17 @@ Pass CreateCompilePass(
   return Pass::create("compile",
                       [usdt_helper](ASTContext &ast,
                                     BPFtrace &bpftrace,
+                                    CDefinitions &c_definitions,
                                     CompileContext &ctx) mutable {
                         USDTHelper default_usdt;
                         if (!usdt_helper) {
                           usdt_helper = std::ref(default_usdt);
                         }
-                        CodegenLLVM llvm(
-                            ast, bpftrace, *ctx.context, usdt_helper->get());
+                        CodegenLLVM llvm(ast,
+                                         bpftrace,
+                                         c_definitions,
+                                         *ctx.context,
+                                         usdt_helper->get());
                         return CompiledModule(llvm.compile());
                       });
 }
