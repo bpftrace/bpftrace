@@ -280,7 +280,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::join)) {
-    uint64_t join_id = *(static_cast<uint64_t *>(data) + 1);
+    uint64_t join_id = static_cast<AsyncEvent::Join *>(data)->join_id;
     const auto *delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
