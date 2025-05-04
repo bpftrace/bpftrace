@@ -13,8 +13,8 @@ TEST(TextOutput, lhist_no_suffix)
   std::stringstream err;
   TextOutput output{ out, err };
 
-  MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->resources.maps_info["@mymap"] = MapInfo{
     .key_type = CreateInt64(),
     .value_type = SizedType{ Type::lhist_t, 8 },
     .detail = LinearHistogramArgs{ .min = 610000,
@@ -36,7 +36,7 @@ TEST(TextOutput, lhist_no_suffix)
     { { 0 }, 6 }
   };
 
-  output.map_hist(bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
+  output.map_hist(*bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
 
   // The buckets for this test case have been specifically chosen: 640000 can
   // also be written as 625K, while the other bucket boundaries can not be
@@ -61,8 +61,8 @@ TEST(TextOutput, lhist_suffix)
   std::stringstream err;
   TextOutput output{ out, err };
 
-  MockBPFtrace bpftrace;
-  bpftrace.resources.maps_info["@mymap"] = MapInfo{
+  auto bpftrace = get_mock_bpftrace(out);
+  bpftrace->resources.maps_info["@mymap"] = MapInfo{
     .key_type = CreateInt64(),
     .value_type = SizedType{ Type::lhist_t, 8 },
     .detail = LinearHistogramArgs{ .min = 0, .max = 5 * 1024, .step = 1024 },
@@ -82,7 +82,7 @@ TEST(TextOutput, lhist_suffix)
     { { 0 }, 5 }
   };
 
-  output.map_hist(bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
+  output.map_hist(*bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
 
   EXPECT_EQ(R"(@mymap:
 [0, 1K)                1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|

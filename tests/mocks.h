@@ -39,6 +39,9 @@ public:
 
 class MockBPFtrace : public BPFtrace {
 public:
+  MockBPFtrace(std::unique_ptr<Output> o) : BPFtrace(std::move(o))
+  {
+  }
   std::vector<Probe> get_probes()
   {
     return resources.probes;
@@ -82,12 +85,12 @@ public:
   const std::optional<struct stat> &get_pidns_self_stat() const override
   {
     static const std::optional<struct stat> init_pid_namespace = []() {
-      struct stat s {};
+      struct stat s{};
       s.st_ino = 0xeffffffc; // PROC_PID_INIT_INO
       return std::optional{ s };
     }();
     static const std::optional<struct stat> child_pid_namespace = []() {
-      struct stat s {};
+      struct stat s{};
       s.st_ino = 0xf0000011; // Arbitrary user namespace
       return std::optional{ s };
     }();
@@ -107,8 +110,9 @@ public:
   bool mock_in_init_pid_ns = true;
 };
 
-std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
-std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
+std::unique_ptr<MockBPFtrace> get_mock_bpftrace(std::ostream &os = std::cout);
+std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace(
+    std::ostream &os = std::cout);
 
 static auto bpf_nofeature = BPFnofeature();
 static auto btf_obj = BTF(nullptr);
