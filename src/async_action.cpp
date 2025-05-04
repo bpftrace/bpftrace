@@ -45,4 +45,13 @@ void time_handler(BPFtrace *bpftrace, void *data)
   bpftrace->out_->message(MessageType::time, timestr, false);
 }
 
+void helper_error_handler(BPFtrace *bpftrace, void *data)
+{
+  auto *helper_error = static_cast<AsyncEvent::HelperError *>(data);
+  auto error_id = helper_error->error_id;
+  auto return_value = helper_error->return_value;
+  auto &info = bpftrace->resources.helper_error_info[error_id];
+  bpftrace->out_->helper_error(return_value, info);
+}
+
 } // namespace bpftrace::async_action

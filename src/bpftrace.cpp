@@ -270,11 +270,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     async_action::join_handler(bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::helper_error) {
-    auto *helpererror = static_cast<AsyncEvent::HelperError *>(data);
-    auto error_id = helpererror->error_id;
-    auto return_value = helpererror->return_value;
-    auto &info = bpftrace->resources.helper_error_info[error_id];
-    bpftrace->out_->helper_error(return_value, info);
+    async_action::helper_error_handler(bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::watchpoint_attach) {
     bool abort = false;

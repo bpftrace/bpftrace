@@ -1,6 +1,7 @@
 #include "async_action.h"
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
+#include "location.hh"
 #include "mocks.h"
 #include "types.h"
 #include "gmock/gmock.h"
@@ -97,6 +98,83 @@ TEST(async_action, time_invalid_format)
   std::string log = testing::internal::GetCapturedStderr();
 
   EXPECT_THAT(log, testing::HasSubstr("strftime returned 0"));
+}
+
+TEST(async_action, helper_error)
+{
+  struct TestCase {
+    int func_id;
+    int return_value;
+    std::string expected_substring;
+    std::string filename;
+    unsigned int line;
+    unsigned int column;
+  };
+
+  std::vector<TestCase> test_cases = {
+    // case 1: `map_update_elem` returns `-E2BIG`
+    { .func_id = libbpf::BPF_FUNC_map_update_elem,
+      .return_value = -E2BIG,
+      .expected_substring = "WARNING: Map full; can't update element",
+      .filename = std::string("test1.bt"),
+      .line = 10,
+      .column = 5 },
+    // case 2: `map_delete_elem` returns `-ENOENT`
+    { .func_id = libbpf::BPF_FUNC_map_delete_elem,
+      .return_value = -ENOENT,
+      .expected_substring =
+          "WARNING: Can't delete map element because it does not exist",
+      .filename = std::string("test2.bt"),
+      .line = 15,
+      .column = 8 },
+    // case 3: `map_lookup_elem` failed to lookup map element
+    { .func_id = libbpf::BPF_FUNC_map_lookup_elem,
+      .return_value = 0,
+      .expected_substring =
+          "WARNING: Can't lookup map element because it does not exist",
+      .filename = std::string("test3.bt"),
+      .line = 20,
+      .column = 3 },
+    // case 4: default case - other function ID and error code
+    { .func_id = libbpf::BPF_FUNC_trace_printk,
+      .return_value = -EPERM,
+      .expected_substring = "WARNING: " + std::string(strerror(EPERM)),
+      .filename = std::string("test4.bt"),
+      .line = 25,
+      .column = 1 }
+  };
+
+  for (const auto &tc : test_cases) {
+    std::stringstream out;
+    auto bpftrace = get_mock_bpftrace(out);
+
+    auto src_loc = ast::SourceLocation(
+        location(&tc.filename, tc.line, tc.column));
+    auto location_chain = std::make_shared<ast::LocationChain>(src_loc);
+    HelperErrorInfo info(tc.func_id, location_chain);
+
+    bpftrace->resources.helper_error_info.emplace(tc.func_id, std::move(info));
+
+    AsyncEvent::HelperError error_event(static_cast<int64_t>(
+                                            AsyncAction::helper_error),
+                                        tc.func_id,
+                                        tc.return_value);
+
+    helper_error_handler(bpftrace.get(), &error_event);
+
+    std::string output = out.str();
+    EXPECT_THAT(output, testing::HasSubstr(tc.expected_substring))
+        << "function: " << tc.func_id << " return " << tc.return_value
+        << " failed";
+
+    std::string expected_loc = std::to_string(tc.line) + ":" +
+                               std::to_string(tc.column);
+    EXPECT_THAT(output, testing::HasSubstr(expected_loc))
+        << "Source location not found in output: " << expected_loc;
+
+    EXPECT_THAT(output, testing::HasSubstr(std::to_string(tc.return_value)))
+        << "Return value not found in output: " << tc.return_value;
+  }
 }
 
 } // namespace bpftrace::test::async_action
