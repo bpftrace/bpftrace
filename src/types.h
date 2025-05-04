@@ -719,6 +719,7 @@ private:
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 
+// TODO: move this `AsyncAction` enum to `async_action.h`
 enum class AsyncAction {
   // clang-format off
   printf  = 0,     // printf reserves 0-9999 for printf_ids

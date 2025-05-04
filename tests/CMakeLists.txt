@@ -27,6 +27,7 @@ endif()
 
 add_executable(bpftrace_test
   ast.cpp
+  async_action.cpp
   bpfbytecode.cpp
   bpftrace.cpp
   child.cpp

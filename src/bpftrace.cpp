@@ -33,6 +33,7 @@
 
 #include "ast/async_event_types.h"
 #include "ast/context.h"
+#include "async_action.h"
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
@@ -263,35 +264,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::time)) {
-    char timestr[64]; // not respecting config_->get(ConfigKeyInt::max_strlen)
-    time_t t;
-    struct tm tmp;
-    t = time(nullptr);
-    if (!localtime_r(&t, &tmp)) {
-      LOG(WARNING) << "localtime_r: " << strerror(errno);
-      return;
-    }
-    auto *time = static_cast<AsyncEvent::Time *>(data);
-    const auto *fmt = bpftrace->resources.time_args[time->time_id].c_str();
-    if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
-      LOG(WARNING) << "strftime returned 0";
-      return;
-    }
-    bpftrace->out_->message(MessageType::time, timestr, false);
+    async_action::time_handler(bpftrace, data);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::join)) {
-    auto *join = static_cast<AsyncEvent::Join *>(data);
-    const auto *delim = bpftrace->resources.join_args[join->join_id].c_str();
-    std::stringstream joined;
-    for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
-      auto *arg = join->content + (i * bpftrace->join_argsize_);
-      if (arg[0] == 0)
-        break;
-      if (i)
-        joined << delim;
-      joined << arg;
-    }
-    bpftrace->out_->message(MessageType::join, joined.str());
+    async_action::join_handler(bpftrace, data);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::helper_error)) {
     auto *helpererror = static_cast<AsyncEvent::HelperError *>(data);
