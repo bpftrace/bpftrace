@@ -47,10 +47,10 @@ TEST(Config, set)
   EXPECT_TRUE(bool(config.set("cache_user_symbols", "NONE")));
   EXPECT_EQ(config.user_symbol_cache_type, UserSymbolCacheType::none);
 
-  EXPECT_EQ(config.missing_probes, ConfigMissingProbes::warn);
-  EXPECT_FALSE(bool(config.set("missing_probes", "invalid")));
-  EXPECT_TRUE(bool(config.set("missing_probes", "error")));
   EXPECT_EQ(config.missing_probes, ConfigMissingProbes::error);
+  EXPECT_FALSE(bool(config.set("missing_probes", "invalid")));
+  EXPECT_TRUE(bool(config.set("missing_probes", "warn")));
+  EXPECT_EQ(config.missing_probes, ConfigMissingProbes::warn);
 }
 
 TEST(Config, key_finding)

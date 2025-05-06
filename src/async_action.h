@@ -14,9 +14,7 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, const void *data);
 void print_map_handler(BPFtrace &bpftrace, Output &out, const void *data);
 void zero_map_handler(BPFtrace &bpftrace, const void *data);
 void clear_map_handler(BPFtrace &bpftrace, const void *data);
-void watchpoint_attach_handler(BPFtrace &bpftrace,
-                               Output &out,
-                               const void *data);
+void watchpoint_attach_handler(BPFtrace &bpftrace, const void *data);
 void watchpoint_detach_handler(BPFtrace &bpftrace, const void *data);
 void skboutput_handler(BPFtrace &bpftrace, void *data, int size);
 void syscall_handler(BPFtrace &bpftrace,

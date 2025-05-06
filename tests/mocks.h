@@ -6,6 +6,7 @@
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "util/format.h"
+#include "util/result.h"
 #include "gmock/gmock-function-mocker.h"
 
 namespace bpftrace::test {
@@ -55,10 +56,10 @@ public:
 
 class MockBPFtrace : public BPFtrace {
 public:
-  MOCK_METHOD2(
-      attach_probe,
-      std::vector<std::unique_ptr<AttachedProbe>>(Probe &probe,
-                                                  const BpfBytecode &bytecode));
+  MOCK_METHOD2(attach_probe,
+               Result<std::vector<std::unique_ptr<AttachedProbe>>>(
+                   Probe &probe,
+                   const BpfBytecode &bytecode));
 
   MOCK_METHOD1(resume_tracee, int(pid_t tracee_pid));
   std::vector<Probe> get_probes()
