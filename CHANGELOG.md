@@ -42,6 +42,8 @@ and this project adheres to
   - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
 - Positional params can be used in any part of a probe string
   - [#3956](https://github.com/bpftrace/bpftrace/pull/3956)
+- Don't error on missing single probes as long as at least one attachment was successful.
+  - [#4097](https://github.com/bpftrace/bpftrace/pull/4097)
 #### Deprecated
 #### Removed
 #### Fixed

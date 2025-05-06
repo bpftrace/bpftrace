@@ -11,11 +11,23 @@
 #include "probe_types.h"
 #include "usdt.h"
 
+#include "util/result.h"
+
 namespace bpftrace {
 
 bpf_probe_attach_type attachtype(ProbeType t);
 libbpf::bpf_prog_type progtype(ProbeType t);
 std::string progtypeName(libbpf::bpf_prog_type t);
+
+class ResolveOffsetError : public ErrorInfo<ResolveOffsetError> {
+public:
+  ResolveOffsetError(std::string origin) : origin_(std::move(origin)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+private:
+  std::string origin_;
+};
 
 class AttachedProbe {
 public:
@@ -31,12 +43,20 @@ public:
   const Probe &probe() const;
   int progfd() const;
   int linkfd_ = -1;
+  bool did_attach()
+  {
+    return attached_;
+  }
+  const std::string &err_msg() const
+  {
+    return err_msg_;
+  }
 
 private:
   std::string eventprefix() const;
   std::string eventname() const;
-  void resolve_offset_kprobe();
-  bool resolve_offset_uprobe(bool safe_mode, bool has_multiple_aps);
+  bool resolve_offset_kprobe();
+  bool resolve_offset_uprobe(bool safe_mode);
   void attach_multi_kprobe();
   void attach_multi_uprobe(std::optional<int> pid);
   void attach_kprobe();
@@ -81,6 +101,8 @@ private:
   int tracing_fd_ = -1;
   std::function<void()> usdt_destructor_;
   USDTHelper usdt_helper;
+  bool attached_ = false;
+  std::string err_msg_;
 
   BPFtrace &bpftrace_;
 };

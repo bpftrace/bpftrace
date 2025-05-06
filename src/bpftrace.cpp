@@ -299,28 +299,35 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     // Attach the real watchpoint probe
     {
-      bool registers_available = true;
       Probe &wp_probe = bpftrace->resources.watchpoint_probes[probe_idx];
       wp_probe.address = addr;
-      std::vector<std::unique_ptr<AttachedProbe>> aps;
-      try {
-        aps = bpftrace->attach_probe(wp_probe, bpftrace->bytecode_);
-      } catch (const util::EnospcException &ex) {
-        registers_available = false;
-        bpftrace->out_->message(MessageType::lost_events,
-                                "Failed to attach watchpoint probe. You are "
-                                "out of watchpoint registers.");
+      std::vector<std::unique_ptr<AttachedProbe>> aps = bpftrace->attach_probe(
+          wp_probe, bpftrace->bytecode_);
+
+      if (aps.empty()) {
         goto out;
       }
 
-      if (aps.empty() && registers_available) {
-        std::cerr << "Unable to attach real watchpoint probe" << std::endl;
-        abort = true;
-        goto out;
-      }
-
-      for (auto &ap : aps)
+      for (auto &ap : aps) {
+        if (!ap->did_attach()) {
+          const auto &err_msg = ap->err_msg();
+          if (bpftrace->config_->missing_probes == ConfigMissingProbes::error) {
+            if (!err_msg.empty()) {
+              LOG(ERROR) << err_msg;
+            }
+            LOG(ERROR) << "Unable to attach probe: " << ap->probe().name << ".";
+            abort = true;
+          } else if (bpftrace->config_->missing_probes ==
+                     ConfigMissingProbes::warn) {
+            if (!err_msg.empty()) {
+              LOG(WARNING) << err_msg;
+            }
+            LOG(WARNING) << "Unable to attach probe: " << ap->probe().name
+                         << ". Skipping.";
+          }
+        }
         bpftrace->attached_probes_.emplace_back(std::move(ap));
+      }
     }
 
   out:
@@ -704,38 +711,22 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
-  try {
-    const auto &program = bytecode.getProgramForProbe(probe);
-    std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
-                                      : this->pid();
+  const auto &program = bytecode.getProgramForProbe(probe);
+  std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
+                                    : this->pid();
 
-    if (probe.type == ProbeType::usdt) {
-      auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
-      for (auto &ap : aps)
-        ret.emplace_back(std::move(ap));
+  if (probe.type == ProbeType::usdt) {
+    auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
+    for (auto &ap : aps)
+      ret.emplace_back(std::move(ap));
 
-      return ret;
-    } else if (probe.type == ProbeType::uprobe ||
-               probe.type == ProbeType::uretprobe) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, program, pid, *this, safe_mode_));
-      return ret;
-    } else if (probe.type == ProbeType::watchpoint ||
-               probe.type == ProbeType::asyncwatchpoint) {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid, *this));
-      return ret;
-    } else {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid, *this));
-      return ret;
-    }
-  } catch (const util::EnospcException &e) {
-    // Caller will handle
-    throw e;
-  } catch (const std::exception &e) {
-    LOG(ERROR) << e.what();
-    ret.clear();
+  } else if (probe.type == ProbeType::uprobe ||
+             probe.type == ProbeType::uretprobe) {
+    ret.emplace_back(std::make_unique<AttachedProbe>(
+        probe, program, pid, *this, safe_mode_));
+  } else {
+    ret.emplace_back(
+        std::make_unique<AttachedProbe>(probe, program, pid, *this));
   }
   return ret;
 }
@@ -838,8 +829,7 @@ int BPFtrace::prerun() const
         << "environment variable, but BE CAREFUL since a high number of probes "
         << "attached can cause your system to crash.";
     return 1;
-  } else if (!bt_quiet)
-    out_->attached_probes(num_probes);
+  }
 
   return 0;
 }
@@ -898,6 +888,8 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
+  int num_special_attached = 0;
+
   auto begin_probe = resources.special_probes.find("BEGIN");
   if (begin_probe != resources.special_probes.end()) {
     auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
@@ -905,12 +897,20 @@ int BPFtrace::run(BpfBytecode bytecode)
       return -1;
 
     LOG(V1) << "Attaching BEGIN";
+    ++num_special_attached;
+  }
+
+  // This is a little bit of a lie as we don't actually attach the END
+  // special probe until the end
+  if (resources.special_probes.contains("END")) {
+    ++num_special_attached;
   }
 
   auto signal_probe = resources.special_probes.find("self_signal");
   if (signal_probe != resources.special_probes.end()) {
     auto &sig_prog = bytecode_.getProgramForProbe((*signal_probe).second);
     sigusr1_prog_fd_ = sig_prog.fd();
+    ++num_special_attached;
   }
 
   if (child_ && has_usdt_) {
@@ -935,10 +935,6 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
     if (!attach_reverse(probe)) {
       auto aps = attach_probe(probe, bytecode_);
-
-      if (aps.empty())
-        return -1;
-
       for (auto &ap : aps)
         attached_probes_.emplace_back(std::move(ap));
     }
@@ -951,10 +947,6 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
     if (attach_reverse(probe)) {
       auto aps = attach_probe(probe, bytecode_);
-
-      if (aps.empty())
-        return -1;
-
       for (auto &ap : aps)
         attached_probes_.emplace_back(std::move(ap));
     }
@@ -977,6 +969,42 @@ int BPFtrace::run(BpfBytecode bytecode)
       return -1;
     }
   }
+
+  size_t num_attached = 0;
+  for (const auto &ap : attached_probes_) {
+    if (ap->did_attach()) {
+      ++num_attached;
+    } else {
+      const auto &err_msg = ap->err_msg();
+      if (config_->missing_probes == ConfigMissingProbes::error) {
+        if (!err_msg.empty()) {
+          LOG(ERROR) << err_msg;
+        }
+        LOG(ERROR) << "Unable to attach probe: " << ap->probe().name << ".";
+      } else if (config_->missing_probes == ConfigMissingProbes::warn) {
+        if (!err_msg.empty()) {
+          LOG(WARNING) << err_msg;
+        }
+        LOG(WARNING) << "Unable to attach probe: " << ap->probe().name
+                     << ". Skipping.";
+      }
+    }
+  }
+
+  if (config_->missing_probes == ConfigMissingProbes::error &&
+      num_attached != attached_probes_.size()) {
+    return -1;
+  }
+
+  auto total_attached = num_attached + num_special_attached;
+
+  if (total_attached == 0) {
+    LOG(ERROR) << "Attachment failed for all probes.";
+    return -1;
+  }
+
+  if (!bt_quiet)
+    out_->attached_probes(total_attached);
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))

@@ -70,15 +70,15 @@ AFTER ./testprogs/fentry_args 1111 2222
 
 NAME fentry_warn_missing_probes
 PROG fentry:vfs_read,fentry:nonsense { exit(); }
-EXPECT WARNING: No BTF found for nonsense, skipping.
+EXPECT WARNING: No BTF found for nonsense.
 
 NAME fentry_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } fentry:vfs_read,fentry:nonsense { exit(); }
-EXPECT_NONE WARNING: No BTF found for nonsense, skipping.
+EXPECT_NONE WARNING: No BTF found for nonsense.
 
 NAME fentry_error_missing_probes
 PROG config = { missing_probes = "error" } fentry:vfs_read,fentry:nonsense { exit(); }
-EXPECT ERROR: No BTF found for nonsense
+EXPECT ERROR: No BTF found for nonsense.
 WILL_FAIL
 
 # Sanity check for kfunc/kretfunc alias
@@ -137,7 +137,8 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT ERROR: Error attaching probe: kprobe:nonsense:vfs_read: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+EXPECT WARNING: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+EXPECT ERROR: Attachment failed for all probes.
 WILL_FAIL
 
 NAME kprobe_wildcard_all_leading_underscore
@@ -157,7 +158,8 @@ EXPECT 0
 
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT ERROR: Error attaching probe: kprobe:vmlinux:nonsense
+EXPECT WARNING: Unable to attach probe: kprobe:vmlinux:nonsense. Skipping.
+EXPECT ERROR: Attachment failed for all probes.
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
@@ -207,7 +209,7 @@ CLEANUP nft delete table bpftrace
 
 NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
-EXPECT ERROR: Possible attachment attempt in the middle of an instruction, try a different offset.
+EXPECT WARNING: Possible attachment attempt in the middle of an instruction, try a different offset.
 ARCH x86_64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
@@ -221,15 +223,15 @@ WILL_FAIL
 
 NAME kprobe_warn_missing_probes
 PROG kprobe:vfs_read,kprobe:nonsense { exit(); }
-EXPECT WARNING: could not attach probe kprobe:nonsense, skipping.
+EXPECT WARNING: Unable to attach probe: kprobe:nonsense. Skipping.
 
 NAME kprobe_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } kprobe:vfs_read,kprobe:nonsense { exit(); }
-EXPECT_NONE WARNING: could not attach probe kprobe:nonsense, skipping.
+EXPECT_NONE WARNING: Unable to attach probe: kprobe:nonsense. Skipping.
 
 NAME kprobe_error_missing_probes
 PROG config = { missing_probes = "error" } kprobe:vfs_read,kprobe:nonsense { exit(); }
-EXPECT ERROR: Error attaching probe: kprobe:nonsense
+EXPECT ERROR: Unable to attach probe: kprobe:nonsense.
 WILL_FAIL
 
 NAME kretprobe
@@ -316,7 +318,7 @@ WILL_FAIL
 
 NAME uprobe_address_fail_resolve
 PROG uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}
-EXPECT ERROR: Could not resolve address: /bin/bash:0xa
+EXPECT WARNING: Could not resolve address: /bin/bash:0xa
 WILL_FAIL
 
 NAME uprobe_library
@@ -332,7 +334,7 @@ AFTER /bin/bash -c "echo lala";
 
 NAME uprobe_zero_size
 PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
-EXPECT ERROR: Could not determine boundary for _init (symbol has size 0).
+EXPECT WARNING: Could not determine boundary for _init (symbol has size 0).
        Use --unsafe to force attachment. WARNING: This option could lead to data corruption in the target process.
 WILL_FAIL
 
@@ -343,7 +345,7 @@ AFTER ./testprogs/uprobe_test
 
 NAME uprobe_warn_missing_probes
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, skipping probe.
+EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_ignore_missing_probes
@@ -353,7 +355,7 @@ AFTER ./testprogs/uprobe_test
 
 NAME uprobe_error_missing_probes
 PROG config = { missing_probes = "error" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT ERROR: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3, cannot attach probe.
+EXPECT ERROR: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3
 AFTER ./testprogs/uprobe_test
 WILL_FAIL
 
@@ -388,7 +390,7 @@ EXPECT hit
 
 NAME tracepoint_missing
 PROG t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT stdin:1:1-20: ERROR: tracepoint not found: syscalls:nonsense
+EXPECT stdin:1:1-20: WARNING: tracepoint not found: syscalls:nonsense
 WILL_FAIL
 
 NAME tracepoint_multiattach_missing
@@ -441,7 +443,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_module_missing
 PROG rawtracepoint:nonsense:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
-EXPECT ERROR: No BTF found for nonsense:sys_exit
+EXPECT WARNING: No BTF found for nonsense:sys_exit.
 REQUIRES_FEATURE btf
 WILL_FAIL
 
@@ -548,3 +550,16 @@ EXPECT_NONE bad
 BEFORE ./testprogs/nanosleep_loop
 BEFORE ./testprogs/nanosleep_loop
 TIMEOUT 2
+
+NAME some_missing_probes
+PROG kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
+EXPECT WARNING: Unable to attach probe: uprobe:./testprogs/uprobe_test:uprobeFunction3. Skipping.
+
+NAME all_missing_probes
+PROG kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT WARNING: Unable to attach probe: kprobe:nonsense. Skipping.
+EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
+EXPECT WARNING: Unable to attach probe: uprobe:./testprogs/uprobe_test:uprobeFunction3. Skipping.
+EXPECT ERROR: Attachment failed for all probes.
+WILL_FAIL
