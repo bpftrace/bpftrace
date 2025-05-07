@@ -3761,7 +3761,7 @@ takes a lot of resources (and it should not happen often).
 
 ==== max_cat_bytes
 
-Default: 10000
+Default: 10240
 
 Maximum bytes read by cat builtin.
 
