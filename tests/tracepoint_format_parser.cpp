@@ -59,9 +59,9 @@ TEST(tracepoint_format_parser, tracepoint_struct)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", bpftrace);
+      format_file, "syscalls", "sys_enter_read", *bpftrace);
 
   EXPECT_EQ(expected, result);
 }
@@ -80,9 +80,9 @@ TEST(tracepoint_format_parser, array)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", bpftrace);
+      format_file, "syscalls", "sys_enter_read", *bpftrace);
 
   EXPECT_EQ(expected, result);
 }
@@ -100,9 +100,9 @@ TEST(tracepoint_format_parser, data_loc)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", bpftrace);
+      format_file, "syscalls", "sys_enter_read", *bpftrace);
 
   EXPECT_EQ(expected, result);
 }
@@ -161,9 +161,9 @@ TEST(tracepoint_format_parser, adjust_integer_types)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", bpftrace);
+      format_file, "syscalls", "sys_enter_read", *bpftrace);
 
   EXPECT_EQ(expected, result);
 }
@@ -208,9 +208,9 @@ TEST(tracepoint_format_parser, padding)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "sched", "sched_wakeup", bpftrace);
+      format_file, "sched", "sched_wakeup", *bpftrace);
 
   EXPECT_EQ(expected, result);
 }
@@ -241,19 +241,19 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
 
   std::istringstream format_file(input);
 
-  MockBPFtrace bpftrace;
+  auto bpftrace = get_mock_bpftrace();
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", bpftrace);
+      format_file, "syscalls", "sys_enter_read", *bpftrace);
 
   // Check that BTF types are populated
-  EXPECT_THAT(bpftrace.btf_set_, Contains("unsigned short"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("unsigned char"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("int"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("u64"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("char *"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("size_t"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("char"));
-  EXPECT_THAT(bpftrace.btf_set_, Contains("TASK_COMM_LEN"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("unsigned short"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("unsigned char"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("int"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("u64"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("char *"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("size_t"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("char"));
+  EXPECT_THAT(bpftrace->btf_set_, Contains("TASK_COMM_LEN"));
 }
 
 } // namespace bpftrace::test::tracepoint_format_parser

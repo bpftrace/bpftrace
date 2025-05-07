@@ -13,6 +13,7 @@ add_library(compiler_core STATIC
 add_dependencies(compiler_core parser)
 
 add_library(runtime STATIC
+  async_action.cpp
   attached_probe.cpp
   bpffeature.cpp
   bpftrace.cpp

@@ -157,9 +157,10 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   bpftrace.helper_check_level_ = 0;
 }
 
-std::unique_ptr<MockBPFtrace> get_mock_bpftrace()
+std::unique_ptr<MockBPFtrace> get_mock_bpftrace(std::ostream &os)
 {
-  auto bpftrace = std::make_unique<NiceMock<MockBPFtrace>>();
+  std::unique_ptr<Output> output = std::make_unique<TextOutput>(os);
+  auto bpftrace = std::make_unique<NiceMock<MockBPFtrace>>(std::move(output));
   setup_mock_bpftrace(*bpftrace);
 
   auto probe_matcher = std::make_unique<NiceMock<MockProbeMatcher>>(
@@ -172,9 +173,10 @@ std::unique_ptr<MockBPFtrace> get_mock_bpftrace()
   return bpftrace;
 }
 
-std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
+std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace(std::ostream &os)
 {
-  auto bpftrace = std::make_unique<StrictMock<MockBPFtrace>>();
+  std::unique_ptr<Output> output = std::make_unique<TextOutput>(os);
+  auto bpftrace = std::make_unique<StrictMock<MockBPFtrace>>(std::move(output));
   setup_mock_bpftrace(*bpftrace);
 
   auto probe_matcher = std::make_unique<StrictMock<MockProbeMatcher>>(
