@@ -4997,4 +4997,13 @@ macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add
 )");
 }
 
+TEST(semantic_analyser, warning_for_empty_positional_parameters)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("1");
+  test_for_warning(bpftrace,
+                   "BEGIN { print(($1, $2)) }",
+                   "Positional parameter $2 is empty or not provided.");
+}
+
 } // namespace bpftrace::test::semantic_analyser
