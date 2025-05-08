@@ -13,7 +13,8 @@ namespace bpftrace::test::async_action {
 using namespace bpftrace::async_action;
 
 template <typename... Args>
-void syscall_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
+void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
+                   AsyncAction id,
                    std::string &command,
                    Args... args)
 {
@@ -22,21 +23,18 @@ void syscall_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
   size_t total_args_size = 0;
   const char *arg_strs[] = { args... };
 
-  if constexpr (sizeof...(Args) > 0) {
-    ssize_t offset = sizeof(uint64_t);
-    for (const char *arg_str : arg_strs) {
-      size_t arg_len = strlen(arg_str) + 1;
-      fields.push_back(Field{ .name = "arg",
-                              .type = CreateString(arg_len),
-                              .offset = offset,
-                              .bitfield = std::nullopt });
-      offset += arg_len;
-      total_args_size += arg_len;
-    }
+  ssize_t offset = sizeof(uint64_t);
+  for (const char *arg_str : arg_strs) {
+    size_t arg_len = strlen(arg_str) + 1;
+    fields.push_back(Field{ .name = "arg",
+                            .type = CreateString(arg_len),
+                            .offset = offset,
+                            .bitfield = std::nullopt });
+    offset += arg_len;
+    total_args_size += arg_len;
   }
 
-  bpftrace->resources.system_args.emplace_back(std::make_tuple(cmd, fields));
-  uint64_t printf_id = static_cast<uint64_t>(AsyncAction::syscall);
+  uint64_t printf_id = static_cast<uint64_t>(id);
   size_t data_size = sizeof(uint64_t) + total_args_size;
   std::vector<uint8_t> arg_data(data_size, 0);
   memcpy(arg_data.data(), &printf_id, sizeof(printf_id));
@@ -50,7 +48,15 @@ void syscall_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
     }
   }
 
-  syscall_handler(bpftrace.get(), AsyncAction::syscall, arg_data.data());
+  if (id == AsyncAction::syscall) {
+    bpftrace->resources.system_args.emplace_back(std::make_tuple(cmd, fields));
+    syscall_handler(bpftrace.get(), id, arg_data.data());
+  } else if (id == AsyncAction::cat) {
+    bpftrace->resources.cat_args.emplace_back(std::make_tuple(cmd, fields));
+    cat_handler(bpftrace.get(), id, arg_data.data());
+  } else {
+    FAIL() << "Only support syscall and cat";
+  }
 }
 
 TEST(async_action, join)
@@ -226,7 +232,7 @@ TEST(async_action, syscall)
   bpftrace->safe_mode_ = false;
   auto cmd = std::string("echo test");
 
-  syscall_proxy(bpftrace, cmd);
+  handler_proxy(bpftrace, AsyncAction::syscall, cmd);
 
   EXPECT_THAT(out.str(), testing::HasSubstr("test"))
       << "Syscall output should contain the result of 'echo test'";
@@ -239,7 +245,7 @@ TEST(async_action, syscall_safe_mode)
   auto cmd = std::string("echo test");
 
   try {
-    syscall_proxy(bpftrace, cmd);
+    handler_proxy(bpftrace, AsyncAction::syscall, cmd);
     FAIL() << "Expected syscall_handler to throw an exception in safe mode";
   } catch (const util::FatalUserException &ex) {
     EXPECT_THAT(std::string(ex.what()),
@@ -262,10 +268,34 @@ TEST(async_action, syscall_with_args)
   bpftrace->safe_mode_ = false;
   auto cmd = std::string("echo %s");
 
-  syscall_proxy(bpftrace, cmd, "hello world");
+  handler_proxy(bpftrace, AsyncAction::syscall, cmd, "hello world");
 
   EXPECT_THAT(out.str(), testing::HasSubstr("hello world"))
       << "Syscall output should contain the argument 'hello world'";
+}
+
+TEST(async_action, cat)
+{
+  std::string test_content = "Hello, cat_handler test!\nThis is line 2.\n";
+  char filename[] = "/tmp/bpftrace-test-cat-XXXXXX";
+  int fd = mkstemp(filename);
+  ASSERT_NE(fd, -1) << "Failed to create temporary file";
+  ASSERT_EQ(write(fd, test_content.c_str(), test_content.length()),
+            static_cast<ssize_t>(test_content.length()));
+  close(fd);
+
+  std::stringstream out;
+  auto bpftrace = get_mock_bpftrace(out);
+  bpftrace->config_->max_cat_bytes = 1024;
+
+  auto cmd = std::string("%s/%s");
+  std::string basename = std::string(filename).substr(5);
+  handler_proxy(bpftrace, AsyncAction::cat, cmd, "/tmp", basename.c_str());
+
+  EXPECT_EQ(test_content, out.str())
+      << "cat_handler should output the file content correctly";
+
+  std::remove(filename);
 }
 
 } // namespace bpftrace::test::async_action

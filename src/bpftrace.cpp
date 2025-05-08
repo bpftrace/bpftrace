@@ -47,7 +47,6 @@
 #include "util/exceptions.h"
 #include "util/format.h"
 #include "util/int_parser.h"
-#include "util/io.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/stats.h"
@@ -373,18 +372,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id >= AsyncAction::cat &&
              printf_id <= AsyncAction::cat_end) {
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::cat);
-    auto &fmt = std::get<0>(bpftrace->resources.cat_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.cat_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    std::stringstream buf;
-    util::cat_file(fmt.format_str(arg_values).c_str(),
-                   bpftrace->config_->max_cat_bytes,
-                   buf);
-    bpftrace->out_->message(MessageType::cat, buf.str(), false);
-
+    async_action::cat_handler(bpftrace, printf_id, arg_data);
     return;
   } else if (printf_id >= AsyncAction::printf &&
              printf_id <= AsyncAction::printf_end) {

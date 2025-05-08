@@ -2,6 +2,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "util/exceptions.h"
+#include "util/io.h"
 #include "util/system.h"
 #include <memory>
 #include <string>
@@ -74,6 +75,21 @@ void syscall_handler(BPFtrace *bpftrace,
   bpftrace->out_->message(MessageType::syscall,
                           util::exec_system(fmt.format_str(arg_values).c_str()),
                           false);
+}
+
+void cat_handler(BPFtrace *bpftrace, AsyncAction printf_id, uint8_t *arg_data)
+{
+  auto id = static_cast<size_t>(printf_id) -
+            static_cast<size_t>(AsyncAction::cat);
+  auto &fmt = std::get<0>(bpftrace->resources.cat_args[id]);
+  auto &args = std::get<1>(bpftrace->resources.cat_args[id]);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+  std::stringstream buf;
+  util::cat_file(fmt.format_str(arg_values).c_str(),
+                 bpftrace->config_->max_cat_bytes,
+                 buf);
+  bpftrace->out_->message(MessageType::cat, buf.str(), false);
 }
 
 } // namespace bpftrace::async_action
