@@ -3,6 +3,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
 #include "bpftrace.h"
@@ -91,10 +92,12 @@ ast::ASTContext test(BPFtrace &bpftrace,
                 .put(ast)
                 .put(bpftrace)
                 .add(CreateParsePass())
+                .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(CreateClangPass())
                 .add(CreateParsePass())
+                .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
@@ -2794,7 +2797,7 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 2);
 }
 
-TEST(semantic_analyser, macros)
+TEST(semantic_analyser, c_macros)
 {
   test("#define A 1\nkprobe:f { printf(\"%d\", A); }");
   test("#define A A\nkprobe:f { printf(\"%d\", A); }", 1);
@@ -4953,6 +4956,44 @@ HINT: Valid map types: percpulruhash, percpuarray, percpuhash, lruhash, hash
 stdin:1:1-25: ERROR: Max entries can only be 1 for map type percpuarray
 let @a = percpuarray(10); BEGIN { @a = count(); }
 ~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, macros)
+{
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->config_->unstable_macro = true;
+
+  test_error(*bpftrace,
+             "macro set($x) { $x = 1; $x } BEGIN { $a = \"string\"; set($a); }",
+             R"(
+stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'string[7]'
+macro set($x) { $x = 1; $x } BEGIN { $a = "string"; set($a); }
+                ~~~~~~
+stdin:1:53-60: ERROR: expanded from
+macro set($x) { $x = 1; $x } BEGIN { $a = "string"; set($a); }
+                                                    ~~~~~~~
+)");
+
+  test_error(*bpftrace,
+             "macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a "
+             "= \"string\"; add1($a); }",
+             R"(
+stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with int64
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add1($a); }
+                    ~
+stdin:1:18-20: ERROR: left (string[7])
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add1($a); }
+                 ~~
+stdin:1:23-24: ERROR: right (int64)
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add1($a); }
+                      ~
+stdin:1:78-86: ERROR: expanded from
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add1($a); }
+                                                                             ~~~~~~~~
+stdin:1:44-52: ERROR: expanded from
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } BEGIN { $a = "string"; add1($a); }
+                                           ~~~~~~~~
 )");
 }
 

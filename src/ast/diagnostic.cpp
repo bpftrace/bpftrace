@@ -8,13 +8,8 @@ namespace bpftrace::ast {
 
 std::stringstream& Diagnostic::addContext(Location loc)
 {
-  // This must not modify the existing location, instead we add
-  // a new link to the location chain. We don't inject the full
-  // chain if one has been provided, but take only that node.
-  auto nloc = std::make_shared<LocationChain>(loc->current);
-  auto& nlink = nloc->parent.emplace(LocationChain::Parent(std::move(loc_)));
-  loc_ = std::move(nloc);
-  return nlink.msg;
+  loc_->contexts.emplace_back(std::make_shared<LocationChain>(loc->current));
+  return loc_->contexts.back().msg;
 }
 
 void Diagnostics::emit(std::ostream& out) const
@@ -31,20 +26,31 @@ void Diagnostics::emit(std::ostream& out, Severity s) const
 
 void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
 {
-  // Build our set of messages.
+  // Build our sets of messages.
   std::vector<std::pair<std::string, SourceLocation>> msgs;
+  std::vector<std::pair<std::string, SourceLocation>> parent_msgs;
   auto loc = d.loc();
-  while (loc) {
-    auto& parent = loc->parent;
-    if (parent) {
-      msgs.emplace_back(parent->msg.str(), loc->current);
-      loc = parent->loc;
-    } else {
-      msgs.emplace_back(d.msg(), loc->current);
-      break;
+
+  if (loc) {
+    msgs.emplace_back(d.msg(), loc->current);
+
+    for (const auto& context : loc->contexts) {
+      msgs.emplace_back(context.msg.str(), context.loc->current);
+    }
+
+    while (loc) {
+      auto& parent = loc->parent;
+      if (parent) {
+        parent_msgs.emplace_back(parent->msg.str(), parent->loc->current);
+        loc = parent->loc;
+      } else {
+        break;
+      }
     }
   }
-  std::ranges::reverse(msgs);
+
+  // reverse to print the initial parent first
+  std::ranges::reverse(parent_msgs);
 
   switch (s) {
     case Severity::Warning:
@@ -57,6 +63,9 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
       if (auto msg = d.hint(); !msg.empty()) {
         LOG(HINT, out) << msg;
       }
+      for (const auto& [msg, loc] : parent_msgs) {
+        LOG(WARNING, loc.source_location(), loc.source_context(), out) << msg;
+      }
       break;
     case Severity::Error:
       if (msgs.empty()) {
@@ -67,6 +76,9 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
       }
       if (auto msg = d.hint(); !msg.empty()) {
         LOG(HINT, out) << msg;
+      }
+      for (const auto& [msg, loc] : parent_msgs) {
+        LOG(ERROR, loc.source_location(), loc.source_context(), out) << msg;
       }
       break;
   }
