@@ -10,6 +10,7 @@
 #include "ast/clone.h"
 #include "ast/context.h"
 #include "diagnostic.h"
+#include "probe_types.h"
 #include "types.h"
 #include "usdt.h"
 
