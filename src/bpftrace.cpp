@@ -369,21 +369,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id >= AsyncAction::syscall &&
              printf_id <= AsyncAction::syscall_end) {
-    if (bpftrace->safe_mode_) {
-      throw util::FatalUserException(
-          "syscall() not allowed in safe mode. Use '--unsafe'.");
-    }
-
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::syscall);
-    auto &fmt = std::get<0>(bpftrace->resources.system_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.system_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    bpftrace->out_->message(MessageType::syscall,
-                            util::exec_system(
-                                fmt.format_str(arg_values).c_str()),
-                            false);
+    async_action::syscall_handler(bpftrace, printf_id, arg_data);
     return;
   } else if (printf_id >= AsyncAction::cat &&
              printf_id <= AsyncAction::cat_end) {

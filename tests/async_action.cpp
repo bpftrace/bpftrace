@@ -4,12 +4,54 @@
 #include "location.hh"
 #include "mocks.h"
 #include "types.h"
+#include "util/exceptions.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::async_action {
 
 using namespace bpftrace::async_action;
+
+template <typename... Args>
+void syscall_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
+                   std::string &command,
+                   Args... args)
+{
+  FormatString cmd(command);
+  std::vector<Field> fields;
+  size_t total_args_size = 0;
+  const char *arg_strs[] = { args... };
+
+  if constexpr (sizeof...(Args) > 0) {
+    ssize_t offset = sizeof(uint64_t);
+    for (const char *arg_str : arg_strs) {
+      size_t arg_len = strlen(arg_str) + 1;
+      fields.push_back(Field{ .name = "arg",
+                              .type = CreateString(arg_len),
+                              .offset = offset,
+                              .bitfield = std::nullopt });
+      offset += arg_len;
+      total_args_size += arg_len;
+    }
+  }
+
+  bpftrace->resources.system_args.emplace_back(std::make_tuple(cmd, fields));
+  uint64_t printf_id = static_cast<uint64_t>(AsyncAction::syscall);
+  size_t data_size = sizeof(uint64_t) + total_args_size;
+  std::vector<uint8_t> arg_data(data_size, 0);
+  memcpy(arg_data.data(), &printf_id, sizeof(printf_id));
+  if constexpr (sizeof...(Args) > 0) {
+    ssize_t offset = sizeof(uint64_t);
+
+    for (const char *arg_str : arg_strs) {
+      size_t arg_len = strlen(arg_str) + 1;
+      memcpy(arg_data.data() + offset, arg_str, arg_len);
+      offset += arg_len;
+    }
+  }
+
+  syscall_handler(bpftrace.get(), AsyncAction::syscall, arg_data.data());
+}
 
 TEST(async_action, join)
 {
@@ -175,6 +217,55 @@ TEST(async_action, helper_error)
     EXPECT_THAT(output, testing::HasSubstr(std::to_string(tc.return_value)))
         << "Return value not found in output: " << tc.return_value;
   }
+}
+
+TEST(async_action, syscall)
+{
+  std::stringstream out;
+  auto bpftrace = get_mock_bpftrace(out);
+  bpftrace->safe_mode_ = false;
+  auto cmd = std::string("echo test");
+
+  syscall_proxy(bpftrace, cmd);
+
+  EXPECT_THAT(out.str(), testing::HasSubstr("test"))
+      << "Syscall output should contain the result of 'echo test'";
+}
+
+TEST(async_action, syscall_safe_mode)
+{
+  std::stringstream out;
+  auto bpftrace = get_mock_bpftrace(out);
+  auto cmd = std::string("echo test");
+
+  try {
+    syscall_proxy(bpftrace, cmd);
+    FAIL() << "Expected syscall_handler to throw an exception in safe mode";
+  } catch (const util::FatalUserException &ex) {
+    EXPECT_THAT(std::string(ex.what()),
+                testing::HasSubstr(
+                    "syscall() not allowed in safe mode. Use '--unsafe'."))
+        << "Exception should indicate syscall is not allowed in safe mode";
+  } catch (...) {
+    FAIL() << "Expected syscall_handler to throw a FatalUserException in safe "
+              "mode";
+  }
+
+  EXPECT_TRUE(out.str().empty())
+      << "No output should be generated in safe mode";
+}
+
+TEST(async_action, syscall_with_args)
+{
+  std::stringstream out;
+  auto bpftrace = get_mock_bpftrace(out);
+  bpftrace->safe_mode_ = false;
+  auto cmd = std::string("echo %s");
+
+  syscall_proxy(bpftrace, cmd, "hello world");
+
+  EXPECT_THAT(out.str(), testing::HasSubstr("hello world"))
+      << "Syscall output should contain the argument 'hello world'";
 }
 
 } // namespace bpftrace::test::async_action

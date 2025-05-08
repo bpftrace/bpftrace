@@ -1,6 +1,8 @@
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
 #include "log.h"
+#include "util/exceptions.h"
+#include "util/system.h"
 #include <memory>
 #include <string>
 
@@ -52,6 +54,26 @@ void helper_error_handler(BPFtrace *bpftrace, void *data)
   auto return_value = helper_error->return_value;
   auto &info = bpftrace->resources.helper_error_info[error_id];
   bpftrace->out_->helper_error(return_value, info);
+}
+
+void syscall_handler(BPFtrace *bpftrace,
+                     AsyncAction printf_id,
+                     uint8_t *arg_data)
+{
+  if (bpftrace->safe_mode_) {
+    throw util::FatalUserException(
+        "syscall() not allowed in safe mode. Use '--unsafe'.");
+  }
+
+  auto id = static_cast<uint64_t>(printf_id) -
+            static_cast<uint64_t>(AsyncAction::syscall);
+  auto &fmt = std::get<0>(bpftrace->resources.system_args[id]);
+  auto &args = std::get<1>(bpftrace->resources.system_args[id]);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+  bpftrace->out_->message(MessageType::syscall,
+                          util::exec_system(fmt.format_str(arg_values).c_str()),
+                          false);
 }
 
 } // namespace bpftrace::async_action
