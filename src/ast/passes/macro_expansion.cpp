@@ -208,16 +208,15 @@ std::optional<Block *> MacroExpander::expand(Macro &macro, const Call &call)
   }
 
   for (auto expr : macro.block->stmts) {
-    stmt_list.push_back(clone(ast_, expr, expr.loc()));
+    stmt_list.push_back(clone(ast_, expr, call.loc));
   }
 
   auto *cloned_block =
       macro.block->expr.has_value()
-          ? ast_.make_node<Block>(
-                std::move(stmt_list),
-                clone(ast_, *macro.block->expr, macro.block->expr->loc()),
-                Location(macro.loc))
-          : ast_.make_node<Block>(std::move(stmt_list), Location(macro.loc));
+          ? ast_.make_node<Block>(std::move(stmt_list),
+                                  clone(ast_, *macro.block->expr, call.loc),
+                                  Location(macro.loc))
+          : ast_.make_node<Block>(std::move(stmt_list), Location(call.loc));
 
   visit(cloned_block);
 

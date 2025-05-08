@@ -74,9 +74,8 @@ using Location = std::shared_ptr<LocationChain>;
 // `Location` alias should be the way that it is referred to broadly.
 class LocationChain {
 public:
-  // See the `parent` field below.
-  struct Parent {
-    Parent(Location &&loc) : loc(std::move(loc)) {};
+  struct Context {
+    Context(Location &&loc) : loc(std::move(loc)) {};
     std::stringstream msg;
     const Location loc;
   };
@@ -109,8 +108,9 @@ public:
   // copying a node you may automatically modify the location in order to
   // inject a parent that has "expanded from <...>". When these are displayed as
   // diagnostics, they are unpacked in reverse.
-  std::optional<Parent> parent;
+  std::optional<Context> parent;
   const SourceLocation current;
+  std::vector<Context> contexts;
 };
 
 Location operator+(const Location &orig, const Location &expansion);
