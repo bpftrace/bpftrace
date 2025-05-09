@@ -169,4 +169,13 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_->log_size, 150);
 }
 
+TEST(config_analyser, log_warnings)
+{
+  test_for_warning("config = { symbol_source=\"symbol_table\" } BEGIN { }",
+                   "symbol_source is deprecated and has no effect");
+  test_for_no_warning(
+      "config = { symbol_source=\"zzz\"; log_warnings=0 } BEGIN { }",
+      "symbol_source is deprecated and has no effect");
+}
+
 } // namespace bpftrace::test::config_analyser

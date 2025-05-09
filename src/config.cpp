@@ -276,6 +276,7 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "lazy_symbolication", CONFIG_FIELD_PARSER(lazy_symbolication) },
   { "license", CONFIG_FIELD_PARSER(license) },
   { "log_size", CONFIG_FIELD_PARSER(log_size) },
+  { "log_warnings", CONFIG_FIELD_PARSER(log_warnings) },
   { "max_bpf_progs", CONFIG_FIELD_PARSER(max_bpf_progs) },
   { "max_cat_bytes", CONFIG_FIELD_PARSER(max_cat_bytes) },
   { "max_map_keys", CONFIG_FIELD_PARSER(max_map_keys) },
