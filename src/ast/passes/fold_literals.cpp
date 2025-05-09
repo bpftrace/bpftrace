@@ -21,6 +21,7 @@ public:
   std::optional<Expression> visit(Binop &op);
   std::optional<Expression> visit(PositionalParameterCount &param);
   std::optional<Expression> visit(PositionalParameter &param);
+  std::optional<Expression> visit(CpuProcessorCount &param);
   std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Expression &expr);
 
@@ -345,6 +346,13 @@ std::optional<Expression> LiteralFolder::visit(PositionalParameterCount &param)
 {
   // This is always an unsigned integer value.
   return ast_.make_node<Integer>(bpftrace_.num_params(), Location(param.loc));
+}
+
+std::optional<Expression> LiteralFolder::visit(CpuProcessorCount &param)
+{
+  // This is always an unsigned integer value.
+  return ast_.make_node<Integer>(util::get_online_cpus().size(),
+                                 Location(param.loc));
 }
 
 std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)

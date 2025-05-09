@@ -165,6 +165,7 @@ oct_esc  [0-7]{1,3}
 "offsetof"              { return Parser::make_OFFSETOF(yytext, driver.loc); }
 "let"                   { return Parser::make_LET(yytext, driver.loc); }
 "import"                { return Parser::make_IMPORT(yytext, driver.loc); }
+"nproc"                 { return Parser::make_NPROC(driver.loc); }
 
 {int_type}              { return Parser::make_INT_TYPE(yytext, driver.loc); }
 {builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, driver.loc); }

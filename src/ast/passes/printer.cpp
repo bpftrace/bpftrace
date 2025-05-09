@@ -47,6 +47,12 @@ void Printer::visit([[maybe_unused]] PositionalParameterCount &param)
   out_ << indent << "param: $#" << std::endl;
 }
 
+void Printer::visit([[maybe_unused]] CpuProcessorCount &param)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "nproc: " << std::endl;
+}
+
 void Printer::visit(String &string)
 {
   std::string indent(depth_, ' ');

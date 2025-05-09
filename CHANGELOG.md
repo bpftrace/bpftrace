@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- Add nproc to get the number of CPUs.
+  - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)
 - Drop majority of DWARF support. Only uprobe argument parsing remains.
   - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
   - [#3950](https://github.com/bpftrace/bpftrace/pull/3950)
