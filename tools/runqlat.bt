@@ -22,6 +22,14 @@
 #define TASK_RUNNING 0
 #endif
 
+/*
+ * Suppress warnings from the `delete` call, which is racy
+ * because sched_switch gets called very very often.
+ */
+config = {
+	log_warnings=0;
+}
+
 BEGIN
 {
 	printf("Tracing CPU scheduler... Hit Ctrl-C to end.\n");
