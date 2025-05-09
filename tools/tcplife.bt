@@ -27,6 +27,10 @@
 #define AF_INET6 10
 #endif
 
+config = {
+	log_warnings=0;
+}
+
 BEGIN
 {
 	printf("%-5s %-10s %-15s %-5s %-15s %-5s ", "PID", "COMM",
