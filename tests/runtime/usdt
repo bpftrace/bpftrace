@@ -287,3 +287,8 @@ RUN {{BPFTRACE}} runtime/scripts/usdt_multi_modules.bt
 EXPECT Attaching 2 probes...
 TIMEOUT 1
 REQUIRES ./testprogs/systemtap_sys_sdt_check
+
+NAME usdt probes firing order
+RUN {{BPFTRACE}} runtime/scripts/usdt_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/usdt_sized_args
