@@ -558,3 +558,8 @@ NAME rawtracepoint_order
 RUN {{BPFTRACE}} runtime/scripts/rawtracepoint_order.bt
 EXPECT_REGEX (first)+ second
 AFTER ./testprogs/syscall nanosleep 233;
+
+NAME usdt_order
+RUN {{BPFTRACE}} runtime/scripts/usdt_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/usdt_sized_args
