@@ -548,3 +548,8 @@ EXPECT_NONE bad
 BEFORE ./testprogs/nanosleep_loop
 BEFORE ./testprogs/nanosleep_loop
 TIMEOUT 2
+
+NAME fentry_order
+RUN {{BPFTRACE}} runtime/scripts/fentry_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
