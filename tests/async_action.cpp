@@ -12,50 +12,111 @@ namespace bpftrace::test::async_action {
 
 using namespace bpftrace::async_action;
 
+// Process string type argument - handle const char*
+template <typename T>
+void process_arg(std::vector<Field> &fields,
+                 ssize_t &offset,
+                 size_t &total_size,
+                 T arg,
+                 [[maybe_unused]] std::enable_if_t<
+                     std::is_convertible_v<T, const char *>> *unused = nullptr)
+{
+  const char *str = arg;
+  size_t arg_len = strlen(str) + 1;
+
+  fields.push_back(Field{ .name = "arg",
+                          .type = CreateString(arg_len),
+                          .offset = offset,
+                          .bitfield = std::nullopt });
+
+  offset += arg_len;
+  total_size += arg_len;
+}
+
+// Process integer type argument
+template <typename T>
+void process_arg(std::vector<Field> &fields,
+                 ssize_t &offset,
+                 size_t &total_size,
+                 [[maybe_unused]] T arg,
+                 [[maybe_unused]] std::enable_if_t<std::is_integral_v<T> &&
+                                                   !std::is_same_v<T, char *>>
+                     *unused = nullptr)
+{
+  size_t arg_size = sizeof(T);
+
+  fields.push_back(Field{ .name = "arg",
+                          .type = CreateInt(arg_size * 8),
+                          .offset = offset,
+                          .bitfield = std::nullopt });
+
+  offset += arg_size;
+  total_size += arg_size;
+}
+
+template <typename T>
+void fill_arg_data(
+    uint8_t *data,
+    ssize_t &offset,
+    T arg,
+    [[maybe_unused]] std::enable_if_t<std::is_convertible_v<T, const char *>>
+        *unused = nullptr)
+{
+  const char *str = arg;
+  size_t arg_len = strlen(str) + 1;
+  memcpy(data + offset, str, arg_len);
+  offset += arg_len;
+}
+
+// Fill data for integer, unsigned long long and char type arguments
+template <typename T>
+void fill_arg_data(
+    uint8_t *data,
+    ssize_t &offset,
+    T arg,
+    [[maybe_unused]] std::enable_if_t<!std::is_convertible_v<T, const char *> &&
+                                      !std::is_same_v<T, std::string>> *unused =
+        nullptr)
+{
+  memcpy(data + offset, &arg, sizeof(T));
+  offset += sizeof(T);
+}
+
 template <typename... Args>
 void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
                    AsyncAction id,
                    std::string &command,
-                   Args... args)
+                   [[maybe_unused]] Args... args)
 {
   FormatString cmd(command);
   std::vector<Field> fields;
   size_t total_args_size = 0;
-  const char *arg_strs[] = { args... };
 
-  ssize_t offset = sizeof(uint64_t);
-  for (const char *arg_str : arg_strs) {
-    size_t arg_len = strlen(arg_str) + 1;
-    fields.push_back(Field{ .name = "arg",
-                            .type = CreateString(arg_len),
-                            .offset = offset,
-                            .bitfield = std::nullopt });
-    offset += arg_len;
-    total_args_size += arg_len;
+  if constexpr (sizeof...(Args) > 0) {
+    ssize_t offset = sizeof(uint64_t);
+    (process_arg(fields, offset, total_args_size, args), ...);
   }
 
-  uint64_t printf_id = static_cast<uint64_t>(id);
+  auto printf_id = static_cast<uint64_t>(id);
   size_t data_size = sizeof(uint64_t) + total_args_size;
   std::vector<uint8_t> arg_data(data_size, 0);
   memcpy(arg_data.data(), &printf_id, sizeof(printf_id));
   if constexpr (sizeof...(Args) > 0) {
     ssize_t offset = sizeof(uint64_t);
-
-    for (const char *arg_str : arg_strs) {
-      size_t arg_len = strlen(arg_str) + 1;
-      memcpy(arg_data.data() + offset, arg_str, arg_len);
-      offset += arg_len;
-    }
+    (fill_arg_data(arg_data.data(), offset, args), ...);
   }
 
   if (id == AsyncAction::syscall) {
-    bpftrace->resources.system_args.emplace_back(std::make_tuple(cmd, fields));
+    bpftrace->resources.system_args.emplace_back(cmd, fields);
     syscall_handler(bpftrace.get(), id, arg_data.data());
   } else if (id == AsyncAction::cat) {
-    bpftrace->resources.cat_args.emplace_back(std::make_tuple(cmd, fields));
+    bpftrace->resources.cat_args.emplace_back(cmd, fields);
     cat_handler(bpftrace.get(), id, arg_data.data());
+  } else if (id == AsyncAction::printf) {
+    bpftrace->resources.printf_args.emplace_back(cmd, fields);
+    printf_handler(bpftrace.get(), id, arg_data.data());
   } else {
-    FAIL() << "Only support syscall and cat";
+    FAIL() << "Only support syscall, cat, and printf";
   }
 }
 
@@ -296,6 +357,29 @@ TEST(async_action, cat)
       << "cat_handler should output the file content correctly";
 
   std::remove(filename);
+}
+
+TEST(async_action, printf)
+{
+  std::stringstream out;
+  auto bpftrace = get_mock_bpftrace(out);
+
+  std::string format = "Multiple: %s=%d (0x%llx) char=%hhu";
+  char expected_buffer[64];
+  snprintf(expected_buffer,
+           sizeof(expected_buffer),
+           format.c_str(),
+           "answer",
+           42,
+           0xDEADBEEFULL,
+           'a');
+  std::string expected(expected_buffer);
+
+  handler_proxy(
+      bpftrace, AsyncAction::printf, format, "answer", 42, 0xDEADBEEFULL, 'a');
+
+  EXPECT_EQ(expected, out.str())
+      << "printf_handler should format multiple arguments correctly";
 }
 
 } // namespace bpftrace::test::async_action

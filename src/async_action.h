@@ -12,5 +12,8 @@ void syscall_handler(BPFtrace *bpftrace,
                      AsyncAction printf_id,
                      uint8_t *arg_data);
 void cat_handler(BPFtrace *bpftrace, AsyncAction printf_id, uint8_t *arg_data);
+void printf_handler(BPFtrace *bpftrace,
+                    AsyncAction printf_id,
+                    uint8_t *arg_data);
 
 } // namespace bpftrace::async_action

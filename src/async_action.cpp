@@ -92,4 +92,18 @@ void cat_handler(BPFtrace *bpftrace, AsyncAction printf_id, uint8_t *arg_data)
   bpftrace->out_->message(MessageType::cat, buf.str(), false);
 }
 
+void printf_handler(BPFtrace *bpftrace,
+                    AsyncAction printf_id,
+                    uint8_t *arg_data)
+{
+  auto id = static_cast<size_t>(printf_id) -
+            static_cast<size_t>(AsyncAction::printf);
+  auto &fmt = std::get<0>(bpftrace->resources.printf_args[id]);
+  auto &args = std::get<1>(bpftrace->resources.printf_args[id]);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+  bpftrace->out_->message(MessageType::printf,
+                          fmt.format_str(arg_values),
+                          false);
+}
 } // namespace bpftrace::async_action

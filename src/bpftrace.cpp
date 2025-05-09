@@ -376,15 +376,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id >= AsyncAction::printf &&
              printf_id <= AsyncAction::printf_end) {
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::printf);
-    auto &fmt = std::get<0>(bpftrace->resources.printf_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.printf_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    bpftrace->out_->message(MessageType::printf,
-                            fmt.format_str(arg_values),
-                            false);
+    async_action::printf_handler(bpftrace, printf_id, arg_data);
     return;
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
