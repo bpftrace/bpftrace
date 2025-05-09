@@ -354,6 +354,8 @@ std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
   const std::string &val = bpftrace_.get_param(param.n);
   // If empty, treat as zero. This is the documented behavior.
   if (val.empty()) {
+    param.addWarning() << "Positional parameter $" << param.n
+                       << " is empty or not provided. ";
     return ast_.make_node<Integer>(static_cast<uint64_t>(0),
                                    Location(param.loc));
   }
