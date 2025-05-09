@@ -30,6 +30,10 @@ NAME cpu
 PROG i:ms:1 { printf("SUCCESS %lu\n", cpu); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
 
+NAME ncpus
+PROG BEGIN { printf("%ld\n", ncpus); exit(); }
+EXPECT_REGEX ^[1-9][0-9]*$
+
 NAME comm
 PROG BEGIN { printf("SUCCESS %s\n", comm); exit(); }
 EXPECT SUCCESS bpftrace

@@ -1916,6 +1916,12 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | raw_smp_processor_id
 | ID of the processor executing the BPF program
 
+| ncpus
+| uint64
+| n/a
+| n/a
+| Number of CPUs
+
 | curtask
 | uint64
 | 4.8

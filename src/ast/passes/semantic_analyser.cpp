@@ -857,7 +857,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
              builtin.ident == "cgroup" || builtin.ident == "uid" ||
              builtin.ident == "gid" || builtin.ident == "cpu" ||
              builtin.ident == "rand" || builtin.ident == "numaid" ||
-             builtin.ident == "jiffies") {
+             builtin.ident == "jiffies" || builtin.ident == "ncpus") {
     builtin.builtin_type = CreateUInt64();
     if (builtin.ident == "cgroup" &&
         !bpftrace_.feature_->has_helper_get_current_cgroup_id()) {

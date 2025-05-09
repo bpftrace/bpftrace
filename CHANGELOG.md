@@ -19,6 +19,8 @@ and this project adheres to
 - Ustack and kstack symbols are automatically enhanced with debug info if available
   - [#3999](https://github.com/bpftrace/bpftrace/pull/3999)
 #### Added
+- Add ncpus builtin to get the number of CPUs.
+  - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)
 - Use blazesym for user space address symbolization
   - [#3884](https://github.com/bpftrace/bpftrace/pull/3884)
 - Add simple block expressions
