@@ -47,7 +47,6 @@
 #include "util/exceptions.h"
 #include "util/format.h"
 #include "util/int_parser.h"
-#include "util/io.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/stats.h"
@@ -270,11 +269,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     async_action::join_handler(bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::helper_error) {
-    auto *helpererror = static_cast<AsyncEvent::HelperError *>(data);
-    auto error_id = helpererror->error_id;
-    auto return_value = helpererror->return_value;
-    auto &info = bpftrace->resources.helper_error_info[error_id];
-    bpftrace->out_->helper_error(return_value, info);
+    async_action::helper_error_handler(bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::watchpoint_attach) {
     bool abort = false;
@@ -373,48 +368,15 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     return;
   } else if (printf_id >= AsyncAction::syscall &&
              printf_id <= AsyncAction::syscall_end) {
-    if (bpftrace->safe_mode_) {
-      throw util::FatalUserException(
-          "syscall() not allowed in safe mode. Use '--unsafe'.");
-    }
-
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::syscall);
-    auto &fmt = std::get<0>(bpftrace->resources.system_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.system_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    bpftrace->out_->message(MessageType::syscall,
-                            util::exec_system(
-                                fmt.format_str(arg_values).c_str()),
-                            false);
+    async_action::syscall_handler(bpftrace, printf_id, arg_data);
     return;
   } else if (printf_id >= AsyncAction::cat &&
              printf_id <= AsyncAction::cat_end) {
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::cat);
-    auto &fmt = std::get<0>(bpftrace->resources.cat_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.cat_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    std::stringstream buf;
-    util::cat_file(fmt.format_str(arg_values).c_str(),
-                   bpftrace->config_->max_cat_bytes,
-                   buf);
-    bpftrace->out_->message(MessageType::cat, buf.str(), false);
-
+    async_action::cat_handler(bpftrace, printf_id, arg_data);
     return;
   } else if (printf_id >= AsyncAction::printf &&
              printf_id <= AsyncAction::printf_end) {
-    auto id = static_cast<size_t>(printf_id) -
-              static_cast<size_t>(AsyncAction::printf);
-    auto &fmt = std::get<0>(bpftrace->resources.printf_args[id]);
-    auto &args = std::get<1>(bpftrace->resources.printf_args[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
-
-    bpftrace->out_->message(MessageType::printf,
-                            fmt.format_str(arg_values),
-                            false);
+    async_action::printf_handler(bpftrace, printf_id, arg_data);
     return;
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
