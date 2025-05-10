@@ -12,8 +12,7 @@ public:
   std::vector<std::filesystem::path> objects;
 };
 
-// Produces a set of no-op external objects. This will be replaced in the
-// future by actual import passes. This produces `BpfExternObjects`.
+// Produces a set of external objects, `BpfExternObjects`.
 Pass CreateExternObjectPass();
 
 class LinkError : public ErrorInfo<LinkError> {

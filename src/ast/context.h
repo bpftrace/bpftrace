@@ -82,6 +82,11 @@ public:
     return *diagnostics_;
   }
 
+  std::shared_ptr<ASTSource> source() const
+  {
+    return source_;
+  }
+
   Program *root = nullptr;
 
 private:

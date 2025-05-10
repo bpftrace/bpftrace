@@ -60,7 +60,7 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
       for (const auto& [msg, loc] : msgs) {
         LOG(WARNING, loc.source_location(), loc.source_context(), out) << msg;
       }
-      if (auto msg = d.hint(); !msg.empty()) {
+      for (const auto& msg : d.hints()) {
         LOG(HINT, out) << msg;
       }
       for (const auto& [msg, loc] : parent_msgs) {
@@ -74,7 +74,7 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
       for (const auto& [msg, loc] : msgs) {
         LOG(ERROR, loc.source_location(), loc.source_context(), out) << msg;
       }
-      if (auto msg = d.hint(); !msg.empty()) {
+      for (const auto& msg : d.hints()) {
         LOG(HINT, out) << msg;
       }
       for (const auto& [msg, loc] : parent_msgs) {
