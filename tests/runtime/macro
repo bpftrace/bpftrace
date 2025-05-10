@@ -1,75 +1,75 @@
 NAME it mutates the passed variable
-PROG config = { unstable_macro=1; } macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); print($a); exit(); }
+PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); print($a); exit(); }
 EXPECT 2
 
 NAME it does not mutate previously passed variable with literal
-PROG config = { unstable_macro=1; } macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc(1); print($a); exit(); }
+PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc(1); print($a); exit(); }
 EXPECT 2
 
 NAME it mutates the passed non-scalar map
-PROG config = { unstable_macro=1; } macro set(@x) { @x[1] = 2; 1 } BEGIN { @a[1] = 1; set(@a); exit(); }
+PROG macro set(@x) { @x[1] = 2; 1 } BEGIN { @a[1] = 1; set(@a); exit(); }
 EXPECT @a[1]: 2
 
 NAME it mutates the passed scalar map
-PROG config = { unstable_macro=1; } macro set(@x) { @x = 2; 1 } BEGIN { @a = 1; set(@a); exit(); }
+PROG macro set(@x) { @x = 2; 1 } BEGIN { @a = 1; set(@a); exit(); }
 EXPECT @a: 2
 
 NAME it reads the passed map
-PROG config = { unstable_macro=1; } macro get(@x) { 1 + @x[1] } BEGIN { @a[1] = 1; print(get(@a)); exit(); }
+PROG macro get(@x) { 1 + @x[1] } BEGIN { @a[1] = 1; print(get(@a)); exit(); }
 EXPECT 2
 
 NAME it can have side effects
-PROG config = { unstable_macro=1; } macro print_me($x) { print(("me", $x)) } BEGIN { $a = 1; print_me($a); exit(); }
+PROG macro print_me($x) { print(("me", $x)) } BEGIN { $a = 1; print_me($a); exit(); }
 EXPECT (me, 1)
 
 NAME it can exit early
-PROG config = { unstable_macro=1; } macro early() { exit() } BEGIN { early(); print(1); }
+PROG macro early() { exit() } BEGIN { early(); print(1); }
 EXPECT_NONE 1
 
 NAME it can call other macros
-PROG config = { unstable_macro=1; } macro add1($x) { $x + 1 } macro add2($y) { $y + add1($y) } macro add3($z) { $z + add2($z) } BEGIN { print(add3(1)); exit(); }
+PROG macro add1($x) { $x + 1 } macro add2($y) { $y + add1($y) } macro add3($z) { $z + add2($z) } BEGIN { print(add3(1)); exit(); }
 EXPECT 4
 
 NAME macro definition order does not matter
-PROG config = { unstable_macro=1; } macro add2($x) { $x + add1($x) } macro add3($x) { $x + add2($x) } macro add1($x) { $x + 1 } BEGIN { print(add3(1)); exit(); }
+PROG macro add2($x) { $x + add1($x) } macro add3($x) { $x + add2($x) } macro add1($x) { $x + 1 } BEGIN { print(add3(1)); exit(); }
 EXPECT 4
 
 NAME it accepts arbitrary expressions without variables or maps
-PROG config = { unstable_macro=1; } macro add_one($x) { $x + 1 } BEGIN { $a = 1; print(add_one(1 + 1)); exit(); }
+PROG macro add_one($x) { $x + 1 } BEGIN { $a = 1; print(add_one(1 + 1)); exit(); }
 EXPECT 3
 
 NAME it accepts arbitrary expressions with variables
-PROG config = { unstable_macro=1; } macro add_one($x) { $x + 1 } BEGIN { $a = 1; print(add_one($a + 1)); exit(); }
+PROG macro add_one($x) { $x + 1 } BEGIN { $a = 1; print(add_one($a + 1)); exit(); }
 EXPECT 3
 
 NAME it accepts arbitrary expressions with variables nested
-PROG config = { unstable_macro=1; } macro add_two($x) { $x + 2 } macro add_one($x) { add_two($x + 1) + 1 } BEGIN { $a = 1; print(add_one($a + 1)); exit(); }
+PROG macro add_two($x) { $x + 2 } macro add_one($x) { add_two($x + 1) + 1 } BEGIN { $a = 1; print(add_one($a + 1)); exit(); }
 EXPECT 6
 
 NAME it accepts arbitrary expressions with maps
-PROG config = { unstable_macro=1; } macro add_one($x) { $x + 1 } BEGIN { @a = 1; print(add_one(@a + 1)); exit(); }
+PROG macro add_one($x) { $x + 1 } BEGIN { @a = 1; print(add_one(@a + 1)); exit(); }
 EXPECT 3
 
 NAME can call the same macro multiple times
-PROG config = { unstable_macro=1; } macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc($a); inc($a); print($a); exit(); }
+PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc($a); inc($a); print($a); exit(); }
 EXPECT 4
 
 NAME for loops can be in macros
-PROG config = { unstable_macro=1; } macro loop_map(@a) { let $x = 1; for ($kv : @a) { $x += $kv.1;} $x } BEGIN { @x[1] = 5; @x[2] = 10; print(loop_map(@x)); exit(); }
+PROG macro loop_map(@a) { let $x = 1; for ($kv : @a) { $x += $kv.1;} $x } BEGIN { @x[1] = 5; @x[2] = 10; print(loop_map(@x)); exit(); }
 EXPECT 16
 
 NAME it works in nested scopes
-PROG config = { unstable_macro=1; } macro add1($x) { $x + 1 } macro add2($x) { $x + 2 } BEGIN { $a = 1; if ($a == 1) { print(add2($a)); } else { print(add1($a)); } exit(); }
+PROG macro add1($x) { $x + 1 } macro add2($x) { $x + 2 } BEGIN { $a = 1; if ($a == 1) { print(add2($a)); } else { print(add1($a)); } exit(); }
 EXPECT 3
 
 NAME it re-names variables to prevent collision
-PROG config = { unstable_macro=1; } macro inc($x) { $y = $x + 1; $y } BEGIN { $y = 2; $z = inc(5); print(($y, $z)); exit(); }
+PROG macro inc($x) { $y = $x + 1; $y } BEGIN { $y = 2; $z = inc(5); print(($y, $z)); exit(); }
 EXPECT (2, 6)
 
 NAME it re-names decl variables to prevent collision
-PROG config = { unstable_macro=1; } macro inc($x) { let $y = $x + 1; $y } BEGIN { $y = 2; $z = inc(5); print(($y, $z)); exit(); }
+PROG macro inc($x) { let $y = $x + 1; $y } BEGIN { $y = 2; $z = inc(5); print(($y, $z)); exit(); }
 EXPECT (2, 6)
 
 NAME it can be part of an expression passed to a macro
-PROG config = { unstable_macro=1; } macro add_one($x) { $x + 1 } BEGIN { $a = add_one(add_one(1) + 1); print($a); exit(); }
+PROG macro add_one($x) { $x + 1 } BEGIN { $a = add_one(add_one(1) + 1); print($a); exit(); }
 EXPECT 4

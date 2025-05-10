@@ -62,12 +62,6 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
     assignment.addWarning()
         << assignment.var << " has been renamed, please use " << var;
   }
-
-  // If set successfully, see if we must warn.
-  if (bpftrace_.config_->is_unstable(assignment.var)) {
-    assignment.addWarning()
-        << "Script is using an unstable feature: " << assignment.var;
-  }
 }
 
 Pass CreateConfigPass()

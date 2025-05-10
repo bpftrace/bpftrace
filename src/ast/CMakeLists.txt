@@ -35,6 +35,7 @@ add_library(ast STATIC
   passes/return_path_analyser.cpp
   passes/pid_filter_pass.cpp
   passes/recursion_check.cpp
+  passes/unstable_feature.cpp
 )
 
 add_dependencies(ast parser)

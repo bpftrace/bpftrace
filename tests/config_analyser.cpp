@@ -169,14 +169,4 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_->log_size, 150);
 }
 
-TEST(config_analyser, config_unstable)
-{
-  test_for_warning("config = { unstable_map_decl=1 } BEGIN { }",
-                   "Script is using an unstable feature: unstable_map_decl");
-  test_for_warning("config = { unstable_map_decl=0 } BEGIN { }",
-                   "Script is using an unstable feature: unstable_map_decl");
-  test_for_no_warning("config = { stack_mode=perf } BEGIN { }",
-                      "Script is using an unstable feature: unstable_map_decl");
-}
-
 } // namespace bpftrace::test::config_analyser

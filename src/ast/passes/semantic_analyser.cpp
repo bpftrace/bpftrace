@@ -1818,12 +1818,6 @@ void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
 
 void SemanticAnalyser::visit(MapDeclStatement &decl)
 {
-  if (!bpftrace_.config_->unstable_map_decl) {
-    decl.addError() << "Map declarations are not enabled by default. To enable "
-                       "this unstable feature, set this config flag to 1 "
-                       "e.g. unstable_map_decl=1";
-  }
-
   const auto bpf_type = get_bpf_map_type(decl.bpf_type);
   if (!bpf_type) {
     auto &err = decl.addError();

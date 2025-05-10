@@ -61,6 +61,7 @@ add_executable(bpftrace_test
   temp.cpp
   tracepoint_format_parser.cpp
   types.cpp
+  unstable_feature.cpp
   utils.cpp
 
   ${CODEGEN_SRC}
