@@ -5,6 +5,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/resolve_imports.h"
@@ -26,6 +27,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateConfigPass());
   passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
+  passes.emplace_back(CreateImportScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
@@ -37,6 +39,7 @@ inline std::vector<Pass> AllParsePasses(
   // The source and syntax is reparsed because it uses the `macros_` which are
   // set during the clang parse to expand identifiers within the lexer.
   passes.emplace_back(CreateParsePass());
+  passes.emplace_back(CreateImportScriptsPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateMapSugarPass());

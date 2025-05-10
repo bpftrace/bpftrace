@@ -84,4 +84,16 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
   }
 }
 
+void Diagnostics::add(Diagnostics&& other)
+{
+  if (diagnostics_.size() < other.diagnostics_.size()) {
+    diagnostics_.resize(other.diagnostics_.size());
+  }
+  for (size_t i = 0; i < other.diagnostics_.size(); i++) {
+    for (auto& d : other.diagnostics_[i]) {
+      diagnostics_[i].emplace_back(std::move(d));
+    }
+  }
+}
+
 } // namespace bpftrace::ast

@@ -79,7 +79,7 @@ struct Cloner<T> {
 };
 
 template <typename T>
-T clone(ASTContext &ctx, const T &t, const Location &loc)
+T clone(ASTContext &ctx, const T &t, const Location &loc = Location())
 {
   using V = std::remove_const_t<std::decay_t<std::remove_pointer_t<T>>>;
   return Cloner<V>()(ctx, t, loc);

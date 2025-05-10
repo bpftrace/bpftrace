@@ -128,7 +128,7 @@ TEST_F(ImportTest, stdlib_implicit_rules)
   ASSERT_TRUE(bool(dir));
 
   // If we have a `stdlib` directory, it should override the explicit import.
-  ASSERT_TRUE(create_file(*dir, "stdlib/foo.bt", ""));
+  ASSERT_TRUE(create_file(*dir, "stdlib/foo.bt", "END {}"));
   test(R"(import "stdlib"; BEGIN {})", { dir->path() }, [](Imports &imports) {
     EXPECT_TRUE(imports.scripts.contains("stdlib/foo.bt"));
   });
@@ -149,7 +149,7 @@ TEST_F(ImportTest, world_writable_ignored)
   ASSERT_TRUE(bool(dir));
   ASSERT_TRUE(create_dir(*dir, "a"));
   ASSERT_TRUE(create_dir(*dir, "a/lib", std::filesystem::perms(0777)));
-  ASSERT_TRUE(create_file(*dir, "a/lib/foo.bt", ""));
+  ASSERT_TRUE(create_file(*dir, "a/lib/foo.bt", "END {}"));
   test(R"(import "lib"; BEGIN {})", { dir->path() / "a" }, err);
   test(R"(import "lib/foo.bt"; BEGIN {})", { dir->path() / "a" }, err);
 
@@ -158,7 +158,7 @@ TEST_F(ImportTest, world_writable_ignored)
   // the contents of the `lib` directory itself should not change.
   ASSERT_TRUE(create_dir(*dir, "b", std::filesystem::perms(0777)));
   ASSERT_TRUE(create_dir(*dir, "b/lib"));
-  ASSERT_TRUE(create_file(*dir, "b/lib/foo.bt", ""));
+  ASSERT_TRUE(create_file(*dir, "b/lib/foo.bt", "END {}"));
   test(R"(import "lib"; BEGIN {})", { dir->path() / "b" }, err);
   test(R"(import "lib/foo.bt"; BEGIN {})",
        { dir->path() / "b" },
@@ -169,8 +169,8 @@ TEST_F(ImportTest, import_ordering)
 {
   auto dir = TempDir::create();
   ASSERT_TRUE(bool(dir));
-  ASSERT_TRUE(create_file(*dir, "a/lib/foo.bt", ""));
-  ASSERT_TRUE(create_file(*dir, "b/lib/bar.bt", ""));
+  ASSERT_TRUE(create_file(*dir, "a/lib/foo.bt", "END {}"));
+  ASSERT_TRUE(create_file(*dir, "b/lib/bar.bt", "END {}"));
 
   // This should match the first directory, and import everything there only.
   test(R"(import "lib"; BEGIN {})",
