@@ -90,33 +90,19 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
           if (format_file.fail()) {
             // Errno might get clobbered by LOG().
             int saved_errno = errno;
-
-            // Do not fail if trying to attach to multiple tracepoints
-            // (at least one of them could succeed)
-            bool fail = probe->attach_points.size() == 1;
             auto msg = "tracepoint not found: " + category + ":" + event_name;
-            auto select = [&]() -> ast::Diagnostic & {
-              if (fail)
-                return ap->addError();
-              else
-                return ap->addWarning();
-            };
-            auto &err = select();
-            err << msg;
+            auto &warn = ap->addWarning();
+            warn << msg;
 
             // helper message:
             if (category == "syscall")
-              err.addHint() << "Did you mean syscalls:" << event_name << "?";
+              warn.addHint() << "Did you mean syscalls:" << event_name << "?";
 
-            if (fail && bt_verbose) {
+            if (bt_verbose) {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
-              ap->addError()
-                  << strerror(saved_errno) << ": " << format_file_path;
-            }
-            if (fail)
-              return false;
-            else
+              warn << strerror(saved_errno) << ": " << format_file_path;
+            } else
               continue;
           }
 
