@@ -6,6 +6,7 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "config.h"
+#include "log.h"
 
 namespace bpftrace::ast {
 
@@ -61,6 +62,13 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   if (var != assignment.var) {
     assignment.addWarning()
         << assignment.var << " has been renamed, please use " << var;
+  }
+
+  // Need this in a fairly early pass to make sure we don't get warnings
+  // in later passes.
+  if (!bpftrace_.config_->log_warnings) {
+    bpftrace_.helper_check_level_ = 0;
+    DISABLE_LOG(WARNING);
   }
 }
 

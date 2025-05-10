@@ -41,6 +41,7 @@ public:
   // All configuration options.
   bool cpp_demangle = true;
   bool lazy_symbolication = true;
+  bool log_warnings = true;
   bool print_maps_on_exit = true;
   ConfigUnstable unstable_macro = ConfigUnstable::warn;
   ConfigUnstable unstable_map_decl = ConfigUnstable::warn;

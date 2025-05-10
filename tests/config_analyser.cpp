@@ -1,5 +1,6 @@
 #include "ast/passes/config_analyser.h"
 #include "driver.h"
+#include "log.h"
 #include "mocks.h"
 #include "types.h"
 #include "gtest/gtest.h"
@@ -167,6 +168,17 @@ TEST(config_analyser, config_setting)
   EXPECT_EQ(bpftrace->config_->user_symbol_cache_type,
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_->log_size, 150);
+}
+
+TEST(config_analyser, log_warnings)
+{
+  test_for_warning("config = { symbol_source=\"symbol_table\" } BEGIN { }",
+                   "symbol_source is deprecated and has no effect");
+  test_for_no_warning(
+      "config = { symbol_source=\"zzz\"; log_warnings=0 } BEGIN { }",
+      "symbol_source is deprecated and has no effect");
+  // we have to re-enable the log after this test
+  ENABLE_LOG(WARNING);
 }
 
 } // namespace bpftrace::test::config_analyser

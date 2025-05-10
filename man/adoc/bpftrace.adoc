@@ -151,6 +151,7 @@ Disable use of detected features, valid values are::
 === *--no-warnings*
 
 Suppress all warning messages created by bpftrace.
+A config variable can also be used to suppress warnings e.g. "log_warnings=0".
 
 === *-o* _FILENAME_
 
@@ -3738,6 +3739,12 @@ The license bpftrace will use to load BPF programs into the linux kernel.
 Default: 1000000
 
 Log size in bytes.
+
+==== log_warnings
+
+Default: 1
+
+Print warnings to the log. If set to 0, this is similar to using the `--no-warnings` CLI option.
 
 ==== max_bpf_progs
 
