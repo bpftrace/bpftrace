@@ -17,6 +17,7 @@ add_library(ast STATIC
   pass_manager.cpp
   signal.cpp
 
+  passes/c_macro_expansion.cpp
   passes/codegen_resources.cpp
   passes/config_analyser.cpp
   passes/deprecated.cpp

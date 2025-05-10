@@ -12,8 +12,7 @@ using namespace bpftrace::async_action;
 
 TEST(async_action, join)
 {
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.join_args.emplace_back(",");
 
   unsigned int content_size = bpftrace->join_argsize_ * bpftrace->join_argnum_;
@@ -35,14 +34,21 @@ TEST(async_action, join)
   memcpy(join->content + bpftrace->join_argsize_, arg2, strlen(arg2) + 1);
   memcpy(join->content + (2 * bpftrace->join_argsize_), arg3, strlen(arg3) + 1);
 
-  join_handler(bpftrace.get(), join);
+  CDefinitions no_c_defs;
+  std::stringstream out;
+  TextOutput output(no_c_defs, out);
+
+  join_handler(*bpftrace, output, join);
   EXPECT_EQ("/bin/ls,-la,/tmp\n", out.str());
 }
 
 TEST(async_action, time)
 {
+  auto bpftrace = get_mock_bpftrace();
+
+  CDefinitions no_c_defs;
   std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  TextOutput output(no_c_defs, out);
 
   bpftrace->resources.time_args.emplace_back("%Y-%m-%d");
   bpftrace->resources.time_args.emplace_back("%H:%M:%S");
@@ -51,7 +57,7 @@ TEST(async_action, time)
   // The first format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"(\d{4}-\d{2}-\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -61,7 +67,7 @@ TEST(async_action, time)
   // The second format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 1);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"(\d{2}:\d{2}:\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -71,7 +77,7 @@ TEST(async_action, time)
   // The third format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 2);
-    time_handler(bpftrace.get(), &time_event);
+    time_handler(*bpftrace, output, &time_event);
 
     std::regex pattern(R"([A-Za-z]+, \d{2} [A-Za-z]+ \d{4})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -80,8 +86,11 @@ TEST(async_action, time)
 
 TEST(async_action, time_invalid_format)
 {
+  auto bpftrace = get_mock_bpftrace();
+
+  CDefinitions no_c_defs;
   std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
+  TextOutput output(no_c_defs, out);
 
   // invalid time format string
   std::string very_long_format(bpftrace::async_action::MAX_TIME_STR_LEN, 'X');
@@ -91,7 +100,7 @@ TEST(async_action, time_invalid_format)
 
   testing::internal::CaptureStderr();
 
-  time_handler(bpftrace.get(), &time_event);
+  time_handler(*bpftrace, output, &time_event);
   EXPECT_TRUE(out.str().empty());
 
   std::string log = testing::internal::GetCapturedStderr();

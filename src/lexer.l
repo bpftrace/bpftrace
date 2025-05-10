@@ -262,41 +262,7 @@ struct|union|enum       {
   \n                    driver.buffer += '\n'; driver.loc.lines(1); driver.loc.step();
 }
 
-{ident}                 {
-                          static int unput_count = 0;
-                          if (driver.bpftrace.macros_.count(yytext) != 0)
-                          {
-                            const char *s = driver.bpftrace.macros_.find(yytext)->second.c_str();
-                            int z;
-                            // NOTE(mmarchini) workaround for simple recursive
-                            // macros. More complex recursive macros (for
-                            // example, with operators) will go into an
-                            // infinite loop. Yes, we should fix that in the
-                            // future.
-                            if (strcmp(s, yytext) == 0)
-                            {
-                              unput_count = 0;
-                              return Parser::make_IDENT(yytext, driver.loc);
-                            }
-                            else
-                            {
-                              std::string original_s(s);
-                              std::string original_yytext(yytext);
-                              for (z=strlen(s) - 1; z >= 0; z--) {
-                                if (unput_count >= 1000) {
-                                  driver.error(driver.loc, std::string("Macro recursion limit reached: ")
-                                                    + original_yytext + ", " + original_s);
-                                  yyterminate();
-                                }
-                                unput(s[z]);
-                                unput_count++;
-                              }
-                            }
-                          } else {
-                            unput_count = 0;
-                            return Parser::make_IDENT(yytext, driver.loc);
-                          }
-                        }
+{ident}                 { return Parser::make_IDENT(yytext, driver.loc); }
 
 .                       { driver.error(driver.loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
