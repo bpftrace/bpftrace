@@ -85,10 +85,10 @@ void fill_arg_data(
 template <typename... Args>
 void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
                    AsyncAction id,
-                   std::string &command,
+                   std::string &fmt_str,
                    [[maybe_unused]] Args... args)
 {
-  FormatString cmd(command);
+  FormatString fmt(fmt_str);
   std::vector<Field> fields;
   size_t total_args_size = 0;
 
@@ -107,13 +107,13 @@ void handler_proxy(std::unique_ptr<MockBPFtrace> &bpftrace,
   }
 
   if (id == AsyncAction::syscall) {
-    bpftrace->resources.system_args.emplace_back(cmd, fields);
+    bpftrace->resources.system_args.emplace_back(fmt, fields);
     syscall_handler(bpftrace.get(), id, arg_data.data());
   } else if (id == AsyncAction::cat) {
-    bpftrace->resources.cat_args.emplace_back(cmd, fields);
+    bpftrace->resources.cat_args.emplace_back(fmt, fields);
     cat_handler(bpftrace.get(), id, arg_data.data());
   } else if (id == AsyncAction::printf) {
-    bpftrace->resources.printf_args.emplace_back(cmd, fields);
+    bpftrace->resources.printf_args.emplace_back(fmt, fields);
     printf_handler(bpftrace.get(), id, arg_data.data());
   } else {
     FAIL() << "Only support syscall, cat, and printf";
@@ -288,15 +288,35 @@ TEST(async_action, helper_error)
 
 TEST(async_action, syscall)
 {
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
-  bpftrace->safe_mode_ = false;
-  auto cmd = std::string("echo test");
+  struct TestCase {
+    std::string cmd;
+    std::optional<const char *> args;
+    std::string expected_substring;
+  };
 
-  handler_proxy(bpftrace, AsyncAction::syscall, cmd);
+  std::vector<TestCase> test_cases = {
+    { .cmd = std::string("echo test"),
+      .args = std::nullopt,
+      .expected_substring = "test" },
+    { .cmd = std::string("echo %s"),
+      .args = "test",
+      .expected_substring = "test" },
+  };
 
-  EXPECT_THAT(out.str(), testing::HasSubstr("test"))
-      << "Syscall output should contain the result of 'echo test'";
+  for (auto &tc : test_cases) {
+    std::stringstream out;
+    auto bpftrace = get_mock_bpftrace(out);
+    bpftrace->safe_mode_ = false;
+
+    if (tc.args.has_value()) {
+      handler_proxy(bpftrace, AsyncAction::syscall, tc.cmd, tc.args.value());
+    } else {
+      handler_proxy(bpftrace, AsyncAction::syscall, tc.cmd);
+    }
+
+    EXPECT_THAT(out.str(), testing::HasSubstr(tc.expected_substring))
+        << "Syscall output should contain the result of 'echo test'";
+  }
 }
 
 TEST(async_action, syscall_safe_mode)
@@ -320,19 +340,6 @@ TEST(async_action, syscall_safe_mode)
 
   EXPECT_TRUE(out.str().empty())
       << "No output should be generated in safe mode";
-}
-
-TEST(async_action, syscall_with_args)
-{
-  std::stringstream out;
-  auto bpftrace = get_mock_bpftrace(out);
-  bpftrace->safe_mode_ = false;
-  auto cmd = std::string("echo %s");
-
-  handler_proxy(bpftrace, AsyncAction::syscall, cmd, "hello world");
-
-  EXPECT_THAT(out.str(), testing::HasSubstr("hello world"))
-      << "Syscall output should contain the argument 'hello world'";
 }
 
 TEST(async_action, cat)
