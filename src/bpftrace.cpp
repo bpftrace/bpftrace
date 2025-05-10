@@ -240,16 +240,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                << "\", err=" << std::to_string(err);
     return;
   } else if (printf_id == AsyncAction::print_non_map) {
-    auto *print = static_cast<AsyncEvent::PrintNonMap *>(data);
-    const SizedType &ty = ctx->bpftrace.resources.non_map_print_args.at(
-        print->print_id);
-
-    std::vector<uint8_t> bytes;
-    for (size_t i = 0; i < ty.GetSize(); ++i)
-      bytes.emplace_back(print->content[i]);
-
-    ctx->output.value(ctx->bpftrace, ty, bytes);
-
+    async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);
     return;
   } else if (printf_id == AsyncAction::clear) {
     auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);

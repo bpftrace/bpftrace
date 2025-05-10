@@ -57,6 +57,19 @@ void helper_error_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.helper_error(return_value, info);
 }
 
+void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
+{
+  auto *print = static_cast<AsyncEvent::PrintNonMap *>(data);
+  const SizedType &ty = bpftrace.resources.non_map_print_args.at(
+      print->print_id);
+
+  std::vector<uint8_t> bytes;
+  for (size_t i = 0; i < ty.GetSize(); ++i)
+    bytes.emplace_back(print->content[i]);
+
+  out.value(bpftrace, ty, bytes);
+}
+
 void syscall_handler(BPFtrace &bpftrace,
                      Output &out,
                      AsyncAction printf_id,
@@ -109,4 +122,5 @@ void printf_handler(BPFtrace &bpftrace,
 
   out.message(MessageType::printf, fmt.format_str(arg_values), false);
 }
+
 } // namespace bpftrace::async_action
