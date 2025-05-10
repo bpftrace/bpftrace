@@ -60,6 +60,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   ENDPRED    "end predicate"
   COMMA      ","
   PARAMCOUNT "$#"
+  NPROC      "nproc"
   ASSIGN     "="
   EQ         "=="
   NE         "!="
@@ -154,6 +155,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
 %type <ast::PositionalParameterCount *> param_count
+%type <ast::CpuProcessorCount *> nprocessor
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
 %type <std::pair<ast::ProbeList, ast::SubprogList>> probes_and_subprogs
@@ -434,6 +436,10 @@ param_count:
                 PARAMCOUNT { $$ = driver.ctx.make_node<ast::PositionalParameterCount>(@$); }
                 ;
 
+nprocessor:
+                NPROC { $$ = driver.ctx.make_node<ast::CpuProcessorCount>(@$); }
+                ;
+
 /*
  * The last statement in a block does not require a trailing semicolon.
  */
@@ -540,6 +546,7 @@ primary_expr:
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
         |       param_count        { $$ = $1; }
+        |       nprocessor         { $$ = $1; }
         |       var                { $$ = $1; }
         |       map                { $$ = $1; }
         |       map_expr           { $$ = $1; }

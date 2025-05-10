@@ -130,6 +130,7 @@ class Integer;
 class NegativeInteger;
 class PositionalParameter;
 class PositionalParameterCount;
+class CpuProcessorCount;
 class String;
 class Identifier;
 class Builtin;
@@ -153,6 +154,7 @@ class Expression : public VariantNode<Integer,
                                       NegativeInteger,
                                       PositionalParameter,
                                       PositionalParameterCount,
+                                      CpuProcessorCount,
                                       String,
                                       Identifier,
                                       Builtin,
@@ -275,6 +277,23 @@ public:
   explicit PositionalParameterCount(
       ASTContext &ctx,
       [[maybe_unused]] const PositionalParameterCount &other,
+      const Location &loc)
+      : Node(ctx, loc + other.loc) {};
+
+  const SizedType &type() const
+  {
+    static SizedType none = CreateNone();
+    return none;
+  }
+};
+
+class CpuProcessorCount : public Node {
+public:
+  explicit CpuProcessorCount(ASTContext &ctx, Location &&loc)
+      : Node(ctx, std::move(loc)) {};
+  explicit CpuProcessorCount(
+      ASTContext &ctx,
+      [[maybe_unused]] const CpuProcessorCount &other,
       const Location &loc)
       : Node(ctx, loc + other.loc) {};
 

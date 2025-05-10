@@ -37,6 +37,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] CpuProcessorCount &param)
+  {
+    return default_value();
+  }
   R visit([[maybe_unused]] String &string)
   {
     return default_value();
