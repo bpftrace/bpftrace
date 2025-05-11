@@ -252,6 +252,7 @@ private:
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
+  std::unordered_set<std::string> signal_probes_;
 };
 
 } // namespace
@@ -3530,6 +3531,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "signal") {
       if (!SIGNALS.contains(ap.func))
         ap.addError() << ap.func << " is not a supported signal";
+      if (is_final_pass()) {
+        if (signal_probes_.contains(ap.func))
+          ap.addError() << "More than one signal probe for signal: " << ap.func;
+
+        signal_probes_.insert(ap.func);
+      }
       return;
     }
     ap.addError() << ap.target << " is not a supported trigger";

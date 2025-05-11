@@ -2231,6 +2231,12 @@ stdin:1:1-20: ERROR: keypress is not a supported trigger
 self:keypress:space { 1 }
 ~~~~~~~~~~~~~~~~~~~
 )");
+
+  test_error("self:signal:SIGUSR1 { 1 } self:signal:SIGUSR1 { 2 }", R"(
+stdin:1:26-46: ERROR: More than one signal probe for signal: SIGUSR1
+self:signal:SIGUSR1 { 1 } self:signal:SIGUSR1 { 2 }
+                         ~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, tracepoint)

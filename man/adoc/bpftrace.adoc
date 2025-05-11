@@ -1230,7 +1230,7 @@ END {
 
 These are special built-in events provided by the bpftrace runtime.
 The trigger function is called by the bpftrace runtime when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
-When multiple signal handlers are attached to the same signal, only the first one is used.
+Multiple signal probes for the same signal are not allowed.
 
 ----
 self:signal:SIGUSR1 {
