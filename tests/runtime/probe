@@ -563,3 +563,7 @@ NAME usdt_order
 RUN {{BPFTRACE}} runtime/scripts/usdt_order.bt
 EXPECT_REGEX (first)+ second
 AFTER ./testprogs/usdt_sized_args
+
+NAME interval_order
+RUN {{BPFTRACE}} runtime/scripts/interval_runtime_order.bt
+EXPECT_REGEX (first)+ second
