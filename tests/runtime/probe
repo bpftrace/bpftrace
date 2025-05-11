@@ -567,3 +567,8 @@ AFTER ./testprogs/usdt_sized_args
 NAME interval_order
 RUN {{BPFTRACE}} runtime/scripts/interval_runtime_order.bt
 EXPECT_REGEX (first)+ second
+
+NAME hardware_order
+REQUIRES ls /sys/devices/cpu/events/cache-misses
+RUN {{BPFTRACE}} runtime/scripts/hardware_order.bt
+EXPECT_REGEX (first)+ second
