@@ -572,3 +572,7 @@ NAME hardware_order
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 RUN {{BPFTRACE}} runtime/scripts/hardware_order.bt
 EXPECT_REGEX (first)+ second
+
+NAME profile_order
+RUN {{BPFTRACE}} runtime/scripts/profile_order.bt
+EXPECT_REGEX (first)+ second
