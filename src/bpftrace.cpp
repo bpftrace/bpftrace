@@ -727,9 +727,9 @@ bool attach_reverse(const Probe &p)
     case ProbeType::usdt:
     case ProbeType::software:
     case ProbeType::fentry:
+    case ProbeType::fexit:
     case ProbeType::iter:
       return true;
-    case ProbeType::fexit:
     case ProbeType::kretprobe:
     case ProbeType::tracepoint:
     case ProbeType::profile:
