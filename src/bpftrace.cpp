@@ -339,19 +339,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   } else if (printf_id == AsyncAction::watchpoint_detach) {
-    auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
-    uint64_t addr = unwatch->addr;
-
-    // Remove all probes watching `addr`. Note how we fail silently here
-    // (ie invalid addr). This lets script writers be a bit more aggressive
-    // when unwatch'ing addresses, especially if they're sampling a portion
-    // of addresses they're interested in watching.
-    auto it = std::ranges::remove_if(ctx->bpftrace.attached_probes_,
-                                     [&](const auto &ap) {
-                                       return ap->probe().address == addr;
-                                     });
-    ctx->bpftrace.attached_probes_.erase(it.begin(), it.end());
-
+    async_action::watchpoint_detach_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::skboutput) {
     async_action::skboutput_handler(ctx->bpftrace, data, size);

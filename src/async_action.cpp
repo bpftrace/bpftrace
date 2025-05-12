@@ -77,6 +77,22 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.value(bpftrace, ty, bytes);
 }
 
+void watchpoint_detach_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
+  uint64_t addr = unwatch->addr;
+
+  // Remove all probes watching `addr`. Note how we fail silently here
+  // (ie invalid addr). This lets script writers be a bit more aggressive
+  // when unwatch'ing addresses, especially if they're sampling a portion
+  // of addresses they're interested in watching.
+  auto it = std::ranges::remove_if(bpftrace.attached_probes_,
+                                   [&](const auto &ap) {
+                                     return ap->probe().address == addr;
+                                   });
+  bpftrace.attached_probes_.erase(it.begin(), it.end());
+}
+
 void skboutput_handler(BPFtrace &bpftrace, void *data, int size)
 {
   struct hdr_t {
