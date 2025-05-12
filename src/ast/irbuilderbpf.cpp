@@ -1135,6 +1135,54 @@ CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map,
   return call;
 }
 
+Value *IRBuilderBPF::CreateForRange(Value *iters,
+                                    Value *callback,
+                                    Value *callback_ctx,
+                                    const Location &loc)
+{
+  // long bpf_loop(__u32 nr_loops, void *callback_fn, void *callback_ctx, u64
+  // flags)
+  //
+  // Return: 0 on success or negative error
+  //
+  // callback is long (*callback_fn)(u64 index, void *ctx);
+  iters = CreateIntCast(iters, getInt32Ty(), true);
+  llvm::Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *is_positive_block = BasicBlock::Create(module_.getContext(),
+                                                     "is_positive",
+                                                     parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "merge",
+                                               parent);
+  Value *is_positive = CreateICmpSGT(iters, getInt32(0), "is_positive_cond");
+  CreateCondBr(is_positive, is_positive_block, merge_block);
+  SetInsertPoint(is_positive_block);
+
+  FunctionType *bpf_loop_type = FunctionType::get(
+      getInt64Ty(),
+      { getInt32Ty(), callback->getType(), getPtrTy(), getInt64Ty() },
+      false);
+  PointerType *bpf_loop_ptr_type = PointerType::get(bpf_loop_type, 0);
+
+  Constant *bpf_loop_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                  getInt64(
+                                                      libbpf::BPF_FUNC_loop),
+                                                  bpf_loop_ptr_type);
+  CallInst *call = createCall(
+      bpf_loop_type,
+      bpf_loop_func,
+      { iters,
+        callback,
+        callback_ctx ? CreateIntToPtr(callback_ctx, getPtrTy()) : GetNull(),
+        /*flags=*/getInt64(0) },
+      "bpf_loop");
+  CreateHelperErrorCond(call, libbpf::BPF_FUNC_loop, loc);
+  CreateBr(merge_block);
+
+  SetInsertPoint(merge_block);
+  return call;
+}
+
 Value *IRBuilderBPF::CreateForEachMapElem(Map &map,
                                           Value *callback,
                                           Value *callback_ctx,

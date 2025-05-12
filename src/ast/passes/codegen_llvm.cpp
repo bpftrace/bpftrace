@@ -213,6 +213,8 @@ public:
   ScopedExpr visit(If &if_node);
   ScopedExpr visit(Unroll &unroll);
   ScopedExpr visit(While &while_block);
+  ScopedExpr visit(For &f, Map &map);
+  ScopedExpr visit(For &f, Range &range);
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
   ScopedExpr visit(Predicate &pred);
@@ -349,7 +351,33 @@ private:
   ScopedExpr createIncDec(Unop &unop);
 
   llvm::Function *createMapLenCallback();
-  llvm::Function *createForEachMapCallback(For &f, llvm::Type *ctx_t);
+
+  // This function creates the context type and value for callbacks. Extra
+  // fields for this context may be passed as the `extra_fields` argument.
+  //
+  // The context created here is suitable for use in `createForCallback`.
+  std::pair<llvm::Type *, llvm::Value *> createForContext(
+      const For &f,
+      std::vector<llvm::Type *> &&extra_fields = {});
+
+  // This creates and invokes a callback function that captures all required
+  // arguments in the context type. Note that all callbacks require some
+  // argument for the context; this is found by finding a parameter named `ctx`
+  // in the `debug_arg`. This must be provided by the caller.
+  //
+  // The provided `decl` function is invoked to construct the scoped value for
+  // the local context.
+  llvm::Function *createForCallback(
+      For &f,
+      const std::string &name,
+      ArrayRef<llvm::Type *> args,
+      const Struct &debug_args,
+      llvm::Type *ctx_t,
+      std::function<llvm::Value *(llvm::Function *)> decl);
+
+  llvm::Function *createForEachMapCallback(const For &f,
+                                           const Map &map,
+                                           llvm::Type *ctx_t);
   llvm::Function *createMurmurHash2Func();
 
   Value *createFmtString(int print_id);
@@ -2938,31 +2966,9 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
 
 ScopedExpr CodegenLLVM::visit(For &f)
 {
-  Value *ctx = b_.getInt64(0);
-  llvm::Type *ctx_t = nullptr;
-
-  const auto &ctx_fields = f.ctx_type.GetFields();
-  if (!ctx_fields.empty()) {
-    // Pack pointers to variables into context struct for use in the callback
-
-    std::vector<llvm::Type *> ctx_field_types(ctx_fields.size(), b_.getPtrTy());
-    ctx_t = StructType::create(ctx_field_types, "ctx_t");
-    ctx = b_.CreateAllocaBPF(ctx_t, "ctx");
-
-    for (size_t i = 0; i < ctx_fields.size(); i++) {
-      const auto &field = ctx_fields[i];
-      auto *field_expr = getVariable(field.name).value;
-      auto *ctx_field_ptr = b_.CreateSafeGEP(
-          ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
-      b_.CreateStore(field_expr, ctx_field_ptr);
-    }
-  }
-
   scope_stack_.push_back(&f);
-  b_.CreateForEachMapElem(
-      *f.map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
+  std::visit([&](auto *iter) { visit(f, *iter); }, f.iterable.value);
   scope_stack_.pop_back();
-
   return ScopedExpr();
 }
 
@@ -4611,79 +4617,85 @@ llvm::Function *CodegenLLVM::createMapLenCallback()
   return callback;
 }
 
-llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
+std::pair<llvm::Type *, llvm::Value *> CodegenLLVM::createForContext(
+    const For &f,
+    std::vector<llvm::Type *> &&extra_fields)
 {
-  // Create a callback function suitable for passing to bpf_for_each_map_elem,
-  // of the form:
-  //
-  //   static int cb(struct map *map, void *key, void *value, void *ctx)
-  //   {
-  //     $decl = (key, value);
-  //     [stmts...]
-  //   }
+  const auto &ctx_fields = f.ctx_type.GetFields();
+  std::vector<llvm::Type *> ctx_field_types(ctx_fields.size(), b_.getPtrTy());
 
+  // Add all the extra fields.
+  std::ranges::move(extra_fields, std::back_inserter(ctx_field_types));
+
+  // Pack pointers to variables into context struct for use in the callback. If
+  // there are no fields, then the underlying codegen helper will simply pass
+  // null as the context value. We should not allocate an empty struct.
+  llvm::Type *ctx_t = nullptr;
+  Value *ctx = nullptr;
+  if (!ctx_field_types.empty()) {
+    ctx_t = StructType::create(ctx_field_types, "ctx_t");
+    ctx = b_.CreateAllocaBPF(ctx_t, "ctx");
+    for (size_t i = 0; i < ctx_fields.size(); i++) {
+      const auto &field = ctx_fields[i];
+      auto *field_expr = getVariable(field.name).value;
+      auto *ctx_field_ptr = b_.CreateSafeGEP(
+          ctx_t, ctx, { b_.getInt64(0), b_.getInt32(i) }, "ctx." + field.name);
+      b_.CreateStore(field_expr, ctx_field_ptr);
+    }
+  }
+
+  return { ctx_t, ctx };
+}
+
+llvm::Function *CodegenLLVM::createForCallback(
+    For &f,
+    const std::string &name,
+    ArrayRef<llvm::Type *> args,
+    const Struct &debug_args,
+    llvm::Type *ctx_t,
+    std::function<llvm::Value *(llvm::Function *)> decl)
+{
   auto saved_ip = b_.saveIP();
 
-  std::array<llvm::Type *, 4> args = {
-    b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy()
-  };
-
+  // All callbacks in BPF will be generated with a standard integer return.
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
   auto *callback = llvm::Function::Create(
       callback_type,
       llvm::Function::LinkageTypes::InternalLinkage,
-      "map_for_each_cb",
+      name,
       module_.get());
   callback->setDSOLocal(true);
   callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
   callback->setSection(".text");
   callback->addFnAttr(Attribute::NoUnwind);
 
-  Struct debug_args;
-  debug_args.AddField("map", CreatePointer(CreateInt8()));
-  debug_args.AddField("key", CreatePointer(CreateInt8()));
-  debug_args.AddField("value", CreatePointer(CreateInt8()));
-  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+  // Add the debug information.
   debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
+  // Start our basic function block.
   auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
   b_.SetInsertPoint(bb);
 
-  auto &key_type = f.decl->type().GetField(0).type;
-  Value *key = callback->getArg(1);
-  if (!inBpfMemory(key_type)) {
-    key = b_.CreateLoad(b_.GetType(key_type), key, "key");
+  // Extract our context type and value. As noted, this requires that some
+  // member of `debug_args` is named `ctx`.
+  size_t ctx_index = 0;
+  while (ctx_index < debug_args.fields.size()) {
+    if (debug_args.fields[ctx_index].name == "ctx") {
+      break;
+    }
+    ctx_index++;
   }
+  assert(ctx_index < debug_args.fields.size());
+  llvm::Value *ctx = callback->getArg(ctx_index);
 
-  auto map_info = bpftrace_.resources.maps_info.find(f.map->ident);
-  if (map_info == bpftrace_.resources.maps_info.end()) {
-    LOG(BUG) << "map name: \"" << f.map->ident << "\" not found";
-  }
-
-  auto &val_type = f.decl->type().GetField(1).type;
-  Value *val = callback->getArg(2);
-
-  const auto &map_val_type = map_info->second.value_type;
-  if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
-    val = b_.CreatePerCpuMapAggElems(
-        *f.map, callback->getArg(1), map_val_type, f.loc);
-  } else if (!inBpfMemory(val_type)) {
-    val = b_.CreateLoad(b_.GetType(val_type), val, "val");
-  }
-
-  // Create decl variable for use in this iteration of the loop
-  auto *tuple = createTuple(f.decl->type(),
-                            { { key, f.decl->loc }, { val, f.decl->loc } },
-                            f.decl->ident,
-                            f.decl->loc);
+  // Generate the variable declaration.
   variables_[scope_stack_.back()][f.decl->ident] = VariableLLVM{
-    .value = tuple, .type = b_.GetType(f.decl->type())
+    .value = decl(callback), .type = b_.GetType(f.decl->type())
   };
 
   // 1. Save original locations of variables which will form part of the
   //    callback context
   // 2. Replace variable expressions with those from the context
-  Value *ctx = callback->getArg(3);
   const auto &ctx_fields = f.ctx_type.GetFields();
   std::unordered_map<std::string, Value *> orig_ctx_vars;
   for (size_t i = 0; i < ctx_fields.size(); i++) {
@@ -4697,20 +4709,134 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
                                                   field.name);
   }
 
-  // Generate code for the loop body
+  // Generate code for the loop body.
   visit(f.stmts);
   b_.CreateRet(b_.getInt64(0));
 
-  // Restore original non-context variables
+  // Restore original non-context variables.
   for (const auto &[ident, expr] : orig_ctx_vars) {
     getVariable(ident).value = expr;
   }
 
-  // Decl variable is not valid beyond this for loop
+  // Decl variable is not valid beyond this for loop.
   variables_[scope_stack_.back()].erase(f.decl->ident);
 
   b_.restoreIP(saved_ip);
   return callback;
+}
+
+ScopedExpr CodegenLLVM::visit(For &f, Range &range)
+{
+  // Evaluate our starting and endpoint values.
+  auto start = visit(range.start);
+  auto end = visit(range.end);
+  Value *iters = b_.CreateBinOp(Instruction::Sub, end.value(), start.value());
+
+  // Construct the context and callback with extra fields add to the context,
+  // which track the starting value and the current value of the iteration.
+  auto [ctx_t, ctx] = createForContext(f, { b_.getInt64Ty(), b_.getInt64Ty() });
+  const auto sz = f.ctx_type.GetFields().size();
+  b_.CreateStore(start.value(),
+                 b_.CreateSafeGEP(ctx_t,
+                                  ctx,
+                                  { b_.getInt64(0), b_.getInt32(sz) },
+                                  "ctx.start"));
+
+  // Create a callback function suitable for passing to bpf_loop, for the form:
+  //
+  //   static int cb(uint64_t index, void *ctx)
+  //   {
+  //     $x = index+prefix;
+  //     [stmts...]
+  //   }
+  std::array<llvm::Type *, 2> args = { b_.getInt64Ty(), b_.getPtrTy() };
+  Struct debug_args;
+  debug_args.AddField("index", CreateInt64());
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+
+  auto *cb = createForCallback(
+      f, "loop_cb", args, debug_args, ctx_t, [&](llvm::Function *callback) {
+        // See above. Prior to the callback, we push the starting value into the
+        // context as an extra field, and reserve space for the current value
+        // there. This must be set on each iteration, and provides a declaration
+        // that points there.
+        auto *ctx = callback->getArg(1);
+        auto *start_field_ptr = b_.CreateSafeGEP(
+            ctx_t, ctx, { b_.getInt64(0), b_.getInt32(sz) }, "start");
+        auto *current_field_ptr = b_.CreateSafeGEP(
+            ctx_t, ctx, { b_.getInt64(0), b_.getInt32(sz + 1) }, "current");
+
+        // Add the current iteration count to our starting count, reseting the
+        // value of the current variable in the context. The starting value is
+        // not available to the user, simply the value of the current iteration.
+        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(),
+                                                  start_field_ptr),
+                                    callback->getArg(0)),
+                       current_field_ptr);
+        return current_field_ptr;
+      });
+
+  // Execute the loop.
+  b_.CreateForRange(iters, cb, ctx, f.loc);
+  return ScopedExpr();
+}
+
+ScopedExpr CodegenLLVM::visit(For &f, Map &map)
+{
+  // Construct our context types.
+  auto [ctx_t, ctx] = createForContext(f);
+
+  // Create a callback function suitable for passing to bpf_for_each_map_elem,
+  // of the form:
+  //
+  //   static int cb(struct map *map, void *key, void *value, void *ctx)
+  //   {
+  //     $decl = (key, value);
+  //     [stmts...]
+  //   }
+  std::array<llvm::Type *, 4> args = {
+    b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy()
+  };
+  Struct debug_args;
+  debug_args.AddField("map", CreatePointer(CreateInt8()));
+  debug_args.AddField("key", CreatePointer(CreateInt8()));
+  debug_args.AddField("value", CreatePointer(CreateInt8()));
+  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+
+  const std::string name = "map_for_each_cb";
+  auto *cb = createForCallback(
+      f, name, args, debug_args, ctx_t, [&](llvm::Function *callback) {
+        auto &key_type = f.decl->type().GetField(0).type;
+        Value *key = callback->getArg(1);
+        if (!inBpfMemory(key_type)) {
+          key = b_.CreateLoad(b_.GetType(key_type), key, "key");
+        }
+
+        auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+        if (map_info == bpftrace_.resources.maps_info.end()) {
+          LOG(BUG) << "map name: \"" << map.ident << "\" not found";
+        }
+
+        auto &val_type = f.decl->type().GetField(1).type;
+        Value *val = callback->getArg(2);
+
+        const auto &map_val_type = map_info->second.value_type;
+        if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
+          val = b_.CreatePerCpuMapAggElems(
+              map, callback->getArg(1), map_val_type, f.loc);
+        } else if (!inBpfMemory(val_type)) {
+          val = b_.CreateLoad(b_.GetType(val_type), val, "val");
+        }
+
+        return createTuple(f.decl->type(),
+                           { { key, f.decl->loc }, { val, f.decl->loc } },
+                           f.decl->ident,
+                           f.decl->loc);
+      });
+
+  // Invoke via the helper.
+  b_.CreateForEachMapElem(map, cb, ctx, f.loc);
+  return ScopedExpr();
 }
 
 bool CodegenLLVM::canAggPerCpuMapElems(const libbpf::bpf_map_type map_type,

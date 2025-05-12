@@ -59,6 +59,10 @@ public:
                                 Value *key,
                                 bool ret_val_discarded,
                                 const Location &loc);
+  Value *CreateForRange(Value *iters,
+                        Value *callback,
+                        Value *callback_ctx,
+                        const Location &loc);
   Value *CreateForEachMapElem(Map &map,
                               Value *callback,
                               Value *callback_ctx,
