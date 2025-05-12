@@ -4459,19 +4459,19 @@ TEST(semantic_analyser, for_loop_invalid_expr)
 {
   // Error location is incorrect: #3063
   test_error("BEGIN { for ($x : $var) { } }", R"(
-stdin:1:19-24: ERROR: syntax error, unexpected variable, expecting map
+stdin:1:19-25: ERROR: syntax error, unexpected ), expecting [ or . or ->
 BEGIN { for ($x : $var) { } }
-                  ~~~~~
+                  ~~~~~~
 )");
   test_error("BEGIN { for ($x : 1+2) { } }", R"(
-stdin:1:19-21: ERROR: syntax error, unexpected integer, expecting map
+stdin:1:19-22: ERROR: syntax error, unexpected +, expecting [ or . or ->
 BEGIN { for ($x : 1+2) { } }
-                  ~~
+                  ~~~
 )");
   test_error("BEGIN { for ($x : \"abc\") { } }", R"(
-stdin:1:19-25: ERROR: syntax error, unexpected string, expecting map
+stdin:1:19-26: ERROR: syntax error, unexpected ), expecting [ or . or ->
 BEGIN { for ($x : "abc") { } }
-                  ~~~~~~
+                  ~~~~~~~
 )");
 }
 
@@ -4533,6 +4533,118 @@ BEGIN { @map[0] = count(); for ($kv : @map) { print($kv); } }
                            ~~~
 )",
              false);
+}
+
+TEST(semantic_analyser, for_range_loop)
+{
+  // These are all technically valid, although they may result in zero
+  // iterations (for example 5..0 will result in no iterations).
+  test(R"(BEGIN { for ($i : 0..5) { printf("%d\n", $i); } })");
+  test(R"(BEGIN { for ($i : 5..0) { printf("%d\n", $i); } })");
+  test(R"(BEGIN { for ($i : (-10)..10) { printf("%d\n", $i); } })");
+  test(R"(BEGIN { $start = 0; for ($i : $start..5) { printf("%d\n", $i); } })");
+  test(R"(BEGIN { $end = 5; for ($i : 0..$end) { printf("%d\n", $i); } })");
+  test(
+      R"(BEGIN { $start = 0; $end = 5; for ($i : $start..$end) { printf("%d\n", $i); } })");
+  test(
+      R"(BEGIN { for ($i : nsecs()..(nsecs()+100)) { printf("%d\n", $i); } })");
+  test(
+      R"(BEGIN { for ($i : sizeof(int8)..sizeof(int64)) { printf("%d\n", $i); } })");
+  test(R"(BEGIN { for ($i : ((int8)0)..((int8)5)) { printf("%d\n", $i); } })");
+}
+
+TEST(semantic_analyser, for_range_nested)
+{
+  test("BEGIN { for ($i : 0..5) { for ($j : 0..$i) { printf(\"%d %d\\n\", "
+       "$i, $j); } } }");
+}
+
+TEST(semantic_analyser, for_range_variable_use)
+{
+  test("BEGIN { for ($i : 0..5) { @[$i] = $i * 2; } }");
+}
+
+TEST(semantic_analyser, for_range_shadowing)
+{
+  test_error(R"(BEGIN { $i = 10; for ($i : 0..5) { printf("%d", $i); } })",
+             R"(
+stdin:1:22-25: ERROR: Loop declaration shadows existing variable: $i
+BEGIN { $i = 10; for ($i : 0..5) { printf("%d", $i); } }
+                     ~~~
+)");
+}
+
+TEST(semantic_analyser, for_range_invalid_types)
+{
+  test_error(R"(BEGIN { for ($i : "str"..5) { printf("%d", $i); } })",
+             R"(
+stdin:1:19-28: ERROR: Loop range requires an integer for the start value
+BEGIN { for ($i : "str"..5) { printf("%d", $i); } }
+                  ~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { for ($i : 0.."str") { printf("%d", $i); } })",
+             R"(
+stdin:1:19-28: ERROR: Loop range requires an integer for the end value
+BEGIN { for ($i : 0.."str") { printf("%d", $i); } }
+                  ~~~~~~~~~
+)");
+
+  test_error(R"(BEGIN { for ($i : 0.0..5) { printf("%d", $i); } })", R"(
+stdin:1:19-23: ERROR: Can not access index '0' on expression of type 'int64'
+BEGIN { for ($i : 0.0..5) { printf("%d", $i); } }
+                  ~~~~
+stdin:1:19-26: ERROR: Loop range requires an integer for the start value
+BEGIN { for ($i : 0.0..5) { printf("%d", $i); } }
+                  ~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_range_control_flow)
+{
+  test_error("BEGIN { for ($i : 0..5) { break; } }", R"(
+stdin:1:28-33: ERROR: 'break' statement is not allowed in a for-loop
+BEGIN { for ($i : 0..5) { break; } }
+                           ~~~~~
+)");
+
+  test_error("BEGIN { for ($i : 0..5) { continue; } }", R"(
+stdin:1:28-36: ERROR: 'continue' statement is not allowed in a for-loop
+BEGIN { for ($i : 0..5) { continue; } }
+                           ~~~~~~~~
+)");
+
+  test_error("BEGIN { for ($i : 0..5) { return; } }", R"(
+stdin:1:28-34: ERROR: 'return' statement is not allowed in a for-loop
+BEGIN { for ($i : 0..5) { return; } }
+                           ~~~~~~
+)");
+}
+
+TEST(semantic_analyser, for_range_out_of_scope)
+{
+  test_error(
+      R"(BEGIN { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); })",
+      R"(
+stdin:1:61-63: ERROR: Undefined or undeclared variable: $i
+BEGIN { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); }
+                                                            ~~
+)");
+}
+
+TEST(semantic_analyser, for_range_context_access)
+{
+  test_error("kprobe:f { for ($i : 0..5) { arg0 } }", R"(
+stdin:1:31-35: ERROR: 'arg0' builtin is not allowed in a for-loop
+kprobe:f { for ($i : 0..5) { arg0 } }
+                              ~~~~
+)");
+}
+
+TEST(semantic_analyser, for_range_nested_range)
+{
+  test("BEGIN { for ($i : 0..5) { for ($j : 0..$i) { printf(\"%d %d\\n\", $i, "
+       "$j); } } }");
 }
 
 TEST(semantic_analyser, castable_map_missing_feature)

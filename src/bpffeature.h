@@ -124,6 +124,7 @@ public:
   DEFINE_HELPER_TEST(for_each_map_elem, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(get_ns_current_pid_tgid, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(loop, libbpf::BPF_PROG_TYPE_KPROBE); // Added in 5.13.
   DEFINE_PROG_TEST(kprobe, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);

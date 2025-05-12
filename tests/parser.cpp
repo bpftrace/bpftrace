@@ -2926,6 +2926,57 @@ BEGIN { for (@kv : @map) { } }
 )");
 }
 
+TEST(Parser, for_range)
+{
+  test("BEGIN { for ($i : 0..10) { print($i) } }", R"(
+Program
+ BEGIN
+  for
+   decl
+    variable: $i
+    start
+     int: 0
+    end
+     int: 10
+   stmts
+    call: print
+     variable: $i
+)");
+
+  // Binary expressions must be wrapped.
+  test_parse_failure("BEGIN { for ($i : 1+1..10) { print($i) } }", R"(
+stdin:1:19-22: ERROR: syntax error, unexpected +, expecting [ or . or ->
+BEGIN { for ($i : 1+1..10) { print($i) } }
+                  ~~~
+)");
+  test_parse_failure("BEGIN { for ($i : 0..1+1) { print($i) } }", R"(
+stdin:1:19-25: ERROR: syntax error, unexpected +, expecting )
+BEGIN { for ($i : 0..1+1) { print($i) } }
+                  ~~~~~~
+)");
+
+  // Invalid range operator.
+  test_parse_failure("BEGIN { for ($i : 0...10) { print($i) } }", R"(
+stdin:1:19-24: ERROR: syntax error, unexpected .
+BEGIN { for ($i : 0...10) { print($i) } }
+                  ~~~~~
+)");
+
+  // Missing end range.
+  test_parse_failure("BEGIN { for ($i : 0..) { print($i) } }", R"(
+stdin:1:19-24: ERROR: syntax error, unexpected )
+BEGIN { for ($i : 0..) { print($i) } }
+                  ~~~~~
+)");
+
+  // Missing start range.
+  test_parse_failure("BEGIN { for ($i : ..10) { print($i) } }", R"(
+stdin:1:19-21: ERROR: syntax error, unexpected .
+BEGIN { for ($i : ..10) { print($i) } }
+                  ~~
+)");
+}
+
 TEST(Parser, variable_declarations)
 {
   test("BEGIN { let $x; }", R"(

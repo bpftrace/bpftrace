@@ -1014,6 +1014,28 @@ public:
   Block *block = nullptr;
 };
 
+class Range : public Node {
+public:
+  explicit Range(ASTContext &ctx,
+                 Expression start,
+                 Expression end,
+                 Location &&loc)
+      : Node(ctx, std::move(loc)), start(start), end(end) {};
+  explicit Range(ASTContext &ctx, const Range &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        start(clone(ctx, other.start, loc)),
+        end(clone(ctx, other.end, loc)) {};
+
+  Expression start;
+  Expression end;
+};
+
+class Iterable : public VariantNode<Map, Range> {
+public:
+  using VariantNode::VariantNode;
+  Iterable() : Iterable(static_cast<Map *>(nullptr)) {};
+};
+
 class For : public Node {
 public:
   explicit For(ASTContext &ctx,
@@ -1023,16 +1045,25 @@ public:
                Location &&loc)
       : Node(ctx, std::move(loc)),
         decl(decl),
-        map(map),
+        iterable(map),
+        stmts(std::move(stmts)) {};
+  explicit For(ASTContext &ctx,
+               Variable *decl,
+               Range *range,
+               StatementList &&stmts,
+               Location &&loc)
+      : Node(ctx, std::move(loc)),
+        decl(decl),
+        iterable(range),
         stmts(std::move(stmts)) {};
   explicit For(ASTContext &ctx, const For &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         decl(clone(ctx, other.decl, loc)),
-        map(clone(ctx, other.map, loc)),
+        iterable(clone(ctx, other.iterable, loc)),
         stmts(clone(ctx, other.stmts, loc)) {};
 
   Variable *decl = nullptr;
-  Map *map = nullptr;
+  Iterable iterable;
   StatementList stmts;
   SizedType ctx_type;
 };
