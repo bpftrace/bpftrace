@@ -1,0 +1,10 @@
+software:cpu:1e6
+{
+  printf("first");
+}
+
+software:cpu:1e6
+{
+  print(" second\n");
+  exit();
+}
