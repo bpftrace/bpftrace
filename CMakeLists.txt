@@ -227,10 +227,6 @@ if(ENABLE_SYSTEMD)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBSYSTEMD)
 endif()
 
-if(LIBBLAZESYM_FOUND)
-  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BLAZESYM)
-endif()
-
 add_subdirectory(src)
 if (BUILD_TESTING)
   add_subdirectory(tests)
