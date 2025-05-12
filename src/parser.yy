@@ -162,6 +162,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
 %type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
 %type <ast::RootStatements> root_stmts
+%type <ast::Range *> range
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
@@ -491,6 +492,11 @@ loop_stmt:
 
 for_stmt:
                 FOR "(" var ":" map ")" block        { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+        |       FOR "(" var ":" range ")" block      { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+                ;
+
+range:
+                postfix_expr DOT DOT postfix_expr { $$ = driver.ctx.make_node<ast::Range>($1, $4, @$); }
                 ;
 
 if_stmt:

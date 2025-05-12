@@ -2475,15 +2475,22 @@ void SemanticAnalyser::visit(While &while_block)
 
 void SemanticAnalyser::visit(For &f)
 {
-  if (!bpftrace_.feature_->has_helper_for_each_map_elem()) {
+  if (f.iterable.is<Range>() && !bpftrace_.feature_->has_helper_loop()) {
+    f.addError() << "Missing required kernel feature: loop";
+  }
+  if (f.iterable.is<Map>() &&
+      !bpftrace_.feature_->has_helper_for_each_map_elem()) {
     f.addError() << "Missing required kernel feature: for_each_map_elem";
   }
-  if (!is_first_pass() && !map_val_.contains(f.map->ident)) {
-    f.map->addError() << "Undefined map: " << f.map->ident;
+  if (auto *map = f.iterable.as<Map>()) {
+    if (!is_first_pass() && !map_val_.contains(map->ident)) {
+      map->addError() << "Undefined map: " << map->ident;
+    }
   }
 
-  // For-loops are implemented using the bpf_for_each_map_elem helper
-  // function, which requires them to be rewritten into a callback style.
+  // For-loops are implemented using the bpf_for_each_map_elem or bpf_loop
+  // helper functions, which requires them to be rewritten into a callback
+  // style.
   //
   // Pseudo code for the transformation we apply:
   //
@@ -2564,29 +2571,41 @@ void SemanticAnalyser::visit(For &f)
   //       $len++;
   //     }
 
-  // Validate decl
+  // Validate decl.
   const auto &decl_name = f.decl->ident;
   if (find_variable(decl_name)) {
     f.decl->addError() << "Loop declaration shadows existing variable: " +
                               decl_name;
   }
 
-  if (!f.map->type().IsMapIterableTy()) {
-    f.map->addError() << "Loop expression does not support type: "
-                      << f.map->type();
-    return;
+  visit(f.iterable);
+
+  // Validate the iterable.
+  if (auto *map = f.iterable.as<Map>()) {
+    if (!map->type().IsMapIterableTy()) {
+      map->addError() << "Loop expression does not support type: "
+                      << map->type();
+      return;
+    }
+  } else if (auto *range = f.iterable.as<Range>()) {
+    if (is_final_pass()) {
+      if (!range->start.type().IsIntTy()) {
+        range->addError()
+            << "Loop range requires an integer for the start value";
+      }
+      if (!range->end.type().IsIntTy()) {
+        range->addError() << "Loop range requires an integer for the end value";
+      }
+    }
   }
 
-  // Validate body
-  // This could be relaxed in the future:
+  // Validate body. We may relax this in the future.
   CollectNodes<Jump> jumps;
   jumps.visit(f.stmts);
   for (const Jump &n : jumps.nodes()) {
     n.addError() << "'" << opstr(n)
                  << "' statement is not allowed in a for-loop";
   }
-
-  visit(f.map);
 
   if (!ctx_.diagnostics().ok())
     return;
@@ -2625,15 +2644,20 @@ void SemanticAnalyser::visit(For &f)
     }
   }
 
-  // Create type for the loop's decl
-  // Iterating over a map provides a tuple: (map_key, map_val)
-  auto *mapkey = get_map_key_type(*f.map);
-  auto *mapval = get_map_type(*f.map);
+  // Create type for the loop's decl.
+  if (auto *map = f.iterable.as<Map>()) {
+    // Iterating over a map provides a tuple: (map_key, map_val)
+    auto *mapkey = get_map_key_type(*map);
+    auto *mapval = get_map_type(*map);
 
-  if (!mapkey || !mapval)
-    return;
+    if (!mapkey || !mapval)
+      return;
 
-  f.decl->var_type = CreateTuple(Struct::CreateTuple({ *mapkey, *mapval }));
+    f.decl->var_type = CreateTuple(Struct::CreateTuple({ *mapkey, *mapval }));
+  } else if (auto *range = f.iterable.as<Range>()) {
+    // Always use the same type as the first parameter.
+    f.decl->var_type = range->start.type();
+  }
 
   scope_stack_.push_back(&f);
 

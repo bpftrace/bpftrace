@@ -457,7 +457,7 @@ Strings support the following escape sequences:
 
 ==== For
 
-With Linux 5.13 and later, `for` loops can be used to iterate over elements in a map.
+With Linux 5.13 and later, `for` loops can be used to iterate over elements in a map, or over a range of integers, provided as two unary expressions separated by `..`.
 
 ----
 for ($kv : @map) {
@@ -465,7 +465,15 @@ for ($kv : @map) {
 }
 ----
 
-The variable declared in the `for` loop will be initialised on each iteration with a tuple containing a key and a value from the map, i.e. `$kv = (key, value)`.
+----
+for ($i : start..end) {
+  block;
+}
+----
+
+The variable declared in the `for` loop will be initialised on each iteration.
+
+If the iteration is over a map, the value will be a tuple containing a key and a value from the map, i.e. `$kv = (key, value)`:
 
 ----
 @map[10] = 20;
@@ -475,7 +483,7 @@ for ($kv : @map) {
 }
 ----
 
-When a map has multiple keys, the loop variable will be initialised with nested tuple of the form: `((key1, key2, ...), value)`
+If a map has multiple keys, the loop variable will be initialised with nested tuple of the form: `((key1, key2, ...), value)`:
 
 ----
 @map[10,11] = 20;
@@ -486,11 +494,29 @@ for ($kv : @map) {
 }
 ----
 
+If an integer range is provided, the value will be an integer value for each element in the range, inclusive of the start value and exclusive of the end value:
+
+----
+for ($cpu : 0..ncpus) {
+  print($cpu); // current value in range
+}
+----
+
+Note that you cannot adjust the range itself after the loop has started.
+The `for` start and end values are evaluated once, not on each loop iteration.
+For example, the following will print `0` through `9`:
+
+----
+$a = 10;
+for ($i : 0..$a) {
+  print($i);
+  $a--;
+}
+----
+
 ==== While
 
-Since kernel 5.3 BPF supports loops as long as the verifier can prove they're bounded and fit within the instruction limit.
-
-In bpftrace, loops are available through the `while` statement.
+Since kernel 5.3 BPF supports `while` loops as long as the verifier can prove they're bounded and fit within the instruction limit.
 
 ----
 while (condition) {
@@ -498,7 +524,7 @@ while (condition) {
 }
 ----
 
-Within a while-loop the following control flow statements can be used:
+Within a `while` loop the following control flow statements can be used:
 
 [cols="~,~"]
 |===

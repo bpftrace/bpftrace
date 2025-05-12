@@ -403,6 +403,21 @@ void Printer::visit(While &while_block)
   visit(while_block.block);
 }
 
+void Printer::visit(Range &range)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "start\n";
+  ++depth_;
+  visit(range.start);
+  --depth_;
+
+  out_ << indent << "end\n";
+  ++depth_;
+  visit(range.end);
+  --depth_;
+}
+
 void Printer::visit(For &for_loop)
 {
   std::string indent(depth_, ' ');
@@ -420,7 +435,7 @@ void Printer::visit(For &for_loop)
   out_ << indent << " decl\n";
   ++depth_;
   visit(for_loop.decl);
-  visit(for_loop.map);
+  visit(for_loop.iterable);
   --depth_;
 
   out_ << indent << " stmts\n";
