@@ -1,0 +1,10 @@
+usdt:./testprogs/usdt_sized_args:probe1
+{
+  printf("first");
+}
+
+usdt:./testprogs/usdt_sized_args:probe1
+{
+  printf(" second\n");
+  exit();
+}

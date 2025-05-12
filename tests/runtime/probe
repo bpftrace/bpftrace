@@ -548,3 +548,37 @@ EXPECT_NONE bad
 BEFORE ./testprogs/nanosleep_loop
 BEFORE ./testprogs/nanosleep_loop
 TIMEOUT 2
+
+NAME fentry_order
+RUN {{BPFTRACE}} runtime/scripts/fentry_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
+
+NAME rawtracepoint_order
+RUN {{BPFTRACE}} runtime/scripts/rawtracepoint_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
+
+NAME usdt_order
+RUN {{BPFTRACE}} runtime/scripts/usdt_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/usdt_sized_args
+
+NAME interval_order
+RUN {{BPFTRACE}} runtime/scripts/interval_runtime_order.bt
+EXPECT_REGEX (first)+ second
+
+NAME hardware_order
+REQUIRES ls /sys/devices/cpu/events/cache-misses
+RUN {{BPFTRACE}} runtime/scripts/hardware_order.bt
+EXPECT_REGEX (first)+ second
+
+NAME profile_order
+RUN {{BPFTRACE}} runtime/scripts/profile_order.bt
+EXPECT_REGEX (first)+ second
+
+NAME watchpoint_order
+RUN {{BPFTRACE}} -e 'watchpoint:increment+arg1:4:w { printf("first") } watchpoint:increment+arg1:4:w { printf(" second\n"); exit(); }' -c ./testprogs/watchpoint_func
+EXPECT_REGEX (first)+ second
+ARCH aarch64|x86_64
+REQUIRES_FEATURE signal
