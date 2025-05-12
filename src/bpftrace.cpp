@@ -725,7 +725,6 @@ bool attach_reverse(const Probe &p)
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
-    case ProbeType::software:
     case ProbeType::fentry:
     case ProbeType::fexit:
     case ProbeType::iter:
@@ -738,6 +737,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::asyncwatchpoint:
     case ProbeType::hardware:
     case ProbeType::rawtracepoint:
+    case ProbeType::software:
       return false;
     case ProbeType::invalid:
       LOG(BUG) << "Unknown probe type";
