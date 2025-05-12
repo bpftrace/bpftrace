@@ -137,10 +137,8 @@ TEST(async_action, join)
   memset(buffer, 0, total_size);
 
   auto *join = reinterpret_cast<AsyncEvent::Join *>(buffer);
-  auto action_id = static_cast<uint64_t>(AsyncAction::join);
-  uint64_t join_id = 0;
-  memcpy(&join->action_id, &action_id, sizeof(action_id));
-  memcpy(&join->join_id, &join_id, sizeof(join_id));
+  join->action_id = static_cast<uint64_t>(AsyncAction::join);
+  join->join_id = 0;
 
   const char *arg1 = "/bin/ls";
   const char *arg2 = "-la";
@@ -405,6 +403,64 @@ TEST(async_action, printf)
 
   EXPECT_EQ(expected, out)
       << "printf_handler should format multiple arguments correctly";
+}
+
+TEST(async_action, print_non_map)
+{
+  struct TestCase {
+    SizedType type;
+    std::vector<uint8_t> content;
+    std::string expected_output;
+  };
+
+  std::vector<TestCase> test_cases = {
+    // Integer type test
+    { .type = CreateInt64(),
+      .content =
+          []() {
+            int64_t value = 123456789;
+            std::vector<uint8_t> bytes(sizeof(value));
+            for (size_t i = 0; i < sizeof(value); i++) {
+              bytes[i] = reinterpret_cast<uint8_t *>(&value)[i];
+            }
+            return bytes;
+          }(),
+      .expected_output = "123456789\n" },
+    // String type test
+    { .type = CreateString(12),
+      .content =
+          []() {
+            const char *value = "Hello world";
+            std::vector<uint8_t> bytes(strlen(value) + 1);
+            for (size_t i = 0; i < bytes.size(); i++) {
+              bytes[i] = static_cast<uint8_t>(value[i]);
+            }
+            return bytes;
+          }(),
+      .expected_output = "Hello world\n" }
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    bpftrace->resources.non_map_print_args.emplace_back(tc.type);
+    size_t total_size = sizeof(AsyncEvent::PrintNonMap) + tc.content.size();
+    char buffer[total_size];
+    memset(buffer, 0, total_size);
+
+    auto *print_event = reinterpret_cast<AsyncEvent::PrintNonMap *>(buffer);
+    print_event->action_id = static_cast<uint64_t>(AsyncAction::print_non_map);
+    print_event->print_id = 0;
+    std::ranges::copy(tc.content, print_event->content);
+
+    print_non_map_handler(*bpftrace, output, print_event);
+
+    EXPECT_EQ(tc.expected_output, out.str())
+        << "print_non_map_handler failed for type: " << tc.type.GetName();
+  }
 }
 
 } // namespace bpftrace::test::async_action
