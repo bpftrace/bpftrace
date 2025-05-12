@@ -57,6 +57,8 @@ and this project adheres to
   - [#4064](https://github.com/bpftrace/bpftrace/pull/4064)
 - Fix per-cpu map update warning
   - [#4047](https://github.com/bpftrace/bpftrace/pull/4074)
+- Fix probe firing order for fexit and software
+  - [#4113](https://github.com/bpftrace/bpftrace/pull/4113)
 #### Security
 #### Docs
 #### Tools

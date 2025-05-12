@@ -582,3 +582,12 @@ RUN {{BPFTRACE}} -e 'watchpoint:increment+arg1:4:w { printf("first") } watchpoin
 EXPECT_REGEX (first)+ second
 ARCH aarch64|x86_64
 REQUIRES_FEATURE signal
+
+NAME fexit_order
+RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
+
+NAME software_order
+RUN {{BPFTRACE}} runtime/scripts/software_order.bt
+EXPECT_REGEX (first)+ second
