@@ -11,6 +11,13 @@
 
 namespace bpftrace::async_action {
 
+void exit_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *exit = static_cast<AsyncEvent::Exit *>(data);
+  BPFtrace::exit_code = exit->exit_code;
+  bpftrace.request_finalize();
+}
+
 void join_handler(BPFtrace &bpftrace, Output &out, void *data)
 {
   auto *join = static_cast<AsyncEvent::Join *>(data);

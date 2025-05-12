@@ -230,9 +230,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   // async actions
   if (printf_id == AsyncAction::exit) {
-    auto *exit = static_cast<AsyncEvent::Exit *>(data);
-    BPFtrace::exit_code = exit->exit_code;
-    ctx->bpftrace.request_finalize();
+    async_action::exit_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::print) {
     auto *print = static_cast<AsyncEvent::Print *>(data);

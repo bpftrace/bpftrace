@@ -6,6 +6,7 @@
 namespace bpftrace::async_action {
 
 const static size_t MAX_TIME_STR_LEN = 64;
+void exit_handler(BPFtrace &bpftrace, void *data);
 void join_handler(BPFtrace &bpftrace, Output &out, void *data);
 void time_handler(BPFtrace &bpftrace, Output &out, void *data);
 void helper_error_handler(BPFtrace &bpftrace, Output &out, void *data);
