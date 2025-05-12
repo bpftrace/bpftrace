@@ -70,6 +70,23 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.value(bpftrace, ty, bytes);
 }
 
+void skboutput_handler(BPFtrace &bpftrace, void *data, int size)
+{
+  struct hdr_t {
+    uint64_t aid;
+    uint64_t id;
+    uint64_t ns;
+    uint8_t pkt[];
+  } __attribute__((packed)) * hdr;
+
+  hdr = static_cast<struct hdr_t *>(data);
+
+  int offset = std::get<1>(bpftrace.resources.skboutput_args_.at(hdr->id));
+
+  bpftrace.write_pcaps(
+      hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
+}
+
 void syscall_handler(BPFtrace &bpftrace,
                      Output &out,
                      AsyncAction printf_id,

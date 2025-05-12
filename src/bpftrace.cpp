@@ -356,20 +356,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   } else if (printf_id == AsyncAction::skboutput) {
-    struct hdr_t {
-      uint64_t aid;
-      uint64_t id;
-      uint64_t ns;
-      uint8_t pkt[];
-    } __attribute__((packed)) * hdr;
-
-    hdr = static_cast<struct hdr_t *>(data);
-
-    int offset = std::get<1>(
-        ctx->bpftrace.resources.skboutput_args_.at(hdr->id));
-
-    ctx->bpftrace.write_pcaps(
-        hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
+    async_action::skboutput_handler(ctx->bpftrace, data, size);
     return;
   } else if (printf_id >= AsyncAction::syscall &&
              printf_id <= AsyncAction::syscall_end) {
