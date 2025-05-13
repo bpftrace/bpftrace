@@ -51,6 +51,7 @@ public:
   void visit(Predicate &pred);
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
+  void visit(SubprogArg &arg);
   void visit(Subprog &subprog);
   void visit(Import &imp);
   void visit(Program &program);

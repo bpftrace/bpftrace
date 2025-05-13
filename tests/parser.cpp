@@ -2774,8 +2774,8 @@ TEST(Parser, subprog_probe_mixed)
 {
   test("i:s:1 {} fn f1(): void {} i:s:1 {} fn f2(): void {}",
        "Program\n"
-       " f1: void()\n"
-       " f2: void()\n"
+       " subprog: f1 :: [void]\n"
+       " subprog: f2 :: [void]\n"
        " interval:s:1\n"
        " interval:s:1\n");
 }
@@ -2784,7 +2784,7 @@ TEST(Parser, subprog_void_no_args)
 {
   test("fn f(): void {}",
        "Program\n"
-       " f: void()\n");
+       " subprog: f :: [void]\n");
 }
 
 TEST(Parser, subprog_invalid_return_type)
@@ -2801,42 +2801,55 @@ TEST(Parser, subprog_one_arg)
 {
   test("fn f($a : uint8): void {}",
        "Program\n"
-       " f: void($a : uint8)\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [uint8]\n");
 }
 
 TEST(Parser, subprog_two_args)
 {
   test("fn f($a : uint8, $b : uint8): void {}",
        "Program\n"
-       " f: void($a : uint8, $b : uint8)\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [uint8]\n"
+       "   $b :: [uint8]\n");
 }
 
 TEST(Parser, subprog_string_arg)
 {
-  test("fn f($a : string[16]): void {}",
+  test("fn f($a : string): void {}",
        "Program\n"
-       " f: void($a : string[16])\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [string[0]]\n");
 }
 
 TEST(Parser, subprog_struct_arg)
 {
   test("fn f($a: struct x): void {}",
        "Program\n"
-       " f: void($a : struct x)\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [struct x]\n");
 }
 
 TEST(Parser, subprog_union_arg)
 {
   test("fn f($a : union x): void {}",
        "Program\n"
-       " f: void($a : union x)\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [union x]\n");
 }
 
 TEST(Parser, subprog_enum_arg)
 {
   test("fn f($a : enum x): void {}",
        "Program\n"
-       " f: void($a : enum x)\n");
+       " subprog: f :: [void]\n"
+       "  args\n"
+       "   $a :: [enum x]\n");
 }
 
 TEST(Parser, subprog_invalid_arg)
@@ -2853,7 +2866,7 @@ TEST(Parser, subprog_return)
 {
   test("fn f(): void { return 1 + 1; }",
        "Program\n"
-       " f: void()\n"
+       " subprog: f :: [void]\n"
        "  return\n"
        "   +\n"
        "    int: 1\n"
@@ -2862,30 +2875,30 @@ TEST(Parser, subprog_return)
 
 TEST(Parser, subprog_string)
 {
-  test("fn f(): string[16] {}",
+  test("fn f(): string {}",
        "Program\n"
-       " f: string[16]()\n");
+       " subprog: f :: [string[0]]\n");
 }
 
 TEST(Parser, subprog_struct)
 {
   test("fn f(): struct x {}",
        "Program\n"
-       " f: struct x()\n");
+       " subprog: f :: [struct x]\n");
 }
 
 TEST(Parser, subprog_union)
 {
   test("fn f(): union x {}",
        "Program\n"
-       " f: union x()\n");
+       " subprog: f :: [union x]\n");
 }
 
 TEST(Parser, subprog_enum)
 {
   test("fn f(): enum x {}",
        "Program\n"
-       " f: enum x()\n");
+       " subprog: f :: [enum x]\n");
 }
 
 TEST(Parser, for_loop)
