@@ -204,6 +204,7 @@ public:
   // be collecting this, but it's complex to move the logic.
   std::vector<Probe> probes;
   std::unordered_map<std::string, Probe> special_probes;
+  std::vector<Probe> signal_probes;
   std::vector<Probe> watchpoint_probes;
 
   // List of probes using userspace symbol resolution
@@ -229,6 +230,7 @@ private:
             needed_global_vars,
             needs_perf_event_map,
             probes,
+            signal_probes,
             special_probes);
   }
 };

@@ -118,11 +118,15 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
   auto probe = generate_probe(ap, p, usdt_location_idx);
 
   // Add the new probe(s) to resources
-  if (ap.provider == "BEGIN" || ap.provider == "END" || ap.provider == "self") {
+  if (ap.provider == "BEGIN" || ap.provider == "END") {
     // special probes
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
+  } else if (ap.provider == "self") {
+    if (ap.target == "signal") {
+      resources.signal_probes.emplace_back(std::move(probe));
+    }
   } else if ((type == ProbeType::watchpoint ||
               type == ProbeType::asyncwatchpoint) &&
              !ap.func.empty()) {
@@ -178,7 +182,8 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
 
 int BPFtrace::num_probes() const
 {
-  return resources.special_probes.size() + resources.probes.size();
+  return resources.special_probes.size() + resources.probes.size() +
+         resources.signal_probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -876,10 +881,9 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     LOG(V1) << "Attaching BEGIN";
   }
 
-  auto signal_probe = resources.special_probes.find("self_signal");
-  if (signal_probe != resources.special_probes.end()) {
-    auto &sig_prog = bytecode_.getProgramForProbe((*signal_probe).second);
-    sigusr1_prog_fd_ = sig_prog.fd();
+  for (auto &probe : resources.signal_probes) {
+    auto &sig_prog = bytecode_.getProgramForProbe(probe);
+    sigusr1_prog_fds_.emplace_back(sig_prog.fd());
   }
 
   if (child_ && has_usdt_) {
@@ -1141,8 +1145,8 @@ void BPFtrace::poll_output(Output &out, bool drain)
     if (BPFtrace::sigusr1_recv) {
       BPFtrace::sigusr1_recv = false;
 
-      if (sigusr1_prog_fd_.has_value()) {
-        if (::bpf_prog_test_run_opts(*sigusr1_prog_fd_, nullptr)) {
+      for (auto fd : sigusr1_prog_fds_) {
+        if (::bpf_prog_test_run_opts(fd, nullptr)) {
           LOG(ERROR) << "Failed to run signal probe";
           return;
         }
