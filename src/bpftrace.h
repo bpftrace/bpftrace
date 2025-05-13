@@ -192,7 +192,7 @@ public:
   const util::FuncsModulesMap &get_raw_tracepoints() const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
-  std::optional<int> sigusr1_prog_fd_;
+  std::vector<int> sigusr1_prog_fds_;
 
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;

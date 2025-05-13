@@ -591,3 +591,8 @@ AFTER ./testprogs/syscall nanosleep 233;
 NAME software_order
 RUN {{BPFTRACE}} runtime/scripts/software_order.bt
 EXPECT_REGEX (first)+ second
+
+NAME signal_order
+RUN {{BPFTRACE}} -e 'self:signal:SIGUSR1 { printf("first"); } self:signal:SIGUSR1 { printf(" second\n"); exit(); }'
+AFTER kill -s USR1 $(pidof bpftrace)
+EXPECT_REGEX (first)+ second
