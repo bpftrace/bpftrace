@@ -132,7 +132,7 @@ EXPECT Attaching 3 probes...
 
 NAME usdt probes - attach to probe on multiple files by wildcard
 PROG usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }
-EXPECT Attaching 48 probes...
+EXPECT Attaching 49 probes...
 
 NAME usdt probes - attach to probe on multiple providers by wildcard and pid
 RUN {{BPFTRACE}} -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
@@ -286,4 +286,9 @@ NAME usdt probes in multiple modules
 RUN {{BPFTRACE}} runtime/scripts/usdt_multi_modules.bt
 EXPECT Attaching 2 probes...
 TIMEOUT 1
+REQUIRES ./testprogs/systemtap_sys_sdt_check
+
+NAME usdt multi arguments
+RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_multi_args:usdt_multi_args:probe1 { printf("%llx %llx %llx %llx %llx %llx %llx %llx %llx %llx %lld %llx\n", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11); exit(); }' -c ./testprogs/usdt_multi_args
+EXPECT deadbeef 1 ffffffffffffffff cafebabe 8badf00d feedface 123456789abcdef 0 7fffffffffffffff 5555555555555555 42 aaaaaaaaaaaaaaaa
 REQUIRES ./testprogs/systemtap_sys_sdt_check
