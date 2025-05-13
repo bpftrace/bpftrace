@@ -477,22 +477,32 @@ void Printer::visit(Probe &probe)
   --depth_;
 }
 
+void Printer::visit(SubprogArg &arg)
+{
+  std::string indent(depth_, ' ');
+
+  ++depth_;
+  out_ << indent << arg.name << type(arg.type) << std::endl;
+  --depth_;
+}
+
 void Printer::visit(Subprog &subprog)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << subprog.name << ": " << subprog.return_type;
-
-  out_ << "(";
-  for (size_t i = 0; i < subprog.args.size(); i++) {
-    auto &arg = subprog.args.at(i);
-    out_ << arg->name << " : " << arg->type;
-    if (i < subprog.args.size() - 1)
-      out_ << ", ";
-  }
-  out_ << ")" << std::endl;
+  out_ << indent << "subprog: " << subprog.name << type(subprog.return_type)
+       << std::endl;
 
   ++depth_;
+
+  if (!subprog.args.empty()) {
+    ++depth_;
+    out_ << indent << " args" << std::endl;
+    visit(subprog.args);
+    --depth_;
+  }
+
   visit(subprog.stmts);
+
   --depth_;
 }
 
