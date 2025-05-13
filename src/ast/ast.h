@@ -1,5 +1,6 @@
 #pragma once
 
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -340,11 +341,24 @@ public:
     return builtin_type;
   }
 
-  // Check if the builtin is 'arg0' - 'arg9'
+  // Check if the builtin is 'arg0' - 'arg255'
   bool is_argx() const
   {
-    return !ident.compare(0, 3, "arg") && ident.size() == 4 &&
-           ident.at(3) >= '0' && ident.at(3) <= '9';
+    if (ident.size() < 4 || ident.size() > 6 || !ident.starts_with("arg"))
+      return false;
+
+    std::string_view num_part = ident.substr(3);
+
+    // no leading zeros
+    if (num_part.size() > 1 && num_part.front() == '0')
+      return false;
+
+    int arg_num = 0;
+    auto [ptr, ec] = std::from_chars(num_part.data(),
+                                     num_part.data() + num_part.size(),
+                                     arg_num);
+    return ec == std::errc() && ptr == num_part.data() + num_part.size() &&
+           arg_num >= 0 && arg_num < 256;
   }
 
   std::string ident;
