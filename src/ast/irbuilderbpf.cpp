@@ -11,6 +11,7 @@
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
+#include "util/exceptions.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -1491,9 +1492,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   }
 
   if (usdt == nullptr) {
-    builtin.addError() << "failed to initialize usdt context for probe "
-                       << attach_point->target;
-    exit(-1);
+    throw util::FatalUserException(
+        "failed to initialize usdt context for probe " + attach_point->target);
   }
 
   std::string ns = attach_point->usdt.provider;
@@ -1505,10 +1505,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                             usdt_location_index,
                             arg_num,
                             &argument) != 0) {
-    builtin.addError() << "couldn't get argument " << arg_num << " for "
-                       << attach_point->target << ":" << attach_point->ns << ":"
-                       << attach_point->func;
-    exit(-2);
+    throw util::FatalUserException("couldn't get argument " +
+                                   std::to_string(arg_num) + " for " +
+                                   attach_point->target + ":" +
+                                   attach_point->ns + ":" + attach_point->func);
   }
 
   Value *result = CreateUSDTReadArgument(ctx, &argument, builtin, as, loc);

@@ -950,6 +950,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
     AddrSpace addrspace = find_addrspace(pt);
+    int arg_num = atoi(builtin.ident.substr(3).c_str());
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
@@ -957,11 +958,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
         builtin.addError() << "The " << builtin.ident
                            << " builtin can only be used with "
                            << "'kprobes', 'uprobes' and 'usdt' probes";
+      // argx in USDT probes doesn't need to check against arch::max_arg()
+      if (type != ProbeType::usdt && arg_num > arch::max_arg())
+        builtin.addError() << arch::name() << " doesn't support "
+                           << builtin.ident;
     }
-    int arg_num = atoi(builtin.ident.substr(3).c_str());
-    if (arg_num > arch::max_arg())
-      builtin.addError() << arch::name() << " doesn't support "
-                         << builtin.ident;
     builtin.builtin_type = CreateUInt64();
     builtin.builtin_type.SetAS(addrspace);
   } else if (!builtin.ident.compare(0, 4, "sarg") &&
