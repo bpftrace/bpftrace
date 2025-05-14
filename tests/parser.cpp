@@ -1878,7 +1878,7 @@ TEST(Parser, cast_sized_type)
   test("kprobe:sys_read { (string)arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
-       "  (string[0])\n"
+       "  (string)\n"
        "   builtin: arg0\n");
 }
 
@@ -1887,7 +1887,7 @@ TEST(Parser, cast_sized_type_pointer)
   test("kprobe:sys_read { (string *)arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
-       "  (string[0] *)\n"
+       "  (string *)\n"
        "   builtin: arg0\n");
 }
 

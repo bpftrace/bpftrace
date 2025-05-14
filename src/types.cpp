@@ -27,7 +27,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   return os;
 }
 
-std::string typestr(const SizedType &type)
+std::string typestr(const SizedType &type, bool debug)
 {
   switch (type.GetTy()) {
     case Type::integer:
@@ -36,18 +36,22 @@ std::string typestr(const SizedType &type)
       }
       return (type.is_signed_ ? "int" : "uint") +
              std::to_string(8 * type.GetSize());
-    case Type::inet:
     case Type::string:
+      if (debug)
+        return typestr(type.GetTy()) + "[" + std::to_string(type.GetSize()) +
+               "]";
+      return typestr(type.GetTy());
+    case Type::inet:
     case Type::buffer:
       return typestr(type.GetTy()) + "[" + std::to_string(type.GetSize()) + "]";
     case Type::pointer: {
       std::string prefix;
       if (type.IsCtxAccess())
         prefix = "(ctx) ";
-      return prefix + typestr(*type.GetPointeeTy()) + " *";
+      return prefix + typestr(*type.GetPointeeTy(), debug) + " *";
     }
     case Type::array:
-      return typestr(*type.GetElementTy()) + "[" +
+      return typestr(*type.GetElementTy(), debug) + "[" +
              std::to_string(type.GetNumElements()) + "]";
     case Type::record:
       return type.GetName();
@@ -55,7 +59,7 @@ std::string typestr(const SizedType &type)
       std::string res = "(";
       size_t n = type.GetFieldCount();
       for (size_t i = 0; i < n; ++i) {
-        res += typestr(type.GetField(i).type);
+        res += typestr(type.GetField(i).type, debug);
         if (i != n - 1)
           res += ",";
       }

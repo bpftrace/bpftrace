@@ -2,7 +2,6 @@
 
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
-#include <sstream>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
@@ -170,7 +169,7 @@ StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
 }
 
 StructType *IRBuilderBPF::GetStructType(
-    std::string name,
+    const std::string &name,
     const std::vector<llvm::Type *> &elements,
     bool packed)
 {
@@ -376,16 +375,16 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
     ty = ArrayType::get(GetType(*stype.GetElementTy()), stype.GetNumElements());
   } else if (stype.IsTupleTy()) {
     std::vector<llvm::Type *> llvm_elems;
-    std::ostringstream ty_name;
+    std::string ty_name;
 
     for (const auto &elem : stype.GetFields()) {
       const auto &elemtype = elem.type;
       llvm_elems.emplace_back(GetType(elemtype));
-      ty_name << elemtype << "_";
+      ty_name += typestr(elemtype, true) + "_";
     }
-    ty_name << "_tuple_t";
+    ty_name += "_tuple_t";
 
-    ty = GetStructType(ty_name.str(), llvm_elems, false);
+    ty = GetStructType(ty_name, llvm_elems, false);
   } else if (stype.IsStack()) {
     ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
