@@ -503,7 +503,7 @@ public:
 
   bool NeedsPercpuMap() const;
 
-  friend std::string typestr(const SizedType &type);
+  friend std::string typestr(const SizedType &type, bool debug);
 
   // Factories
 
@@ -572,7 +572,7 @@ SizedType CreateTimestampMode();
 
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
-std::string typestr(const SizedType &type);
+std::string typestr(const SizedType &type, bool debug = false);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
 } // namespace bpftrace

@@ -967,7 +967,7 @@ tuple above:
 Just like with any variable the type is determined on first use and cannot be modified afterwards.
 This applies to both the key(s) and the value type.
 
-The following snippets create a map with key signature `(int64, string[16])` and a value type of `int64`:
+The following snippets create a map with key signature `(int64, string)` and a value type of `int64`:
 
 ----
 @[pid, comm]++
@@ -1886,7 +1886,7 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | ID of the cgroup the current process belongs to. Only works with cgroupv2.
 
 | comm
-| string[16]
+| string
 | 4.2
 | get_current_comm
 | Name of the current thread
