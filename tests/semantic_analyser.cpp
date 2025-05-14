@@ -4011,10 +4011,10 @@ TEST(semantic_analyser, subprog_arguments)
 {
   test("fn f($a : int64): int64 { return $a; }");
   // Error location is incorrect: #3063
-  test_error("fn f($a : int64): string[16] { return $a; }", R"(
-stdin:1:34-43: ERROR: Function f is of type string[16], cannot return int64
-fn f($a : int64): string[16] { return $a; }
-                                 ~~~~~~~~~
+  test_error("fn f($a : int64): string { return $a; }", R"(
+stdin:1:30-39: ERROR: Function f is of type string[0], cannot return int64
+fn f($a : int64): string { return $a; }
+                             ~~~~~~~~~
 )");
 }
 
@@ -4648,12 +4648,8 @@ TEST(semantic_analyser, variable_declarations)
   test("BEGIN { let $a = 1; }");
   test("BEGIN { let $a: int16 = 1; }");
   test(R"(BEGIN { let $a: string; $a = "hiya"; })");
-  test(R"(BEGIN { let $a: string[5] = "hiya"; })");
   test("BEGIN { let $a: int16; print($a); }");
   test("BEGIN { let $a; print($a); $a = 1; }");
-  // If the type is specified it's strict in that future assignments
-  // need to fit into that type
-  test(R"(BEGIN { let $a: string[5] = "hiya"; $a = "bye"; })");
   test(R"(BEGIN { let $a = "hiya"; $a = "longerstr"; })");
   test("BEGIN { let $a: int16 = 1; $a = (int8)2; }");
   // Test more types
@@ -4705,12 +4701,6 @@ BEGIN { $a = -1; let $a; }
 stdin:1:9-29: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
 BEGIN { let $a: uint16 = -1; }
         ~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_error(R"(BEGIN { let $a: string[5] = "hiya"; $a = "longerstr"; })", R"(
-stdin:1:38-54: ERROR: Type mismatch for $a: trying to assign value of type 'string[10]' when variable already contains a value of type 'string[5]'
-BEGIN { let $a: string[5] = "hiya"; $a = "longerstr"; }
-                                     ~~~~~~~~~~~~~~~~
 )");
 
   test_error(R"(BEGIN { let $a: sum_t; })", R"(
