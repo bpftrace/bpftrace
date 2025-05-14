@@ -252,6 +252,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { elapsed }");
   test("kprobe:f { numaid }");
   test("kprobe:f { cpu }");
+  test("kprobe:f { ncpus }");
   test("kprobe:f { curtask }");
   test("kprobe:f { rand }");
   test("kprobe:f { ctx }");

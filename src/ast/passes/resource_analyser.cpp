@@ -171,6 +171,9 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
+  } else if (builtin.ident == "ncpus") {
+    resources_.needed_global_vars.insert(
+        bpftrace::globalvars::GlobalVar::NUM_CPUS);
   }
 }
 
