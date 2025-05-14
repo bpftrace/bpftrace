@@ -211,7 +211,7 @@ public:
                              const Location &loc,
                              bool compare_zero = false);
   StructType *GetStackStructType(bool is_ustack);
-  StructType *GetStructType(std::string name,
+  StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
   Value *CreateGetPid(const Location &loc);

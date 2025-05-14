@@ -14,7 +14,7 @@ std::string Printer::type(const SizedType &ty)
   if (ty.IsNoneTy())
     return "";
   std::stringstream buf;
-  buf << " :: [" << ty;
+  buf << " :: [" << typestr(ty, true);
   if (ty.IsCtxAccess())
     buf << ", ctx: 1";
   if (ty.GetAS() != AddrSpace::none)
@@ -151,14 +151,14 @@ void Printer::visit(Map &map)
   // going to be marked as `is_ctx` or have an associated address space.
   std::string indent(depth_, ' ');
   out_ << indent << "map: " << map.ident;
-  if (!map.key_type.IsNoneTy() || !map.key_type.IsNoneTy()) {
+  if (!map.key_type.IsNoneTy() || !map.value_type.IsNoneTy()) {
     out_ << " :: ";
   }
   if (!map.key_type.IsNoneTy()) {
-    out_ << "[" << map.key_type << "]";
+    out_ << "[" << typestr(map.key_type, true) << "]";
   }
   if (!map.value_type.IsNoneTy()) {
-    out_ << map.value_type;
+    out_ << typestr(map.value_type, true);
   }
   out_ << std::endl;
 }
