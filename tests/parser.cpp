@@ -1893,10 +1893,10 @@ TEST(Parser, cast_sized_type_pointer)
 
 TEST(Parser, cast_sized_type_pointer_with_size)
 {
-  test("kprobe:sys_read { (string[1] *)arg0; }",
+  test("kprobe:sys_read { (inet[1] *)arg0; }",
        "Program\n"
        " kprobe:sys_read\n"
-       "  (string[1] *)\n"
+       "  (inet[1] *)\n"
        "   builtin: arg0\n");
 }
 
