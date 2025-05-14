@@ -4413,19 +4413,19 @@ TEST(semantic_analyser, for_loop_invalid_expr)
 {
   // Error location is incorrect: #3063
   test_error("BEGIN { for ($x : $var) { } }", R"(
-stdin:1:19-24: ERROR: syntax error, unexpected variable, expecting map
+stdin:1:19-25: ERROR: syntax error, unexpected ), expecting [ or . or ->
 BEGIN { for ($x : $var) { } }
-                  ~~~~~
+                  ~~~~~~
 )");
   test_error("BEGIN { for ($x : 1+2) { } }", R"(
-stdin:1:19-21: ERROR: syntax error, unexpected integer, expecting map
+stdin:1:19-22: ERROR: syntax error, unexpected +, expecting [ or . or ->
 BEGIN { for ($x : 1+2) { } }
-                  ~~
+                  ~~~
 )");
   test_error("BEGIN { for ($x : \"abc\") { } }", R"(
-stdin:1:19-25: ERROR: syntax error, unexpected string, expecting map
+stdin:1:19-26: ERROR: syntax error, unexpected ), expecting [ or . or ->
 BEGIN { for ($x : "abc") { } }
-                  ~~~~~~
+                  ~~~~~~~
 )");
 }
 
