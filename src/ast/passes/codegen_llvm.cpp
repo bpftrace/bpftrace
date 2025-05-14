@@ -4876,6 +4876,7 @@ Pass CreateVerifyPass()
     std::stringstream ss;
     raw_os_ostream OS(ss);
     bool ret = llvm::verifyModule(*cm.module, &OS);
+    OS.flush();
     if (ret) {
       ast.root->addError() << ss.str();
     }
@@ -4918,6 +4919,7 @@ Pass CreateDumpIRPass(std::ostream &out)
     raw_os_ostream os(out);
     cm.module->print(os, nullptr, false, true);
     os.flush();
+    out.flush();
   });
 }
 
