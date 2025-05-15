@@ -230,9 +230,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   // async actions
   if (printf_id == AsyncAction::exit) {
-    auto *exit = static_cast<AsyncEvent::Exit *>(data);
-    BPFtrace::exit_code = exit->exit_code;
-    ctx->bpftrace.request_finalize();
+    async_action::exit_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::print) {
     auto *print = static_cast<AsyncEvent::Print *>(data);
@@ -341,35 +339,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   } else if (printf_id == AsyncAction::watchpoint_detach) {
-    auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
-    uint64_t addr = unwatch->addr;
-
-    // Remove all probes watching `addr`. Note how we fail silently here
-    // (ie invalid addr). This lets script writers be a bit more aggressive
-    // when unwatch'ing addresses, especially if they're sampling a portion
-    // of addresses they're interested in watching.
-    auto it = std::ranges::remove_if(ctx->bpftrace.attached_probes_,
-                                     [&](const auto &ap) {
-                                       return ap->probe().address == addr;
-                                     });
-    ctx->bpftrace.attached_probes_.erase(it.begin(), it.end());
-
+    async_action::watchpoint_detach_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::skboutput) {
-    struct hdr_t {
-      uint64_t aid;
-      uint64_t id;
-      uint64_t ns;
-      uint8_t pkt[];
-    } __attribute__((packed)) * hdr;
-
-    hdr = static_cast<struct hdr_t *>(data);
-
-    int offset = std::get<1>(
-        ctx->bpftrace.resources.skboutput_args_.at(hdr->id));
-
-    ctx->bpftrace.write_pcaps(
-        hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
+    async_action::skboutput_handler(ctx->bpftrace, data, size);
     return;
   } else if (printf_id >= AsyncAction::syscall &&
              printf_id <= AsyncAction::syscall_end) {

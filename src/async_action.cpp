@@ -11,6 +11,13 @@
 
 namespace bpftrace::async_action {
 
+void exit_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *exit = static_cast<AsyncEvent::Exit *>(data);
+  BPFtrace::exit_code = exit->exit_code;
+  bpftrace.request_finalize();
+}
+
 void join_handler(BPFtrace &bpftrace, Output &out, void *data)
 {
   auto *join = static_cast<AsyncEvent::Join *>(data);
@@ -68,6 +75,39 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
     bytes.emplace_back(print->content[i]);
 
   out.value(bpftrace, ty, bytes);
+}
+
+void watchpoint_detach_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
+  uint64_t addr = unwatch->addr;
+
+  // Remove all probes watching `addr`. Note how we fail silently here
+  // (ie invalid addr). This lets script writers be a bit more aggressive
+  // when unwatch'ing addresses, especially if they're sampling a portion
+  // of addresses they're interested in watching.
+  auto it = std::ranges::remove_if(bpftrace.attached_probes_,
+                                   [&](const auto &ap) {
+                                     return ap->probe().address == addr;
+                                   });
+  bpftrace.attached_probes_.erase(it.begin(), it.end());
+}
+
+void skboutput_handler(BPFtrace &bpftrace, void *data, int size)
+{
+  struct hdr_t {
+    uint64_t aid;
+    uint64_t id;
+    uint64_t ns;
+    uint8_t pkt[];
+  } __attribute__((packed)) * hdr;
+
+  hdr = static_cast<struct hdr_t *>(data);
+
+  int offset = std::get<1>(bpftrace.resources.skboutput_args_.at(hdr->id));
+
+  bpftrace.write_pcaps(
+      hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
 }
 
 void syscall_handler(BPFtrace &bpftrace,
