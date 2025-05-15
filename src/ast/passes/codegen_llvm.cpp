@@ -464,6 +464,22 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
   license_var->setSection("license");
   license_var->addDebugInfo(
       debug_.createGlobalVariable(LICENSE, CreateString(license_size)));
+
+  // Set global array argpids in .rodata section
+  if (bpftrace.pid() && bpftrace.has_argpids_builtin_) {
+    ArrayType *argpids_ty = ArrayType::get(b_.getInt32Ty(), 1);
+    auto *argpids_var = llvm::cast<GlobalVariable>(
+        module_->getOrInsertGlobal("argpids", argpids_ty));
+
+    argpids_var->setInitializer(
+        ConstantArray::get(argpids_ty,
+                           { b_.getInt32(bpftrace.pid().value()) }));
+    argpids_var->setConstant(true);
+    argpids_var->setSection(".rodata");
+    argpids_var->setAlignment(llvm::Align(4));
+    argpids_var->addDebugInfo(
+        debug_.createGlobalVariable("argpids", CreateString(2)));
+  }
 }
 
 ScopedExpr CodegenLLVM::visit(Integer &integer)
@@ -642,6 +658,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(ctx_, builtin.loc));
+  } else if (builtin.ident == "argpids") {
+    return ScopedExpr(module_->getNamedGlobal("argpids"));
   } else if (builtin.ident == "cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
   } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
@@ -2386,7 +2404,20 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
   auto scoped_expr = visit(arr.expr);
   auto scoped_index = visit(arr.indexpr);
 
-  if (inBpfMemory(arr.element_type) && !type.IsPtrTy())
+  // For builtin expr "argpids[idx]", we generate ir:
+  // getelementptr inbounds @argpids, ptr @argpids, i32 0, i32 idx
+  if (scoped_expr.value()->getName() == "argpids") {
+    GlobalVariable *argpids_var = module_->getNamedGlobal("argpids");
+    Value *idx = b_.CreateIntCast(scoped_index.value(), b_.getInt32Ty(), false);
+    Value *element_ptr = b_.CreateInBoundsGEP(argpids_var->getValueType(),
+                                              argpids_var,
+                                              { b_.getInt32(0), idx },
+                                              "argpids_elem_ptr");
+
+    return ScopedExpr(
+        b_.CreateLoad(b_.getInt32Ty(), element_ptr, "argpids_elem"));
+
+  } else if (inBpfMemory(arr.element_type) && !type.IsPtrTy())
     return readDatastructElemFromStack(
         std::move(scoped_expr), scoped_index.value(), type, arr.element_type);
   else {
