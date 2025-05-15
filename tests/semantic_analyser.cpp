@@ -356,14 +356,14 @@ TEST(semantic_analyser, consistent_map_values)
   test(
       R"(BEGIN { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test_error("kprobe:f { @x = 0; @x = \"a\"; }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
+stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
 kprobe:f { @x = 0; @x = "a"; }
-                   ~~
+                   ~~~~~~~~
 )");
   test_error("kprobe:f { @x = 0; @x = *curtask; }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'int64'
+stdin:1:20-33: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'int64'
 kprobe:f { @x = 0; @x = *curtask; }
-                   ~~
+                   ~~~~~~~~~~~~~
 )");
 }
 
@@ -2459,9 +2459,9 @@ kprobe:f { @y = stats(5); @x = @y; }
 stdin:1:35-42: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
                                   ~~~~~~~
-stdin:1:35-37: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'int64'
+stdin:1:35-42: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
-                                  ~~
+                                  ~~~~~~~
 )");
 
   test("kprobe:f { @ = count(); if (@ > 0) { print((1)); } }");
@@ -2482,9 +2482,9 @@ kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
 )");
   test_error("kprobe:f { @ = count(); @ += 5 }", R"(
-stdin:1:25-26: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count_t'
+stdin:1:25-31: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count_t'
 kprobe:f { @ = count(); @ += 5 }
-                        ~
+                        ~~~~~~
 )");
 }
 

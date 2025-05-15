@@ -201,7 +201,9 @@ private:
   bool is_valid_assignment(const Expression &expr, bool map_without_type);
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
-  void assign_map_type(Map &map, const SizedType &type);
+  void assign_map_type(Map &map,
+                       const SizedType &type,
+                       AssignMapStatement *assignment = nullptr);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
   void reconcile_map_key(Map *map, const Expression &key_expr);
   void update_current_key(SizedType &current_key_type,
@@ -2984,7 +2986,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     }
   }
 
-  assign_map_type(*assignment.map, assignment.expr.type());
+  assign_map_type(*assignment.map, assignment.expr.type(), &assignment);
 
   const auto &map_ident = assignment.map->ident;
   const auto &type = assignment.expr.type();
@@ -3928,7 +3930,9 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
 // Semantic analysis for assigning a value of the provided type to the given
 // map. The type within the passes `Map` node will be updated to reflect the
 // new type, if available.
-void SemanticAnalyser::assign_map_type(Map &map, const SizedType &type)
+void SemanticAnalyser::assign_map_type(Map &map,
+                                       const SizedType &type,
+                                       AssignMapStatement *assignment)
 {
   const std::string &map_ident = map.ident;
 
@@ -3945,10 +3949,12 @@ void SemanticAnalyser::assign_map_type(Map &map, const SizedType &type)
       else
         *maptype = type;
     } else if (maptype->GetTy() != type.GetTy()) {
-      map.addError() << "Type mismatch for " << map_ident << ": "
-                     << "trying to assign value of type '" << type
-                     << "' when map already contains a value of type '"
-                     << *maptype << "'";
+      Diagnostic &diagnostic = assignment ? assignment->addError()
+                                          : map.addError();
+      diagnostic << "Type mismatch for " << map_ident << ": "
+                 << "trying to assign value of type '" << type
+                 << "' when map already contains a value of type '" << *maptype
+                 << "'";
     }
     if (maptype->IsStringTy() || maptype->IsTupleTy())
       update_string_size(*maptype, type);
