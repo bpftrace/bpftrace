@@ -308,7 +308,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=2,
       .arg_types={
         map_type_spec{
-          .type = std::function<SizedType(const Call&)>([](const ast::Call&) -> SizedType { return CreateCount(true); })
+          .type = std::function<SizedType(const Call&)>([](const ast::Call&) -> SizedType { return CreateCount(); })
         },
         map_key_spec{ .map_index=0 },
       }
@@ -1177,7 +1177,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   } else if (call.func == "count") {
-    call.return_type = CreateCount(true);
+    call.return_type = CreateCount();
   } else if (call.func == "sum") {
     call.return_type = CreateSum(call.vargs.at(0).type().IsSigned());
   } else if (call.func == "min") {

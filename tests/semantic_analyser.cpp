@@ -2482,7 +2482,7 @@ kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
 )");
   test_error("kprobe:f { @ = count(); @ += 5 }", R"(
-stdin:1:25-31: ERROR: Type mismatch for @: trying to assign value of type 'int64' when map already contains a value of type 'count_t'
+stdin:1:25-31: ERROR: Type mismatch for @: trying to assign value of type 'uint64' when map already contains a value of type 'count_t'
 kprobe:f { @ = count(); @ += 5 }
                         ~~~~~~
 )");
