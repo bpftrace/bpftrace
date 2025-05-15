@@ -856,6 +856,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   } else if (builtin.ident == "pid" || builtin.ident == "tid") {
     builtin.builtin_type = CreateUInt32();
+  } else if (builtin.ident == "argpid") {
+    if (!bpftrace_.pid()) {
+      builtin.addError() << "'argpid' builtin is available only if -p is set";
+      return;
+    }
+    builtin.builtin_type = CreateUInt32();
   } else if (builtin.ident == "nsecs" || builtin.ident == "elapsed" ||
              builtin.ident == "cgroup" || builtin.ident == "uid" ||
              builtin.ident == "gid" || builtin.ident == "cpu" ||

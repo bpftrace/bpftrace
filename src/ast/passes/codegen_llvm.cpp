@@ -642,6 +642,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(ctx_, builtin.loc));
+  } else if (builtin.ident == "argpid") {
+    return ScopedExpr(b_.getInt32(bpftrace_.pid().value_or(0)));
   } else if (builtin.ident == "cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
   } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
