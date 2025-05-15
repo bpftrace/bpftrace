@@ -32,6 +32,7 @@ add_library(runtime STATIC
   probe_matcher.cpp
   probe_types.cpp
   procmon.cpp
+  progress.cpp
   printf.cpp
   run_bpftrace.cpp
   usdt.cpp
