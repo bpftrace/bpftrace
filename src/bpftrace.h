@@ -120,7 +120,7 @@ public:
   int num_probes() const;
   int prerun(Output &out) const;
   int run(Output &out, BpfBytecode bytecode);
-  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
+  virtual std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
@@ -161,6 +161,7 @@ public:
   void request_finalize();
   std::optional<std::string> get_watchpoint_binary_path() const;
   virtual bool is_traceable_func(const std::string &func_name) const;
+  virtual int resume_tracee(pid_t tracee_pid);
   virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(

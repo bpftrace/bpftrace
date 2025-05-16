@@ -77,6 +77,64 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.value(bpftrace, ty, bytes);
 }
 
+void watchpoint_attach_handler(BPFtrace &bpftrace, Output &output, void *data)
+{
+  auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
+  uint64_t probe_idx = watchpoint->watchpoint_idx;
+  uint64_t addr = watchpoint->addr;
+
+  if (probe_idx >= bpftrace.resources.watchpoint_probes.size()) {
+    LOG(BUG) << "Invalid watchpoint probe idx=" << probe_idx;
+  }
+
+  // Ignore duplicate watchpoints (idx && addr same), but allow the same
+  // address to be watched by different probes.
+  //
+  // NB: this check works b/c we set Probe::addr below
+  //
+  // TODO: Should we be printing a warning or info message out here?
+  if (bpftrace.resources.watchpoint_probes[probe_idx].address == addr)
+    goto out;
+
+  // Attach the real watchpoint probe
+  {
+    bool registers_available = true;
+    Probe &wp_probe = bpftrace.resources.watchpoint_probes[probe_idx];
+    wp_probe.address = addr;
+    std::vector<std::unique_ptr<AttachedProbe>> aps;
+    try {
+      aps = bpftrace.attach_probe(wp_probe, bpftrace.bytecode_);
+    } catch (const util::EnospcException &ex) {
+      registers_available = false;
+      output.message(MessageType::lost_events,
+                     "Failed to attach watchpoint probe. You are "
+                     "out of watchpoint registers.");
+      goto out;
+    }
+
+    if (aps.empty() && registers_available) {
+      throw util::FatalUserException("Unable to attach real watchpoint probe");
+    }
+
+    for (auto &ap : aps)
+      bpftrace.attached_probes_.emplace_back(std::move(ap));
+  }
+
+out:
+  // Async watchpoints are not SIGSTOP'd
+  if (bpftrace.resources.watchpoint_probes[probe_idx].async)
+    return;
+  // Let the tracee continue
+  pid_t pid = bpftrace.child_
+                  ? bpftrace.child_->pid()
+                  : (bpftrace.procmon_ ? bpftrace.procmon_->pid() : -1);
+  if (pid == -1 || bpftrace.resume_tracee(pid) != 0) {
+    throw util::FatalUserException(
+        "Failed to SIGCONT tracee (pid: " + std::to_string(pid) +
+        "): " + strerror(errno));
+  }
+}
+
 void watchpoint_detach_handler(BPFtrace &bpftrace, void *data)
 {
   auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
