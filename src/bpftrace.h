@@ -233,6 +233,7 @@ public:
   int online_cpus_;
   int max_cpu_id_;
   std::unique_ptr<Config> config_;
+  bool has_argpids_builtin_ = false;
 
 private:
   Ksyms ksyms_;
