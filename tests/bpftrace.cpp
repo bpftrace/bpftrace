@@ -1342,4 +1342,31 @@ TEST(bpftrace, list_modules_kprobe_explicit)
   EXPECT_THAT(modules, Contains("kernel_mod"));
 }
 
+// Implicit fentry/fexit is not tested b/c the mocks are currently wired
+// up in a somewhat rigid way. The mocked data source uses "vmlinux" module
+// but another mock forces "mock_vmlinux" module. Anyone reading this comment
+// is welcome to try it out again (in case it's been fixed in interim) or do
+// a proper fix.
+
+TEST_F(bpftrace_btf, list_modules_fentry_explicit)
+{
+  auto modules = list_modules("fentry:vmlinux:func_1{},fexit:vmlinux:func_2{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
+TEST_F(bpftrace_btf, list_modules_rawtracepoint_implicit)
+{
+  auto modules = list_modules("rawtracepoint:event_rt{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
+TEST_F(bpftrace_btf, list_modules_rawtracepoint_explicit)
+{
+  auto modules = list_modules("rawtracepoint:vmlinux:event_rt{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
 } // namespace bpftrace::test::bpftrace
