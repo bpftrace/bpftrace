@@ -357,3 +357,7 @@ TIMEOUT 1
 NAME block expression
 PROG BEGIN { let $a = { let $b = 1; $b }; print($a); exit(); }
 EXPECT 1
+
+NAME argpid_builtin
+RUN {{BPFTRACE}} -p 1 -e 'BEGIN {print(argpid); exit();}'
+EXPECT 1
