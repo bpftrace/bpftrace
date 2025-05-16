@@ -554,7 +554,7 @@ SizedType CreateStack(bool kernel, StackType st = StackType());
 SizedType CreateMin(bool is_signed);
 SizedType CreateMax(bool is_signed);
 SizedType CreateSum(bool is_signed);
-SizedType CreateCount(bool is_signed);
+SizedType CreateCount();
 SizedType CreateAvg(bool is_signed);
 SizedType CreateStats(bool is_signed);
 SizedType CreateUsername();

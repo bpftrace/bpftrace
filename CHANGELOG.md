@@ -48,6 +48,8 @@ and this project adheres to
   - [#3772](https://github.com/bpftrace/bpftrace/pull/3772)
 - Positional params can be used in any part of a probe string
   - [#3956](https://github.com/bpftrace/bpftrace/pull/3956)
+- Add signed type checking for map assignments
+  - [#4132](https://github.com/bpftrace/bpftrace/pull/4132)
 #### Deprecated
 #### Removed
 #### Fixed

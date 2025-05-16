@@ -66,9 +66,9 @@ std::string typestr(const SizedType &type)
     case Type::min_t:
     case Type::sum_t:
     case Type::avg_t:
-    case Type::count_t:
     case Type::stats_t:
       return (type.is_signed_ ? "" : "u") + typestr(type.GetTy());
+    case Type::count_t:
     case Type::mac_address:
     case Type::kstack_t:
     case Type::ustack_t:
@@ -391,9 +391,9 @@ SizedType CreateSum(bool is_signed)
   return { Type::sum_t, 8, is_signed };
 }
 
-SizedType CreateCount(bool is_signed)
+SizedType CreateCount()
 {
-  return { Type::count_t, 8, is_signed };
+  return { Type::count_t, 8, false };
 }
 
 SizedType CreateAvg(bool is_signed)

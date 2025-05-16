@@ -55,8 +55,7 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateStats(true)), "stats_t");
   EXPECT_EQ(to_str(CreateStats(false)), "ustats_t");
 
-  EXPECT_EQ(to_str(CreateCount(true)), "count_t");
-  EXPECT_EQ(to_str(CreateCount(false)), "ucount_t");
+  EXPECT_EQ(to_str(CreateCount()), "count_t");
 
   EXPECT_EQ(to_str(CreateMacAddress()), "mac_address");
   EXPECT_EQ(to_str(CreateStack(true)), "kstack");
