@@ -3342,7 +3342,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     // Integers are always stored as 64-bit in map keys
     b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
                                     b_.getInt64Ty(),
-                                    key_expr.type().IsSigned()),
+                                    key_type.IsSigned()),
                    key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
