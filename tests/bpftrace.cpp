@@ -66,7 +66,7 @@ void check_kprobe(Probe &p,
                   const std::string &attach_point,
                   const std::string &orig_name,
                   uint64_t func_offset = 0,
-                  const std::string &target = "")
+                  const std::string &target = "mock_vmlinux")
 {
   EXPECT_EQ(ProbeType::kprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
@@ -225,7 +225,7 @@ TEST(bpftrace, add_probes_single)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  check_kprobe(bpftrace->get_probes().at(0), "sys_read", "kprobe:sys_read");
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", "kprobe:mock_vmlinux:sys_read");
 }
 
 TEST(bpftrace, add_probes_multiple)
@@ -235,7 +235,7 @@ TEST(bpftrace, add_probes_multiple)
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read,kprobe:sys_write";
+  std::string probe_orig_name = "kprobe:mock_vmlinux:sys_read,kprobe:mock_vmlinux:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
 }
@@ -253,10 +253,10 @@ TEST(bpftrace, add_probes_wildcard)
   ASSERT_EQ(4U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  std::string probe_orig_name = "kprobe:mock_vmlinux:sys_read,kprobe:my_*,kprobe:mock_vmlinux:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
-  check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name);
-  check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name, 0, "");
+  check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name, 0, "");
   check_kprobe(bpftrace->get_probes().at(3), "sys_write", probe_orig_name);
 }
 
@@ -272,7 +272,7 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   ASSERT_EQ(3U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  std::string probe_orig_name = "kprobe:mock_vmlinux:sys_read,kprobe:my_*,kprobe:mock_vmlinux:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe_multi(bpftrace->get_probes().at(1),
                      { "my_one", "my_two" },
@@ -296,7 +296,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name =
-      "kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write";
+      "kprobe:mock_vmlinux:sys_read,kprobe:not_here_*,kprobe:mock_vmlinux:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
 }
@@ -316,7 +316,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches_kprobe_multi)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name =
-      "kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write";
+      "kprobe:mock_vmlinux:sys_read,kprobe:not_here_*,kprobe:mock_vmlinux:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
 }
@@ -324,12 +324,12 @@ TEST(bpftrace, add_probes_wildcard_no_matches_kprobe_multi)
 TEST(bpftrace, add_probes_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("kprobe:func_in_mod{}", *bpftrace);
+  parse_probe("kprobe:func_in_modzz{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "kprobe:func_in_mod";
+  std::string probe_orig_name = "kprobe:kernel_mod:func_in_mod";
   check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
 }
 
@@ -418,7 +418,7 @@ TEST(bpftrace, add_probes_offset)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read+" + std::to_string(offset);
+  std::string probe_orig_name = "kprobe:mock_vmlinux:sys_read+" + std::to_string(offset);
   check_kprobe(
       bpftrace->get_probes().at(0), "sys_read", probe_orig_name, offset);
 }
