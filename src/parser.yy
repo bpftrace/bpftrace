@@ -10,7 +10,7 @@
 %define define_location_comparison
 %define parse.assert
 %define parse.trace
-%expect 4
+%expect 0
 
 %define parse.error verbose
 
@@ -99,6 +99,9 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   PTR        "->"
   STRUCT     "struct"
   UNION      "union"
+
+  // Pseudo token; see below.
+  LOW "low-precedence"
 ;
 
 %token <std::string> BUILTIN "builtin"
@@ -169,9 +172,19 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
-%type <ast::Identifier *> raw_ident
 %type <ast::Program *> program
 
+
+// A pseudo token, which is the lowest precedence among all tokens.
+//
+// This helps us explicitly lower the precedence of a given rule to force shift
+// vs. reduce, and make the grammar explicit (still ambiguous, but explicitly
+// ambiguous). For example, consider the inherently ambiguous `@foo[..]`, which
+// could be interpreted as accessing the `@foo` non-scalar map, or indexing
+// into the value of the `@foo` scalar map, e.g. `(@foo)[...]`. We lower the
+// precedence of the associated rules to ensure that this is shifted, and the
+// longer `map_expr` rule will match over the `map` rule in this case.
+%left LOW
 
 %left COMMA
 %right ASSIGN LEFTASSIGN RIGHTASSIGN PLUSASSIGN MINUSASSIGN MULASSIGN DIVASSIGN MODASSIGN BANDASSIGN BORASSIGN BXORASSIGN
@@ -187,7 +200,9 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %left PLUS MINUS
 %left MUL DIV MOD
 %right LNOT BNOT
-%left LPAREN RPAREN LBRACKET RBRACKET DOT PTR
+%left DOT PTR
+%right PAREN RPAREN
+%right LBRACKET RBRACKET
 
 // In order to support the parsing of full programs and the parsing of just
 // expressions (used while expanding C macros, for example), use the trick
@@ -199,12 +214,12 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %%
 
-start:          START_PROGRAM program { driver.result = $2; }
-        |       START_EXPR expr       { driver.result = $2; }
+start:          START_PROGRAM program END { driver.result = $2; }
+        |       START_EXPR expr END       { driver.result = $2; }
                 ;
 
 program:
-                c_definitions config imports map_decl_list macros body END {
+                c_definitions config imports map_decl_list macros body {
                     $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
                 }
                 ;
@@ -537,15 +552,13 @@ var_decl_stmt:
         ;
 
 primary_expr:
-                raw_ident          { $$ = $1; }
-        |       UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
+                UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       BUILTIN            { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
         |       param_count        { $$ = $1; }
         |       var                { $$ = $1; }
-        |       map                { $$ = $1; }
         |       map_expr           { $$ = $1; }
         |       "(" vargs "," expr ")"
                 {
@@ -553,6 +566,8 @@ primary_expr:
                   args.push_back($4);
                   $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
                 }
+        |       map %prec LOW      { $$ = $1; }
+        |       IDENT %prec LOW    { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;
 
 postfix_expr:
@@ -718,10 +733,6 @@ ident:
         |       BUILTIN       { $$ = $1; }
         |       BUILTIN_TYPE  { $$ = $1; }
         |       SIZED_TYPE    { $$ = $1; }
-                ;
-
-raw_ident:
-                IDENT         { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;
 
 struct_field:
