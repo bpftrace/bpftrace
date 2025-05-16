@@ -273,70 +273,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     async_action::helper_error_handler(ctx->bpftrace, ctx->output, data);
     return;
   } else if (printf_id == AsyncAction::watchpoint_attach) {
-    bool abort = false;
-    auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
-    uint64_t probe_idx = watchpoint->watchpoint_idx;
-    uint64_t addr = watchpoint->addr;
-
-    if (probe_idx >= ctx->bpftrace.resources.watchpoint_probes.size()) {
-      LOG(ERROR) << "Invalid watchpoint probe idx=" << probe_idx;
-      abort = true;
-      goto out;
-    }
-
-    // Ignore duplicate watchpoints (idx && addr same), but allow the same
-    // address to be watched by different probes.
-    //
-    // NB: this check works b/c we set Probe::addr below
-    //
-    // TODO: Should we be printing a warning or info message out here?
-    if (ctx->bpftrace.resources.watchpoint_probes[probe_idx].address == addr)
-      goto out;
-
-    // Attach the real watchpoint probe
-    {
-      bool registers_available = true;
-      Probe &wp_probe = ctx->bpftrace.resources.watchpoint_probes[probe_idx];
-      wp_probe.address = addr;
-      std::vector<std::unique_ptr<AttachedProbe>> aps;
-      try {
-        aps = ctx->bpftrace.attach_probe(wp_probe, ctx->bpftrace.bytecode_);
-      } catch (const util::EnospcException &ex) {
-        registers_available = false;
-        ctx->output.message(MessageType::lost_events,
-                            "Failed to attach watchpoint probe. You are "
-                            "out of watchpoint registers.");
-        goto out;
-      }
-
-      if (aps.empty() && registers_available) {
-        std::cerr << "Unable to attach real watchpoint probe" << std::endl;
-        abort = true;
-        goto out;
-      }
-
-      for (auto &ap : aps)
-        ctx->bpftrace.attached_probes_.emplace_back(std::move(ap));
-    }
-
-  out:
-    // Async watchpoints are not SIGSTOP'd
-    if (ctx->bpftrace.resources.watchpoint_probes[probe_idx].async)
-      return;
-
-    // Let the tracee continue
-    pid_t pid = ctx->bpftrace.child_
-                    ? ctx->bpftrace.child_->pid()
-                    : (ctx->bpftrace.procmon_ ? ctx->bpftrace.procmon_->pid()
-                                              : -1);
-    if (pid == -1 || ::kill(pid, SIGCONT) != 0) {
-      std::cerr << "Failed to SIGCONT tracee: " << strerror(errno) << std::endl;
-      abort = true;
-    }
-
-    if (abort)
-      std::abort();
-
+    async_action::watchpoint_attach_handler(ctx->bpftrace, ctx->output, data);
     return;
   } else if (printf_id == AsyncAction::watchpoint_detach) {
     async_action::watchpoint_detach_handler(ctx->bpftrace, data);
@@ -1838,6 +1775,11 @@ bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
   const auto &funcs = get_traceable_funcs();
   return funcs.contains(func_name);
+}
+
+int BPFtrace::resume_tracee(pid_t tracee_pid)
+{
+  return ::kill(tracee_pid, SIGCONT);
 }
 
 std::unordered_set<std::string> BPFtrace::get_func_modules(
