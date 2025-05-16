@@ -63,6 +63,8 @@ and this project adheres to
   - [#4047](https://github.com/bpftrace/bpftrace/pull/4074)
 - Fix probe firing order for fexit and software
   - [#4113](https://github.com/bpftrace/bpftrace/pull/4113)
+- Fix type mismatch error for map assignments
+  - [#4130](https://github.com/bpftrace/bpftrace/pull/4130)
 #### Security
 #### Docs
 #### Tools
