@@ -21,6 +21,7 @@ namespace bpftrace::test::bpftrace {
 #include "btf_common.h"
 
 using ::testing::ContainerEq;
+using ::testing::Contains;
 using ::testing::StrictMock;
 
 static const int STRING_SIZE = 64;
@@ -1303,6 +1304,69 @@ TEST(bpftrace, resolve_timestamp)
   // Now check that we handle rollover to a new second correctly
   bpftrace->resources.strftime_args.emplace_back("%s.%f");
   EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 2, 15), "1736725827.000000");
+}
+
+static std::set<std::string> list_modules(std::string_view ap)
+{
+  ast::ASTContext ast("stdin", ap.data());
+  auto bpftrace = get_mock_bpftrace();
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(static_cast<BPFtrace &>(*bpftrace))
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .run();
+  EXPECT_TRUE(ok && ast.diagnostics().ok());
+
+  return bpftrace->list_modules(ast);
+}
+
+// Test modules are extracted when module is not explicit in attachpoint
+TEST(bpftrace, list_modules_kprobe_implicit)
+{
+  auto modules = list_modules("k:queued_spin_lock_slowpath{},kr:func_in_mod{}");
+  EXPECT_EQ(modules.size(), 3);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+  EXPECT_THAT(modules, Contains("kernel_mod"));
+  EXPECT_THAT(modules, Contains("other_kernel_mod"));
+}
+
+// Inverse of above
+TEST(bpftrace, list_modules_kprobe_explicit)
+{
+  auto modules = list_modules(
+      "k:vmlinux:queued_spin_lock_slowpath{},kr:kernel_mod:func_in_mod{}");
+  EXPECT_EQ(modules.size(), 2);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+  EXPECT_THAT(modules, Contains("kernel_mod"));
+}
+
+// Implicit fentry/fexit is not tested b/c the mocks are currently wired
+// up in a somewhat rigid way. The mocked data source uses "vmlinux" module
+// but another mock forces "mock_vmlinux" module. Anyone reading this comment
+// is welcome to try it out again (in case it's been fixed in interim) or do
+// a proper fix.
+
+TEST_F(bpftrace_btf, list_modules_fentry_explicit)
+{
+  auto modules = list_modules("fentry:vmlinux:func_1{},fexit:vmlinux:func_2{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
+TEST_F(bpftrace_btf, list_modules_rawtracepoint_implicit)
+{
+  auto modules = list_modules("rawtracepoint:event_rt{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
+TEST_F(bpftrace_btf, list_modules_rawtracepoint_explicit)
+{
+  auto modules = list_modules("rawtracepoint:vmlinux:event_rt{}");
+  EXPECT_EQ(modules.size(), 1);
+  EXPECT_THAT(modules, Contains("vmlinux"));
 }
 
 } // namespace bpftrace::test::bpftrace

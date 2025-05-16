@@ -717,7 +717,7 @@ AttachPointParser::State AttachPointParser::fentry_parser()
     ap_->func = parts_[2];
   } else {
     ap_->func = parts_[1];
-    if (ap_->func.find('*') == std::string::npos) {
+    if (!util::has_wildcard(ap_->func)) {
       auto func_modules = bpftrace_.get_func_modules(ap_->func);
       if (func_modules.size() == 1)
         ap_->target = *func_modules.begin();

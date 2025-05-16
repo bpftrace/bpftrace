@@ -1956,20 +1956,24 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
           probe_type == ProbeType::rawtracepoint ||
-          ((probe_type == ProbeType::kprobe ||
-            probe_type == ProbeType::kretprobe) &&
-           !ap->target.empty())) {
-        if (ap->expansion != ast::ExpansionType::NONE) {
-          for (const auto &match : probe_matcher_->get_matches_for_ap(*ap)) {
-            std::string func = match;
-            util::erase_prefix(func);
-            auto match_modules = probe_type == ProbeType::rawtracepoint
-                                     ? get_raw_tracepoint_modules(func)
-                                     : get_func_modules(func);
-            modules.insert(match_modules.begin(), match_modules.end());
-          }
-        } else
-          modules.insert(ap->target);
+          probe_type == ProbeType::kprobe ||
+          probe_type == ProbeType::kretprobe) {
+        // Force module name into listing
+        bool clear_target;
+        if (ap->target.empty()) {
+          ap->target = "*";
+          clear_target = true;
+        } else {
+          clear_target = false;
+        }
+
+        for (std::string match : probe_matcher_->get_matches_for_ap(*ap)) {
+          auto module = util::erase_prefix(match);
+          modules.insert(module);
+        }
+
+        if (clear_target)
+          ap->target.clear();
       } else if (probe_type == ProbeType::tracepoint) {
         // For now, we support this for a single target only since tracepoints
         // need dumping of C definitions BTF and that is not available for
