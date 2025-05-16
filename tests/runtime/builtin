@@ -101,7 +101,7 @@ EXPECT_REGEX SUCCESS .*
 
 NAME probe
 PROG k:do_nanosleep { printf("SUCCESS %s\n", probe); exit(); }
-EXPECT SUCCESS kprobe:do_nanosleep
+EXPECT SUCCESS kprobe:vmlinux:do_nanosleep
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME begin probe

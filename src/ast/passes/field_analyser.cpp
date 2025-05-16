@@ -357,7 +357,9 @@ void FieldAnalyser::resolve_type(SizedType &type)
   if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
     sized_type_ = bpftrace_.btf_->get_stype(name);
 
-  // Could not resolve destination type - let ClangParser do it
+  // Could not resolve destination type - let ClangParser do it.
+  // The type may have been provided through a #include or some C fragments
+  // inside the script.
   if (sized_type_.IsNoneTy())
     bpftrace_.btf_set_.insert(name);
 }

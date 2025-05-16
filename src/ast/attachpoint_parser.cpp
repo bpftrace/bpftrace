@@ -362,6 +362,21 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
     ap_->func = parts_[func_idx];
   }
 
+  // Normalize attachpoint to contain module information if possible
+  if (ap_->target.empty() && !util::has_wildcard(ap_->func)) {
+    auto func_modules = bpftrace_.get_func_modules(ap_->func);
+    if (func_modules.size() == 1)
+      ap_->target = *func_modules.begin();
+    else if (func_modules.size() > 1) {
+      // Same as with fentry/fexit, ask the user to specify a module explicitly
+      // if there is ambiguity.
+      errs_ << "ambiguous attach point, please specify module containing "
+               "the function \'"
+            << ap_->func << "\'";
+      return INVALID;
+    }
+  }
+
   // kprobe_multi does not support the "module:function" syntax so in case
   // a module is specified, always use full expansion
   if (util::has_wildcard(ap_->target))
@@ -717,7 +732,7 @@ AttachPointParser::State AttachPointParser::fentry_parser()
     ap_->func = parts_[2];
   } else {
     ap_->func = parts_[1];
-    if (ap_->func.find('*') == std::string::npos) {
+    if (!util::has_wildcard(ap_->func)) {
       auto func_modules = bpftrace_.get_func_modules(ap_->func);
       if (func_modules.size() == 1)
         ap_->target = *func_modules.begin();
