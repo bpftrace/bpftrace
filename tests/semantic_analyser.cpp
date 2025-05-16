@@ -563,19 +563,19 @@ kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
 TEST(semantic_analyser, mismatched_call_types)
 {
   test_error("kprobe:f { @x = 1; @x = count(); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'int64'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = count(); }
-                   ~~
+                        ~~~~~~~
 )");
   test_error("kprobe:f { @x = count(); @x = sum(pid); }", R"(
-stdin:1:26-28: ERROR: Type mismatch for @x: trying to assign value of type 'usum_t' when map already contains a value of type 'count_t'
+stdin:1:31-39: ERROR: Type mismatch for @x: trying to assign value of type 'usum_t' when map already contains a value of type 'count_t'
 kprobe:f { @x = count(); @x = sum(pid); }
-                         ~~
+                              ~~~~~~~~
 )");
   test_error("kprobe:f { @x = 1; @x = hist(0); }", R"(
-stdin:1:20-22: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'int64'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'int64'
 kprobe:f { @x = 1; @x = hist(0); }
-                   ~~
+                        ~~~~~~~
 )");
 }
 
@@ -3173,6 +3173,57 @@ Program
    variable: $x :: [int8]
    (int8)
     int: 5
+)");
+}
+
+TEST(semantic_analyser, mixed_int_like_map_assignments)
+{
+  // Map values are automatically promoted to 64bit ints
+  test("kprobe:f { @x = (uint64)0; @x = (uint16)1; }");
+  test("kprobe:f { @x = (int8)1; @x = 5; }");
+  test("kprobe:f { @x = 1; @x = -1; }");
+  test("kprobe:f { @x = (int8)1; @x = -2; }");
+  test("kprobe:f { @x = (int16)1; @x = 20000; }");
+  test("kprobe:f { @x = (uint16)1; @x = 200; }");
+  test("kprobe:f { @x = (uint16)1; @x = 10223372036854775807; }");
+  test("kprobe:f { @x = 1; @x = 9223372036854775807; }");
+  test("kprobe:f { @x = 1; @x = -9223372036854775808; }");
+
+  test_error("kprobe:f { @x = (uint8)1; @x = -1; }", R"(
+stdin:1:27-34: ERROR: Type mismatch for @x: trying to assign value of type 'int64' when map already contains a value of type 'uint64'
+kprobe:f { @x = (uint8)1; @x = -1; }
+                          ~~~~~~~
+)");
+
+  test_error("kprobe:f { @x = 1; @x = 10223372036854775807; }", R"(
+stdin:1:20-45: ERROR: Type mismatch for @x: trying to assign value '10223372036854775807' which does not fit into the map of type 'int64'
+kprobe:f { @x = 1; @x = 10223372036854775807; }
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }", R"(
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'sum_t' when map already contains a value of type 'usum_t'
+kprobe:f { @x = sum((uint64)1); @x = sum(-1); }
+                                     ~~~~~~~
+)");
+  test_error("kprobe:f { @x = min((uint64)1); @x = min(-1); }", R"(
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'min_t' when map already contains a value of type 'umin_t'
+kprobe:f { @x = min((uint64)1); @x = min(-1); }
+                                     ~~~~~~~
+)");
+  test_error("kprobe:f { @x = max((uint64)1); @x = max(-1); }", R"(
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'max_t' when map already contains a value of type 'umax_t'
+kprobe:f { @x = max((uint64)1); @x = max(-1); }
+                                     ~~~~~~~
+)");
+  test_error("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }", R"(
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'avg_t' when map already contains a value of type 'uavg_t'
+kprobe:f { @x = avg((uint64)1); @x = avg(-1); }
+                                     ~~~~~~~
+)");
+  test_error("kprobe:f { @x = stats((uint64)1); @x = stats(-1); }", R"(
+stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'ustats_t'
+kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
+                                       ~~~~~~~~~
 )");
 }
 

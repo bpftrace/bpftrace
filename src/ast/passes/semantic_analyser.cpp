@@ -203,6 +203,7 @@ private:
   SizedType *get_map_key_type(const Map &map);
   void assign_map_type(Map &map,
                        const SizedType &type,
+                       const Node *loc_node,
                        AssignMapStatement *assignment = nullptr);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
   void reconcile_map_key(Map *map, const Expression &key_expr);
@@ -232,15 +233,16 @@ private:
   };
   void accept_statements(StatementList &stmts);
 
-  // At the moment we iterate over the stack from top to bottom as variable
-  // shadowing is not supported.
+  // At the moment we iterate over the stack from top to
+  // bottom as variable shadowing is not supported.
   std::vector<Node *> scope_stack_;
   Node *top_level_node_ = nullptr;
 
-  // Holds the function currently being visited by this SemanticAnalyser.
-  std::string func_;
-  // Holds the function argument index currently being visited by this
+  // Holds the function currently being visited by this
   // SemanticAnalyser.
+  std::string func_;
+  // Holds the function argument index currently being
+  // visited by this SemanticAnalyser.
   int func_arg_idx_ = -1;
 
   variable *find_variable(const std::string &var_ident);
@@ -2250,7 +2252,7 @@ void SemanticAnalyser::visit(Unop &unop)
         // Doing increments or decrements on the map type implements that
         // it is done on an integer. Maps are always coerced into larger
         // integers, so this should not conflict with different assignments.
-        assign_map_type(*acc->map, CreateInt64());
+        assign_map_type(*acc->map, CreateInt64(), acc->map);
       }
     } else if (!unop.expr.is<Variable>()) {
       unop.addError() << "The " << opstr(unop)
@@ -2986,7 +2988,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     }
   }
 
-  assign_map_type(*assignment.map, assignment.expr.type(), &assignment);
+  assign_map_type(
+      *assignment.map, assignment.expr.type(), &assignment, &assignment);
 
   const auto &map_ident = assignment.map->ident;
   const auto &type = assignment.expr.type();
@@ -3655,7 +3658,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
   if (auto *map = call.vargs.at(index).as<Map>()) {
     if (spec.type) {
       SizedType type = spec.type(call);
-      assign_map_type(*map, type);
+      assign_map_type(*map, type, &call);
     }
     return true;
   }
@@ -3932,12 +3935,13 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
 // new type, if available.
 void SemanticAnalyser::assign_map_type(Map &map,
                                        const SizedType &type,
+                                       const Node *loc_node,
                                        AssignMapStatement *assignment)
 {
   const std::string &map_ident = map.ident;
 
   if (type.IsRecordTy() && type.is_tparg) {
-    map.addError() << "Storing tracepoint args in maps is not supported";
+    loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
 
   auto *maptype = get_map_type(map);
@@ -3949,15 +3953,46 @@ void SemanticAnalyser::assign_map_type(Map &map,
       else
         *maptype = type;
     } else if (maptype->GetTy() != type.GetTy()) {
-      Diagnostic &diagnostic = assignment ? assignment->addError()
-                                          : map.addError();
-      diagnostic << "Type mismatch for " << map_ident << ": "
-                 << "trying to assign value of type '" << type
-                 << "' when map already contains a value of type '" << *maptype
-                 << "'";
-    }
-    if (maptype->IsStringTy() || maptype->IsTupleTy())
+      loc_node->addError() << "Type mismatch for " << map_ident << ": "
+                           << "trying to assign value of type '" << type
+                           << "' when map already contains a value of type '"
+                           << *maptype << "'";
+    } else if (maptype->IsSumTy() || maptype->IsMinTy() || maptype->IsMaxTy() ||
+               maptype->IsAvgTy() || maptype->IsStatsTy()) {
+      if (maptype->IsSigned() != type.IsSigned()) {
+        loc_node->addError() << "Type mismatch for " << map_ident << ": "
+                             << "trying to assign value of type '" << type
+                             << "' when map already contains a value of type '"
+                             << *maptype << "'";
+      }
+    } else if (maptype->IsIntegerTy() && !maptype->IsEqual(type)) {
+      auto *integer = assignment ? assignment->expr.as<Integer>() : nullptr;
+      if (integer) {
+        uint64_t value = integer->value;
+        bool can_fit = false;
+        if (!maptype->IsSigned()) {
+          auto min_max = getUIntTypeRange(*maptype);
+          can_fit = value <= min_max.second;
+        } else {
+          auto min_max = getIntTypeRange(*maptype);
+          can_fit = value <= static_cast<uint64_t>(min_max.second);
+        }
+        if (!can_fit) {
+          loc_node->addError() << "Type mismatch for " << map_ident << ": "
+                               << "trying to assign value '"
+                               << static_cast<uint64_t>(integer->value)
+                               << "' which does not fit into the map of type '"
+                               << *maptype << "'";
+        }
+      } else if (maptype->IsSigned() != type.IsSigned()) {
+        loc_node->addError() << "Type mismatch for " << map_ident << ": "
+                             << "trying to assign value of type '" << type
+                             << "' when map already contains a value of type '"
+                             << *maptype << "'";
+      }
+    } else if (maptype->IsStringTy() || maptype->IsTupleTy()) {
       update_string_size(*maptype, type);
+    }
     map.value_type = *maptype;
   } else {
     // This map hasn't been seen before.
