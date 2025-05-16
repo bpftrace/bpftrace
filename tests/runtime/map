@@ -19,6 +19,10 @@ NAME map indexed, scalar-like, with decl
 PROG let @a = hash(1); BEGIN { @a[0] = 0; exit(); }
 EXPECT @a[0]: 0
 
+NAME uint64 key
+PROG BEGIN { @a[18446744073709551615] = 0; exit(); }
+EXPECT @a[18446744073709551615]: 0
+
 # Unfortunately there are some issues when evicting lruhash entries. We can't
 # know exactly which elements will be present. See #3992 for more information.
 NAME map declaration lruhash

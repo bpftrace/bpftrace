@@ -36,7 +36,7 @@ BEGIN
 	    "RADDR:RPORT", "STATE");
 
 	// See include/net/tcp_states.h:
-	@tcp_states[1] = "ESTABLISHED";
+	@tcp_states[(uint64)1] = "ESTABLISHED";
 	@tcp_states[2] = "SYN_SENT";
 	@tcp_states[3] = "SYN_RECV";
 	@tcp_states[4] = "FIN_WAIT1";
