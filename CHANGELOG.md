@@ -67,6 +67,8 @@ and this project adheres to
   - [#4113](https://github.com/bpftrace/bpftrace/pull/4113)
 - Fix type mismatch error for map assignments
   - [#4130](https://github.com/bpftrace/bpftrace/pull/4130)
+- Parse BTF for implicit kernel modules in kprobe/kretprobe
+  - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
 #### Security
 #### Docs
 #### Tools
