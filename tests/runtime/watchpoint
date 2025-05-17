@@ -59,3 +59,8 @@ RUN {{BPFTRACE}} -e 'watchpoint:increment_*+arg0:4:w { printf("%s!\n", probe) }'
 EXPECT_REGEX .*increment_0:4:w!
 ARCH aarch64|x86_64
 REQUIRES_FEATURE signal
+
+NAME execution breakpoint
+RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:x { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_exec
+EXPECT hit!
+ARCH aarch64|ppc64|ppc64le|x86_64
