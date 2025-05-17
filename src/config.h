@@ -62,7 +62,7 @@ public:
   uint64_t perf_rb_pages = 64;
   std::string license = "GPL";
   std::string str_trunc_trailer = "..";
-  ConfigMissingProbes missing_probes = ConfigMissingProbes::warn;
+  ConfigMissingProbes missing_probes = ConfigMissingProbes::error;
   StackMode stack_mode = StackMode::bpftrace;
 
   // Initialized in the constructor.

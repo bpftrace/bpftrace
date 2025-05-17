@@ -7,6 +7,23 @@ compatibility in some way. Each entry should contain:
 - an example of an error message
 - a simple guide to fix existing scripts
 
+## Versions 0.23.x (or earlier) to 0.24.x (or later)
+
+### Probe Attachment Failure Exits the Program
+
+Previously, if a probe with multiple attach points or a wildcard failed to attach,
+a warning would be printed and the program would continue to run. Now, if there
+are any attachment failures, the program will exit with an error.
+
+If it's expected that some probes will fail to attach, you can use the config
+variable 'missing_probes' to either `warn` or `ignore` these failures e.g.
+
+```
+config = {
+    missing_probes = "warn"
+}
+```
+
 ## Versions 0.21.x (or earlier) to 0.22.x (or later)
 
 ### Added block scoping for scratch variables
@@ -165,4 +182,3 @@ manually include the print statements in your signal handler probe:
 ```
 # bpftrace -e 'BEGIN { @b[1] = 2; } self:signal:SIGUSR1 { print(@b); }' & kill -s USR1 $(pidof bpftrace)
 ```
-

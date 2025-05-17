@@ -191,7 +191,6 @@ aot.probe.uprobe_address_fail_resolve
 aot.probe.uprobe_offset
 aot.probe.uprobe_offset
 aot.probe.uprobe_offset_fail_size
-aot.probe.uprobe_warn_missing_probes
 aot.probe.uprobe_zero_size
 aot.probe.uretprobe
 aot.regression.access ctx struct field twice

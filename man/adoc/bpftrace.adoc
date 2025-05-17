@@ -1125,6 +1125,8 @@ kprobe:tcp_reset,kprobe:*socket* {
 }
 ----
 
+By default, bpftrace requires all probes to attach successfully or else an error is returned. However this can be changed using the `missing_probes` config variable.
+
 Most providers also support a short name which can be used instead of the full name, e.g. `kprobe:f` and `k:f` are identical.
 
 [cols="~,~,~,~"]
@@ -3785,11 +3787,9 @@ There is no artificial limit on what you can tune this to. But you may be wastin
 
 ==== missing_probes
 
-Default: `warn`
+Default: `error`
 
-Controls handling of probes with multiple kprobe or uprobe attach points which
-cannot be attached to some functions because they do not exist in the kernel or
-in the traced binary.
+Controls handling of probes which cannot be attached because they do not exist (in the kernel or in the traced binary) or there was an issue during attachment.
 
 The possible options are:
 - `error` - always fail on missing probes

@@ -82,20 +82,13 @@ void BpfProgram::set_attach_target(const Probe &probe,
   }
 
   if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
-    const std::string msg = "No BTF found for " + attach_target;
-    if (probe.orig_name != probe.name &&
-        config.missing_probes != ConfigMissingProbes::error) {
-      // One attach point in a multi-attachpoint probe failed and the user
-      // requested not to error out. Show a warning (if requested) and continue
-      // but disable auto-loading of the program as it would make the entire BPF
-      // object loading fail.
-      if (config.missing_probes == ConfigMissingProbes::warn)
-        LOG(WARNING) << msg << ", skipping.";
-      bpf_program__set_autoload(bpf_prog_, false);
-    } else {
-      // explicit match failed, fail hard
-      throw util::FatalUserException(msg);
+    const std::string msg = "No BTF found for " + attach_target + ".";
+    if (config.missing_probes == ConfigMissingProbes::error) {
+      LOG(ERROR) << msg;
+    } else if (config.missing_probes == ConfigMissingProbes::warn) {
+      LOG(WARNING) << msg;
     }
+    bpf_program__set_autoload(bpf_prog_, false);
   }
 
   bpf_program__set_attach_target(bpf_prog_, 0, attach_target.c_str());
