@@ -200,25 +200,25 @@ WILL_FAIL
 
 NAME pid fails validation with leading non-number
 RUN {{BPFTRACE}} -p a1111 file.bt
-EXPECT ERROR: Failed to parse pid: pid 'a1111' is not a valid decimal number
+EXPECT ERROR: Failed to parse pid: invalid integer: a1111
 TIMEOUT 1
 WILL_FAIL
 
 NAME pid fails validation with non-number in between
 RUN {{BPFTRACE}} -p 111a1 file.bt
-EXPECT ERROR: Failed to parse pid: pid '111a1' is not a valid decimal number
+EXPECT ERROR: Failed to parse pid: invalid trailing bytes: 111a1
 TIMEOUT 1
 WILL_FAIL
 
 NAME pid fails validation with non-numeric argument
 RUN {{BPFTRACE}} -p not_a_pid file.bt
-EXPECT ERROR: Failed to parse pid: pid 'not_a_pid' is not a valid decimal number
+EXPECT ERROR: Failed to parse pid: invalid integer: not_a_pid
 TIMEOUT 1
 WILL_FAIL
 
 NAME pid outside of valid pid range
 RUN {{BPFTRACE}} -p 5000000 file.bt
-EXPECT ERROR: Failed to parse pid: pid '5000000' out of valid pid range [1,4194304]
+EXPECT ERROR: Pid out of range: 5000000
 TIMEOUT 1
 WILL_FAIL
 

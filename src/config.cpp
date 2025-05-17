@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <sstream>
 #include <unordered_set>
 
 #include "config.h"
@@ -64,14 +65,13 @@ struct ConfigParser<uint64_t> {
                    uint64_t *target,
                    const std::string &s)
   {
-    try {
-      // If this can be parsed as a literal integer, then we take that.
-      *target = util::to_uint(s, 0);
-      return OK();
-    } catch (const std::exception &e) {
-      // Don't bother with the exception, just include the original string.
+    // If this can be parsed as a literal integer, then we take that.
+    auto val = util::to_uint(s);
+    if (!val) {
       return make_error<ParseError>(key, "expecting a number, got " + s);
     }
+    *target = *val;
+    return OK();
   }
   Result<OK> parse([[maybe_unused]] const std::string &key,
                    uint64_t *target,

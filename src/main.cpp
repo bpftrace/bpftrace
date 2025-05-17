@@ -720,10 +720,16 @@ int main(int argc, char* argv[])
   bpftrace.delta_taitime_ = get_delta_taitime();
 
   if (!args.pid_str.empty()) {
-    std::string errmsg;
-    auto maybe_pid = util::parse_pid(args.pid_str, errmsg);
-    if (!maybe_pid.has_value()) {
-      LOG(ERROR) << "Failed to parse pid: " + errmsg;
+    auto maybe_pid = util::to_uint(args.pid_str);
+    if (!maybe_pid) {
+      LOG(ERROR) << "Failed to parse pid: " << maybe_pid.takeError();
+      exit(1);
+    }
+    if (*maybe_pid > 0x400000) {
+      // The actual maximum pid depends on the configuration for the specific
+      // system, i.e. read from `/proc/sys/kernel/pid_max`. We can impose a
+      // basic sanity check here against the nominal maximum for 64-bit systems.
+      LOG(ERROR) << "Pid out of range: " << *maybe_pid;
       exit(1);
     }
     try {
