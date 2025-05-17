@@ -100,9 +100,17 @@ if(STATIC_LINKING)
   target_link_libraries(ast PUBLIC ${clang_libs})
   target_link_libraries(ast PUBLIC ${llvm_libs})
 else()
-  # llvm_config macro comes from the LLVM toolchain and will auto-resolve component
-  # names to library names. USE_SHARED option will tell llvm_config macro to prefer
-  # shared library / DLL on the system over the static libraries
-  llvm_config(ast USE_SHARED bpfcodegen ipo irreader mcjit orcjit)
+  find_package(LLVM QUIET CONFIG)
+  if (TARGET LLVM)
+    # llvm_config macro comes from the LLVM toolchain and will auto-resolve component
+    # names to library names. USE_SHARED option will tell llvm_config macro to prefer
+    # shared library / DLL on the system over the static libraries
+    llvm_config(ast USE_SHARED bpfcodegen ipo irreader mcjit orcjit)
+  else()
+    llvm_map_components_to_libnames(_llvm_libs bpfcodegen ipo irreader mcjit orcjit)
+    llvm_expand_dependencies(llvm_libs ${_llvm_libs})
+    target_link_libraries(ast PRIVATE ${llvm_libs})
+  endif()
+
   target_link_libraries(ast PUBLIC libclang)
 endif()
