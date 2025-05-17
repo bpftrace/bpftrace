@@ -100,9 +100,15 @@ if(STATIC_LINKING)
   target_link_libraries(ast PUBLIC ${clang_libs})
   target_link_libraries(ast PUBLIC ${llvm_libs})
 else()
-  # llvm_config macro comes from the LLVM toolchain and will auto-resolve component
-  # names to library names. USE_SHARED option will tell llvm_config macro to prefer
-  # shared library / DLL on the system over the static libraries
-  llvm_config(ast USE_SHARED bpfcodegen ipo irreader mcjit orcjit)
+  if (TARGET LLVM)
+    # llvm_config macro comes from the LLVM toolchain and will auto-resolve component
+    # names to library names. USE_SHARED option will tell llvm_config macro to prefer
+    # shared library / DLL on the system over the static libraries
+    llvm_config(ast USE_SHARED bpfcodegen ipo irreader mcjit orcjit)
+  else()
+    # some build environment(e.g facebookexperimental/ExtendedAndroidTools) doesn't
+    # have libLLVM.so, drop `USE_SHARED` to avoid forcing link to `-lLLVM`.
+    llvm_config(ast bpfcodegen ipo irreader mcjit orcjit)
+  endif()
   target_link_libraries(ast PUBLIC libclang)
 endif()
