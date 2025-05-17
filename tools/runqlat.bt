@@ -22,6 +22,10 @@
 #define TASK_RUNNING 0
 #endif
 
+config = {
+	log_warnings=0;
+}
+
 BEGIN
 {
 	printf("Tracing CPU scheduler... Hit Ctrl-C to end.\n");
