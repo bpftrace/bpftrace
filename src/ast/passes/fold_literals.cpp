@@ -363,17 +363,26 @@ std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
     return ast_.make_node<Integer>(static_cast<uint64_t>(0),
                                    Location(param.loc));
   }
-  try {
-    if (val[0] == '-') {
-      auto v = util::to_int(val, 0);
-      return ast_.make_node<NegativeInteger>(v, Location(param.loc));
-    } else {
-      auto v = util::to_uint(val, 0);
-      return ast_.make_node<Integer>(v, Location(param.loc));
+  if (val[0] == '-') {
+    auto v = util::to_uint(val.substr(1, val.size() - 1));
+    if (!v) {
+      // Not parsed, treat it as a string.
+      return ast_.make_node<String>(val, Location(param.loc));
     }
-  } catch (const std::exception &e) {
-    // Treat this as the original string.
-    return ast_.make_node<String>(val, Location(param.loc));
+    // Converting without overflow.
+    auto neg = -static_cast<int64_t>(*v - 1) - 1;
+    if (neg > 0) {
+      // Overflow/underflow, treat ias a string.
+      return ast_.make_node<String>(val, Location(param.loc));
+    }
+    return ast_.make_node<NegativeInteger>(neg, Location(param.loc));
+  } else {
+    auto v = util::to_uint(val);
+    if (!v) {
+      // Not parsed, treat it as a string.
+      return ast_.make_node<String>(val, Location(param.loc));
+    }
+    return ast_.make_node<Integer>(*v, Location(param.loc));
   }
 }
 

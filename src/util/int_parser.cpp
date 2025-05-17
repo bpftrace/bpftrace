@@ -1,225 +1,120 @@
-#include "util/int_parser.h"
-
-#include <algorithm>
-#include <exception>
+#include <cstdint>
+#include <limits>
+#include <map>
+#include <optional>
 #include <ranges>
-#include <regex>
-#include <sstream>
-#include <stdexcept>
-#include <type_traits>
-#include <variant>
 
-namespace {
-
-template <typename T>
-T _parse_int(const std::string &num __attribute__((unused)),
-             size_t *idx __attribute__((unused)),
-             int base __attribute__((unused)))
-{
-  static_assert(not std::is_same_v<T, T>,
-                "BUG: _parse_int not implemented for type");
-}
-
-template <>
-int64_t _parse_int(const std::string &num, size_t *idx, int base)
-{
-  return std::stoll(num, idx, base);
-}
-
-template <>
-uint64_t _parse_int(const std::string &num, size_t *idx, int base)
-{
-  return std::stoull(num, idx, base);
-}
-
-template <typename T>
-std::variant<T, std::string> _parse_int(const std::string &num, int base)
-{
-  // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
-  static auto int_size_re = std::regex("^(u|u?l?l)$", std::regex::icase);
-  try {
-    std::size_t idx;
-    T ret = _parse_int<T>(num, &idx, base);
-
-    if (idx != num.size()) {
-      auto trail = num.substr(idx, std::string::npos);
-      auto match = std::regex_match(trail, int_size_re);
-
-      if (!match)
-        return "Found trailing non-numeric characters";
-    }
-
-    return ret;
-  } catch (const std::exception &ex) {
-    return ex.what();
-  }
-}
-
-// integer variant of   10^exp
-uint64_t _ten_pow(uint64_t exp)
-{
-  static const uint64_t v[] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
-  if (exp > 6)
-    return v[6] * _ten_pow(exp - 6);
-  return v[exp];
-}
-
-// integer variant of scientific notation parsing
-template <typename T>
-std::variant<T, std::string> _parse_exp(const std::string &coeff,
-                                        const std::string &exp)
-{
-  std::stringstream errmsg;
-  auto maybe_coeff = _parse_int<T>(coeff, 10);
-  if (auto *err = std::get_if<std::string>(&maybe_coeff)) {
-    errmsg << "Coefficient part of scientific literal is not a valid number: "
-           << coeff << ": " << *err;
-    return errmsg.str();
-  }
-
-  auto maybe_exp = _parse_int<T>(exp, 10);
-  if (auto *err = std::get_if<std::string>(&maybe_exp)) {
-    errmsg << "Exponent part of scientific literal is not a valid number: "
-           << exp << ": " << *err;
-    return errmsg.str();
-  }
-
-  auto c = std::get<T>(maybe_coeff);
-  auto e = std::get<T>(maybe_exp);
-
-  if (c > 9) {
-    errmsg << "Coefficient part of scientific literal must be in range (0,9), "
-              "got: "
-           << coeff;
-    return errmsg.str();
-  }
-
-  if (e > 16) {
-    errmsg << "Exponent will overflow integer range: " << exp;
-    return errmsg.str();
-  }
-
-  return c * static_cast<T>(_ten_pow(e));
-}
-
-} // namespace
+#include "util/int_parser.h"
+#include "util/result.h"
 
 namespace bpftrace::util {
 
-template <typename T>
-T to_int(const std::string &num, int base)
+char OverflowError::ID;
+void OverflowError::log(llvm::raw_ostream &OS) const
 {
-  std::string n(num);
-  auto it = std::ranges::remove(n, '_');
-  n.erase(it.begin(), it.end());
-
-  std::variant<T, std::string> res;
-
-  // If hex
-  if ((n.starts_with("0x")) || (n.starts_with("0X"))) {
-    res = _parse_int<T>(n, base);
-  } else {
-    auto pos = n.find_first_of("eE");
-    if (pos != std::string::npos) {
-      res = _parse_exp<T>(n.substr(0, pos),
-                          n.substr(pos + 1, std::string::npos));
-    } else {
-      res = _parse_int<T>(n, base);
-    }
-  }
-
-  if (auto *err = std::get_if<std::string>(&res))
-    throw std::invalid_argument(*err);
-  return std::get<T>(res);
+  OS << "overflow error, maximum value is " << max_ << ": " << num_;
 }
 
-int64_t to_int(const std::string &num, int base)
+char NumberFormatError::ID;
+void NumberFormatError::log(llvm::raw_ostream &OS) const
 {
-  return to_int<int64_t>(num, base);
+  OS << msg_ << ": " << num_;
 }
 
-uint64_t to_uint(const std::string &num, int base)
+static std::optional<uint64_t> safe_exp(uint64_t base, uint64_t exp)
 {
-  return to_int<uint64_t>(num, base);
-}
-
-std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
-    const std::string &s)
-{
-  if (s.empty()) {
-    return std::nullopt;
-  }
-
-  if (s.starts_with("0x") || s.starts_with("0X")) {
-    // Treat all hex's as unsigned
-    std::size_t idx;
-    try {
-      uint64_t ret = std::stoull(s, &idx, 0);
-      if (idx == s.size()) {
-        return ret;
-      } else {
-        return std::nullopt;
-      }
-    } catch (...) {
+  constexpr uint64_t max_factor = std::numeric_limits<uint64_t>::max() / 10;
+  uint64_t result = base;
+  while (exp > 0) {
+    if (result > max_factor) {
       return std::nullopt;
     }
+    result = result * 10;
+    exp--;
+  }
+  return result;
+}
+
+Result<uint64_t> to_uint(const std::string &num, int base)
+{
+  std::string n(num); // Copy.
+
+  // Drop all underscores, a convenience separator.
+  auto underscores = std::ranges::remove(n, '_');
+  n.erase(underscores.begin(), underscores.end());
+
+  // Discover the base, if needed.
+  if (base == 0 && n.size() >= 2) {
+    if (n.starts_with("0x") || n.starts_with("0X")) {
+      return to_uint(n.substr(2, n.size() - 2), 16);
+    } else if (n.starts_with("0b") || n.starts_with("0B")) {
+      return to_uint(n.substr(2, n.size() - 2), 2);
+    } else if (n.starts_with("0") && n[1] >= '0' && n[1] <= '7') {
+      return to_uint(n.substr(1, n.size() - 1), 8);
+    }
   }
 
-  char *endptr;
-  const char *s_ptr = s.c_str();
+  // Parse the integer.
+  //
+  // Note that we need to use reset `errno` in order to reliably
+  // detect an integer too large. This will be set to ERANGE and
+  // the maximum value will be returned, but if we successfully
+  // parse this value, we need to ensure that `errno` is cleared
+  // to distinguish it from a real error.
+  char *endptr = nullptr;
   errno = 0;
-
-  if (s.at(0) == '-') {
-    int64_t ret = strtol(s_ptr, &endptr, 0);
-    if (endptr == s_ptr || *endptr != '\0' || errno == ERANGE ||
-        errno == EINVAL) {
-      return std::nullopt;
-    }
-    return ret;
+  uint64_t ret = std::strtoull(n.c_str(), &endptr, base);
+  if (ret == 0 && endptr == n.c_str()) {
+    return make_error<NumberFormatError>("invalid integer", num);
+  }
+  if (ret == ULLONG_MAX && errno == ERANGE) {
+    return make_error<OverflowError>(num, ULLONG_MAX);
   }
 
-  uint64_t ret = strtoul(s_ptr, &endptr, 0);
-  if (endptr == s_ptr || *endptr != '\0' || errno == ERANGE ||
-      errno == EINVAL) {
-    return std::nullopt;
+  // Check for a valid end pointer. If we have an exponent, then should must
+  // parse the remainder of the string in base 10.
+  if ((*endptr == 'e' || *endptr == 'E') && *(endptr + 1) >= '1' &&
+      *(endptr + 1) <= '9') {
+    if (ret <= 0 || ret >= 10) {
+      return make_error<NumberFormatError>(
+          "coefficient part of scientific literal must be 1-9", num);
+    }
+    char *exp = endptr + 1;
+    uint64_t exp_pow = std::strtoull(exp, &endptr, 10);
+    if (exp_pow == 0 && endptr == exp) {
+      return make_error<NumberFormatError>("invalid exponent", num);
+    }
+    // Compute the result, ensuring that we never overflow.
+    auto maybe_result = safe_exp(ret, exp_pow);
+    if (!maybe_result) {
+      return make_error<OverflowError>(num,
+                                       std::numeric_limits<uint64_t>::max());
+    }
+    ret = maybe_result.value();
+  }
+
+  // Check to see if this has been bound to a specific type. Note that we
+  // treat no suffix as a 64-bit integer type.
+  // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
+  std::string suffix(endptr);
+  static std::map<std::string, uint64_t> max = {
+    { "", std::numeric_limits<uint64_t>::max() },
+    { "u", std::numeric_limits<unsigned>::max() },
+    { "ul", std::numeric_limits<unsigned long>::max() },
+    { "ull", std::numeric_limits<unsigned long long>::max() },
+    { "l", std::numeric_limits<long>::max() },
+    { "ll", std::numeric_limits<long long>::max() },
+  };
+  auto typespec = max.find(suffix);
+  if (typespec == max.end()) {
+    // Not a valid suffix.
+    return make_error<NumberFormatError>("invalid trailing bytes", num);
+  }
+  // Is it out of the range? We consider this as an overflow.
+  if (ret > typespec->second) {
+    return make_error<OverflowError>(num, typespec->second);
   }
   return ret;
-}
-
-static std::string get_invalid_pid_message(const std::string &pid,
-                                           const std::string &msg)
-{
-  return "pid '" + pid + "' " + msg;
-}
-
-std::optional<pid_t> parse_pid(const std::string &str, std::string &err)
-{
-  std::size_t idx = 0;
-  pid_t pid;
-  constexpr ssize_t pid_max = 4 * 1024 * 1024;
-  try {
-    pid = std::stol(str, &idx, 10);
-  } catch (const std::out_of_range &e) {
-    err = get_invalid_pid_message(str, "outside of integer range");
-    return std::nullopt;
-  } catch (const std::invalid_argument &e) {
-    err = get_invalid_pid_message(str, "is not a valid decimal number");
-    return std::nullopt;
-  }
-  // Detect cases like `13ABC`
-  if (idx < str.size()) {
-    err = get_invalid_pid_message(str, "is not a valid decimal number");
-    return std::nullopt;
-  }
-
-  if (pid < 1 || pid > pid_max) {
-    err = get_invalid_pid_message(str,
-                                  "out of valid pid range [1," +
-                                      std::to_string(pid_max) + "]");
-    return std::nullopt;
-  }
-
-  return pid;
 }
 
 } // namespace bpftrace::util

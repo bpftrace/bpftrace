@@ -35,26 +35,6 @@ AttachPointParser::State AttachPointParser::argument_count_error(
   return INVALID;
 }
 
-std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
-{
-  try {
-    return util::to_uint(str, 0);
-  } catch (const std::exception &e) {
-    errs_ << e.what() << std::endl;
-    return std::nullopt;
-  }
-}
-
-std::optional<int64_t> AttachPointParser::stoll(const std::string &str)
-{
-  try {
-    return util::to_int(str, 0);
-  } catch (const std::exception &e) {
-    errs_ << e.what() << std::endl;
-    return std::nullopt;
-  }
-}
-
 AttachPointParser::AttachPointParser(ASTContext &ctx,
                                      BPFtrace &bpftrace,
                                      bool listing)
@@ -260,20 +240,17 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       }
 
       param_idx_str = raw.substr(idx + 1, len);
-      size_t pos, param_idx;
-
-      try {
-        param_idx = std::stoll(param_idx_str, &pos, 0);
-      } catch (std::out_of_range const &ex) {
-        errs_ << "positional param index " << param_idx_str
-              << " is out of integer range. Max int: "
-              << std::to_string(std::numeric_limits<long>::max());
+      auto param_idx = util::to_uint(param_idx_str, 10);
+      if (!param_idx) {
+        errs_ << "positional parameter is not valid: " << param_idx.takeError()
+              << std::endl;
         return State::INVALID;
       }
 
       // Expand the positional param in-place and decrement idx so that the next
       // iteration takes the first char of the expansion
-      raw = raw.substr(0, idx) + bpftrace_.get_param(param_idx) + raw.substr(i);
+      raw = raw.substr(0, idx) + bpftrace_.get_param(*param_idx) +
+            raw.substr(i);
       idx--;
     } else
       argument += raw[idx];
@@ -350,9 +327,9 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 
     ap_->func = offset_parts[0];
 
-    auto res = stoll(offset_parts[1]);
+    auto res = util::to_uint(offset_parts[1]);
     if (!res) {
-      errs_ << "Invalid offset" << std::endl;
+      errs_ << "Invalid offset: " << res.takeError() << std::endl;
       return INVALID;
     }
     ap_->func_offset = *res;
@@ -447,10 +424,9 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     }
 
     ap_->func = offset_parts[0];
-
-    auto res = stoll(offset_parts[1]);
+    auto res = util::to_uint(offset_parts[1]);
     if (!res) {
-      errs_ << "Invalid offset" << std::endl;
+      errs_ << "Invalid offset: " << res.takeError() << std::endl;
       return INVALID;
     }
     ap_->func_offset = *res;
@@ -458,7 +434,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
   // Default case (eg uprobe:[addr][func])
   else {
     if (allow_abs_addr) {
-      auto res = stoll(func);
+      auto res = util::to_uint(func);
       if (res) {
         if (util::has_wildcard(ap_->target)) {
           errs_ << "Cannot use wildcards with absolute address" << std::endl;
@@ -566,10 +542,10 @@ AttachPointParser::State AttachPointParser::profile_parser()
   }
 
   ap_->target = parts_[1];
-
-  auto res = stoull(parts_[2]);
+  auto res = util::to_uint(parts_[2]);
   if (!res) {
-    errs_ << "Invalid rate of " << ap_->provider << " probe";
+    errs_ << "Invalid rate of " << ap_->provider
+          << " probe: " << res.takeError() << std::endl;
     return INVALID;
   }
 
@@ -591,9 +567,10 @@ AttachPointParser::State AttachPointParser::interval_parser()
   }
 
   ap_->target = parts_[1];
-  auto res = stoull(parts_[2]);
+  auto res = util::to_uint(parts_[2]);
   if (!res) {
-    errs_ << "Invalid rate of " << ap_->provider << " probe";
+    errs_ << "Invalid rate of " << ap_->provider
+          << " probe: " << res.takeError() << std::endl;
     return INVALID;
   }
 
@@ -613,9 +590,10 @@ AttachPointParser::State AttachPointParser::software_parser()
   ap_->target = parts_[1];
 
   if (parts_.size() == 3 && parts_[2] != "*") {
-    auto res = stoull(parts_[2]);
+    auto res = util::to_uint(parts_[2]);
     if (!res) {
-      errs_ << "Invalid count for " << ap_->provider << " probe";
+      errs_ << "Invalid count for " << ap_->provider
+            << " probe: " << res.takeError() << std::endl;
       return INVALID;
     }
     ap_->freq = *res;
@@ -636,9 +614,10 @@ AttachPointParser::State AttachPointParser::hardware_parser()
   ap_->target = parts_[1];
 
   if (parts_.size() == 3 && parts_[2] != "*") {
-    auto res = stoull(parts_[2]);
+    auto res = util::to_uint(parts_[2]);
     if (!res) {
-      errs_ << "Invalid count for " << ap_->provider << " probe";
+      errs_ << "Invalid count for " << ap_->provider
+            << " probe: " << res.takeError() << std::endl;
       return INVALID;
     }
     ap_->freq = *res;
@@ -654,16 +633,17 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
   }
 
   if (parts_[1].find('+') == std::string::npos) {
-    auto parsed = stoull(parts_[1]);
+    auto parsed = util::to_uint(parts_[1]);
     if (!parsed) {
-      errs_ << "Invalid function/address argument" << std::endl;
+      errs_ << "Invalid function/address argument: " << parsed.takeError()
+            << std::endl;
       return INVALID;
     }
     ap_->address = *parsed;
   } else {
     auto func_arg_parts = util::split_string(parts_[1], '+', true);
     if (func_arg_parts.size() != 2) {
-      errs_ << "Invalid function/address argument" << std::endl;
+      errs_ << "Invalid function/address argument: " << parts_[1] << std::endl;
       return INVALID;
     }
 
@@ -673,21 +653,22 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
 
     if (func_arg_parts[1].size() <= 3 ||
         !func_arg_parts[1].starts_with("arg")) {
-      errs_ << "Invalid function argument" << std::endl;
+      errs_ << "Invalid function/address argument: " << func_arg_parts[1]
+            << std::endl;
       return INVALID;
     }
 
-    auto parsed = stoull(func_arg_parts[1].substr(3));
+    auto parsed = util::to_uint(func_arg_parts[1].substr(3));
     if (!parsed) {
-      errs_ << "Invalid function argument" << std::endl;
+      errs_ << "Invalid function argument: " << parsed.takeError() << std::endl;
       return INVALID;
     }
     ap_->address = *parsed;
   }
 
-  auto len_parsed = stoull(parts_[2]);
+  auto len_parsed = util::to_uint(parts_[2]);
   if (!len_parsed) {
-    errs_ << "Invalid length argument" << std::endl;
+    errs_ << "Invalid length argument: " << len_parsed.takeError() << std::endl;
     return INVALID;
   }
   ap_->len = *len_parsed;
