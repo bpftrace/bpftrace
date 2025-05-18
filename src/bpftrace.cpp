@@ -246,22 +246,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);
     return;
   } else if (printf_id == AsyncAction::clear) {
-    auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
-    const auto &map = ctx->bpftrace.bytecode_.getMap(mapevent->mapid);
-
-    err = ctx->bpftrace.clear_map(map);
-    if (err)
-      LOG(BUG) << "Could not clear map with ident \"" << map.name()
-               << "\", err=" << std::to_string(err);
+    async_action::clear_map_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::zero) {
-    auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
-    const auto &map = ctx->bpftrace.bytecode_.getMap(mapevent->mapid);
-
-    err = ctx->bpftrace.zero_map(map);
-    if (err)
-      LOG(BUG) << "Could not zero map with ident \"" << map.name()
-               << "\", err=" << std::to_string(err);
+    async_action::zero_map_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::time) {
     async_action::time_handler(ctx->bpftrace, ctx->output, data);

@@ -77,6 +77,28 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.value(bpftrace, ty, bytes);
 }
 
+void zero_map_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+  const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
+
+  auto err = bpftrace.zero_map(map);
+  if (err)
+    LOG(BUG) << "Could not zero map with ident \"" << map.name()
+             << "\", err=" << std::to_string(err);
+}
+
+void clear_map_handler(BPFtrace &bpftrace, void *data)
+{
+  auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+  const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
+
+  auto err = bpftrace.clear_map(map);
+  if (err)
+    LOG(BUG) << "Could not clear map with ident \"" << map.name()
+             << "\", err=" << std::to_string(err);
+}
+
 void watchpoint_attach_handler(BPFtrace &bpftrace, Output &output, void *data)
 {
   auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
