@@ -347,7 +347,7 @@ public:
     if (ident.size() < 4 || ident.size() > 6 || !ident.starts_with("arg"))
       return false;
 
-    std::string_view num_part = ident.substr(3);
+    std::string num_part = ident.substr(3);
 
     // no leading zeros
     if (num_part.size() > 1 && num_part.front() == '0')
