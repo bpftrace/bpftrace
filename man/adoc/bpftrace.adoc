@@ -3732,7 +3732,7 @@ Default: 0
 
 For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
 
-=== license
+==== license
 
 Default: "GPL"
 
