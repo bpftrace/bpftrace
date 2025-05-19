@@ -34,6 +34,7 @@
 #include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "async_action.h"
+#include "attached_probe.h"
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
@@ -62,6 +63,25 @@ bool dry_run = false;
 int BPFtrace::exit_code = 0;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
+
+void log_probe_attach_failure(const std::string &err_msg,
+                              const std::string &name,
+                              ConfigMissingProbes missing_probes)
+{
+  if (missing_probes == ConfigMissingProbes::error) {
+    if (!err_msg.empty()) {
+      LOG(ERROR) << err_msg;
+    }
+    LOG(ERROR) << "Unable to attach probe: " << name
+               << ". If this is expected, set the 'missing_probes' "
+                  "config variable to 'warn'.";
+  } else if (missing_probes == ConfigMissingProbes::warn) {
+    if (!err_msg.empty()) {
+      LOG(WARNING) << err_msg;
+    }
+    LOG(WARNING) << "Unable to attach probe: " << name << ". Skipping.";
+  }
+}
 
 BPFtrace::~BPFtrace()
 {
@@ -196,7 +216,7 @@ void BPFtrace::request_finalize()
 
 // PerfEventContext is our callback wrapper.
 struct PerfEventContext {
-  PerfEventContext(BPFtrace &b, Output &o) : bpftrace(b), output(o) {};
+  PerfEventContext(BPFtrace &b, Output &o) : bpftrace(b), output(o){};
   BPFtrace &bpftrace;
   Output &output;
 };
@@ -515,8 +535,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   if (feature_->has_uprobe_refcnt() || !file_activation || probe.path.empty()) {
-    ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, program, pid, *this));
+    auto attached = AttachedProbe::make(probe, program, pid, *this);
+    ret.emplace_back(std::move(*attached));
     return ret;
   }
 
@@ -569,8 +589,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
         throw util::FatalUserException("failed to parse pid=" + pid_str);
       }
 
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid_parsed, *this));
+      auto attached = AttachedProbe::make(probe, program, pid_parsed, *this);
+      ret.emplace_back(std::move(*attached));
       break;
     }
   }
@@ -587,38 +607,22 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
-  try {
-    const auto &program = bytecode.getProgramForProbe(probe);
-    std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
-                                      : this->pid();
+  const auto &program = bytecode.getProgramForProbe(probe);
+  std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
+                                    : this->pid();
 
-    if (probe.type == ProbeType::usdt) {
-      auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
-      for (auto &ap : aps)
-        ret.emplace_back(std::move(ap));
+  if (probe.type == ProbeType::usdt) {
+    auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
+    for (auto &ap : aps)
+      ret.emplace_back(std::move(ap));
 
-      return ret;
-    } else if (probe.type == ProbeType::uprobe ||
-               probe.type == ProbeType::uretprobe) {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, program, pid, *this, safe_mode_));
-      return ret;
-    } else if (probe.type == ProbeType::watchpoint ||
-               probe.type == ProbeType::asyncwatchpoint) {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid, *this));
-      return ret;
-    } else {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid, *this));
-      return ret;
-    }
-  } catch (const util::EnospcException &e) {
-    // Caller will handle
-    throw e;
-  } catch (const std::exception &e) {
-    LOG(ERROR) << e.what();
-    ret.clear();
+  } else if (probe.type == ProbeType::uprobe ||
+             probe.type == ProbeType::uretprobe) {
+    auto attached = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+    ret.emplace_back(std::move(*attached));
+  } else {
+    auto attached = AttachedProbe::make(probe, program, pid, *this);
+    ret.emplace_back(std::move(*attached));
   }
   return ret;
 }
@@ -705,7 +709,7 @@ int BPFtrace::run_iter()
   return 0;
 }
 
-int BPFtrace::prerun(Output &out) const
+int BPFtrace::prerun() const
 {
   uint64_t num_probes = this->num_probes();
   const auto max_probes = config_->max_probes;
@@ -721,15 +725,14 @@ int BPFtrace::prerun(Output &out) const
         << "environment variable, but BE CAREFUL since a high number of probes "
         << "attached can cause your system to crash.";
     return 1;
-  } else if (!bt_quiet)
-    out.attached_probes(num_probes);
+  }
 
   return 0;
 }
 
 int BPFtrace::run(Output &out, BpfBytecode bytecode)
 {
-  int err = prerun(out);
+  int err = prerun();
   if (err)
     return err;
 
@@ -782,6 +785,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
+  int num_special_attached = 0;
+
   auto begin_probe = resources.special_probes.find("BEGIN");
   if (begin_probe != resources.special_probes.end()) {
     auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
@@ -789,11 +794,19 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
 
     LOG(V1) << "Attaching BEGIN";
+    ++num_special_attached;
+  }
+
+  // This is a little bit of a lie as we don't actually attach the END
+  // special probe until the end
+  if (resources.special_probes.contains("END")) {
+    ++num_special_attached;
   }
 
   for (auto &probe : resources.signal_probes) {
     auto &sig_prog = bytecode_.getProgramForProbe(probe);
     sigusr1_prog_fds_.emplace_back(sig_prog.fd());
+    ++num_special_attached;
   }
 
   if (child_ && has_usdt_) {
@@ -818,12 +831,18 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
     if (!attach_reverse(probe)) {
       auto aps = attach_probe(probe, bytecode_);
-
-      if (aps.empty())
-        return -1;
-
-      for (auto &ap : aps)
-        attached_probes_.emplace_back(std::move(ap));
+      for (auto &ap : aps) {
+        auto ok = ap->attach();
+        if (!ok) {
+          std::ostringstream err;
+          err << ok.takeError();
+          log_probe_attach_failure(err.str(),
+                                   ap->probe().name,
+                                   config_->missing_probes);
+        } else {
+          attached_probes_.emplace_back(std::move(ap));
+        }
+      }
     }
   }
 
@@ -834,12 +853,18 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
     if (attach_reverse(probe)) {
       auto aps = attach_probe(probe, bytecode_);
-
-      if (aps.empty())
-        return -1;
-
-      for (auto &ap : aps)
-        attached_probes_.emplace_back(std::move(ap));
+      for (auto &ap : aps) {
+        auto ok = ap->attach();
+        if (!ok) {
+          std::ostringstream err;
+          err << ok.takeError();
+          log_probe_attach_failure(err.str(),
+                                   ap->probe().name,
+                                   config_->missing_probes);
+        } else {
+          attached_probes_.emplace_back(std::move(ap));
+        }
+      }
     }
   }
 
@@ -860,6 +885,23 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
     }
   }
+
+  size_t num_attached = attached_probes_.size();
+
+  if (config_->missing_probes == ConfigMissingProbes::error &&
+      num_attached != resources.probes.size()) {
+    return -1;
+  }
+
+  auto total_attached = num_attached + num_special_attached;
+
+  if (total_attached == 0) {
+    LOG(ERROR) << "Attachment failed for all probes.";
+    return -1;
+  }
+
+  if (!bt_quiet)
+    out.attached_probes(total_attached);
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
@@ -1800,7 +1842,8 @@ std::unordered_set<std::string> BPFtrace::get_raw_tracepoint_modules(
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
 {
-  static std::optional<struct stat> pidns = []() -> std::optional<struct stat> {
+  static std::optional<struct stat> pidns = []() -> std::optional<struct stat>
+  {
     struct stat s;
     if (::stat("/proc/self/ns/pid", &s)) {
       if (errno == ENOENT)
@@ -1810,7 +1853,8 @@ const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
           std::strerror(errno));
     }
     return s;
-  }();
+  }
+  ();
 
   return pidns;
 }
