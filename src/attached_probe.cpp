@@ -1162,7 +1162,8 @@ void AttachedProbe::attach_watchpoint(int pid, const std::string &mode)
   }
 
   attr.bp_addr = probe_.address;
-  attr.bp_len = probe_.len;
+  // https://man7.org/linux/man-pages/man2/perf_event_open.2.html
+  attr.bp_len = (attr.bp_type & HW_BREAKPOINT_X) ? sizeof(long) : probe_.len;
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;
 
