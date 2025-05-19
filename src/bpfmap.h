@@ -59,9 +59,9 @@ public:
   bool is_printable() const;
 
   KeyVec collect_keys() const;
-  KVPairVec collect_kvs(int nvalues) const;
-  HistogramMap collect_histogram_data(const MapInfo &map_info,
-                                      int nvalues) const;
+  virtual KVPairVec collect_kvs(int nvalues) const;
+  virtual HistogramMap collect_histogram_data(const MapInfo &map_info,
+                                              int nvalues) const;
   void zero_out(KeyVec &keys, int nvalues) const;
   void delete_by_keys(KeyVec &keys) const;
   void update_elem(const void *key, const void *value) const;

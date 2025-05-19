@@ -216,8 +216,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   auto printf_id = AsyncAction(*reinterpret_cast<uint64_t *>(arg_data));
 
-  int err;
-
   // Ignore the remaining events if perf_event_printer is called during
   // finalization stage (exit() builtin has been called)
   if (ctx->bpftrace.finalize_)
@@ -233,14 +231,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     async_action::exit_handler(ctx->bpftrace, data);
     return;
   } else if (printf_id == AsyncAction::print) {
-    auto *print = static_cast<AsyncEvent::Print *>(data);
-    const auto &map = ctx->bpftrace.bytecode_.getMap(print->mapid);
-
-    err = ctx->bpftrace.print_map(ctx->output, map, print->top, print->div);
-
-    if (err)
-      LOG(BUG) << "Could not print map with ident \"" << map.name()
-               << "\", err=" << std::to_string(err);
+    async_action::print_map_handler(ctx->bpftrace, ctx->output, data);
     return;
   } else if (printf_id == AsyncAction::print_non_map) {
     async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);

@@ -131,7 +131,8 @@ KVPairVec BpfMap::collect_kvs(int nvalues) const
   KVPairVec values_by_key;
 
   while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
-    auto value = ValueType(value_size_ * nvalues);
+    auto value = ValueType(static_cast<size_t>(value_size_) *
+                           static_cast<size_t>(nvalues));
     int err = bpf_map_lookup_elem(fd(), key.data(), value.data());
     if (err == -ENOENT) {
       // key was removed by the eBPF program during bpf_map_get_next_key() and
@@ -167,7 +168,8 @@ HistogramMap BpfMap::collect_histogram_data(const MapInfo &map_info,
                       key.begin() + map_info.key_type.GetSize(),
                       key_prefix.begin());
 
-    auto value = ValueType(value_size_ * nvalues);
+    auto value = ValueType(static_cast<size_t>(value_size_) *
+                           static_cast<size_t>(nvalues));
     int err = bpf_map_lookup_elem(fd(), key.data(), value.data());
     if (err == -ENOENT) {
       // key was removed by the eBPF program during bpf_map_get_next_key() and

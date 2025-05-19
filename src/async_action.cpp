@@ -11,21 +11,21 @@
 
 namespace bpftrace::async_action {
 
-void exit_handler(BPFtrace &bpftrace, void *data)
+void exit_handler(BPFtrace &bpftrace, const void *data)
 {
-  auto *exit = static_cast<AsyncEvent::Exit *>(data);
+  const auto *exit = static_cast<const AsyncEvent::Exit *>(data);
   BPFtrace::exit_code = exit->exit_code;
   bpftrace.request_finalize();
 }
 
-void join_handler(BPFtrace &bpftrace, Output &out, void *data)
+void join_handler(BPFtrace &bpftrace, Output &out, const void *data)
 {
-  auto *join = static_cast<AsyncEvent::Join *>(data);
+  const auto *join = static_cast<const AsyncEvent::Join *>(data);
   uint64_t join_id = join->join_id;
   const auto *delim = bpftrace.resources.join_args[join_id].c_str();
   std::stringstream joined;
   for (unsigned int i = 0; i < bpftrace.join_argnum_; i++) {
-    auto *arg = join->content + (i * bpftrace.join_argsize_);
+    const auto *arg = join->content + (i * bpftrace.join_argsize_);
     if (arg[0] == 0)
       break;
     if (i)
@@ -35,7 +35,7 @@ void join_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.message(MessageType::join, joined.str());
 }
 
-void time_handler(BPFtrace &bpftrace, Output &out, void *data)
+void time_handler(BPFtrace &bpftrace, Output &out, const void *data)
 {
   // not respecting config_->get(ConfigKeyInt::max_strlen)
   char timestr[MAX_TIME_STR_LEN];
@@ -46,7 +46,7 @@ void time_handler(BPFtrace &bpftrace, Output &out, void *data)
     LOG(WARNING) << "localtime_r: " << strerror(errno);
     return;
   }
-  auto *time = static_cast<AsyncEvent::Time *>(data);
+  const auto *time = static_cast<const AsyncEvent::Time *>(data);
   const auto *fmt = bpftrace.resources.time_args[time->time_id].c_str();
   if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
     LOG(WARNING) << "strftime returned 0";
@@ -55,18 +55,18 @@ void time_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.message(MessageType::time, timestr, false);
 }
 
-void helper_error_handler(BPFtrace &bpftrace, Output &out, void *data)
+void helper_error_handler(BPFtrace &bpftrace, Output &out, const void *data)
 {
-  auto *helper_error = static_cast<AsyncEvent::HelperError *>(data);
+  const auto *helper_error = static_cast<const AsyncEvent::HelperError *>(data);
   auto error_id = helper_error->error_id;
-  auto return_value = helper_error->return_value;
-  auto &info = bpftrace.resources.helper_error_info[error_id];
+  const auto return_value = helper_error->return_value;
+  const auto &info = bpftrace.resources.helper_error_info[error_id];
   out.helper_error(return_value, info);
 }
 
-void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
+void print_non_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
 {
-  auto *print = static_cast<AsyncEvent::PrintNonMap *>(data);
+  const auto *print = static_cast<const AsyncEvent::PrintNonMap *>(data);
   const SizedType &ty = bpftrace.resources.non_map_print_args.at(
       print->print_id);
 
@@ -77,9 +77,21 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, void *data)
   out.value(bpftrace, ty, bytes);
 }
 
-void zero_map_handler(BPFtrace &bpftrace, void *data)
+void print_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
 {
-  auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+  const auto *print = static_cast<const AsyncEvent::Print *>(data);
+  const auto &map = bpftrace.bytecode_.getMap(print->mapid);
+
+  auto err = bpftrace.print_map(out, map, print->top, print->div);
+
+  if (err)
+    LOG(BUG) << "Could not print map with ident \"" << map.name()
+             << "\", err=" << std::to_string(err);
+}
+
+void zero_map_handler(BPFtrace &bpftrace, const void *data)
+{
+  const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
 
   auto err = bpftrace.zero_map(map);
@@ -88,9 +100,9 @@ void zero_map_handler(BPFtrace &bpftrace, void *data)
              << "\", err=" << std::to_string(err);
 }
 
-void clear_map_handler(BPFtrace &bpftrace, void *data)
+void clear_map_handler(BPFtrace &bpftrace, const void *data)
 {
-  auto *mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+  const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
 
   auto err = bpftrace.clear_map(map);
@@ -99,9 +111,11 @@ void clear_map_handler(BPFtrace &bpftrace, void *data)
              << "\", err=" << std::to_string(err);
 }
 
-void watchpoint_attach_handler(BPFtrace &bpftrace, Output &output, void *data)
+void watchpoint_attach_handler(BPFtrace &bpftrace,
+                               Output &output,
+                               const void *data)
 {
-  auto *watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
+  const auto *watchpoint = static_cast<const AsyncEvent::Watchpoint *>(data);
   uint64_t probe_idx = watchpoint->watchpoint_idx;
   uint64_t addr = watchpoint->addr;
 
@@ -157,9 +171,10 @@ out:
   }
 }
 
-void watchpoint_detach_handler(BPFtrace &bpftrace, void *data)
+void watchpoint_detach_handler(BPFtrace &bpftrace, const void *data)
 {
-  auto *unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
+  const auto *unwatch = static_cast<const AsyncEvent::WatchpointUnwatch *>(
+      data);
   uint64_t addr = unwatch->addr;
 
   // Remove all probes watching `addr`. Note how we fail silently here

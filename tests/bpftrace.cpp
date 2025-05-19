@@ -28,6 +28,69 @@ static const int STRING_SIZE = 64;
 
 static const std::optional<int> no_pid = std::nullopt;
 
+template <typename K, typename V>
+KVPairVec generate_kv_pairs(const std::vector<K> &keys,
+                            const std::vector<V> &values)
+{
+  KVPairVec kv_pairs;
+  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
+    std::vector<uint8_t> key_bytes(sizeof(K));
+    std::vector<uint8_t> value_bytes(sizeof(V));
+    memcpy(key_bytes.data(), &keys[i], sizeof(K));
+    memcpy(value_bytes.data(), &values[i], sizeof(V));
+    kv_pairs.emplace_back(key_bytes, value_bytes);
+  }
+  return kv_pairs;
+}
+
+template <typename K>
+KVPairVec generate_kv_pairs(const std::vector<K> &keys,
+                            const std::vector<std::string> &values)
+{
+  KVPairVec kv_pairs;
+  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
+    std::vector<uint8_t> key_bytes(sizeof(K));
+    memcpy(key_bytes.data(), &keys[i], sizeof(K));
+    std::vector<uint8_t> value_bytes(values[i].size() + 1);
+    std::copy(values[i].begin(), values[i].end(), value_bytes.begin());
+    value_bytes[values[i].size()] = '\0';
+    kv_pairs.emplace_back(key_bytes, value_bytes);
+  }
+  return kv_pairs;
+}
+
+template <typename K>
+KVPairVec generate_kv_pairs(const std::vector<K> &keys,
+                            const std::vector<std::vector<uint8_t>> &values)
+{
+  KVPairVec kv_pairs;
+  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
+    std::vector<uint8_t> key_bytes(sizeof(K));
+    memcpy(key_bytes.data(), &keys[i], sizeof(K));
+    kv_pairs.emplace_back(key_bytes, values[i]);
+  }
+  return kv_pairs;
+}
+
+std::vector<uint8_t> generate_percpu_data(
+    const std::vector<std::pair<uint64_t, bool>> &values)
+{
+  std::vector<uint8_t> value;
+
+  value.resize(values.size() * (sizeof(uint64_t) * 2), 0);
+  for (size_t i = 0; i < values.size(); i++) {
+    auto is_set = static_cast<uint32_t>(values[i].second);
+    std::memcpy(value.data() + (i * (sizeof(uint64_t) * 2)),
+                &values[i].first,
+                sizeof(uint64_t));
+    std::memcpy(value.data() +
+                    (sizeof(uint64_t) + (i * (sizeof(uint64_t) * 2))),
+                &is_set,
+                sizeof(uint32_t));
+  }
+  return value;
+}
+
 static std::string kprobe_name(const std::string &attach_point,
                                const std::string &target,
                                uint64_t func_offset)
@@ -1367,6 +1430,481 @@ TEST_F(bpftrace_btf, list_modules_rawtracepoint_explicit)
   auto modules = list_modules("rawtracepoint:vmlinux:event_rt{}");
   EXPECT_EQ(modules.size(), 1);
   EXPECT_THAT(modules, Contains("vmlinux"));
+}
+
+TEST(bpftrace, print_basic_map)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  auto keys = std::vector<uint64_t>{ 1, 3, 5, 7, 9 };
+  auto values = std::vector<uint64_t>{ 5, 10, 4, 11, 7 };
+  auto returned_kvs = generate_kv_pairs(keys, values);
+  auto map_info = MapInfo{
+    .key_type = CreateInt64(),
+    .value_type = CreateInt64(),
+    .detail = std::monostate{},
+  };
+
+  std::vector<TestCase> test_cases = {
+    { .name = "basic_map_1",
+      .top = 3,
+      .div = 0,
+      .expected_output = R"(basic_map_1[9]: 7
+basic_map_1[3]: 10
+basic_map_1[7]: 11
+)" },
+    { .name = "basic_map_2",
+      .top = 0,
+      .div = 0,
+
+      .expected_output = R"(basic_map_2[5]: 4
+basic_map_2[1]: 5
+basic_map_2[9]: 7
+basic_map_2[3]: 10
+basic_map_2[7]: 11
+)" },
+    { .name = "basic_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(basic_map_3[5]: 2
+basic_map_3[1]: 2
+basic_map_3[9]: 3
+basic_map_3[3]: 5
+basic_map_3[7]: 5
+)" },
+    { .name = "basic_map_4",
+      .top = 3,
+      .div = 2,
+      .expected_output = R"(basic_map_4[9]: 3
+basic_map_4[3]: 5
+basic_map_4[7]: 5
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                                 tc.name);
+    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+        .WillOnce(testing::Return(returned_kvs));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_max_map)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  auto keys = std::vector<uint64_t>{ 1, 2, 3 };
+  auto values = std::vector<std::vector<uint8_t>>{
+    generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
+    generate_percpu_data({ { 15, false }, { 0, false }, { 12, true } }),
+    generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
+  };
+
+  auto returned_kvs = generate_kv_pairs(keys, values);
+
+  auto map_info = MapInfo{ .key_type = CreateInt64(),
+                           .value_type = CreateMax(false),
+                           .detail = std::monostate{} };
+
+  std::vector<TestCase> test_cases = {
+    { .name = "max_map_1",
+      .top = 0,
+      .div = 0,
+      .expected_output = R"(max_map_1[1]: 8
+max_map_1[2]: 12
+max_map_1[3]: 20
+)" },
+    { .name = "max_map_2",
+      .top = 2,
+      .div = 0,
+      .expected_output = R"(max_map_2[2]: 12
+max_map_2[3]: 20
+)" },
+    { .name = "max_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(max_map_3[1]: 4
+max_map_3[2]: 6
+max_map_3[3]: 10
+)" },
+    { .name = "max_map_4",
+      .top = 2,
+      .div = 2,
+      .expected_output = R"(max_map_4[2]: 6
+max_map_4[3]: 10
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    bpftrace->ncpus_ = 3;
+    auto mock_map = std::make_unique<MockBpfMap>(
+        libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+        .WillOnce(testing::Return(returned_kvs));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_avg_map)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  auto keys = std::vector<uint64_t>{ 1, 2, 3 };
+  auto values = std::vector<std::vector<uint8_t>>{
+    generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
+    generate_percpu_data({ { 16, true }, { 0, false }, { 12, true } }),
+    generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
+  };
+
+  auto returned_kvs = generate_kv_pairs(keys, values);
+
+  auto map_info = MapInfo{ .key_type = CreateInt64(),
+                           .value_type = CreateAvg(false),
+                           .detail = std::monostate{} };
+
+  std::vector<TestCase> test_cases = {
+    { .name = "avg_map_1",
+      .top = 0,
+      .div = 0,
+      .expected_output = R"(avg_map_1[1]: 5
+avg_map_1[2]: 14
+avg_map_1[3]: 200
+
+)" },
+    { .name = "avg_map_2",
+      .top = 2,
+      .div = 0,
+      .expected_output = R"(avg_map_2[2]: 14
+avg_map_2[3]: 200
+
+)" },
+    { .name = "avg_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(avg_map_3[1]: 2
+avg_map_3[2]: 7
+avg_map_3[3]: 100
+
+)" },
+    { .name = "avg_map_4",
+      .top = 2,
+      .div = 2,
+      .expected_output = R"(avg_map_4[2]: 7
+avg_map_4[3]: 100
+
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    bpftrace->ncpus_ = 3;
+    auto mock_map = std::make_unique<MockBpfMap>(
+        libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+        .WillOnce(testing::Return(returned_kvs));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_map_sort_by_key)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  std::vector<uint64_t> keys{ 3, 1, 2 };
+  std::vector<std::string> values{ "hello", "world", "bpftrace" };
+  auto returned_kvs = generate_kv_pairs(keys, values);
+
+  auto map_info = MapInfo{ .key_type = CreateInt64(),
+                           .value_type = CreateString(32),
+                           .detail = std::monostate{} };
+
+  std::vector<TestCase> test_cases = {
+    { .name = "string_map_1",
+      .top = 0,
+      .div = 0,
+      .expected_output = R"(string_map_1[1]: world
+string_map_1[2]: bpftrace
+string_map_1[3]: hello
+)" },
+    { .name = "string_map_2",
+      .top = 2,
+      .div = 0,
+      .expected_output = R"(string_map_2[2]: bpftrace
+string_map_2[3]: hello
+)" },
+    { .name = "string_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(string_map_3[1]: world
+string_map_3[2]: bpftrace
+string_map_3[3]: hello
+)" },
+    { .name = "string_map_4",
+      .top = 2,
+      .div = 2,
+      .expected_output = R"(string_map_4[2]: bpftrace
+string_map_4[3]: hello
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                                 tc.name);
+    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+        .WillOnce(testing::Return(returned_kvs));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_lhist_map)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  HistogramMap values_by_key = {
+    { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+    { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+  };
+
+  auto map_info = MapInfo{
+    .key_type = CreateInt64(),
+    .value_type = CreateLhist(),
+    .detail = LinearHistogramArgs{ .min = 0, .max = 5 * 1024, .step = 1024 },
+    .id = {},
+    .is_scalar = true
+  };
+
+  std::vector<TestCase> test_cases = {
+    // Test case 1: print all buckets
+    { .name = "lhist_map_1",
+      .top = 0,
+      .div = 0,
+      .expected_output = R"(lhist_map_1:
+[0, 1K)                2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1K, 2K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2K, 3K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[3K, 4K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[4K, 5K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+lhist_map_1:
+[0, 1K)               10 |@@@@@@@@@@                                          |
+[1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
+[2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3K, 4K)              40 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4K, 5K)              50 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+    // Test case 2: print top 1 bucket
+    { .name = "lhist_map_2",
+      .top = 1,
+      .div = 0,
+      .expected_output = R"(lhist_map_2:
+[0, 1K)               10 |@@@@@@@@@@                                          |
+[1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
+[2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3K, 4K)              40 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4K, 5K)              50 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+    // Test case 3: print all buckets with div = 2
+    // Note: div parameter has no effect on linear histograms.
+    // Therefore, this `expected_output` is the same as `lhist_map_1`.
+    { .name = "lhist_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(lhist_map_3:
+[0, 1K)                2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1K, 2K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2K, 3K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[3K, 4K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[4K, 5K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+lhist_map_3:
+[0, 1K)               10 |@@@@@@@@@@                                          |
+[1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
+[2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3K, 4K)              40 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4K, 5K)              50 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                                 tc.name);
+    EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+        .WillOnce(testing::Return(values_by_key));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_hist_map)
+{
+  struct TestCase {
+    std::string name;
+    uint32_t top;
+    uint32_t div;
+    std::string expected_output;
+  };
+
+  HistogramMap values_by_key = {
+    { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+    { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+  };
+
+  auto map_info = MapInfo{ .key_type = CreateInt64(),
+                           .value_type = CreateHist(),
+                           .detail = HistogramArgs{ .bits = 10 },
+                           .id = {},
+                           .is_scalar = true };
+
+  std::vector<TestCase> test_cases = {
+    // Test case 1: print all buckets
+    { .name = "hist_map_1",
+      .top = 0,
+      .div = 0,
+      .expected_output = R"(hist_map_1:
+[0]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[3]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[4]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+hist_map_1:
+[0]                   10 |@@@@@@@@@@                                          |
+[1]                   20 |@@@@@@@@@@@@@@@@@@@@                                |
+[2]                   30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3]                   40 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4]                   50 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+    // Test case 2: print top 1 bucket
+    { .name = "hist_map_2",
+      .top = 1,
+      .div = 0,
+      .expected_output = R"(hist_map_2:
+[0]                   10 |@@@@@@@@@@                                          |
+[1]                   20 |@@@@@@@@@@@@@@@@@@@@                                |
+[2]                   30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3]                   40 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4]                   50 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+    // Test case 3: print all buckets with div = 2
+    { .name = "hist_map_3",
+      .top = 0,
+      .div = 2,
+      .expected_output = R"(hist_map_3:
+[0]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[3]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[4]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+hist_map_3:
+[0]                    5 |@@@@@@@@@@                                          |
+[1]                   10 |@@@@@@@@@@@@@@@@@@@@                                |
+[2]                   15 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3]                   20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4]                   25 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+    // Test case 4: print top 1 bucket with div = 2
+    { .name = "hist_map_4",
+      .top = 1,
+      .div = 2,
+      .expected_output = R"(hist_map_4:
+[0]                    5 |@@@@@@@@@@                                          |
+[1]                   10 |@@@@@@@@@@@@@@@@@@@@                                |
+[2]                   15 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[3]                   20 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[4]                   25 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                                 tc.name);
+    EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+        .WillOnce(testing::Return(values_by_key));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+
+    EXPECT_EQ(out.str(), tc.expected_output);
+  }
 }
 
 } // namespace bpftrace::test::bpftrace
