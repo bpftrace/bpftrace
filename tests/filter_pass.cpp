@@ -1,13 +1,15 @@
-#include "ast/passes/pid_filter_pass.h"
+#include "ast/passes/filter_pass.h"
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/import_scripts.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast_matchers.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace::test::pid_filter_pass {
+namespace bpftrace::test::filter_pass {
 
 using bpftrace::test::ExprStatement;
 using bpftrace::test::If;
@@ -40,10 +42,14 @@ void test(const std::string& attach_points,
                 .put(ast)
                 .put(bpftrace)
                 .add(CreateParsePass())
+                .add(ast::CreateResolveRootImportsPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeAndApExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
-                .add(ast::CreatePidFilterPass())
+                .add(ast::CreateFilterPass(ast::FilterInputs{
+                    .pid = has_pid ? std::optional<pid_t>(1) : std::nullopt,
+                    .cgroup_id = std::nullopt }))
+                .add(ast::CreateResolveStatementImportsPass())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 
@@ -63,7 +69,7 @@ void test(const std::string& attach_points,
   EXPECT_THAT(ast, Program().WithProbes(matchers));
 }
 
-TEST(pid_filter_pass, add_filter)
+TEST(filter_pass, add_filter)
 {
   std::vector<std::string> filter_probes = {
     "kprobe:f",
@@ -79,7 +85,7 @@ TEST(pid_filter_pass, add_filter)
   }
 }
 
-TEST(pid_filter_pass, no_add_filter)
+TEST(filter_pass, no_add_filter)
 {
   // Sanity check: no pid, no filter
   test("kprobe:f", false, { false });
@@ -104,4 +110,4 @@ TEST(pid_filter_pass, no_add_filter)
   }
 }
 
-} // namespace bpftrace::test::pid_filter_pass
+} // namespace bpftrace::test::filter_pass

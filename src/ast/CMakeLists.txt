@@ -29,12 +29,12 @@ add_library(ast STATIC
   passes/control_flow_analyser.cpp
   passes/deprecated.cpp
   passes/field_analyser.cpp
+  passes/filter_pass.cpp
   passes/fold_literals.cpp
   passes/import_scripts.cpp
   passes/link.cpp
   passes/map_sugar.cpp
   passes/macro_expansion.cpp
-  passes/pid_filter_pass.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/args_resolver.cpp

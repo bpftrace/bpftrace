@@ -1,0 +1,11 @@
+// Cgroup helpers.
+//
+// This file contains helpers for cgroups and containers.
+
+// Checks if the current process is in the given cgroup.
+// :variant bool in_cgroup(uint64 cgroup_id)
+macro in_cgroup(id)
+{
+  import "stdlib/cgroups/cgroups.bpf.c";
+  __in_cgroup((uint64)id)
+}

@@ -11,12 +11,12 @@
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/filter_pass.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
@@ -30,6 +30,7 @@ namespace bpftrace::ast {
 inline std::vector<Pass> AllParsePasses(
     std::vector<std::string> &&extra_flags = {},
     std::vector<std::string> &&import_paths = {},
+    const struct FilterInputs &filter_inputs = {},
     bool debug = false)
 {
   std::vector<Pass> passes;
@@ -45,6 +46,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateCheckAttachpointsPass());
   passes.emplace_back(CreateUSDTImportPass());
+  passes.emplace_back(CreateFilterPass(filter_inputs));
   passes.emplace_back(CreateImportInternalScriptsPass());
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
@@ -58,9 +60,8 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
   passes.emplace_back(CreateNamedParamsPass());
-  passes.emplace_back(CreatePidFilterPass());
   // This comes after the MacroExpansion pass to conditionally
-  // import standard library C files
+  // import standard library C files.
   passes.emplace_back(CreateResolveStatementImportsPass());
   return passes;
 }
