@@ -263,7 +263,7 @@ AttachedProbe::~AttachedProbe()
   if (err)
     LOG(WARNING) << "failed to detach probe: " << probe_.name;
 
-  if (close_progfd_ && progfd_ >= 0)
+  if (progfd_ >= 0)
     close(progfd_);
 }
 
