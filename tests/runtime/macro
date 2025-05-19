@@ -2,10 +2,6 @@ NAME it mutates the passed variable
 PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); print($a); exit(); }
 EXPECT 2
 
-NAME it does not mutate previously passed variable with literal
-PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc(1); print($a); exit(); }
-EXPECT 2
-
 NAME it mutates the passed non-scalar map
 PROG macro set(@x) { @x[1] = 2; 1 } BEGIN { @a[1] = 1; set(@a); exit(); }
 EXPECT @a[1]: 2

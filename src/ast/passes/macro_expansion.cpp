@@ -27,7 +27,7 @@ public:
   void visit(Map &map);
   void visit(Expression &expr);
 
-  std::optional<Block *> expand(Macro &macro, const Call &call);
+  std::optional<Block *> expand(Macro &macro, Call &call);
   bool check_recursive_call(const std::string &macro_name, const Call &call);
 
 private:
@@ -41,6 +41,7 @@ private:
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
   std::unordered_set<Variable *> temp_vars_;
+  std::unordered_map<std::string, Call *> arg_vars_no_mutation_;
   const std::vector<std::string> macro_stack_;
 };
 
@@ -83,6 +84,15 @@ void MacroExpander::visit(AssignVarStatement &assignment)
     // BEGIN { $a = 1; print({let $$add_one_$a = $a + 1; $$add_one_$a + 1}); }
     return;
   }
+
+  if (auto it = arg_vars_no_mutation_.find(var->ident);
+      it != arg_vars_no_mutation_.end()) {
+    it->second->addError()
+        << "Macro '" << macro_stack_.back() << "' assigns to parameter '"
+        << var->ident << "', meaning it expects a variable, not an expression.";
+    return;
+  }
+
   if (std::holds_alternative<VarDeclStatement *>(assignment.var_decl)) {
     visit(std::get<VarDeclStatement *>(assignment.var_decl));
   } else {
@@ -164,7 +174,7 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
   return std::format("$${}_{}", macro_name_, original_ident);
 }
 
-std::optional<Block *> MacroExpander::expand(Macro &macro, const Call &call)
+std::optional<Block *> MacroExpander::expand(Macro &macro, Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
     call.addError() << "Call to macro has wrong number arguments. Expected: "
@@ -198,6 +208,11 @@ std::optional<Block *> MacroExpander::expand(Macro &macro, const Call &call)
                                      Location(call.loc)),
             clone(ast_, call.vargs.at(i), call.vargs.at(i).loc()),
             Location(call.loc)));
+        // As per the name these arg variables are not expecting to be mutated
+        // because the caller passed in an expression instead of another
+        // variable e.g.
+        // macro add1($x) { $x += 1; $x } BEGIN { add1(1 + 1);
+        arg_vars_no_mutation_[mvar->ident] = &call;
         temp_vars_.insert(stmt_list.back().as<AssignVarStatement>()->var());
       } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
         call.addError()
