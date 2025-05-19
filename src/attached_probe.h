@@ -100,9 +100,6 @@ private:
   Result<> attach_raw_tracepoint();
   int detach_raw_tracepoint();
 
-  static std::map<std::string, int> cached_prog_fds_;
-  bool use_cached_progfd(BPFfeature &feature);
-  void cache_progfd();
   Result<> check_alignment(std::string &path,
                            std::string &symbol,
                            uint64_t sym_offset,
