@@ -653,6 +653,17 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
       return ScopedExpr(b_.CreateLShr(uidgid, 32));
     }
     __builtin_unreachable();
+  } else if (builtin.ident == "usermode") {
+    int cs_offset = arch::offset("cs");
+    Value *cs = b_.CreateRegisterRead(ctx_, cs_offset, "reg_cs");
+    Value *mask = b_.getInt64(0x3);
+    Value *is_usermode = b_.CreateICmpEQ(b_.CreateAnd(cs, mask),
+                                         b_.getInt64(3),
+                                         "is_usermode");
+    Value *expr = b_.CreateZExt(is_usermode,
+                                b_.GetType(builtin.builtin_type),
+                                "usermode_result");
+    return ScopedExpr(expr);
   } else if (builtin.ident == "numaid") {
     return ScopedExpr(b_.CreateGetNumaId(builtin.loc));
   } else if (builtin.ident == "cpu") {

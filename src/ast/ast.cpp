@@ -3,6 +3,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "attached_probe.h"
 #include "log.h"
 #include "util/format.h"
 
@@ -185,6 +186,89 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
       LOG(BUG) << "Unknown probe type";
   }
   return ap;
+}
+
+bool AttachPoint::check_available(const std::string &identifier) const
+{
+  ProbeType type = probetype(provider);
+
+  if (identifier == "reg" || identifier == "usermode") {
+    switch (type) {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::uprobe:
+      case ProbeType::uretprobe:
+      case ProbeType::usdt:
+      case ProbeType::profile:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::special:
+      case ProbeType::tracepoint:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
+      case ProbeType::iter:
+      case ProbeType::rawtracepoint:
+        return false;
+    }
+  } else if (identifier == "uaddr") {
+    switch (type) {
+      case ProbeType::usdt:
+      case ProbeType::uretprobe:
+      case ProbeType::uprobe:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::special:
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::tracepoint:
+      case ProbeType::profile:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
+      case ProbeType::iter:
+      case ProbeType::rawtracepoint:
+        return false;
+    }
+  } else if (identifier == "signal") {
+    switch (type) {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::uprobe:
+      case ProbeType::uretprobe:
+      case ProbeType::usdt:
+      case ProbeType::tracepoint:
+      case ProbeType::profile:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
+      case ProbeType::rawtracepoint:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::special:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
+      case ProbeType::iter:
+        return false;
+    }
+  } else if (identifier == "skboutput") {
+    return bpftrace::progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
+  }
+
+  if (type == ProbeType::invalid)
+    return false;
+
+  return true;
 }
 
 std::string AttachPoint::name() const
