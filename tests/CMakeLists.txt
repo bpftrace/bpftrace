@@ -17,6 +17,7 @@ add_executable(bpftrace_test
   control_flow_analyser.cpp
   deprecated.cpp
   field_analyser.cpp
+  filter_pass.cpp
   fold_literals.cpp
   function_registry.cpp
   globalvars.cpp
@@ -36,7 +37,6 @@ add_executable(bpftrace_test
   probe.cpp
   config_analyser.cpp
   pass_manager.cpp
-  pid_filter_pass.cpp
   recursion_check.cpp
   resource_analyser.cpp
   result.cpp
