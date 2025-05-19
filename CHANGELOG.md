@@ -69,6 +69,8 @@ and this project adheres to
   - [#4130](https://github.com/bpftrace/bpftrace/pull/4130)
 - Parse BTF for implicit kernel modules in kprobe/kretprobe
   - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
+- Fix execution watchpoints
+  - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
 #### Security
 #### Docs
 #### Tools
