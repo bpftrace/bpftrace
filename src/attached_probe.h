@@ -2,6 +2,7 @@
 
 #include <bcc/libbpf.h>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -35,11 +36,12 @@ private:
 
 class AttachedProbe {
 public:
-  AttachedProbe(Probe &probe,
-                const BpfProgram &prog,
-                std::optional<int> pid,
-                BPFtrace &bpftrace,
-                bool safe_mode = true);
+  static Result<std::unique_ptr<AttachedProbe>> make(Probe &probe,
+                                                     const BpfProgram &prog,
+                                                     std::optional<int> pid,
+                                                     BPFtrace &bpftrace,
+                                                     bool safe_mode = true);
+
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
@@ -50,6 +52,12 @@ public:
   int linkfd_ = -1;
 
 private:
+  AttachedProbe(Probe &probe,
+                const BpfProgram &prog,
+                std::optional<int> pid,
+                BPFtrace &bpftrace,
+                bool safe_mode = true);
+
   std::string eventprefix() const;
   std::string eventname() const;
   Result<uint64_t> resolve_offset(const std::string &path,

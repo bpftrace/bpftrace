@@ -535,8 +535,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
   if (feature_->has_uprobe_refcnt() || !file_activation || probe.path.empty()) {
-    ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, program, pid, *this));
+    auto attached = AttachedProbe::make(probe, program, pid, *this);
+    ret.emplace_back(std::move(*attached));
     return ret;
   }
 
@@ -589,8 +589,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
         throw util::FatalUserException("failed to parse pid=" + pid_str);
       }
 
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, program, pid_parsed, *this));
+      auto attached = AttachedProbe::make(probe, program, pid_parsed, *this);
+      ret.emplace_back(std::move(*attached));
       break;
     }
   }
@@ -618,11 +618,11 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
   } else if (probe.type == ProbeType::uprobe ||
              probe.type == ProbeType::uretprobe) {
-    ret.emplace_back(std::make_unique<AttachedProbe>(
-        probe, program, pid, *this, safe_mode_));
+    auto attached = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+    ret.emplace_back(std::move(*attached));
   } else {
-    ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, program, pid, *this));
+    auto attached = AttachedProbe::make(probe, program, pid, *this);
+    ret.emplace_back(std::move(*attached));
   }
   return ret;
 }

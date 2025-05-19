@@ -176,6 +176,25 @@ int AttachedProbe::detach_raw_tracepoint()
   return 0;
 }
 
+Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid,
+    BPFtrace &bpftrace,
+    bool safe_mode)
+{
+  // Cannot use std::make_unique here b/c it won't have access to
+  // private constructor.
+  auto attached = std::unique_ptr<AttachedProbe>(
+      new AttachedProbe(probe, prog, pid, bpftrace, safe_mode));
+
+  auto result = attached->attach();
+  if (!result)
+    return result.takeError();
+
+  return attached;
+}
+
 AttachedProbe::AttachedProbe(Probe &probe,
                              const BpfProgram &prog,
                              std::optional<int> pid,
