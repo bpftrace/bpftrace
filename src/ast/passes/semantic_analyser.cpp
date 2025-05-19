@@ -555,6 +555,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         map_type_spec{},
       } } },
+  { "always_true", { .min_args=0, .max_args=0 }},
 };
 // clang-format on
 
@@ -1698,6 +1699,8 @@ If you're seeing errors, try clamping the string sizes. For example:
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
     }
+  } else if (call.func == "always_true") {
+    call.return_type = CreateInt64();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
   }

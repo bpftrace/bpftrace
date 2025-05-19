@@ -29,7 +29,7 @@ embed(
   ${CMAKE_CURRENT_SOURCE_DIR}/base.bt
   OUTPUT  base_bt.h
   VAR     base_bt
-  DEPENDS base
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/base.bt
 )
 
 # The standard library holds these definitions internally via the headers
