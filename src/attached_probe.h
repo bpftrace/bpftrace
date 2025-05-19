@@ -112,7 +112,6 @@ private:
 
   Probe &probe_;
   std::vector<int> perf_event_fds_;
-  bool close_progfd_ = true;
   int progfd_ = -1;
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
