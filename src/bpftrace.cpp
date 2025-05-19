@@ -682,7 +682,7 @@ int BPFtrace::run_iter()
   }
 
   auto &ap = *attached_probes_.begin();
-  int link_fd = ap->linkfd_;
+  int link_fd = ap->link_fd();
 
   if (probe->pin.empty()) {
     int iter_fd = bpf_iter_create(link_fd);
