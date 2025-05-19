@@ -108,16 +108,16 @@ private:
                            ProbeType type);
 
   Probe &probe_;
+  const BpfProgram &prog_;
+  BPFtrace &bpftrace_;
+  std::optional<int> pid_;
+  bool safe_mode_;
+
   std::vector<int> perf_event_fds_;
-  int progfd_ = -1;
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
   std::function<void()> usdt_destructor_;
   USDTHelper usdt_helper;
-
-  BPFtrace &bpftrace_;
-  std::optional<int> pid_;
-  bool safe_mode_;
 };
 
 class HelperVerifierError : public std::runtime_error {

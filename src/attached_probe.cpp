@@ -104,10 +104,10 @@ std::string progtypeName(libbpf::bpf_prog_type t)
 
 Result<> AttachedProbe::attach_fentry()
 {
-  if (progfd_ < 0)
+  if (prog_.fd() < 0)
     return make_error<AttachError>();
 
-  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
+  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, prog_.fd());
   if (tracing_fd_ < 0) {
     return make_error<AttachError>();
   }
@@ -123,7 +123,7 @@ int AttachedProbe::detach_fentry()
 Result<> AttachedProbe::attach_iter()
 {
   if (!pid_.has_value()) {
-    linkfd_ = bpf_link_create(progfd_,
+    linkfd_ = bpf_link_create(prog_.fd(),
                               0,
                               static_cast<enum ::bpf_attach_type>(
                                   libbpf::BPF_TRACE_ITER),
@@ -135,7 +135,7 @@ Result<> AttachedProbe::attach_iter()
     linfo.task.pid = *pid_;
     opts.iter_info = &linfo;
     opts.iter_info_len = sizeof(linfo);
-    linkfd_ = bpf_link_create(progfd_,
+    linkfd_ = bpf_link_create(prog_.fd(),
                               0,
                               static_cast<enum ::bpf_attach_type>(
                                   libbpf::BPF_TRACE_ITER),
@@ -156,7 +156,7 @@ int AttachedProbe::detach_iter()
 
 Result<> AttachedProbe::attach_raw_tracepoint()
 {
-  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
+  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, prog_.fd());
   if (tracing_fd_ < 0) {
     if (tracing_fd_ == -ENOENT) {
       return make_error<AttachError>("Probe does not exist: " + probe_.name);
@@ -201,7 +201,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BPFtrace &bpftrace,
                              bool safe_mode)
     : probe_(probe),
-      progfd_(prog.fd()),
+      prog_(prog),
       bpftrace_(bpftrace),
       pid_(pid),
       safe_mode_(safe_mode)
@@ -263,8 +263,8 @@ AttachedProbe::~AttachedProbe()
   if (err)
     LOG(WARNING) << "failed to detach probe: " << probe_.name;
 
-  if (progfd_ >= 0)
-    close(progfd_);
+  if (int fd = prog_.fd(); fd >= 0)
+    close(fd);
 }
 
 Result<> AttachedProbe::attach()
@@ -312,7 +312,7 @@ const Probe &AttachedProbe::probe() const
 
 int AttachedProbe::progfd() const
 {
-  return progfd_;
+  return prog_.fd();
 }
 
 std::string AttachedProbe::eventprefix() const
@@ -593,7 +593,7 @@ Result<> AttachedProbe::attach_multi_kprobe()
                                        : libbpf::BPF_TRACE_KPROBE_MULTI;
 
   linkfd_ = bpf_link_create(
-      progfd_, 0, static_cast<enum ::bpf_attach_type>(attach_type), &opts);
+      prog_.fd(), 0, static_cast<enum ::bpf_attach_type>(attach_type), &opts);
   if (linkfd_ < 0) {
     return make_error<AttachError>();
   }
@@ -636,9 +636,9 @@ Result<> AttachedProbe::attach_kprobe()
   if (!is_symbol_kprobe)
     funcname += probe_.attach_point;
 
-  LOG(V1) << "bpf_attach_kprobe(" << progfd_ << ", " << probe_.type << ", "
+  LOG(V1) << "bpf_attach_kprobe(" << prog_.fd() << ", " << probe_.type << ", "
           << eventname() << ", " << funcname << ", " << offset_ << ", 0)";
-  int perf_event_fd = bpf_attach_kprobe(progfd_,
+  int perf_event_fd = bpf_attach_kprobe(prog_.fd(),
                                         attachtype(probe_.type),
                                         eventname().c_str(),
                                         funcname.c_str(),
@@ -794,7 +794,7 @@ Result<> AttachedProbe::attach_multi_uprobe()
     }
   }
 
-  linkfd_ = bpf_link_create(progfd_,
+  linkfd_ = bpf_link_create(prog_.fd(),
                             0,
                             static_cast<enum ::bpf_attach_type>(
                                 libbpf::BPF_TRACE_UPROBE_MULTI),
@@ -823,7 +823,7 @@ Result<> AttachedProbe::attach_uprobe(bool safe_mode)
     return offset_res.takeError();
   }
 
-  int perf_event_fd = bpf_attach_uprobe(progfd_,
+  int perf_event_fd = bpf_attach_uprobe(prog_.fd(),
                                         attachtype(probe_.type),
                                         eventname().c_str(),
                                         probe_.path.c_str(),
@@ -990,7 +990,7 @@ Result<> AttachedProbe::attach_usdt(BPFfeature &feature)
         "\n Try using -p or --usdt-file-activation if there's USDT semaphores");
   }
 
-  int perf_event_fd = bpf_attach_uprobe(progfd_,
+  int perf_event_fd = bpf_attach_uprobe(prog_.fd(),
                                         attachtype(probe_.type),
                                         eventname().c_str(),
                                         probe_.path.c_str(),
@@ -1012,7 +1012,7 @@ Result<> AttachedProbe::attach_usdt(BPFfeature &feature)
 
 Result<> AttachedProbe::attach_tracepoint()
 {
-  int perf_event_fd = bpf_attach_tracepoint(progfd_,
+  int perf_event_fd = bpf_attach_tracepoint(prog_.fd(),
                                             probe_.path.c_str(),
                                             eventname().c_str());
 
@@ -1048,7 +1048,7 @@ Result<> AttachedProbe::attach_profile()
 
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
+    int perf_event_fd = bpf_attach_perf_event(prog_.fd(),
                                               PERF_TYPE_SOFTWARE,
                                               PERF_COUNT_SW_CPU_CLOCK,
                                               period,
@@ -1085,7 +1085,7 @@ Result<> AttachedProbe::attach_interval()
                                    "\"");
   }
 
-  int perf_event_fd = bpf_attach_perf_event(progfd_,
+  int perf_event_fd = bpf_attach_perf_event(prog_.fd(),
                                             PERF_TYPE_SOFTWARE,
                                             PERF_COUNT_SW_CPU_CLOCK,
                                             period,
@@ -1124,7 +1124,7 @@ Result<> AttachedProbe::attach_software()
 
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
+    int perf_event_fd = bpf_attach_perf_event(prog_.fd(),
                                               PERF_TYPE_SOFTWARE,
                                               type,
                                               period,
@@ -1164,7 +1164,7 @@ Result<> AttachedProbe::attach_hardware()
 
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
+    int perf_event_fd = bpf_attach_perf_event(prog_.fd(),
                                               PERF_TYPE_HARDWARE,
                                               type,
                                               period,
@@ -1229,7 +1229,7 @@ Result<> AttachedProbe::attach_watchpoint(const std::string &mode)
 
       return make_error<AttachError>(std::move(err_msg));
     }
-    if (ioctl(perf_event_fd, PERF_EVENT_IOC_SET_BPF, progfd_) != 0) {
+    if (ioctl(perf_event_fd, PERF_EVENT_IOC_SET_BPF, prog_.fd()) != 0) {
       close(perf_event_fd);
       return make_error<AttachError>(
           std::system_error(errno, std::generic_category(), "").what());
