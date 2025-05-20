@@ -30,6 +30,11 @@ RUN {{BPFTRACE}} -l | grep kprobes
 EXPECT_REGEX kprobe:.*
 TIMEOUT 1
 
+NAME it lists kprobes with glob matching
+RUN {{BPFTRACE}} -l 'kprobe*'
+EXPECT_REGEX kprobe:.*
+TIMEOUT 1
+
 NAME it lists tracepoints
 RUN {{BPFTRACE}} -l | grep tracepoint
 EXPECT_REGEX tracepoint:.*

@@ -69,7 +69,7 @@ enum class ExpansionType {
 
 class Node {
 public:
-  Node(ASTContext &ctx, Location &&loc) : ctx_(ctx), loc(loc) {};
+  Node(ASTContext &ctx, Location &&loc) : state_(*ctx.state_), loc(loc) {};
   virtual ~Node() = default;
 
   Node(const Node &) = delete;
@@ -81,7 +81,12 @@ public:
   Diagnostic &addWarning() const;
 
 private:
-  ASTContext &ctx_;
+  // N.B. it is not legal to hold on to a long-term reference to `ASTContext&`,
+  // as this is generally movable. Therefore, we hold on to the internal state
+  // only, which will not be moving.
+  //
+  // See `ASTContext::State` for more information.
+  ASTContext::State &state_;
 
 public:
   // This is temporarily accessible by other classes because we don't have a
