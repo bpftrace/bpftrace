@@ -555,6 +555,13 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         map_type_spec{},
       } } },
+
+  // These functions are supplied via bitcode.
+  { "__in_cgroup",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        arg_type_spec{ .type=Type::integer } } } },
 };
 // clang-format on
 
@@ -1699,7 +1706,12 @@ If you're seeing errors, try clamping the string sizes. For example:
                          "userspace. This is very unexpected.";
     }
   } else {
-    call.addError() << "Unknown function: '" << call.func << "'";
+    // These are functions source from bitcode.
+    if (call.func == "__in_cgroup") {
+      call.return_type = CreateInt32();
+    } else {
+      call.addError() << "Unknown function: '" << call.func << "'";
+    }
   }
 }
 

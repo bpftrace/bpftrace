@@ -1,12 +1,12 @@
-#include "ast/passes/pid_filter_pass.h"
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/filter_pass.h"
 #include "ast/passes/printer.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace::test::pid_filter_pass {
+namespace bpftrace::test::filter_pass {
 
 using ::testing::_;
 using ::testing::HasSubstr;
@@ -30,7 +30,9 @@ void test(const std::string& input, bool has_pid, bool has_filter)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
-                .add(ast::CreatePidFilterPass())
+                .add(ast::CreateFilterPass(ast::FilterInputs{
+                    .pid = has_pid ? std::optional<pid_t>(1) : std::nullopt,
+                    .cgroup_id = std::nullopt }))
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 
@@ -101,4 +103,4 @@ TEST(pid_filter_pass, mixed_probes)
   test("usdt:sh:probe, uprobe:/bin/sh:f, profile:ms:1 { 1 }", true, false);
 }
 
-} // namespace bpftrace::test::pid_filter_pass
+} // namespace bpftrace::test::filter_pass

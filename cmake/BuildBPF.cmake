@@ -30,7 +30,7 @@ function(btf_header NAME SOURCE)
   endif ()
   add_custom_command(
     OUTPUT ${ARG_OUTPUT}
-    COMMAND ${BPFTOOL} btf dump file "${ARG_SOURCE}" format c > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
+    COMMAND ${BPFTOOL} btf dump file "${SOURCE}" format c > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
     VERBATIM
   )
   add_custom_target(${NAME}
@@ -103,7 +103,7 @@ function(bpf NAME)
     add_custom_command(
       OUTPUT ${ARG_BITCODE}
       DEPENDS ${ARG_SOURCE} ${ARG_DEPENDS}
-      COMMAND ${CLANG} -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
+      COMMAND ${CLANG} -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${LIBBPF_INCLUDE_DIRS} -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
       VERBATIM
     )
     add_custom_target(${NAME}_gen_bitcode DEPENDS ${ARG_BITCODE})

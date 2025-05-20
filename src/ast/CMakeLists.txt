@@ -22,6 +22,7 @@ add_library(ast STATIC
   passes/config_analyser.cpp
   passes/deprecated.cpp
   passes/field_analyser.cpp
+  passes/filter_pass.cpp
   passes/fold_literals.cpp
   passes/import_scripts.cpp
   passes/link.cpp
@@ -35,7 +36,6 @@ add_library(ast STATIC
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/return_path_analyser.cpp
-  passes/pid_filter_pass.cpp
   passes/recursion_check.cpp
   passes/unstable_feature.cpp
 )

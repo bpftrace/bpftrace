@@ -20,10 +20,10 @@
 #include "ast/pass_manager.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
+#include "ast/passes/filter_pass.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_analyser.h"
@@ -46,6 +46,7 @@
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "run_bpftrace.h"
+#include "util/cgroup.h"
 #include "util/env.h"
 #include "util/format.h"
 #include "util/int_parser.h"
@@ -91,6 +92,8 @@ enum Options {
   NO_FEATURE,
   DEBUG,
   DRY_RUN,
+  PID,
+  CGROUP,
 };
 
 constexpr auto FULL_SEARCH = "*:*";
@@ -115,7 +118,8 @@ void usage(std::ostream& out)
   out << "    --include FILE add an #include file before preprocessing" << std::endl;
   out << "    -l [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
-  out << "    -p PID         filter actions and enable USDT probes on PID" << std::endl;
+  out << "    -p, --pid PID  filter actions and enable USDT probes on PID" << std::endl;
+  out << "    --cgroup ROOT  filter for processes in within cgroup" << std::endl;
   out << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   out << "    --no-feature FEATURE[,FEATURE]" << std::endl;
   out << "                   disable use of detected features" << std::endl;
@@ -299,7 +303,6 @@ std::vector<std::string> extra_flags(
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreatePidFilterPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
@@ -331,6 +334,7 @@ ast::Pass printPass(const std::string& name)
 
 struct Args {
   std::string pid_str;
+  std::string cgroup_str;
   std::string cmd_str;
   bool listing = false;
   bool safe_mode = true;
@@ -440,6 +444,14 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::DRY_RUN },
+    option{ .name = "pid",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::PID },
+    option{ .name = "cgroup",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::CGROUP },
     option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 }, // Must
                                                                         // be
                                                                         // last
@@ -524,7 +536,11 @@ Args parse_args(int argc, char* argv[])
         args.script = optarg;
         break;
       case 'p':
+      case Options::PID:
         args.pid_str = optarg;
+        break;
+      case Options::CGROUP:
+        args.cgroup_str = optarg;
         break;
       case 'I':
         args.include_dirs.emplace_back(optarg);
@@ -722,6 +738,7 @@ int main(int argc, char* argv[])
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
 
+  std::optional<pid_t> pid;
   if (!args.pid_str.empty()) {
     std::string errmsg;
     auto maybe_pid = util::parse_pid(args.pid_str, errmsg);
@@ -729,12 +746,18 @@ int main(int argc, char* argv[])
       LOG(ERROR) << "Failed to parse pid: " + errmsg;
       exit(1);
     }
+    pid = *maybe_pid;
     try {
       bpftrace.procmon_ = std::make_unique<ProcMon>(*maybe_pid);
     } catch (const std::exception& e) {
       LOG(ERROR) << e.what();
       exit(1);
     }
+  }
+
+  std::optional<uint64_t> cgroup_id;
+  if (!args.cgroup_str.empty()) {
+    cgroup_id = util::resolve_cgroupid(args.cgroup_str);
   }
 
   if (!args.cmd_str.empty()) {
@@ -894,6 +917,21 @@ int main(int argc, char* argv[])
     addPass(std::move(pass));
   }
 
+  // Add any filters to probes.
+  if (pid || cgroup_id) {
+    if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
+      // Not supported for ahead-of-time, at least warn the user.
+      LOG(WARNING) << "Ignoring provided `pid` and `cgroup` arguments.";
+    } else {
+      // Add the pass early on, which injects the checks.
+      addPass(ast::CreateFilterPass(ast::FilterInputs{
+          .pid = pid,
+          .cgroup_id = cgroup_id,
+      }));
+    }
+  }
+
+  // Add all standard passes.
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
       CreateDynamicPasses(addPass);
