@@ -242,3 +242,8 @@ NAME kstack builtin with stack_mode config
 RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } k:do_nanosleep { @c[kstack] = 1; exit(); }'
 EXPECT_REGEX ^@c\[\n[0-9a-f]+$
 AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME kstack missing frame
+PROG kprobe:do_nanosleep {$lr=*(uint64*)reg("sp"); printf("%s%s", ksym($lr), kstack); }
+EXPECT_REGEX let it fail
+AFTER ./testprogs/syscall nanosleep 1e8
