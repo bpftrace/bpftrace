@@ -41,6 +41,8 @@ and this project adheres to
   - [#4095](https://github.com/bpftrace/bpftrace/pull/4095)
 - Support accessing up to 255 USDT probe args
   - [#4118](https://github.com/bpftrace/bpftrace/pull/4118)
+- Add new builtin "usermode"
+  - [#4129](https://github.com/bpftrace/bpftrace/pull/4129)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
