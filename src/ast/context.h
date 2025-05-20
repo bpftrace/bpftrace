@@ -56,7 +56,7 @@ public:
     auto uniq_ptr = std::make_unique<T>(*this,
                                         wrap(std::forward<Args>(args))...);
     auto *raw_ptr = uniq_ptr.get();
-    nodes_.push_back(std::move(uniq_ptr));
+    state_->nodes_.push_back(std::move(uniq_ptr));
     return raw_ptr;
   }
 
@@ -68,18 +68,18 @@ public:
     }
     auto uniq_ptr = std::make_unique<T>(*this, *other, loc);
     auto *raw_ptr = uniq_ptr.get();
-    nodes_.push_back(std::move(uniq_ptr));
+    state_->nodes_.push_back(std::move(uniq_ptr));
     return raw_ptr;
   }
 
   unsigned int node_count()
   {
-    return nodes_.size();
+    return state_->nodes_.size();
   }
 
   Diagnostics &diagnostics() const
   {
-    return *diagnostics_;
+    return *state_->diagnostics_;
   }
 
   std::shared_ptr<ASTSource> source() const
@@ -92,9 +92,19 @@ public:
   // syntax tree in place.
   void clear();
 
+  // Root points to a node in `state_.nodes_`.
   Program *root = nullptr;
 
 private:
+  // State owns the underlying nodes; they are permitted to take a reference to
+  // this object since their lifetimes are bound.
+  class State {
+  public:
+    State();
+    std::vector<std::unique_ptr<Node>> nodes_;
+    std::unique_ptr<Diagnostics> diagnostics_;
+  };
+
   // wrap potentially converts external types to internal ones. At the moment,
   // this automatically converts the parser `location` to the `Location` class
   // bound to the current source file.
@@ -108,8 +118,7 @@ private:
     return std::make_shared<LocationChain>(SourceLocation(loc, source_));
   };
 
-  std::vector<std::unique_ptr<Node>> nodes_;
-  std::unique_ptr<Diagnostics> diagnostics_;
+  std::unique_ptr<State> state_;
   std::shared_ptr<ASTSource> source_;
 
   friend class bpftrace::Driver;

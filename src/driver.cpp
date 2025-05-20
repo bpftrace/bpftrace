@@ -50,7 +50,7 @@ void Driver::error(const location &l, const std::string &m)
 {
   // This path is normally not allowed, however we don't yet have nodes
   // constructed. Therefore, we add diagnostics directly via the private field.
-  ctx.diagnostics_->addError(ctx.wrap(l)) << m;
+  ctx.state_->diagnostics_->addError(ctx.wrap(l)) << m;
 }
 
 ast::Pass CreateParsePass(bool debug)

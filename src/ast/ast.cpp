@@ -10,12 +10,12 @@ namespace bpftrace::ast {
 
 Diagnostic &Node::addError() const
 {
-  return ctx_.diagnostics_->addError(loc);
+  return state_.diagnostics_->addError(loc);
 }
 
 Diagnostic &Node::addWarning() const
 {
-  return ctx_.diagnostics_->addWarning(loc);
+  return state_.diagnostics_->addWarning(loc);
 }
 
 const SizedType &Expression::type() const
