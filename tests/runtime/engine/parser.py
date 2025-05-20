@@ -233,6 +233,9 @@ class TestParser(object):
         if return_code is None:
             return_code = 0
 
+        if return_code != 0 and will_fail:
+            raise InvalidFieldError('WILL_FAIL and RETURN_CODE can not be used together. Suite: ' + test_suite)
+
         return TestStruct(
             name,
             run,

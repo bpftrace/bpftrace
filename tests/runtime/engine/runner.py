@@ -519,13 +519,22 @@ class Runner(object):
             print(warn("[   SKIP   ] ") + label)
             return Runner.SKIP_AOT_NOT_SUPPORTED
 
-        if p and p.returncode != test.return_code and not test.will_fail and not timeout:
-            print(fail("[  FAILED  ] ") + label)
-            print('\tCommand: ' + bpf_call)
-            print('\tUnclean exit code: ' + str(p.returncode))
-            print('\tOutput: ' + to_utf8(output))
-            print_befores_and_after_output()
-            return Runner.FAIL
+        if p and not timeout:
+            if p.returncode != test.return_code and not test.will_fail:
+                print(fail("[  FAILED  ] ") + label)
+                print('\tCommand: ' + bpf_call)
+                print('\tUnclean exit code: ' + str(p.returncode))
+                print('\tOutput: ' + to_utf8(output))
+                print_befores_and_after_output()
+                return Runner.FAIL
+
+            if p.returncode == 0 and test.will_fail:
+                print(fail("[  FAILED  ] ") + label)
+                print("\tCommand: " + bpf_call)
+                print("\tClean exit code but expecting failure with WILL_FAIL directive")
+                print("\tOutput: " + to_utf8(output))
+                print_befores_and_after_output()
+                return Runner.FAIL
 
         if result:
             print(ok("[       OK ] ") + label)
