@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
 %"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64, i64 }
+%"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args" = type { i32, i64, i64, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
@@ -17,36 +17,36 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @uprobe__tmp_bpftrace_test_dwarf_data_func_1_1(ptr %0) #0 section "s_uprobe__tmp_bpftrace_test_dwarf_data_func_1_1" !dbg !57 {
+define i64 @p1_0(ptr %0) #0 section "probes" !dbg !57 {
 entry:
   %"@_key" = alloca i64, align 8
-  %args = alloca %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", align 8
+  %args = alloca %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %args)
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 14
   %arg0 = load volatile i64, ptr %2, align 8
   %3 = trunc i64 %arg0 to i32
-  %4 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 0
+  %4 = getelementptr %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", ptr %args, i64 0, i32 0
   store i32 %3, ptr %4, align 4
   %5 = call ptr @llvm.preserve.static.offset(ptr %0)
   %6 = getelementptr i64, ptr %5, i64 13
   %arg1 = load volatile i64, ptr %6, align 8
-  %7 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 1
+  %7 = getelementptr %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", ptr %args, i64 0, i32 1
   store i64 %arg1, ptr %7, align 8
   %8 = call ptr @llvm.preserve.static.offset(ptr %0)
   %9 = getelementptr i64, ptr %8, i64 12
   %arg2 = load volatile i64, ptr %9, align 8
-  %10 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 2
+  %10 = getelementptr %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", ptr %args, i64 0, i32 2
   store i64 %arg2, ptr %10, align 8
   %11 = call ptr @llvm.preserve.static.offset(ptr %0)
   %12 = getelementptr i64, ptr %11, i64 11
   %arg3 = load volatile i64, ptr %12, align 8
-  %13 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
+  %13 = getelementptr %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", ptr %args, i64 0, i32 3
   store i64 %arg3, ptr %13, align 8
   %14 = call ptr @llvm.preserve.static.offset(ptr %0)
   %15 = getelementptr i64, ptr %14, i64 9
   %arg4 = load volatile i64, ptr %15, align 8
-  %16 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 4
+  %16 = getelementptr %"uprobe:/tmp/nix-shell.v2ZA1e/bpftrace.QMp7rB:func_1_args", ptr %args, i64 0, i32 4
   store i64 %arg4, ptr %16, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
@@ -128,7 +128,7 @@ attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !54 = !{!0, !7, !26, !40}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
 !56 = !{i32 7, !"uwtable", i32 0}
-!57 = distinct !DISubprogram(name: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", linkageName: "uprobe__tmp_bpftrace_test_dwarf_data_func_1_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!57 = distinct !DISubprogram(name: "p1_0", linkageName: "p1_0", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
 !58 = !DISubroutineType(types: !59)
 !59 = !{!20, !60}
 !60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

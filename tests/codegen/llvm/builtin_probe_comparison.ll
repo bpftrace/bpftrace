@@ -15,7 +15,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_one_1(ptr %0) #0 section "s_tracepoint_sched_sched_one_1" !dbg !46 {
+define i64 @p2_0(ptr %0) #0 section "probes" !dbg !46 {
 entry:
   %strcmp.result = alloca i1, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcmp.result)
@@ -368,7 +368,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !43 = !{!0, !7, !22}
 !44 = !{i32 2, !"Debug Info Version", i32 3}
 !45 = !{i32 7, !"uwtable", i32 0}
-!46 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
+!46 = distinct !DISubprogram(name: "p2_0", linkageName: "p2_0", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
 !47 = !DISubroutineType(types: !48)
 !48 = !{!41, !49}
 !49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

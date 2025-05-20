@@ -16,7 +16,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !57 {
+define i64 @p2_0(ptr %0) #0 section "probes" !dbg !57 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -37,7 +37,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !63 {
+define i64 @p3_0(ptr %0) #0 section "probes" !dbg !63 {
 entry:
   %"$s" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
@@ -113,13 +113,13 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !54 = !{!0, !7, !26, !40}
 !55 = !{i32 2, !"Debug Info Version", i32 3}
 !56 = !{i32 7, !"uwtable", i32 0}
-!57 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
+!57 = distinct !DISubprogram(name: "p2_0", linkageName: "p2_0", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !61)
 !58 = !DISubroutineType(types: !59)
 !59 = !{!24, !60}
 !60 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !61 = !{!62}
 !62 = !DILocalVariable(name: "ctx", arg: 1, scope: !57, file: !2, type: !60)
-!63 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !64)
+!63 = distinct !DISubprogram(name: "p3_0", linkageName: "p3_0", scope: !2, file: !2, type: !58, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !53, retainedNodes: !64)
 !64 = !{!65}
 !65 = !DILocalVariable(name: "ctx", arg: 1, scope: !63, file: !2, type: !60)
 !66 = !DISubprogram(name: "bpf_map_sum_elem_count", linkageName: "bpf_map_sum_elem_count", scope: !2, file: !2, type: !67, flags: DIFlagPrototyped, spFlags: 0)

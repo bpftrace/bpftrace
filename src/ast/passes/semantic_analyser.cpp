@@ -1026,12 +1026,21 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
+
+    SizedType args_type = CreateNone();
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
         attach_point->expansion = ExpansionType::FULL;
         builtin_args_tracepoint(attach_point, builtin);
+      }
+
+      // We can't really do type infererance and semantic analysis prior to
+      // expanding these types. But we'll leave this for now, and just expand
+      // to the first available type.
+      if (args_type.IsNoneTy() && attach_point->args_type) {
+        args_type = *attach_point->args_type;
       }
     }
 
@@ -1044,9 +1053,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
              "\"probe1,probe2 {args}\" is not.";
     } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
                type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
-      auto type_name = probe->args_typename();
-      builtin.builtin_type = CreateRecord(type_name,
-                                          bpftrace_.structs.Lookup(type_name));
+      builtin.builtin_type = args_type;
       if (builtin.builtin_type.GetFieldCount() == 0)
         builtin.addError() << "Cannot read function parameters";
 
@@ -2657,35 +2664,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
     }
-    return;
-  }
-
-  if (type.is_funcarg) {
-    auto *probe = get_probe(acc);
-    if (probe == nullptr)
-      return;
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
-    if (arg) {
-      acc.field_type = arg->type;
-      acc.field_type.SetAS(acc.expr.type().GetAS());
-
-      if (is_final_pass()) {
-        if (acc.field_type.IsNoneTy())
-          acc.addError() << acc.field << " has unsupported type";
-
-        ProbeType probetype = single_provider_type(probe);
-        if (probetype == ProbeType::fentry || probetype == ProbeType::fexit) {
-          acc.field_type.is_btftype = true;
-        }
-      }
-    } else {
-      acc.addError() << "Can't find function parameter " << acc.field;
-    }
-    return;
-  }
-
-  if (!bpftrace_.structs.Has(type.GetName())) {
-    acc.addError() << "Unknown struct/union: '" << type.GetName() << "'";
     return;
   }
 

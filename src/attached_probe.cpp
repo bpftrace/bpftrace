@@ -939,7 +939,7 @@ void AttachedProbe::attach_usdt(std::optional<int> pid, BPFfeature &feature)
   err = bcc_usdt_get_location(ctx,
                               probe_.ns.c_str(),
                               probe_.attach_point.c_str(),
-                              probe_.usdt_location_idx,
+                              probe_.inline_index,
                               &loc);
   if (err)
     throw util::FatalUserException("Error finding location for probe: " +

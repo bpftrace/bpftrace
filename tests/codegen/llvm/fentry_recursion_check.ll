@@ -16,7 +16,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @fentry_mock_vmlinux_queued_spin_lock_slowpath_1(ptr %0) #0 section "s_fentry_mock_vmlinux_queued_spin_lock_slowpath_1" !dbg !55 {
+define i64 @p2_0(ptr %0) #0 section "probes" !dbg !55 {
 entry:
   %lookup_key6 = alloca i32, align 4
   %key = alloca i32, align 4
@@ -82,7 +82,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_exceptions_page_fault_user_2(ptr %0) #0 section "s_tracepoint_exceptions_page_fault_user_2" !dbg !61 {
+define i64 @p3_0(ptr %0) #0 section "probes" !dbg !61 {
 entry:
   %lookup_key6 = alloca i32, align 4
   %key = alloca i32, align 4
@@ -202,12 +202,12 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !52 = !{!0, !7, !28, !42}
 !53 = !{i32 2, !"Debug Info Version", i32 3}
 !54 = !{i32 7, !"uwtable", i32 0}
-!55 = distinct !DISubprogram(name: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", linkageName: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!55 = distinct !DISubprogram(name: "p2_0", linkageName: "p2_0", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
 !56 = !DISubroutineType(types: !57)
 !57 = !{!27, !58}
 !58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !59 = !{!60}
 !60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)
-!61 = distinct !DISubprogram(name: "tracepoint_exceptions_page_fault_user_2", linkageName: "tracepoint_exceptions_page_fault_user_2", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !62)
+!61 = distinct !DISubprogram(name: "p3_0", linkageName: "p3_0", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !62)
 !62 = !{!63}
 !63 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !58)

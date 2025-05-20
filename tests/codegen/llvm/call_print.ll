@@ -17,7 +17,7 @@ target triple = "bpf-pc-linux"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !52 {
+define i64 @p2_0(ptr %0) #0 section "probes" !dbg !52 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -38,7 +38,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !58 {
+define i64 @p3_0(ptr %0) #0 section "probes" !dbg !58 {
 entry:
   %key = alloca i32, align 4
   %"print_@x" = alloca %print_t, align 8
@@ -136,12 +136,12 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !49 = !{!0, !7, !22, !36}
 !50 = !{i32 2, !"Debug Info Version", i32 3}
 !51 = !{i32 7, !"uwtable", i32 0}
-!52 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !56)
+!52 = distinct !DISubprogram(name: "p2_0", linkageName: "p2_0", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !56)
 !53 = !DISubroutineType(types: !54)
 !54 = !{!20, !55}
 !55 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !56 = !{!57}
 !57 = !DILocalVariable(name: "ctx", arg: 1, scope: !52, file: !2, type: !55)
-!58 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !59)
+!58 = distinct !DISubprogram(name: "p3_0", linkageName: "p3_0", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !48, retainedNodes: !59)
 !59 = !{!60}
 !60 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !55)

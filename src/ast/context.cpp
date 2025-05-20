@@ -17,8 +17,9 @@ ASTSource::ASTSource(std::string &&filename, std::string &&input)
 
 ASTContext::ASTContext(std::string &&filename, std::string &&contents)
     : diagnostics_(std::make_unique<Diagnostics>()),
-      source_(
-          std::make_shared<ASTSource>(std::move(filename), std::move(contents)))
+      source_(std::make_shared<ASTSource>(std::move(filename),
+                                          std::move(contents))),
+      next_unique_id_(std::make_unique<std::atomic<size_t>>())
 {
 }
 
