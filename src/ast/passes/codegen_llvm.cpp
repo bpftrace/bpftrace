@@ -2255,7 +2255,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   bool is_ctx = type.IsCtxAccess();
   bool is_tparg = type.is_tparg;
   bool is_funcarg = type.is_funcarg;
-  bool is_btftype = type.is_btftype;
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2281,7 +2280,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     type.MarkCtxAccess();
   type.is_tparg = is_tparg;
   type.is_funcarg = is_funcarg;
-  type.is_btftype = is_btftype;
   // Restore the addrspace info
   // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
   type.SetAS(addrspace);
@@ -2371,11 +2369,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
 ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
 {
-  // Only allow direct reads if the element is also marked as a BTF type; this
-  // is specifically because the semantic analyzer has marked these cases to
-  // avoid copying through two pointers.
   SizedType type = arr.expr.type();
-  type.is_btftype = type.is_btftype && arr.element_type.is_btftype;
 
   // We can allow the lifetime of the index to expire by the time the array
   // expression is complete, but we must preserve the lifetime of the
@@ -2461,7 +2455,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
       if (cast.expr.type().GetAS() == AddrSpace::bpf ||
-          cast.expr.type().IsCtxAccess() || cast.expr.type().is_btftype) {
+          cast.expr.type().IsCtxAccess()) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
@@ -3319,7 +3313,17 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                                                map.ident + "_key",
                                                map.loc)
                    : scoped_key_expr.value();
-  if (inBpfMemory(key_expr.type())) {
+  if (map.key_type.IsIntTy()) {
+    // Integers are always stored as 64-bit in map keys
+    b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
+                                    b_.getInt64Ty(),
+                                    key_expr.type().IsSigned()),
+                   key);
+  } else if (inBpfMemory(key_expr.type())) {
+    // The only time when sizes are different is when the key is:
+    // - an integers that has been upscaled for maps (handled above)
+    // - a string that is automatically upscaled (handled here)
+    // - a tuple with upscaled integers or strings (handled here)
     if (!key_expr.type().IsSameSizeRecursive(key_type)) {
       b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
       if (key_expr.type().IsTupleTy()) {
@@ -3336,12 +3340,6 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     } else {
       // Call-ee freed
     }
-  } else if (map.key_type.IsIntTy()) {
-    // Integers are always stored as 64-bit in map keys
-    b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
-                                    b_.getInt64Ty(),
-                                    key_expr.type().IsSigned()),
-                   key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
@@ -4298,7 +4296,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (elem_type.IsStringTy() && data_type.is_btftype) {
+    if (elem_type.IsStringTy() && data_type.GetAS() == AddrSpace::bpf) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
@@ -4311,7 +4309,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(dst, [this, dst]() { b_.CreateLifetimeEnd(dst); });
   } else {
     // Read data onto stack
-    if (data_type.IsCtxAccess() || data_type.is_btftype) {
+    if (data_type.IsCtxAccess() || data_type.GetAS() == AddrSpace::bpf) {
       // Types have already been suitably casted; just do the access.
       Value *expr = b_.CreateDatastructElemLoad(
           elem_type, src, true, data_type.GetAS());
