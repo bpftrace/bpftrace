@@ -37,6 +37,22 @@ public:
 #pragma GCC diagnostic pop
 };
 
+class MockBpfMap : public BpfMap {
+public:
+  MockBpfMap(libbpf::bpf_map_type type = libbpf::BPF_MAP_TYPE_HASH,
+             std::string name = "mock_map",
+             uint32_t key_size = sizeof(uint64_t),
+             uint32_t value_size = sizeof(uint64_t),
+             uint32_t max_entries = 10)
+      : BpfMap(type, name, key_size, value_size, max_entries)
+  {
+  }
+  MOCK_CONST_METHOD1(collect_elements, Result<MapElements>(int nvalues));
+  MOCK_CONST_METHOD2(collect_histogram_data,
+                     Result<HistogramMap>(const MapInfo &map_info,
+                                          int nvalues));
+};
+
 class MockBPFtrace : public BPFtrace {
 public:
   MOCK_METHOD2(
