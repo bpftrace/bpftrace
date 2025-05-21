@@ -6,7 +6,7 @@ further investigation beyond dcstat(8). The output is likely verbose, as
 dcache lookups are likely frequent. For example:
 
 # ./dcsnoop.bt
-Attaching 4 probes...
+Attached 4 probes
 Tracing dcache lookups... Hit Ctrl-C to end.
 TIME     PID    COMM             T FILE
 427      1518   irqbalance       R proc/interrupts

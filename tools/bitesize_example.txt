@@ -5,7 +5,7 @@ This traces disk I/O via the block I/O interface, and prints a summary of I/O
 sizes as histograms for each process name. For example:
 
 # ./bitesize.bt
-Attaching 3 probes...
+Attached 3 probes
 Tracing block device I/O... Hit Ctrl-C to end.
 ^C
 I/O size (bytes) histograms by process name:

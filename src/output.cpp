@@ -835,9 +835,9 @@ void TextOutput::lost_events(uint64_t lost) const
 void TextOutput::attached_probes(uint64_t num_probes) const
 {
   if (num_probes == 1)
-    out_ << "Attaching " << num_probes << " probe..." << std::endl;
+    out_ << "Attached " << num_probes << " probe" << std::endl;
   else
-    out_ << "Attaching " << num_probes << " probes..." << std::endl;
+    out_ << "Attached " << num_probes << " probes" << std::endl;
 }
 
 void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const

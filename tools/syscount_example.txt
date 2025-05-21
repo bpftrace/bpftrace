@@ -5,7 +5,7 @@ syscount counts system calls, and prints summaries of the top ten syscall IDs,
 and the top ten process names making syscalls. For example:
 
 # ./syscount.bt
-Attaching 3 probes...
+Attached 3 probes
 Counting syscalls... Hit Ctrl-C to end.
 ^C
 Top 10 syscalls IDs:

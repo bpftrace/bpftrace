@@ -4,7 +4,7 @@ Demonstrations of threadsnoop, the Linux bpftrace/eBPF version.
 Tracing new threads via phtread_create():
 
 # ./threadsnoop.bt
-Attaching 2 probes...
+Attached 2 probes
 TIME                PID COMM             FUNC
 10:20:31.938572   28549 dockerd          threadentry
 10:20:31.939213   28549 dockerd          threadentry

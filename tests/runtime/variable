@@ -116,7 +116,7 @@ EXPECT_REGEX [0-9]+
 
 NAME variable declaration with unresolved type
 PROG BEGIN { let $x: struct Foo[1]; exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME variable declaration not initialized
 PROG BEGIN { let $a; if (false) { $a = 1; } @b = $a; exit();}

@@ -5,7 +5,7 @@ This traces some common VFS calls (see the script for the list) and prints
 per-second summaries.
 
 # ./vfsstat.bt
-Attaching 8 probes...
+Attached 8 probes
 Tracing key VFS calls... Hit Ctrl-C to end.
 21:30:38
 @[vfs_write]: 1274

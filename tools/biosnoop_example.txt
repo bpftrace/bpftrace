@@ -5,7 +5,7 @@ This traces block I/O, and shows the issuing process (at least, the process
 that was on-CPU at the time of queue insert) and the latency of the I/O:
 
 # ./biosnoop.bt
-Attaching 4 probes...
+Attached 4 probes
 TIME(ms)     DISK ID        COMM             PID    LAT(ms)
              MAJOR MINOR
 611          259   0        bash             4179        10
@@ -37,7 +37,7 @@ program start.
 An example of some background flushing:
 
 # ./biosnoop.bt
-Attaching 4 probes...
+Attached 4 probes
 TIME(ms)     DISK ID        COMM             PID    LAT(ms)
              MAJOR MINOR
 2966         259   0        jbd2/nvme0n1-8   615          0

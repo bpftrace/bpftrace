@@ -5,7 +5,7 @@ xfsdist traces XFS reads, writes, opens, and fsyncs, and summarizes their
 latency as a power-of-2 histogram. For example:
 
 # xfsdist.bt
-Attaching 9 probes...
+Attached 9 probes
 Tracing XFS operation latency... Hit Ctrl-C to end.
 ^C
 

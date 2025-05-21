@@ -17,7 +17,7 @@ Requests/sec:   1272.97
 Transfer/sec:    376.67KB
 
 # ./ssllatency.bt
-Attaching 26 probes...
+Attached 26 probes
 Tracing SSL/TLS handshake... Hit Ctrl-C to end.
 ^C
 Latency distribution in microsecond:
@@ -64,7 +64,7 @@ Requests/sec:   2930.53
 Transfer/sec:    867.14KB
 
 # ./ssllatency.bt
-Attaching 26 probes...
+Attached 26 probes
 Tracing SSL/TLS handshake... Hit Ctrl-C to end.
 ^C
 Latency distribution in microsecond:

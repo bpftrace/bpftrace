@@ -7,7 +7,7 @@ requested by applications (eg, metadata reads on writes, resilvering, etc).
 For example:
 
 # ./biostacks.bt
-Attaching 5 probes...
+Attached 5 probes
 Tracing block I/O with init stacks. Hit Ctrl-C to end.
 ^C
 

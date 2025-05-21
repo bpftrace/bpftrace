@@ -6,7 +6,7 @@ metric is often called run queue latency, or scheduler latency. This tool shows
 this latency as a power-of-2 histogram in nanoseconds. For example:
 
 # ./runqlat.bt
-Attaching 5 probes...
+Attached 5 probes
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
 
@@ -51,7 +51,7 @@ I'll now add a single-threaded CPU bound workload to this system, and bind
 it on one CPU:
 
 # ./runqlat.bt
-Attaching 5 probes...
+Attached 5 probes
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
 
@@ -87,7 +87,7 @@ Now I'll add a second single-threaded CPU workload, and bind it to the same
 CPU, causing contention:
 
 # ./runqlat.bt
-Attaching 5 probes...
+Attached 5 probes
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
 
@@ -122,7 +122,7 @@ wait its turn on the one CPU.
 Now I'll run 10 CPU-bound threads on one CPU:
 
 # ./runqlat.bt
-Attaching 5 probes...
+Attached 5 probes
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
 

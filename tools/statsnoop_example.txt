@@ -5,7 +5,7 @@ statsnoop traces different stat() syscalls system-wide, and prints details.
 Example output:
 
 # ./statsnoop.bt
-Attaching 9 probes...
+Attached 9 probes
 Tracing stat syscalls... Hit Ctrl-C to end.
 PID    COMM             ERR PATH
 27835  bash               0 .

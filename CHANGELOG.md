@@ -62,6 +62,8 @@ and this project adheres to
   - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
 - if `delete` fails it will only print a warning if return value is not handled
   - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- Change "Attaching N probes..." to "Attached N probes"
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Deprecated
 #### Removed
 #### Fixed
