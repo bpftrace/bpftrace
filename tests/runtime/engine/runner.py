@@ -520,10 +520,10 @@ class Runner(object):
             return Runner.SKIP_AOT_NOT_SUPPORTED
 
         if p and p.returncode != test.return_code and not test.will_fail and not timeout:
-            print(fail("[  FAILED  ] ") + label)
-            print('\tCommand: ' + bpf_call)
-            print('\tUnclean exit code: ' + str(p.returncode))
-            print('\tOutput: ' + to_utf8(output))
+            print(f"{fail("[  FAILED  ] ")} {label}")
+            print(f"\tCommand: {bpf_call}")
+            print(f"\tUnclean exit code: {p.returncode}")
+            print(f"\tOutput: {to_utf8(output)}")
             print_befores_and_after_output()
             return Runner.FAIL
 
