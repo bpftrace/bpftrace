@@ -122,6 +122,7 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `SKIP_IF_ENV_HAS`: Skip test case if specified environment variable is found
   and matches value provided. Accepted format is KEY=VALUE. Only a single key/value
   pair per test is accepted.
+* `RETURN_CODE`: Require that bpftrace exit with specified return code.
 
 One or more [`EXPECT`, `EXPECT_NONE`, `EXPECT_REGEX`, `EXPECT_REGEX_NONE`] or
 a single [`EXPECT_FILE`, `EXPECT_JSON`] is required.
