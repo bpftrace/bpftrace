@@ -5,3 +5,13 @@ NAME command doesn't respond to SIGTERM
 RUN trap '' TERM; echo __BPFTRACE_NOTIFY_PROBES_ATTACHED && sleep 999 && echo "shouldn't echo"
 TIMEOUT 1
 EXPECT_NONE shouldn't echo
+
+NAME WILL_FAIL allows failure
+RUN echo __BPFTRACE_NOTIFY_PROBES_ATTACHED && exit 1
+EXPECT_NONE matches nothing
+WILL_FAIL
+
+NAME RETURN_CODE checks return code
+RUN echo __BPFTRACE_NOTIFY_PROBES_ATTACHED && exit 123
+EXPECT_NONE matches nothing
+RETURN_CODE 123

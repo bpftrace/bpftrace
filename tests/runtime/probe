@@ -395,7 +395,6 @@ NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { print("hit"); exit(); }
 EXPECT hit
 AFTER ./testprogs/syscall nanosleep 1e8
-WILL_FAIL
 
 NAME tracepoint args
 PROG tracepoint:syscalls:sys_enter_read { printf("%d\n", args.count); exit(); }
