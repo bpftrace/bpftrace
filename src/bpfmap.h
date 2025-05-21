@@ -14,10 +14,29 @@ namespace libbpf {
 
 namespace bpftrace {
 
+class BpfMapError : public ErrorInfo<BpfMapError> {
+public:
+  static char ID;
+  std::string name_;
+  std::string op_;
+  int errno_;
+
+  BpfMapError(std::string name_, std::string op_, int errno_)
+      : name_(std::move(name_)), op_(std::move(op_)), errno_(errno_)
+  {
+  }
+
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << "BPF map operation " << op_ << " failed: " << std::strerror(-errno_)
+       << " [map = " << name_ << "]";
+  }
+};
+
 using KeyType = std::vector<uint8_t>;
 using KeyVec = std::vector<KeyType>;
 using ValueType = std::vector<uint8_t>;
-using KVPairVec = std::vector<std::pair<KeyType, ValueType>>;
+using MapElements = std::vector<std::pair<KeyType, ValueType>>;
 using BucketUnit = uint64_t;
 using BucketType = std::vector<BucketUnit>;
 using HistogramMap = std::map<KeyType, BucketType>;
@@ -55,17 +74,16 @@ public:
 
   bool is_stack_map() const;
   bool is_per_cpu_type() const;
-  bool is_clearable() const;
   bool is_printable() const;
 
   KeyVec collect_keys() const;
-  virtual KVPairVec collect_kvs(int nvalues) const;
-  virtual HistogramMap collect_histogram_data(const MapInfo &map_info,
-                                              int nvalues) const;
-  void zero_out(KeyVec &keys, int nvalues) const;
-  void delete_by_keys(KeyVec &keys) const;
-  void update_elem(const void *key, const void *value) const;
-  void lookup_elem(const void *key, void *value) const;
+  virtual Result<MapElements> collect_elements(int nvalues) const;
+  virtual Result<HistogramMap> collect_histogram_data(const MapInfo &map_info,
+                                                      int nvalues) const;
+  Result<> zero_out(int nvalues) const;
+  Result<> clear(int nvalues) const;
+  Result<> update_elem(const void *key, const void *value) const;
+  Result<> lookup_elem(const void *key, void *value) const;
 
 private:
   struct bpf_map *bpf_map_;

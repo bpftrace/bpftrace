@@ -7,6 +7,7 @@
 #include "util/stats.h"
 
 namespace bpftrace {
+char BpfMapError::ID = 0;
 
 const std::unordered_map<std::string, libbpf::bpf_map_type> BPF_MAP_TYPES = {
   { "hash", libbpf::BPF_MAP_TYPE_HASH },
@@ -53,11 +54,6 @@ bool BpfMap::is_per_cpu_type() const
          type() == libbpf::BPF_MAP_TYPE_LRU_PERCPU_HASH;
 }
 
-bool BpfMap::is_clearable() const
-{
-  return is_bpf_map_clearable(type());
-}
-
 bool BpfMap::is_printable() const
 {
   // Internal maps are not printable
@@ -78,8 +74,9 @@ KeyVec BpfMap::collect_keys() const
   return keys;
 }
 
-void BpfMap::zero_out(KeyVec &keys, int nvalues) const
+Result<> BpfMap::zero_out(int nvalues) const
 {
+  auto keys = collect_keys();
   auto value_size = static_cast<size_t>(value_size_) *
                     static_cast<size_t>(nvalues);
   ValueType zero(value_size, 0);
@@ -87,48 +84,50 @@ void BpfMap::zero_out(KeyVec &keys, int nvalues) const
     int err = bpf_map_update_elem(fd(), k.data(), zero.data(), BPF_EXIST);
 
     if (err && err != -ENOENT) {
-      throw util::BpfMapElemException(
-          "failed to look up elem: " + std::to_string(err) + " (" +
-          std::strerror(-err) + ")");
+      return make_error<BpfMapError>(name_, "zero", err);
     }
   }
+  return OK();
 }
 
-void BpfMap::delete_by_keys(KeyVec &keys) const
+Result<> BpfMap::clear(int nvalues) const
 {
+  if (!is_bpf_map_clearable(type())) {
+    return zero_out(nvalues);
+  }
+  auto keys = collect_keys();
   for (auto &k : keys) {
     int err = bpf_map_delete_elem(fd(), k.data());
     if (err && err != -ENOENT) {
-      throw util::BpfMapElemException(
-          "failed to look up elem: " + std::to_string(err) + " (" +
-          std::strerror(-err) + ")");
+      return make_error<BpfMapError>(name_, "clear", err);
     }
   }
+  return OK();
 }
 
-void BpfMap::update_elem(const void *key, const void *value) const
+Result<> BpfMap::update_elem(const void *key, const void *value) const
 {
   auto err = bpf_map_update_elem(fd(), key, value, BPF_ANY);
-  if (err != 0)
-    throw util::BpfMapElemException(
-        "failed to update elem: " + std::to_string(err) + " (" +
-        std::strerror(-err) + ")");
+  if (err != 0) {
+    return make_error<BpfMapError>(name_, "update", err);
+  }
+  return OK();
 }
 
-void BpfMap::lookup_elem(const void *key, void *value) const
+Result<> BpfMap::lookup_elem(const void *key, void *value) const
 {
   auto err = bpf_map_lookup_elem(fd(), key, value);
-  if (err != 0)
-    throw util::BpfMapElemException(
-        "failed to lookup elem: " + std::to_string(err) + " (" +
-        std::strerror(-err) + ")");
+  if (err != 0) {
+    return make_error<BpfMapError>(name_, "lookup", err);
+  }
+  return OK();
 }
 
-KVPairVec BpfMap::collect_kvs(int nvalues) const
+Result<MapElements> BpfMap::collect_elements(int nvalues) const
 {
   uint8_t *old_key = nullptr;
   auto key = KeyType(key_size_);
-  KVPairVec values_by_key;
+  MapElements values_by_key;
 
   while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
     auto value = ValueType(static_cast<size_t>(value_size_) *
@@ -139,9 +138,7 @@ KVPairVec BpfMap::collect_kvs(int nvalues) const
       // bpf_map_lookup_elem(), let's skip this key
       continue;
     } else if (err) {
-      throw util::BpfMapElemException(
-          "failed to look up elem: " + std::to_string(err) + " (" +
-          std::strerror(-err) + ")");
+      return make_error<BpfMapError>(name_, "lookup", err);
     }
 
     values_by_key.emplace_back(key, value);
@@ -151,8 +148,8 @@ KVPairVec BpfMap::collect_kvs(int nvalues) const
   return values_by_key;
 }
 
-HistogramMap BpfMap::collect_histogram_data(const MapInfo &map_info,
-                                            int nvalues) const
+Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
+                                                    int nvalues) const
 {
   uint8_t *old_key = nullptr;
   auto key = KeyType(key_size_);
@@ -176,9 +173,7 @@ HistogramMap BpfMap::collect_histogram_data(const MapInfo &map_info,
       // bpf_map_lookup_elem(), let's skip this key
       continue;
     } else if (err) {
-      throw util::BpfMapElemException(
-          "failed to look up elem: " + std::to_string(err) + " (" +
-          std::strerror(-err) + ")");
+      return make_error<BpfMapError>(name_, "lookup", err);
     }
 
     if (!values_by_key.contains(key_prefix)) {

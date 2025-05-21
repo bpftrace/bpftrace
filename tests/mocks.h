@@ -47,9 +47,10 @@ public:
       : BpfMap(type, name, key_size, value_size, max_entries)
   {
   }
-  MOCK_CONST_METHOD1(collect_kvs, KVPairVec(int nvalues));
+  MOCK_CONST_METHOD1(collect_elements, Result<MapElements>(int nvalues));
   MOCK_CONST_METHOD2(collect_histogram_data,
-                     HistogramMap(const MapInfo &map_info, int nvalues));
+                     Result<HistogramMap>(const MapInfo &map_info,
+                                          int nvalues));
 };
 
 class MockBPFtrace : public BPFtrace {

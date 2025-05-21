@@ -30,11 +30,4 @@ public:
   using std::runtime_error::runtime_error;
 };
 
-class BpfMapElemException : public std::runtime_error {
-public:
-  // C++11 feature: bring base class constructor into scope to automatically
-  // forward constructor calls to base class
-  using std::runtime_error::runtime_error;
-};
-
 } // namespace bpftrace::util

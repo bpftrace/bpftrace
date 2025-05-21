@@ -125,8 +125,6 @@ public:
       const BpfBytecode &bytecode);
   int run_iter();
   int print_maps(Output &out);
-  int clear_map(const BpfMap &map);
-  int zero_map(const BpfMap &map);
   int print_map(Output &out, const BpfMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
                         uint32_t nr_stack_frames,

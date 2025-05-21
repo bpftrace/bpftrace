@@ -754,10 +754,10 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     auto nsec = (1000000000ULL * ts.tv_sec) + ts.tv_nsec;
     uint64_t key = 0;
     auto map = bytecode_.getMap(MapType::Elapsed);
-    try {
-      map.update_elem(&key, &nsec);
-    } catch (const util::BpfMapElemException &e) {
-      LOG(ERROR) << "Failed to write start time to elapsed map: " << e.what();
+    auto ok = map.update_elem(&key, &nsec);
+    if (!ok) {
+      LOG(ERROR) << "Failed to write start time to elapsed map: "
+                 << ok.takeError();
       return -1;
     }
   }
@@ -933,10 +933,9 @@ int BPFtrace::setup_perf_events(void *ctx)
     int reader_fd = perf_reader_fd(static_cast<perf_reader *>(reader));
 
     auto map = bytecode_.getMap(MapType::PerfEvent);
-    try {
-      map.update_elem(&cpu, &reader_fd);
-    } catch (const util::BpfMapElemException &e) {
-      LOG(ERROR) << "Failed to update perf event map: " << e.what();
+    auto ok = map.update_elem(&cpu, &reader_fd);
+    if (!ok) {
+      LOG(ERROR) << "Failed to update perf event map: " << ok.takeError();
       return -1;
     }
     if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, reader_fd, &ev) == -1) {
@@ -956,11 +955,11 @@ void BPFtrace::setup_ringbuf(void *ctx)
 int BPFtrace::setup_event_loss()
 {
   auto map = bytecode_.getMap(MapType::EventLossCounter);
-  try {
-    map.update_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                    const_cast<uint64_t *>(&event_loss_cnt_val_));
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << "Failed to update event loss counter:" << e.what();
+  auto ok = map.update_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
+                            const_cast<uint64_t *>(&event_loss_cnt_val_));
+
+  if (!ok) {
+    LOG(ERROR) << "Failed to update event loss counter:" << ok.takeError();
     return -1;
   }
   return 0;
@@ -1069,13 +1068,12 @@ void BPFtrace::handle_event_loss(Output &out)
 {
   uint64_t current_value = 0;
   auto map = bytecode_.getMap(MapType::EventLossCounter);
-  try {
-    map.lookup_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                    &current_value);
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << "Failed to lookup event loss counter: " << e.what();
-  }
-  if (current_value) {
+  auto ok = map.lookup_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
+                            &current_value);
+
+  if (!ok) {
+    LOG(ERROR) << "Failed to lookup event loss counter: " << ok.takeError();
+  } else {
     if (current_value > event_loss_count_) {
       out.lost_events(current_value - event_loss_count_);
       event_loss_count_ = current_value;
@@ -1103,37 +1101,6 @@ int BPFtrace::print_maps(Output &out)
   return 0;
 }
 
-// clear a map
-int BPFtrace::clear_map(const BpfMap &map)
-{
-  if (!map.is_clearable())
-    return zero_map(map);
-
-  auto keys = map.collect_keys();
-  try {
-    map.delete_by_keys(keys);
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << e.what();
-    return -1;
-  }
-
-  return 0;
-}
-
-// zero a map
-int BPFtrace::zero_map(const BpfMap &map)
-{
-  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  auto keys = map.collect_keys();
-  try {
-    map.zero_out(keys, nvalues);
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << e.what();
-    return -1;
-  }
-  return 0;
-}
-
 int BPFtrace::print_map(Output &out,
                         const BpfMap &map,
                         uint32_t top,
@@ -1145,18 +1112,17 @@ int BPFtrace::print_map(Output &out,
     return print_map_hist(out, map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  KVPairVec values_by_key;
+  auto values_by_key = map.collect_elements(nvalues);
 
-  try {
-    values_by_key = map.collect_kvs(nvalues);
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << e.what();
+  if (!values_by_key) {
+    LOG(ERROR) << "Failed to collect key-value pairs: "
+               << values_by_key.takeError();
     return -1;
   }
 
   if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy()) {
     bool is_signed = value_type.IsSigned();
-    std::ranges::sort(values_by_key,
+    std::ranges::sort(*values_by_key,
 
                       [&](auto &a, auto &b) {
                         if (is_signed)
@@ -1167,7 +1133,7 @@ int BPFtrace::print_map(Output &out,
                                util::reduce_value<uint64_t>(b.second, nvalues);
                       });
   } else if (value_type.IsMinTy() || value_type.IsMaxTy()) {
-    std::ranges::sort(values_by_key,
+    std::ranges::sort(*values_by_key,
 
                       [&](auto &a, auto &b) {
                         return util::min_max_value<uint64_t>(
@@ -1177,14 +1143,14 @@ int BPFtrace::print_map(Output &out,
                       });
   } else if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
     if (value_type.IsSigned()) {
-      std::ranges::sort(values_by_key,
+      std::ranges::sort(*values_by_key,
 
                         [&](auto &a, auto &b) {
                           return util::avg_value<int64_t>(a.second, nvalues) <
                                  util::avg_value<int64_t>(b.second, nvalues);
                         });
     } else {
-      std::ranges::sort(values_by_key,
+      std::ranges::sort(*values_by_key,
 
                         [&](auto &a, auto &b) {
                           return util::avg_value<uint64_t>(a.second, nvalues) <
@@ -1192,18 +1158,18 @@ int BPFtrace::print_map(Output &out,
                         });
     }
   } else {
-    sort_by_key(map_info.key_type, values_by_key);
+    sort_by_key(map_info.key_type, *values_by_key);
   };
 
   if (div == 0)
     div = 1;
 
   if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
-    out.map_stats(*this, map, top, div, values_by_key);
+    out.map_stats(*this, map, top, div, *values_by_key);
     return 0;
   }
 
-  out.map(*this, map, top, div, values_by_key);
+  out.map(*this, map, top, div, *values_by_key);
   return 0;
 }
 
@@ -1219,18 +1185,17 @@ int BPFtrace::print_map_hist(Output &out,
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   const auto &map_info = resources.maps_info.at(map.name());
-  HistogramMap values_by_key;
+  auto values_by_key = map.collect_histogram_data(map_info, nvalues);
 
-  try {
-    values_by_key = map.collect_histogram_data(map_info, nvalues);
-  } catch (const util::BpfMapElemException &e) {
-    LOG(ERROR) << e.what();
+  if (!values_by_key) {
+    LOG(ERROR) << "Failed to collect histogram data: "
+               << values_by_key.takeError();
     return -1;
   }
 
   // Sort based on sum of counts in all buckets
   std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
-  for (auto &map_elem : values_by_key) {
+  for (auto &map_elem : *values_by_key) {
     int64_t sum = 0;
     for (unsigned long i : map_elem.second) {
       sum += i;
@@ -1243,7 +1208,7 @@ int BPFtrace::print_map_hist(Output &out,
 
   if (div == 0)
     div = 1;
-  out.map_hist(*this, map, top, div, values_by_key, total_counts_by_key);
+  out.map_hist(*this, map, top, div, *values_by_key, total_counts_by_key);
   return 0;
 }
 
@@ -1274,12 +1239,11 @@ std::string BPFtrace::get_stack(int64_t stackid,
                                  .nr_stack_frames = nr_stack_frames };
   auto stack_trace = std::vector<uint64_t>(stack_type.limit);
   auto map = bytecode_.getMap(stack_type.name());
-  try {
-    map.lookup_elem(&stack_key, stack_trace.data());
-  } catch (const util::BpfMapElemException &e) {
+  auto ok = map.lookup_elem(&stack_key, stack_trace.data());
+  if (!ok) {
     LOG(ERROR) << "failed to look up stack id: " << stackid
                << " stack length: " << nr_stack_frames << " (pid " << pid
-               << "): " << e.what();
+               << "): " << ok.takeError();
     return "";
   }
 

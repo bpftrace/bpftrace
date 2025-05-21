@@ -7,6 +7,7 @@
 #include "log.h"
 #include "util/exceptions.h"
 #include "util/io.h"
+#include "util/result.h"
 #include "util/system.h"
 
 namespace bpftrace::async_action {
@@ -93,22 +94,25 @@ void zero_map_handler(BPFtrace &bpftrace, const void *data)
 {
   const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
+  uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
+  auto ok = map.zero_out(nvalues);
 
-  auto err = bpftrace.zero_map(map);
-  if (err)
+  if (!ok) {
     LOG(BUG) << "Could not zero map with ident \"" << map.name()
-             << "\", err=" << std::to_string(err);
+             << "\", err=" << ok.takeError();
+  }
 }
 
 void clear_map_handler(BPFtrace &bpftrace, const void *data)
 {
   const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
-
-  auto err = bpftrace.clear_map(map);
-  if (err)
+  uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
+  auto ok = map.clear(nvalues);
+  if (!ok) {
     LOG(BUG) << "Could not clear map with ident \"" << map.name()
-             << "\", err=" << std::to_string(err);
+             << "\", err=" << ok.takeError();
+  }
 }
 
 void watchpoint_attach_handler(BPFtrace &bpftrace,

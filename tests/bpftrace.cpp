@@ -29,10 +29,10 @@ static const int STRING_SIZE = 64;
 static const std::optional<int> no_pid = std::nullopt;
 
 template <typename K, typename V>
-KVPairVec generate_kv_pairs(const std::vector<K> &keys,
-                            const std::vector<V> &values)
+MapElements generate_kv_pairs(const std::vector<K> &keys,
+                              const std::vector<V> &values)
 {
-  KVPairVec kv_pairs;
+  MapElements kv_pairs;
   for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
     std::vector<uint8_t> key_bytes(sizeof(K));
     std::vector<uint8_t> value_bytes(sizeof(V));
@@ -44,10 +44,10 @@ KVPairVec generate_kv_pairs(const std::vector<K> &keys,
 }
 
 template <typename K>
-KVPairVec generate_kv_pairs(const std::vector<K> &keys,
-                            const std::vector<std::string> &values)
+MapElements generate_kv_pairs(const std::vector<K> &keys,
+                              const std::vector<std::string> &values)
 {
-  KVPairVec kv_pairs;
+  MapElements kv_pairs;
   for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
     std::vector<uint8_t> key_bytes(sizeof(K));
     memcpy(key_bytes.data(), &keys[i], sizeof(K));
@@ -60,10 +60,10 @@ KVPairVec generate_kv_pairs(const std::vector<K> &keys,
 }
 
 template <typename K>
-KVPairVec generate_kv_pairs(const std::vector<K> &keys,
-                            const std::vector<std::vector<uint8_t>> &values)
+MapElements generate_kv_pairs(const std::vector<K> &keys,
+                              const std::vector<std::vector<uint8_t>> &values)
 {
-  KVPairVec kv_pairs;
+  MapElements kv_pairs;
   for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
     std::vector<uint8_t> key_bytes(sizeof(K));
     memcpy(key_bytes.data(), &keys[i], sizeof(K));
@@ -1493,7 +1493,7 @@ basic_map_4[7]: 5
     auto bpftrace = get_mock_bpftrace();
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+    EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(returned_kvs));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
@@ -1562,7 +1562,7 @@ max_map_4[3]: 10
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
-    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+    EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(returned_kvs));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
@@ -1635,7 +1635,7 @@ avg_map_4[3]: 100
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
-    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+    EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(returned_kvs));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
@@ -1699,7 +1699,7 @@ string_map_4[3]: hello
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    EXPECT_CALL(*mock_map, collect_kvs(testing::_))
+    EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(returned_kvs));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
