@@ -76,7 +76,6 @@ TEST(macro_expansion, basic_checks)
 TEST(macro_expansion, variables)
 {
   test("macro set($x) { $x += 1; $x } BEGIN { $a = 1; set($a); }");
-  test("macro set($x) { $x += 1; $x } BEGIN { $a = 1; set(1); }");
   test("macro set($x, $y) { $x + $y } BEGIN { $a = 1; set($a, 1); }");
   test("macro set($x) { $b = $x + 1; $b } BEGIN { $a = 1; set($a); }");
   test("macro set($x) { let $b = $x + 1; $b } BEGIN { $a = 1; set($a); }");
@@ -85,6 +84,10 @@ TEST(macro_expansion, variables)
       "macro set($x) { $x += 1; $x } BEGIN { @a = 1; set(@a); }",
       "Mismatched arg to macro call. Macro expects a variable for arg $x "
       "but got a map.");
+
+  test_error("macro add1($x) { $x += 1; $x } BEGIN { add1(1 + 1); }",
+             "Macro 'add1' assigns to parameter '$x', meaning it expects a "
+             "variable, not an expression.");
 }
 
 TEST(macro_expansion, maps)
