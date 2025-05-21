@@ -849,7 +849,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
               CreateRecord(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
-          builtin.builtin_type.is_btftype = true;
         } else {
           builtin.addError() << "invalid program type";
         }
@@ -895,7 +894,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                       RETVAL_FIELD_NAME);
       if (arg) {
         builtin.builtin_type = arg->type;
-        builtin.builtin_type.is_btftype = true;
+        builtin.builtin_type.SetAS(AddrSpace::bpf);
       } else
         builtin.addError() << "Can't find a field " << RETVAL_FIELD_NAME;
     } else {
@@ -1933,16 +1932,12 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     arr.element_type = *type.GetPointeeTy();
   arr.element_type.SetAS(type.GetAS());
 
-  // BPF verifier cannot track BTF information for double pointers so we
-  // cannot propagate is_btftype for arrays of pointers and we need to reset
-  // it on the array type as well. Indexing a pointer as an array also can't
-  // be verified, so the same applies there.
+  // BPF verifier cannot track BTF information for double pointers so we cannot
+  // propagate the address space for arrays of pointers and we need to reset it
+  // on the array type as well. Indexing a pointer as an array also can't be
+  // verified, so the same applies there.
   if (arr.element_type.IsPtrTy() || type.IsPtrTy()) {
     arr.element_type.SetAS(AddrSpace::user);
-    arr.element_type.is_btftype = false;
-  } else {
-    arr.element_type.SetAS(type.GetAS());
-    arr.element_type.is_btftype = type.is_btftype;
   }
 }
 
@@ -2289,11 +2284,12 @@ void SemanticAnalyser::visit(Unop &unop)
       unop.result_type = SizedType(*type.GetPointeeTy());
       if (type.IsCtxAccess())
         unop.result_type.MarkCtxAccess();
-      unop.result_type.SetAS(type.GetAS());
 
-      // BPF verifier cannot track BTF information for double pointers
-      if (!unop.result_type.IsPtrTy())
-        unop.result_type.is_btftype = type.is_btftype;
+      // BPF verifier cannot track BTF information for double pointers. We only
+      // copy the address space through if it is not a pointer.
+      if (!unop.result_type.IsPtrTy()) {
+        unop.result_type.SetAS(type.GetAS());
+      }
     } else if (type.IsRecordTy()) {
       // We allow dereferencing "args" with no effect (for backwards compat)
       if (type.IsCtxAccess())
@@ -2674,7 +2670,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
         ProbeType probetype = single_provider_type(probe);
         if (probetype == ProbeType::fentry || probetype == ProbeType::fexit) {
-          acc.field_type.is_btftype = true;
+          acc.field_type.SetAS(AddrSpace::bpf);
         }
       }
     } else {
@@ -2748,7 +2744,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         acc.field_type.MarkCtxAccess();
       }
       acc.field_type.SetAS(acc.expr.type().GetAS());
-      acc.field_type.is_btftype = type.is_btftype;
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
       // access to the first 8 bytes results in verifier error.
@@ -2860,6 +2855,8 @@ void SemanticAnalyser::visit(Cast &cast)
     }
 
     if (rhs.IsIntTy()) {
+      // This is now a plain integer, and therefore we can consider it living
+      // in BPF memory. It is not clear if this is load bearing.
       cast.cast_type.SetAS(AddrSpace::bpf);
     }
   }
