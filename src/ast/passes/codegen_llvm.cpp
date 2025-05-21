@@ -2254,7 +2254,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   assert(type.IsRecordTy());
   bool is_ctx = type.IsCtxAccess();
   bool is_tparg = type.is_tparg;
-  bool is_internal = type.is_internal;
   bool is_funcarg = type.is_funcarg;
   bool is_btftype = type.is_btftype;
 
@@ -2281,7 +2280,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   if (is_ctx)
     type.MarkCtxAccess();
   type.is_tparg = is_tparg;
-  type.is_internal = is_internal;
   type.is_funcarg = is_funcarg;
   type.is_btftype = is_btftype;
   // Restore the addrspace info
@@ -2462,8 +2460,8 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (cast.expr.type().IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (cast.expr.type().is_internal || cast.expr.type().IsCtxAccess() ||
-          cast.expr.type().is_btftype) {
+      if (cast.expr.type().GetAS() == AddrSpace::bpf ||
+          cast.expr.type().IsCtxAccess() || cast.expr.type().is_btftype) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
@@ -2653,7 +2651,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
       }
     }
   } else if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
-    if (!expr_type.is_internal) {
+    if (expr_type.GetAS() != AddrSpace::bpf) {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
       b_.CreateProbeRead(

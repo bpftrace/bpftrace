@@ -20,6 +20,7 @@ define i64 @iter_task_file_1(ptr %0) #0 section "s_iter_task_file_1" !dbg !57 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  %"struct bpf_iter_meta.session_id" = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 0
   %3 = load volatile i64, ptr %2, align 8
@@ -33,7 +34,10 @@ pred_true:                                        ; preds = %entry
   %4 = inttoptr i64 %3 to ptr
   %5 = call ptr @llvm.preserve.static.offset(ptr %4)
   %6 = getelementptr i8, ptr %5, i64 8
-  %7 = load volatile i64, ptr %6, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct bpf_iter_meta.session_id")
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct bpf_iter_meta.session_id", i32 8, ptr %6)
+  %7 = load i64, ptr %"struct bpf_iter_meta.session_id", align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct bpf_iter_meta.session_id")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 %7, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")

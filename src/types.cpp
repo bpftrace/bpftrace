@@ -418,7 +418,6 @@ SizedType CreateUsername()
 SizedType CreateInet(size_t size)
 {
   auto st = SizedType(Type::inet, size);
-  st.is_internal = true;
   return st;
 }
 
@@ -463,7 +462,6 @@ SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 SizedType CreateMacAddress()
 {
   auto st = SizedType(Type::mac_address, 6);
-  st.is_internal = true;
   return st;
 }
 

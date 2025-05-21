@@ -31,7 +31,7 @@ entry:
   %2 = load i64, ptr %deref, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref1)
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %deref1, i32 4, i64 %2)
+  %probe_read = call i64 inttoptr (i64 4 to ptr)(ptr %deref1, i32 4, i64 %2)
   %3 = load i32, ptr %deref1, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref1)
   store i32 %3, ptr %"$res", align 4

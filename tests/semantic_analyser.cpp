@@ -2667,7 +2667,7 @@ TEST(semantic_analyser, field_access_sub_struct)
        1);
 }
 
-TEST(semantic_analyser, field_access_is_internal)
+TEST(semantic_analyser, field_access_addr_space)
 {
   BPFtrace bpftrace;
   std::string structs = "struct type1 { int x; }";
@@ -2676,7 +2676,7 @@ TEST(semantic_analyser, field_access_is_internal)
     auto ast = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
     auto &stmts = ast.root->probes.at(0)->block->stmts;
     auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
-    EXPECT_FALSE(var_assignment1->var()->var_type.is_internal);
+    EXPECT_NE(var_assignment1->var()->var_type.GetAS(), AddrSpace::bpf);
   }
 
   {
@@ -2685,8 +2685,8 @@ TEST(semantic_analyser, field_access_is_internal)
     auto &stmts = ast.root->probes.at(0)->block->stmts;
     auto *map_assignment = stmts.at(0).as<ast::AssignMapStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(map_assignment->map->value_type.is_internal);
-    EXPECT_TRUE(var_assignment2->var()->var_type.is_internal);
+    EXPECT_EQ(map_assignment->map->value_type.GetAS(), AddrSpace::bpf);
+    EXPECT_EQ(var_assignment2->var()->var_type.GetAS(), AddrSpace::bpf);
   }
 }
 

@@ -20,6 +20,7 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !52 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  %array_access = alloca i8, align 1
   %"$a" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
@@ -30,13 +31,17 @@ entry:
   store i64 %2, ptr %"$a", align 8
   %3 = load i64, ptr %"$a", align 8
   %4 = inttoptr i64 %3 to ptr
-  %5 = getelementptr [8 x i8], ptr %4, i32 0, i64 0
-  %6 = load volatile i8, ptr %5, align 1
+  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
+  %6 = getelementptr i8, ptr %5, i64 0
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %6)
+  %7 = load i8, ptr %array_access, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  %7 = zext i8 %6 to i64
-  store i64 %7, ptr %"@_val", align 8
+  %8 = zext i8 %7 to i64
+  store i64 %8, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
@@ -46,11 +51,15 @@ entry:
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!48}
 !llvm.module.flags = !{!50, !51}

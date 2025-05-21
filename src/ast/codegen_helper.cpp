@@ -24,7 +24,7 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
   if (shouldBeInBpfMemoryAlready(expr_type)) {
     return !expr_type.IsSameSizeRecursive(map.value_type);
   } else if (map.value_type.IsRecordTy() || map.value_type.IsArrayTy()) {
-    return !expr_type.is_internal;
+    return expr_type.GetAS() != AddrSpace::bpf;
   }
   return true;
 }

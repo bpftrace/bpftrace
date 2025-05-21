@@ -24,14 +24,12 @@ entry:
   %2 = getelementptr i64, ptr %1, i64 0
   %sk = load volatile i64, ptr %2, align 8
   %3 = inttoptr i64 %sk to ptr
-  %4 = call ptr @llvm.preserve.static.offset(ptr %3)
-  %5 = getelementptr i8, ptr %4, i64 0
-  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
-  %7 = getelementptr i8, ptr %6, i64 0
-  %8 = load volatile i32, ptr %7, align 4
+  %4 = getelementptr [752 x i8], ptr %3, i32 0, i64 0
+  %5 = getelementptr [136 x i8], ptr %4, i32 0, i64 0
+  %6 = load volatile i32, ptr %5, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  %9 = zext i32 %8 to i64
-  store i64 %9, ptr %"@_key", align 8
+  %7 = zext i32 %6 to i64
+  store i64 %7, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
