@@ -23,6 +23,7 @@ class Expect:
     self.expect = expect
     self.mode = mode
 
+# Remember to update tests/README.md if adding a new directive!
 TestStruct = namedtuple(
     'TestStruct',
     [
