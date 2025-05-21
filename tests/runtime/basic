@@ -62,6 +62,12 @@ EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+NAME regression for #4162
+RUN {{BPFTRACE}} -l 'fentry:*'
+EXPECT_REGEX fentry:.*
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists rawtracepoints
 RUN {{BPFTRACE}} -l | grep rawtracepoint
 EXPECT_REGEX rawtracepoint:.*
