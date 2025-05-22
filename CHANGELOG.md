@@ -73,6 +73,8 @@ and this project adheres to
   - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
 - Fix execution watchpoints
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
+- Attach watchpoint probes to newly created threads
+  - [#4179](https://github.com/bpftrace/bpftrace/pull/4179)
 #### Security
 #### Docs
 #### Tools
