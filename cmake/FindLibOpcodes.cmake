@@ -1,10 +1,10 @@
-# - Try to find libbfd
+# - Try to find libopcodes
 # Once done this will define
 #
-#  LIBOPCODES_FOUND - system has libbfd
-#  LIBOPCODES_INCLUDE_DIRS - the libbfd include directory
-#  LIBOPCODES_LIBRARIES - Link these to use libbfd
-#  LIBOPCODES_DEFINITIONS - Compiler switches required for using libbfd
+#  LIBOPCODES_FOUND - system has libopcodes
+#  LIBOPCODES_INCLUDE_DIRS - the libopcodes include directory
+#  LIBOPCODES_LIBRARIES - Link these to use libopcodes
+#  LIBOPCODES_DEFINITIONS - Compiler switches required for using libopcodes
 
 #if (LIBOPCODES_LIBRARIES AND LIBOPCODES_INCLUDE_DIRS)
 #  set (LibBpf_FIND_QUIETLY TRUE)
