@@ -32,6 +32,7 @@ enum class GlobalVar {
   WRITE_MAP_VALUE_BUFFER,
   VARIABLE_BUFFER,
   MAP_KEY_BUFFER,
+  EVENT_LOSS_COUNTER,
 };
 
 std::string to_string(GlobalVar global_var);
@@ -48,6 +49,8 @@ constexpr std::string_view WRITE_MAP_VALUE_BUFFER_SECTION_NAME =
     ".data.write_map_val_buf";
 constexpr std::string_view VARIABLE_BUFFER_SECTION_NAME = ".data.var_buf";
 constexpr std::string_view MAP_KEY_BUFFER_SECTION_NAME = ".data.map_key_buf";
+constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
+    ".data.event_loss_counter";
 
 struct GlobalVarConfig {
   std::string name;
@@ -92,6 +95,10 @@ const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
     { .name = "map_key_buf",
       .section = std::string(MAP_KEY_BUFFER_SECTION_NAME),
       .read_only = false } },
+  { GlobalVar::EVENT_LOSS_COUNTER,
+    { .name = "event_loss_counter",
+      .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
+      .read_only = false } },
 };
 
 void update_global_vars(
@@ -104,6 +111,12 @@ SizedType get_type(GlobalVar global_var,
                    const RequiredResources &resources,
                    const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
+
+uint64_t get_event_loss_counter(
+    const struct bpf_object *bpf_object,
+    const std::unordered_map<std::string, struct bpf_map *>
+        &section_name_to_global_vars_map,
+    const BPFtrace &bpftrace);
 
 } // namespace globalvars
 } // namespace bpftrace

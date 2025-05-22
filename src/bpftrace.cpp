@@ -937,9 +937,6 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
 int BPFtrace::setup_output(void *ctx)
 {
   setup_ringbuf(ctx);
-  int err = setup_event_loss();
-  if (err)
-    return err;
   if (resources.using_skboutput) {
     return setup_skboutput_perf_buffer(ctx);
   }
@@ -995,19 +992,6 @@ void BPFtrace::setup_ringbuf(void *ctx)
 {
   ringbuf_ = ring_buffer__new(
       bytecode_.getMap(MapType::Ringbuf).fd(), ringbuf_printer, ctx, nullptr);
-}
-
-int BPFtrace::setup_event_loss()
-{
-  auto map = bytecode_.getMap(MapType::EventLossCounter);
-  auto ok = map.update_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                            const_cast<uint64_t *>(&event_loss_cnt_val_));
-
-  if (!ok) {
-    LOG(ERROR) << "Failed to update event loss counter:" << ok.takeError();
-    return -1;
-  }
-  return 0;
 }
 
 void BPFtrace::teardown_output()
@@ -1110,21 +1094,13 @@ int BPFtrace::poll_skboutput_events()
 
 void BPFtrace::handle_event_loss(Output &out)
 {
-  uint64_t current_value = 0;
-  auto map = bytecode_.getMap(MapType::EventLossCounter);
-  auto ok = map.lookup_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                            &current_value);
-
-  if (!ok) {
-    LOG(ERROR) << "Failed to lookup event loss counter: " << ok.takeError();
-  } else {
-    if (current_value > event_loss_count_) {
-      out.lost_events(current_value - event_loss_count_);
-      event_loss_count_ = current_value;
-    } else if (current_value < event_loss_count_) {
-      LOG(ERROR) << "Invalid event loss count value: " << current_value
-                 << ", last seen: " << event_loss_count_;
-    }
+  auto current_value = bytecode_.get_event_loss_counter(*this);
+  if (current_value > event_loss_count_) {
+    out.lost_events(current_value - event_loss_count_);
+    event_loss_count_ = current_value;
+  } else if (current_value < event_loss_count_) {
+    LOG(ERROR) << "Invalid event loss count value: " << current_value
+               << ", last seen: " << event_loss_count_;
   }
 }
 
