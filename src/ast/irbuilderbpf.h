@@ -188,16 +188,16 @@ public:
                     size_t size,
                     const location *loc = nullptr);
   void CreateAtomicIncCounter(const std::string &map_name, uint32_t idx);
-  void CreateMapElemInit(Value *ctx,
-                         Map &map,
-                         Value *key,
-                         Value *val,
-                         const location &loc);
-  void CreateMapElemAdd(Value *ctx,
-                        Map &map,
-                        Value *key,
-                        Value *val,
-                        const location &loc);
+  void CreatePerCpuMapElemInit(Value *ctx,
+                               Map &map,
+                               Value *key,
+                               Value *val,
+                               const location &loc);
+  void CreatePerCpuMapElemAdd(Value *ctx,
+                              Map &map,
+                              Value *key,
+                              Value *val,
+                              const location &loc);
   void CreateDebugOutput(std::string fmt_str,
                          const std::vector<Value *> &values,
                          const location &loc);

@@ -500,3 +500,12 @@ NAME sanitise probe name
 PROG uprobe:./testprogs/uprobe_namesan:fn* { printf("ok\n"); exit(); }
 EXPECT ok
 AFTER ./testprogs/uprobe_namesan
+
+NAME fexit_order
+RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
+
+NAME software_order
+RUN {{BPFTRACE}} runtime/scripts/software_order.bt
+EXPECT_REGEX (first)+ second

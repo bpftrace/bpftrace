@@ -78,12 +78,12 @@ public:
   const struct stat &get_pidns_self_stat() const override
   {
     static const struct stat init_pid_namespace = []() {
-      struct stat s {};
+      struct stat s{};
       s.st_ino = 0xeffffffc; // PROC_PID_INIT_INO
       return s;
     }();
     static const struct stat child_pid_namespace = []() {
-      struct stat s {};
+      struct stat s{};
       s.st_ino = 0xf0000011; // Arbitrary user namespace
       return s;
     }();
