@@ -1,5 +1,6 @@
 #include "async_action.h"
 #include "ast/async_event_types.h"
+#include "attached_probe.h"
 #include "bpftrace.h"
 #include "location.hh"
 #include "mocks.h"
@@ -467,7 +468,6 @@ TEST(async_action, watchpoint_attach_out_of_bound)
 {
   CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
@@ -479,7 +479,7 @@ TEST(async_action, watchpoint_attach_out_of_bound)
   // FYI: https://github.com/google/googletest/issues/1004
   auto watchpoint_attach_handler_op = [&] {
     EXPECT_CALL(*mock_bpftrace, resume_tracee(testing::_)).Times(1);
-    watchpoint_attach_handler(bpftrace, output, &watch_event);
+    watchpoint_attach_handler(bpftrace, &watch_event);
   };
 
   EXPECT_DEATH(watchpoint_attach_handler_op(),
@@ -490,7 +490,6 @@ TEST(async_action, watchpoint_attach_duplicated_address)
 {
   CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
@@ -502,40 +501,13 @@ TEST(async_action, watchpoint_attach_duplicated_address)
   bpftrace.resources.watchpoint_probes.push_back(std::move(probe));
   EXPECT_CALL(*mock_bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*mock_bpftrace, resume_tracee(testing::_)).Times(1);
-  watchpoint_attach_handler(bpftrace, output, &watch_event);
+  watchpoint_attach_handler(bpftrace, &watch_event);
 }
 
-TEST(async_action, watchpoint_attach_enospc_exception)
+TEST(async_action, watchpoint_attach_probe_error)
 {
   CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
-  auto mock_bpftrace = get_mock_bpftrace();
-  BPFtrace &bpftrace = *mock_bpftrace;
-  bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
-  AsyncEvent::Watchpoint watch_event(
-      static_cast<int>(AsyncAction::watchpoint_attach), 0, 0x1234);
-  Probe probe;
-  probe.type = ProbeType::watchpoint;
-  probe.address = 0x12345678;
-  bpftrace.resources.watchpoint_probes.push_back(std::move(probe));
-  const char *expected_substring = "Failed to attach watchpoint probe. You are "
-                                   "out of watchpoint registers.";
-  EXPECT_CALL(*mock_bpftrace, attach_probe(testing::_, testing::_))
-      .WillOnce(
-          testing::Throw(util::EnospcException("No more HW registers left")));
-  EXPECT_CALL(*mock_bpftrace, resume_tracee(testing::_)).Times(1);
-  watchpoint_attach_handler(bpftrace, output, &watch_event);
-  EXPECT_THAT(out.str(), testing::HasSubstr(expected_substring))
-      << "Watchpoint_attach output should contain the result of \""
-      << expected_substring << "\"";
-}
-
-TEST(async_action, watchpoint_attach_empty_probes)
-{
-  CDefinitions no_c_defs;
-  std::stringstream out;
-  TextOutput output(no_c_defs, out);
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
@@ -546,8 +518,11 @@ TEST(async_action, watchpoint_attach_empty_probes)
   probe.address = 0x12345678;
   bpftrace.resources.watchpoint_probes.push_back(std::move(probe));
   EXPECT_CALL(*mock_bpftrace, attach_probe(testing::_, testing::_))
-      .WillOnce(testing::Return(std::vector<std::unique_ptr<AttachedProbe>>{}));
-  EXPECT_THROW(watchpoint_attach_handler(bpftrace, output, &watch_event),
+      .WillOnce([]([[maybe_unused]] Probe &probe,
+                   [[maybe_unused]] const BpfBytecode &bytecode) {
+        return make_error<AttachError>();
+      });
+  EXPECT_THROW(watchpoint_attach_handler(bpftrace, &watch_event),
                util::FatalUserException);
 }
 
@@ -555,7 +530,6 @@ TEST(async_action, watchpoint_attach_resume_tracee_failed)
 {
   CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
@@ -568,7 +542,7 @@ TEST(async_action, watchpoint_attach_resume_tracee_failed)
   EXPECT_CALL(*mock_bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*mock_bpftrace, resume_tracee(testing::_))
       .WillOnce(testing::Return(-1));
-  EXPECT_THROW(watchpoint_attach_handler(bpftrace, output, &watch_event),
+  EXPECT_THROW(watchpoint_attach_handler(bpftrace, &watch_event),
                util::FatalUserException);
 }
 
@@ -576,7 +550,6 @@ TEST(async_action, asyncwatchpoint_attach_ignore_duplicated_addr)
 {
   CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output(no_c_defs, out);
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(1234);
@@ -589,6 +562,6 @@ TEST(async_action, asyncwatchpoint_attach_ignore_duplicated_addr)
   bpftrace.resources.watchpoint_probes.push_back(std::move(probe));
   EXPECT_CALL(*mock_bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*mock_bpftrace, resume_tracee(testing::_)).Times(0);
-  watchpoint_attach_handler(bpftrace, output, &watch_event);
+  watchpoint_attach_handler(bpftrace, &watch_event);
 }
 } // namespace bpftrace::test::async_action

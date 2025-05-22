@@ -115,9 +115,7 @@ void clear_map_handler(BPFtrace &bpftrace, const void *data)
   }
 }
 
-void watchpoint_attach_handler(BPFtrace &bpftrace,
-                               Output &output,
-                               const void *data)
+void watchpoint_attach_handler(BPFtrace &bpftrace, const void *data)
 {
   const auto *watchpoint = static_cast<const AsyncEvent::Watchpoint *>(data);
   uint64_t probe_idx = watchpoint->watchpoint_idx;
@@ -138,26 +136,19 @@ void watchpoint_attach_handler(BPFtrace &bpftrace,
 
   // Attach the real watchpoint probe
   {
-    bool registers_available = true;
     Probe &wp_probe = bpftrace.resources.watchpoint_probes[probe_idx];
     wp_probe.address = addr;
-    std::vector<std::unique_ptr<AttachedProbe>> aps;
-    try {
-      aps = bpftrace.attach_probe(wp_probe, bpftrace.bytecode_);
-    } catch (const util::EnospcException &ex) {
-      registers_available = false;
-      output.message(MessageType::lost_events,
-                     "Failed to attach watchpoint probe. You are "
-                     "out of watchpoint registers.");
-      goto out;
-    }
 
-    if (aps.empty() && registers_available) {
+    auto aps = bpftrace.attach_probe(wp_probe, bpftrace.bytecode_);
+
+    if (!aps &&
+        bpftrace.config_->missing_probes == ConfigMissingProbes::error) {
       throw util::FatalUserException("Unable to attach real watchpoint probe");
     }
 
-    for (auto &ap : aps)
-      bpftrace.attached_probes_.emplace_back(std::move(ap));
+    for (auto &ap : *aps) {
+      bpftrace.attached_probes_.push_back(std::move(ap));
+    }
   }
 
 out:
