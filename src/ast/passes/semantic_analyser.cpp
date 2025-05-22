@@ -212,7 +212,7 @@ private:
   void validate_new_key(const SizedType &current_key_type,
                         const SizedType &new_key_type,
                         const std::string &map_ident,
-                        const Node &node);
+                        const Expression &key_expr);
   bool update_string_size(SizedType &type, const SizedType &new_type);
   SizedType create_merged_tuple(const SizedType &left, const SizedType &right);
   void validate_map_key(const SizedType &key, Node &node);
@@ -2791,7 +2791,7 @@ void SemanticAnalyser::reconcile_map_key(Map *map, const Expression &key_expr)
 
   if (const auto &key = map_key_.find(map->ident); key != map_key_.end()) {
     update_current_key(key->second, new_key_type);
-    validate_new_key(key->second, new_key_type, map->ident, key_expr.node());
+    validate_new_key(key->second, new_key_type, map->ident, key_expr);
   } else {
     if (!new_key_type.IsNoneTy()) {
       map_key_.insert({ map->ident, new_key_type });
@@ -4037,7 +4037,7 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
     // Store all integer values as 64-bit in map keys, so that there will
     // be space for any integer in the map key later
     // This should have a better solution.
-    new_key_type.SetSign(true);
+    new_key_type.SetSign(expr_type.IsSigned());
     new_key_type.SetIntBitWidth(64);
   }
 
@@ -4057,7 +4057,7 @@ void SemanticAnalyser::update_current_key(SizedType &current_key_type,
 void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
                                         const SizedType &new_key_type,
                                         const std::string &map_ident,
-                                        const Node &node)
+                                        const Expression &key_expr)
 {
   // Map keys can get resized/updated across multiple passes
   // wait till the end to log an error if there is a key mismatch.
@@ -4067,8 +4067,7 @@ void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
 
   bool valid = true;
   if (current_key_type.IsSameType(new_key_type)) {
-    if (current_key_type.IsTupleTy() || current_key_type.IsIntegerTy() ||
-        current_key_type.IsStringTy()) {
+    if (current_key_type.IsTupleTy() || current_key_type.IsStringTy()) {
       // This should always be true as map integer keys default to 64 bits
       // and strings get resized (this happens recursively into tuples as
       // well) but keep this here just in case we add larger ints and need to
@@ -4077,7 +4076,32 @@ void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
         valid = false;
       }
     } else if (!current_key_type.IsEqual(new_key_type)) {
-      valid = false;
+      if (current_key_type.IsIntegerTy()) {
+        auto *integer = key_expr.as<Integer>();
+        if (integer) {
+          uint64_t value = integer->value;
+          bool can_fit = false;
+          if (current_key_type.IsSigned()) {
+            auto min_max = getIntTypeRange(current_key_type);
+            can_fit = value <= static_cast<uint64_t>(min_max.second);
+          } else {
+            auto min_max = getUIntTypeRange(current_key_type);
+            can_fit = value <= min_max.second;
+          }
+          if (!can_fit) {
+            key_expr.node().addError()
+                << "Argument mismatch for " << map_ident << ": "
+                << "trying to access with argument '"
+                << static_cast<uint64_t>(integer->value)
+                << "' which does not fit into the map of key type '"
+                << current_key_type << "'";
+          }
+        } else if (current_key_type.IsSigned() != new_key_type.IsSigned()) {
+          valid = false;
+        }
+      } else {
+        valid = false;
+      }
     }
   } else {
     valid = false;
@@ -4088,14 +4112,15 @@ void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
   }
 
   if (current_key_type.IsNoneTy()) {
-    node.addError() << "Argument mismatch for " << map_ident << ": "
-                    << "trying to access with arguments: '" << new_key_type
-                    << "' when map expects no arguments";
+    key_expr.node().addError()
+        << "Argument mismatch for " << map_ident << ": "
+        << "trying to access with arguments: '" << new_key_type
+        << "' when map expects no arguments";
   } else {
-    node.addError() << "Argument mismatch for " << map_ident << ": "
-                    << "trying to access with arguments: '" << new_key_type
-                    << "' when map expects arguments: '" << current_key_type
-                    << "'";
+    key_expr.node().addError()
+        << "Argument mismatch for " << map_ident << ": "
+        << "trying to access with arguments: '" << new_key_type
+        << "' when map expects arguments: '" << current_key_type << "'";
   }
 }
 

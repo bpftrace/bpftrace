@@ -889,8 +889,8 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @y[((int8)3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, ((int8)1, 2, 3)); }");
   // The second arg gets treated like a map key, in terms of int type adjustment
-  test("kprobe:f { @y[5] = 5; delete(@y, (uint8)5); }");
-  test("kprobe:f { @y[5, 4] = 5; delete(@y, ((uint8)5, (uint64)4)); }");
+  test("kprobe:f { @y[5] = 5; delete(@y, (int8)5); }");
+  test("kprobe:f { @y[5, 4] = 5; delete(@y, ((int8)5, (int64)4)); }");
 
   test_error("kprobe:f { delete(1); }", R"(
 stdin:1:12-20: ERROR: delete() expects a map argument
@@ -2943,7 +2943,7 @@ TEST(semantic_analyser, map_as_lookup_table)
 {
   // Initializing a map should not lead to usage issues
   test("BEGIN { @[0] = \"abc\"; @[1] = \"def\" } kretprobe:f { "
-       "printf(\"%s\\n\", @[retval])}");
+       "printf(\"%s\\n\", @[(int64)retval])}");
 }
 
 TEST(semantic_analyser, cast_sign)
@@ -3224,6 +3224,36 @@ kprobe:f { @x = avg((uint64)1); @x = avg(-1); }
 stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'ustats_t'
 kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
                                        ~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, mixed_int_map_access)
+{
+  // Map keys are automatically promoted to 64bit ints
+  test("kprobe:f { @x[1] = 1; @x[(int16)2] }");
+  test("kprobe:f { @x[(int16)1] = 1; @x[2] }");
+  test("kprobe:f { @x[(int16)1] = 1; @x[(int64)2] }");
+  test("kprobe:f { @x[(uint16)1] = 1; @x[(uint64)2] }");
+  test("kprobe:f { @x[(uint64)1] = 1; @x[(uint16)2] }");
+  test("kprobe:f { @x[(uint16)1] = 1; @x[2] }");
+  test("kprobe:f { @x[(uint16)1] = 1; @x[10223372036854775807] }");
+  test("kprobe:f { @x[1] = 1; @x[9223372036854775807] }");
+  test("kprobe:f { @x[1] = 1; @x[-9223372036854775808] }");
+
+  test_error("kprobe:f { @x[1] = 1; @x[10223372036854775807] }", R"(
+stdin:1:23-46: ERROR: Argument mismatch for @x: trying to access with argument '10223372036854775807' which does not fit into the map of key type 'int64'
+kprobe:f { @x[1] = 1; @x[10223372036854775807] }
+                      ~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @x[(uint64)1] = 1; @x[-1] }", R"(
+stdin:1:31-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects arguments: 'uint64'
+kprobe:f { @x[(uint64)1] = 1; @x[-1] }
+                              ~~~~
+)");
+  test_error("kretprobe:f { @x[1] = 1; @x[retval] }", R"(
+stdin:1:26-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int64'
+kretprobe:f { @x[1] = 1; @x[retval] }
+                         ~~~~~~~~~
 )");
 }
 
