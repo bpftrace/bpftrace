@@ -1522,6 +1522,11 @@ Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
   attr.bp_len = (attr.bp_type & HW_BREAKPOINT_X) ? sizeof(long) : probe.len;
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;
+  // Attach to threads.
+  //
+  // NB: this only works for threads created after attachment
+  // (limitation of perf_event_open)!
+  attr.inherit = 1;
 
   std::vector<int> cpus;
   if (pid.has_value()) {

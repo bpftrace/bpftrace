@@ -1840,6 +1840,9 @@ int main()
 # bpftrace -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./wpfunc
 ----
 
+Note that threads are monitored, but only for threads created after watchpoint attachment.
+The is a limitation from the kernel.
+
 == Builtins
 
 Builtins are special variables built into the language.
