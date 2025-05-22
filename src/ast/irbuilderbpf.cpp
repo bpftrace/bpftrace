@@ -1109,9 +1109,10 @@ void IRBuilderBPF::CreateMapUpdateElem(const std::string &map_ident,
   CreateHelperErrorCond(call, libbpf::BPF_FUNC_map_update_elem, loc);
 }
 
-void IRBuilderBPF::CreateMapDeleteElem(Map &map,
-                                       Value *key,
-                                       const Location &loc)
+CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map,
+                                            Value *key,
+                                            bool ret_val_discarded,
+                                            const Location &loc)
 {
   assert(key->getType()->isPointerTy());
   Value *map_ptr = GetMapVar(map.ident);
@@ -1127,7 +1128,10 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map,
       delete_func_ptr_type);
   CallInst *call = createCall(
       delete_func_type, delete_func, { map_ptr, key }, "delete_elem");
-  CreateHelperErrorCond(call, libbpf::BPF_FUNC_map_delete_elem, loc);
+  CreateHelperErrorCond(
+      call, libbpf::BPF_FUNC_map_delete_elem, loc, !ret_val_discarded);
+
+  return call;
 }
 
 Value *IRBuilderBPF::CreateForEachMapElem(Map &map,
@@ -2459,14 +2463,12 @@ void IRBuilderBPF::CreateHelperError(Value *return_value,
   CreateLifetimeEnd(buf);
 }
 
-// Report error if a return value < 0 (or return value == 0 if compare_zero is
-// true)
 void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
                                          libbpf::bpf_func_id func_id,
                                          const Location &loc,
-                                         bool compare_zero)
+                                         bool suppress_error)
 {
-  if (bpftrace_.helper_check_level_ == 0 ||
+  if (bpftrace_.helper_check_level_ == 0 || suppress_error ||
       (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
     return;
 
@@ -2481,11 +2483,7 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
   // return int and we need to use Int32Ty value to check if a return
   // value is negative. TODO: use Int32Ty as a return type
   auto *ret = CreateIntCast(return_value, getInt32Ty(), true);
-  Value *condition;
-  if (compare_zero)
-    condition = CreateICmpNE(ret, Constant::getNullValue(ret->getType()));
-  else
-    condition = CreateICmpSGE(ret, Constant::getNullValue(ret->getType()));
+  Value *condition = CreateICmpSGE(ret, Constant::getNullValue(ret->getType()));
   CreateCondBr(condition, helper_merge_block, helper_failure_block);
   SetInsertPoint(helper_failure_block);
   CreateHelperError(ret, func_id, loc);

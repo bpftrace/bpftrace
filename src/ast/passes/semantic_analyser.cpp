@@ -1196,7 +1196,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "stats") {
     call.return_type = CreateStats(true);
   } else if (call.func == "delete") {
-    // Leave as `none`.
+    call.return_type = CreateUInt8();
   } else if (call.func == "has_key") {
     // TODO: this should be a bool type but that type is currently broken
     // as a value for variables and maps
@@ -2935,6 +2935,16 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
+  if (auto *call = expr.expr.as<Call>()) {
+    // Calls from expression statements are bare, meaning they're not
+    // handling the return value e.g.
+    // delete(@a, 1); <- ExprStatement
+    // vs
+    // $x = delete(@a, 1) <- AssignVarStatement
+    // if (delete(@a, 1)) { <- If
+    call->ret_val_discarded = true;
+  }
+
   visit(expr.expr);
 }
 

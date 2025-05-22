@@ -75,6 +75,7 @@ helper_failure2:                                  ; preds = %helper_merge
   br i1 %ringbuf_loss8, label %event_loss_counter6, label %counter_merge7
 
 helper_merge3:                                    ; preds = %counter_merge7, %helper_merge
+  %delete_ret = icmp eq i64 %delete_elem, 0
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   ret i64 0
 
