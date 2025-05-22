@@ -91,6 +91,8 @@ and this project adheres to
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
 - Fix incorrect reporting of attached count for multi probes
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
+- Attach watchpoint probes to newly created threads
+  - [#4239](https://github.com/bpftrace/bpftrace/pull/4239)
 #### Security
 #### Docs
 #### Tools
