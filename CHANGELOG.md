@@ -8,6 +8,20 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.23.3] 2025-05-22
+
+#### Fixed
+- Fix per-cpu map update warning
+  - [#4047](https://github.com/bpftrace/bpftrace/pull/4074)
+- Fix probe firing order for fexit and software
+  - [#4113](https://github.com/bpftrace/bpftrace/pull/4113)
+- Fix execution watchpoints
+  - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
+- Fix runqlen.bt script
+  - [#3934](https://github.com/bpftrace/bpftrace/pull/3934)
+- Reduce delete warnings in runqlat.bt
+  - [#4100](https://github.com/bpftrace/bpftrace/pull/4100)
+
 ## [0.23.2] 2025-04-14
 
 #### Fixed
