@@ -1055,8 +1055,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.builtin_type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
                                                            : AddrSpace::kernel);
       // We'll build uprobe args struct on stack
-      if (type == ProbeType::uprobe)
-        builtin.builtin_type.is_internal = true;
+      if (type == ProbeType::uprobe) {
+        builtin.builtin_type.SetAS(AddrSpace::bpf);
+      }
     } else if (type != ProbeType::tracepoint) // no special action for
                                               // tracepoint
     {
@@ -1353,8 +1354,7 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     call.return_type = CreateArray(addr_size, CreateUInt8());
-    call.return_type.SetAS(AddrSpace::kernel);
-    call.return_type.is_internal = true;
+    call.return_type.SetAS(AddrSpace::bpf);
   } else if (call.func == "join") {
     call.return_type = CreateNone();
 
@@ -1938,10 +1938,10 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   // it on the array type as well. Indexing a pointer as an array also can't
   // be verified, so the same applies there.
   if (arr.element_type.IsPtrTy() || type.IsPtrTy()) {
-    arr.element_type.is_internal = false;
+    arr.element_type.SetAS(AddrSpace::user);
     arr.element_type.is_btftype = false;
   } else {
-    arr.element_type.is_internal = type.is_internal;
+    arr.element_type.SetAS(type.GetAS());
     arr.element_type.is_btftype = type.is_btftype;
   }
 }
@@ -2289,7 +2289,6 @@ void SemanticAnalyser::visit(Unop &unop)
       unop.result_type = SizedType(*type.GetPointeeTy());
       if (type.IsCtxAccess())
         unop.result_type.MarkCtxAccess();
-      unop.result_type.is_internal = type.is_internal;
       unop.result_type.SetAS(type.GetAS());
 
       // BPF verifier cannot track BTF information for double pointers
@@ -2748,9 +2747,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
         acc.field_type.MarkCtxAccess();
       }
-      acc.field_type.is_internal = type.is_internal;
-      acc.field_type.is_btftype = type.is_btftype;
       acc.field_type.SetAS(acc.expr.type().GetAS());
+      acc.field_type.is_btftype = type.is_btftype;
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
       // access to the first 8 bytes results in verifier error.
@@ -2861,8 +2859,9 @@ void SemanticAnalyser::visit(Cast &cast)
       }
     }
 
-    if (rhs.IsIntTy())
-      cast.cast_type.is_internal = true;
+    if (rhs.IsIntTy()) {
+      cast.cast_type.SetAS(AddrSpace::bpf);
+    }
   }
 
   if (cast.cast_type.IsEnumTy()) {
@@ -3004,7 +3003,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
                             << stored_ty << "'";
     } else {
       map_val_[map_ident] = assignment.expr.type();
-      map_val_[map_ident].is_internal = true;
+      map_val_[map_ident].SetAS(AddrSpace::bpf);
     }
   } else if (type.IsStringTy()) {
     auto map_size = map_val_[map_ident].GetSize();
@@ -3045,7 +3044,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
     if (map_type == expr_type) {
-      map_val_[map_ident].is_internal = true;
+      map_val_[map_ident].SetAS(AddrSpace::bpf);
     } else {
       assignment.addError()
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
