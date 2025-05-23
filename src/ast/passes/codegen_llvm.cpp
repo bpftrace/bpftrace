@@ -579,7 +579,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
                               { b_.getInt64(0), b_.getInt32(0) }));
   // Add the stack and id to the stack map
   b_.CreateMapUpdateElem(
-      ctx_, stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
+      stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(stack_scratch_failure);
@@ -592,7 +592,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   // ustack keys are special: see IRBuilderBPF::GetStackStructType()
   if (is_ustack) {
     // store pid
-    b_.CreateStore(b_.CreateGetPid(ctx_, loc),
+    b_.CreateStore(b_.CreateGetPid(loc),
                    b_.CreateGEP(stack_key_struct,
                                 stack_key,
                                 { b_.getInt64(0), b_.getInt32(2) }));
@@ -628,7 +628,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 
     auto type = CreateUInt64();
     auto *start = b_.CreateMapLookupElem(
-        ctx_, to_string(MapType::Elapsed), key, type, builtin.loc);
+        to_string(MapType::Elapsed), key, type, builtin.loc);
     Value *ns_value = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
     Value *ns_delta = b_.CreateSub(ns_value, start);
     // start won't be on stack, no need to LifeTimeEnd it
@@ -639,9 +639,9 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                          builtin.builtin_type.stack_type,
                          builtin.loc);
   } else if (builtin.ident == "pid") {
-    return ScopedExpr(b_.CreateGetPid(ctx_, builtin.loc));
+    return ScopedExpr(b_.CreateGetPid(builtin.loc));
   } else if (builtin.ident == "tid") {
-    return ScopedExpr(b_.CreateGetTid(ctx_, builtin.loc));
+    return ScopedExpr(b_.CreateGetTid(builtin.loc));
   } else if (builtin.ident == "cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
   } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
@@ -673,8 +673,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.builtin_type, "comm");
     // initializing memory needed for older kernels:
     b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.builtin_type.GetSize());
-    b_.CreateGetCurrentComm(
-        ctx_, buf, builtin.builtin_type.GetSize(), builtin.loc);
+    b_.CreateGetCurrentComm(buf, builtin.builtin_type.GetSize(), builtin.loc);
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (builtin.ident == "func") {
     // fentry/fexit probes do not have access to registers, so require use of
@@ -701,7 +700,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     }
 
     if (builtin.builtin_type.IsUsymTy()) {
-      value = b_.CreateUSym(ctx_, value, get_probe_id(), builtin.loc);
+      value = b_.CreateUSym(value, get_probe_id(), builtin.loc);
       return ScopedExpr(value,
                         [this, value]() { b_.CreateLifetimeEnd(value); });
     }
@@ -734,7 +733,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
       value = b_.CreateRegisterRead(ctx_, builtin.ident);
 
     if (builtin.builtin_type.IsUsymTy()) {
-      value = b_.CreateUSym(ctx_, value, get_probe_id(), builtin.loc);
+      value = b_.CreateUSym(value, get_probe_id(), builtin.loc);
       return ScopedExpr(value,
                         [this, value]() { b_.CreateLifetimeEnd(value); });
     }
@@ -765,7 +764,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 
     Value *src = b_.CreateAdd(
         sp, b_.getInt64((arg_num + arch::arg_stack_offset()) * arg_width));
-    b_.CreateProbeRead(ctx_, dst, arg_type, src, builtin.loc);
+    b_.CreateProbeRead(dst, arg_type, src, builtin.loc);
     Value *expr = b_.CreateLoad(b_.GetType(builtin.builtin_type), dst);
     b_.CreateLifetimeEnd(dst);
     return ScopedExpr(expr);
@@ -805,7 +804,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Map &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
     b_.CreatePerCpuMapElemAdd(
-        ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
+        map, scoped_key.value(), b_.getInt64(1), call.loc);
     return ScopedExpr();
 
   } else if (call.func == "sum") {
@@ -817,7 +816,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
                                    call.vargs.front().type().IsSigned());
-    b_.CreatePerCpuMapElemAdd(ctx_, map, scoped_key.value(), cast, call.loc);
+    b_.CreatePerCpuMapElemAdd(map, scoped_key.value(), cast, call.loc);
     return ScopedExpr();
 
   } else if (call.func == "max" || call.func == "min") {
@@ -917,8 +916,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                 mm_struct,
                                 { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateMapUpdateElem(
-        ctx_, map.ident, scoped_key.value(), mm_struct, call.loc);
+    b_.CreateMapUpdateElem(map.ident, scoped_key.value(), mm_struct, call.loc);
 
     b_.CreateLifetimeEnd(mm_struct);
 
@@ -997,8 +995,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                 avg_struct,
                                 { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateMapUpdateElem(
-        ctx_, map.ident, scoped_key.value(), avg_struct, call.loc);
+    b_.CreateMapUpdateElem(map.ident, scoped_key.value(), avg_struct, call.loc);
 
     b_.CreateLifetimeEnd(avg_struct);
 
@@ -1029,7 +1026,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     ScopedExpr scoped_key = getMultiMapKey(
         map, call.vargs.at(1), { log2 }, call.loc);
     b_.CreatePerCpuMapElemAdd(
-        ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
+        map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
 
@@ -1070,7 +1067,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     ScopedExpr scoped_key = getMultiMapKey(
         map, call.vargs.at(1), { linear }, call.loc);
     b_.CreatePerCpuMapElemAdd(
-        ctx_, map, scoped_key.value(), b_.getInt64(1), call.loc);
+        map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
 
@@ -1084,11 +1081,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                                    map.ident + "_zero",
                                                    call.loc);
       b_.CreateStore(Constant::getNullValue(b_.GetType(map.value_type)), val);
-      b_.CreateMapUpdateElem(
-          ctx_, map.ident, scoped_key.value(), val, call.loc);
+      b_.CreateMapUpdateElem(map.ident, scoped_key.value(), val, call.loc);
       return ScopedExpr();
     } else {
-      b_.CreateMapDeleteElem(ctx_, map, scoped_key.value(), call.loc);
+      b_.CreateMapDeleteElem(map, scoped_key.value(), call.loc);
       return ScopedExpr();
     }
   } else if (call.func == "has_key") {
@@ -1123,7 +1119,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &arg0 = call.vargs.front();
     auto scoped_expr = visit(call.vargs.front());
     b_.CreateProbeReadStr(
-        ctx_, buf, strlen, scoped_expr.value(), arg0.type().GetAS(), call.loc);
+        buf, strlen, scoped_expr.value(), arg0.type().GetAS(), call.loc);
 
     if (dyn_cast<AllocaInst>(buf))
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
@@ -1178,8 +1174,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     auto scoped_expr = visit(call.vargs.front());
     auto &arg0 = call.vargs.front();
-    b_.CreateProbeRead(ctx_,
-                       buf_data_offset,
+    b_.CreateProbeRead(buf_data_offset,
                        length,
                        scoped_expr.value(),
                        find_addrspace_stack(arg0.type()),
@@ -1208,8 +1203,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     auto scoped_arg = visit(call.vargs.front());
     Value *value = scoped_arg.value();
-    b_.CreatePath(ctx_,
-                  buf,
+    b_.CreatePath(buf,
                   b_.CreateCast(value->getType()->isPointerTy()
                                     ? Instruction::BitCast
                                     : Instruction::IntToPtr,
@@ -1263,7 +1257,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "usym") {
     auto scoped_arg = visit(call.vargs.front());
     return ScopedExpr(
-        b_.CreateUSym(ctx_, scoped_arg.value(), get_probe_id(), call.loc),
+        b_.CreateUSym(scoped_arg.value(), get_probe_id(), call.loc),
         std::move(scoped_arg));
   } else if (call.func == "ntop") {
     // struct {
@@ -1308,8 +1302,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &inet = call.vargs.at(inet_index);
     auto scoped_inet = visit(inet);
     if (inet.type().IsArrayTy() || inet.type().IsStringTy()) {
-      b_.CreateProbeRead(ctx_,
-                         static_cast<AllocaInst *>(inet_offset),
+      b_.CreateProbeRead(static_cast<AllocaInst *>(inet_offset),
                          inet.type(),
                          scoped_inet.value(),
                          call.loc);
@@ -1468,7 +1461,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         code,
         b_.CreateGEP(exit_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateOutput(ctx_, buf, struct_size, call.loc);
+    b_.CreateOutput(buf, struct_size, call.loc);
     b_.CreateLifetimeEnd(buf);
 
     createRet();
@@ -1544,7 +1537,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                    { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreateOutput(ctx_, buf, getStructSize(event_struct), call.loc);
+    b_.CreateOutput(buf, getStructSize(event_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "len") {
     if (call.vargs.at(0).type().IsStack()) {
@@ -1573,8 +1566,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         if (!map_len_func_)
           map_len_func_ = createMapLenCallback();
 
-        return ScopedExpr(b_.CreateForEachMapElem(
-            ctx_, map, map_len_func_, nullptr, call.loc));
+        return ScopedExpr(
+            b_.CreateForEachMapElem(map, map_len_func_, nullptr, call.loc));
       }
     }
   } else if (call.func == "time") {
@@ -1594,7 +1587,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         b_.GetIntSameSize(async_ids_.time(), elements.at(1)),
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
-    b_.CreateOutput(ctx_, buf, getStructSize(time_struct), call.loc);
+    b_.CreateOutput(buf, getStructSize(time_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "strftime") {
     auto elements = AsyncEvent::Strftime().asLLVMType(b_);
@@ -1629,14 +1622,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       if (sigid < 1) {
         LOG(BUG) << "Invalid signal ID for \"" << signame << "\"";
       }
-      b_.CreateSignal(ctx_, b_.getInt32(sigid), call.loc);
+      b_.CreateSignal(b_.getInt32(sigid), call.loc);
       return ScopedExpr();
     }
     auto scoped_arg = visit(arg);
     Value *sig_number = b_.CreateIntCast(scoped_arg.value(),
                                          b_.getInt32Ty(),
                                          arg.type().IsSigned());
-    b_.CreateSignal(ctx_, sig_number, call.loc);
+    b_.CreateSignal(sig_number, call.loc);
     return ScopedExpr();
   } else if (call.func == "strerror") {
     return visit(call.vargs.front());
@@ -1684,8 +1677,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (inBpfMemory(macaddr.type()))
       b_.CreateMemcpyBPF(buf, scoped_arg.value(), macaddr.type().GetSize());
     else
-      b_.CreateProbeRead(
-          ctx_, buf, macaddr.type(), scoped_arg.value(), call.loc);
+      b_.CreateProbeRead(buf, macaddr.type(), scoped_arg.value(), call.loc);
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "unwatch") {
@@ -1704,7 +1696,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                          b_.getInt64Ty(),
                          false /* unsigned */),
         b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    b_.CreateOutput(ctx_, buf, struct_size, call.loc);
+    b_.CreateOutput(buf, struct_size, call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "bswap") {
     auto &arg = call.vargs.at(0);
@@ -1852,8 +1844,7 @@ ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
   assert(left_array_ty.GetElementTy()->GetSize() ==
          right_array_ty.GetElementTy()->GetSize());
 
-  return ScopedExpr(b_.CreateIntegerArrayCmp(ctx_,
-                                             left_array_val,
+  return ScopedExpr(b_.CreateIntegerArrayCmp(left_array_val,
                                              right_array_val,
                                              left_array_ty,
                                              right_array_ty,
@@ -2095,7 +2086,7 @@ ScopedExpr CodegenLLVM::unop_int(Unop &unop)
       ScopedExpr scoped_expr = visit(unop.expr);
       auto dst_type = SizedType(type.GetTy(), type.GetSize());
       AllocaInst *dst = b_.CreateAllocaBPF(dst_type, "deref");
-      b_.CreateProbeRead(ctx_, dst, type, scoped_expr.value(), unop.loc);
+      b_.CreateProbeRead(dst, type, scoped_expr.value(), unop.loc);
       Value *value = b_.CreateIntCast(b_.CreateLoad(b_.GetType(dst_type), dst),
                                       b_.getInt64Ty(),
                                       type.IsSigned());
@@ -2118,7 +2109,7 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
         const auto *et = type.GetPointeeTy();
         AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
         b_.CreateProbeRead(
-            ctx_, dst, *et, scoped_expr.value(), unop.loc, type.GetAS());
+            dst, *et, scoped_expr.value(), unop.loc, type.GetAS());
         Value *value = b_.CreateLoad(b_.GetType(*et), dst);
         b_.CreateLifetimeEnd(dst);
         return ScopedExpr(value);
@@ -2319,8 +2310,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
           // memset so verifier doesn't complain about reading uninitialized
           // stack
           b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
-          b_.CreateProbeRead(ctx_,
-                             dst,
+          b_.CreateProbeRead(dst,
                              b_.getInt32(field.bitfield->read_bytes),
                              src,
                              type.GetAS(),
@@ -2443,9 +2433,9 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
   Value *value;
   if (canAggPerCpuMapElems(map_info->second.bpf_type, val_type)) {
     value = b_.CreatePerCpuMapAggElems(
-        ctx_, *acc.map, scoped_key.value(), val_type, acc.loc);
+        *acc.map, scoped_key.value(), val_type, acc.loc);
   } else {
-    value = b_.CreateMapLookupElem(ctx_, *acc.map, scoped_key.value(), acc.loc);
+    value = b_.CreateMapLookupElem(*acc.map, scoped_key.value(), acc.loc);
   }
 
   return ScopedExpr(value, [this, value] {
@@ -2470,12 +2460,8 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       } else {
         // array is in memory - need to proberead
         auto *buf = b_.CreateAllocaBPF(cast.cast_type);
-        b_.CreateProbeRead(ctx_,
-                           buf,
-                           cast.cast_type,
-                           array,
-                           cast.loc,
-                           cast.expr.type().GetAS());
+        b_.CreateProbeRead(
+            buf, cast.cast_type, array, cast.loc, cast.expr.type().GetAS());
         array = buf;
       }
       return ScopedExpr(b_.CreateLoad(int_ty, array, true));
@@ -2559,7 +2545,7 @@ Value *CodegenLLVM::createTuple(
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
-      b_.CreateProbeRead(ctx_, dst, type, val, vloc);
+      b_.CreateProbeRead(dst, type, val, vloc);
     else
       b_.CreateStore(val, dst);
   }
@@ -2657,7 +2643,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
       b_.CreateProbeRead(
-          ctx_, value, map_type, expr, assignment.loc, expr_type.GetAS());
+          value, map_type, expr, assignment.loc, expr_type.GetAS());
     }
   } else {
     if (assignment.map->type().IsIntTy()) {
@@ -2667,7 +2653,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
     b_.CreateStore(expr, value);
   }
   b_.CreateMapUpdateElem(
-      ctx_, assignment.map->ident, scoped_key.value(), value, assignment.loc);
+      assignment.map->ident, scoped_key.value(), value, assignment.loc);
   if (self_alloca && dyn_cast<AllocaInst>(value))
     b_.CreateLifetimeEnd(value);
   return ScopedExpr();
@@ -2953,7 +2939,7 @@ ScopedExpr CodegenLLVM::visit(For &f)
 
   scope_stack_.push_back(&f);
   b_.CreateForEachMapElem(
-      ctx_, *f.map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
+      *f.map, createForEachMapCallback(f, ctx_t), ctx, f.loc);
   scope_stack_.pop_back();
 
   return ScopedExpr();
@@ -3348,7 +3334,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
       b_.CreateProbeRead(
-          ctx_, key, key_expr.type(), scoped_key_expr.value(), map.loc);
+          key, key_expr.type(), scoped_key_expr.value(), map.loc);
     } else {
       b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
                                       b_.getInt64Ty(),
@@ -3416,7 +3402,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // Read the array/struct into the key
       b_.CreateProbeRead(
-          ctx_, offset_val, key_expr.type(), scoped_expr.value(), map.loc);
+          offset_val, key_expr.type(), scoped_expr.value(), map.loc);
       if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
@@ -3851,7 +3837,7 @@ void CodegenLLVM::createFormatStringCall(Call &call,
       b_.CreateStore(scoped_arg.value(), offset);
   }
 
-  b_.CreateOutput(ctx_, fmt_args, struct_size, call.loc);
+  b_.CreateOutput(fmt_args, struct_size, call.loc);
   if (dyn_cast<AllocaInst>(fmt_args))
     b_.CreateLifetimeEnd(fmt_args);
 }
@@ -3876,7 +3862,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
 
   // Send SIGSTOP to curtask
   if (!current_attach_point_->async)
-    b_.CreateSignal(ctx_, b_.getInt32(SIGSTOP), current_attach_point_->loc);
+    b_.CreateSignal(b_.getInt32(SIGSTOP), current_attach_point_->loc);
 
   // Pull out function argument
   Value *ctx = func->arg_begin();
@@ -3903,7 +3889,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreateStore(
       addr,
       b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
-  b_.CreateOutput(ctx, buf, struct_size, loc);
+  b_.CreateOutput(buf, struct_size, loc);
   b_.CreateLifetimeEnd(buf);
 
   createRet();
@@ -3955,7 +3941,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
                                 { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
   }
 
-  b_.CreateOutput(ctx_, buf, getStructSize(print_struct), call.loc);
+  b_.CreateOutput(buf, getStructSize(print_struct), call.loc);
   b_.CreateLifetimeEnd(buf);
 }
 
@@ -4003,14 +3989,13 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
       value = b_.CreateAdd(value, b_.getInt64(ptr_width / 8));
     }
 
-    b_.CreateProbeRead(ctx_, arr, elem_type, value, call.loc);
+    b_.CreateProbeRead(arr, elem_type, value, call.loc);
     Value *str_offset = b_.getInt64(
         static_cast<uint64_t>(i) *
         static_cast<uint64_t>(bpftrace_.join_argsize_));
     Value *str_ptr = b_.CreateGEP(b_.getInt8Ty(), content_ptr, str_offset);
 
-    b_.CreateProbeReadStr(ctx_,
-                          str_ptr,
+    b_.CreateProbeReadStr(str_ptr,
                           bpftrace_.join_argsize_,
                           b_.CreateLoad(b_.getInt64Ty(), arr),
                           addrspace,
@@ -4019,7 +4004,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
   size_t header_size = offsetof(AsyncEvent::Join, content); // action_id +
                                                             // join_id
   size_t total_size = header_size + content_size;
-  b_.CreateOutput(ctx_, perfdata, total_size, call.loc);
+  b_.CreateOutput(perfdata, total_size, call.loc);
 
   b_.CreateBr(failure_callback);
   b_.SetInsertPoint(failure_callback);
@@ -4063,12 +4048,12 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
     if (inBpfMemory(arg.type()))
       b_.CreateMemcpyBPF(content_offset, value, arg.type().GetSize());
     else
-      b_.CreateProbeRead(ctx_, content_offset, arg.type(), value, call.loc);
+      b_.CreateProbeRead(content_offset, arg.type(), value, call.loc);
   } else {
     b_.CreateStore(value, content_offset);
   }
 
-  b_.CreateOutput(ctx_, buf, struct_size, call.loc);
+  b_.CreateOutput(buf, struct_size, call.loc);
   if (dyn_cast<AllocaInst>(buf))
     b_.CreateLifetimeEnd(buf);
 }
@@ -4185,8 +4170,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateUInt64());
   }
 
-  if (!bpftrace_.feature_->has_map_ringbuf() ||
-      required_resources.needs_perf_event_map) {
+  if (required_resources.using_skboutput) {
     createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         util::get_online_cpus().size(),
@@ -4194,14 +4178,12 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateInt32());
   }
 
-  if (bpftrace_.feature_->has_map_ringbuf()) {
-    const auto entries = bpftrace_.config_->perf_rb_pages * 4096;
-    createMapDefinition(to_string(MapType::Ringbuf),
-                        libbpf::BPF_MAP_TYPE_RINGBUF,
-                        entries,
-                        CreateNone(),
-                        CreateNone());
-  }
+  auto entries = bpftrace_.config_->perf_rb_pages * 4096;
+  createMapDefinition(to_string(MapType::Ringbuf),
+                      libbpf::BPF_MAP_TYPE_RINGBUF,
+                      entries,
+                      CreateNone(),
+                      CreateNone());
 
   int loss_cnt_key_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_key_) * 8;
   int loss_cnt_val_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_val_) * 8;
@@ -4305,7 +4287,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
     } else {
-      b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
+      b_.CreateProbeRead(dst, elem_type, src, loc, data_type.GetAS());
     }
     // dst is left as is, so we need to return and bound its lifetime to the
     // underlying expression. Since we've finished copying, we can end the
@@ -4342,7 +4324,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
 
     } else {
       AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-      b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
+      b_.CreateProbeRead(dst, elem_type, src, loc, data_type.GetAS());
       Value *expr = b_.CreateLoad(b_.GetType(elem_type), dst);
       // We have completely loaded from dst, and therefore can insert an end to
       // its lifetime directly.
@@ -4361,8 +4343,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
   if (auto *acc = unop.expr.as<MapAccess>()) {
     auto &map = *acc->map;
     auto scoped_key = getMapKey(map, acc->key);
-    Value *oldval = b_.CreateMapLookupElem(
-        ctx_, map, scoped_key.value(), unop.loc);
+    Value *oldval = b_.CreateMapLookupElem(map, scoped_key.value(), unop.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.value_type,
                                             map.ident + "_newval");
     if (is_increment)
@@ -4371,8 +4352,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     else
       b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
                      newval);
-    b_.CreateMapUpdateElem(
-        ctx_, map.ident, scoped_key.value(), newval, unop.loc);
+    b_.CreateMapUpdateElem(map.ident, scoped_key.value(), newval, unop.loc);
 
     Value *value;
     if (unop.is_post_op)
@@ -4662,7 +4642,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
   const auto &map_val_type = map_info->second.value_type;
   if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
     val = b_.CreatePerCpuMapAggElems(
-        ctx_, *f.map, callback->getArg(1), map_val_type, f.loc);
+        *f.map, callback->getArg(1), map_val_type, f.loc);
   } else if (!inBpfMemory(val_type)) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }

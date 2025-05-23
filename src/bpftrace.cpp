@@ -936,19 +936,17 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
 
 int BPFtrace::setup_output(void *ctx)
 {
-  if (is_ringbuf_enabled()) {
-    setup_ringbuf(ctx);
-  }
+  setup_ringbuf(ctx);
   int err = setup_event_loss();
   if (err)
     return err;
-  if (is_perf_event_enabled()) {
-    return setup_perf_events(ctx);
+  if (resources.using_skboutput) {
+    return setup_skboutput_perf_buffer(ctx);
   }
   return 0;
 }
 
-int BPFtrace::setup_perf_events(void *ctx)
+int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
 {
   epollfd_ = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd_ == -1) {
@@ -1014,10 +1012,9 @@ int BPFtrace::setup_event_loss()
 
 void BPFtrace::teardown_output()
 {
-  if (is_ringbuf_enabled())
-    ring_buffer__free(ringbuf_);
+  ring_buffer__free(ringbuf_);
 
-  if (is_perf_event_enabled())
+  if (resources.using_skboutput)
     // Calls perf_reader_free() on all open perf buffers.
     open_perf_buffers_.clear();
 }
@@ -1025,8 +1022,8 @@ void BPFtrace::teardown_output()
 void BPFtrace::poll_output(Output &out, bool drain)
 {
   int ready;
-  bool do_poll_perf_event = is_perf_event_enabled();
-  bool do_poll_ringbuf = is_ringbuf_enabled();
+  bool poll_skboutput = resources.using_skboutput;
+  bool do_poll_ringbuf = true;
   auto should_retry = [](int ready) {
     // epoll_wait will set errno to EINTR if an interrupt received, it is
     // retryable if not caused by SIGINT. ring_buffer__poll does not set errno,
@@ -1044,20 +1041,20 @@ void BPFtrace::poll_output(Output &out, bool drain)
            (ready == 0 && (drain || finalize_));
   };
 
-  if (do_poll_perf_event && epollfd_ < 0) {
+  if (poll_skboutput && epollfd_ < 0) {
     LOG(ERROR) << "Invalid epollfd " << epollfd_;
     return;
   }
 
   while (true) {
-    if (do_poll_perf_event) {
-      ready = poll_perf_events();
+    if (poll_skboutput) {
+      ready = poll_skboutput_events();
       if (should_retry(ready)) {
         if (!do_poll_ringbuf)
           continue;
       }
       if (should_stop(ready)) {
-        do_poll_perf_event = false;
+        poll_skboutput = false;
       }
     }
 
@@ -1073,7 +1070,7 @@ void BPFtrace::poll_output(Output &out, bool drain)
         do_poll_ringbuf = false;
       }
     }
-    if (!do_poll_perf_event && !do_poll_ringbuf) {
+    if (!poll_skboutput && !do_poll_ringbuf) {
       return;
     }
 
@@ -1098,7 +1095,7 @@ void BPFtrace::poll_output(Output &out, bool drain)
   }
 }
 
-int BPFtrace::poll_perf_events()
+int BPFtrace::poll_skboutput_events()
 {
   auto events = std::vector<struct epoll_event>(online_cpus_);
   int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);

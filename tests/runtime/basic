@@ -287,7 +287,7 @@ TIMEOUT 3
 
 NAME info flag
 RUN {{BPFTRACE}} --info
-EXPECT_REGEX perf_event_array: yes
+EXPECT_REGEX ringbuf: yes
 TIMEOUT 1
 
 NAME basic while loop

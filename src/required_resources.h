@@ -127,7 +127,7 @@ public:
   // Map metadata
   std::map<std::string, MapInfo> maps_info;
   std::unordered_set<bpftrace::globalvars::GlobalVar> needed_global_vars;
-  bool needs_perf_event_map = false;
+  bool using_skboutput = false;
 
   // Probe metadata
   //
@@ -159,7 +159,7 @@ private:
             probe_ids,
             maps_info,
             needed_global_vars,
-            needs_perf_event_map,
+            using_skboutput,
             probes,
             signal_probes,
             special_probes);

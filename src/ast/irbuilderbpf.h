@@ -41,37 +41,26 @@ public:
   CallInst *CreateMapLookup(Map &map,
                             Value *key,
                             const std::string &name = "lookup_elem");
-  Value *CreateMapLookupElem(Value *ctx,
-                             Map &map,
-                             Value *key,
-                             const Location &loc);
-  Value *CreateMapLookupElem(Value *ctx,
-                             const std::string &map_name,
+  Value *CreateMapLookupElem(Map &map, Value *key, const Location &loc);
+  Value *CreateMapLookupElem(const std::string &map_name,
                              Value *key,
                              SizedType &type,
                              const Location &loc);
-  Value *CreatePerCpuMapAggElems(Value *ctx,
-                                 Map &map,
+  Value *CreatePerCpuMapAggElems(Map &map,
                                  Value *key,
                                  const SizedType &type,
                                  const Location &loc);
-  void CreateMapUpdateElem(Value *ctx,
-                           const std::string &map_ident,
+  void CreateMapUpdateElem(const std::string &map_ident,
                            Value *key,
                            Value *val,
                            const Location &loc,
                            int64_t flags = 0);
-  void CreateMapDeleteElem(Value *ctx,
-                           Map &map,
-                           Value *key,
-                           const Location &loc);
-  Value *CreateForEachMapElem(Value *ctx,
-                              Map &map,
+  void CreateMapDeleteElem(Map &map, Value *key, const Location &loc);
+  Value *CreateForEachMapElem(Map &map,
                               Value *callback,
                               Value *callback_ctx,
                               const Location &loc);
-  void CreateProbeRead(Value *ctx,
-                       Value *dst,
+  void CreateProbeRead(Value *dst,
                        llvm::Value *size,
                        Value *src,
                        AddrSpace as,
@@ -81,8 +70,7 @@ public:
   // size depends on the host system as well as the probe type.
   // If provided, the optional AddrSpace argument is used instead of the type's
   // address space (which may not always be set).
-  void CreateProbeRead(Value *ctx,
-                       Value *dst,
+  void CreateProbeRead(Value *dst,
                        const SizedType &type,
                        Value *src,
                        const Location &loc,
@@ -96,14 +84,12 @@ public:
       llvm::Value *ptr,
       bool isVolatile = false,
       std::optional<AddrSpace> addrSpace = std::nullopt);
-  CallInst *CreateProbeReadStr(Value *ctx,
-                               Value *dst,
+  CallInst *CreateProbeReadStr(Value *dst,
                                llvm::Value *size,
                                Value *src,
                                AddrSpace as,
                                const Location &loc);
-  CallInst *CreateProbeReadStr(Value *ctx,
-                               Value *dst,
+  CallInst *CreateProbeReadStr(Value *dst,
                                size_t size,
                                Value *src,
                                AddrSpace as,
@@ -121,8 +107,7 @@ public:
                            uint64_t haystack_sz,
                            Value *needle,
                            uint64_t needle_sz);
-  Value *CreateIntegerArrayCmp(Value *ctx,
-                               Value *val1,
+  Value *CreateIntegerArrayCmp(Value *val1,
                                Value *val2,
                                const SizedType &val1_type,
                                const SizedType &val2_type,
@@ -176,19 +161,14 @@ public:
                        Value *callee,
                        ArrayRef<Value *> args,
                        const Twine &Name);
-  void CreateGetCurrentComm(Value *ctx,
-                            AllocaInst *buf,
-                            size_t size,
-                            const Location &loc);
-  void CreateOutput(Value *ctx, Value *data, size_t size, const Location &loc);
+  void CreateGetCurrentComm(AllocaInst *buf, size_t size, const Location &loc);
+  void CreateOutput(Value *data, size_t size, const Location &loc);
   void CreateAtomicIncCounter(const std::string &map_name, uint32_t idx);
-  void CreatePerCpuMapElemInit(Value *ctx,
-                               Map &map,
+  void CreatePerCpuMapElemInit(Map &map,
                                Value *key,
                                Value *val,
                                const Location &loc);
-  void CreatePerCpuMapElemAdd(Value *ctx,
-                              Map &map,
+  void CreatePerCpuMapElemAdd(Map &map,
                               Value *key,
                               Value *val,
                               const Location &loc);
@@ -199,14 +179,12 @@ public:
                          Value *fmt_size,
                          const std::vector<Value *> &values,
                          const Location &loc);
-  void CreateSignal(Value *ctx, Value *sig, const Location &loc);
+  void CreateSignal(Value *sig, const Location &loc);
   void CreateOverrideReturn(Value *ctx, Value *rc);
-  void CreateHelperError(Value *ctx,
-                         Value *return_value,
+  void CreateHelperError(Value *return_value,
                          libbpf::bpf_func_id func_id,
                          const Location &loc);
-  void CreateHelperErrorCond(Value *ctx,
-                             Value *return_value,
+  void CreateHelperErrorCond(Value *return_value,
                              libbpf::bpf_func_id func_id,
                              const Location &loc,
                              bool compare_zero = false);
@@ -216,12 +194,7 @@ public:
                             bool packed = false);
   Value *CreateGetPid(const Location &loc);
   Value *CreateGetTid(const Location &loc);
-  Value *CreateGetPid(Value *ctx, const Location &loc);
-  Value *CreateGetTid(Value *ctx, const Location &loc);
-  AllocaInst *CreateUSym(Value *ctx,
-                         Value *val,
-                         int probe_id,
-                         const Location &loc);
+  AllocaInst *CreateUSym(Value *val, int probe_id, const Location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
@@ -232,11 +205,7 @@ public:
                             Value *len,
                             AllocaInst *data,
                             size_t size);
-  void CreatePath(Value *ctx,
-                  Value *buf,
-                  Value *path,
-                  Value *sz,
-                  const Location &loc);
+  void CreatePath(Value *buf, Value *path, Value *sz, const Location &loc);
   void CreateSeqPrintf(Value *ctx,
                        Value *fmt,
                        Value *fmt_size,
@@ -284,8 +253,7 @@ private:
   AsyncIds &async_ids_;
 
   CallInst *CreateGetPidTgid(const Location &loc);
-  void CreateGetNsPidTgid(Value *ctx,
-                          Value *dev,
+  void CreateGetNsPidTgid(Value *dev,
                           Value *ino,
                           AllocaInst *ret,
                           const Location &loc);
@@ -332,10 +300,6 @@ private:
   llvm::Type *getKernelPointerStorageTy();
   llvm::Type *getUserPointerStorageTy();
   void CreateRingbufOutput(Value *data, size_t size, const Location &loc);
-  void CreatePerfEventOutput(Value *ctx,
-                             Value *data,
-                             size_t size,
-                             const Location &loc);
 
   void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
   void createPerCpuMinMax(AllocaInst *ret,
