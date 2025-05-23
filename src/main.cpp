@@ -972,7 +972,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  // Emits warnings
+  if (!bpftrace.config_->log_warnings) {
+    bpftrace.helper_check_level_ = 0;
+    DISABLE_LOG(WARNING);
+  }
+  // Emits error and warning messages (if not disabled by the user).
   ast.diagnostics().emit(std::cout);
 
   if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
