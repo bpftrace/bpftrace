@@ -3081,7 +3081,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   Node *var_scope = nullptr;
   const auto &var_ident = assignment.var()->ident;
-  const auto &assignTy = assignment.expr.type();
+  auto assignTy = assignment.expr.type();
 
   if (auto *scope = find_variable_scope(var_ident)) {
     auto &foundVar = variables_[scope][var_ident];
@@ -3107,25 +3107,24 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         // No checks or casts needed.
       } else if (auto *neg_integer = assignment.expr.as<NegativeInteger>()) {
         int64_t value = neg_integer->value;
-        bool can_fit = false;
         if (!storedTy.IsSigned()) {
           type_mismatch_error = true;
         } else {
           auto min_max = getIntTypeRange(storedTy);
-          can_fit = value >= min_max.first;
-        }
-        if (can_fit) {
-          assignment.expr = ctx_.make_node<Cast>(
-              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
-              assignment.expr,
-              Location(assignment.loc));
-          visit(assignment.expr);
-        } else if (!type_mismatch_error) {
-          assignment.addError()
-              << "Type mismatch for " << var_ident << ": "
-              << "trying to assign value '" << neg_integer->value
-              << "' which does not fit into the variable of type '" << storedTy
-              << "'";
+          if (value < min_max.first) {
+            assignment.addError()
+                << "Type mismatch for " << var_ident << ": "
+                << "trying to assign value '" << neg_integer->value
+                << "' which does not fit into the variable of type '"
+                << storedTy << "'";
+          } else {
+            assignTy = storedTy;
+            assignment.expr = ctx_.make_node<Cast>(
+                CreateInteger(storedTy.GetSize() * 8, true),
+                assignment.expr,
+                Location(assignment.loc));
+            visit(assignment.expr);
+          }
         }
       } else if (auto *integer = assignment.expr.as<Integer>()) {
         uint64_t value = integer->value;
@@ -3138,12 +3137,13 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           can_fit = value <= static_cast<uint64_t>(min_max.second);
         }
         if (can_fit) {
+          assignTy = storedTy;
           assignment.expr = ctx_.make_node<Cast>(
               CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
               assignment.expr,
               Location(assignment.loc));
           visit(assignment.expr);
-        } else if (!type_mismatch_error) {
+        } else {
           assignment.addError()
               << "Type mismatch for " << var_ident << ": "
               << "trying to assign value '"
