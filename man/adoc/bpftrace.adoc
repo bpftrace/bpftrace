@@ -1879,7 +1879,7 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | struct args
 | n/a
 | n/a
-| The struct of all arguments of the traced function. Available in `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
+| The struct of all arguments of the traced function. Available in `rawtracepoint`, `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
 
 | cgroup
 | uint64
