@@ -65,6 +65,11 @@ public:
                            Map &map,
                            Value *key,
                            const Location &loc);
+  Value *CreateForRange(Value *ctx,
+                        Value *iters,
+                        Value *callback,
+                        Value *callback_ctx,
+                        const Location &loc);
   Value *CreateForEachMapElem(Value *ctx,
                               Map &map,
                               Value *callback,

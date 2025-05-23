@@ -208,12 +208,14 @@ void MapDefaultKey::visit(Call &call)
 
 void MapDefaultKey::visit(For &for_loop)
 {
-  if (!check(*for_loop.map, true)) {
-    for_loop.map->addError() << for_loop.map->ident
-                             << " has no explicit keys (scalar map), and "
-                                "cannot be used for iteration";
+  if (auto *map = for_loop.iterable.as<Map>()) {
+    if (!check(*map, true)) {
+      map->addError() << map->ident
+                      << " has no explicit keys (scalar map), and "
+                         "cannot be used for iteration";
+    }
   }
-  Visitor<MapDefaultKey>::visit(for_loop.stmts);
+  visit(for_loop.stmts);
 }
 
 void MapFunctionAliases::visit(Call &call)
