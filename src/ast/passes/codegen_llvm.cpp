@@ -12,8 +12,11 @@
 #include <llvm-c/Transforms/IPO.h>
 #endif
 #include <llvm/ADT/FunctionExtras.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/CodeGen/UnreachableBlockElim.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
@@ -21,7 +24,9 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Linker/Linker.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/IPO.h>
@@ -41,6 +46,7 @@
 #include "ast/irbuilderbpf.h"
 #include "ast/location.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "bpfmap.h"
@@ -63,7 +69,7 @@ namespace bpftrace::ast {
 
 using namespace llvm;
 
-static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
+static constexpr char LLVMTargetTriple[] = "bpf";
 static constexpr auto LICENSE = "LICENSE";
 
 static auto getTargetMachine()
@@ -1759,8 +1765,29 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
     }
   } else {
-    LOG(BUG) << "missing codegen for function \"" << call.func << "\"";
-    __builtin_unreachable();
+    // If we don't know about this function for codegen, then it is very likely
+    // something that will be linked in from the standard library. Assume that
+    // the semantic analyser has provided the types correctly, and set
+    // everything up for success.
+    llvm::Type *result_type = b_.GetType(call.return_type);
+    std::vector<ScopedExpr> args;
+    SmallVector<llvm::Type *> arg_types;
+    SmallVector<llvm::Value *> arg_values;
+    for (auto &expr : call.vargs) {
+      args.emplace_back(visit(expr));
+      arg_types.push_back(b_.GetType(expr.type()));
+      arg_values.push_back(args.back().value());
+    }
+
+    FunctionType *function_type = FunctionType::get(result_type,
+                                                    arg_types,
+                                                    false);
+    auto *func = llvm::Function::Create(function_type,
+                                        llvm::Function::ExternalLinkage,
+                                        call.func,
+                                        module_.get());
+    func->addFnAttr(Attribute::AlwaysInline);
+    return ScopedExpr(b_.CreateCall(func, arg_values, call.func));
   }
 }
 
@@ -4847,6 +4874,57 @@ Pass CreateCompilePass(
                                          *ctx.context,
                                          usdt_helper->get());
                         return CompiledModule(llvm.compile());
+                      });
+}
+
+Pass CreateLinkBitcodePass()
+{
+  return Pass::create("LinkBitcode",
+                      [](Imports &imports,
+                         CompiledModule &cm,
+                         CompileContext &ctx) -> Result<> {
+                        for (const auto &[_, bc] : imports.bitcode) {
+                          // Parse the underlying bitcode.
+                          auto buf = llvm::MemoryBuffer::getMemBuffer(
+                              StringRef(bc.data));
+                          assert(buf);
+                          auto mod = llvm::parseBitcodeFile(*buf, *ctx.context);
+                          if (!mod) {
+                            return mod.takeError();
+                          }
+
+                          // Modify to ensure everything is inlined. Note that
+                          // this is also marking all these functions for
+                          // below, which will adjust their linkage.
+                          for (auto &fn : (*mod)->functions()) {
+                            if (fn.isDSOLocal()) {
+                              fn.removeFnAttr(Attribute::NoInline);
+                              fn.removeFnAttr(Attribute::OptimizeNone);
+                              fn.addFnAttr(Attribute::AlwaysInline);
+                              fn.addFnAttr(Attribute::NoUnwind);
+                            }
+                          }
+
+                          // Link into the original source module, consume the
+                          // new one. This returns `false` on success, and
+                          // `true` when everything has been linked.
+                          auto err = Linker::linkModules(*cm.module,
+                                                         std::move(*mod));
+                          assert(!err);
+                        }
+
+                        // Remark all defined functions as having internal
+                        // linkage. This is using all the functions marked
+                        // above. It doesn't really make sense to have
+                        // `always_inline` but be an external linkage.
+                        for (auto &fn : cm.module->functions()) {
+                          if (fn.hasFnAttribute(Attribute::AlwaysInline)) {
+                            fn.setLinkage(llvm::Function::InternalLinkage);
+                            llvm::stripDebugInfo(fn);
+                          }
+                        }
+
+                        return OK();
                       });
 }
 
