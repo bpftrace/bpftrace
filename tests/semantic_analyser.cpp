@@ -4676,7 +4676,10 @@ TEST(semantic_analyser, variable_declarations)
   test("BEGIN { let $a; $a = 1; }");
   test("BEGIN { let $a: int16; $a = 1; }");
   test("BEGIN { let $a = 1; }");
+  test("BEGIN { let $a: uint16 = 1; }");
   test("BEGIN { let $a: int16 = 1; }");
+  test("BEGIN { let $a: uint8 = 1; $a = 100; }");
+  test("BEGIN { let $a: int8 = 1; $a = -100; }");
   test(R"(BEGIN { let $a: string; $a = "hiya"; })");
   test("BEGIN { let $a: int16; print($a); }");
   test("BEGIN { let $a; print($a); $a = 1; }");
@@ -4707,6 +4710,18 @@ BEGIN { let $a; let $a; }
 stdin:1:26-33: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
 BEGIN { let $a: uint16; $a = -1; }
                          ~~~~~~~
+)");
+
+  test_error("BEGIN { let $a: uint8 = 1; $a = 10000; }", R"(
+stdin:1:29-39: ERROR: Type mismatch for $a: trying to assign value '10000' which does not fit into the variable of type 'uint8'
+BEGIN { let $a: uint8 = 1; $a = 10000; }
+                            ~~~~~~~~~~
+)");
+
+  test_error("BEGIN { let $a: int8 = 1; $a = -10000; }", R"(
+stdin:1:28-39: ERROR: Type mismatch for $a: trying to assign value '-10000' which does not fit into the variable of type 'int8'
+BEGIN { let $a: int8 = 1; $a = -10000; }
+                           ~~~~~~~~~~~
 )");
 
   test_error("BEGIN { let $a; $a = (uint8)1; $a = -1; }", R"(
