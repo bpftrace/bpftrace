@@ -1,4 +1,3 @@
-#include <format>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -171,7 +170,7 @@ void MacroExpander::visit(Expression &expr)
 
 std::string MacroExpander::get_new_var_ident(std::string original_ident)
 {
-  return std::format("$${}_{}", macro_name_, original_ident);
+  return std::string("$$") + macro_name_ + std::string("_") + original_ident;
 }
 
 std::optional<Block *> MacroExpander::expand(Macro &macro, Call &call)
