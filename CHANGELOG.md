@@ -23,6 +23,8 @@ and this project adheres to
 - Require BPF_MAP_TYPE_RINGBUF to be available
   - [#3974](https://github.com/bpftrace/bpftrace/pull/3974)
 #### Added
+- Disallow std::format().
+  - [#4127](https://github.com/bpftrace/bpftrace/pull/4127)
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)
 - Use blazesym for user space address symbolization

@@ -34,6 +34,10 @@ Checks:
   - -readability-make-member-function-const
   - -readability-suspicious-call-argument
 
+CheckOptions:
+  # std::format()
+  modernize-use-std-format.ReplacementFormat: "DISALLOW"
+
 WarningsAsErrors: "*"
 UseColor: true
 HeaderFilterRegex: ".*"
