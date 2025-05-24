@@ -319,22 +319,21 @@ std::unordered_set<std::string> get_section_names()
   return ret;
 }
 
-uint64_t get_event_loss_counter(
-    const struct bpf_object *bpf_object,
-    const std::unordered_map<std::string, struct bpf_map *>
-        &section_name_to_global_vars_map,
-    const BPFtrace &bpftrace)
+uint64_t get_global_var(const struct bpf_object *bpf_object,
+                        std::string_view target_section,
+                        const std::unordered_map<std::string, struct bpf_map *>
+                            &section_name_to_global_vars_map,
+                        const BPFtrace &bpftrace)
 {
   verify_maps_found(section_name_to_global_vars_map, bpftrace);
 
   auto it = std::ranges::find_if(section_name_to_global_vars_map,
-                                 [](const auto &pair) {
-                                   return pair.first ==
-                                          EVENT_LOSS_COUNTER_SECTION_NAME;
+                                 [target_section](const auto &pair) {
+                                   return pair.first == target_section;
                                  });
 
   if (it == section_name_to_global_vars_map.end()) {
-    LOG(BUG) << EVENT_LOSS_COUNTER_SECTION_NAME << " not found";
+    LOG(BUG) << target_section << " not found";
   }
 
   const auto &[section_name, global_vars_map] = *it;
@@ -360,14 +359,14 @@ uint64_t get_event_loss_counter(
   }
 
   size_t v_size;
-  auto *event_loss_cnt = reinterpret_cast<uint64_t *>(
+  auto *target_var = reinterpret_cast<uint64_t *>(
       bpf_map__initial_value(global_vars_map, &v_size));
 
-  if (!event_loss_cnt) {
+  if (!target_var) {
     LOG(BUG) << "Failed to get array buf for global variable map";
   }
 
-  return *event_loss_cnt;
+  return *target_var;
 }
 
 } // namespace bpftrace::globalvars

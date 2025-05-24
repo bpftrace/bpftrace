@@ -112,11 +112,11 @@ SizedType get_type(GlobalVar global_var,
                    const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
 
-uint64_t get_event_loss_counter(
-    const struct bpf_object *bpf_object,
-    const std::unordered_map<std::string, struct bpf_map *>
-        &section_name_to_global_vars_map,
-    const BPFtrace &bpftrace);
+uint64_t get_global_var(const struct bpf_object *bpf_object,
+                        std::string_view target_section,
+                        const std::unordered_map<std::string, struct bpf_map *>
+                            &section_name_to_global_vars_map,
+                        const BPFtrace &bpftrace);
 
 } // namespace globalvars
 } // namespace bpftrace

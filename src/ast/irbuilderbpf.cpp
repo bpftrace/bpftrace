@@ -1223,7 +1223,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
   // Most of the time this will happen for the functions that can lead
   // to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
   // for nested probes e.g. "page_fault_user" -> "print".
-  CreateAtomicIncCounter();
+  CreateIncEventLossCounter();
   CreateRet(getInt64(early_exit_ret));
 
   SetInsertPoint(lookup_failure_block);
@@ -2129,13 +2129,13 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
   CreateCondBr(condition, loss_block, merge_block);
 
   SetInsertPoint(loss_block);
-  CreateAtomicIncCounter();
+  CreateIncEventLossCounter();
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
 }
 
-void IRBuilderBPF::CreateAtomicIncCounter()
+void IRBuilderBPF::CreateIncEventLossCounter()
 {
   auto *global_event_loss_counter = module_.getGlobalVariable(
       to_string(bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER));

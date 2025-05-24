@@ -123,9 +123,10 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
 
 uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
 {
-  return globalvars::get_event_loss_counter(bpf_object_.get(),
-                                            section_names_to_global_vars_map_,
-                                            bpftrace);
+  return globalvars::get_global_var(bpf_object_.get(),
+                                    globalvars::EVENT_LOSS_COUNTER_SECTION_NAME,
+                                    section_names_to_global_vars_map_,
+                                    bpftrace);
 }
 
 namespace {
