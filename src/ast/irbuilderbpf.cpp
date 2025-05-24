@@ -1223,8 +1223,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
   // Most of the time this will happen for the functions that can lead
   // to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
   // for nested probes e.g. "page_fault_user" -> "print".
-  CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
-                         bpftrace::BPFtrace::event_loss_cnt_key_);
+  CreateIncEventLossCounter();
   CreateRet(getInt64(early_exit_ret));
 
   SetInsertPoint(lookup_failure_block);
@@ -2130,50 +2129,21 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
   CreateCondBr(condition, loss_block, merge_block);
 
   SetInsertPoint(loss_block);
-  CreateAtomicIncCounter(to_string(MapType::EventLossCounter),
-                         bpftrace::BPFtrace::event_loss_cnt_key_);
+  CreateIncEventLossCounter();
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
 }
 
-void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
-                                          uint32_t idx)
+void IRBuilderBPF::CreateIncEventLossCounter()
 {
-  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
-  CreateStore(getInt32(idx), key);
-
-  CallInst *call = createMapLookup(map_name, key);
-  llvm::Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
-                                                        "lookup_success",
-                                                        parent);
-  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
-                                                        "lookup_failure",
-                                                        parent);
-  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
-                                                      "lookup_merge",
-                                                      parent);
-
-  Value *condition = CreateICmpNE(CreateIntCast(call, getPtrTy(), true),
-                                  GetNull(),
-                                  "map_lookup_cond");
-  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
-
-  SetInsertPoint(lookup_success_block);
+  auto *global_event_loss_counter = module_.getGlobalVariable(
+      to_string(bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER));
   CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Add,
-                    call,
+                    global_event_loss_counter,
                     getInt64(1),
                     8,
                     AtomicOrdering::SequentiallyConsistent);
-  CreateBr(lookup_merge_block);
-
-  SetInsertPoint(lookup_failure_block);
-  // ignore lookup failure
-  CreateBr(lookup_merge_block);
-
-  SetInsertPoint(lookup_merge_block);
-  CreateLifetimeEnd(key);
 }
 
 void IRBuilderBPF::CreatePerCpuMapElemInit(Map &map,

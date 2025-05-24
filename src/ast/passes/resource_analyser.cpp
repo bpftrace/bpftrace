@@ -149,6 +149,8 @@ RequiredResources ResourceAnalyser::resources()
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
+  resources_.needed_global_vars.insert(
+      bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER);
 
   return std::move(resources_);
 }

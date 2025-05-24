@@ -4184,14 +4184,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                       entries,
                       CreateNone(),
                       CreateNone());
-
-  int loss_cnt_key_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_key_) * 8;
-  int loss_cnt_val_size = sizeof(bpftrace::BPFtrace::event_loss_cnt_val_) * 8;
-  createMapDefinition(to_string(MapType::EventLossCounter),
-                      libbpf::BPF_MAP_TYPE_ARRAY,
-                      1,
-                      CreateInt(loss_cnt_key_size),
-                      CreateInt(loss_cnt_val_size));
 }
 
 void CodegenLLVM::generate_global_vars(

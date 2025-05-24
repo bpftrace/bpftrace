@@ -4,18 +4,17 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
 %"struct map_t" = type { ptr, ptr }
-%"struct map_t.0" = type { ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
-@event_loss_counter = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
-@process_counts = external global i64, section ".ksyms", !dbg !42
+@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !22
+@process_counts = external global i64, section ".ksyms", !dbg !25
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !48 {
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !31 {
 entry:
   %per_cpu_ptr = call ptr inttoptr (i64 153 to ptr)(ptr @process_counts, i64 0)
   %1 = ptrtoint ptr %per_cpu_ptr to i64
@@ -24,8 +23,8 @@ entry:
 
 attributes #0 = { nounwind }
 
-!llvm.dbg.cu = !{!44}
-!llvm.module.flags = !{!46, !47}
+!llvm.dbg.cu = !{!27}
+!llvm.module.flags = !{!29, !30}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -51,33 +50,16 @@ attributes #0 = { nounwind }
 !21 = !DISubrange(count: 262144, lowerBound: 0)
 !22 = !DIGlobalVariableExpression(var: !23, expr: !DIExpression())
 !23 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
-!24 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !25)
-!25 = !{!26, !31, !36, !39}
-!26 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !27, size: 64)
-!27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 64)
-!28 = !DICompositeType(tag: DW_TAG_array_type, baseType: !14, size: 64, elements: !29)
-!29 = !{!30}
-!30 = !DISubrange(count: 2, lowerBound: 0)
-!31 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !32, size: 64, offset: 64)
-!32 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !33, size: 64)
-!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !14, size: 32, elements: !34)
-!34 = !{!35}
-!35 = !DISubrange(count: 1, lowerBound: 0)
-!36 = !DIDerivedType(tag: DW_TAG_member, name: "key", scope: !2, file: !2, baseType: !37, size: 64, offset: 128)
-!37 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !38, size: 64)
-!38 = !DIBasicType(name: "int32", size: 32, encoding: DW_ATE_signed)
-!39 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !40, size: 64, offset: 192)
-!40 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !41, size: 64)
-!41 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!42 = !DIGlobalVariableExpression(var: !43, expr: !DIExpression())
-!43 = distinct !DIGlobalVariable(name: "process_counts", linkageName: "global", scope: !2, file: !2, type: !41, isLocal: false, isDefinition: true)
-!44 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !45)
-!45 = !{!0, !7, !22, !42}
-!46 = !{i32 2, !"Debug Info Version", i32 3}
-!47 = !{i32 7, !"uwtable", i32 0}
-!48 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !52)
-!49 = !DISubroutineType(types: !50)
-!50 = !{!41, !51}
-!51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!52 = !{!53}
-!53 = !DILocalVariable(name: "ctx", arg: 1, scope: !48, file: !2, type: !51)
+!24 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
+!26 = distinct !DIGlobalVariable(name: "process_counts", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!27 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !28)
+!28 = !{!0, !7, !22, !25}
+!29 = !{i32 2, !"Debug Info Version", i32 3}
+!30 = !{i32 7, !"uwtable", i32 0}
+!31 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !32, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !27, retainedNodes: !35)
+!32 = !DISubroutineType(types: !33)
+!33 = !{!24, !34}
+!34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!35 = !{!36}
+!36 = !DILocalVariable(name: "ctx", arg: 1, scope: !31, file: !2, type: !34)
