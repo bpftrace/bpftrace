@@ -23,10 +23,14 @@ public:
   std::optional<Expression> visit(PositionalParameter &param);
   std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Expression &expr);
+  std::optional<Expression> visit(Probe &probe);
+  std::optional<Expression> visit(Builtin &builtin);
 
 private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+
+  Node *top_level_node_ = nullptr;
 };
 
 } // namespace
@@ -437,6 +441,31 @@ std::optional<Expression> LiteralFolder::visit(Expression &expr)
   if (r) {
     expr.value = r->value;
   }
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(Probe &probe)
+{
+  top_level_node_ = &probe;
+  return Visitor<LiteralFolder, std::optional<Expression>>::visit(probe);
+}
+
+std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
+{
+  if (builtin.ident == "usermode") {
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      for (auto *ap : probe->attach_points) {
+        if (!ap->check_available(builtin.ident)) {
+          auto probe_type = probetype(ap->provider);
+          if (probe_type == ProbeType::special) {
+            return ast_.make_node<Integer>(1, Location(builtin.loc));
+          }
+          return ast_.make_node<Integer>(0, Location(builtin.loc));
+        }
+      }
+    }
+  }
+
   return std::nullopt;
 }
 

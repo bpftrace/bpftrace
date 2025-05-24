@@ -44,7 +44,7 @@ hspace   [ \t]
 vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#$+\*])+
-builtin  arg[0-9]+|args|cgroup|comm|cpid|numaid|cpu|ncpus|ctx|curtask|elapsed|func|gid|pid|probe|rand|retval|sarg[0-9]|tid|uid|username|jiffies|nsecs|kstack|ustack
+builtin  arg[0-9]+|args|cgroup|comm|cpid|numaid|cpu|ncpus|ctx|curtask|elapsed|func|gid|pid|probe|rand|retval|sarg[0-9]|tid|uid|usermode|username|jiffies|nsecs|kstack|ustack
 
 int_type        bool|(u)?int(8|16|32|64)
 builtin_type    void|(u)?(min|max|sum|avg|stats)_t|count_t|probe_t|username|lhist_t|hist_t|usym_t|ksym_t|timestamp|macaddr_t|cgroup_path_t|strerror_t|kstack_t|ustack_t|string

@@ -1096,6 +1096,8 @@ public:
   int index() const;
   void set_index(int index);
 
+  bool check_available(const std::string &identifier) const;
+
 private:
   int index_ = 0;
 };

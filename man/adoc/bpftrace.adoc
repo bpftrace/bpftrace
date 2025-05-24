@@ -1995,6 +1995,12 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | get_current_uid_gid
 | User name of the current thread, as seen from the init namespace
 
+| `usermode`
+| uint8
+| n/a
+| n/a
+| Returns 1 if the current process is in user mode, 0 otherwise. Currently only available on x86_64.
+
 |===
 
 [#builtins-positional-parameters]

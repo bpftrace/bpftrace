@@ -192,7 +192,6 @@ private:
                  size_t index,
                  bool want_literal = false);
   bool check_symbol(const Call &call, int arg_num);
-  bool check_available(const Call &call, const AttachPoint &ap);
 
   void check_stack_call(Call &call, bool kernel);
 
@@ -1017,6 +1016,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
     probe->need_expansion = true;
   } else if (builtin.ident == "username") {
     builtin.builtin_type = CreateUsername();
+  } else if (builtin.ident == "usermode") {
+    if (arch::name() != "x86_64") {
+      builtin.addError() << "'usermode' builtin is only supported on x86_64";
+      return;
+    }
+    builtin.builtin_type = CreateUInt8();
   } else if (builtin.ident == "cpid") {
     if (!has_child_) {
       builtin.addError() << "cpid cannot be used without child command";
@@ -1105,7 +1110,7 @@ void SemanticAnalyser::visit(Call &call)
 
   if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
     for (auto *ap : probe->attach_points) {
-      if (!check_available(call, *ap)) {
+      if (!ap->check_available(call.func)) {
         call.addError() << call.func << " can not be used with \""
                         << ap->provider << "\" probes";
       }
@@ -3825,90 +3830,6 @@ bool SemanticAnalyser::check_symbol(const Call &call,
                     << ") as input (\"" << arg << "\" provided)";
     return false;
   }
-
-  return true;
-}
-
-bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
-{
-  const auto &func = call.func;
-  ProbeType type = probetype(ap.provider);
-
-  if (func == "reg") {
-    switch (type) {
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-      case ProbeType::uprobe:
-      case ProbeType::uretprobe:
-      case ProbeType::usdt:
-      case ProbeType::profile:
-      case ProbeType::interval:
-      case ProbeType::software:
-      case ProbeType::hardware:
-      case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
-        return true;
-      case ProbeType::invalid:
-      case ProbeType::special:
-      case ProbeType::tracepoint:
-      case ProbeType::fentry:
-      case ProbeType::fexit:
-      case ProbeType::iter:
-      case ProbeType::rawtracepoint:
-        return false;
-    }
-  } else if (func == "uaddr") {
-    switch (type) {
-      case ProbeType::usdt:
-      case ProbeType::uretprobe:
-      case ProbeType::uprobe:
-        return true;
-      case ProbeType::invalid:
-      case ProbeType::special:
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-      case ProbeType::tracepoint:
-      case ProbeType::profile:
-      case ProbeType::interval:
-      case ProbeType::software:
-      case ProbeType::hardware:
-      case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
-      case ProbeType::fentry:
-      case ProbeType::fexit:
-      case ProbeType::iter:
-      case ProbeType::rawtracepoint:
-        return false;
-    }
-  } else if (func == "signal") {
-    switch (type) {
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-      case ProbeType::uprobe:
-      case ProbeType::uretprobe:
-      case ProbeType::usdt:
-      case ProbeType::tracepoint:
-      case ProbeType::profile:
-      case ProbeType::fentry:
-      case ProbeType::fexit:
-      case ProbeType::rawtracepoint:
-        return true;
-      case ProbeType::invalid:
-      case ProbeType::special:
-      case ProbeType::interval:
-      case ProbeType::software:
-      case ProbeType::hardware:
-      case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
-      case ProbeType::iter:
-        return false;
-    }
-  } else if (func == "skboutput") {
-    return progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
-  }
-
-  if (type == ProbeType::invalid)
-    return false;
 
   return true;
 }
