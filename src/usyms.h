@@ -46,7 +46,6 @@ private:
                           bool perf_mode);
   struct bcc_symbol_option& get_symbol_opts();
 
-#ifdef HAVE_BLAZESYM
   struct blaze_symbolizer* symbolizer_{ nullptr };
 
   struct blaze_symbolizer* create_symbolizer() const;
@@ -63,7 +62,6 @@ private:
                                             bool show_offset,
                                             bool perf_mode,
                                             bool show_debug_info);
-#endif
 };
 
 } // namespace bpftrace
