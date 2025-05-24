@@ -34,6 +34,12 @@ Checks:
   - -readability-make-member-function-const
   - -readability-suspicious-call-argument
 
+CheckOptions:
+  # gcc and llvm did not introduce <format> when supporting C++20, so using
+  # std::format is temporarily not allowed.
+  # see issue https://github.com/bpftrace/bpftrace/issues/4185
+  modernize-use-std-format.ReplacementFormat: "DISALLOW"
+
 WarningsAsErrors: "*"
 UseColor: true
 HeaderFilterRegex: ".*"
