@@ -888,6 +888,11 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[((int8)3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, ((int8)1, 2, 3)); }");
+  test("kprobe:f { @y = delete(@x); }");
+  test("kprobe:f { $y = delete(@x); }");
+  test("kprobe:f { @[delete(@x)] = 1; }");
+  test("kprobe:f { @x = 1; if(delete(@x)) { 123 } }");
+  test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }");
   // The second arg gets treated like a map key, in terms of int type adjustment
   test("kprobe:f { @y[5] = 5; delete(@y, (int8)5); }");
   test("kprobe:f { @y[5, 4] = 5; delete(@y, ((int8)5, (int64)4)); }");
@@ -902,45 +907,6 @@ kprobe:f { delete(1); }
 stdin:1:12-20: ERROR: delete() expects a map argument
 kprobe:f { delete(1, 1); }
            ~~~~~~~~
-)");
-
-  test_error("kprobe:f { @y = delete(@x); }", R"(
-stdin:1:12-27: ERROR: Not a valid assignment: none
-kprobe:f { @y = delete(@x); }
-           ~~~~~~~~~~~~~~~
-stdin:1:12-14: ERROR: Undefined map: @y
-kprobe:f { @y = delete(@x); }
-           ~~
-)");
-
-  test_error("kprobe:f { $y = delete(@x); }", R"(
-stdin:1:12-27: ERROR: Value 'none' cannot be assigned to a scratch variable.
-kprobe:f { $y = delete(@x); }
-           ~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @[delete(@x)] = 1; }", R"(
-stdin:1:12-24: ERROR: Invalid map key type: none
-kprobe:f { @[delete(@x)] = 1; }
-           ~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", R"(
-stdin:1:20-42: ERROR: Invalid condition in if(): none
-kprobe:f { @x = 1; if(delete(@x)) { 123 } }
-                   ~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", R"(
-stdin:1:20-39: ERROR: Invalid condition in ternary: none
-kprobe:f { @x = 1; delete(@x) ? 0 : 1; }
-                   ~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @y[5] = 5; delete(@y[5], 5); }", R"(
-stdin:1:23-35: ERROR: delete() expects a map argument
-kprobe:f { @y[5] = 5; delete(@y[5], 5); }
-                      ~~~~~~~~~~~~
 )");
 
   test_error("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }", R"(

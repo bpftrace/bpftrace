@@ -58,6 +58,10 @@ and this project adheres to
   - [#4132](https://github.com/bpftrace/bpftrace/pull/4132)
 - Add signed type checking for map keys
   - [#4136](https://github.com/bpftrace/bpftrace/pull/4136)
+- `delete` now returns 1 if successful, 0 if not
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- if `delete` fails it will only print a warning if return value is not handled
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
 #### Deprecated
 #### Removed
 #### Fixed

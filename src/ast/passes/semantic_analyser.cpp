@@ -126,6 +126,8 @@ public:
 
   int analyse();
 
+  void visit_call(Call &call, bool from_expr_stmt = false);
+
   using Visitor<SemanticAnalyser>::visit;
   void visit(String &string);
   void visit(StackMode &mode);
@@ -1074,7 +1076,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
 }
 
-void SemanticAnalyser::visit(Call &call)
+void SemanticAnalyser::visit_call(Call &call, bool from_expr_stmt)
 {
   // Check for unsafe-ness first. It is likely the most pertinent issue
   // (and should be at the top) for any function call.
@@ -1120,6 +1122,8 @@ void SemanticAnalyser::visit(Call &call)
   if (!check_call(call)) {
     return;
   }
+
+  call.ret_val_discarded = from_expr_stmt;
 
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
@@ -1196,7 +1200,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "stats") {
     call.return_type = CreateStats(true);
   } else if (call.func == "delete") {
-    // Leave as `none`.
+    call.return_type = CreateUInt8();
   } else if (call.func == "has_key") {
     // TODO: this should be a bool type but that type is currently broken
     // as a value for variables and maps
@@ -1706,6 +1710,11 @@ If you're seeing errors, try clamping the string sizes. For example:
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
   }
+}
+
+void SemanticAnalyser::visit(Call &call)
+{
+  visit_call(call);
 }
 
 void SemanticAnalyser::visit(Sizeof &szof)
@@ -2935,7 +2944,11 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
-  visit(expr.expr);
+  if (auto *call = expr.expr.as<Call>()) {
+    visit_call(*call, true);
+  } else {
+    visit(expr.expr);
+  }
 }
 
 static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
