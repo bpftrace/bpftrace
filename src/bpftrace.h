@@ -208,8 +208,6 @@ public:
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
-  static constexpr uint32_t event_loss_cnt_key_ = 0;
-  static constexpr uint64_t event_loss_cnt_val_ = 0;
   bool need_recursion_check_ = false;
 
   static void sort_by_key(
@@ -252,7 +250,6 @@ private:
   int setup_output(void *ctx);
   int setup_skboutput_perf_buffer(void *ctx);
   void setup_ringbuf(void *ctx);
-  int setup_event_loss();
   std::vector<std::string> resolve_ksym_stack(uint64_t addr,
                                               bool show_offset,
                                               bool perf_mode,

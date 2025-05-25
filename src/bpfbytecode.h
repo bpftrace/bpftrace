@@ -32,6 +32,7 @@ public:
   BpfBytecode &operator=(BpfBytecode &&) = default;
 
   void update_global_vars(BPFtrace &bpftrace);
+  uint64_t get_event_loss_counter(BPFtrace &bpftrace);
   void load_progs(const RequiredResources &resources,
                   const BTF &btf,
                   BPFfeature &feature,

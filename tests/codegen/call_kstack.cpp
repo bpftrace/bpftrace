@@ -33,7 +33,7 @@ kprobe:f {
   ASSERT_TRUE(ok && ast.diagnostics().ok());
   bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
-  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 8);
+  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 7);
   ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 3U);
 
   StackType stack_type;
@@ -64,7 +64,7 @@ kprobe:f {
   ASSERT_TRUE(ast.diagnostics().ok());
   bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
-  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 10);
+  ASSERT_EQ(bpftrace->bytecode_.maps().size(), 9);
   ASSERT_EQ(bpftrace->bytecode_.countStackMaps(), 4U);
 
   StackType stack_type;

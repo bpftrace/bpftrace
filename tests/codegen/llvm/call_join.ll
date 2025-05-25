@@ -5,21 +5,19 @@ target triple = "bpf-pc-linux"
 
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
-%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
 %join_t = type <{ i64, i64, [16384 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @join = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !30
-@event_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !44
+@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !44
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !60 {
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !51 {
 entry:
-  %key = alloca i32, align 4
   %join_r0 = alloca i64, align 8
   %lookup_join_key = alloca i32, align 4
   %"struct arg.argv" = alloca i64, align 8
@@ -139,25 +137,11 @@ lookup_join_merge:                                ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %lookup_join_merge
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %key)
-  store i32 0, ptr %key, align 4
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @event_loss_counter, ptr %key)
-  %map_lookup_cond = icmp ne ptr %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
-
-counter_merge:                                    ; preds = %lookup_merge, %lookup_join_merge
-  br label %failure_callback
-
-lookup_success:                                   ; preds = %event_loss_counter
-  %56 = atomicrmw add ptr %lookup_elem, i64 1 seq_cst, align 8
-  br label %lookup_merge
-
-lookup_failure:                                   ; preds = %event_loss_counter
-  br label %lookup_merge
-
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %key)
+  %56 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
+
+counter_merge:                                    ; preds = %event_loss_counter, %lookup_join_merge
+  br label %failure_callback
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -173,8 +157,8 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
-!llvm.dbg.cu = !{!56}
-!llvm.module.flags = !{!58, !59}
+!llvm.dbg.cu = !{!47}
+!llvm.module.flags = !{!49, !50}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -222,23 +206,14 @@ attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !43 = !DISubrange(count: 262144, lowerBound: 0)
 !44 = !DIGlobalVariableExpression(var: !45, expr: !DIExpression())
 !45 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
-!46 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !47)
-!47 = !{!48, !17, !22, !53}
-!48 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !49, size: 64)
-!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !50, size: 64)
-!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !14, size: 64, elements: !51)
-!51 = !{!52}
-!52 = !DISubrange(count: 2, lowerBound: 0)
-!53 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !54, size: 64, offset: 192)
-!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !55, size: 64)
-!55 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!56 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !57)
-!57 = !{!0, !7, !30, !44}
-!58 = !{i32 2, !"Debug Info Version", i32 3}
-!59 = !{i32 7, !"uwtable", i32 0}
-!60 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !61, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !56, retainedNodes: !64)
-!61 = !DISubroutineType(types: !62)
-!62 = !{!55, !63}
-!63 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!64 = !{!65}
-!65 = !DILocalVariable(name: "ctx", arg: 1, scope: !60, file: !2, type: !63)
+!46 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
+!48 = !{!0, !7, !30, !44}
+!49 = !{i32 2, !"Debug Info Version", i32 3}
+!50 = !{i32 7, !"uwtable", i32 0}
+!51 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
+!52 = !DISubroutineType(types: !53)
+!53 = !{!46, !54}
+!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!55 = !{!56}
+!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
