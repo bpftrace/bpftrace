@@ -4,8 +4,37 @@
  *		For Linux, uses bpftrace and eBPF.
  *
  * Written as a basic example of counting on an event.
- *
- * USAGE: pidpersec.bt
+ * 
+ * Example of usage:
+ * 
+ * # ./pidpersec.bt
+ * Attaching 4 probes...
+ * Tracing new processes... Hit Ctrl-C to end.
+ * 22:29:50 PIDs/sec: @: 121
+ * 22:29:51 PIDs/sec: @: 120
+ * 22:29:52 PIDs/sec: @: 122
+ * 22:29:53 PIDs/sec: @: 124
+ * ^C
+ * 
+ * The output begins by showing a rate of new processes over 120 per second.
+ * 
+ * 
+ * The following example shows a Linux build launched at 6:33:40, on a 36 CPU
+ * server, with make -j36:
+ * 
+ * # ./pidpersec.bt
+ * Attaching 4 probes...
+ * Tracing new processes... Hit Ctrl-C to end.
+ * 06:33:38 PIDs/sec:
+ * 06:33:39 PIDs/sec:
+ * 06:33:40 PIDs/sec: @: 2314
+ * 06:33:41 PIDs/sec: @: 2517
+ * 06:33:42 PIDs/sec: @: 1345
+ * 06:33:43 PIDs/sec: @: 1752
+ * 
+ * A Linux kernel build involves launched many thousands of short-lived processes,
+ * which can be seen in the above output: a rate of over 1,000 processes per
+ * second.
  *
  * This is a bpftrace version of the bcc tool of the same name.
  *
