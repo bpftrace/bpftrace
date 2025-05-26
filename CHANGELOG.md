@@ -83,7 +83,7 @@ and this project adheres to
 #### Docs
 #### Tools
 - Remove tools example usage txt files and move info. to comments
-  - [4187](https://github.com/bpftrace/bpftrace/pull/4187)
+  - [#4187](https://github.com/bpftrace/bpftrace/pull/4187)
 - Fix biosnoop.bt to print comm from block_io_start probe
   - [#4013](https://github.com/bpftrace/bpftrace/pull/4013)
 
