@@ -1,21 +1,22 @@
 .TH killsnoop.bt 8  "2018-09-07" "USER COMMANDS"
 .SH NAME
-killsnoop.bt \- Trace signals issued by the kill() syscall. Uses bpftrace/eBPF.
+killsnoop.bt \- Trace signals issued by the kill(),tkill(),tgkill() syscall.
+Uses bpftrace/eBPF.
 .SH SYNOPSIS
 .B killsnoop.bt
 .SH DESCRIPTION
-killsnoop traces the kill() syscall, to show signals sent via this method. This
-may be useful to troubleshoot failing applications, where an unknown mechanism
-is sending signals.
+killsnoop traces the kill(),tkill(),tgkill() syscall, to show signals sent via
+this method. This may be useful to troubleshoot failing applications, where an
+unknown mechanism is sending signals.
 
-This works by tracing the kill() syscall tracepoints.
+This works by tracing the kill(),tkill(),tgkill() syscall tracepoints.
 
 Since this uses BPF, only the root user can use this tool.
 .SH REQUIREMENTS
 CONFIG_BPF and bpftrace.
 .SH EXAMPLES
 .TP
-Trace all kill() syscalls:
+Trace all kill(),tkill(),tgkill() syscalls:
 #
 .B killsnoop.bt
 .SH FIELDS
@@ -41,8 +42,8 @@ Result. 0 == success, a negative value (of the error code) for failure.
 This traces the kernel kill function and prints output for each event. As the
 rate of this is generally expected to be low (< 100/s), the overhead is also
 expected to be negligible. If you have an application that is calling a very
-high rate of kill()s for some reason, then test and understand overhead before
-use.
+high rate of kill()|tkill()|tgkill()s for some reason, then test and understand
+overhead before use.
 .SH SOURCE
 This is from bpftrace.
 .IP
