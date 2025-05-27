@@ -162,6 +162,10 @@ public:
   SizedType(Type type, size_t size_) : type_(type), size_bits_(size_ * 8)
   {
   }
+  SizedType(Type type, size_t size_, AddrSpace as)
+      : type_(type), size_bits_(size_ * 8), as_(as)
+  {
+  }
 
   StackType stack_type;
   int funcarg_idx = -1;

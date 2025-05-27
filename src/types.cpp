@@ -307,7 +307,7 @@ SizedType CreateEnum(size_t bits, const std::string &name)
 
 SizedType CreateString(size_t size)
 {
-  return { Type::string, size };
+  return { Type::string, size, AddrSpace::kernel };
 }
 
 SizedType CreateNone()
@@ -375,7 +375,8 @@ SizedType CreateStack(bool kernel, StackType stack)
   // These sizes are based on the stack key (see
   // IRBuilderBPF::GetStackStructType) but include struct padding
   auto st = SizedType(kernel ? Type::kstack_t : Type::ustack_t,
-                      kernel ? 16 : 24);
+                      kernel ? 16 : 24,
+                      AddrSpace::kernel);
   st.stack_type = stack;
   return st;
 }
@@ -417,7 +418,7 @@ SizedType CreateUsername()
 
 SizedType CreateInet(size_t size)
 {
-  auto st = SizedType(Type::inet, size);
+  auto st = SizedType(Type::inet, size, AddrSpace::kernel);
   st.is_internal = true;
   return st;
 }
@@ -434,7 +435,7 @@ SizedType CreateHist()
 
 SizedType CreateUSym()
 {
-  return { Type::usym_t, 16 };
+  return { Type::usym_t, 16, AddrSpace::kernel };
 }
 
 SizedType CreateKSym()
@@ -445,31 +446,33 @@ SizedType CreateKSym()
 SizedType CreateBuffer(size_t size)
 {
   auto metadata_headroom_bytes = sizeof(AsyncEvent::Buf);
-  return { Type::buffer, size + metadata_headroom_bytes };
+  // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
+  // The result of buf is copied to bpf stack. Hence kernel probe read
+  return { Type::buffer, size + metadata_headroom_bytes, AddrSpace::kernel };
 }
 
 SizedType CreateTimestamp()
 {
-  return { Type::timestamp, 16 };
+  return { Type::timestamp, 16, AddrSpace::kernel };
 }
 
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 {
-  auto s = SizedType(Type::tuple, tuple->size);
+  auto s = SizedType(Type::tuple, tuple->size, AddrSpace::kernel);
   s.inner_struct_ = std::move(tuple);
   return s;
 }
 
 SizedType CreateMacAddress()
 {
-  auto st = SizedType(Type::mac_address, 6);
+  auto st = SizedType(Type::mac_address, 6, AddrSpace::kernel);
   st.is_internal = true;
   return st;
 }
 
 SizedType CreateCgroupPath()
 {
-  return { Type::cgroup_path_t, 16 };
+  return { Type::cgroup_path_t, 16, AddrSpace::kernel };
 }
 
 SizedType CreateStrerror()

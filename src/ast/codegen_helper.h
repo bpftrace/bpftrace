@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/ast.h"
+#include "log.h"
 
 namespace bpftrace::ast {
 
@@ -25,11 +26,6 @@ inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
 inline bool inBpfMemory(const SizedType &type)
 {
   return type.is_internal || shouldBeInBpfMemoryAlready(type);
-}
-
-inline AddrSpace find_addrspace_stack(const SizedType &ty)
-{
-  return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
 }
 
 bool needAssignMapStatementAllocation(const AssignMapStatement &assignment);
