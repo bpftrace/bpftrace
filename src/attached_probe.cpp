@@ -907,8 +907,8 @@ int AttachedProbe::usdt_sem_up_manual_addsem(int pid,
   return err;
 }
 
-int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
-                               [[maybe_unused]] int pid,
+int AttachedProbe::usdt_sem_up(BPFfeature &feature,
+                               int pid,
                                const std::string &fn_name,
                                void *ctx)
 {
