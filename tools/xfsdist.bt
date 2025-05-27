@@ -14,11 +14,7 @@
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of xfsdist, the Linux bpftrace/eBPF version.
- * 
- * 
- * xfsdist traces XFS reads, writes, opens, and fsyncs, and summarizes their
- * latency as a power-of-2 histogram. For example:
+ * Example of usage:
  * 
  * # xfsdist.bt
  * Attaching 9 probes...
@@ -74,7 +70,6 @@
  * getattr()) are not traced.
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides command line options to customize the output.
  * 
  */

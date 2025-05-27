@@ -13,11 +13,7 @@
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of opensnoop, the Linux bpftrace/eBPF version.
- * 
- * 
- * opensnoop traces the open() syscall system-wide, and prints various details.
- * Example output:
+ * Example of usage:
  * 
  * # ./opensnoop.bt
  * Attaching 3 probes...
@@ -62,7 +58,6 @@
  * during application startup.
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides command line options to customize the output.
  * 
  */

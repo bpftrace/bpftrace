@@ -13,10 +13,7 @@
  *
  * 06-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of vfscount, the Linux bpftrace/eBPF version.
- * 
- * 
- * Tracing all VFS calls:
+ * Example of usage:
  * 
  * # ./vfscount.bt
  * Attaching 54 probes...
@@ -48,10 +45,7 @@
  * kprobe:vfs_dedupe_get_page.isra.21": these are not currently instrumentable by
  * bpftrace/kprobes, so a warning is printed to let you know that they will be
  * missed.
- * 
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
- * 
+ *
  */
 
 BEGIN

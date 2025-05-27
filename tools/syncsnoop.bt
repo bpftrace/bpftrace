@@ -13,10 +13,7 @@
  *
  * 06-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of syncsnoop, the Linux bpftrace/eBPF version.
- * 
- * 
- * Tracing file system sync events:
+ * Example of usage:
  * 
  * # ./syncsnoop.bt
  * Attaching 7 probes...
@@ -27,9 +24,6 @@
  * 
  * The output shows calls to the sync() syscall (traced via its tracepoint),
  * along with various details.
- * 
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * 
  */
 

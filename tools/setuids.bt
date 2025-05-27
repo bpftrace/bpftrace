@@ -11,12 +11,7 @@
  *
  * 26-Feb-2019  Brendan Gregg   Created this.
  * 
- * Demonstrations of setuids, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool traces privilege escalation via setuid syscalls (setuid(2),
- * setfsuid(2), retresuid(2)). For example, here are the setuid calls during an
- * ssh login:
+ * Example of usage:
  * 
  * # ./setuids.bt
  * Attaching 7 probes...

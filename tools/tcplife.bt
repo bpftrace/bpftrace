@@ -11,12 +11,7 @@
  *
  * 17-Apr-2019  Brendan Gregg   Created this.
  * 
- * Demonstrations of tcplife, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool shows the lifespan of TCP sessions, including througphut statistics,
- * and for efficiency only instruments TCP state changes (rather than all packets).
- * For example:
+ * Example of usage:
  * 
  * # ./tcplife.bt
  * PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS

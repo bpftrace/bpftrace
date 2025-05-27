@@ -14,12 +14,7 @@
 
  * 23-Nov-2018	Dale Hamel	created this.
  * 
- * Demonstrations of tcpaccept, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool traces the kernel function accepting TCP socket connections (eg, a
- * passive connection via accept(); not connect()). Some example output (IP
- * addresses changed to protect the innocent):
+ * Example of usage:
  * 
  * # ./tcpaccept.bt
  * Tracing tcp accepts. Hit Ctrl-C to end.
@@ -40,12 +35,6 @@
  * 
  * This tool only traces successful TCP accept()s. Connection attempts to closed
  * ports will not be shown (those can be traced via other functions).
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
- * 
- * USAGE message:
- * 
- * # ./tcpaccept.bt
  * 
  */
 

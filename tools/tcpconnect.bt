@@ -16,12 +16,7 @@
  *
  * 23-Nov-2018	Dale Hamel	created this.
  * 
- * Demonstrations of tcpconnect, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool traces the kernel function performing active TCP connections
- * (eg, via a connect() syscall; accept() are passive connections). Some example
- * output (IP addresses changed to protect the innocent):
+ * Example of usage:
  * 
  * # ./tcpconnect.bt
  * TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
@@ -38,10 +33,6 @@
  * The overhead of this tool should be negligible, since it is only tracing the
  * kernel functions performing connect. It is not tracing every packet and then
  * filtering.
- * 
- * USAGE message:
- * 
- * # ./tcpconnect.bt
  * 
  */
 

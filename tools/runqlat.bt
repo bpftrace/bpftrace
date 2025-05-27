@@ -9,12 +9,7 @@
  *
  * 17-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of runqlat, the Linux BPF/bpftrace version.
- * 
- * 
- * This traces time spent waiting in the CPU scheduler for a turn on-CPU. This
- * metric is often called run queue latency, or scheduler latency. This tool shows
- * this latency as a power-of-2 histogram in nanoseconds. For example:
+ * Example of usage:
  * 
  * # ./runqlat.bt
  * Attaching 5 probes...
@@ -167,7 +162,6 @@
  * largest mode between 32 and 64 milliseconds.
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides options to customize the output.
  * 
  */

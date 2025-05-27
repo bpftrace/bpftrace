@@ -9,13 +9,7 @@
  * published by Addison Wesley. ISBN-13: 9780136554820
  * When copying or porting, include this comment.
  *
- * Demonstrations of biostacks, the Linux BCC/eBPF version.
- * 
- * 
- * This tool shows block I/O latency as a histogram, with the kernel stack trace
- * that initiated the I/O. This can help explain disk I/O that is not directly
- * requested by applications (eg, metadata reads on writes, resilvering, etc).
- * For example:
+ * Example of usage:
  * 
  * # ./biostacks.bt
  * Attaching 5 probes...

@@ -15,12 +15,7 @@
  *
  * 10-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of loads, the Linux bpftrace/eBPF version.
- * 
- * 
- * This is a simple tool that prints the system load averages, to three decimal
- * places each (not that it really matters), as a demonstration of fetching
- * kernel structures from bpftrace:
+ * Example of usage:
  * 
  * # ./loads.bt
  * Attaching 2 probes...
@@ -40,7 +35,7 @@
  *  21:29:24 up 2 days, 18:57,  3 users,  load average: 2.16, 2.06, 1.95
  * 
  * 
- * For more on load averages, see my post:
+ * For more on load averages, see the post:
  * http://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
  * 
  */

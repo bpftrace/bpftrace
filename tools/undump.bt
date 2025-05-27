@@ -13,10 +13,7 @@
  *
  * 22-May-2022	Rong Tao	Created this.
  * 
- * Demonstrations of undump.bt, the Linux eBPF/bpftrace version.
- * 
- * This example trace the kernel function performing receive AP_UNIX socket
- * packet. Some example output:
+ * Example of usage:
  * 
  * Terminal 1, UNIX Socket Server:
  * 
@@ -47,8 +44,7 @@
  * 20:40:14 nc               139071   7        123abc\x0a
  * ^C
  * ```
- * 
- * 
+ *
  */
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/skbuff.h>

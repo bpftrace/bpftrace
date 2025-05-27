@@ -18,11 +18,7 @@
  * 23-Nov-2018	Dale Hamel	created this.
  * 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
  * 
- * Demonstrations of tcpdrop, the Linux bpftrace/eBPF version.
- * 
- * 
- * tcpdrop prints details of TCP packets or segments that were dropped by the
- * kernel, including the kernel stack trace that led to the drop:
+ * Example of usage:
  * 
  * # ./tcpdrop.bt
  * TIME     PID      COMM             SADDR:SPORT           DADDR:DPORT           STATE
@@ -62,11 +58,7 @@
  * 
  * This tool is useful for debugging high rates of drops, which can cause the
  * remote end to do timer-based retransmits, hurting performance.
- * 
- * USAGE:
- * 
- * # ./tcpdrop.bt
- * 
+ *
  */
 
 #ifndef BPFTRACE_HAVE_BTF

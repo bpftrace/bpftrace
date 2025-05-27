@@ -15,11 +15,7 @@
  *
  * 23-Nov-2018  Dale Hamel      created this.
  * 
- * Demonstrations of tcpretrans, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool traces the kernel TCP retransmit function to show details of these
- * retransmits. For example:
+ * Example of usage:
  * 
  * # ./tcpretrans.bt
  * TIME     PID               LADDR:LPORT           RADDR:RPORT  STATE
@@ -39,11 +35,7 @@
  * low overhead, as it only traces the retransmit function. It also prints
  * additional kernel details: the state of the TCP session at the time of the
  * retransmit.
- * 
- * USAGE message:
- * 
- * # ./tcpretrans.bt
- * 
+ *
  */
 
 #ifndef BPFTRACE_HAVE_BTF

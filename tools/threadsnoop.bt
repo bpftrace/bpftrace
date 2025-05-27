@@ -11,10 +11,7 @@
  *
  * 15-Feb-2019  Brendan Gregg   Created this.
  * 
- * Demonstrations of threadsnoop, the Linux bpftrace/eBPF version.
- * 
- * 
- * Tracing new threads via phtread_create():
+ * Example of usage:
  * 
  * # ./threadsnoop.bt
  * Attaching 2 probes...

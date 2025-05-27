@@ -11,11 +11,7 @@
  *
  * 07-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of bitesize, the Linux bpftrace/eBPF version.
- * 
- * 
- * This traces disk I/O via the block I/O interface, and prints a summary of I/O
- * sizes as histograms for each process name. For example:
+ * Example of usage:
  * 
  * # ./bitesize.bt
  * Attaching 3 probes...
@@ -67,9 +63,6 @@
  * 
  * The most active process while tracing was "dd", which issues 921 I/O between
  * 16 Kbytes and 32 Kbytes in size.
- * 
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * 
  */
 

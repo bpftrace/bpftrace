@@ -18,11 +18,7 @@
  *
  * 07-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of oomkill, the Linux bpftrace/eBPF version.
- * 
- * 
- * oomkill is a simple program that traces the Linux out-of-memory (OOM) killer,
- * and shows basic details on one line per OOM kill:
+ * Example of usage:
  * 
  * # ./oomkill.bt
  * Tracing oom_kill_process()... Ctrl-C to end.

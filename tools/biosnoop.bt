@@ -7,11 +7,7 @@
  *
  * This is a bpftrace version of the bcc tool of the same name.
  * 
- * Demonstrations of biosnoop, the Linux BPF/bpftrace version.
- * 
- * 
- * This traces block I/O, and shows the issuing process (at least, the process
- * that was on-CPU at the time of queue insert) and the latency of the I/O:
+ * Example of usage:
  * 
  * # ./biosnoop.bt
  * Attaching 4 probes...
@@ -54,7 +50,6 @@
  * [...]
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides more fields.
  * 
  */

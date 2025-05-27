@@ -13,12 +13,7 @@
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of dcsnoop, the Linux bpftrace/eBPF version.
- * 
- * 
- * dcsnoop traces directory entry cache (dcache) lookups, and can be used for
- * further investigation beyond dcstat(8). The output is likely verbose, as
- * dcache lookups are likely frequent. For example:
+ * Example of usage:
  * 
  * # ./dcsnoop.bt
  * Attaching 4 probes...

@@ -12,11 +12,7 @@
  * 26-Jan-2019  Brendan Gregg   Created this.
  * 31-May-2024  Rong Tao        Add folio support.
  * 
- * Demonstrations of swapin, the Linux BCC/eBPF version.
- * 
- * 
- * This tool counts swapins by process, to show which process is affected by
- * swapping. For example:
+ * Example of usage:
  * 
  * # ./swapin.bt
  * Attaching 2 probes...

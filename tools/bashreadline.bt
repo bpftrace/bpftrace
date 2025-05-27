@@ -13,11 +13,7 @@
  *
  * 06-Sep-2018	Brendan Gregg	Created this.
  *
- * Demonstrations of bashreadline, the Linux bpftrace/eBPF version.
- * 
- * 
- * This prints bash commands from all running bash shells on the system. For
- * example:
+ * Example of usage:
  * 
  * # ./bashreadline.bt
  * Attaching 2 probes...
@@ -31,12 +27,6 @@
  * 
  * The entered command may fail. This is just showing what command lines were
  * entered interactively for bash to process.
- * 
- * It works by tracing the return of the readline() function using uprobes
- * (specifically a uretprobe).
- * 
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  *
  */
 

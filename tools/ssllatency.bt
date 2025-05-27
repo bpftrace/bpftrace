@@ -9,12 +9,7 @@
  *
  * 17-Dec-2021	Tao Xu	created this.
  * 
- * Demonstrations of ssllatency, the Linux bpftrace/eBPF version.
- * 
- * ssllatency traces OpenSSL handshake functions. It's the statistical summary
- * version of sslsnoop. This is useful for performance analysis with different
- * crypto algorithms or async SSL acceleration by CPU or offload device.
- * For example:
+ * Example of usage:
  * 
  * # wrk -t 1 -c 10 -d 1s -H 'Connection: close' https://localhost:443/0kb.bin
  * Running 1s test @ https://localhost:443/0kb.bin

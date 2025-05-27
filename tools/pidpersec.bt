@@ -13,10 +13,7 @@
  *
  * 06-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of pidpersec, the Linux bpftrace/eBPF version.
- * 
- * 
- * Tracing new processes:
+ * Example of usage:
  * 
  * # ./pidpersec.bt
  * Attaching 4 probes...
@@ -67,9 +64,6 @@
  * A Linux kernel build involves launched many thousands of short-lived processes,
  * which can be seen in the above output: a rate of over 1,000 processes per
  * second.
- * 
- * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * 
  */
 

@@ -11,11 +11,7 @@
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of capable, the Linux bpftrace/eBPF version.
- * 
- * 
- * capable traces calls to the kernel cap_capable() function, which does security
- * capability checks, and prints details for each call. For example:
+ * Example of usage:
  * 
  * # ./capable.bt
  * TIME      UID    PID    COMM             CAP  NAME                 AUDIT
@@ -58,7 +54,6 @@
  * page and the kernel source.
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides options to customize the output.
  * 
  */

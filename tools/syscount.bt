@@ -11,11 +11,7 @@
  *
  * 13-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of syscount, the Linux bpftrace/eBPF version.
- * 
- * 
- * syscount counts system calls, and prints summaries of the top ten syscall IDs,
- * and the top ten process names making syscalls. For example:
+ * Example of usage:
  * 
  * # ./syscount.bt
  * Attaching 3 probes...
@@ -50,9 +46,7 @@
  * highest syscall ID was 4, which is stat().
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
- * The bcc version provides different command line options, and translates the
- * syscall IDs to their syscall names.
+ * The bcc version provides different command line options.
  * 
  */
 

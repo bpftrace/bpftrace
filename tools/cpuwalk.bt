@@ -11,11 +11,7 @@
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of cpuwalk, the Linux bpftrace/eBPF version.
- * 
- * 
- * cpuwalk samples which CPUs processes are running on, and prints a summary
- * histogram. For example, here is a Linux kernel build on a 36-CPU server:
+ * Example of usage:
  * 
  * # ./cpuwalk.bt
  * Attaching 2 probes...

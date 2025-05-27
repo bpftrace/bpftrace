@@ -14,10 +14,7 @@
  * 15-Nov-2017	Brendan Gregg	Created this.
  * 11-Sep-2018	   "     "	Switched to use join().
  * 
- * Demonstrations of execsnoop, the Linux BPF/bpftrace version.
- * 
- * 
- * Tracing all new process execution (via exec()):
+ * Example of usage:
  * 
  * # ./execsnoop.bt
  * Attaching 3 probes...
@@ -48,7 +45,6 @@
  * causing performance issues such as latency perturbations.
  * 
  * 
- * There is another version of this tool in bcc: https://github.com/iovisor/bcc
  * The bcc version provides more fields and command line options.
  * 
  */

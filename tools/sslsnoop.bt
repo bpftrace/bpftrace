@@ -10,10 +10,7 @@
  *
  * 15-Dec-2021	Tao Xu	created this.
  * 
- * Demonstrations of sslsnoop, the Linux bpftrace/eBPF version.
- * 
- * sslsnoop shows OpenSSL handshake function latency and return value. This
- * can be used to analyzea SSL/TLS performance. For example:
+ * Example of usage:
  * 
  * # ./sslsnoop.bt
  * Attaching 25 probes...

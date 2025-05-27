@@ -17,12 +17,7 @@
  *
  * 14-Sep-2018	Brendan Gregg	Created this.
  * 
- * Demonstrations of writeback, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool traces when the kernel writeback procedure is writing dirtied pages
- * to disk, and shows details such as the time, device numbers, reason for the
- * write back, and the duration. For example:
+ * Example of usage:
  * 
  * # ./writeback.bt
  * Attaching 4 probes...

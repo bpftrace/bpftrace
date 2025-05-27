@@ -11,13 +11,7 @@
  *
  * 19-Apr-2019  Brendan Gregg   Created this.
  * 
- * Demonstrations of tcpsynbl, the Linux bpftrace/eBPF version.
- * 
- * 
- * This tool shows the TCP SYN backlog size during SYN arrival as a histogram.
- * This lets you see how close your applications are to hitting the backlog limit
- * and dropping SYNs (causing performance issues with SYN retransmits). For
- * example:
+ * Example of usage:
  * 
  * # ./tcpsynbl.bt
  * Attaching 4 probes...
