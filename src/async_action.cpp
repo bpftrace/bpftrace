@@ -3,6 +3,7 @@
 
 #include "ast/async_event_types.h"
 #include "async_action.h"
+#include "attached_probe.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "util/exceptions.h"
