@@ -83,6 +83,8 @@ and this project adheres to
   - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
 - Fix execution watchpoints
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
+- Fix incorrect reporting of attached count for multi probes
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Security
 #### Docs
 #### Tools

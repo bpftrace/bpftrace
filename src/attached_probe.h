@@ -45,6 +45,10 @@ public:
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
   virtual int link_fd();
+  virtual size_t probe_count() const
+  {
+    return 1;
+  }
 
   const Probe &probe() const
   {
@@ -53,9 +57,9 @@ public:
 
 protected:
   AttachedProbe(const Probe &probe, int progfd);
+  const Probe &probe_;
 
 private:
-  const Probe &probe_;
   const int progfd_;
 };
 

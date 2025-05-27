@@ -876,7 +876,11 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
-  size_t num_attached = attached_probes_.size();
+  size_t num_attached = 0;
+
+  for (auto &ap : attached_probes_) {
+    num_attached += ap->probe_count();
+  }
 
   auto total_attached = num_attached + num_special_attached;
 
