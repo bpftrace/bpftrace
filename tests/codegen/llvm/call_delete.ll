@@ -30,6 +30,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
   store i64 1, ptr %"@x_key1", align 8
   %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %"@x_key1")
+  %delete_ret = icmp eq i64 %delete_elem, 0
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
   ret i64 0
 }

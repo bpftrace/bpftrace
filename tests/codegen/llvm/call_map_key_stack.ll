@@ -86,6 +86,7 @@ lookup_merge4:                                    ; preds = %lookup_failure3, %l
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key11")
   store i64 1, ptr %"@x_key11", align 8
   %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %"@x_key11")
+  %delete_ret = icmp eq i64 %delete_elem, 0
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key11")
   ret i64 0
 }

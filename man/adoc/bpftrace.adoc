@@ -3457,12 +3457,29 @@ interval:s:10 {
 === delete
 
 .variants
-* `void delete(map m, mapkey k)`
-* deprecated `void delete(mapkey k)`
+* `bool delete(map m, mapkey k)`
+* deprecated `bool delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
+
+If deletion fails (e.g. the key doesn't exist) the function returns false (0).
+Additionally, if the return value for `delete` is discarded, and deletion fails, you will get a warning.
+
+```
+@a[1] = 1;
+
+delete(@a, 1); // no warning (the key exists)
+
+if (delete(@a, 2)) { // no warning (return value is used)
+  ...
+}
+
+$did_delete = delete(@a, 2); // no warning (return value is used)
+
+delete(@a, 2); // warning (return value is discarded and the key doesn't exist)
+```
 
 The, now deprecated, API (supported in version <= 0.21.x) of passing map arguments with the key is still supported:
 e.g. `delete(@mymap[3, "hello"]);`.

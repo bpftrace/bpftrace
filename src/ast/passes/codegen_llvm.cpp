@@ -1093,10 +1093,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                                    call.loc);
       b_.CreateStore(Constant::getNullValue(b_.GetType(map.value_type)), val);
       b_.CreateMapUpdateElem(map.ident, scoped_key.value(), val, call.loc);
-      return ScopedExpr();
+      // Assume delete for these kinds of maps always succeeds.
+      Value *expr = b_.getInt8(1);
+      return ScopedExpr(expr);
     } else {
-      b_.CreateMapDeleteElem(map, scoped_key.value(), call.loc);
-      return ScopedExpr();
+      Value *ret = b_.CreateMapDeleteElem(
+          map, scoped_key.value(), call.ret_val_discarded, call.loc);
+      Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
+      return ScopedExpr(expr);
     }
   } else if (call.func == "has_key") {
     auto &arg = call.vargs.at(0);
