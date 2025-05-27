@@ -6,6 +6,7 @@
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
+#include <filesystem>
 #include <iostream>
 #include <linux/hw_breakpoint.h>
 #include <linux/limits.h>
@@ -512,8 +513,14 @@ Result<std::function<void()>> usdt_sem_up(Probe &probe,
   bcc_usdt_close(ctx);
 
   // Set destructor to decrement the semaphore count
-  return [pid, addsem]() {
-    void *c = bcc_usdt_new_frompid(pid, nullptr);
+  return [pid, probe, addsem]() {
+    void *c = nullptr;
+    if (!probe.path.empty()) {
+      auto real_path = std::filesystem::absolute(probe.path).string();
+      c = bcc_usdt_new_frompid(pid, real_path.c_str());
+    } else {
+      c = bcc_usdt_new_frompid(pid, nullptr);
+    }
     if (!c)
       return;
 
@@ -868,8 +875,12 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
   std::string fn_name = "probe_" + probe.attach_point + "_1";
 
   if (pid.has_value()) {
-    // FIXME when iovisor/bcc#2064 is merged, optionally pass probe_.path
-    ctx = bcc_usdt_new_frompid(*pid, nullptr);
+    if (!probe.path.empty()) {
+      auto real_path = std::filesystem::absolute(probe.path).string();
+      ctx = bcc_usdt_new_frompid(*pid, real_path.c_str());
+    } else {
+      ctx = bcc_usdt_new_frompid(*pid, nullptr);
+    }
     if (!ctx) {
       return make_error<AttachError>(
           "Error initializing context for probe: " + probe.name +
