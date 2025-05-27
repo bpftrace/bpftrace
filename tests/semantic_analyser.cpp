@@ -3901,6 +3901,14 @@ struct Foo { struct Bar { int a; } bar; }               BEGIN { @x = offsetof(st
   test("BEGIN { @x = offsetof(struct __notexiststruct__, x.y.z); }", 1);
 }
 
+TEST(semantic_analyser, call_task_from_pid)
+{
+  test("tracepoint:syscalls:sys_enter_kill {"
+       " $task = task_from_pid(1);"
+       " if ($task) { task_release($task); }"
+       "}");
+}
+
 TEST(semantic_analyser, int_ident)
 {
   test("BEGIN { sizeof(int32) }");

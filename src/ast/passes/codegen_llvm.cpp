@@ -1762,6 +1762,34 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *ret = b_.CreateSkbOutput(
         scoped_skb.value(), len, data, getStructSize(hdr_t));
     return ScopedExpr(ret);
+  } else if (call.func == "task_from_pid") {
+    auto &arg = call.vargs.at(0);
+    auto scoped_arg = visit(arg);
+
+    assert(arg.type().IsIntegerTy());
+
+    if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_task_from_pid)) {
+      return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_task_from_pid,
+                                             { scoped_arg.value() },
+                                             "task_from_pid",
+                                             call));
+    } else {
+      LOG(ERROR) << "kernel not support bpf_task_from_pid()!";
+    }
+  } else if (call.func == "task_release") {
+    auto &arg = call.vargs.at(0);
+    auto scoped_arg = visit(arg);
+
+    assert(arg.type().IsPtrTy());
+
+    if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_task_release)) {
+      return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_task_release,
+                                             { scoped_arg.value() },
+                                             "task_release",
+                                             call));
+    } else {
+      LOG(ERROR) << "kernel not support bpf_task_release()!";
+    }
   } else if (call.func == "nsecs") {
     if (call.return_type.ts_mode == TimestampMode::sw_tai) {
       if (!bpftrace_.delta_taitime_.has_value())
@@ -4760,10 +4788,14 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
     }
   }
 
-  FunctionType *func_type = FunctionType::get(
-      b_.GetType(func_struct->GetField(RETVAL_FIELD_NAME).type, false),
-      args,
-      false);
+  SizedType rettype = func_struct->GetField(RETVAL_FIELD_NAME).type;
+  // kfunc maybe return void
+  if (rettype.IsNoneTy())
+    rettype = CreateVoid();
+
+  FunctionType *func_type = FunctionType::get(b_.GetType(rettype, false),
+                                              args,
+                                              false);
 
   auto *fun = llvm::Function::Create(func_type,
                                      llvm::GlobalValue::ExternalWeakLinkage,
@@ -4773,8 +4805,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
   fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
   fun->addFnAttr(Attribute::NoUnwind);
 
-  debug_.createFunctionDebugInfo(
-      *fun, func_struct->GetField(RETVAL_FIELD_NAME).type, debug_args, true);
+  debug_.createFunctionDebugInfo(*fun, rettype, debug_args, true);
 
   return fun;
 }

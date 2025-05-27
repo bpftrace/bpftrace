@@ -554,6 +554,14 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         map_type_spec{},
       } } },
+  { "task_from_pid",
+    { .min_args=1,
+      .max_args=1,
+    } },
+  { "task_release",
+    { .min_args=1,
+      .max_args=1,
+    } },
 };
 // clang-format on
 
@@ -1703,6 +1711,29 @@ If you're seeing errors, try clamping the string sizes. For example:
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
     }
+  } else if (call.func == "task_from_pid") {
+    auto &arg = call.vargs.at(0);
+    if (!arg.type().IsIntTy()) {
+      call.addError() << call.func << "() only supports integer arguments ("
+                      << arg.type().GetTy() << " provided)";
+      return;
+    }
+
+    if (bpftrace_.has_btf_data())
+      bpftrace_.btf_->get_stype("struct task_struct");
+
+    call.return_type = CreatePointer(CreateRecord("struct task_struct",
+                                                  bpftrace_.structs.Lookup(
+                                                      "struct task_struct")),
+                                     AddrSpace::kernel);
+  } else if (call.func == "task_release") {
+    auto &arg = call.vargs.at(0);
+    if (!arg.type().IsPtrTy()) {
+      call.addError() << call.func << "() only supports struct task_struct * ("
+                      << arg.type().GetTy() << " provided)";
+      return;
+    }
+    call.return_type = CreateVoid();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
   }

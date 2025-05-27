@@ -285,6 +285,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
                                                           emit_codegen_types),
                                                   64);
 
+  if (stype.IsVoidTy())
+    return createUnspecifiedType("void");
+
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {
     case 8:
