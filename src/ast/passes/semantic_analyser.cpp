@@ -725,8 +725,6 @@ void SemanticAnalyser::visit(String &string)
     string.addError() << "String is too long (over " << str_len
                       << " bytes): " << string.value;
   }
-  // @a = buf("hi", 2). String allocated on bpf stack. See codegen
-  string.string_type.SetAS(AddrSpace::kernel);
 }
 
 void SemanticAnalyser::visit(Identifier &identifier)
@@ -946,9 +944,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "comm") {
     constexpr int COMM_SIZE = 16;
     builtin.builtin_type = CreateString(COMM_SIZE);
-    // comm allocated in the bpf stack. See codegen
-    // Case: @=comm and strncmp(@, "name")
-    builtin.builtin_type.SetAS(AddrSpace::kernel);
   } else if (builtin.ident == "func") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
@@ -1257,7 +1252,6 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.return_type = CreateString(strlen);
-    call.return_type.SetAS(AddrSpace::kernel);
   } else if (call.func == "buf") {
     const uint64_t max_strlen = bpftrace_.config_->max_strlen;
     if (max_strlen >
@@ -1308,9 +1302,6 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     call.return_type = CreateBuffer(buffer_size);
-    // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
-    // The result of buf is copied to bpf stack. Hence kernel probe read
-    call.return_type.SetAS(AddrSpace::kernel);
   } else if (call.func == "ksym" || call.func == "usym") {
     // allow symbol lookups on casts (eg, function pointers)
     auto &arg = call.vargs.at(0);
@@ -1621,7 +1612,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    call.return_type = SizedType(Type::string, call_type_size);
+    call.return_type = CreateString(call_type_size);
 
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
@@ -2780,7 +2771,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       }
       acc.field_type.is_internal = type.is_internal;
       acc.field_type.is_btftype = type.is_btftype;
-      acc.field_type.SetAS(acc.expr.type().GetAS());
+      if (acc.field_type.GetAS() == AddrSpace::none) {
+        acc.field_type.SetAS(acc.expr.type().GetAS());
+      }
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
       // access to the first 8 bytes results in verifier error.

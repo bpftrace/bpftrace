@@ -1193,7 +1193,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateProbeRead(buf_data_offset,
                        length,
                        scoped_expr.value(),
-                       find_addrspace_stack(arg0.type()),
+                       arg0.type().GetAS(),
                        call.loc);
 
     if (dyn_cast<AllocaInst>(buf))
