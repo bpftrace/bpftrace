@@ -537,31 +537,31 @@ public:
       BPFtrace &bpftrace);
   ~AttachedKprobeProbe() override;
 
+  int link_fd() override;
+
 private:
-  AttachedKprobeProbe(const Probe &probe,
-                      int progfd,
-                      int perf_event_fd,
-                      std::string event_name);
-  int perf_event_fd_;
-  const std::string event_name_;
+  AttachedKprobeProbe(const Probe &probe, int progfd, struct bpf_link *link);
+  struct bpf_link *link_;
 };
 
 AttachedKprobeProbe::AttachedKprobeProbe(const Probe &probe,
                                          int progfd,
-                                         int perf_event_fd,
-                                         std::string event_name)
-    : AttachedProbe(probe, progfd),
-      perf_event_fd_(perf_event_fd),
-      event_name_(std::move(event_name))
+                                         struct bpf_link *link)
+    : AttachedProbe(probe, progfd), link_(link)
 {
 }
 
 AttachedKprobeProbe::~AttachedKprobeProbe()
 {
-  if (bpf_close_perf_event_fd(perf_event_fd_))
-    LOG(WARNING) << "failed to close perf event FD for kprobe probe";
+  if (bpf_link__destroy(link_)) {
+    LOG(WARNING) << "failed to destroy link for kprobe probe: "
+                 << strerror(errno);
+  }
+}
 
-  bpf_detach_kprobe(event_name_.c_str());
+int AttachedKprobeProbe::link_fd()
+{
+  return bpf_link__fd(link_);
 }
 
 Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
@@ -601,17 +601,16 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
   if (!is_symbol_kprobe)
     funcname += probe.attach_point;
 
-  LOG(V1) << "bpf_attach_kprobe(" << prog.fd() << ", " << probe.type << ", "
-          << eventname(probe, offset) << ", " << funcname << ", " << offset
-          << ", 0)";
-  int perf_event_fd = bpf_attach_kprobe(prog.fd(),
-                                        attachtype(probe.type),
-                                        eventname(probe, offset).c_str(),
-                                        funcname.c_str(),
-                                        offset,
-                                        0);
+  struct bpf_kprobe_opts opts;
+  ::memset(&opts, 0, sizeof(opts));
+  opts.sz = sizeof(struct bpf_kprobe_opts);
+  opts.offset = offset;
+  opts.retprobe = probe.type == ProbeType::kretprobe;
 
-  if (perf_event_fd < 0) {
+  auto *link = bpf_program__attach_kprobe_opts(prog.bpf_prog(),
+                                               funcname.c_str(),
+                                               &opts);
+  if (!link) {
     if (errno == EILSEQ)
       return make_error<AttachError>(
           "Possible attachment attempt in the middle of an instruction, "
@@ -619,8 +618,8 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
     return make_error<AttachError>();
   }
 
-  return std::unique_ptr<AttachedKprobeProbe>(new AttachedKprobeProbe(
-      probe, prog.fd(), perf_event_fd, eventname(probe, 0)));
+  return std::unique_ptr<AttachedKprobeProbe>(
+      new AttachedKprobeProbe(probe, prog.fd(), link));
 }
 
 class AttachedMultiKprobeProbe : public AttachedProbe {
