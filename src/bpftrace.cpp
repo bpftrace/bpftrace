@@ -940,8 +940,8 @@ void BPFtrace::poll_output(Output &out, bool drain)
       }
     }
 
-    // print loss events
-    handle_event_loss(out);
+    // Handle lost events, if any
+    poll_event_loss(out);
 
     if (do_poll_ringbuf) {
       ready = ring_buffer__poll(ringbuf_, timeout_ms);
@@ -990,7 +990,7 @@ int BPFtrace::poll_skboutput_events()
   return ready;
 }
 
-void BPFtrace::handle_event_loss(Output &out)
+void BPFtrace::poll_event_loss(Output &out)
 {
   auto current_value = bytecode_.get_event_loss_counter(*this);
   if (current_value > event_loss_count_) {

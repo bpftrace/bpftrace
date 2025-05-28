@@ -258,7 +258,7 @@ private:
   void teardown_output();
   void poll_output(Output &out, bool drain = false);
   int poll_skboutput_events();
-  void handle_event_loss(Output &out);
+  void poll_event_loss(Output &out);
   int print_map_hist(Output &out,
                      const BpfMap &map,
                      uint32_t top,
