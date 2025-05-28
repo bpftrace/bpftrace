@@ -1571,12 +1571,6 @@ AttachedProbe::AttachedProbe(const Probe &probe) : probe_(probe)
 {
 }
 
-int AttachedProbe::link_fd()
-{
-  LOG(BUG) << "link_fd() not implemented for " << probe_.name;
-  return -1;
-}
-
 Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
     Probe &probe,
     const BpfProgram &prog,
