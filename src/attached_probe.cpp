@@ -564,6 +564,8 @@ public:
       const BpfProgram &prog);
   ~AttachedMultiKprobeProbe() override;
 
+  int link_fd() override;
+
   size_t probe_count() const override;
 
 private:
@@ -580,6 +582,11 @@ AttachedMultiKprobeProbe::AttachedMultiKprobeProbe(const Probe &probe,
 AttachedMultiKprobeProbe::~AttachedMultiKprobeProbe()
 {
   close(link_fd_);
+}
+
+int AttachedMultiKprobeProbe::link_fd()
+{
+  return link_fd_;
 }
 
 size_t AttachedMultiKprobeProbe::probe_count() const
