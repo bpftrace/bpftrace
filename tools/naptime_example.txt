@@ -4,7 +4,7 @@ Demonstrations of naptime, the Linux bpftrace/eBPF version.
 Tracing application sleeps via the nanosleep(2) syscall:
 
 # ./naptime.bt
-Attaching 2 probes...
+Attached 2 probes
 Tracing sleeps. Hit Ctrl-C to end.
 TIME     PCOMM  PPID             COMM   PID              SECONDS
 15:50:00 1      systemd          1319   mysqld           1.000

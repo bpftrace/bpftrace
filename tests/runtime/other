@@ -157,7 +157,7 @@ TIMEOUT 1
 
 NAME positional as string literal
 RUN {{BPFTRACE}} -e 'BEGIN { @ = kaddr(str($1)); exit() }' vfs_read
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME positional arg count
 RUN {{BPFTRACE}} -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exit();}' "one" 2

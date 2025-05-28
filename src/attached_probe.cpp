@@ -630,6 +630,8 @@ public:
       const BpfProgram &prog);
   ~AttachedMultiKprobeProbe() override;
 
+  size_t probe_count() const override;
+
 private:
   AttachedMultiKprobeProbe(const Probe &probe, int progfd, int link_fd);
   int link_fd_;
@@ -645,6 +647,11 @@ AttachedMultiKprobeProbe::AttachedMultiKprobeProbe(const Probe &probe,
 AttachedMultiKprobeProbe::~AttachedMultiKprobeProbe()
 {
   close(link_fd_);
+}
+
+size_t AttachedMultiKprobeProbe::probe_count() const
+{
+  return probe_.funcs.size();
 }
 
 Result<std::unique_ptr<AttachedMultiKprobeProbe>> AttachedMultiKprobeProbe::
@@ -755,6 +762,8 @@ public:
       std::optional<int> pid);
   ~AttachedMultiUprobeProbe() override;
 
+  size_t probe_count() const override;
+
 private:
   AttachedMultiUprobeProbe(const Probe &probe, int progfd, int link_fd);
   int link_fd_;
@@ -770,6 +779,11 @@ AttachedMultiUprobeProbe::AttachedMultiUprobeProbe(const Probe &probe,
 AttachedMultiUprobeProbe::~AttachedMultiUprobeProbe()
 {
   close(link_fd_);
+}
+
+size_t AttachedMultiUprobeProbe::probe_count() const
+{
+  return probe_.funcs.size();
 }
 
 #ifdef HAVE_LIBBPF_UPROBE_MULTI

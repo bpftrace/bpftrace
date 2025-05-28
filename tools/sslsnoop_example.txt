@@ -4,7 +4,7 @@ sslsnoop shows OpenSSL handshake function latency and return value. This
 can be used to analyzea SSL/TLS performance. For example:
 
 # ./sslsnoop.bt
-Attaching 25 probes...
+Attached 25 probes
 Tracing SSL/TLS handshake... Hit Ctrl-C to end.
 TIME(us)   TID      COMM     LAT(us)   RET FUNC
 1623016    2834695  openssl       71     1 ossl_ecdh_compute_key
@@ -22,7 +22,7 @@ time. Local ECDH and RSA crypto calculation is fast at client side. Most
 time is spent at server side including crypto and network latency.
 
 # ./sslsnoop.bt
-Attaching 25 probes...
+Attached 25 probes
 Tracing SSL/TLS handshake... Hit Ctrl-C to end.
 TIME(us)   TID      COMM     LAT(us)   RET FUNC
 1133960    2826460  nginx         81    -1 SSL_do_handshake

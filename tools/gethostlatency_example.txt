@@ -6,7 +6,7 @@ gethostbyname2()), and shows the PID and command performing the lookup, the
 latency (duration) of the call in milliseconds, and the host string:
 
 # ./gethostlatency.bt
-Attaching 7 probes...
+Attached 7 probes
 Tracing getaddr/gethost calls... Hit Ctrl-C to end.
 TIME      PID    COMM              LATms HOST
 02:52:05  19105  curl                 81 www.netflix.com

@@ -5,7 +5,7 @@ This prints bash commands from all running bash shells on the system. For
 example:
 
 # ./bashreadline.bt
-Attaching 2 probes...
+Attached 2 probes
 Tracing bash commands... Hit Ctrl-C to end.
 TIME      PID    COMMAND
 06:40:06  5526   df -h

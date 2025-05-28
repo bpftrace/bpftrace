@@ -33,7 +33,7 @@ $ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
 $ nix build
 $ sudo ./result/bin/bpftrace -e 'BEGIN { print("hello world!") }'
-Attaching 1 probe...
+Attached 1 probe
 hello world!
 ^C
 ```
@@ -53,7 +53,7 @@ $ nix build .#appimage
 $ ldd ./result
         not a dynamic executable
 $ sudo ./result -e 'BEGIN { print("static!"); exit() }'
-Attaching 1 probe...
+Attached 1 probe
 static!
 ```
 

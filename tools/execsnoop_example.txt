@@ -4,7 +4,7 @@ Demonstrations of execsnoop, the Linux BPF/bpftrace version.
 Tracing all new process execution (via exec()):
 
 # ./execsnoop.bt
-Attaching 3 probes...
+Attached 3 probes
 TIME            PID     PPID    ARGS
 08:57:52.430193 3187374 1971701 ls --color --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
 08:57:52.441868 3187378 3187375 man ls

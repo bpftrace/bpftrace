@@ -6,7 +6,7 @@ sampled lengths as a histogram. This can be used to characterize demand for
 CPU resources. For example:
 
 # ./runqlen.bt
-Attaching 2 probes...
+Attached 2 probes
 Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.
 ^C
 

@@ -64,6 +64,8 @@ and this project adheres to
   - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
 - if `delete` fails it will only print a warning if return value is not handled
   - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- Change "Attaching N probes..." to "Attached N probes"
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Deprecated
 #### Removed
 #### Fixed
@@ -85,6 +87,8 @@ and this project adheres to
   - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
 - Fix execution watchpoints
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
+- Fix incorrect reporting of attached count for multi probes
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Security
 #### Docs
 #### Tools
