@@ -4,14 +4,6 @@
  *		For Linux, uses bpftrace and eBPF.
  *
  * Written as a basic example of counting kernel functions.
- *
- * USAGE: vfscount.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -46,6 +38,11 @@
  * bpftrace/kprobes, so a warning is printed to let you know that they will be
  * missed.
  *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

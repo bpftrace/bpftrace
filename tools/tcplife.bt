@@ -3,13 +3,6 @@
  * tcplife - Trace TCP session lifespans with connection details.
  *
  * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 17-Apr-2019  Brendan Gregg   Created this.
  * 
  * Example of usage:
  * 
@@ -19,20 +12,18 @@
  * 20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059
  * 14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
  * 4496  Chrome_IOT 7f00:6:5ea7::a00:0 42846 0:0:bb01::      443        0     3 12441
- * 4496  Chrome_IOT 7f00:6:5aa7::a00:0 42842 0:0:bb01::      443        0     3 12436
- * 4496  Chrome_IOT 7f00:6:62a7::a00:0 42850 0:0:bb01::      443        0     3 12436
- * 4496  Chrome_IOT 7f00:6:5ca7::a00:0 42844 0:0:bb01::      443        0     3 12442
- * 4496  Chrome_IOT 7f00:6:60a7::a00:0 42848 0:0:bb01::      443        0     3 12436
- * 4496  Chrome_IOT 10.0.0.65       33342 54.241.2.241    443        0     3 10717
- * 4496  Chrome_IOT 10.0.0.65       33350 54.241.2.241    443        0     3 10711
- * 4496  Chrome_IOT 10.0.0.65       33352 54.241.2.241    443        0     3 10712
- * 14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
  * 
  * The output begins with a localhost ssh connection, so both endpoints can be
  * seen: the ssh process (PID 20976) which received 10584 Kbytes, and the sshd
  * process (PID 20977) which transmitted 10584 Kbytes. This session lasted 3059
  * milliseconds. Other sessions can also be seen, including IPv6 connections.
- * 
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 17-Apr-2019  Brendan Gregg   Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

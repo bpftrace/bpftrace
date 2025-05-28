@@ -7,15 +7,7 @@
  * remote host name lookups were slow, and by how much.
  *
  * This uses dynamic tracing of user-level functions and registers, and may
- # need modifications to match your software and processor architecture.
- *
- * USAGE: gethostlatency.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
+ * need modifications to match your software and processor architecture.
  * 
  * Example of usage:
  * 
@@ -31,9 +23,12 @@
  * In this example, the first call to lookup "www.netflix.com" took 81 ms, and
  * the second took 17 ms (sounds like some caching).
  * 
- * 
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 config = { missing_probes = "ignore" }

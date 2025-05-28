@@ -2,14 +2,6 @@
 /*
  * capable	Trace security capability checks (cap_capable()).
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: capable.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -53,9 +45,12 @@
  * To see what each of these capabilities does, check the capabilities(7) man
  * page and the kernel source.
  * 
- * 
- * The bcc version provides options to customize the output.
- * 
+ * This is a bpftrace version of the bcc tool of the same name.
+ * The bcc version provides options to customize the output. 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

@@ -2,12 +2,6 @@
 /*
  * runqlen.bt	CPU scheduler run queue length as a histogram.
  *		For Linux, uses bpftrace, eBPF.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Oct-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -25,10 +19,13 @@
  * This output shows that the run queue length was usually zero, except for some
  * samples where it was 3. This was caused by binding 4 CPU bound threads to a
  * single CPUs.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 07-Oct-2018	Brendan Gregg	Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

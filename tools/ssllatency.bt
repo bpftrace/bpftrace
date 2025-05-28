@@ -4,10 +4,6 @@
  * 		For Linux, uses bpftrace and eBPF.
  *
  * ssllatency shows handshake latency stats and distribution.
- *
- * Copyright (c) 2021 Tao Xu.
- *
- * 17-Dec-2021	Tao Xu	created this.
  * 
  * Example of usage:
  * 
@@ -106,7 +102,10 @@
  * The above effect is based on the huge bottleneck of RSA which is very CPU
  * intensive. If change to ECDSA, the overhead would be much less, and overall
  * improvement is less obvious.
- * 
+ *
+ * Copyright (c) 2021 Tao Xu.
+ *
+ * 17-Dec-2021	Tao Xu	created this.
  */
 
 config = { missing_probes = "ignore" }

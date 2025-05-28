@@ -3,17 +3,8 @@
  * tcpretrans.bt Trace or count TCP retransmits
  *               For Linux, uses bpftrace and eBPF.
  *
- * USAGE: tcpretrans.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * It doesn't support tracking TLPs.
- *
  * This uses dynamic tracing of kernel functions, and will need to be updated
  * to match kernel changes.
- *
- * Copyright (c) 2018 Dale Hamel.
- *
- * 23-Nov-2018  Dale Hamel      created this.
  * 
  * Example of usage:
  * 
@@ -36,6 +27,12 @@
  * additional kernel details: the state of the TCP session at the time of the
  * retransmit.
  *
+ * This is a bpftrace version of the bcc tool of the same name.
+ * It doesn't support tracking TLPs.
+ * 
+ * Copyright (c) 2018 Dale Hamel.
+ *
+ * 23-Nov-2018  Dale Hamel      created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

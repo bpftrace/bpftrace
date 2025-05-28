@@ -3,18 +3,10 @@
  * tcpconnect.bt  Trace TCP connect()s.
  *                For Linux, uses bpftrace and eBPF.
  *
- * USAGE: tcpconnect.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
  * All connection attempts are traced, even if they ultimately fail.
  *
  * This uses dynamic tracing of kernel functions, and will need to be updated
  * to match kernel changes.
- *
- * Copyright (c) 2018 Dale Hamel.
- *
- * 23-Nov-2018	Dale Hamel	created this.
  * 
  * Example of usage:
  * 
@@ -33,7 +25,12 @@
  * The overhead of this tool should be negligible, since it is only tracing the
  * kernel functions performing connect. It is not tracing every packet and then
  * filtering.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * 
+ * Copyright (c) 2018 Dale Hamel.
+ *
+ * 23-Nov-2018	Dale Hamel	created this. 
  */
 
 #ifndef BPFTRACE_HAVE_BTF

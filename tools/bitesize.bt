@@ -2,14 +2,6 @@
 /*
  * bitesize	Show disk I/O size as a histogram.
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: bitesize.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -63,7 +55,12 @@
  * 
  * The most active process while tracing was "dd", which issues 921 I/O between
  * 16 Kbytes and 32 Kbytes in size.
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 07-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

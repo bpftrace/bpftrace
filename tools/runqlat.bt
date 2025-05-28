@@ -2,12 +2,6 @@
 /*
  * runqlat.bt	CPU scheduler run queue latency as a histogram.
  *		For Linux, uses bpftrace, eBPF.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 17-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -160,10 +154,13 @@
  * 
  * This shows that most of the time threads need to wait their turn, with the
  * largest mode between 32 and 64 milliseconds.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 17-Sep-2018	Brendan Gregg	Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

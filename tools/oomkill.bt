@@ -11,12 +11,6 @@
  * time of the OOM, or other commands in the system() call.
  *
  * This currently works by using kernel dynamic tracing of oom_kill_process().
- *
- * USAGE: oomkill.bt
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -45,7 +39,10 @@
  * the time of the OOM kill, or to run other commands from the shell.
  * 
  * There is another version of this tool in bcc: https://github.com/iovisor/bcc
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 07-Sep-2018	Brendan Gregg	Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

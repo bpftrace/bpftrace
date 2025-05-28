@@ -4,8 +4,6 @@
  *               For Linux, uses bpftrace, eBPF.
  *
  * TODO: Add offset and size columns.
- *
- * This is a bpftrace version of the bcc tool of the same name.
  * 
  * Example of usage:
  * 
@@ -17,20 +15,6 @@
  * 611          259   0        cksum            4179         0
  * 627          259   0        cksum            4179        15
  * 641          259   0        cksum            4179        13
- * 644          259   0        cksum            4179         3
- * 658          259   0        cksum            4179        13
- * 673          259   0        cksum            4179        14
- * 686          259   0        cksum            4179        13
- * 701          259   0        cksum            4179        14
- * 710          259   0        cksum            4179         8
- * 717          259   0        cksum            4179         6
- * 728          259   0        cksum            4179        10
- * 735          259   0        cksum            4179         6
- * 751          259   0        cksum            4179        10
- * 758          259   0        cksum            4179        17
- * 783          259   0        cksum            4179        12
- * 796          259   0        cksum            4179        25
- * 802          259   0        cksum            4179        32
  * [...]
  * 
  * This output shows the cksum process was issuing block I/O, which were
@@ -50,8 +34,8 @@
  * [...]
  * 
  * 
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides more fields.
- * 
  */
 
 BEGIN

@@ -2,16 +2,6 @@
 /*
  * mdflush	Trace md flush events.
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: mdflush.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * For Linux 5.12+ (see tools/old for script for lower versions).
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -56,7 +46,14 @@
  * Note that the flush events are likely to originate from higher in the I/O
  * stack, such as from file systems. This traces md processing them, and the
  * timestamp corresponds with when md began to issue the flush to disks.
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * For Linux 5.12+ (see tools/old for script for lower versions).
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

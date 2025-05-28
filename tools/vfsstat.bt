@@ -5,14 +5,6 @@
  *
  * Written as a basic example of counting multiple events and printing a
  * per-second summary.
- *
- * USAGE: vfsstat.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -38,21 +30,18 @@
  * @[vfs_write]: 1230
  * @[vfs_open]: 8605
  * @[vfs_read]: 11077
- * 
- * 21:30:42
- * @[vfs_write]: 1229
- * @[vfs_open]: 8591
- * @[vfs_read]: 11061
- * 
  * ^C
  * 
  * Each second, a timestamp is printed ("HH:MM:SS") followed by common VFS
  * functions and the number of calls for that second. While tracing, the vfs_read()
  * kernel function was most frequent, occurring over 10,000 times per second.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides command line options.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

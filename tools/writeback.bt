@@ -10,12 +10,6 @@
  * that the problem may be caused by writeback. How quickly the kernel does
  * writeback can be tuned: see the kernel docs, eg,
  * vm.dirty_writeback_centisecs.
- *
- * USAGE: writeback.bt
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 14-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -30,20 +24,6 @@
  * 23:28:55  259:0    41970    background       326.663
  * 23:28:56  259:0    18418    background       332.689
  * 23:28:56  259:0    60402    background       362.446
- * 23:28:57  259:1    18230    periodic         0.005
- * 23:28:57  259:1    65492    background       3.343
- * 23:28:57  259:1    65492    background       0.002
- * 23:28:58  259:0    36850    background       0.000
- * 23:28:58  259:0    13298    background       597.198
- * 23:28:58  259:0    55282    background       322.050
- * 23:28:59  259:0    31730    background       336.031
- * 23:28:59  259:0    8178     background       357.119
- * 23:29:01  259:0    50162    background       1803.146
- * 23:29:02  259:0    27634    background       1311.876
- * 23:29:03  259:0    6130     background       331.599
- * 23:29:03  259:0    50162    background       293.968
- * 23:29:03  259:0    28658    background       284.946
- * 23:29:03  259:0    7154     background       286.572
  * [...]
  * 
  * By looking a the timestamps and latency, it can be seen that the system was
@@ -54,7 +34,10 @@
  * performance issues, that would be a clue that they are correlated and there
  * is contention for the disk devices. There are various ways to tune this:
  * eg, vm.dirty_writeback_centisecs.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 14-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

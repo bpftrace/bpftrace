@@ -2,14 +2,6 @@
 /*
  * syscount.bt	Count system calls.
  *		For Linux, uses bpftrace, eBPF.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc versions translates syscall IDs to their names, and this version
- * currently does not. Syscall IDs can be listed by "ausyscall --dump".
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 13-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -44,10 +36,15 @@
  * The above output was traced during a Linux kernel build, and the process name
  * with the most syscalls was "make" with 1,404,065 syscalls while tracing. The
  * highest syscall ID was 4, which is stat().
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ * The bcc versions translates syscall IDs to their names, and this version
+ * currently does not. Syscall IDs can be listed by "ausyscall --dump".
  * The bcc version provides different command line options.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 13-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

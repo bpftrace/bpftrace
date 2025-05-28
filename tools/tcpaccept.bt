@@ -3,16 +3,8 @@
  * tcpaccept.bt Trace TCP accept()s
  *              For Linux, uses bpftrace and eBPF.
  *
- * USAGE: tcpaccept.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
  * This uses dynamic tracing of the kernel inet_csk_accept() socket function
  * (from tcp_prot.accept), and will need to be modified to match kernel changes.
-
- * Copyright (c) 2018 Dale Hamel.
-
- * 23-Nov-2018	Dale Hamel	created this.
  * 
  * Example of usage:
  * 
@@ -36,6 +28,11 @@
  * This tool only traces successful TCP accept()s. Connection attempts to closed
  * ports will not be shown (those can be traced via other functions).
  * 
+ * This is a bpftrace version of the bcc tool of the same name.
+ * 
+ * Copyright (c) 2018 Dale Hamel.
+ * 
+ * 23-Nov-2018	Dale Hamel	created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

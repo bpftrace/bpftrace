@@ -2,16 +2,6 @@
 /*
  * killsnoop	Trace signals issued by the kill() syscall.
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: killsnoop.bt
- *
- * Also a basic example of bpftrace.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -27,10 +17,13 @@
  * PID 23856. The result, 0, means success. The next line shows the same signal
  * sent, which resulted in -3, a failure (likely because the target process
  * no longer existed).
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides command line options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 07-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

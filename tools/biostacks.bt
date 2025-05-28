@@ -4,11 +4,6 @@
  *
  * See BPF Performance Tools, Chapter 9, for an explanation of this tool.
  *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
  * Example of usage:
  * 
  * # ./biostacks.bt
@@ -67,6 +62,10 @@
  * between 8 and 512 microseconds. The other stack included here shows an XFS
  * log sync.
  * 
+ * Copyright (c) 2019 Brendan Gregg.
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
  */
 
 BEGIN

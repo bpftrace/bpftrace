@@ -3,13 +3,6 @@
  * tcpsynbl - Show TCP SYN backlog as a histogram.
  *
  * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 19-Apr-2019  Brendan Gregg   Created this.
  * 
  * Example of usage:
  * 
@@ -29,7 +22,13 @@
  * arrivals where the backlog was zero, three where the backlog was one, and
  * one where the backlog was either two or three. This indicates that we are
  * nowhere near this limit.
- * 
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 19-Apr-2019  Brendan Gregg   Created this.
  */
 
 #ifndef BPFTRACE_HAVE_BTF

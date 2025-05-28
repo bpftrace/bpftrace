@@ -3,13 +3,6 @@
  * threadsnoop - List new thread creation.
  *
  * See BPF Performance Tools, Chapter 13, for an explanation of this tool.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 15-Feb-2019  Brendan Gregg   Created this.
  * 
  * Example of usage:
  * 
@@ -35,7 +28,13 @@
  * routine threadentry(), and docker-containe (truncated) and systemd-journal
  * also starting threads: in their cases, the function had no symbol information
  * available, so their addresses are printed in hex.
- * 
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 15-Feb-2019  Brendan Gregg   Created this.
  */
 
 config = { missing_probes = "ignore" }

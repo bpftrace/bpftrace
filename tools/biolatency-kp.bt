@@ -3,16 +3,10 @@
  * biolatency.bt	Block I/O latency as a histogram.
  *			For Linux, uses bpftrace, eBPF.
  *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
  * This version of the tool uses kprobes to attach to kernel events.
  * Note that these do not exist or are inlined on newer kernels
  * (since kernel version 6.4) and therefore this version will not work.
  * On newer kernels, use biolatency.bt.
- *
- * 13-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -40,12 +34,15 @@
  * There were also 10 I/O with latency 128 to 256 ms: outliers. Other tools and
  * instrumentation, like biosnoop.bt, can shed more light on those outliers.
  * 
- * 
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
  * 
  * "biolatency.bt" is an updated version of "biolatency-kp.bt" and does basically
  * the same thing utilizing the tracepoints instead of kprobes.
  * 
+ * Copyright 2018 Netflix, Inc.
+ * 
+ * 13-Sep-2018	Brendan Gregg	Created this.
  */
 
 config = { missing_probes = "ignore" }

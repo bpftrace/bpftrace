@@ -3,14 +3,6 @@
  * swapin - Show swapins by process.
  *
  * See BPF Performance Tools, Chapter 7, for an explanation of this tool.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 26-Jan-2019  Brendan Gregg   Created this.
- * 31-May-2024  Rong Tao        Add folio support.
  * 
  * Example of usage:
  * 
@@ -40,7 +32,14 @@
  * 
  * While tracing, this showed that PID 2239 (gnome-shell) and PID 4536 (chrome)
  * suffered over ten thousand swapins.
- * 
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 26-Jan-2019  Brendan Gregg   Created this.
+ * 31-May-2024  Rong Tao        Add folio support.
  */
 
 config = { missing_probes = "ignore" }

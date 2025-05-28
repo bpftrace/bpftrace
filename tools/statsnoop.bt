@@ -6,16 +6,6 @@
  * This traces the tracepoints for statfs(), statx(), newstat(), and
  * newlstat(). These aren't the only the stat syscalls: if you are missing
  * activity, you may need to add more variants.
- *
- * Also a basic example of bpftrace.
- *
- * USAGE: statsnoop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -67,10 +57,13 @@
  * statsnoop can be used for general debugging, to see what file information has
  * been requested, and whether those files exist. It can be used as a companion
  * to opensnoop, which shows what files were actually opened.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this. 
  */
 
 BEGIN

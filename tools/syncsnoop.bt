@@ -2,16 +2,6 @@
 /*
  * syncsnoop	Trace sync() variety of syscalls.
  *		For Linux, uses bpftrace and eBPF.
- *
- * Also a basic example of bpftrace.
- *
- * USAGE: syncsnoop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -24,7 +14,12 @@
  * 
  * The output shows calls to the sync() syscall (traced via its tracepoint),
  * along with various details.
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

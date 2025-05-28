@@ -2,14 +2,6 @@
 /*
  * cpuwalk	Sample which CPUs are executing processes.
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: cpuwalk.bt
- *
- * This is a bpftrace version of the DTraceToolkit tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -87,7 +79,12 @@
  * sample was taken of another CPU (20) running a process. If the workload was
  * supposed to be making use of multiple CPUs, it isn't, and that can be
  * investigated (application's configuration, number of threads, CPU binding, etc).
- * 
+ *
+ * This is a bpftrace version of the DTraceToolkit tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

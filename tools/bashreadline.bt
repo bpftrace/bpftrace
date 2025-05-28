@@ -5,14 +5,6 @@
  *
  * This works by tracing the readline() function using a uretprobe (uprobes).
  *
- * USAGE: bashreadline.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
- *
  * Example of usage:
  * 
  * # ./bashreadline.bt
@@ -28,6 +20,11 @@
  * The entered command may fail. This is just showing what command lines were
  * entered interactively for bash to process.
  *
+ * This is a bpftrace version of the bcc tool of the same name.
+ * 
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
  */
 
 config = { missing_probes = "ignore" }

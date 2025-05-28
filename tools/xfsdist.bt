@@ -5,14 +5,6 @@
  *
  * This traces four common file system calls: read, write, open, and fsync.
  * It can be customized to trace more if desired.
- *
- * USAGE: xfsdist.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -68,10 +60,13 @@
  * Note that this only traces the common file system operations previously
  * listed: other file system operations (eg, inode operations including
  * getattr()) are not traced.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides command line options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 config = { missing_probes = "ignore" }

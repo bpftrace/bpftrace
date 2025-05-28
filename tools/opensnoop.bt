@@ -2,16 +2,6 @@
 /*
  * opensnoop	Trace open() syscalls.
  *		For Linux, uses bpftrace and eBPF.
- *
- * Also a basic example of bpftrace.
- *
- * USAGE: opensnoop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
  * 
  * Example of usage:
  * 
@@ -56,10 +46,13 @@
  * 
  * opensnoop can be useful for discovering configuration and log files, if used
  * during application startup.
- * 
- * 
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides command line options to customize the output.
- * 
+ *
+ * Copyright 2018 Netflix, Inc.
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
 BEGIN

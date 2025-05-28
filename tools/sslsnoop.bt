@@ -5,10 +5,6 @@
  *
  * sslsnoop shows handshake latency and retval. This is useful for SSL/TLS
  * performance analysis.
- *
- * Copyright (c) 2021 Tao Xu.
- *
- * 15-Dec-2021	Tao Xu	created this.
  * 
  * Example of usage:
  * 
@@ -49,7 +45,10 @@
  * 
  * The bcc tool sslsniff shows similar event latency, and additional plaintext
  * and ciphertext in SSL_read/wirte: https://github.com/iovisor/bcc
- * 
+ *
+ * Copyright (c) 2021 Tao Xu.
+ *
+ * 15-Dec-2021	Tao Xu	created this.
  */
 
 config = { missing_probes = "ignore" }

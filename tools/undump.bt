@@ -2,16 +2,6 @@
 /*
  * undump	Trace unix domain socket package receive.
  *		For Linux, uses bpftrace and eBPF.
- *
- * Also a basic example of bpftrace.
- *
- * This is a bpftrace version of the bcc examples/tracing of the same name.
- *
- * USAGE: undump.bt
- *
- * Copyright 2022 CESTC, Inc.
- *
- * 22-May-2022	Rong Tao	Created this.
  * 
  * Example of usage:
  * 
@@ -45,6 +35,11 @@
  * ^C
  * ```
  *
+ * This is a bpftrace version of the bcc examples/tracing of the same name.
+ * 
+ * Copyright 2022 CESTC, Inc.
+ *
+ * 22-May-2022	Rong Tao	Created this.
  */
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/skbuff.h>

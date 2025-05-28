@@ -3,20 +3,9 @@
  * tcpdrop.bt   Trace TCP kernel-dropped packets/segments.
  *              For Linux, uses bpftrace and eBPF.
  *
- * USAGE: tcpdrop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
  * This provides information such as packet details, socket state, and kernel
  * stack trace for packets/segments that were dropped via kfree_skb.
  * It cannot show tcp flags.
- *
- * For Linux 5.17+ (see tools/old for script for lower versions).
- *
- * Copyright (c) 2018 Dale Hamel.
- *
- * 23-Nov-2018	Dale Hamel	created this.
- * 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
  * 
  * Example of usage:
  * 
@@ -27,38 +16,21 @@
  * 	tcp_v4_do_rcv+0x135
  * 	tcp_v4_rcv+0x9c7
  * 	ip_local_deliver_finish+0x62
- * 	ip_local_deliver+0x6f
- * 	ip_rcv_finish+0x129
- * 	ip_rcv+0x28f
- * 	__netif_receive_skb_core+0x432
- * 	__netif_receive_skb+0x18
- * 	netif_receive_skb_internal+0x37
- * 	napi_gro_receive+0xc5
- * 	ena_clean_rx_irq+0x3c3
- * 	ena_io_poll+0x33f
- * 	net_rx_action+0x140
- * 	__softirqentry_text_start+0xdf
- * 	irq_exit+0xb6
- * 	do_IRQ+0x82
- * 	ret_from_intr+0x0
- * 	native_safe_halt+0x6
- * 	default_idle+0x20
- * 	arch_cpu_idle+0x15
- * 	default_idle_call+0x23
- * 	do_idle+0x17f
- * 	cpu_startup_entry+0x73
- * 	rest_init+0xae
- * 	start_kernel+0x4dc
- * 	x86_64_start_reservations+0x24
- * 	x86_64_start_kernel+0x74
- * 	secondary_startup_64+0xa5
  * [...]
  * 
  * The last column shows the state of the TCP session.
  * 
  * This tool is useful for debugging high rates of drops, which can cause the
  * remote end to do timer-based retransmits, hurting performance.
+ * 
+ * This is a bpftrace version of the bcc tool of the same name.
+ * 
+ * For Linux 5.17+ (see tools/old for script for lower versions).
  *
+ * Copyright (c) 2018 Dale Hamel.
+ *
+ * 23-Nov-2018	Dale Hamel	created this.
+ * 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
  */
 
 #ifndef BPFTRACE_HAVE_BTF
