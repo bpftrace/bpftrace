@@ -66,3 +66,11 @@ NAME execution breakpoint
 RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:x { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_exec
 EXPECT hit!
 ARCH aarch64|ppc64|ppc64le|x86_64
+
+NAME watchpoint absolute address threaded
+BEFORE ./testprogs/watchpoint_threaded
+RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_threaded
+EXPECT hit!
+# Not all archs support mmap to our specific address, so be conservative here.
+# See 08a47afa ("Fixing absolute address test issue across platforms")
+ARCH x86_64
