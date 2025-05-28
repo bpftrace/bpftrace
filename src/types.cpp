@@ -185,9 +185,6 @@ std::string addrspacestr(AddrSpace as)
     case AddrSpace::user:
       return "user";
       break;
-    case AddrSpace::bpf:
-      return "bpf";
-      break;
     case AddrSpace::none:
       return "none";
       break;
