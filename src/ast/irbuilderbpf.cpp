@@ -1,8 +1,5 @@
 #include "ast/irbuilderbpf.h"
 
-#include <llvm/IR/DataLayout.h>
-#include <llvm/IR/Module.h>
-
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
@@ -11,6 +8,9 @@
 #include "globalvars.h"
 #include "log.h"
 #include "util/exceptions.h"
+#include <filesystem>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/Module.h>
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -1467,8 +1467,12 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   void *usdt;
 
   if (pid.has_value()) {
-    // FIXME use attach_point->target when iovisor/bcc#2064 is merged
-    usdt = bcc_usdt_new_frompid(*pid, nullptr);
+    if (!attach_point->target.empty()) {
+      auto real_path = std::filesystem::absolute(attach_point->target).string();
+      usdt = bcc_usdt_new_frompid(*pid, real_path.c_str());
+    } else {
+      usdt = bcc_usdt_new_frompid(*pid, nullptr);
+    };
   } else {
     usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
   }
