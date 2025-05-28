@@ -2683,8 +2683,8 @@ This function can only be used by functions that are allowed to, these functions
 === percpu_kaddr
 
 .variants
-* `void *percpu_kaddr(const string name)`
-* `void *percpu_kaddr(const string name, int cpu)`
+* `uint64 *percpu_kaddr(const string name)`
+* `uint64 *percpu_kaddr(const string name, int cpu)`
 
 *sync*
 

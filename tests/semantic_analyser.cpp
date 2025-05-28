@@ -5056,4 +5056,21 @@ TEST(semantic_analyser, warning_for_empty_positional_parameters)
                    "Positional parameter $2 is empty or not provided.");
 }
 
+TEST(semantic_analyser, warning_for_discared_return_value)
+{
+  // Non exhaustive testing, just a few examples
+  test_for_warning("k:f { bswap(arg0); }",
+                   "Return value discarded for bswap. It should be used");
+  test_for_warning("k:f { cgroup_path(1); }",
+                   "Return value discarded for cgroup_path. It should be used");
+  test_for_warning("k:f { @x[1] = 0; has_key(@x, 1); }",
+                   "Return value discarded for has_key. It should be used");
+  test_for_warning("k:f { @x[1] = 1; len(@x); }",
+                   "Return value discarded for len. It should be used");
+  test_for_warning("k:f { uptr((int8*) arg0); }",
+                   "Return value discarded for uptr. It should be used");
+  test_for_warning("k:f { ustack(raw); }",
+                   "Return value discarded for ustack. It should be used");
+}
+
 } // namespace bpftrace::test::semantic_analyser
