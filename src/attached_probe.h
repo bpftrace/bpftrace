@@ -1,15 +1,12 @@
 #pragma once
 
-#include <bcc/libbpf.h>
-#include <functional>
+#include <cstdint>
 #include <string>
-#include <vector>
 
-#include "bpffeature.h"
+#include <bcc/libbpf.h>
+
 #include "bpfprogram.h"
-#include "btf.h"
 #include "probe_types.h"
-#include "usdt.h"
 #include "util/result.h"
 
 namespace bpftrace {
@@ -33,6 +30,20 @@ private:
   std::string msg_;
 };
 
+class LinkQueryError : public ErrorInfo<LinkQueryError> {
+public:
+  LinkQueryError(int err) : errno_(err) {};
+  LinkQueryError() = default;
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << std::strerror(errno_);
+  }
+
+private:
+  int errno_ = 0;
+};
+
 class AttachedProbe {
 public:
   static Result<std::unique_ptr<AttachedProbe>> make(Probe &probe,
@@ -44,6 +55,7 @@ public:
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
+  // Returns FD for underlying BPF link, if any.
   virtual int link_fd()
   {
     return -1;
@@ -54,6 +66,12 @@ public:
     return 1;
   }
 
+  // Returns the number of missed executions.
+  //
+  // NB: the returned value is the number of missed executions since the last
+  // time this method was called. IOW: not monotically increasing.
+  Result<uint64_t> missed();
+
   const Probe &probe() const
   {
     return probe_;
@@ -62,6 +80,9 @@ public:
 protected:
   AttachedProbe(const Probe &probe);
   const Probe &probe_;
+
+private:
+  uint64_t last_missed_ = 0;
 };
 
 } // namespace bpftrace
