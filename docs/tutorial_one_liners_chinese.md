@@ -20,7 +20,7 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 
 ```
 # bpftrace -e 'BEGIN { printf("hello world\n"); }'
-Attaching 1 probe...
+Attached 1 probe
 hello world
 ^C
 ```
@@ -34,7 +34,7 @@ hello world
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
-Attaching 1 probe...
+Attached 1 probe
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
 snmpd /proc/net/dev
@@ -54,7 +54,7 @@ snmpd /proc/net/if_inet6
 
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @[bpftrace]: 6
@@ -75,7 +75,7 @@ Maps会在bpftrace结束(如按Ctrl-C)时自动打印出来。
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -100,7 +100,7 @@ Attaching 1 probe...
 
 ```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -127,7 +127,7 @@ Attaching 1 probe...
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
-Attaching 2 probes...
+Attached 2 probes
 
 [...]
 @ns[snmp-pass]:
@@ -165,7 +165,7 @@ Attaching 2 probes...
 
 ```
 # bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
-Attaching 25 probes...
+Attached 25 probes
 @[tracepoint:sched:sched_wakeup_new]: 1
 @[tracepoint:sched:sched_process_fork]: 1
 @[tracepoint:sched:sched_process_exec]: 1
@@ -190,7 +190,7 @@ Attaching 25 probes...
 
 ```
 # bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 [...]
@@ -254,7 +254,7 @@ secondary_startup_64+165
 
 ```
 # bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @:
@@ -302,7 +302,7 @@ kprobe:vfs_open
 }
 
 # bpftrace path.bt
-Attaching 1 probe...
+Attached 1 probe
 open path: dev
 open path: if_inet6
 open path: retrans_time_ms

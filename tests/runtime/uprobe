@@ -39,7 +39,7 @@ BEFORE ./testprogs/mountns_wrapper uprobe_test
 
 NAME uprobes - attach to probe for executable in separate mount namespace
 RUN {{BPFTRACE}} -e 'uprobe:/tmp/bpftrace-unshare-mountns-test/uprobe_test:uprobeFunction1 { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 BEFORE ./testprogs/mountns_wrapper uprobe_test
 
 NAME uprobes - attach to probe for executable in a pivot_root'd mount namespace
@@ -49,7 +49,7 @@ BEFORE ./testprogs/mountns_pivot_wrapper uprobe_test
 
 NAME uprobes - attach to probe by pid with only wildcard
 RUN {{BPFTRACE}} -e 'uprobe:*:uprobeFunction1 { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobes - attach to multiple probes by pid with only wildcard
@@ -63,7 +63,7 @@ EXPECT uprobe:./testlibs/libsimple.so:fun
 
 NAME uprobes - probe function in non-executable library
 PROG uprobe:./testlibs/libsimple.so:fun {}
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME uprobes - attach to single process with pid arg
 RUN {{BPFTRACE}} runtime/scripts/uprobe_pid_check.bt -p {{BEFORE_PID}} {{BEFORE_PID}}

@@ -116,8 +116,8 @@ AFTER ./testprogs/uprobe_test
 
 NAME ustack in tuple
 PROG BEGIN { print((ustack, "a")); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME kstack in tuple
 PROG BEGIN { print((kstack, "a")); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe

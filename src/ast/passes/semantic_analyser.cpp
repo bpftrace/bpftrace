@@ -101,6 +101,7 @@ struct map_key_spec {
 struct call_spec {
   size_t min_args = 0;
   size_t max_args = 0;
+  bool discard_ret_warn = false;
   // NOLINTBEGIN(readability-redundant-member-init)
   std::vector<std::variant<arg_type_spec, map_type_spec, map_key_spec>>
       arg_types = {};
@@ -274,10 +275,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
                              }) },
                      map_key_spec{ .map_index = 0 },
                      arg_type_spec{ .type = Type::integer } } } },
-  { "bswap", { .min_args = 1, .max_args = 1 } },
+  { "bswap", { .min_args = 1, .max_args = 1, .discard_ret_warn = true } },
   { "buf",
     { .min_args=1,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer } } } },
@@ -289,11 +291,13 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "cgroupid",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "cgroup_path",
     { .min_args=1,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::integer },
         arg_type_spec{ .type=Type::string } } } },
@@ -335,6 +339,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "has_key",
     { .min_args=2,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         map_type_spec{},
         map_key_spec{ .map_index=0 },
@@ -359,20 +364,25 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "kaddr",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "kptr",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "kstack",
     { .min_args=0,
-      .max_args=2 } },
+      .max_args=2,
+      .discard_ret_warn = true, } },
   { "ksym",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "len",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       // This cannot be checked without overloading: it requires *either* a
       // stack type, or a non-scalar map.
     } },
@@ -390,7 +400,8 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "macaddr",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "max",
     { .min_args=3,
       .max_args=3,
@@ -412,11 +423,17 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "nsecs",
     { .min_args=0,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::timestamp_mode } } } },
   { "ntop",
     { .min_args=1,
-      .max_args=2 } },
+      .max_args=2,
+      .discard_ret_warn = true, } },
+  { "offsetof",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true, } },
   { "override",
     { .min_args=1,
       .max_args=1,
@@ -425,12 +442,14 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "path",
     { .min_args=1,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "percpu_kaddr",
     { .min_args=1,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true },
         arg_type_spec{ .type=Type::integer } } } },
@@ -450,19 +469,26 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "pton",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "reg",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "signal",
     { .min_args=1,
       .max_args=1,
        } },
+  { "sizeof",
+    { .min_args=1,
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "skboutput",
     { .min_args=4,
       .max_args=4,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true }, // pcap file name
         arg_type_spec{ .type=Type::pointer },      // *skb
@@ -483,29 +509,34 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "str",
     { .min_args=1,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer } } } },
   { "strerror",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::integer } } } },
   { "strftime",
     { .min_args=2,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=true },
           arg_type_spec{ .type=Type::integer } } } },
   { "strcontains",
     { .min_args=2,
       .max_args=2,
+      .discard_ret_warn = true,
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=false },
           arg_type_spec{ .type=Type::string, .literal=false } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
+      .discard_ret_warn = true,
       .arg_types={
           arg_type_spec{ .type=Type::string },
           arg_type_spec{ .type=Type::string },
@@ -532,6 +563,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "uaddr",
     { .min_args=1,
       .max_args=1,
+      .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "unwatch",
@@ -541,13 +573,16 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::integer } } } },
   { "uptr",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "ustack",
     { .min_args=0,
-      .max_args=2 } },
+      .max_args=2,
+      .discard_ret_warn = true, } },
   { "usym",
     { .min_args=1,
-      .max_args=1 } },
+      .max_args=1,
+      .discard_ret_warn = true, } },
   { "zero",
     { .min_args=1,
       .max_args=1,
@@ -1196,7 +1231,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "stats") {
     call.return_type = CreateStats(true);
   } else if (call.func == "delete") {
-    // Leave as `none`.
+    call.return_type = CreateUInt8();
   } else if (call.func == "has_key") {
     // TODO: this should be a bool type but that type is currently broken
     // as a value for variables and maps
@@ -2935,6 +2970,16 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
+  if (auto *call = expr.expr.as<Call>()) {
+    // Calls from expression statements are bare, meaning they're not
+    // handling the return value e.g.
+    // delete(@a, 1); <- ExprStatement
+    // vs
+    // $x = delete(@a, 1) <- AssignVarStatement
+    // if (delete(@a, 1)) { <- If
+    call->ret_val_discarded = true;
+  }
+
   visit(expr.expr);
 }
 
@@ -3086,7 +3131,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   Node *var_scope = nullptr;
   const auto &var_ident = assignment.var()->ident;
-  const auto &assignTy = assignment.expr.type();
+  auto assignTy = assignment.expr.type();
 
   if (auto *scope = find_variable_scope(var_ident)) {
     auto &foundVar = variables_[scope][var_ident];
@@ -3112,25 +3157,24 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         // No checks or casts needed.
       } else if (auto *neg_integer = assignment.expr.as<NegativeInteger>()) {
         int64_t value = neg_integer->value;
-        bool can_fit = false;
         if (!storedTy.IsSigned()) {
           type_mismatch_error = true;
         } else {
           auto min_max = getIntTypeRange(storedTy);
-          can_fit = value >= min_max.first;
-        }
-        if (can_fit) {
-          assignment.expr = ctx_.make_node<Cast>(
-              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
-              assignment.expr,
-              Location(assignment.loc));
-          visit(assignment.expr);
-        } else if (!type_mismatch_error) {
-          assignment.addError()
-              << "Type mismatch for " << var_ident << ": "
-              << "trying to assign value '" << neg_integer->value
-              << "' which does not fit into the variable of type '" << storedTy
-              << "'";
+          if (value < min_max.first) {
+            assignment.addError()
+                << "Type mismatch for " << var_ident << ": "
+                << "trying to assign value '" << neg_integer->value
+                << "' which does not fit into the variable of type '"
+                << storedTy << "'";
+          } else {
+            assignTy = storedTy;
+            assignment.expr = ctx_.make_node<Cast>(
+                CreateInteger(storedTy.GetSize() * 8, true),
+                assignment.expr,
+                Location(assignment.loc));
+            visit(assignment.expr);
+          }
         }
       } else if (auto *integer = assignment.expr.as<Integer>()) {
         uint64_t value = integer->value;
@@ -3143,12 +3187,13 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           can_fit = value <= static_cast<uint64_t>(min_max.second);
         }
         if (can_fit) {
+          assignTy = storedTy;
           assignment.expr = ctx_.make_node<Cast>(
               CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
               assignment.expr,
               Location(assignment.loc));
           visit(assignment.expr);
-        } else if (!type_mismatch_error) {
+        } else {
           assignment.addError()
               << "Type mismatch for " << var_ident << ": "
               << "trying to assign value '"
@@ -3691,6 +3736,12 @@ bool SemanticAnalyser::check_call(const Call &call)
   auto spec = CALL_SPEC.find(call.func);
   if (spec == CALL_SPEC.end()) {
     return true;
+  }
+
+  if (is_final_pass() && call.ret_val_discarded &&
+      spec->second.discard_ret_warn) {
+    call.addWarning() << "Return value discarded for " << call.func
+                      << ". It should be used.";
   }
 
   auto ret = true;

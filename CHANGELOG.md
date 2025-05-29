@@ -47,6 +47,8 @@ and this project adheres to
   - [#4118](https://github.com/bpftrace/bpftrace/pull/4118)
 - Add new builtin "usermode"
   - [#4129](https://github.com/bpftrace/bpftrace/pull/4129)
+- Warn on discarded return values for specific builtin functions
+  - [#4191](https://github.com/bpftrace/bpftrace/pull/4191)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
@@ -58,6 +60,12 @@ and this project adheres to
   - [#4132](https://github.com/bpftrace/bpftrace/pull/4132)
 - Add signed type checking for map keys
   - [#4136](https://github.com/bpftrace/bpftrace/pull/4136)
+- `delete` now returns 1 if successful, 0 if not
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- if `delete` fails it will only print a warning if return value is not handled
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- Change "Attaching N probes..." to "Attached N probes"
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Deprecated
 #### Removed
 #### Fixed
@@ -79,6 +87,8 @@ and this project adheres to
   - [#4137](https://github.com/bpftrace/bpftrace/pull/4137)
 - Fix execution watchpoints
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
+- Fix incorrect reporting of attached count for multi probes
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Security
 #### Docs
 #### Tools

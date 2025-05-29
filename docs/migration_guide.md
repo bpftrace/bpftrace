@@ -155,7 +155,7 @@ BEGIN { $x = pid; $x = cgroup; }
 To mitigate such an error, just typecast `pid` or `tid` to `uint64`:
 ```
 # bpftrace -e 'BEGIN { $x = (uint64)pid; $x = cgroup; }'
-Attaching 1 probe...
+Attached 1 probe
 ```
 
 ### default `SIGUSR1` handler removed

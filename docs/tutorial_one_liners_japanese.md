@@ -21,7 +21,7 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 
 ```
 # bpftrace -e 'BEGIN { printf("hello world\n"); }'
-Attaching 1 probe...
+Attached 1 probe
 hello world
 ^C
 ```
@@ -35,7 +35,7 @@ hello world
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
-Attaching 1 probe...
+Attached 1 probe
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
 snmpd /proc/net/dev
@@ -58,7 +58,7 @@ snmpd /proc/net/if_inet6
 
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @[bpftrace]: 6
@@ -79,7 +79,7 @@ Attaching 1 probe...
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -105,7 +105,7 @@ PID 18644 のプロセスによるカーネル関数 sys_read() の戻り値を�
 
 ```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -132,7 +132,7 @@ read() のバイト数を線形スケールのヒストグラムとして集計�
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
-Attaching 2 probes...
+Attached 2 probes
 
 [...]
 @ns[snmp-pass]:
@@ -171,7 +171,7 @@ read() の実行時間をナノ秒単位で計測し，プロセスごとにヒ�
 
 ```
 # bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
-Attaching 25 probes...
+Attached 25 probes
 @[tracepoint:sched:sched_wakeup_new]: 1
 @[tracepoint:sched:sched_process_fork]: 1
 @[tracepoint:sched:sched_process_exec]: 1
@@ -196,7 +196,7 @@ Attaching 25 probes...
 
 ```
 # bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 [...]
@@ -260,7 +260,7 @@ secondary_startup_64+165
 
 ```
 # bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @:
@@ -308,7 +308,7 @@ kprobe:vfs_open
 }
 
 # bpftrace path.bt
-Attaching 1 probe...
+Attached 1 probe
 open path: dev
 open path: if_inet6
 open path: retrans_time_ms
@@ -325,4 +325,3 @@ open path: retrans_time_ms
 カーネル構造体のサポートは bcc と同様にカーネルヘッダを利用します．したがって多くの構造体が利用可能ですが，全てではありません．場合によっては手動で構造体を定義する必要があります．例えば [dcsnoop tool](../tools/dcsnoop.bt) では nameidata 構造体の一部を手動で定義しています．これはこの構造体がヘッダ内で定義されていないためです．LinuxカーネルのBTFデータがある場合，全ての構造体が利用可能です．
 
 ここまでで bpftrace の多くを理解し，強力なワンライナーを作成・利用することができます．bpftrace のその他の機能については [インストラクションマニュアル](../man/adoc/bpftrace.adoc) を参照して下さい．
-

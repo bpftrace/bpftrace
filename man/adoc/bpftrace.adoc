@@ -2070,7 +2070,7 @@ With no arguments, `$1` defaults to zero:
 
 ----
 # ./bsize.bt
-Attaching 2 probes...
+Attached 2 probes
 Tracing block I/O sizes > 0 bytes
 ^C
 
@@ -2683,8 +2683,8 @@ This function can only be used by functions that are allowed to, these functions
 === percpu_kaddr
 
 .variants
-* `void *percpu_kaddr(const string name)`
-* `void *percpu_kaddr(const string name, int cpu)`
+* `uint64 *percpu_kaddr(const string name)`
+* `uint64 *percpu_kaddr(const string name, int cpu)`
 
 *sync*
 
@@ -3101,7 +3101,7 @@ interval:s:30 {
 Note how the async `time` and `printf` first print every second until the `interval:s:10` probe hits, then they print every 10 seconds due to bpftrace blocking on `sleep`.
 
 ----
-Attaching 3 probes...
+Attached 3 probes
 08:50:37: 0
 08:50:38: 1
 08:50:39: 2
@@ -3457,12 +3457,29 @@ interval:s:10 {
 === delete
 
 .variants
-* `void delete(map m, mapkey k)`
-* deprecated `void delete(mapkey k)`
+* `bool delete(map m, mapkey k)`
+* deprecated `bool delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
+
+If deletion fails (e.g. the key doesn't exist) the function returns false (0).
+Additionally, if the return value for `delete` is discarded, and deletion fails, you will get a warning.
+
+```
+@a[1] = 1;
+
+delete(@a, 1); // no warning (the key exists)
+
+if (delete(@a, 2)) { // no warning (return value is used)
+  ...
+}
+
+$did_delete = delete(@a, 2); // no warning (return value is used)
+
+delete(@a, 2); // warning (return value is discarded and the key doesn't exist)
+```
 
 The, now deprecated, API (supported in version <= 0.21.x) of passing map arguments with the key is still supported:
 e.g. `delete(@mymap[3, "hello"]);`.
@@ -4229,7 +4246,7 @@ foo.h
 
 # bpftrace -I /tmp/include program.bt
 
-Attaching 1 probe...
+Attached 1 probe
 ----
 
 The `--include` option can be used to include headers by default.
@@ -4240,7 +4257,7 @@ Headers are included in the order they are defined, and they are included before
 # bpftrace --include linux/path.h --include linux/dcache.h \
     -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
 
-Attaching 1 probe...
+Attached 1 probe
 open path: .com.google.Chrome.ASsbu2
 open path: .com.google.Chrome.gimc10
 open path: .com.google.Chrome.R1234s
@@ -4253,7 +4270,7 @@ The `-v` option prints more information about the program as it is run:
 ----
 # bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
 AST node count: 7
-Attaching 1 probe...
+Attached 1 probe
 
 load tracepoint:syscalls:sys_enter_nanosleep, with BTF, with func_infos: Success
 
@@ -4396,7 +4413,7 @@ And then calling it:
 ----
 # bpftrace sleepers.bt
 
-Attaching 1 probe...
+Attached 1 probe
 iscsid is sleeping.
 iscsid is sleeping.
 ----
@@ -4418,7 +4435,7 @@ Then make it executable:
 # chmod 755 sleepers.bt
 # ./sleepers.bt
 
-Attaching 1 probe...
+Attached 1 probe
 iscsid is sleeping.
 iscsid is sleeping.
 ----

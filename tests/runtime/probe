@@ -125,6 +125,11 @@ EXPECT progs: 1
 REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
 
+NAME kprobe_wildcard_multi_probe_count
+RUN {{BPFTRACE}} -e 'kprobe:vfs_* { exit(); }'
+EXPECT_REGEX Attached [0-9][0-9]+ probes
+REQUIRES_FEATURE kprobe_multi
+
 NAME kprobe_module
 PROG kprobe:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*

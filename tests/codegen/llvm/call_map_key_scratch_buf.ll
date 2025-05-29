@@ -95,6 +95,7 @@ lookup_merge6:                                    ; preds = %lookup_failure5, %l
   %14 = getelementptr [1 x [3 x [16 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
   store i64 1, ptr %14, align 8
   %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %14)
+  %delete_ret = icmp eq i64 %delete_elem, 0
   ret i64 0
 }
 

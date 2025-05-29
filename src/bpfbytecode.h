@@ -76,4 +76,14 @@ private:
       section_names_to_global_vars_map_;
 };
 
+class HelperVerifierError : public std::runtime_error {
+public:
+  HelperVerifierError(const std::string &msg, libbpf::bpf_func_id func_id_)
+      : std::runtime_error(msg), func_id(func_id_)
+  {
+  }
+
+  const libbpf::bpf_func_id func_id;
+};
+
 } // namespace bpftrace

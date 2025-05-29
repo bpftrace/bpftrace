@@ -320,17 +320,17 @@ EXPECT_FILE runtime/outputs/lhist.txt
 
 NAME kstack
 PROG k:do_nanosleep { printf("%s\n%s\n", kstack(), kstack(1)); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME kstack perf mode
 PROG k:do_nanosleep { printf("%s\n", kstack(perf, 1)); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME ustack
 PROG u:./testprogs/uprobe_loop:uprobeFunction1 { printf("%s\n%s\n", ustack(), ustack(1)); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 AFTER ./testprogs/uprobe_loop
 
 NAME ustack_stack_mode_env_bpftrace
@@ -631,7 +631,7 @@ MIN_KERNEL 5.5
 # Just test that the verifier doesn't reject this
 NAME skboutput rawtracepoint
 RUN {{BPFTRACE}} -e 'rawtracepoint:consume_skb { $ret = skboutput("receive.pcap", (struct sk_buff *)arg0, 1, 0); printf("ret: %d\n", $ret); exit(); }'
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 REQUIRES_FEATURE skboutput
 MIN_KERNEL 5.5
 

@@ -40,11 +40,11 @@ EXPECT SUCCESS bpftrace
 
 NAME kstack
 PROG BEGIN { printf("%s\n", kstack); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME ustack
 PROG BEGIN { printf("%s\n", ustack); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME arg
 PROG k:vfs_read { printf("SUCCESS %p\n", arg0); exit(); }

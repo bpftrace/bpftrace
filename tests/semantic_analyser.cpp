@@ -888,6 +888,11 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[((int8)3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, ((int8)1, 2, 3)); }");
+  test("kprobe:f { @y = delete(@x); }");
+  test("kprobe:f { $y = delete(@x); }");
+  test("kprobe:f { @[delete(@x)] = 1; }");
+  test("kprobe:f { @x = 1; if(delete(@x)) { 123 } }");
+  test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }");
   // The second arg gets treated like a map key, in terms of int type adjustment
   test("kprobe:f { @y[5] = 5; delete(@y, (int8)5); }");
   test("kprobe:f { @y[5, 4] = 5; delete(@y, ((int8)5, (int64)4)); }");
@@ -902,45 +907,6 @@ kprobe:f { delete(1); }
 stdin:1:12-20: ERROR: delete() expects a map argument
 kprobe:f { delete(1, 1); }
            ~~~~~~~~
-)");
-
-  test_error("kprobe:f { @y = delete(@x); }", R"(
-stdin:1:12-27: ERROR: Not a valid assignment: none
-kprobe:f { @y = delete(@x); }
-           ~~~~~~~~~~~~~~~
-stdin:1:12-14: ERROR: Undefined map: @y
-kprobe:f { @y = delete(@x); }
-           ~~
-)");
-
-  test_error("kprobe:f { $y = delete(@x); }", R"(
-stdin:1:12-27: ERROR: Value 'none' cannot be assigned to a scratch variable.
-kprobe:f { $y = delete(@x); }
-           ~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @[delete(@x)] = 1; }", R"(
-stdin:1:12-24: ERROR: Invalid map key type: none
-kprobe:f { @[delete(@x)] = 1; }
-           ~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", R"(
-stdin:1:20-42: ERROR: Invalid condition in if(): none
-kprobe:f { @x = 1; if(delete(@x)) { 123 } }
-                   ~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", R"(
-stdin:1:20-39: ERROR: Invalid condition in ternary: none
-kprobe:f { @x = 1; delete(@x) ? 0 : 1; }
-                   ~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_error("kprobe:f { @y[5] = 5; delete(@y[5], 5); }", R"(
-stdin:1:23-35: ERROR: delete() expects a map argument
-kprobe:f { @y[5] = 5; delete(@y[5], 5); }
-                      ~~~~~~~~~~~~
 )");
 
   test_error("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }", R"(
@@ -4676,7 +4642,10 @@ TEST(semantic_analyser, variable_declarations)
   test("BEGIN { let $a; $a = 1; }");
   test("BEGIN { let $a: int16; $a = 1; }");
   test("BEGIN { let $a = 1; }");
+  test("BEGIN { let $a: uint16 = 1; }");
   test("BEGIN { let $a: int16 = 1; }");
+  test("BEGIN { let $a: uint8 = 1; $a = 100; }");
+  test("BEGIN { let $a: int8 = 1; $a = -100; }");
   test(R"(BEGIN { let $a: string; $a = "hiya"; })");
   test("BEGIN { let $a: int16; print($a); }");
   test("BEGIN { let $a; print($a); $a = 1; }");
@@ -4707,6 +4676,18 @@ BEGIN { let $a; let $a; }
 stdin:1:26-33: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
 BEGIN { let $a: uint16; $a = -1; }
                          ~~~~~~~
+)");
+
+  test_error("BEGIN { let $a: uint8 = 1; $a = 10000; }", R"(
+stdin:1:29-39: ERROR: Type mismatch for $a: trying to assign value '10000' which does not fit into the variable of type 'uint8'
+BEGIN { let $a: uint8 = 1; $a = 10000; }
+                            ~~~~~~~~~~
+)");
+
+  test_error("BEGIN { let $a: int8 = 1; $a = -10000; }", R"(
+stdin:1:28-39: ERROR: Type mismatch for $a: trying to assign value '-10000' which does not fit into the variable of type 'int8'
+BEGIN { let $a: int8 = 1; $a = -10000; }
+                           ~~~~~~~~~~~
 )");
 
   test_error("BEGIN { let $a; $a = (uint8)1; $a = -1; }", R"(
@@ -5073,6 +5054,23 @@ TEST(semantic_analyser, warning_for_empty_positional_parameters)
   test_for_warning(bpftrace,
                    "BEGIN { print(($1, $2)) }",
                    "Positional parameter $2 is empty or not provided.");
+}
+
+TEST(semantic_analyser, warning_for_discared_return_value)
+{
+  // Non exhaustive testing, just a few examples
+  test_for_warning("k:f { bswap(arg0); }",
+                   "Return value discarded for bswap. It should be used");
+  test_for_warning("k:f { cgroup_path(1); }",
+                   "Return value discarded for cgroup_path. It should be used");
+  test_for_warning("k:f { @x[1] = 0; has_key(@x, 1); }",
+                   "Return value discarded for has_key. It should be used");
+  test_for_warning("k:f { @x[1] = 1; len(@x); }",
+                   "Return value discarded for len. It should be used");
+  test_for_warning("k:f { uptr((int8*) arg0); }",
+                   "Return value discarded for uptr. It should be used");
+  test_for_warning("k:f { ustack(raw); }",
+                   "Return value discarded for ustack. It should be used");
 }
 
 } // namespace bpftrace::test::semantic_analyser
