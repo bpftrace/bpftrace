@@ -1,6 +1,10 @@
 NAME it mutates the passed variable
-PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); print($a); exit(); }
+PROG macro inc($x) { $x += 1; } BEGIN { $a = 1; inc($a); print($a); exit(); }
 EXPECT 2
+
+NAME it assigns to the last expression
+PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; $b = inc($a); print(($a, $b)); exit(); }
+EXPECT (2, 2)
 
 NAME it mutates the passed non-scalar map
 PROG macro set(@x) { @x[1] = 2; 1 } BEGIN { @a[1] = 1; set(@a); exit(); }

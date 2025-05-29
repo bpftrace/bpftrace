@@ -5015,6 +5015,14 @@ TEST(semantic_analyser, macros)
   bpftrace->config_->unstable_macro = ConfigUnstable::enable;
 
   test_error(*bpftrace,
+             "macro set($x) { $x = 1; } BEGIN { $a = 0; $b = set($a); }",
+             R"(
+stdin:1:43-55: ERROR: Value 'none' cannot be assigned to a scratch variable.
+macro set($x) { $x = 1; } BEGIN { $a = 0; $b = set($a); }
+                                          ~~~~~~~~~~~~
+)");
+
+  test_error(*bpftrace,
              "macro set($x) { $x = 1; $x } BEGIN { $a = \"string\"; set($a); }",
              R"(
 stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'string'

@@ -363,6 +363,8 @@ macros:
 macro:
                 MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
         |       MACRO IDENT "(" ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList{}, $5, @$); }
+        |       MACRO IDENT "(" macro_args ")" "{" stmt_list "}" { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), driver.ctx.make_node<ast::Block>(std::move($7), @$), @$); }
+        |       MACRO IDENT "(" ")" "{" stmt_list "}" { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList{}, driver.ctx.make_node<ast::Block>(std::move($6), @$), @$); }
 
 macro_args:
                 macro_args "," map { $$ = std::move($1); $$.push_back($3); }

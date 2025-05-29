@@ -57,6 +57,12 @@ void test_warning(const std::string& input, const std::string& warn)
 
 TEST(macro_expansion, basic_checks)
 {
+  test("macro add1($x) { $x + 1 } macro add2($x) { $x + add1($x) } macro "
+       "add3($x) { $x + add2($x) } BEGIN { print(add3(1)); }");
+  test("macro add1($x) { $x += 1; } BEGIN { $y = 1; add1($y); }");
+  test("macro add3($x) { $x += 1; $x += 1; $x += 1; } BEGIN { $y = 1; "
+       "add3($y); }");
+
   test_error("macro set($x) { $x += 1; $x } BEGIN { $a = 1; set($a, 1); }",
              "Call to macro has wrong number arguments. Expected: 1 but got 2");
   test_error("macro set($x, $x) { $x += 1; $x } BEGIN { $a = 1; set($a, 1); }",
@@ -64,9 +70,6 @@ TEST(macro_expansion, basic_checks)
   test_error("macro set($x) { $x += 1; $x } macro set($x) { $x } BEGIN { $a = "
              "1; set($a, 1); }",
              "Redifinition of macro: set");
-  test("macro add1($x) { $x + 1 } macro add2($x) { $x + add1($x) } macro "
-       "add3($x) { $x + add2($x) } BEGIN { print(add3(1)); }");
-
   test_error(
       "macro add1($x) { $x + add3($x) } macro add2($x) { $x + add1($x) } macro "
       "add3($x) { $x + add2($x) } BEGIN { print(add3(1)); }",
