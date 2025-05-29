@@ -1219,16 +1219,25 @@ public:
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
-        block_expr(block_expr) {};
+        block(block_expr) {};
+  Macro(ASTContext &ctx,
+        std::string name,
+        ExpressionList &&vargs,
+        Block *block,
+        Location &&loc)
+      : Node(ctx, std::move(loc)),
+        name(std::move(name)),
+        vargs(std::move(vargs)),
+        block(block) {};
   explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, other.vargs, loc)),
-        block_expr(clone(ctx, other.block_expr, loc)) {};
+        block(clone(ctx, other.block, loc)) {};
 
   std::string name;
   ExpressionList vargs;
-  BlockExpr *block_expr;
+  std::variant<BlockExpr *, Block *> block;
 };
 using MacroList = std::vector<Macro *>;
 
