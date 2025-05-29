@@ -173,6 +173,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::Program *> program
+%type <ast::ExpressionMap> kwargs
 
 
 // A pseudo token, which is the lowest precedence among all tokens.
@@ -747,6 +748,8 @@ call:
         |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
         |       IDENT "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
         |       BUILTIN "(" vargs ")"         { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
+        |       IDENT "(" kwargs ")"          { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
+        |       BUILTIN "(" kwargs ")"        { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
                 ;
 
 map:
@@ -770,6 +773,11 @@ var:
 vargs:
                 vargs "," expr { $$ = std::move($1); $$.push_back($3); }
         |       expr           { $$ = ast::ExpressionList{$1}; }
+                ;
+
+kwargs:
+                kwargs "," IDENT ASSIGN expr  { $$ = std::move($1); $$.emplace($3, $5); }
+        |       IDENT ASSIGN expr             { $$ = ast::ExpressionMap{{$1, $3}}; }
                 ;
 
 compound_op:

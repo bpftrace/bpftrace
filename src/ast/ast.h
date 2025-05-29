@@ -184,6 +184,14 @@ public:
   // The `type` method is the only common thing required by all expression
   // types. This will on the variant types.
   const SizedType &type() const;
+
+  bool is_empty() const
+  {
+    if (std::holds_alternative<Block *>(this->value)) {
+      return std::get<Block *>(this->value) == nullptr;
+    }
+    return false;
+  }
 };
 using ExpressionList = std::vector<Expression>;
 
@@ -197,6 +205,8 @@ class Unroll;
 class Jump;
 class While;
 class For;
+
+using ExpressionMap = std::unordered_map<std::string, Expression>;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
@@ -388,6 +398,13 @@ public:
         vargs(clone(ctx, other.vargs, loc)),
         return_type(other.return_type),
         injected_args(other.injected_args) {};
+  explicit Call(ASTContext &ctx,
+                std::string func,
+                ExpressionMap &&kwargs,
+                Location &&loc)
+      : Node(ctx, std::move(loc)),
+        func(std::move(func)),
+        vargs(std::move(expression_map_to_list(std::move(kwargs)))) {};
 
   const SizedType &type() const
   {
@@ -405,6 +422,62 @@ public:
   // correctly account for this.
   size_t injected_args = 0;
   bool ret_val_discarded = false;
+
+private:
+  static inline const std::unordered_map<std::string,
+                                         std::unordered_map<std::string, int>>
+      available_func_kwargs = {
+        { "kstack", { { "mode", 0 }, { "limit", 1 } } },
+        { "delete", { { "map", 0 }, { "mapkey", 1 } } },
+      };
+
+  ExpressionList expression_map_to_list(ExpressionMap &&kwargs)
+  {
+    auto it = available_func_kwargs.find(func);
+    if (it == available_func_kwargs.end()) {
+      addError() << "Unknown function '" << func
+                 << "' with keyword arguments\n";
+      return {};
+    }
+    const auto &available_kwargs = it->second;
+
+    int max_idx = -1;
+    for (auto &[_, idx] : available_kwargs) {
+      if (idx > max_idx)
+        max_idx = idx;
+    }
+
+    ExpressionList result(max_idx + 1);
+
+    for (auto &&[key, exp] : kwargs) {
+      auto pos_it = available_kwargs.find(key);
+      if (pos_it == available_kwargs.end()) {
+        addError() << "Unknown keyword argument '" << key << "' for function '"
+                   << func << "'\n";
+        return {};
+      }
+
+      int pos = pos_it->second;
+      result[pos] = std::move(exp);
+    }
+
+    // Validate arguments and trim trailing empty positions
+    // We don't allow "hollow" arguments like kstack(limit=1) which would be
+    // converted to kstack(null, 1); but we do allow trailing empty positions
+    // which get trimmed.
+    bool found_non_empty = false;
+    for (int i = result.size() - 1; i >= 0; --i) {
+      if (result[i].is_empty())
+        found_non_empty = true;
+      else if (found_non_empty)
+        addError() << "Hollow argument at position" << i << " for function '"
+                   << func << "'\n";
+    }
+
+    while (!result.empty() && result.back().is_empty())
+      result.pop_back();
+    return result;
+  }
 };
 
 class Sizeof : public Node {
@@ -416,6 +489,10 @@ public:
   explicit Sizeof(ASTContext &ctx, const Sizeof &other, const Location &loc)
       : Node(ctx, loc + other.loc), record(clone(ctx, other.record, loc)) {};
 
+  std::string func;
+  ExpressionList vargs;
+  ExpressionMap kwargs;
+  SizedType return_type;
   const SizedType &type() const
   {
     static SizedType uint64 = CreateUInt64();
