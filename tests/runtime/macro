@@ -1,13 +1,17 @@
 NAME it mutates the passed variable
-PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); print($a); exit(); }
+PROG macro inc($x) { $x += 1; } BEGIN { $a = 1; inc($a); print($a); exit(); }
 EXPECT 2
 
+NAME it assigns to the last expression
+PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; $b = inc($a); print(($a, $b)); exit(); }
+EXPECT (2, 2)
+
 NAME it mutates the passed non-scalar map
-PROG macro set(@x) { @x[1] = 2; 1 } BEGIN { @a[1] = 1; set(@a); exit(); }
+PROG macro set(@x) { @x[1] = 2; } BEGIN { @a[1] = 1; set(@a); exit(); }
 EXPECT @a[1]: 2
 
 NAME it mutates the passed scalar map
-PROG macro set(@x) { @x = 2; 1 } BEGIN { @a = 1; set(@a); exit(); }
+PROG macro set(@x) { @x = 2; } BEGIN { @a = 1; set(@a); exit(); }
 EXPECT @a: 2
 
 NAME it reads the passed map
@@ -15,15 +19,19 @@ PROG macro get(@x) { 1 + @x[1] } BEGIN { @a[1] = 1; print(get(@a)); exit(); }
 EXPECT 2
 
 NAME it can have side effects
-PROG macro print_me($x) { print(("me", $x)) } BEGIN { $a = 1; print_me($a); exit(); }
+PROG macro print_me($x) { print(("me", $x)); } BEGIN { $a = 1; print_me($a); exit(); }
 EXPECT (me, 1)
 
 NAME it can exit early
-PROG macro early() { exit() } BEGIN { early(); print(1); }
+PROG macro early() { exit(); } BEGIN { early(); print(1); }
 EXPECT_NONE 1
 
-NAME it can call other macros
+NAME it can call other macros as expressions
 PROG macro add1($x) { $x + 1 } macro add2($y) { $y + add1($y) } macro add3($z) { $z + add2($z) } BEGIN { print(add3(1)); exit(); }
+EXPECT 4
+
+NAME it can call other macros as statements
+PROG macro add1($x) { $x += 1; } macro add2($y) { add1($y); $y += 1; } macro add3($z) { add2($z); $z += 1; } BEGIN { $a = 1; add3($a); print($a); exit(); }
 EXPECT 4
 
 NAME macro definition order does not matter
@@ -47,7 +55,7 @@ PROG macro add_one($x) { $x + 1 } BEGIN { @a = 1; print(add_one(@a + 1)); exit()
 EXPECT 3
 
 NAME can call the same macro multiple times
-PROG macro inc($x) { $x += 1; $x } BEGIN { $a = 1; inc($a); inc($a); inc($a); print($a); exit(); }
+PROG macro inc($x) { $x += 1; } BEGIN { $a = 1; inc($a); inc($a); inc($a); print($a); exit(); }
 EXPECT 4
 
 NAME for loops can be in macros

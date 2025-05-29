@@ -12,6 +12,42 @@
 
 namespace bpftrace::ast {
 
+std::unordered_map<std::string, Macro *> collect_macros(ASTContext &ast)
+{
+  std::unordered_map<std::string, Macro *> macros;
+  for (Macro *macro : ast.root->macros) {
+    if (macros.contains(macro->name)) {
+      macro->addError() << "Redifinition of macro: " << macro->name;
+      return macros;
+    }
+
+    std::unordered_set<std::string> seen_mvars;
+    std::unordered_set<std::string> seen_mmaps;
+    for (const auto &arg : macro->vargs) {
+      if (auto *mvar = arg.as<Variable>()) {
+        auto inserted = seen_mvars.insert(mvar->ident);
+        if (!inserted.second) {
+          mvar->addError()
+              << "Variable for macro argument has already been used: "
+              << mvar->ident;
+          return macros;
+        }
+      } else if (auto *mmap = arg.as<Map>()) {
+        auto inserted = seen_mmaps.insert(mmap->ident);
+        if (!inserted.second) {
+          mmap->addError() << "Map for macro argument has already been used: "
+                           << mmap->ident;
+          return macros;
+        }
+      }
+    }
+
+    macros[macro->name] = macro;
+  }
+
+  return macros;
+}
+
 class MacroExpander : public Visitor<MacroExpander> {
 public:
   MacroExpander(ASTContext &ast,
@@ -25,16 +61,22 @@ public:
   void visit(Variable &var);
   void visit(Map &map);
   void visit(Expression &expr);
+  void visit(Statement &stmt);
 
-  std::optional<BlockExpr *> expand(Macro &macro, Call &call);
-  bool check_recursive_call(const std::string &macro_name, const Call &call);
+  std::optional<std::variant<BlockExpr *, Block *>> expand(Macro &macro,
+                                                           Call &call);
 
 private:
   ASTContext &ast_;
   const std::string macro_name_;
   const std::unordered_map<std::string, Macro *> &macros_;
 
+  bool is_recursive_call(const std::string &macro_name, const Call &call);
   std::string get_new_var_ident(std::string original_ident);
+  bool is_top_level()
+  {
+    return macro_stack_.empty();
+  }
 
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
@@ -42,21 +84,6 @@ private:
   std::unordered_set<Variable *> temp_vars_;
   std::unordered_map<std::string, Call *> arg_vars_no_mutation_;
   const std::vector<std::string> macro_stack_;
-};
-
-class MacroCollection : public Visitor<MacroCollection> {
-public:
-  MacroCollection(ASTContext &ast, BPFtrace &b);
-  void collect_macros();
-
-  using Visitor<MacroCollection>::visit;
-
-  void visit(Expression &expr);
-
-private:
-  ASTContext &ast_;
-  BPFtrace &bpftrace_;
-  std::unordered_map<std::string, Macro *> macros_;
 };
 
 MacroExpander::MacroExpander(
@@ -69,11 +96,15 @@ MacroExpander::MacroExpander(
       macros_(macros),
       macro_stack_(std::move(macro_stack))
 {
-  assert(!macro_stack_.empty());
 }
 
 void MacroExpander::visit(AssignVarStatement &assignment)
 {
+  if (is_top_level()) {
+    visit(assignment.expr);
+    return;
+  }
+
   auto *var = assignment.var();
   if (temp_vars_.contains(var)) {
     // Don't change variable names if this is a variable assignment
@@ -102,6 +133,10 @@ void MacroExpander::visit(AssignVarStatement &assignment)
 
 void MacroExpander::visit(Variable &var)
 {
+  if (is_top_level()) {
+    return;
+  }
+
   if (auto it = vars_.find(var.ident); it != vars_.end()) {
     var.ident = it->second;
   } else if (!temp_vars_.contains(&var)) {
@@ -111,6 +146,10 @@ void MacroExpander::visit(Variable &var)
 
 void MacroExpander::visit(Map &map)
 {
+  if (is_top_level()) {
+    return;
+  }
+
   if (auto it = maps_.find(map.ident); it != maps_.end()) {
     map.ident = it->second;
   } else {
@@ -119,8 +158,8 @@ void MacroExpander::visit(Map &map)
   }
 }
 
-bool MacroExpander::check_recursive_call(const std::string &macro_name,
-                                         const Call &call)
+bool MacroExpander::is_recursive_call(const std::string &macro_name,
+                                      const Call &call)
 {
   for (size_t i = 0; i < macro_stack_.size(); ++i) {
     if (macro_stack_.at(i) == macro_name) {
@@ -152,7 +191,15 @@ void MacroExpander::visit(Expression &expr)
   if (auto it = macros_.find(call->func); it != macros_.end()) {
     Macro *macro = it->second;
 
-    if (check_recursive_call(macro->name, *call)) {
+    if (is_recursive_call(macro->name, *call)) {
+      return;
+    }
+
+    if (std::holds_alternative<Block *>(macro->block)) {
+      call->addError() << "Macro '" << macro->name
+                       << "' expanded to a block instead of a block "
+                          "expression. Try removing the semicolon from the "
+                          "end of the last statement in the macro body.";
       return;
     }
 
@@ -163,7 +210,54 @@ void MacroExpander::visit(Expression &expr)
                  ast_, macro->name, macros_, std::move(next_macro_stack))
                  .expand(*macro, *call);
     if (r) {
-      expr.value = *r;
+      expr.value = std::get<BlockExpr *>(*r);
+    }
+  }
+}
+
+void MacroExpander::visit(Statement &stmt)
+{
+  auto *expr_stmt = stmt.as<ExprStatement>();
+  if (!expr_stmt) {
+    Visitor<MacroExpander>::visit(stmt);
+    return;
+  }
+
+  auto *call = expr_stmt->expr.as<Call>();
+  if (!call) {
+    Visitor<MacroExpander>::visit(stmt);
+    return;
+  }
+
+  for (auto &varg : call->vargs) {
+    visit(varg);
+  }
+
+  if (auto it = macros_.find(call->func); it != macros_.end()) {
+    Macro *macro = it->second;
+
+    if (is_recursive_call(macro->name, *call)) {
+      return;
+    }
+
+    auto next_macro_stack = macro_stack_;
+    next_macro_stack.push_back(macro->name);
+
+    auto r = MacroExpander(
+                 ast_, macro->name, macros_, std::move(next_macro_stack))
+                 .expand(*macro, *call);
+
+    if (!r) {
+      return;
+    }
+
+    if (std::holds_alternative<BlockExpr *>(macro->block)) {
+      // Finding a block expression instead of a block is ok
+      // as we can just create a expression statement which is legal
+      stmt.value = ast_.make_node<ExprStatement>(std::get<BlockExpr *>(*r),
+                                                 Location(expr_stmt->loc));
+    } else {
+      stmt.value = std::get<Block *>(*r);
     }
   }
 }
@@ -173,7 +267,9 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
   return std::string("$$") + macro_name_ + std::string("_") + original_ident;
 }
 
-std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
+std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
+    Macro &macro,
+    Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
     call.addError() << "Call to macro has wrong number arguments. Expected: "
@@ -221,13 +317,26 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
     }
   }
 
-  for (auto expr : macro.block_expr->stmts) {
+  if (std::holds_alternative<Block *>(macro.block)) {
+    auto *bare_block = std::get<Block *>(macro.block);
+    for (auto expr : bare_block->stmts) {
+      stmt_list.push_back(clone(ast_, expr, call.loc));
+    }
+    auto *cloned_block = ast_.make_node<Block>(std::move(stmt_list),
+                                               Location(macro.loc));
+    visit(cloned_block);
+
+    return cloned_block;
+  }
+
+  auto *block_expr = std::get<BlockExpr *>(macro.block);
+  for (auto expr : block_expr->stmts) {
     stmt_list.push_back(clone(ast_, expr, call.loc));
   }
 
   auto *cloned_block = ast_.make_node<BlockExpr>(
       std::move(stmt_list),
-      clone(ast_, macro.block_expr->expr, call.loc),
+      clone(ast_, block_expr->expr, call.loc),
       Location(macro.loc));
 
   visit(cloned_block);
@@ -239,77 +348,13 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
   return std::nullopt;
 }
 
-MacroCollection::MacroCollection(ASTContext &ast, BPFtrace &b)
-    : ast_(ast), bpftrace_(b)
-{
-}
-
-// This is similar to MacroExpander::visit(Expression &expr) but doesn't have
-// to check for macro recursion because we're at the top level of the AST
-// and avoids the need to keep some state in MacroExpander indicating if we're
-// at the top level of the AST (e.g. where we don't want to rename variables)
-void MacroCollection::visit(Expression &expr)
-{
-  auto *call = expr.as<Call>();
-  if (!call) {
-    Visitor<MacroCollection>::visit(expr);
-    return;
-  }
-
-  for (auto &varg : call->vargs) {
-    visit(varg);
-  }
-
-  if (auto it = macros_.find(call->func); it != macros_.end()) {
-    Macro *macro = it->second;
-    auto r = MacroExpander(ast_, macro->name, macros_, { macro->name })
-                 .expand(*macro, *call);
-    if (r) {
-      expr.value = *r;
-    }
-  }
-}
-
-void MacroCollection::collect_macros()
-{
-  for (Macro *macro : ast_.root->macros) {
-    if (macros_.contains(macro->name)) {
-      macro->addError() << "Redifinition of macro: " << macro->name;
-      return;
-    }
-
-    std::unordered_set<std::string> seen_mvars;
-    std::unordered_set<std::string> seen_mmaps;
-    for (const auto &arg : macro->vargs) {
-      if (auto *mvar = arg.as<Variable>()) {
-        auto inserted = seen_mvars.insert(mvar->ident);
-        if (!inserted.second) {
-          mvar->addError()
-              << "Variable for macro argument has already been used: "
-              << mvar->ident;
-          return;
-        }
-      } else if (auto *mmap = arg.as<Map>()) {
-        auto inserted = seen_mmaps.insert(mmap->ident);
-        if (!inserted.second) {
-          mmap->addError() << "Map for macro argument has already been used: "
-                           << mmap->ident;
-          return;
-        }
-      }
-    }
-
-    macros_[macro->name] = macro;
-  }
-}
-
 Pass CreateMacroExpansionPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b) {
-    MacroCollection collector(ast, b);
-    collector.collect_macros();
+  auto fn = [](ASTContext &ast) {
+    auto macros = collect_macros(ast);
     if (ast.diagnostics().ok()) {
-      collector.visit(ast.root);
+      MacroExpander expander(ast, "none", macros, {});
+      expander.visit(ast.root);
     }
   };
 

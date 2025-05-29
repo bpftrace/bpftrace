@@ -140,6 +140,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList> attach_points
+%type <ast::Block *> bare_block
 %type <ast::BlockExpr *> block_expr
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
@@ -164,7 +165,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
-%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt bare_block
+%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
 %type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
@@ -362,13 +363,14 @@ macros:
 
 macro:
                 MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
-        |       MACRO IDENT "(" ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList{}, $5, @$); }
+        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
 
 macro_args:
                 macro_args "," map { $$ = std::move($1); $$.push_back($3); }
         |       macro_args "," var { $$ = std::move($1); $$.push_back($3); }
         |       map                { $$ = ast::ExpressionList{$1}; }
         |       var                { $$ = ast::ExpressionList{$1}; }
+        |       %empty             { $$ = ast::ExpressionList{}; }
                 ;
 
 body:
