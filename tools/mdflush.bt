@@ -13,29 +13,6 @@
  * 03:14:49 496    kworker/1:0H     md0
  * 03:14:49 488    xfsaild/md0      md0
  * 03:14:54 488    xfsaild/md0      md0
- * 03:15:00 488    xfsaild/md0      md0
- * 03:15:02 85     kswapd0          md0
- * 03:15:02 488    xfsaild/md0      md0
- * 03:15:05 488    xfsaild/md0      md0
- * 03:15:08 488    xfsaild/md0      md0
- * 03:15:10 488    xfsaild/md0      md0
- * 03:15:11 488    xfsaild/md0      md0
- * 03:15:11 488    xfsaild/md0      md0
- * 03:15:11 488    xfsaild/md0      md0
- * 03:15:11 488    xfsaild/md0      md0
- * 03:15:11 488    xfsaild/md0      md0
- * 03:15:12 488    xfsaild/md0      md0
- * 03:15:13 488    xfsaild/md0      md0
- * 03:15:15 488    xfsaild/md0      md0
- * 03:15:19 496    kworker/1:0H     md0
- * 03:15:49 496    kworker/1:0H     md0
- * 03:15:55 18840  sync             md0
- * 03:16:49 496    kworker/1:0H     md0
- * 03:17:19 496    kworker/1:0H     md0
- * 03:20:19 496    kworker/1:0H     md0
- * 03:21:19 496    kworker/1:0H     md0
- * 03:21:49 496    kworker/1:0H     md0
- * 03:25:19 496    kworker/1:0H     md0
  * [...]
  * 
  * This can be useful for correlation with latency outliers or spikes in disk

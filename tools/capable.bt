@@ -12,27 +12,6 @@
  * 22:11:23  0      7003   chmod            3    CAP_FOWNER           1
  * 22:11:23  0      7003   chmod            4    CAP_FSETID           1
  * 22:11:23  0      7005   chmod            4    CAP_FSETID           1
- * 22:11:23  0      7005   chmod            4    CAP_FSETID           1
- * 22:11:23  0      7006   chown            4    CAP_FSETID           1
- * 22:11:23  0      7006   chown            4    CAP_FSETID           1
- * 22:11:23  0      6990   setuidgid        6    CAP_SETGID           1
- * 22:11:23  0      6990   setuidgid        6    CAP_SETGID           1
- * 22:11:23  0      6990   setuidgid        7    CAP_SETUID           1
- * 22:11:24  0      7013   run              24   CAP_SYS_RESOURCE     1
- * 22:11:24  0      7026   chmod            3    CAP_FOWNER           1
- * 22:11:24  0      7026   chmod            4    CAP_FSETID           1
- * 22:11:24  0      7028   chmod            4    CAP_FSETID           1
- * 22:11:24  0      7028   chmod            4    CAP_FSETID           1
- * 22:11:24  0      7029   chown            4    CAP_FSETID           1
- * 22:11:24  0      7029   chown            4    CAP_FSETID           1
- * 22:11:24  0      7013   setuidgid        6    CAP_SETGID           1
- * 22:11:24  0      7013   setuidgid        6    CAP_SETGID           1
- * 22:11:24  0      7013   setuidgid        7    CAP_SETUID           1
- * 22:11:25  0      7036   run              24   CAP_SYS_RESOURCE     1
- * 22:11:25  0      7049   chmod            3    CAP_FOWNER           1
- * 22:11:25  0      7049   chmod            4    CAP_FSETID           1
- * 22:11:25  0      7051   chmod            4    CAP_FSETID           1
- * 22:11:25  0      7051   chmod            4    CAP_FSETID           1
  * [...]
  * 
  * This can be useful for general debugging, and also security enforcement:
