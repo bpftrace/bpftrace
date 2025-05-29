@@ -992,6 +992,7 @@ int BPFtrace::poll_skboutput_events()
 
 void BPFtrace::poll_event_loss(Output &out)
 {
+  // Check for losses that we have wired up
   auto current_value = bytecode_.get_event_loss_counter(*this);
   if (current_value > event_loss_count_) {
     out.lost_events(current_value - event_loss_count_);
@@ -999,6 +1000,13 @@ void BPFtrace::poll_event_loss(Output &out)
   } else if (current_value < event_loss_count_) {
     LOG(ERROR) << "Invalid event loss count value: " << current_value
                << ", last seen: " << event_loss_count_;
+  }
+
+  // Check for per-attachment losses BPF subsystem has wired up
+  for (auto &ap : attached_probes_) {
+    auto lost = ap->missed();
+    if (lost)
+      out.lost_events(lost);
   }
 }
 

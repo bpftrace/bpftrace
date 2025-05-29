@@ -44,6 +44,7 @@ public:
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
+  // Returns FD for underlying BPF link, if any.
   virtual int link_fd()
   {
     return -1;
@@ -54,6 +55,12 @@ public:
     return 1;
   }
 
+  // Returns the number of missed executions.
+  //
+  // NB: the returned value is the number of missed executions since the last
+  // time this method was called. IOW: not monotically increasing.
+  size_t missed();
+
   const Probe &probe() const
   {
     return probe_;
@@ -62,6 +69,9 @@ public:
 protected:
   AttachedProbe(const Probe &probe);
   const Probe &probe_;
+
+private:
+  size_t last_missed_ = 0;
 };
 
 } // namespace bpftrace
