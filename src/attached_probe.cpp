@@ -601,11 +601,10 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
   if (!is_symbol_kprobe)
     funcname += probe.attach_point;
 
-  struct bpf_kprobe_opts opts;
-  ::memset(&opts, 0, sizeof(opts));
-  opts.sz = sizeof(struct bpf_kprobe_opts);
-  opts.offset = offset;
-  opts.retprobe = probe.type == ProbeType::kretprobe;
+  BPFTRACE_LIBBPF_OPTS(bpf_kprobe_opts,
+                       opts,
+                       .offset = offset,
+                       .retprobe = probe.type == ProbeType::kretprobe);
 
   auto *link = bpf_program__attach_kprobe_opts(prog.bpf_prog(),
                                                funcname.c_str(),
