@@ -121,7 +121,7 @@ public:
   int num_probes() const;
   int prerun() const;
   int run(Output &out, BpfBytecode bytecode);
-  virtual Result<std::vector<std::unique_ptr<AttachedProbe>>> attach_probe(
+  virtual Result<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
@@ -240,11 +240,6 @@ private:
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers_;
 
-  Result<std::vector<std::unique_ptr<AttachedProbe>>> attach_usdt_probe(
-      Probe &probe,
-      const BpfProgram &program,
-      std::optional<int> pid,
-      bool file_activation);
   int create_pcaps();
   void close_pcaps();
   int setup_output(void *ctx);

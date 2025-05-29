@@ -505,133 +505,24 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
   ctx->output.lost_events(lost);
 }
 
-Result<std::vector<std::unique_ptr<AttachedProbe>>> BPFtrace::attach_usdt_probe(
-    Probe &probe,
-    const BpfProgram &program,
-    std::optional<int> pid,
-    bool file_activation)
-{
-  std::vector<std::unique_ptr<AttachedProbe>> ret;
-
-  if (feature_->has_uprobe_refcnt() || !file_activation || probe.path.empty()) {
-    auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
-    if (!ap) {
-      auto missing_probes = config_->missing_probes;
-      auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-        log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-      });
-      if (missing_probes == ConfigMissingProbes::error) {
-        return make_error<AttachError>();
-      }
-    } else {
-      ret.push_back(std::move(*ap));
-    }
-    return ret;
-  }
-
-  // File activation works by scanning through /proc/*/maps and seeing
-  // which processes have the target executable in their address space
-  // with execute permission. If found, we will try to attach to each
-  // process we find.
-  //
-  // Note that this is the slow path. If the kernel has semaphore support
-  // (feature_->has_uprobe_refcnt()), the kernel can do this for us and
-  // much faster too.
-  glob_t globbuf;
-  if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
-    LOG(BUG) << "failed to glob";
-
-  char *p;
-  if (!(p = realpath(probe.path.c_str(), nullptr))) {
-    LOG(ERROR) << "Failed to resolve " << probe.path;
-    return ret;
-  }
-  std::string resolved(p);
-  free(p);
-
-  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-    std::string path(globbuf.gl_pathv[i]);
-    std::ifstream file(path);
-    if (file.fail()) {
-      // The process could have exited between the glob and now. We have
-      // to silently ignore that.
-      continue;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-      if (line.find(resolved) == std::string::npos)
-        continue;
-
-      auto parts = util::split_string(line, ' ');
-      if (parts.at(1).find('x') == std::string::npos)
-        continue;
-
-      // Remove `/proc/` prefix
-      std::string pid_str(globbuf.gl_pathv[i] + 6);
-      // No need to remove `/maps` suffix b/c stoi() will ignore trailing !ints
-
-      int pid_parsed;
-      try {
-        pid_parsed = std::stoi(pid_str);
-      } catch (const std::exception &ex) {
-        throw util::FatalUserException("failed to parse pid=" + pid_str);
-      }
-
-      auto ap = AttachedProbe::make(
-          probe, program, pid_parsed, *this, safe_mode_);
-      if (!ap) {
-        auto missing_probes = config_->missing_probes;
-        auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-          log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-        });
-        if (missing_probes == ConfigMissingProbes::error) {
-          return make_error<AttachError>();
-        }
-      } else {
-        ret.push_back(std::move(*ap));
-      }
-      break;
-    }
-  }
-
-  if (ret.empty())
-    LOG(ERROR) << "Failed to find processes running " << probe.path;
-
-  return ret;
-}
-
-Result<std::vector<std::unique_ptr<AttachedProbe>>> BPFtrace::attach_probe(
+Result<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
     const BpfBytecode &bytecode)
 {
-  std::vector<std::unique_ptr<AttachedProbe>> ret;
-
   const auto &program = bytecode.getProgramForProbe(probe);
   std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
                                     : this->pid();
 
-  if (probe.type == ProbeType::usdt) {
-    auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
-    if (!aps) {
-      return aps.takeError();
-    }
-    ret = std::move(*aps);
+  auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+  if (!ap) {
+    auto missing_probes = config_->missing_probes;
+    auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
+      log_probe_attach_failure(err.msg(), probe.name, missing_probes);
+    });
+    return make_error<AttachError>();
   } else {
-    auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
-    if (!ap) {
-      auto missing_probes = config_->missing_probes;
-      auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-        log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-      });
-      if (missing_probes == ConfigMissingProbes::error) {
-        return make_error<AttachError>();
-      }
-    } else {
-      ret.push_back(std::move(*ap));
-    }
+    return std::move(*ap);
   }
-  return ret;
 }
 
 bool attach_reverse(const Probe &p)
@@ -832,12 +723,13 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
     }
     if (!attach_reverse(probe)) {
-      auto aps = attach_probe(probe, bytecode_);
-      if (!aps) {
-        return -1;
-      }
-      for (auto &ap : *aps) {
-        attached_probes_.push_back(std::move(ap));
+      auto ap = attach_probe(probe, bytecode_);
+      if (!ap) {
+        if (config_->missing_probes == ConfigMissingProbes::error) {
+          return -1;
+        }
+      } else {
+        attached_probes_.push_back(std::move(*ap));
       }
     }
   }
@@ -848,12 +740,13 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
     }
     if (attach_reverse(probe)) {
-      auto aps = attach_probe(probe, bytecode_);
-      if (!aps) {
-        return -1;
-      }
-      for (auto &ap : *aps) {
-        attached_probes_.push_back(std::move(ap));
+      auto ap = attach_probe(probe, bytecode_);
+      if (!ap) {
+        if (config_->missing_probes == ConfigMissingProbes::error) {
+          return -1;
+        }
+      } else {
+        attached_probes_.push_back(std::move(*ap));
       }
     }
   }

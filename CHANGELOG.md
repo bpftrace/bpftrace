@@ -22,6 +22,8 @@ and this project adheres to
   - [#4097](https://github.com/bpftrace/bpftrace/pull/4097)
 - Require BPF_MAP_TYPE_RINGBUF to be available
   - [#3974](https://github.com/bpftrace/bpftrace/pull/3974)
+- Require kernel uprobe ref counting to be available for USDTs with semaphores
+  - [#4199](https://github.com/bpftrace/bpftrace/pull/4199)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)

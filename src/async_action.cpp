@@ -140,15 +140,15 @@ void watchpoint_attach_handler(BPFtrace &bpftrace, const void *data)
     Probe &wp_probe = bpftrace.resources.watchpoint_probes[probe_idx];
     wp_probe.address = addr;
 
-    auto aps = bpftrace.attach_probe(wp_probe, bpftrace.bytecode_);
+    auto ap = bpftrace.attach_probe(wp_probe, bpftrace.bytecode_);
 
-    if (!aps &&
-        bpftrace.config_->missing_probes == ConfigMissingProbes::error) {
-      throw util::FatalUserException("Unable to attach real watchpoint probe");
-    }
-
-    for (auto &ap : *aps) {
-      bpftrace.attached_probes_.push_back(std::move(ap));
+    if (!ap) {
+      if (bpftrace.config_->missing_probes == ConfigMissingProbes::error) {
+        throw util::FatalUserException(
+            "Unable to attach real watchpoint probe");
+      }
+    } else {
+      bpftrace.attached_probes_.push_back(std::move(*ap));
     }
   }
 

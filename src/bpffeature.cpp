@@ -376,20 +376,6 @@ bool BPFfeature::has_d_path()
   return *has_d_path_;
 }
 
-bool BPFfeature::has_uprobe_refcnt()
-{
-  if (has_uprobe_refcnt_.has_value())
-    return *has_uprobe_refcnt_;
-
-  std::error_code ec;
-  std::filesystem::path path{
-    "/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset"
-  };
-  has_uprobe_refcnt_ = std::filesystem::exists(path, ec);
-
-  return *has_uprobe_refcnt_;
-}
-
 bool try_create_link(libbpf::bpf_prog_type prog_type,
                      const std::string_view prog_name,
                      libbpf::bpf_attach_type expected_attach_type,
@@ -608,8 +594,6 @@ std::string BPFfeature::report()
     { "btf", to_str(has_btf()) },
     { "module btf", to_str(btf_.has_module_btf()) },
     { "map batch", to_str(has_map_batch()) },
-    // Depends on BCC's bpf_attach_uprobe refcount feature
-    { "uprobe refcount", to_str(has_uprobe_refcnt()) }
   };
 
   std::vector<std::pair<std::string, std::string>> map_types = {

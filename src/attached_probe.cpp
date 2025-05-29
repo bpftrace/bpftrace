@@ -466,69 +466,6 @@ Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
 }
 #endif // HAVE_LIBBPF_UPROBE_MULTI
 
-Result<std::function<void()>> usdt_sem_up(Probe &probe,
-                                          BPFfeature &feature,
-                                          int pid,
-                                          const std::string &fn_name,
-                                          void *ctx)
-{
-  // If we have BCC and kernel support for uprobe refcnt API, then we don't
-  // need to do anything here. The kernel will increment the semaphore count
-  // for us when we provide the semaphore offset.
-  if (feature.has_uprobe_refcnt()) {
-    bcc_usdt_close(ctx);
-    return []() {};
-  }
-
-  // NB: we are careful to capture by value here everything that will not
-  // be available in AttachedProbe destructor.
-  auto addsem = [probe, fn_name](void *c, int16_t val) -> int {
-    if (probe.ns.empty())
-      return bcc_usdt_addsem_probe(
-          c, probe.attach_point.c_str(), fn_name.c_str(), val);
-    else
-      return bcc_usdt_addsem_fully_specified_probe(c,
-                                                   probe.ns.c_str(),
-                                                   probe.attach_point.c_str(),
-                                                   fn_name.c_str(),
-                                                   val);
-  };
-
-  // Use semaphore increment API to avoid having to hold onto the usdt context
-  // for the entire tracing session. Reason we do it this way instead of
-  // holding onto usdt context is b/c each usdt context can take lots of
-  // memory
-  // (~10MB). This, coupled with --usdt-file-activation and tracees that have
-  // a forking model can cause bpftrace to use huge amounts of memory if we
-  // hold onto the contexts.
-  int err = addsem(ctx, +1);
-  if (err) {
-    return make_error<AttachError>(
-        "Error finding or enabling probe: " + probe.name +
-        "\n Try using -p or --usdt-file-activation if there's USDT "
-        "semaphores");
-  }
-
-  // Now close the context to save some memory
-  bcc_usdt_close(ctx);
-
-  // Set destructor to decrement the semaphore count
-  return [pid, probe, addsem]() {
-    void *c = nullptr;
-    if (!probe.path.empty()) {
-      auto real_path = std::filesystem::absolute(probe.path).string();
-      c = bcc_usdt_new_frompid(pid, real_path.c_str());
-    } else {
-      c = bcc_usdt_new_frompid(pid, nullptr);
-    }
-    if (!c)
-      return;
-
-    addsem(c, -1);
-    bcc_usdt_close(c);
-  };
-}
-
 class AttachedKprobeProbe : public AttachedProbe {
 public:
   static Result<std::unique_ptr<AttachedKprobeProbe>> make(
@@ -840,28 +777,21 @@ Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
 
 class AttachedUSDTProbe : public AttachedProbe {
 public:
-  static Result<std::unique_ptr<AttachedUSDTProbe>> make(Probe &probe,
-                                                         const BpfProgram &prog,
-                                                         std::optional<int> pid,
-                                                         BPFfeature &feature);
+  static Result<std::unique_ptr<AttachedUSDTProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
   ~AttachedUSDTProbe() override;
 
 private:
-  AttachedUSDTProbe(const Probe &probe,
-                    int progfd,
-                    int perf_event_fd,
-                    std::function<void()> cleanup);
+  AttachedUSDTProbe(const Probe &probe, int progfd, int perf_event_fd);
   int perf_event_fd_;
-  std::function<void()> usdt_sem_cleanup_;
 };
 
 AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe,
                                      int progfd,
-                                     int perf_event_fd,
-                                     std::function<void()> cleanup)
-    : AttachedProbe(probe, progfd),
-      perf_event_fd_(perf_event_fd),
-      usdt_sem_cleanup_(std::move(cleanup))
+                                     int perf_event_fd)
+    : AttachedProbe(probe, progfd), perf_event_fd_(perf_event_fd)
 {
 }
 
@@ -869,15 +799,12 @@ AttachedUSDTProbe::~AttachedUSDTProbe()
 {
   if (bpf_close_perf_event_fd(perf_event_fd_))
     LOG(WARNING) << "failed to close perf event FD for usdt probe";
-
-  usdt_sem_cleanup_();
 }
 
 Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
     Probe &probe,
     const BpfProgram &prog,
-    std::optional<int> pid,
-    BPFfeature &feature)
+    std::optional<int> pid)
 {
   struct bcc_usdt_location loc = {};
   int err;
@@ -939,15 +866,7 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
   [[maybe_unused]] auto semaphore_offset = static_cast<uint32_t>(
       u->semaphore_offset);
 
-  // Increment the semaphore count (will noop if no semaphore)
-  // NB: Do *not* use `ctx` after this call. It may either be open or closed,
-  // depending on which path was taken.
-  std::function<void()> usdt_sem_cleanup;
-  auto sem_up_res = usdt_sem_up(probe, feature, pid.value_or(0), fn_name, ctx);
-
-  if (!sem_up_res) {
-    return sem_up_res.takeError();
-  }
+  bcc_usdt_close(ctx);
 
   int perf_event_fd = bpf_attach_uprobe(prog.fd(),
                                         attachtype(probe.type),
@@ -966,7 +885,7 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
   }
 
   return std::unique_ptr<AttachedUSDTProbe>(
-      new AttachedUSDTProbe(probe, prog.fd(), perf_event_fd, *sem_up_res));
+      new AttachedUSDTProbe(probe, prog.fd(), perf_event_fd));
 }
 
 class AttachedTracepointProbe : public AttachedProbe {
@@ -1671,7 +1590,7 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
       return AttachedRawtracepointProbe::make(probe, prog);
     }
     case ProbeType::usdt: {
-      return AttachedUSDTProbe::make(probe, prog, pid, *bpftrace.feature_);
+      return AttachedUSDTProbe::make(probe, prog, pid);
     }
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint: {
