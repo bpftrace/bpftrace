@@ -1033,7 +1033,7 @@ int open_perf_event(uint32_t ev_type,
                     int group_fd)
 {
   if (sample_period > 0 && sample_freq > 0) {
-    LOG(WARNING) << "Exactly one of sample_period / sample_freq should be set";
+    LOG(BUG) << "Exactly one of sample_period / sample_freq should be set";
     return -1;
   }
 
@@ -1078,7 +1078,7 @@ AttachedProfileProbe::AttachedProfileProbe(const Probe &probe,
 
 AttachedProfileProbe::~AttachedProfileProbe()
 {
-  for (auto link : links_) {
+  for (struct bpf_link *link : links_) {
     if (bpf_link__destroy(link))
       LOG(WARNING) << "failed to destroy link for profile probe: "
                    << strerror(errno);
@@ -1137,7 +1137,7 @@ Result<std::unique_ptr<AttachedProfileProbe>> AttachedProfileProbe::make(
   }
 
   if (has_error) {
-    for (auto link : links) {
+    for (struct bpf_link *link : links) {
       if (bpf_link__destroy(link))
         LOG(WARNING) << "failed to destroy link for profile probe: "
                      << strerror(errno);
