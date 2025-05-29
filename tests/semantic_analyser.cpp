@@ -275,7 +275,6 @@ kprobe:f { fake }
 )");
 
   MockBPFfeature feature(false);
-  test(feature, "k:f { cgroup }", 1);
   test(feature, "k:f { jiffies }", 1);
 }
 

@@ -900,13 +900,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
              builtin.ident == "rand" || builtin.ident == "numaid" ||
              builtin.ident == "jiffies" || builtin.ident == "ncpus") {
     builtin.builtin_type = CreateUInt64();
-    if (builtin.ident == "cgroup" &&
-        !bpftrace_.feature_->has_helper_get_current_cgroup_id()) {
-      builtin.addError()
-          << "BPF_FUNC_get_current_cgroup_id is not available for your kernel "
-             "version";
-    } else if (builtin.ident == "jiffies" &&
-               !bpftrace_.feature_->has_helper_jiffies64()) {
+    if (builtin.ident == "jiffies" &&
+        !bpftrace_.feature_->has_helper_jiffies64()) {
       builtin.addError()
           << "BPF_FUNC_jiffies64 is not available for your kernel version";
     }
@@ -1663,11 +1658,6 @@ If you're seeing errors, try clamping the string sizes. For example:
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;
-
-    if (!bpftrace_.feature_->has_helper_override_return()) {
-      call.addError()
-          << "BPF_FUNC_override_return not available for your kernel version";
-    }
 
     for (auto *attach_point : probe->attach_points) {
       ProbeType type = probetype(attach_point->provider);
