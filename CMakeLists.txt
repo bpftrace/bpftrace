@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 project(bpftrace)
 
 cmake_policy(SET CMP0057 NEW)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
@@ -23,12 +27,6 @@ set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 set(SYSTEM_INCLUDE_PATHS "auto" CACHE STRING "Hard-code system include paths (colon separated, the default value \"auto\" queries clang at runtime)")
 
 set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-set (CMAKE_CXX_STANDARD 20)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
@@ -223,6 +221,9 @@ endif()
 if(LIBBLAZESYM_FOUND)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BLAZESYM)
 endif()
+
+include(BuildBPF)
+include(Embed)
 
 add_subdirectory(src)
 if (BUILD_TESTING)

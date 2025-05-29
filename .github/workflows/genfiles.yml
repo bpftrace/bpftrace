@@ -1,0 +1,28 @@
+name: "Check genfiles"
+
+on: [ pull_request ]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      # For flakehub cache
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@v1
+      - name: Run update-genfiles
+        run: ./scripts/update_genfiles.sh

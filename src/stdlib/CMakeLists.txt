@@ -1,6 +1,3 @@
-include(BuildBPF)
-include(Embed)
-
 bpf(base
   SOURCE  base.c
   BITCODE base.bc
@@ -38,4 +35,3 @@ embed(
 # solution is more desirable for now.
 
 add_library(stdlib STATIC stdlib.cpp)
-add_dependencies(stdlib base_bitcode base_btf base_script)

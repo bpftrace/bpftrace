@@ -2,6 +2,8 @@
 
 find_program(XXD xxd REQUIRED)
 
+add_custom_target(genfiles)
+
 function(embed NAME SOURCE)
   cmake_parse_arguments(
     ARG
@@ -45,4 +47,5 @@ function(embed NAME SOURCE)
     ${NAME}
     DEPENDS ${ARG_OUTPUT}
   )
+  add_dependencies(genfiles ${NAME})
 endfunction()
