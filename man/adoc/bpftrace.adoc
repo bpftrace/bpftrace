@@ -1881,115 +1881,115 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | n/a
 | The struct of all arguments of the traced function. Available in `rawtracepoint`, `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
 
-| cgroup
+| `cgroup`
 | uint64
 | 4.18
 | get_current_cgroup_id
 | ID of the cgroup the current process belongs to. Only works with cgroupv2.
 
-| comm
+| `comm`
 | string
 | 4.2
 | get_current_comm
 | Name of the current thread
 
-| cpid
+| `cpid`
 | uint32
 | n/a
 | n/a
 | Child process ID, if bpftrace is invoked with `-c`
 
-| cpu
+| `cpu`
 | uint32
 | 4.1
 | raw_smp_processor_id
 | ID of the processor executing the BPF program
 
-| ncpus
+| `ncpus`
 | uint64
 | n/a
 | n/a
 | Number of CPUs
 
-| curtask
+| `curtask`
 | uint64
 | 4.8
 | get_current_task
 | Pointer to `struct task_struct` of the current task
 
-| elapsed
+| `elapsed`
 | uint64
 | (see nsec)
 | ktime_get_ns / ktime_get_boot_ns
 | Nanoseconds elapsed since bpftrace initialization, based on `nsecs`
 
-| func
+| `func`
 | string
 | n/a
 | n/a
 | Name of the current function being traced (kprobes,uprobes)
 
-| gid
+| `gid`
 | uint64
 | 4.2
 | get_current_uid_gid
 | Group ID of the current thread, as seen from the init namespace
 
-| jiffies
+| `jiffies`
 | uint64
 | 5.9
 | get_jiffies_64
 | Jiffies of the kernel. In 32-bit system, using this builtin might be slower.
 
-| numaid
+| `numaid`
 | uint32
 | 5.8
 | numa_node_id
 | ID of the NUMA node executing the BPF program
 
-| pid
+| `pid`
 | uint32
 | 4.2
 | get_current_pid_tgid
 | Process ID of the current thread (aka thread group ID), as seen from the init namespace
 
-| probe
+| `probe`
 | string
 | n/na
 | n/a
 | Name of the current probe
 
-| rand
+| `rand`
 | uint32
 | 4.1
 | get_prandom_u32
 | Random number
 
-| return
+| `return`
 | n/a
 | n/a
 | n/a
 | The return keyword is used to exit the current probe. This differs from exit() in that it doesn't exit bpftrace.
 
-| retval
+| `retval`
 | uint64
 | n/a
 | n/a
 | Value returned by the function being traced (kretprobe, uretprobe, fexit). For kretprobe and uretprobe, its type is `uint64`, but for fexit it depends. You can look up the type using `bpftrace -lv`
 
-| tid
+| `tid`
 | uint32
 | 4.2
 | get_current_pid_tgid
 | Thread ID of the current thread, as seen from the init namespace
 
-| uid
+| `uid`
 | uint64
 | 4.2
 | get_current_uid_gid
 | User ID of the current thread, as seen from the init namespace
 
-| username
+| `username`
 | string
 | n/a
 | get_current_uid_gid
