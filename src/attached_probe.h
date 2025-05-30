@@ -40,7 +40,7 @@ public:
                                                      std::optional<int> pid,
                                                      BPFtrace &bpftrace,
                                                      bool safe_mode = true);
-  virtual ~AttachedProbe();
+  virtual ~AttachedProbe() = default;
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
@@ -56,11 +56,8 @@ public:
   }
 
 protected:
-  AttachedProbe(const Probe &probe, int progfd);
+  AttachedProbe(const Probe &probe);
   const Probe &probe_;
-
-private:
-  const int progfd_;
 };
 
 } // namespace bpftrace

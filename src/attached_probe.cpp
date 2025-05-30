@@ -477,14 +477,13 @@ public:
   int link_fd() override;
 
 private:
-  AttachedKprobeProbe(const Probe &probe, int progfd, struct bpf_link *link);
+  AttachedKprobeProbe(const Probe &probe, struct bpf_link *link);
   struct bpf_link *link_;
 };
 
 AttachedKprobeProbe::AttachedKprobeProbe(const Probe &probe,
-                                         int progfd,
                                          struct bpf_link *link)
-    : AttachedProbe(probe, progfd), link_(link)
+    : AttachedProbe(probe), link_(link)
 {
 }
 
@@ -555,7 +554,7 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
   }
 
   return std::unique_ptr<AttachedKprobeProbe>(
-      new AttachedKprobeProbe(probe, prog.fd(), link));
+      new AttachedKprobeProbe(probe, link));
 }
 
 class AttachedMultiKprobeProbe : public AttachedProbe {
@@ -568,14 +567,13 @@ public:
   size_t probe_count() const override;
 
 private:
-  AttachedMultiKprobeProbe(const Probe &probe, int progfd, int link_fd);
+  AttachedMultiKprobeProbe(const Probe &probe, int link_fd);
   int link_fd_;
 };
 
 AttachedMultiKprobeProbe::AttachedMultiKprobeProbe(const Probe &probe,
-                                                   int progfd,
                                                    int link_fd)
-    : AttachedProbe(probe, progfd), link_fd_(link_fd)
+    : AttachedProbe(probe), link_fd_(link_fd)
 {
 }
 
@@ -623,7 +621,7 @@ Result<std::unique_ptr<AttachedMultiKprobeProbe>> AttachedMultiKprobeProbe::
   }
 
   return std::unique_ptr<AttachedMultiKprobeProbe>(
-      new AttachedMultiKprobeProbe(probe, prog.fd(), link_fd));
+      new AttachedMultiKprobeProbe(probe, link_fd));
 }
 
 class AttachedUprobeProbe : public AttachedProbe {
@@ -638,15 +636,14 @@ public:
   int link_fd() override;
 
 private:
-  AttachedUprobeProbe(const Probe &probe, int progfd, struct bpf_link *link);
+  AttachedUprobeProbe(const Probe &probe, struct bpf_link *link);
 
   struct bpf_link *link_;
 };
 
 AttachedUprobeProbe::AttachedUprobeProbe(const Probe &probe,
-                                         int progfd,
                                          struct bpf_link *link)
-    : AttachedProbe(probe, progfd), link_(link)
+    : AttachedProbe(probe), link_(link)
 {
 }
 
@@ -688,7 +685,7 @@ Result<std::unique_ptr<AttachedUprobeProbe>> AttachedUprobeProbe::make(
   }
 
   return std::unique_ptr<AttachedUprobeProbe>(
-      new AttachedUprobeProbe(probe, prog.fd(), link));
+      new AttachedUprobeProbe(probe, link));
 }
 
 class AttachedMultiUprobeProbe : public AttachedProbe {
@@ -702,14 +699,13 @@ public:
   size_t probe_count() const override;
 
 private:
-  AttachedMultiUprobeProbe(const Probe &probe, int progfd, int link_fd);
+  AttachedMultiUprobeProbe(const Probe &probe, int link_fd);
   int link_fd_;
 };
 
 AttachedMultiUprobeProbe::AttachedMultiUprobeProbe(const Probe &probe,
-                                                   int progfd,
                                                    int link_fd)
-    : AttachedProbe(probe, progfd), link_fd_(link_fd)
+    : AttachedProbe(probe), link_fd_(link_fd)
 {
 }
 
@@ -767,7 +763,7 @@ Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
   }
 
   return std::unique_ptr<AttachedMultiUprobeProbe>(
-      new AttachedMultiUprobeProbe(probe, prog.fd(), link_fd));
+      new AttachedMultiUprobeProbe(probe, link_fd));
 }
 #else
 Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
@@ -786,14 +782,12 @@ public:
   ~AttachedUSDTProbe() override;
 
 private:
-  AttachedUSDTProbe(const Probe &probe, int progfd, int perf_event_fd);
+  AttachedUSDTProbe(const Probe &probe, int perf_event_fd);
   int perf_event_fd_;
 };
 
-AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe,
-                                     int progfd,
-                                     int perf_event_fd)
-    : AttachedProbe(probe, progfd), perf_event_fd_(perf_event_fd)
+AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe, int perf_event_fd)
+    : AttachedProbe(probe), perf_event_fd_(perf_event_fd)
 {
 }
 
@@ -887,7 +881,7 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
   }
 
   return std::unique_ptr<AttachedUSDTProbe>(
-      new AttachedUSDTProbe(probe, prog.fd(), perf_event_fd));
+      new AttachedUSDTProbe(probe, perf_event_fd));
 }
 
 class AttachedTracepointProbe : public AttachedProbe {
@@ -899,7 +893,6 @@ public:
 
 private:
   AttachedTracepointProbe(const Probe &probe,
-                          int progfd,
                           int perf_event_fd,
                           std::string event_name,
                           std::string probe_path);
@@ -909,11 +902,10 @@ private:
 };
 
 AttachedTracepointProbe::AttachedTracepointProbe(const Probe &probe,
-                                                 int progfd,
                                                  int perf_event_fd,
                                                  std::string event_name,
                                                  std::string probe_path)
-    : AttachedProbe(probe, progfd),
+    : AttachedProbe(probe),
       perf_event_fd_(perf_event_fd),
       event_name_(std::move(event_name)),
       probe_path_(std::move(probe_path))
@@ -941,7 +933,7 @@ Result<std::unique_ptr<AttachedTracepointProbe>> AttachedTracepointProbe::make(
   }
 
   return std::unique_ptr<AttachedTracepointProbe>(new AttachedTracepointProbe(
-      probe, prog.fd(), perf_event_fd, eventname(probe, 0), probe.path));
+      probe, perf_event_fd, eventname(probe, 0), probe.path));
 }
 
 int open_perf_event(uint32_t ev_type,
@@ -984,15 +976,13 @@ public:
 
 private:
   AttachedProfileProbe(const Probe &probe,
-                       int progfd,
                        std::vector<struct bpf_link *> links);
   std::vector<struct bpf_link *> links_;
 };
 
 AttachedProfileProbe::AttachedProfileProbe(const Probe &probe,
-                                           int progfd,
                                            std::vector<struct bpf_link *> links)
-    : AttachedProbe(probe, progfd), links_(std::move(links))
+    : AttachedProbe(probe), links_(std::move(links))
 {
 }
 
@@ -1066,7 +1056,7 @@ Result<std::unique_ptr<AttachedProfileProbe>> AttachedProfileProbe::make(
   }
 
   return std::unique_ptr<AttachedProfileProbe>(
-      new AttachedProfileProbe(probe, prog.fd(), links));
+      new AttachedProfileProbe(probe, links));
 }
 
 class AttachedIntervalProbe : public AttachedProbe {
@@ -1080,14 +1070,13 @@ public:
   int link_fd() override;
 
 private:
-  AttachedIntervalProbe(const Probe &probe, int progfd, struct bpf_link *link);
+  AttachedIntervalProbe(const Probe &probe, struct bpf_link *link);
   struct bpf_link *link_;
 };
 
 AttachedIntervalProbe::AttachedIntervalProbe(const Probe &probe,
-                                             int progfd,
                                              struct bpf_link *link)
-    : AttachedProbe(probe, progfd), link_(link)
+    : AttachedProbe(probe), link_(link)
 {
 }
 
@@ -1143,7 +1132,7 @@ Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
   }
 
   return std::unique_ptr<AttachedIntervalProbe>(
-      new AttachedIntervalProbe(probe, prog.fd(), link));
+      new AttachedIntervalProbe(probe, link));
 }
 
 class AttachedSoftwareProbe : public AttachedProbe {
@@ -1156,16 +1145,14 @@ public:
 
 private:
   AttachedSoftwareProbe(const Probe &probe,
-                        int progfd,
                         std::vector<struct bpf_link *> links);
   std::vector<struct bpf_link *> links_;
 };
 
 AttachedSoftwareProbe::AttachedSoftwareProbe(
     const Probe &probe,
-    int progfd,
     std::vector<struct bpf_link *> links)
-    : AttachedProbe(probe, progfd), links_(std::move(links))
+    : AttachedProbe(probe), links_(std::move(links))
 {
 }
 
@@ -1236,7 +1223,7 @@ Result<std::unique_ptr<AttachedSoftwareProbe>> AttachedSoftwareProbe::make(
   }
 
   return std::unique_ptr<AttachedSoftwareProbe>(
-      new AttachedSoftwareProbe(probe, prog.fd(), links));
+      new AttachedSoftwareProbe(probe, links));
 }
 
 class AttachedHardwareProbe : public AttachedProbe {
@@ -1249,16 +1236,14 @@ public:
 
 private:
   AttachedHardwareProbe(const Probe &probe,
-                        int progfd,
                         std::vector<struct bpf_link *> links);
   std::vector<struct bpf_link *> links_;
 };
 
 AttachedHardwareProbe::AttachedHardwareProbe(
     const Probe &probe,
-    int progfd,
     std::vector<struct bpf_link *> links)
-    : AttachedProbe(probe, progfd), links_(std::move(links))
+    : AttachedProbe(probe), links_(std::move(links))
 {
 }
 
@@ -1329,7 +1314,7 @@ Result<std::unique_ptr<AttachedHardwareProbe>> AttachedHardwareProbe::make(
   }
 
   return std::unique_ptr<AttachedHardwareProbe>(
-      new AttachedHardwareProbe(probe, prog.fd(), links));
+      new AttachedHardwareProbe(probe, links));
 }
 
 class AttachedFentryProbe : public AttachedProbe {
@@ -1340,14 +1325,12 @@ public:
   ~AttachedFentryProbe() override;
 
 private:
-  AttachedFentryProbe(const Probe &probe, int progfd, int tracing_fd);
+  AttachedFentryProbe(const Probe &probe, int tracing_fd);
   int tracing_fd_;
 };
 
-AttachedFentryProbe::AttachedFentryProbe(const Probe &probe,
-                                         int progfd,
-                                         int tracing_fd)
-    : AttachedProbe(probe, progfd), tracing_fd_(tracing_fd)
+AttachedFentryProbe::AttachedFentryProbe(const Probe &probe, int tracing_fd)
+    : AttachedProbe(probe), tracing_fd_(tracing_fd)
 {
 }
 
@@ -1366,7 +1349,7 @@ Result<std::unique_ptr<AttachedFentryProbe>> AttachedFentryProbe::make(
   }
 
   return std::unique_ptr<AttachedFentryProbe>(
-      new AttachedFentryProbe(probe, prog.fd(), tracing_fd));
+      new AttachedFentryProbe(probe, tracing_fd));
 }
 
 class AttachedRawtracepointProbe : public AttachedProbe {
@@ -1377,14 +1360,13 @@ public:
   ~AttachedRawtracepointProbe() override;
 
 private:
-  AttachedRawtracepointProbe(const Probe &probe, int progfd, int tracing_fd);
+  AttachedRawtracepointProbe(const Probe &probe, int tracing_fd);
   int tracing_fd_;
 };
 
 AttachedRawtracepointProbe::AttachedRawtracepointProbe(const Probe &probe,
-                                                       int progfd,
                                                        int tracing_fd)
-    : AttachedProbe(probe, progfd), tracing_fd_(tracing_fd)
+    : AttachedProbe(probe), tracing_fd_(tracing_fd)
 {
 }
 
@@ -1409,7 +1391,7 @@ Result<std::unique_ptr<AttachedRawtracepointProbe>> AttachedRawtracepointProbe::
   }
 
   return std::unique_ptr<AttachedRawtracepointProbe>(
-      new AttachedRawtracepointProbe(probe, prog.fd(), tracing_fd));
+      new AttachedRawtracepointProbe(probe, tracing_fd));
 }
 
 class AttachedIterProbe : public AttachedProbe {
@@ -1423,14 +1405,12 @@ public:
   int link_fd() override;
 
 private:
-  AttachedIterProbe(const Probe &probe, int progfd, int iter_link_fd);
+  AttachedIterProbe(const Probe &probe, int iter_link_fd);
   const int iter_link_fd_;
 };
 
-AttachedIterProbe::AttachedIterProbe(const Probe &probe,
-                                     int progfd,
-                                     int iter_link_fd)
-    : AttachedProbe(probe, progfd), iter_link_fd_(iter_link_fd)
+AttachedIterProbe::AttachedIterProbe(const Probe &probe, int iter_link_fd)
+    : AttachedProbe(probe), iter_link_fd_(iter_link_fd)
 {
 }
 
@@ -1470,7 +1450,7 @@ Result<std::unique_ptr<AttachedIterProbe>> AttachedIterProbe::make(
   }
 
   return std::unique_ptr<AttachedIterProbe>(
-      new AttachedIterProbe(probe, prog.fd(), iter_fd));
+      new AttachedIterProbe(probe, iter_fd));
 }
 
 int AttachedIterProbe::link_fd()
@@ -1488,17 +1468,14 @@ public:
   ~AttachedWatchpointProbe() override;
 
 private:
-  AttachedWatchpointProbe(const Probe &probe,
-                          int progfd,
-                          std::vector<int> perf_event_fds);
+  AttachedWatchpointProbe(const Probe &probe, std::vector<int> perf_event_fds);
   std::vector<int> perf_event_fds_;
 };
 
 AttachedWatchpointProbe::AttachedWatchpointProbe(
     const Probe &probe,
-    int progfd,
     std::vector<int> perf_event_fds)
-    : AttachedProbe(probe, progfd), perf_event_fds_(std::move(perf_event_fds))
+    : AttachedProbe(probe), perf_event_fds_(std::move(perf_event_fds))
 {
 }
 
@@ -1578,18 +1555,11 @@ Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
   }
 
   return std::unique_ptr<AttachedWatchpointProbe>(
-      new AttachedWatchpointProbe(probe, prog.fd(), perf_event_fds));
+      new AttachedWatchpointProbe(probe, perf_event_fds));
 }
 
-AttachedProbe::AttachedProbe(const Probe &probe, int progfd)
-    : probe_(probe), progfd_(progfd)
+AttachedProbe::AttachedProbe(const Probe &probe) : probe_(probe)
 {
-}
-
-AttachedProbe::~AttachedProbe()
-{
-  if (progfd_ >= 0)
-    close(progfd_);
 }
 
 int AttachedProbe::link_fd()
