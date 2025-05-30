@@ -832,12 +832,20 @@ void TextOutput::lost_events(uint64_t lost) const
   out_ << "Lost " << lost << " events" << std::endl;
 }
 
-void TextOutput::attached_probes(uint64_t num_probes) const
+void TextOutput::attached_probes(uint64_t want_to_attach,
+                                 uint64_t attached_probes) const
 {
-  if (num_probes == 1)
-    out_ << "Attached " << num_probes << " probe" << std::endl;
+  if (attached_probes == 1)
+    out_ << "Attached " << attached_probes << " probe.";
   else
-    out_ << "Attached " << num_probes << " probes" << std::endl;
+    out_ << "Attached " << attached_probes << " probes.";
+
+  if (want_to_attach > attached_probes) {
+    out_ << " Failed count: " << (want_to_attach - attached_probes)
+         << std::endl;
+  } else {
+    out_ << std::endl;
+  }
 }
 
 void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
@@ -1136,9 +1144,13 @@ void JsonOutput::lost_events(uint64_t lost) const
   message(MessageType::lost_events, "events", lost);
 }
 
-void JsonOutput::attached_probes(uint64_t num_probes) const
+void JsonOutput::attached_probes(uint64_t want_to_attach,
+                                 uint64_t attached_probes) const
 {
-  message(MessageType::attached_probes, "probes", num_probes);
+  out_ << R"({"type": ")" << MessageType::attached_probes << R"(", "data": )"
+       << "{\"successful\" : " << attached_probes
+       << ", \"failed\" : " << want_to_attach - attached_probes << "}" << "}"
+       << std::endl;
 }
 
 void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const

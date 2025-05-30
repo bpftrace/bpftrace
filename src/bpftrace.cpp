@@ -789,6 +789,19 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
+  size_t want_to_attach = 0;
+
+  want_to_attach += resources.special_probes.size();
+  want_to_attach += resources.signal_probes.size();
+
+  for (auto &probe : resources.probes) {
+    if (probe.funcs.empty()) {
+      want_to_attach += 1;
+    } else {
+      want_to_attach += probe.funcs.size();
+    }
+  }
+
   int num_special_attached = 0;
 
   auto begin_probe = resources.special_probes.find("BEGIN");
@@ -890,7 +903,7 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
   }
 
   if (!bt_quiet)
-    out.attached_probes(total_attached);
+    out.attached_probes(want_to_attach, total_attached);
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
