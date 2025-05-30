@@ -10,6 +10,8 @@
 
 namespace bpftrace {
 
+char ProgramQueryError::ID;
+
 BpfProgram::BpfProgram(struct bpf_program *bpf_prog) : bpf_prog_(bpf_prog)
 {
 }
@@ -102,6 +104,26 @@ void BpfProgram::set_no_autoattach()
 struct bpf_program *BpfProgram::bpf_prog() const
 {
   return bpf_prog_;
+}
+
+Result<uint64_t> BpfProgram::missed()
+{
+  struct libbpf::bpf_prog_info info = {};
+  __u32 len = sizeof(info);
+
+  auto *info_p = reinterpret_cast<::bpf_prog_info *>(&info);
+  if (bpf_prog_get_info_by_fd(fd(), info_p, &len))
+    return make_error<ProgramQueryError>(errno);
+
+  auto missed = info.recursion_misses;
+  if (missed < last_missed_) {
+    LOG(BUG) << "Kernel recursion counter went backwards: missed=" << missed
+             << " prev=" << last_missed_;
+  }
+
+  auto new_missed = missed - last_missed_;
+  last_missed_ = missed;
+  return new_missed;
 }
 
 } // namespace bpftrace

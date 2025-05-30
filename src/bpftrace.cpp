@@ -54,6 +54,10 @@
 #include "util/system.h"
 #include "util/wildcard.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 std::set<DebugStage> bt_debug = {};
@@ -1008,6 +1012,17 @@ void BPFtrace::poll_event_loss(Output &out)
     auto lost = ap->missed();
     if (!lost) {
       LOG(WARNING) << "Failed to query probe " << name
+                   << " for misses: " << lost.takeError();
+    } else if (*lost) {
+      out.lost_executions(name, *lost);
+    }
+  }
+
+  // Check for per-program losses BPF subsystem has wired up
+  for (auto &[name, program] : bytecode_.progs()) {
+    auto lost = program.missed();
+    if (!lost) {
+      LOG(WARNING) << "Failed to query program " << name
                    << " for misses: " << lost.takeError();
     } else if (*lost) {
       out.lost_executions(name, *lost);

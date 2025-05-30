@@ -114,6 +114,11 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
       const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
 }
 
+std::map<std::string, BpfProgram> &BpfBytecode::progs()
+{
+  return programs_;
+}
+
 void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
 {
   globalvars::update_global_vars(bpf_object_.get(),
