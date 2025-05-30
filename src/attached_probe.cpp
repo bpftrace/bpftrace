@@ -788,20 +788,28 @@ public:
       std::optional<int> pid);
   ~AttachedUSDTProbe() override;
 
+  int link_fd() override;
+
 private:
-  AttachedUSDTProbe(const Probe &probe, int perf_event_fd);
-  int perf_event_fd_;
+  AttachedUSDTProbe(const Probe &probe, struct bpf_link *link);
+  struct bpf_link *link_;
 };
 
-AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe, int perf_event_fd)
-    : AttachedProbe(probe), perf_event_fd_(perf_event_fd)
+AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe, struct bpf_link *link)
+    : AttachedProbe(probe), link_(link)
 {
+}
+
+int AttachedUSDTProbe::link_fd()
+{
+  return bpf_link__fd(link_);
 }
 
 AttachedUSDTProbe::~AttachedUSDTProbe()
 {
-  if (bpf_close_perf_event_fd(perf_event_fd_))
-    LOG(WARNING) << "failed to close perf event FD for usdt probe";
+  if (bpf_link__destroy(link_))
+    LOG(WARNING) << "failed to destroy link for usdt probe: "
+                 << strerror(errno);
 }
 
 Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
@@ -836,7 +844,6 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
     }
   }
 
-  // Resolve location of usdt probe
   USDTHelper usdt_helper;
   auto u = usdt_helper.find(pid, probe.path, probe.ns, probe.attach_point);
   if (!u.has_value()) {
@@ -845,6 +852,7 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
   }
   probe.path = u->path;
 
+  // Resolve location of usdt probe
   err = bcc_usdt_get_location(ctx,
                               probe.ns.c_str(),
                               probe.attach_point.c_str(),
@@ -864,22 +872,21 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
 
   uint64_t offset = *offset_res;
 
-  // Should be 0 if there's no semaphore
-  // Cast to 32 bits b/c kernel API only takes 32 bit offset
-  [[maybe_unused]] auto semaphore_offset = static_cast<uint32_t>(
-      u->semaphore_offset);
+  auto semaphore_offset = static_cast<size_t>(u->semaphore_offset);
 
   bcc_usdt_close(ctx);
+  BPFTRACE_LIBBPF_OPTS(bpf_uprobe_opts,
+                       opts,
+                       .ref_ctr_offset = semaphore_offset,
+                       .retprobe = probe.type == ProbeType::uretprobe);
 
-  int perf_event_fd = bpf_attach_uprobe(prog.fd(),
-                                        attachtype(probe.type),
-                                        eventname(probe, offset).c_str(),
-                                        probe.path.c_str(),
-                                        offset,
-                                        pid.has_value() ? *pid : -1,
-                                        semaphore_offset);
+  auto *link = bpf_program__attach_uprobe_opts(prog.bpf_prog(),
+                                               pid.has_value() ? *pid : -1,
+                                               probe.path.c_str(),
+                                               offset,
+                                               &opts);
 
-  if (perf_event_fd < 0) {
+  if (!link) {
     if (pid.has_value())
       return make_error<AttachError>("Does PID exist? PID: " +
                                      std::to_string(*pid));
@@ -887,8 +894,7 @@ Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
     return make_error<AttachError>();
   }
 
-  return std::unique_ptr<AttachedUSDTProbe>(
-      new AttachedUSDTProbe(probe, perf_event_fd));
+  return std::unique_ptr<AttachedUSDTProbe>(new AttachedUSDTProbe(probe, link));
 }
 
 class AttachedTracepointProbe : public AttachedProbe {
