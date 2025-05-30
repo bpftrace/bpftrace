@@ -3,6 +3,7 @@
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "async_action.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "globalvars.h"
@@ -2451,7 +2452,8 @@ void IRBuilderBPF::CreateHelperError(Value *return_value,
                                                   true);
   AllocaInst *buf = CreateAllocaBPF(helper_error_struct, "helper_error_t");
   CreateStore(
-      GetIntSameSize(static_cast<int64_t>(AsyncAction::helper_error),
+      GetIntSameSize(static_cast<int64_t>(
+                         async_action::AsyncAction::helper_error),
                      elements.at(0)),
       CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(0) }));
   CreateStore(
