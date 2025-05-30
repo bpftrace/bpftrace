@@ -635,31 +635,31 @@ public:
       bool safe_mode);
   ~AttachedUprobeProbe() override;
 
+  int link_fd() override;
+
 private:
-  AttachedUprobeProbe(const Probe &probe,
-                      int progfd,
-                      int perf_event_fd,
-                      std::string event_name);
-  int perf_event_fd_;
-  const std::string event_name_;
+  AttachedUprobeProbe(const Probe &probe, int progfd, struct bpf_link *link);
+
+  struct bpf_link *link_;
 };
 
 AttachedUprobeProbe::AttachedUprobeProbe(const Probe &probe,
                                          int progfd,
-                                         int perf_event_fd,
-                                         std::string event_name)
-    : AttachedProbe(probe, progfd),
-      perf_event_fd_(perf_event_fd),
-      event_name_(std::move(event_name))
+                                         struct bpf_link *link)
+    : AttachedProbe(probe, progfd), link_(link)
 {
 }
 
 AttachedUprobeProbe::~AttachedUprobeProbe()
 {
-  if (bpf_close_perf_event_fd(perf_event_fd_))
-    LOG(WARNING) << "failed to close perf event FD for uprobe probe";
+  if (bpf_link__destroy(link_))
+    LOG(WARNING) << "failed to destroy link for uprobe probe: "
+                 << strerror(errno);
+}
 
-  bpf_detach_uprobe(event_name_.c_str());
+int AttachedUprobeProbe::link_fd()
+{
+  return bpf_link__fd(link_);
 }
 
 Result<std::unique_ptr<AttachedUprobeProbe>> AttachedUprobeProbe::make(
@@ -673,20 +673,22 @@ Result<std::unique_ptr<AttachedUprobeProbe>> AttachedUprobeProbe::make(
     return offset_res.takeError();
   }
 
-  int perf_event_fd = bpf_attach_uprobe(prog.fd(),
-                                        attachtype(probe.type),
-                                        eventname(probe, *offset_res).c_str(),
-                                        probe.path.c_str(),
-                                        *offset_res,
-                                        pid.has_value() ? *pid : -1,
-                                        0);
+  BPFTRACE_LIBBPF_OPTS(bpf_uprobe_opts,
+                       opts,
+                       .retprobe = probe.type == ProbeType::uretprobe);
 
-  if (perf_event_fd < 0) {
+  auto *link = bpf_program__attach_uprobe_opts(prog.bpf_prog(),
+                                               pid.has_value() ? *pid : -1,
+                                               probe.path.c_str(),
+                                               *offset_res,
+                                               &opts);
+
+  if (!link) {
     return make_error<AttachError>();
   }
 
-  return std::unique_ptr<AttachedUprobeProbe>(new AttachedUprobeProbe(
-      probe, prog.fd(), perf_event_fd, eventname(probe, 0)));
+  return std::unique_ptr<AttachedUprobeProbe>(
+      new AttachedUprobeProbe(probe, prog.fd(), link));
 }
 
 class AttachedMultiUprobeProbe : public AttachedProbe {
