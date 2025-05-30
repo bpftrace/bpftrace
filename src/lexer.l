@@ -91,16 +91,15 @@ oct_esc  [0-7]{1,3}
 {subprog}               { return Parser::make_SUBPROG(yytext, driver.loc); }
 {macro}                 { return Parser::make_MACRO(yytext, driver.loc); }
 {int}|{hex}|{exponent}  {
-                          try
-                          {
-                            // Note that we have no unsigned integers in the lexer, these
-                            // are purely derived as a result of folding constants.
-                            auto res = util::to_uint(yytext, 0);
-                            return Parser::make_UNSIGNED_INT(res, driver.loc);
-                          }
-                          catch (const std::exception &e)
-                          {
-                            driver.error(driver.loc, e.what());
+                          // Note that we have no unsigned integers in the lexer, these
+                          // are purely derived as a result of folding constants.
+                          auto res = util::to_uint(yytext, 0);
+                          if (!res) {
+                            std::stringstream ss;
+                            ss << res.takeError();
+                            driver.error(driver.loc, ss.str());
+                          } else {
+                            return Parser::make_UNSIGNED_INT(*res, driver.loc);
                           }
                         }
 {path}                  { return Parser::make_PATH(yytext, driver.loc); }
