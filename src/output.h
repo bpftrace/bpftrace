@@ -95,7 +95,8 @@ public:
                        const std::string &msg,
                        bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
-  virtual void attached_probes(uint64_t num_probes) const = 0;
+  virtual void attached_probes(uint64_t want_to_attach,
+                               uint64_t attached_probes) const = 0;
   virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
 
 protected:
@@ -240,7 +241,8 @@ public:
                const std::string &msg,
                bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
-  void attached_probes(uint64_t num_probes) const override;
+  void attached_probes(uint64_t want_to_attach,
+                       uint64_t attached_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
 
 protected:
@@ -317,7 +319,8 @@ public:
                const std::string &field,
                uint64_t value) const;
   void lost_events(uint64_t lost) const override;
-  void attached_probes(uint64_t num_probes) const override;
+  void attached_probes(uint64_t want_to_attach,
+                       uint64_t attached_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
 
 private:
