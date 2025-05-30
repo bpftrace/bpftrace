@@ -2,8 +2,27 @@
 /*
  * mdflush	Trace md flush events.
  *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: mdflush.bt
+ * 
+ * Example of usage:
+ * 
+ * # ./mdflush.bt
+ * Tracing md flush requests... Hit Ctrl-C to end.
+ * TIME     PID    COMM             DEVICE
+ * 03:13:49 16770  sync             md0
+ * 03:14:08 16864  sync             md0
+ * 03:14:49 496    kworker/1:0H     md0
+ * 03:14:49 488    xfsaild/md0      md0
+ * 03:14:54 488    xfsaild/md0      md0
+ * [...]
+ * 
+ * This can be useful for correlation with latency outliers or spikes in disk
+ * latency, as measured using another tool (eg, system monitoring). If spikes in
+ * disk latency often coincide with md flush events, then it would make flushing
+ * a target for tuning.
+ * 
+ * Note that the flush events are likely to originate from higher in the I/O
+ * stack, such as from file systems. This traces md processing them, and the
+ * timestamp corresponds with when md began to issue the flush to disks.
  *
  * This is a bpftrace version of the bcc tool of the same name.
  *
