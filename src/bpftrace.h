@@ -272,6 +272,7 @@ private:
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
+  uint64_t prog_loss_count_ = 0;
 
   // Mapping traceable functions to modules (or "vmlinux") they appear in.
   // Needs to be mutable to allow lazy loading of the mapping from const lookup

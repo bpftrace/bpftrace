@@ -54,6 +54,10 @@
 #include "util/system.h"
 #include "util/wildcard.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 std::set<DebugStage> bt_debug = {};
@@ -1007,6 +1011,32 @@ void BPFtrace::poll_event_loss(Output &out)
     auto lost = ap->missed();
     if (lost)
       out.lost_events(lost);
+  }
+
+  // Check for per-program losses BPF subsystem has wired up
+  uint64_t prog_loss = 0;
+  for (const auto &[_, prog] : bytecode_.progs()) {
+    struct libbpf::bpf_prog_info info = {};
+    __u32 len = sizeof(info);
+
+    if (bpf_prog_get_info_by_fd(prog.fd(),
+                                reinterpret_cast<::bpf_prog_info *>(&info),
+                                &len)) {
+      int errno_saved = errno;
+      if (errno_saved != EINVAL) {
+        LOG(WARNING) << "Failed to query program info for fd: " << prog.fd()
+                     << strerror(errno_saved);
+      }
+      continue;
+    }
+
+    prog_loss += info.recursion_misses;
+  }
+  if (prog_loss > prog_loss_count_) {
+    out.lost_events(prog_loss - prog_loss_count_);
+    prog_loss_count_ = prog_loss;
+  } else if (prog_loss < prog_loss_count_) {
+    LOG(BUG) << "Kernel recursion counter went backwards";
   }
 }
 
