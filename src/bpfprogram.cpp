@@ -50,9 +50,12 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
       attach_type = libbpf::BPF_TRACE_KPROBE_MULTI;
   }
 
-  if ((probe.type == ProbeType::uprobe || probe.type == ProbeType::uretprobe) &&
-      feature.has_uprobe_multi() && !probe.funcs.empty())
+  if (feature.has_uprobe_multi() && (((probe.type == ProbeType::uprobe ||
+                                       probe.type == ProbeType::uretprobe) &&
+                                      !probe.funcs.empty()) ||
+                                     probe.type == ProbeType::usdt)) {
     attach_type = libbpf::BPF_TRACE_UPROBE_MULTI;
+  }
 
   bpf_program__set_expected_attach_type(
       bpf_prog_, static_cast<::bpf_attach_type>(attach_type));
