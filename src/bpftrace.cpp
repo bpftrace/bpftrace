@@ -234,7 +234,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
   auto *arg_data = data_aligned.data();
 
-  auto printf_id = AsyncAction(*reinterpret_cast<uint64_t *>(arg_data));
+  auto printf_id = async_action::AsyncAction(
+      *reinterpret_cast<uint64_t *>(arg_data));
 
   // Ignore the remaining events if perf_event_printer is called during
   // finalization stage (exit() builtin has been called)
@@ -247,50 +248,50 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 
   // async actions
-  if (printf_id == AsyncAction::exit) {
+  if (printf_id == async_action::AsyncAction::exit) {
     async_action::exit_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::print) {
+  } else if (printf_id == async_action::AsyncAction::print) {
     async_action::print_map_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::print_non_map) {
+  } else if (printf_id == async_action::AsyncAction::print_non_map) {
     async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::clear) {
+  } else if (printf_id == async_action::AsyncAction::clear) {
     async_action::clear_map_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::zero) {
+  } else if (printf_id == async_action::AsyncAction::zero) {
     async_action::zero_map_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::time) {
+  } else if (printf_id == async_action::AsyncAction::time) {
     async_action::time_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::join) {
+  } else if (printf_id == async_action::AsyncAction::join) {
     async_action::join_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::helper_error) {
+  } else if (printf_id == async_action::AsyncAction::helper_error) {
     async_action::helper_error_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::watchpoint_attach) {
+  } else if (printf_id == async_action::AsyncAction::watchpoint_attach) {
     async_action::watchpoint_attach_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::watchpoint_detach) {
+  } else if (printf_id == async_action::AsyncAction::watchpoint_detach) {
     async_action::watchpoint_detach_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::skboutput) {
+  } else if (printf_id == async_action::AsyncAction::skboutput) {
     async_action::skboutput_handler(ctx->bpftrace, data, size);
     return;
-  } else if (printf_id >= AsyncAction::syscall &&
-             printf_id <= AsyncAction::syscall_end) {
+  } else if (printf_id >= async_action::AsyncAction::syscall &&
+             printf_id <= async_action::AsyncAction::syscall_end) {
     async_action::syscall_handler(
         ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
-  } else if (printf_id >= AsyncAction::cat &&
-             printf_id <= AsyncAction::cat_end) {
+  } else if (printf_id >= async_action::AsyncAction::cat &&
+             printf_id <= async_action::AsyncAction::cat_end) {
     async_action::cat_handler(ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
-  } else if (printf_id >= AsyncAction::printf &&
-             printf_id <= AsyncAction::printf_end) {
+  } else if (printf_id >= async_action::AsyncAction::printf &&
+             printf_id <= async_action::AsyncAction::printf_end) {
     async_action::printf_handler(
         ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
