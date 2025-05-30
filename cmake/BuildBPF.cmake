@@ -103,7 +103,11 @@ function(bpf NAME)
     add_custom_command(
       OUTPUT ${ARG_BITCODE}
       DEPENDS ${ARG_SOURCE} ${ARG_DEPENDS}
-      COMMAND ${CLANG} -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
+      # Note that we specifically run this in the source directory because the
+      # source filename will be encoded in the bitcode, and we want it to only
+      # contain the relative filename.
+      COMMAND ${CLANG} -ffile-prefix-map=${CMAKE_SOURCE_DIR}/=/ -emit-llvm -g -target bpf -D__TARGET_ARCH_x86 -I ${CMAKE_CURRENT_BINARY_DIR} -c ${ARG_SOURCE} -o ${CMAKE_CURRENT_BINARY_DIR}/${ARG_BITCODE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       VERBATIM
     )
     add_custom_target(${NAME}_gen_bitcode DEPENDS ${ARG_BITCODE})

@@ -1,6 +1,3 @@
-include(BuildBPF)
-include(Embed)
-
 bpf(
   data_source
   BTF       data_source.btf
