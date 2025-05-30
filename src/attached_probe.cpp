@@ -1155,22 +1155,24 @@ public:
 private:
   AttachedSoftwareProbe(const Probe &probe,
                         int progfd,
-                        std::vector<int> perf_event_fds);
-  std::vector<int> perf_event_fds_;
+                        std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
 };
 
-AttachedSoftwareProbe::AttachedSoftwareProbe(const Probe &probe,
-                                             int progfd,
-                                             std::vector<int> perf_event_fds)
-    : AttachedProbe(probe, progfd), perf_event_fds_(std::move(perf_event_fds))
+AttachedSoftwareProbe::AttachedSoftwareProbe(
+    const Probe &probe,
+    int progfd,
+    std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe, progfd), links_(std::move(links))
 {
 }
 
 AttachedSoftwareProbe::~AttachedSoftwareProbe()
 {
-  for (int perf_event_fd : perf_event_fds_) {
-    if (bpf_close_perf_event_fd(perf_event_fd))
-      LOG(WARNING) << "failed to close perf event FD for software probe";
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for software probe: "
+                   << strerror(errno);
   }
 }
 
@@ -1196,27 +1198,43 @@ Result<std::unique_ptr<AttachedSoftwareProbe>> AttachedSoftwareProbe::make(
   if (period == 0)
     period = defaultp;
 
-  std::vector<int> perf_event_fds;
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(prog.fd(),
-                                              PERF_TYPE_SOFTWARE,
-                                              type,
-                                              period,
-                                              0,
-                                              pid.has_value() ? *pid : -1,
-                                              cpu,
-                                              group_fd);
+    int perf_event_fd = open_perf_event(PERF_TYPE_SOFTWARE,
+                                        type,
+                                        period,
+                                        0,
+                                        pid.has_value() ? *pid : -1,
+                                        cpu,
+                                        group_fd);
 
     if (perf_event_fd < 0) {
-      return make_error<AttachError>();
+      has_error = true;
+      break;
     }
 
-    perf_event_fds.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
+  }
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for software probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>();
   }
 
   return std::unique_ptr<AttachedSoftwareProbe>(
-      new AttachedSoftwareProbe(probe, prog.fd(), perf_event_fds));
+      new AttachedSoftwareProbe(probe, prog.fd(), links));
 }
 
 class AttachedHardwareProbe : public AttachedProbe {
