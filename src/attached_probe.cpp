@@ -1075,22 +1075,30 @@ public:
       std::optional<int> pid);
   ~AttachedIntervalProbe() override;
 
+  int link_fd() override;
+
 private:
-  AttachedIntervalProbe(const Probe &probe, int progfd, int perf_event_fd);
-  int perf_event_fd_;
+  AttachedIntervalProbe(const Probe &probe, int progfd, struct bpf_link *link);
+  struct bpf_link *link_;
 };
 
 AttachedIntervalProbe::AttachedIntervalProbe(const Probe &probe,
                                              int progfd,
-                                             int perf_event_fd)
-    : AttachedProbe(probe, progfd), perf_event_fd_(perf_event_fd)
+                                             struct bpf_link *link)
+    : AttachedProbe(probe, progfd), link_(link)
 {
 }
 
 AttachedIntervalProbe::~AttachedIntervalProbe()
 {
-  if (bpf_close_perf_event_fd(perf_event_fd_))
-    LOG(WARNING) << "failed to close perf event FD for interval probe";
+  if (bpf_link__destroy(link_))
+    LOG(WARNING) << "failed to destroy link for interval probe: "
+                 << strerror(errno);
+}
+
+int AttachedIntervalProbe::link_fd()
+{
+  return bpf_link__fd(link_);
 }
 
 Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
@@ -1115,21 +1123,25 @@ Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
                                    "\"");
   }
 
-  int perf_event_fd = bpf_attach_perf_event(prog.fd(),
-                                            PERF_TYPE_SOFTWARE,
-                                            PERF_COUNT_SW_CPU_CLOCK,
-                                            period,
-                                            freq,
-                                            pid.has_value() ? *pid : -1,
-                                            cpu,
-                                            group_fd);
+  int perf_event_fd = open_perf_event(PERF_TYPE_SOFTWARE,
+                                      PERF_COUNT_SW_CPU_CLOCK,
+                                      period,
+                                      freq,
+                                      pid.has_value() ? *pid : -1,
+                                      cpu,
+                                      group_fd);
 
   if (perf_event_fd < 0) {
     return make_error<AttachError>();
   }
 
+  auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+  if (!link) {
+    return make_error<AttachError>();
+  }
+
   return std::unique_ptr<AttachedIntervalProbe>(
-      new AttachedIntervalProbe(probe, prog.fd(), perf_event_fd));
+      new AttachedIntervalProbe(probe, prog.fd(), link));
 }
 
 class AttachedSoftwareProbe : public AttachedProbe {
