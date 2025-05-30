@@ -173,6 +173,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::Program *> program
+%type <ast::NamedArg> named_arg
+%type <ast::NamedArgList> named_args
 
 
 // A pseudo token, which is the lowest precedence among all tokens.
@@ -747,6 +749,8 @@ call:
         |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
         |       IDENT "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
         |       BUILTIN "(" vargs ")"         { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
+        |       IDENT "(" named_args ")"      { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
+        |       BUILTIN "(" named_args ")"    { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
                 ;
 
 map:
@@ -771,6 +775,14 @@ vargs:
                 vargs "," expr { $$ = std::move($1); $$.push_back($3); }
         |       expr           { $$ = ast::ExpressionList{$1}; }
                 ;
+
+named_args:
+                named_args "," named_arg  { $$ = std::move($1); $$.push_back($3); }
+        |       named_arg                 { $$ = ast::NamedArgList{$1}; }
+                ;
+
+named_arg:
+                IDENT ASSIGN expr { $$ = ast::NamedArg{$1, $3}; }
 
 compound_op:
                 LEFTASSIGN   { $$ = ast::Operator::LEFT; }

@@ -198,6 +198,9 @@ class Jump;
 class While;
 class For;
 
+using NamedArg = std::pair<std::string, Expression>;
+using NamedArgList = std::vector<NamedArg>;
+
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
                                      AssignScalarMapStatement,
@@ -388,6 +391,17 @@ public:
         vargs(clone(ctx, other.vargs, loc)),
         return_type(other.return_type),
         injected_args(other.injected_args) {};
+  explicit Call(ASTContext &ctx,
+                std::string func,
+                NamedArgList &&named_args,
+                Location &&loc)
+      : Node(ctx, std::move(loc)),
+        func(std::move(func))
+  {
+    for (auto &&named_arg: named_args) {
+      vargs.push_back(std::move(named_arg.second));
+    }
+  };
 
   const SizedType &type() const
   {
