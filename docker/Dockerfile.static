@@ -2,6 +2,9 @@
 
 FROM alpine:3.21
 
+# Add edge community repository
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+
 RUN apk add --update \
   asciidoctor \
   argp-standalone \
@@ -10,6 +13,8 @@ RUN apk add --update \
   bcc-static \
   binutils-dev \
   bison \
+  blazesym-dev \
+  blazesym-static \
   bpftool \
   bzip2-static \
   build-base \
