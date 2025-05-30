@@ -1468,22 +1468,24 @@ public:
   ~AttachedWatchpointProbe() override;
 
 private:
-  AttachedWatchpointProbe(const Probe &probe, std::vector<int> perf_event_fds);
-  std::vector<int> perf_event_fds_;
+  AttachedWatchpointProbe(const Probe &probe,
+                          std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
 };
 
 AttachedWatchpointProbe::AttachedWatchpointProbe(
     const Probe &probe,
-    std::vector<int> perf_event_fds)
-    : AttachedProbe(probe), perf_event_fds_(std::move(perf_event_fds))
+    std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe), links_(std::move(links))
 {
 }
 
 AttachedWatchpointProbe::~AttachedWatchpointProbe()
 {
-  for (int perf_event_fd : perf_event_fds_) {
-    if (bpf_close_perf_event_fd(perf_event_fd))
-      LOG(WARNING) << "failed to close perf event FD for watchpoint probe";
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for watchpoint probe: "
+                   << strerror(errno);
   }
 }
 
@@ -1521,7 +1523,9 @@ Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
     cpus = util::get_online_cpus();
   }
 
-  std::vector<int> perf_event_fds;
+  std::string err_msg;
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
 
   for (int cpu : cpus) {
     // We copy paste the code from bcc's bpf_attach_perf_event_raw here
@@ -1534,28 +1538,33 @@ Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
                                 -1,
                                 PERF_FLAG_FD_CLOEXEC);
     if (perf_event_fd < 0) {
-      std::string err_msg;
       if (errno == ENOSPC)
         err_msg = "No more HW registers left";
 
-      return make_error<AttachError>(std::move(err_msg));
-    }
-    if (ioctl(perf_event_fd, PERF_EVENT_IOC_SET_BPF, prog.fd()) != 0) {
-      close(perf_event_fd);
-      return make_error<AttachError>(
-          std::system_error(errno, std::generic_category(), "").what());
-    }
-    if (ioctl(perf_event_fd, PERF_EVENT_IOC_ENABLE, 0) != 0) {
-      close(perf_event_fd);
-      return make_error<AttachError>(
-          std::system_error(errno, std::generic_category(), "").what());
+      has_error = true;
+      break;
     }
 
-    perf_event_fds.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
+  }
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for watchpoint probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>(std::move(err_msg));
   }
 
   return std::unique_ptr<AttachedWatchpointProbe>(
-      new AttachedWatchpointProbe(probe, perf_event_fds));
+      new AttachedWatchpointProbe(probe, links));
 }
 
 AttachedProbe::AttachedProbe(const Probe &probe) : probe_(probe)
