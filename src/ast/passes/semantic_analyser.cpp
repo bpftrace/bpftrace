@@ -160,6 +160,7 @@ public:
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(Block &block);
+  void visit(BlockExpr &block_expr);
   void visit(Subprog &subprog);
 
 private:
@@ -3607,7 +3608,14 @@ void SemanticAnalyser::visit(Block &block)
 {
   scope_stack_.push_back(&block);
   accept_statements(block.stmts);
-  visit(block.expr);
+  scope_stack_.pop_back();
+}
+
+void SemanticAnalyser::visit(BlockExpr &block_expr)
+{
+  scope_stack_.push_back(&block_expr);
+  accept_statements(block_expr.stmts);
+  visit(block_expr.expr);
   scope_stack_.pop_back();
 }
 

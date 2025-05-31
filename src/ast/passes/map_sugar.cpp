@@ -251,12 +251,10 @@ static std::optional<Expression> injectMap(Expression expr,
       call->vargs.insert(call->vargs.end(), args.begin(), args.end());
       return call;
     }
-  } else if (auto *block = expr.as<Block>()) {
-    if (block->expr) {
-      auto injected_expr = injectMap(block->expr.value(), map, key);
-      if (injected_expr) {
-        return block;
-      }
+  } else if (auto *block_expr = expr.as<BlockExpr>()) {
+    auto injected_expr = injectMap(block_expr->expr, map, key);
+    if (injected_expr) {
+      return block_expr;
     }
   }
   return std::nullopt;
