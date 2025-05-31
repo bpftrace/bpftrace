@@ -3132,6 +3132,41 @@ tracepoint:syscalls:sys_enter_execve {
 }
 ----
 
+[#functions-task_from_pid]
+=== task_from_pid
+
+.variants
+* `struct task_struct *task_from_pid(pid)`
+
+*compile time*
+
+Get 'struct task_struct *' pointer from pid.
+
+`task_from_pid()` needs to be used together with `task_release()`, otherwise it will fail the verifier check.
+
+----
+tracepoint:syscalls:sys_enter_kill,
+tracepoint:syscalls:sys_enter_tkill,
+tracepoint:syscalls:sys_enter_tgkill
+{
+    $ttask = task_from_pid(args.pid);
+    if ($ttask) {
+        /* do something */
+        task_release($ttask);
+    }
+}
+----
+
+[#functions-task_release]
+=== task_release
+
+.variants
+* `void task_release(TASK_STRUCT)`
+
+*compile time*
+
+`task_release()` releases the 'struct task_struct *' pointer obtained by `task_from_pid()`.
+
 [#functions-time]
 === time
 
