@@ -2978,6 +2978,22 @@ BEGIN { $x: int8 = 1; }
 )");
 }
 
+TEST(Parser, bare_blocks)
+{
+  test("i:s:1 { $a = 1; { $b = 2; { $c = 3; } } }",
+       "Program\n"
+       " interval:s:1\n"
+       "  =\n"
+       "   variable: $a\n"
+       "   int: 1\n"
+       "  =\n"
+       "   variable: $b\n"
+       "   int: 2\n"
+       "  =\n"
+       "   variable: $c\n"
+       "   int: 3\n");
+}
+
 TEST(Parser, block_expressions)
 {
   // Non-legal trailing statement

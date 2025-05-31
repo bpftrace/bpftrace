@@ -140,7 +140,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList> attach_points
-%type <ast::Block *> block_expr
+%type <ast::BlockExpr *> block_expr
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
@@ -164,7 +164,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
-%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
+%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt bare_block
 %type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
@@ -469,7 +469,11 @@ block_stmt:
                 loop_stmt    { $$ = $1; }
         |       if_stmt      { $$ = $1; }
         |       for_stmt     { $$ = $1; }
+        |       bare_block   { $$ = $1; }
                 ;
+
+bare_block:
+                "{" stmt_list "}"  { $$ = driver.ctx.make_node<ast::Block>(std::move($2), @2); }
 
 expr_stmt:
                 expr               { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
@@ -596,7 +600,7 @@ tuple_access_expr:
                 ;
 
 block_expr:
-                "{" stmt_list expr "}" { $$ = driver.ctx.make_node<ast::Block>(std::move($2), $3, @$); }
+                "{" stmt_list expr "}" { $$ = driver.ctx.make_node<ast::BlockExpr>(std::move($2), $3, @$); }
                 ;
 
 unary_expr:
