@@ -35,6 +35,10 @@
 #include "util/kernel.h"
 #include "util/symbols.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 char AttachError::ID;
@@ -1639,6 +1643,47 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
     }
   }
   return make_error<AttachError>();
+}
+
+size_t AttachedProbe::missed()
+{
+  int linkfd = link_fd();
+  if (linkfd < 0)
+    return 0;
+
+  // Collect miss counters from link API
+  struct libbpf::bpf_link_info info = {};
+  __u32 len = sizeof(info);
+  if (bpf_link_get_info_by_fd(linkfd,
+                              reinterpret_cast<::bpf_link_info *>(&info),
+                              &len)) {
+    if (errno == EINVAL) {
+      // Not a link FD; could be using older non-link APIs
+      return 0;
+    } else {
+      LOG(WARNING) << "Failed to query linkfd " << linkfd
+                   << " for missed executions: " << strerror(errno);
+    }
+  }
+
+  size_t missed = 0;
+  switch (info.type) {
+    case BPF_LINK_TYPE_PERF_EVENT:
+      switch (info.perf_event.type) {
+        case BPF_PERF_EVENT_KPROBE:
+        case BPF_PERF_EVENT_KRETPROBE:
+          missed = info.perf_event.kprobe.missed;
+          break;
+      }
+      break;
+    case BPF_LINK_TYPE_KPROBE_MULTI:
+      missed = info.kprobe_multi.missed;
+      break;
+  }
+
+  auto new_missed = missed - last_missed_;
+  last_missed_ = missed;
+  return new_missed;
 }
 
 } // namespace bpftrace

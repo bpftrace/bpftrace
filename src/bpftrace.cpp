@@ -54,6 +54,10 @@
 #include "util/system.h"
 #include "util/wildcard.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 std::set<DebugStage> bt_debug = {};
@@ -992,6 +996,7 @@ int BPFtrace::poll_skboutput_events()
 
 void BPFtrace::poll_event_loss(Output &out)
 {
+  // Check for losses that we have wired up
   auto current_value = bytecode_.get_event_loss_counter(*this);
   if (current_value > event_loss_count_) {
     out.lost_events(current_value - event_loss_count_);
@@ -999,6 +1004,39 @@ void BPFtrace::poll_event_loss(Output &out)
   } else if (current_value < event_loss_count_) {
     LOG(ERROR) << "Invalid event loss count value: " << current_value
                << ", last seen: " << event_loss_count_;
+  }
+
+  // Check for per-attachment losses BPF subsystem has wired up
+  for (auto &ap : attached_probes_) {
+    auto lost = ap->missed();
+    if (lost)
+      out.lost_events(lost);
+  }
+
+  // Check for per-program losses BPF subsystem has wired up
+  uint64_t prog_loss = 0;
+  for (const auto &[_, prog] : bytecode_.progs()) {
+    struct libbpf::bpf_prog_info info = {};
+    __u32 len = sizeof(info);
+
+    if (bpf_prog_get_info_by_fd(prog.fd(),
+                                reinterpret_cast<::bpf_prog_info *>(&info),
+                                &len)) {
+      int errno_saved = errno;
+      if (errno_saved != EINVAL) {
+        LOG(WARNING) << "Failed to query program info for fd: " << prog.fd()
+                     << strerror(errno_saved);
+      }
+      continue;
+    }
+
+    prog_loss += info.recursion_misses;
+  }
+  if (prog_loss > prog_loss_count_) {
+    out.lost_events(prog_loss - prog_loss_count_);
+    prog_loss_count_ = prog_loss;
+  } else if (prog_loss < prog_loss_count_) {
+    LOG(BUG) << "Kernel recursion counter went backwards";
   }
 }
 
