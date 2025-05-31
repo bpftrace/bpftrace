@@ -8,6 +8,12 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.23.4] 2025-05-30
+
+#### Fixed
+- Fix crashes if kernel is built without PID namespaces
+  - [#3976](https://github.com/bpftrace/bpftrace/pull/3976)
+
 ## [0.23.3] 2025-05-22
 
 #### Fixed
