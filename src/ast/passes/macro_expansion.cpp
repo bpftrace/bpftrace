@@ -26,7 +26,7 @@ public:
   void visit(Map &map);
   void visit(Expression &expr);
 
-  std::optional<Block *> expand(Macro &macro, Call &call);
+  std::optional<BlockExpr *> expand(Macro &macro, Call &call);
   bool check_recursive_call(const std::string &macro_name, const Call &call);
 
 private:
@@ -173,7 +173,7 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
   return std::string("$$") + macro_name_ + std::string("_") + original_ident;
 }
 
-std::optional<Block *> MacroExpander::expand(Macro &macro, Call &call)
+std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
     call.addError() << "Call to macro has wrong number arguments. Expected: "
@@ -221,16 +221,14 @@ std::optional<Block *> MacroExpander::expand(Macro &macro, Call &call)
     }
   }
 
-  for (auto expr : macro.block->stmts) {
+  for (auto expr : macro.block_expr->stmts) {
     stmt_list.push_back(clone(ast_, expr, call.loc));
   }
 
-  auto *cloned_block =
-      macro.block->expr.has_value()
-          ? ast_.make_node<Block>(std::move(stmt_list),
-                                  clone(ast_, *macro.block->expr, call.loc),
-                                  Location(macro.loc))
-          : ast_.make_node<Block>(std::move(stmt_list), Location(call.loc));
+  auto *cloned_block = ast_.make_node<BlockExpr>(
+      std::move(stmt_list),
+      clone(ast_, macro.block_expr->expr, call.loc),
+      Location(macro.loc));
 
   visit(cloned_block);
 

@@ -153,7 +153,7 @@ class MapAccess;
 class Cast;
 class Tuple;
 class Ternary;
-class Block;
+class BlockExpr;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -176,10 +176,10 @@ class Expression : public VariantNode<Integer,
                                       Cast,
                                       Tuple,
                                       Ternary,
-                                      Block> {
+                                      BlockExpr> {
 public:
   using VariantNode::VariantNode;
-  Expression() : Expression(static_cast<Block *>(nullptr)) {};
+  Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
 
   // The `type` method is the only common thing required by all expression
   // types. This will on the variant types.
@@ -197,6 +197,7 @@ class Unroll;
 class Jump;
 class While;
 class For;
+class Block;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
@@ -207,7 +208,8 @@ class Statement : public VariantNode<ExprStatement,
                                      Unroll,
                                      Jump,
                                      While,
-                                     For> {
+                                     For,
+                                     Block> {
 public:
   using VariantNode::VariantNode;
   Statement() : Statement(static_cast<ExprStatement *>(nullptr)) {};
@@ -850,32 +852,41 @@ class Block : public Node {
 public:
   explicit Block(ASTContext &ctx, StatementList &&stmts, Location &&loc)
       : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
-  explicit Block(ASTContext &ctx,
-                 StatementList &&stmts,
-                 Expression expr,
-                 Location &&loc)
-      : Node(ctx, std::move(loc)),
-        stmts(std::move(stmts)),
-        expr(std::move(expr)) {};
   explicit Block(ASTContext &ctx, const Block &other, const Location &loc)
-      : Node(ctx, loc + other.loc),
-        stmts(clone(ctx, other.stmts, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+      : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
 
-  static const SizedType &none_type()
+  const SizedType &type() const
   {
     static SizedType none = CreateNone();
     return none;
   }
+
+  StatementList stmts;
+};
+
+class BlockExpr : public Node {
+public:
+  explicit BlockExpr(ASTContext &ctx,
+                     StatementList &&stmts,
+                     Expression expr,
+                     Location &&loc)
+      : Node(ctx, std::move(loc)),
+        stmts(std::move(stmts)),
+        expr(std::move(expr)) {};
+  explicit BlockExpr(ASTContext &ctx,
+                     const BlockExpr &other,
+                     const Location &loc)
+      : Node(ctx, loc + other.loc),
+        stmts(clone(ctx, other.stmts, loc)),
+        expr(clone(ctx, other.expr, loc)) {};
+
   const SizedType &type() const
   {
-    return expr.has_value() ? expr->type() : none_type();
+    return expr.type();
   }
 
   StatementList stmts;
-  // Depending on how it is parsed, a block can also be evaluated as an
-  // expression. This follows all other statements in the block.
-  std::optional<Expression> expr;
+  Expression expr;
 };
 
 class If : public Node {
@@ -1203,21 +1214,21 @@ public:
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
-        Block *block,
+        BlockExpr *block_expr,
         Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
-        block(block) {};
+        block_expr(block_expr) {};
   explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, other.vargs, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        block_expr(clone(ctx, other.block_expr, loc)) {};
 
   std::string name;
   ExpressionList vargs;
-  Block *block;
+  BlockExpr *block_expr;
 };
 using MacroList = std::vector<Macro *>;
 

@@ -220,6 +220,7 @@ public:
   ScopedExpr visit(Subprog &subprog);
   ScopedExpr visit(Program &program);
   ScopedExpr visit(Block &block);
+  ScopedExpr visit(BlockExpr &block_expr);
 
   // compile is the primary entrypoint; it will return the generated LLVMModule.
   // Only one call to `compile` is permitted per instantiation.
@@ -2997,7 +2998,16 @@ ScopedExpr CodegenLLVM::visit(Block &block)
 {
   scope_stack_.push_back(&block);
   visit(block.stmts);
-  ScopedExpr value = visit(block.expr);
+  scope_stack_.pop_back();
+
+  return ScopedExpr();
+}
+
+ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
+{
+  scope_stack_.push_back(&block_expr);
+  visit(block_expr.stmts);
+  ScopedExpr value = visit(block_expr.expr);
   scope_stack_.pop_back();
 
   return value;

@@ -206,7 +206,12 @@ public:
   R visit(Block &block)
   {
     visitImpl(block.stmts);
-    visitImpl(block.expr);
+    return default_value();
+  }
+  R visit(BlockExpr &block_expr)
+  {
+    visitImpl(block_expr.stmts);
+    visitImpl(block_expr.expr);
     return default_value();
   }
   R visit([[maybe_unused]] Macro &macro)
