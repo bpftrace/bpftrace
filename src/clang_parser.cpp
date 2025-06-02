@@ -16,7 +16,7 @@
 #include "btf.h"
 #include "clang_parser.h"
 #include "log.h"
-#include "resources/headers.h"
+#include "stdlib/stdlib.h"
 #include "types.h"
 #include "util/format.h"
 #include "util/io.h"
@@ -119,45 +119,28 @@ private:
 namespace {
 const std::vector<CXUnsavedFile> &getDefaultHeaders()
 {
-  static std::vector<CXUnsavedFile> unsaved_files = {
-    {
-        .Filename = "/bpftrace/include/__stddef_max_align_t.h",
-        .Contents = __stddef_max_align_t_h.data(),
-        .Length = __stddef_max_align_t_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/float.h",
-        .Contents = float_h.data(),
-        .Length = float_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/limits.h",
-        .Contents = limits_h.data(),
-        .Length = limits_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/stdarg.h",
-        .Contents = stdarg_h.data(),
-        .Length = stdarg_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/stdbool.h",
-        .Contents = stdbool_h.data(),
-        .Length = stdbool_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/stddef.h",
-        .Contents = stddef_h.data(),
-        .Length = stddef_h.length(),
-    },
-    {
-        .Filename = "/bpftrace/include/stdint.h",
-        .Contents = stdint_h.data(),
-        .Length = stdint_h.length(),
-    },
-  };
-
-  return unsaved_files;
+  // N.B. the `cached` value here hangs on to a vector of strings, as well as a
+  // vector of `CXUnsavedFile` objects. Since the `CXUnsavedFile` objects need
+  // a C-style string, this is a `.c_str()` that comes from one of the saved
+  // names. It is important that these objects are kept alive, even if they are
+  // not returned from this function.
+  static auto cached = [] {
+    std::vector<std::string> names;
+    std::vector<CXUnsavedFile> unsaved_files;
+    for (const auto &[name, view] : stdlib::Stdlib::files) {
+      if (!name.ends_with(".h")) {
+        continue; // Inlucde only headers.
+      }
+      const auto &n = names.emplace_back("/bpftrace/" + name);
+      unsaved_files.push_back(CXUnsavedFile{
+          .Filename = n.c_str(),
+          .Contents = view.data(),
+          .Length = view.length(),
+      });
+    }
+    return std::make_pair(std::move(names), std::move(unsaved_files));
+  }();
+  return cached.second; // See above.
 }
 
 std::vector<CXUnsavedFile> getTranslationUnitFiles(
@@ -266,8 +249,8 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_ULongLong:
       return CreateUInt(size);
     case CXType_Record: {
-      // Struct map entry may not exist for forward declared types so we create
-      // it now and fill it later
+      // Struct map entry may not exist for forward declared types so we
+      // create it now and fill it later
       auto s = structs.LookupOrAdd(typestr, size / 8);
       return CreateRecord(typestr, s);
     }
@@ -555,8 +538,8 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types()
   if (input.empty())
     return {};
 
-  // Parse without failing on compilation errors (ie incomplete structs) because
-  // our goal is to enumerate all such errors.
+  // Parse without failing on compilation errors (ie incomplete structs)
+  // because our goal is to enumerate all such errors.
   ClangParserHandler handler;
   if (!handler.parse_file("definitions.h", args, input_files, false))
     return {};
@@ -628,8 +611,8 @@ void ClangParser::resolve_incomplete_types_from_btf(BPFtrace &bpftrace)
 // Type resolution rules:
 //
 // If BTF is available, necessary types are retrieved from there, otherwise we
-// rely on headers and types supplied by the user (we also include linux/types.h
-// in some cases, e.g., for tracepoints).
+// rely on headers and types supplied by the user (we also include
+// linux/types.h in some cases, e.., for tracepoints).
 //
 // The following types are taken from BTF (if available):
 // 1. Types explicitly used in the program (taken from bpftrace.btf_set_).
@@ -643,11 +626,11 @@ void ClangParser::resolve_incomplete_types_from_btf(BPFtrace &bpftrace)
 //    typedef will cause the parser to fail (even if the type is not used in
 //    the program).
 //
-// If any of the above steps retrieves a definition that redefines some existing
-// (user-defined) type, no BTF types are used and all types must be provided.
-// In practice, this means that user may use kernel types without providing
-// their definitions but once he redefines any kernel type, he must provide all
-// necessary definitions.
+// If any of the above steps retrieves a definition that redefines some
+// existing (user-defined) type, no BTF types are used and all types must be
+// provided. In practice, this means that user may use kernel types without
+// providing their definitions but once he redefines any kernel type, he must
+// provide all necessary definitions.
 bool ClangParser::parse(ast::Program *program,
                         BPFtrace &bpftrace,
                         std::vector<std::string> extra_flags)
@@ -676,9 +659,8 @@ bool ClangParser::parse(ast::Program *program,
   }
 
   // Push the generated BTF header into input files.
-  // The header must be the last file in the vector since the following methods
-  // count on it.
-  // If BTF is not available, the header is empty.
+  // The header must be the last file in the vector since the following
+  // methods count on it. If BTF is not available, the header is empty.
   input_files.emplace_back(bpftrace.has_btf_data()
                                ? get_btf_generated_header(bpftrace)
                                : get_empty_btf_generated_header());
@@ -686,8 +668,8 @@ bool ClangParser::parse(ast::Program *program,
   bool btf_conflict = false;
   ClangParserHandler handler;
   if (bpftrace.has_btf_data()) {
-    // We set these args early because some systems may not have <linux/types.h>
-    // (containers) and fully rely on BTF.
+    // We set these args early because some systems may not have
+    // <linux/types.h> (containers) and fully rely on BTF.
 
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>
@@ -718,8 +700,8 @@ bool ClangParser::parse(ast::Program *program,
   }
 
   if (btf_conflict) {
-    // There is a conflict (redefinition) between user-supplied types and types
-    // taken from BTF. We cannot use BTF in such a case.
+    // There is a conflict (redefinition) between user-supplied types and
+    // types taken from BTF. We cannot use BTF in such a case.
     args.pop_back();
     args.pop_back();
     input_files.back() = get_empty_btf_generated_header();
@@ -735,7 +717,8 @@ bool ClangParser::parse(ast::Program *program,
       if (bpftrace.btf_->objects_cnt() > 2) {
         LOG(WARNING)
             << "Trying to dump BTF from multiple kernel modules at once. "
-            << "This is currently not possible, use probes from a single module"
+            << "This is currently not possible, use probes from a single "
+               "module"
             << " (and/or vmlinux) only.";
       }
     }
