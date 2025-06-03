@@ -2747,6 +2747,115 @@ BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }
 )");
 }
 
+TEST(Parser, opts)
+{
+  test("opts = [{ blah = 5 }] BEGIN {}", R"(
+Program
+ opts
+  opt
+   =
+    var: blah
+    int: 5
+ BEGIN
+)");
+
+  test("opts = [{ blah = 5; type = string }] BEGIN {}", R"(
+Program
+ opts
+  opt
+   =
+    var: blah
+    int: 5
+   =
+    var: type
+    string: string
+ BEGIN
+)");
+
+  test("opts = [{ blah = 5 }, { blah = 5 }] BEGIN {}", R"(
+Program
+ opts
+  opt
+   =
+    var: blah
+    int: 5
+  opt
+   =
+    var: blah
+    int: 5
+ BEGIN
+)");
+
+  test("opts = [{ blah = 5; zoop = \"a\" }, { blah = 5 }] BEGIN {}", R"(
+Program
+ opts
+  opt
+   =
+    var: blah
+    int: 5
+   =
+    var: zoop
+    string: a
+  opt
+   =
+    var: blah
+    int: 5
+ BEGIN
+)");
+}
+
+TEST(Parser, opts_error)
+{
+  test_parse_failure("BEGIN {} opts = []",
+                     R"(
+stdin:1:10-14: ERROR: syntax error, unexpected opts, expecting {
+BEGIN {} opts = []
+         ~~~~
+)");
+
+  test_parse_failure("opts = [tomato] BEGIN {}",
+                     R"(
+stdin:1:8-15: ERROR: syntax error, unexpected identifier, expecting { or ]
+opts = [tomato] BEGIN {}
+       ~~~~~~~
+)");
+
+  test_parse_failure("opts = [type=string] BEGIN {}",
+                     R"(
+stdin:1:8-13: ERROR: syntax error, unexpected identifier, expecting { or ]
+opts = [type=string] BEGIN {}
+       ~~~~~
+)");
+
+  test_parse_failure("opts = [{tomato}] BEGIN {}",
+                     R"(
+stdin:1:8-17: ERROR: syntax error, unexpected }, expecting =
+opts = [{tomato}] BEGIN {}
+       ~~~~~~~~~
+)");
+
+  test_parse_failure("opts = [{ exit(); }] BEGIN {}",
+                     R"(
+stdin:1:11-16: ERROR: syntax error, unexpected (, expecting =
+opts = [{ exit(); }] BEGIN {}
+          ~~~~~
+)");
+
+  test_parse_failure("opts = [{type=1+1}] BEGIN {}",
+                     R"(
+stdin:1:8-17: ERROR: syntax error, unexpected +, expecting ; or }
+opts = [{type=1+1}] BEGIN {}
+       ~~~~~~~~~
+)");
+
+  test_parse_failure("opts = [{type=[]] BEGIN {}",
+                     R"(
+stdin:1:8-16: ERROR: syntax error, unexpected [, expecting builtin type or identifier or string or integer
+opts = [{type=[]] BEGIN {}
+       ~~~~~~~~
+)");
+}
+
 TEST(Parser, keywords_as_identifiers)
 {
   std::vector<std::string> keywords = { "break",    "config", "continue",

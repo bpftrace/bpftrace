@@ -318,7 +318,7 @@ void Printer::visit(AssignVarStatement &assignment)
   }
 }
 
-void Printer::visit(AssignConfigVarStatement &assignment)
+void Printer::visit(AssignNonProgVarStatement &assignment)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "=" << std::endl;
@@ -442,6 +442,28 @@ void Printer::visit(Config &config)
   --depth_;
 }
 
+void Printer::visit(Opts &opts)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "opts" << std::endl;
+
+  ++depth_;
+  visit(opts.opt_blocks);
+  --depth_;
+}
+
+void Printer::visit(OptBlock &opt_block)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "opt" << std::endl;
+
+  ++depth_;
+  visit(opt_block.stmts);
+  --depth_;
+}
+
 void Printer::visit(Jump &jump)
 {
   std::string indent(depth_, ' ');
@@ -522,6 +544,10 @@ void Printer::visit(Program &program)
 
   ++depth_;
   visit(program.config);
+  --depth_;
+
+  ++depth_;
+  visit(program.opts);
   --depth_;
 
   ++depth_;

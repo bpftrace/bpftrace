@@ -824,29 +824,29 @@ public:
   Expression expr;
 };
 
-class AssignConfigVarStatement : public Node {
+class AssignNonProgVarStatement : public Node {
 public:
-  explicit AssignConfigVarStatement(ASTContext &ctx,
-                                    std::string var,
-                                    uint64_t value,
-                                    Location &&loc)
+  explicit AssignNonProgVarStatement(ASTContext &ctx,
+                                     std::string var,
+                                     uint64_t value,
+                                     Location &&loc)
       : Node(ctx, std::move(loc)), var(std::move(var)), value(value) {};
-  explicit AssignConfigVarStatement(ASTContext &ctx,
-                                    std::string var,
-                                    std::string value,
-                                    Location &&loc)
+  explicit AssignNonProgVarStatement(ASTContext &ctx,
+                                     std::string var,
+                                     std::string value,
+                                     Location &&loc)
       : Node(ctx, std::move(loc)),
         var(std::move(var)),
         value(std::move(value)) {};
-  explicit AssignConfigVarStatement(ASTContext &ctx,
-                                    const AssignConfigVarStatement &other,
-                                    const Location &loc)
+  explicit AssignNonProgVarStatement(ASTContext &ctx,
+                                     const AssignNonProgVarStatement &other,
+                                     const Location &loc)
       : Node(ctx, loc + other.loc), var(other.var), value(other.value) {};
 
   std::string var;
   std::variant<uint64_t, std::string> value;
 };
-using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
+using NonProgVarStmtList = std::vector<AssignNonProgVarStatement *>;
 
 class Block : public Node {
 public:
@@ -1026,12 +1026,35 @@ public:
 
 class Config : public Node {
 public:
-  explicit Config(ASTContext &ctx, ConfigStatementList &&stmts, Location &&loc)
+  explicit Config(ASTContext &ctx, NonProgVarStmtList &&stmts, Location &&loc)
       : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
   explicit Config(ASTContext &ctx, const Config &other, const Location &loc)
       : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
 
-  ConfigStatementList stmts;
+  NonProgVarStmtList stmts;
+};
+
+class OptBlock : public Node {
+public:
+  explicit OptBlock(ASTContext &ctx, NonProgVarStmtList &&stmts, Location &&loc)
+      : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
+  explicit OptBlock(ASTContext &ctx, const OptBlock &other, const Location &loc)
+      : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
+
+  NonProgVarStmtList stmts;
+};
+
+using OptBlockList = std::vector<OptBlock *>;
+
+class Opts : public Node {
+public:
+  explicit Opts(ASTContext &ctx, OptBlockList &&opt_blocks, Location &&loc)
+      : Node(ctx, std::move(loc)), opt_blocks(std::move(opt_blocks)) {};
+  explicit Opts(ASTContext &ctx, const Opts &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        opt_blocks(clone(ctx, other.opt_blocks, loc)) {};
+
+  OptBlockList opt_blocks;
 };
 
 class Probe;
@@ -1246,6 +1269,7 @@ public:
   explicit Program(ASTContext &ctx,
                    std::string c_definitions,
                    Config *config,
+                   Opts *opts,
                    ImportList &&imports,
                    MapDeclList &&map_decls,
                    MacroList &&macros,
@@ -1255,6 +1279,7 @@ public:
       : Node(ctx, std::move(loc)),
         c_definitions(std::move(c_definitions)),
         config(config),
+        opts(opts),
         imports(std::move(imports)),
         map_decls(std::move(map_decls)),
         macros(std::move(macros)),
@@ -1264,6 +1289,7 @@ public:
       : Node(ctx, loc + other.loc),
         c_definitions(other.c_definitions),
         config(clone(ctx, other.config, loc)),
+        opts(clone(ctx, other.opts, loc)),
         imports(clone(ctx, other.imports, loc)),
         map_decls(clone(ctx, other.map_decls, loc)),
         macros(clone(ctx, other.macros, loc)),
@@ -1272,6 +1298,7 @@ public:
 
   std::string c_definitions;
   Config *config = nullptr;
+  Opts *opts = nullptr;
   ImportList imports;
   MapDeclList map_decls;
   MacroList macros;

@@ -121,6 +121,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> PARAM "positional parameter"
 %token <uint64_t> UNSIGNED_INT "integer"
 %token <std::string> CONFIG "config"
+%token <std::string> OPTS "opts"
 %token <std::string> UNROLL "unroll"
 %token <std::string> WHILE "while"
 %token <std::string> FOR "for"
@@ -163,14 +164,17 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <std::pair<ast::ProbeList, ast::SubprogList>> body probes_and_subprogs
 %type <ast::MacroList> macros
 %type <ast::Config *> config
+%type <ast::Opts *> opts
+%type <ast::OptBlock *> opt_block
+%type <ast::OptBlockList> opt_block_list opts_block
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
 %type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
 %type <ast::MapDeclList> map_decl_list
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
-%type <ast::AssignConfigVarStatement *> config_assign_stmt
-%type <ast::ConfigStatementList> config_assign_stmt_list config_block
+%type <ast::AssignNonProgVarStatement *> non_prog_assign_stmt
+%type <ast::NonProgVarStmtList> non_prog_assign_stmt_list config_block
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::Program *> program
@@ -220,8 +224,8 @@ start:          START_PROGRAM program END { driver.result = $2; }
                 ;
 
 program:
-                c_definitions config imports map_decl_list macros body {
-                    $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
+                c_definitions config opts imports map_decl_list macros body {
+                    $$ = driver.ctx.make_node<ast::Program>($1, $2, $3, std::move($4), std::move($5), std::move($6), std::move($7.second), std::move($7.first), @$);
                 }
                 ;
 
@@ -316,27 +320,45 @@ struct_type:
                 STRUCT IDENT { $$ = ast::ident_to_sized_type($2); }
                 ;
 
+opts:           OPTS ASSIGN opts_block          { $$ = driver.ctx.make_node<ast::Opts>(std::move($3), @$); }
+        |       %empty                          { $$ = nullptr; }
+                ;
+
+opts_block:     "[" opt_block_list "]"           { $$ = std::move($2); }
+        |       "[" opt_block_list opt_block "]" { $$ = std::move($2); $$.push_back($3); }
+                ;
+
+opt_block_list:
+                opt_block_list opt_block ","     { $$ = std::move($1); $$.push_back($2); }
+        |       %empty                           { $$ = ast::OptBlockList{}; }
+                ;
+
+opt_block:
+                "{" non_prog_assign_stmt_list "}"                      { $$ = driver.ctx.make_node<ast::OptBlock>(std::move($2), @$); }
+        |       "{" non_prog_assign_stmt_list non_prog_assign_stmt "}" { $2.push_back($3); $$ = driver.ctx.make_node<ast::OptBlock>(std::move($2), @$); }
+                ;
+
 config:
                 CONFIG ASSIGN config_block     { $$ = driver.ctx.make_node<ast::Config>(std::move($3), @$); }
         |        %empty                        { $$ = nullptr; }
                 ;
-
 /*
  * The last statement in a config_block does not require a trailing semicolon.
  */
-config_block:   "{" config_assign_stmt_list "}"                    { $$ = std::move($2); }
-            |   "{" config_assign_stmt_list config_assign_stmt "}" { $$ = std::move($2); $$.push_back($3); }
+config_block:   "{" non_prog_assign_stmt_list "}"                      { $$ = std::move($2); }
+            |   "{" non_prog_assign_stmt_list non_prog_assign_stmt "}" { $$ = std::move($2); $$.push_back($3); }
                 ;
 
-config_assign_stmt_list:
-                config_assign_stmt_list config_assign_stmt ";" { $$ = std::move($1); $$.push_back($2); }
-        |       %empty                                         { $$ = ast::ConfigStatementList{}; }
+non_prog_assign_stmt_list:
+                non_prog_assign_stmt_list non_prog_assign_stmt ";" { $$ = std::move($1); $$.push_back($2); }
+        |       %empty                                             { $$ = ast::NonProgVarStmtList{}; }
                 ;
 
-config_assign_stmt:
-                IDENT ASSIGN UNSIGNED_INT { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN IDENT        { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN STRING       { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+non_prog_assign_stmt:
+                IDENT ASSIGN UNSIGNED_INT { $$ = driver.ctx.make_node<ast::AssignNonProgVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN IDENT        { $$ = driver.ctx.make_node<ast::AssignNonProgVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN STRING       { $$ = driver.ctx.make_node<ast::AssignNonProgVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN BUILTIN_TYPE { $$ = driver.ctx.make_node<ast::AssignNonProgVarStatement>($1, $3, @$); }
                 ;
 
 subprog:
@@ -729,6 +751,7 @@ keyword:
         |       UNROLL        { $$ = $1; }
         |       WHILE         { $$ = $1; }
         |       SUBPROG       { $$ = $1; }
+        |       OPTS          { $$ = $1; }
         ;
 
 ident:

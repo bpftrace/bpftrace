@@ -665,6 +665,7 @@ static ast::ASTContext buildListProgram(const std::string& search)
       ast::AttachPointList({ ap }), nullptr, nullptr, location());
   ast.root = ast.make_node<ast::Program>("",
                                          nullptr,
+                                         nullptr,
                                          ast::ImportList(),
                                          ast::MapDeclList(),
                                          ast::MacroList(),
