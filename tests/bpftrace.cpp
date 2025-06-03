@@ -2,13 +2,13 @@
 #include <cstring>
 
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "tracefs/tracefs.h"
@@ -116,7 +116,7 @@ static auto parse_probe(const std::string &str,
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
-                .add(CreateClangPass())
+                .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateProbePass())
@@ -1487,7 +1487,7 @@ basic_map_4[7]: 5
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();
@@ -1554,7 +1554,7 @@ max_map_4[3]: 10
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();
@@ -1627,7 +1627,7 @@ avg_map_4[3]: 100
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();
@@ -1692,7 +1692,7 @@ string_map_4[3]: hello
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();
@@ -1787,7 +1787,7 @@ lhist_map_3:
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();
@@ -1890,7 +1890,7 @@ hist_map_3:
   };
 
   for (const auto &tc : test_cases) {
-    CDefinitions no_c_defs;
+    ast::CDefinitions no_c_defs;
     std::stringstream out;
     TextOutput output(no_c_defs, out);
     auto bpftrace = get_mock_bpftrace();

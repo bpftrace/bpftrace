@@ -45,7 +45,6 @@ add_dependencies(runtime parser)
 
 add_library(libbpftrace STATIC
   build_info.cpp
-  clang_parser.cpp
   driver.cpp
   lockdown.cpp
   tracepoint_format_parser.cpp
@@ -69,11 +68,6 @@ target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(bpftrace libbpftrace)
 
 # compile definitions
-
-if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
-  MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
-endif()
-target_compile_definitions(runtime PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE_PATHS}")
 
 # This is run on every build to ensure the version string is always up-to-date
 add_custom_target(version_h

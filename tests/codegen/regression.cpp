@@ -14,7 +14,7 @@ TEST(codegen, regression_957)
   ast::ASTContext ast("stdin", "t:sched:sched_one* { cat(\"%s\", probe); }");
   auto bpftrace = get_mock_bpftrace();
 
-  CDefinitions no_c_defs; // Output from clang parser.
+  ast::CDefinitions no_c_defs; // Output from clang parser.
 
   // N.B. No macros or tracepoint expansion.
   auto ok = ast::PassManager()

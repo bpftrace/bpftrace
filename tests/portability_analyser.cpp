@@ -19,7 +19,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
-  CDefinitions no_c_defs; // Output from clang parser.
+  ast::CDefinitions no_c_defs; // Output from clang parser.
 
   // N.B. No macro or tracepoint expansion.
   auto ok = ast::PassManager()

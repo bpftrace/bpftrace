@@ -18,6 +18,7 @@ add_library(ast STATIC
   signal.cpp
 
   passes/c_macro_expansion.cpp
+  passes/clang_parser.cpp
   passes/codegen_resources.cpp
   passes/config_analyser.cpp
   passes/deprecated.cpp
@@ -44,6 +45,11 @@ add_dependencies(ast parser)
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(ast PRIVATE debugfs tracefs util stdlib)
 target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
+
+if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
+  MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
+endif()
+target_compile_definitions(ast PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE_PATHS}")
 
 if(STATIC_LINKING)
   include(Util)
