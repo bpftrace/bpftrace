@@ -4,8 +4,8 @@
 #include <map>
 #include <vector>
 
+#include "ast/passes/clang_parser.h"
 #include "bpfmap.h"
-#include "clang_parser.h"
 #include "required_resources.h"
 #include "types.h"
 
@@ -39,7 +39,7 @@ std::ostream &operator<<(std::ostream &out, MessageType type);
 // virtual methods.
 class Output {
 public:
-  explicit Output(CDefinitions &c_definitions,
+  explicit Output(ast::CDefinitions &c_definitions,
                   std::ostream &out = std::cout,
                   std::ostream &err = std::cerr)
       : c_definitions_(c_definitions), out_(out), err_(err)
@@ -49,7 +49,7 @@ public:
   Output &operator=(const Output &) = delete;
   virtual ~Output() = default;
 
-  virtual const CDefinitions &c_definitions() const
+  virtual const ast::CDefinitions &c_definitions() const
   {
     return c_definitions_;
   }
@@ -99,7 +99,7 @@ public:
   virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
 
 protected:
-  CDefinitions &c_definitions_;
+  ast::CDefinitions &c_definitions_;
   std::ostream &out_;
   std::ostream &err_;
   void hist_prepare(const std::vector<uint64_t> &values,
@@ -203,7 +203,7 @@ protected:
 
 class TextOutput : public Output {
 public:
-  explicit TextOutput(CDefinitions &c_definitions,
+  explicit TextOutput(ast::CDefinitions &c_definitions,
                       std::ostream &out = std::cout,
                       std::ostream &err = std::cerr)
       : Output(c_definitions, out, err)
@@ -277,7 +277,7 @@ protected:
 
 class JsonOutput : public Output {
 public:
-  explicit JsonOutput(CDefinitions &c_definitions,
+  explicit JsonOutput(ast::CDefinitions &c_definitions,
                       std::ostream &out = std::cout,
                       std::ostream &err = std::cerr)
       : Output(c_definitions, out, err)

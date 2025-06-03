@@ -9,7 +9,7 @@ namespace bpftrace::test::output {
 
 TEST(TextOutput, lhist_no_suffix)
 {
-  CDefinitions c_definitions;
+  ast::CDefinitions c_definitions;
   std::stringstream out;
   std::stringstream err;
   TextOutput output{ c_definitions, out, err };
@@ -58,7 +58,7 @@ TEST(TextOutput, lhist_no_suffix)
 
 TEST(TextOutput, lhist_suffix)
 {
-  CDefinitions c_definitions;
+  ast::CDefinitions c_definitions;
   std::stringstream out;
   std::stringstream err;
   TextOutput output{ c_definitions, out, err };

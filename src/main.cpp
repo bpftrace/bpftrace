@@ -18,6 +18,7 @@
 #include "ast/diagnostic.h"
 #include "ast/helpers.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -38,7 +39,6 @@
 #include "btf.h"
 #include "build_info.h"
 #include "child.h"
-#include "clang_parser.h"
 #include "config.h"
 #include "lockdown.h"
 #include "log.h"
@@ -772,7 +772,7 @@ int main(int argc, char* argv[])
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
-    CDefinitions no_c_defs; // No external C definitions may be used.
+    ast::CDefinitions no_c_defs; // No external C definitions may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into the
     // actual driver here, since we know that the program is already formed.
@@ -862,7 +862,7 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
-    CDefinitions no_c_defs; // See above.
+    ast::CDefinitions no_c_defs; // See above.
     pm.add(CreateParsePass())
         .put(no_c_defs)
         .add(ast::CreateParseAttachpointsPass(args.listing))
@@ -991,7 +991,7 @@ int main(int argc, char* argv[])
 
   // Our output requires the parsed C definitions in order to map enum values to
   // the suitable display name.
-  auto& c_definitions = pmresult->get<CDefinitions>();
+  auto& c_definitions = pmresult->get<ast::CDefinitions>();
   std::unique_ptr<Output> output;
   if (args.output_format.empty() || args.output_format == "text") {
     output = std::make_unique<TextOutput>(c_definitions, *os);

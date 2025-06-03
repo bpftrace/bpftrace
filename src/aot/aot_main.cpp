@@ -48,7 +48,7 @@ std::unique_ptr<Output> prepare_output(const std::string& output_file,
 
   // FIXME(#4087): We should serialize the C enum definitions as part of the AOT
   // payload in order to allow this printing to work.
-  CDefinitions c_definitions;
+  ast::CDefinitions c_definitions;
   std::unique_ptr<Output> output;
   if (output_format.empty() || output_format == "text") {
     output = std::make_unique<TextOutput>(c_definitions, *os);
