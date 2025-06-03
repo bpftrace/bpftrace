@@ -3,8 +3,8 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/c_macro_expansion.h"
+#include "ast/passes/clang_parser.h"
 #include "ast/passes/printer.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 
@@ -49,7 +49,7 @@ void test_macro_parse_failure(BPFtrace &bpftrace,
                 .put(ast)
                 .put(bpftrace)
                 .add(CreateParsePass())
-                .add(CreateClangPass())
+                .add(ast::CreateClangParsePass())
                 .add(ast::CreateCMacroExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));

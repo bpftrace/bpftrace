@@ -6,6 +6,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/c_macro_expansion.h"
+#include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -18,7 +19,6 @@
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "btf_common.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "util/env.h"
 #include "gtest/gtest.h"
@@ -63,7 +63,7 @@ static void test(BPFtrace &bpftrace,
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
-                .add(CreateClangPass())
+                .add(ast::CreateClangParsePass())
                 .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())

@@ -22,7 +22,7 @@
 #include "util/io.h"
 #include "util/system.h"
 
-namespace bpftrace {
+namespace bpftrace::ast {
 
 char ClangParseError::ID;
 
@@ -851,7 +851,7 @@ std::vector<std::string> ClangParser::system_include_paths()
   return result;
 }
 
-ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags)
+ast::Pass CreateClangParsePass(std::vector<std::string> &&extra_flags)
 {
   return ast::Pass::create("ClangParser",
                            [extra_flags = std::move(extra_flags)](
@@ -865,4 +865,4 @@ ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags)
                            });
 }
 
-} // namespace bpftrace
+} // namespace bpftrace::ast

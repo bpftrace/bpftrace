@@ -3,7 +3,7 @@
 #include "ast/pass_manager.h"
 #include <map>
 
-namespace bpftrace {
+namespace bpftrace::ast {
 
 // When the imported definitions are parsed with clang, relevant C definitions
 // are centralized here to be consumed by later passes.
@@ -25,6 +25,6 @@ public:
   void log(llvm::raw_ostream &OS) const override;
 };
 
-ast::Pass CreateClangPass(std::vector<std::string> &&extra_flags = {});
+ast::Pass CreateClangParsePass(std::vector<std::string> &&extra_flags = {});
 
-} // namespace bpftrace
+} // namespace bpftrace::ast

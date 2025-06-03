@@ -1,9 +1,9 @@
 #include <llvm/Config/llvm-config.h>
 
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/clang_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
-#include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "struct.h"
@@ -13,10 +13,11 @@ namespace bpftrace::test::clang_parser {
 
 #include "btf_common.h"
 
-static CDefinitions parse(const std::string &input,
-                          BPFtrace &bpftrace,
-                          bool result = true,
-                          const std::string &probe = "kprobe:sys_read { 1 }")
+static ast::CDefinitions parse(
+    const std::string &input,
+    BPFtrace &bpftrace,
+    bool result = true,
+    const std::string &probe = "kprobe:sys_read { 1 }")
 {
   auto extended_input = input + probe;
   ast::ASTContext ast("stdin", extended_input);
@@ -27,11 +28,11 @@ static CDefinitions parse(const std::string &input,
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
-                .add(CreateClangPass())
+                .add(ast::CreateClangParsePass())
                 .run();
   EXPECT_EQ(ok && ast.diagnostics().ok(), result);
   if (ok) {
-    return std::move(ok->get<CDefinitions>());
+    return std::move(ok->get<ast::CDefinitions>());
   }
   return {};
 }
