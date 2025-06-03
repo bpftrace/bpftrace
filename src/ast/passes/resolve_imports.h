@@ -12,13 +12,26 @@
 
 namespace bpftrace::ast {
 
-class Bitcode {
+// Data is a generic wrapper around some data that was either embedded, or has
+// been loaded off the filesystem. We no longer depend on any files.
+class Data {
 public:
-  Bitcode(const std::string &data) : data(data) {};
+  Data(const std::string &data) : data_(std::ref(data)) {};
+  Data(std::string &&data) : data_(std::move(data)) {};
 
-  // This is only loaded from the standard library, so it is always a
-  // reference. This can be parsed and loaded in a subsequent pass.
-  const std::string &data;
+  const std::string &data()
+  {
+    if (std::holds_alternative<std::string>(data_)) {
+      return std::get<std::string>(data_);
+    } else {
+      return std::get<std::reference_wrapper<std::string>>(data_).get();
+    }
+  }
+
+private:
+  // The reason for this extra indirection: the data is either owned,
+  // or it will be a reference to something immutable in the binary.
+  std::variant<std::reference_wrapper<std::string>, std::string> data_;
 };
 
 class ExternalObject {
@@ -35,7 +48,8 @@ public:
 // for loaded dynamic plugins, and the BPF objects for any binary blobs.
 class Imports : public ast::State<"imports"> {
 public:
-  std::map<std::string, Bitcode> bitcode;
+  std::map<std::string, Data> c_sources;
+  std::map<std::string, Data> c_headers;
   std::map<std::string, ExternalObject> objects;
   std::map<std::string, ASTContext> scripts;
 };
