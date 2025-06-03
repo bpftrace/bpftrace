@@ -13,7 +13,6 @@ embed(
   data_source.btf
   OUTPUT  data_source_btf.h
   VAR     btf_data
-  DEPENDS data_source
 )
 
 embed(
@@ -21,7 +20,6 @@ embed(
   data_source.funcs
   OUTPUT  data_source_funcs.h
   VAR     func_list
-  DEPENDS data_source
 )
 
 embed(
@@ -29,7 +27,6 @@ embed(
   data_source_exe
   OUTPUT  data_source_dwarf.h
   VAR     dwarf_data
-  DEPENDS data_source
 )
 
 # BTF doesn't support C++, so we only generate a data_source_cxx executable

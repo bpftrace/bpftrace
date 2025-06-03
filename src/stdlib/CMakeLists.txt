@@ -13,7 +13,6 @@ embed(
   base.btf
   OUTPUT  base_btf.h
   VAR     base_btf
-  DEPENDS base
 )
 
 embed(
@@ -21,7 +20,6 @@ embed(
   base.bc
   OUTPUT  base_bc.h
   VAR     base_bc
-  DEPENDS base
 )
 
 embed(
@@ -29,7 +27,6 @@ embed(
   ${CMAKE_CURRENT_SOURCE_DIR}/base.bt
   OUTPUT  base_bt.h
   VAR     base_bt
-  DEPENDS base
 )
 
 # The standard library holds these definitions internally via the headers
