@@ -1,9 +1,7 @@
 # Functions to build intermediate BPF modules.
 #
 # The `bpf` function will produce bitcode, an object as well as the BTF type
-# information for a given file. The `btf_header` function can be used to
-# produce a C header for a given BTF source file (often the kernel, but it
-# can be the output from any `bpf` rule, for example).
+# information for a given file.
 
 find_program(GCC gcc REQUIRED)
 find_program(BPFTOOL bpftool REQUIRED)
@@ -16,27 +14,6 @@ find_program(LLVM_OBJCOPY
 find_program(CLANG
   NAMES clang-${LLVM_VERSION_MAJOR}
   REQUIRED)
-
-function(btf_header NAME SOURCE)
-  cmake_parse_arguments(
-    ARG
-    ""
-    "OUTPUT"
-    ""
-    ${ARGN}
-  )
-  if (NOT DEFINED ARG_OUTPUT)
-    set(ARG_OUTPUT "${NAME}.h")
-  endif ()
-  add_custom_command(
-    OUTPUT ${ARG_OUTPUT}
-    COMMAND ${BPFTOOL} btf dump file "${ARG_SOURCE}" format c > ${CMAKE_CURRENT_BINARY_DIR}/${ARG_OUTPUT}
-    VERBATIM
-  )
-  add_custom_target(${NAME}
-    DEPENDS ${ARG_OUTPUT}
-  )
-endfunction()
 
 function(bpf NAME)
   cmake_parse_arguments(

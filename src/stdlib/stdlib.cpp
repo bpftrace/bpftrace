@@ -8,10 +8,11 @@ std::string make_view(const unsigned char *v, size_t sz)
 }
 
 // Embedded file contents.
-#include "stdlib/__stddef_max_align_t.h"
-#include "stdlib/base_bc.h"
 #include "stdlib/base_bt.h"
-#include "stdlib/base_btf.h"
+#include "stdlib/base_c.h"
+
+// Standard headers.
+#include "stdlib/__stddef_max_align_t.h"
 #include "stdlib/float.h"
 #include "stdlib/limits.h"
 #include "stdlib/stdarg.h"
@@ -21,8 +22,7 @@ std::string make_view(const unsigned char *v, size_t sz)
 
 // Files is the immutable index of embedded files.
 const std::map<std::string, std::string> Stdlib::files = {
-  { "stdlib/base.btf", make_view(base_btf, sizeof(base_btf)) },
-  { "stdlib/base.bc", make_view(base_bc, sizeof(base_bc)) },
+  { "stdlib/base.c", make_view(base_c, sizeof(base_c)) },
   { "stdlib/base.bt", make_view(base_bt, sizeof(base_bt)) },
   { "include/float.h", make_view(float_h, sizeof(float_h)) },
   { "include/limits.h", make_view(limits_h, sizeof(limits_h)) },

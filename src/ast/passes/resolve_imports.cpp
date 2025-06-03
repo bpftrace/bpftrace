@@ -61,9 +61,14 @@ private:
   Result<OK> importObject(Node &node,
                           const std::string &name,
                           const std::filesystem::path &path);
-  Result<OK> importBitcode(Node &node,
-                           const std::string &name,
-                           const std::string &contents);
+  static Result<OK> importC(Node &node,
+                            const std::string &name,
+                            const std::filesystem::path &path,
+                            std::map<std::string, LoadedObject> &where);
+  static Result<OK> importC(Node &node,
+                            const std::string &name,
+                            const std::string &contents,
+                            std::map<std::string, LoadedObject> &where);
 
   BPFtrace &bpftrace_;
   const std::vector<std::filesystem::path> &paths_;
@@ -81,7 +86,14 @@ bool ResolveImports::checkPerms(const std::filesystem::path &path)
     return (permissions & std::filesystem::perms::others_write) ==
            std::filesystem::perms::none;
   };
-  return check_one(path) && check_one(path.parent_path());
+  if (!check_one(path)) {
+    return false;
+  }
+  if (path.parent_path().empty()) {
+    return check_one(".");
+  } else {
+    return check_one(path.parent_path());
+  }
 }
 
 Result<OK> ResolveImports::importScript(Node &node,
@@ -142,7 +154,7 @@ Result<OK> ResolveImports::importScript([[maybe_unused]] Node &node,
   return OK();
 }
 
-Result<OK> ResolveImports::importObject([[maybe_unused]] Node &node,
+Result<OK> ResolveImports::importObject(Node &node,
                                         const std::string &name,
                                         const std::filesystem::path &path)
 {
@@ -150,20 +162,44 @@ Result<OK> ResolveImports::importObject([[maybe_unused]] Node &node,
     return OK(); // Already added.
   }
 
-  auto added = imports.objects.emplace(name, ExternalObject(path)).second;
+  auto added = imports.objects.emplace(name, ExternalObject(node, path)).second;
   assert(added);
   return OK();
 }
 
-Result<OK> ResolveImports::importBitcode([[maybe_unused]] Node &node,
-                                         const std::string &name,
-                                         const std::string &contents)
+Result<OK> ResolveImports::importC(Node &node,
+                                   const std::string &name,
+                                   const std::filesystem::path &path,
+                                   std::map<std::string, LoadedObject> &where)
 {
-  if (imports.bitcode.contains(name)) {
+  if (where.contains(name)) {
     return OK(); // Already added.
   }
 
-  auto added = imports.bitcode.emplace(name, Bitcode(contents)).second;
+  // Load the file.
+  std::ifstream file(path);
+  if (file.fail()) {
+    node.addError() << "error reading import '" << path
+                    << "': " << std::strerror(errno);
+    return OK();
+  }
+  std::stringstream buf;
+  buf << file.rdbuf();
+  auto [_, added] = where.emplace(name, LoadedObject(node, buf.str()));
+  assert(added);
+  return OK();
+}
+
+Result<OK> ResolveImports::importC(Node &node,
+                                   const std::string &name,
+                                   const std::string &contents,
+                                   std::map<std::string, LoadedObject> &where)
+{
+  if (where.contains(name)) {
+    return OK(); // Already added.
+  }
+
+  auto [_, added] = where.emplace(name, LoadedObject(node, contents));
   assert(added);
   return OK();
 }
@@ -196,6 +232,10 @@ Result<OK> ResolveImports::importAny(Node &node,
     // Import any support file-based extensions.
     if (path.extension() == ".bt") {
       return importScript(node, name, path);
+    } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
+      return importC(node, name, path, imports.c_sources);
+    } else if (path.extension() == ".h") {
+      return importC(node, name, path, imports.c_headers);
     } else if (path.extension() == ".o" && path.stem().extension() == ".bpf") {
       return importObject(node, name, path);
     } else if (!ignore_unknown) {
@@ -214,8 +254,10 @@ Result<OK> ResolveImports::importAny(Node &node,
   std::filesystem::path path(name);
   if (path.extension() == ".bt") {
     return importScript(node, name, data);
-  } else if (path.extension() == ".bc") {
-    return importBitcode(node, name, data);
+  } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
+    return importC(node, name, data, imports.c_sources);
+  } else if (path.extension() == ".h") {
+    return importC(node, name, data, imports.c_headers);
   } else if (!ignore_unknown) {
     node.addError() << "unknown import type: " << path;
   }

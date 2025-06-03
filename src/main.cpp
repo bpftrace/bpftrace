@@ -18,6 +18,7 @@
 #include "ast/diagnostic.h"
 #include "ast/helpers.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
@@ -907,6 +908,7 @@ int main(int argc, char* argv[])
   }
 
   pm.add(ast::CreateLLVMInitPass());
+  pm.add(ast::CreateClangBuildPass());
   pm.add(ast::CreateCompilePass());
   if (bt_debug.contains(DebugStage::Codegen)) {
     pm.add(ast::Pass::create("dump-ir-prefix", [&] {

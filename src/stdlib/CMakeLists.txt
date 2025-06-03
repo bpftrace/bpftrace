@@ -1,35 +1,17 @@
-include(BuildBPF)
 include(Embed)
 
-bpf(base
-  SOURCE  base.c
-  BITCODE base.bc
-  OBJECT  base.o
-  BTF     base.btf
+embed(
+  base_c
+  ${CMAKE_CURRENT_SOURCE_DIR}/base.c
+  OUTPUT  base_c.h
+  VAR     base_c
 )
 
 embed(
-  base_bitcode
-  base.bc
-  OUTPUT  base_bc.h
-  VAR     base_bc
-  DEPENDS base
-)
-
-embed(
-  base_btf
-  base.btf
-  OUTPUT  base_btf.h
-  VAR     base_btf
-  DEPENDS base
-)
-
-embed(
-  base_script
+  base_bt
   ${CMAKE_CURRENT_SOURCE_DIR}/base.bt
   OUTPUT  base_bt.h
   VAR     base_bt
-  DEPENDS base
 )
 
 foreach(header in float limits stdarg stdbool stddef __stddef_max_align_t stdint)
@@ -48,9 +30,8 @@ endforeach()
 
 add_library(stdlib STATIC stdlib.cpp)
 add_dependencies(stdlib
-  base_bitcode
-  base_btf
-  base_script
+  base_c
+  base_bt
   float_header
   limits_header
   stdarg_header
