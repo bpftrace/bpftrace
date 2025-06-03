@@ -12,22 +12,44 @@
 
 namespace bpftrace::ast {
 
-class Bitcode {
+// LoadedObject is a generic wrapper around some data that was either embedded,
+// or has been loaded off the filesystem. We no longer depend on any files.
+class LoadedObject {
 public:
-  Bitcode(const std::string &data) : data(data) {};
+  LoadedObject(Node &node, const std::string &data)
+      : node(node), data_(std::ref(data)) {};
+  LoadedObject(Node &node, std::string &&data)
+      : node(node), data_(std::move(data)) {};
 
-  // This is only loaded from the standard library, so it is always a
-  // reference. This can be parsed and loaded in a subsequent pass.
-  const std::string &data;
+  const std::string &data()
+  {
+    if (std::holds_alternative<std::string>(data_)) {
+      return std::get<std::string>(data_);
+    } else {
+      return std::get<std::reference_wrapper<std::string>>(data_).get();
+    }
+  }
+
+  // Original node, for errors.
+  Node &node;
+
+private:
+  // The reason for this extra indirection: the data is either owned,
+  // or it will be a reference to something immutable in the binary.
+  std::variant<std::reference_wrapper<std::string>, std::string> data_;
 };
 
 class ExternalObject {
 public:
-  ExternalObject(std::filesystem::path path) : path(std::move(path)) {};
+  ExternalObject(Node &node, std::filesystem::path path)
+      : node(node), path(std::move(path)) {};
+
+  // Per above, the original node.
+  Node &node;
 
   // Objects are left on the filesystem, since these paths are passed directly
   // to the linker.
-  std::filesystem::path path;
+  const std::filesystem::path path;
 };
 
 // Imports holds the set of imported modules. This includes the parsed ASTs for
@@ -35,7 +57,8 @@ public:
 // for loaded dynamic plugins, and the BPF objects for any binary blobs.
 class Imports : public ast::State<"imports"> {
 public:
-  std::map<std::string, Bitcode> bitcode;
+  std::map<std::string, LoadedObject> c_sources;
+  std::map<std::string, LoadedObject> c_headers;
   std::map<std::string, ExternalObject> objects;
   std::map<std::string, ASTContext> scripts;
 };

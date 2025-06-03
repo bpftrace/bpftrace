@@ -1,8 +1,12 @@
 #include <algorithm>
 #include <clang-c/Index.h>
+#include <clang/Driver/Driver.h>
+#include <clang/Frontend/CompilerInstance.h>
 #include <cstring>
 #include <iostream>
 #include <llvm/Config/llvm-config.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/VirtualFileSystem.h>
 #include <regex>
 #include <sstream>
 #include <sys/utsname.h>
@@ -12,6 +16,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/passes/resolve_imports.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "clang_parser.h"
