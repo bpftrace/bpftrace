@@ -94,6 +94,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- killsnoop.bt: support tkill() and tgkill()
+  - [#4190](https://github.com/bpftrace/bpftrace/pull/4190)
 - Remove tools example usage txt files and move info to comments
   - [#4187](https://github.com/bpftrace/bpftrace/pull/4187)
 - Fix biosnoop.bt to print comm from block_io_start probe

@@ -1,13 +1,13 @@
 #!/usr/bin/env bpftrace
 /*
- * killsnoop	Trace signals issued by the kill() syscall.
+ * killsnoop	Trace signals issued by the kill(),tkill(),tgkill() syscall.
  *		For Linux, uses bpftrace and eBPF.
  * 
  * Example of usage:
  * 
  * # ./killsnoop.bt
  * Attaching 3 probes...
- * Tracing kill() signals... Hit Ctrl-C to end.
+ * Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.
  * TIME                PID COMM              SIG   TPID RESULT
  * 00:09:37.345938   22485 bash                2  23856      0
  * 00:09:40.838452   22485 bash                2  23856     -3
@@ -24,25 +24,30 @@
  * Copyright 2018 Netflix, Inc.
  *
  * 07-Sep-2018	Brendan Gregg	Created this.
+ * 27-May-2025	Rong Tao	Support tkill(), tgkill()
  */
 
 BEGIN
 {
-	printf("Tracing kill() signals... Hit Ctrl-C to end.\n");
-	printf("%-15s %7s %-16s %4s %6s %s\n",
+	printf("Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.\n");
+	printf("%-15s %8s %-16s %4s %8s %s\n",
 		"TIME", "PID", "COMM", "SIG", "TPID", "RESULT");
 }
 
-tracepoint:syscalls:sys_enter_kill
+tracepoint:syscalls:sys_enter_kill,
+tracepoint:syscalls:sys_enter_tkill,
+tracepoint:syscalls:sys_enter_tgkill
 {
 	@tpid[tid] = args.pid;
 	@tsig[tid] = args.sig;
 }
 
-tracepoint:syscalls:sys_exit_kill
+tracepoint:syscalls:sys_exit_kill,
+tracepoint:syscalls:sys_exit_tkill,
+tracepoint:syscalls:sys_exit_tgkill
 /@tpid[tid]/
 {
-	printf("%-15s %7d %-16s %4d %6d %6d\n",
+	printf("%-15s %8d %-16s %4d %8d %6d\n",
 		strftime("%H:%M:%S.%f", nsecs),
 		pid, comm, @tsig[tid], @tpid[tid], args.ret);
 	delete(@tpid, tid);
