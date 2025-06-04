@@ -45,13 +45,8 @@ public:
   ConfigUnstable unstable_macro = ConfigUnstable::warn;
   ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
   ConfigUnstable unstable_import = ConfigUnstable::error;
-#ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
   bool show_debug_info = true;
-#else
-  bool use_blazesym = false;
-  bool show_debug_info = false;
-#endif
   uint64_t log_size = 1000000;
   uint64_t max_bpf_progs = 1024;
   uint64_t max_cat_bytes = 10240;

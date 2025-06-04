@@ -25,7 +25,6 @@ private:
   const Config &config_;
   void *ksyms_{ nullptr };
 
-#ifdef HAVE_BLAZESYM
   struct blaze_symbolizer *symbolizer_{ nullptr };
 
   std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
@@ -36,7 +35,6 @@ private:
                                             bool show_offset,
                                             bool perf_mode,
                                             bool show_debug_info);
-#endif
 
   std::string resolve_bcc(uint64_t addr, bool show_offset);
 };
