@@ -404,6 +404,7 @@ public:
   // happens, this number is increased so that later error reporting can
   // correctly account for this.
   size_t injected_args = 0;
+  bool ret_val_discarded = false;
 };
 
 class Sizeof : public Node {
@@ -1095,6 +1096,8 @@ public:
 
   int index() const;
   void set_index(int index);
+
+  bool check_available(const std::string &identifier) const;
 
 private:
   int index_ = 0;

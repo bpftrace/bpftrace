@@ -32,6 +32,7 @@ public:
   BpfBytecode &operator=(BpfBytecode &&) = default;
 
   void update_global_vars(BPFtrace &bpftrace);
+  uint64_t get_event_loss_counter(BPFtrace &bpftrace);
   void load_progs(const RequiredResources &resources,
                   const BTF &btf,
                   BPFfeature &feature,
@@ -73,6 +74,16 @@ private:
   std::map<std::string, BpfProgram> programs_;
   std::unordered_map<std::string, struct bpf_map *>
       section_names_to_global_vars_map_;
+};
+
+class HelperVerifierError : public std::runtime_error {
+public:
+  HelperVerifierError(const std::string &msg, libbpf::bpf_func_id func_id_)
+      : std::runtime_error(msg), func_id(func_id_)
+  {
+  }
+
+  const libbpf::bpf_func_id func_id;
 };
 
 } // namespace bpftrace

@@ -234,7 +234,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
   auto *arg_data = data_aligned.data();
 
-  auto printf_id = AsyncAction(*reinterpret_cast<uint64_t *>(arg_data));
+  auto printf_id = async_action::AsyncAction(
+      *reinterpret_cast<uint64_t *>(arg_data));
 
   // Ignore the remaining events if perf_event_printer is called during
   // finalization stage (exit() builtin has been called)
@@ -247,50 +248,50 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 
   // async actions
-  if (printf_id == AsyncAction::exit) {
+  if (printf_id == async_action::AsyncAction::exit) {
     async_action::exit_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::print) {
+  } else if (printf_id == async_action::AsyncAction::print) {
     async_action::print_map_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::print_non_map) {
+  } else if (printf_id == async_action::AsyncAction::print_non_map) {
     async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::clear) {
+  } else if (printf_id == async_action::AsyncAction::clear) {
     async_action::clear_map_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::zero) {
+  } else if (printf_id == async_action::AsyncAction::zero) {
     async_action::zero_map_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::time) {
+  } else if (printf_id == async_action::AsyncAction::time) {
     async_action::time_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::join) {
+  } else if (printf_id == async_action::AsyncAction::join) {
     async_action::join_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::helper_error) {
+  } else if (printf_id == async_action::AsyncAction::helper_error) {
     async_action::helper_error_handler(ctx->bpftrace, ctx->output, data);
     return;
-  } else if (printf_id == AsyncAction::watchpoint_attach) {
+  } else if (printf_id == async_action::AsyncAction::watchpoint_attach) {
     async_action::watchpoint_attach_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::watchpoint_detach) {
+  } else if (printf_id == async_action::AsyncAction::watchpoint_detach) {
     async_action::watchpoint_detach_handler(ctx->bpftrace, data);
     return;
-  } else if (printf_id == AsyncAction::skboutput) {
+  } else if (printf_id == async_action::AsyncAction::skboutput) {
     async_action::skboutput_handler(ctx->bpftrace, data, size);
     return;
-  } else if (printf_id >= AsyncAction::syscall &&
-             printf_id <= AsyncAction::syscall_end) {
+  } else if (printf_id >= async_action::AsyncAction::syscall &&
+             printf_id <= async_action::AsyncAction::syscall_end) {
     async_action::syscall_handler(
         ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
-  } else if (printf_id >= AsyncAction::cat &&
-             printf_id <= AsyncAction::cat_end) {
+  } else if (printf_id >= async_action::AsyncAction::cat &&
+             printf_id <= async_action::AsyncAction::cat_end) {
     async_action::cat_handler(ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
-  } else if (printf_id >= AsyncAction::printf &&
-             printf_id <= AsyncAction::printf_end) {
+  } else if (printf_id >= async_action::AsyncAction::printf &&
+             printf_id <= async_action::AsyncAction::printf_end) {
     async_action::printf_handler(
         ctx->bpftrace, ctx->output, printf_id, arg_data);
     return;
@@ -505,133 +506,24 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
   ctx->output.lost_events(lost);
 }
 
-Result<std::vector<std::unique_ptr<AttachedProbe>>> BPFtrace::attach_usdt_probe(
-    Probe &probe,
-    const BpfProgram &program,
-    std::optional<int> pid,
-    bool file_activation)
-{
-  std::vector<std::unique_ptr<AttachedProbe>> ret;
-
-  if (feature_->has_uprobe_refcnt() || !file_activation || probe.path.empty()) {
-    auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
-    if (!ap) {
-      auto missing_probes = config_->missing_probes;
-      auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-        log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-      });
-      if (missing_probes == ConfigMissingProbes::error) {
-        return make_error<AttachError>();
-      }
-    } else {
-      ret.push_back(std::move(*ap));
-    }
-    return ret;
-  }
-
-  // File activation works by scanning through /proc/*/maps and seeing
-  // which processes have the target executable in their address space
-  // with execute permission. If found, we will try to attach to each
-  // process we find.
-  //
-  // Note that this is the slow path. If the kernel has semaphore support
-  // (feature_->has_uprobe_refcnt()), the kernel can do this for us and
-  // much faster too.
-  glob_t globbuf;
-  if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
-    LOG(BUG) << "failed to glob";
-
-  char *p;
-  if (!(p = realpath(probe.path.c_str(), nullptr))) {
-    LOG(ERROR) << "Failed to resolve " << probe.path;
-    return ret;
-  }
-  std::string resolved(p);
-  free(p);
-
-  for (size_t i = 0; i < globbuf.gl_pathc; ++i) {
-    std::string path(globbuf.gl_pathv[i]);
-    std::ifstream file(path);
-    if (file.fail()) {
-      // The process could have exited between the glob and now. We have
-      // to silently ignore that.
-      continue;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-      if (line.find(resolved) == std::string::npos)
-        continue;
-
-      auto parts = util::split_string(line, ' ');
-      if (parts.at(1).find('x') == std::string::npos)
-        continue;
-
-      // Remove `/proc/` prefix
-      std::string pid_str(globbuf.gl_pathv[i] + 6);
-      // No need to remove `/maps` suffix b/c stoi() will ignore trailing !ints
-
-      int pid_parsed;
-      try {
-        pid_parsed = std::stoi(pid_str);
-      } catch (const std::exception &ex) {
-        throw util::FatalUserException("failed to parse pid=" + pid_str);
-      }
-
-      auto ap = AttachedProbe::make(
-          probe, program, pid_parsed, *this, safe_mode_);
-      if (!ap) {
-        auto missing_probes = config_->missing_probes;
-        auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-          log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-        });
-        if (missing_probes == ConfigMissingProbes::error) {
-          return make_error<AttachError>();
-        }
-      } else {
-        ret.push_back(std::move(*ap));
-      }
-      break;
-    }
-  }
-
-  if (ret.empty())
-    LOG(ERROR) << "Failed to find processes running " << probe.path;
-
-  return ret;
-}
-
-Result<std::vector<std::unique_ptr<AttachedProbe>>> BPFtrace::attach_probe(
+Result<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
     const BpfBytecode &bytecode)
 {
-  std::vector<std::unique_ptr<AttachedProbe>> ret;
-
   const auto &program = bytecode.getProgramForProbe(probe);
   std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
                                     : this->pid();
 
-  if (probe.type == ProbeType::usdt) {
-    auto aps = attach_usdt_probe(probe, program, pid, usdt_file_activation_);
-    if (!aps) {
-      return aps.takeError();
-    }
-    ret = std::move(*aps);
+  auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+  if (!ap) {
+    auto missing_probes = config_->missing_probes;
+    auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
+      log_probe_attach_failure(err.msg(), probe.name, missing_probes);
+    });
+    return make_error<AttachError>();
   } else {
-    auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
-    if (!ap) {
-      auto missing_probes = config_->missing_probes;
-      auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
-        log_probe_attach_failure(err.msg(), probe.name, missing_probes);
-      });
-      if (missing_probes == ConfigMissingProbes::error) {
-        return make_error<AttachError>();
-      }
-    } else {
-      ret.push_back(std::move(*ap));
-    }
+    return std::move(*ap);
   }
-  return ret;
 }
 
 bool attach_reverse(const Probe &p)
@@ -682,7 +574,7 @@ int BPFtrace::run_iter()
   }
 
   auto &ap = *attached_probes_.begin();
-  int link_fd = ap->linkfd_;
+  int link_fd = ap->link_fd();
 
   if (probe->pin.empty()) {
     int iter_fd = bpf_iter_create(link_fd);
@@ -832,12 +724,13 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
     }
     if (!attach_reverse(probe)) {
-      auto aps = attach_probe(probe, bytecode_);
-      if (!aps) {
-        return -1;
-      }
-      for (auto &ap : *aps) {
-        attached_probes_.push_back(std::move(ap));
+      auto ap = attach_probe(probe, bytecode_);
+      if (!ap) {
+        if (config_->missing_probes == ConfigMissingProbes::error) {
+          return -1;
+        }
+      } else {
+        attached_probes_.push_back(std::move(*ap));
       }
     }
   }
@@ -848,12 +741,13 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
     }
     if (attach_reverse(probe)) {
-      auto aps = attach_probe(probe, bytecode_);
-      if (!aps) {
-        return -1;
-      }
-      for (auto &ap : *aps) {
-        attached_probes_.push_back(std::move(ap));
+      auto ap = attach_probe(probe, bytecode_);
+      if (!ap) {
+        if (config_->missing_probes == ConfigMissingProbes::error) {
+          return -1;
+        }
+      } else {
+        attached_probes_.push_back(std::move(*ap));
       }
     }
   }
@@ -876,7 +770,11 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
-  size_t num_attached = attached_probes_.size();
+  size_t num_attached = 0;
+
+  for (auto &ap : attached_probes_) {
+    num_attached += ap->probe_count();
+  }
 
   auto total_attached = num_attached + num_special_attached;
 
@@ -936,19 +834,14 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
 
 int BPFtrace::setup_output(void *ctx)
 {
-  if (is_ringbuf_enabled()) {
-    setup_ringbuf(ctx);
-  }
-  int err = setup_event_loss();
-  if (err)
-    return err;
-  if (is_perf_event_enabled()) {
-    return setup_perf_events(ctx);
+  setup_ringbuf(ctx);
+  if (resources.using_skboutput) {
+    return setup_skboutput_perf_buffer(ctx);
   }
   return 0;
 }
 
-int BPFtrace::setup_perf_events(void *ctx)
+int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
 {
   epollfd_ = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd_ == -1) {
@@ -999,25 +892,11 @@ void BPFtrace::setup_ringbuf(void *ctx)
       bytecode_.getMap(MapType::Ringbuf).fd(), ringbuf_printer, ctx, nullptr);
 }
 
-int BPFtrace::setup_event_loss()
-{
-  auto map = bytecode_.getMap(MapType::EventLossCounter);
-  auto ok = map.update_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                            const_cast<uint64_t *>(&event_loss_cnt_val_));
-
-  if (!ok) {
-    LOG(ERROR) << "Failed to update event loss counter:" << ok.takeError();
-    return -1;
-  }
-  return 0;
-}
-
 void BPFtrace::teardown_output()
 {
-  if (is_ringbuf_enabled())
-    ring_buffer__free(ringbuf_);
+  ring_buffer__free(ringbuf_);
 
-  if (is_perf_event_enabled())
+  if (resources.using_skboutput)
     // Calls perf_reader_free() on all open perf buffers.
     open_perf_buffers_.clear();
 }
@@ -1025,8 +904,8 @@ void BPFtrace::teardown_output()
 void BPFtrace::poll_output(Output &out, bool drain)
 {
   int ready;
-  bool do_poll_perf_event = is_perf_event_enabled();
-  bool do_poll_ringbuf = is_ringbuf_enabled();
+  bool poll_skboutput = resources.using_skboutput;
+  bool do_poll_ringbuf = true;
   auto should_retry = [](int ready) {
     // epoll_wait will set errno to EINTR if an interrupt received, it is
     // retryable if not caused by SIGINT. ring_buffer__poll does not set errno,
@@ -1044,25 +923,25 @@ void BPFtrace::poll_output(Output &out, bool drain)
            (ready == 0 && (drain || finalize_));
   };
 
-  if (do_poll_perf_event && epollfd_ < 0) {
+  if (poll_skboutput && epollfd_ < 0) {
     LOG(ERROR) << "Invalid epollfd " << epollfd_;
     return;
   }
 
   while (true) {
-    if (do_poll_perf_event) {
-      ready = poll_perf_events();
+    if (poll_skboutput) {
+      ready = poll_skboutput_events();
       if (should_retry(ready)) {
         if (!do_poll_ringbuf)
           continue;
       }
       if (should_stop(ready)) {
-        do_poll_perf_event = false;
+        poll_skboutput = false;
       }
     }
 
-    // print loss events
-    handle_event_loss(out);
+    // Handle lost events, if any
+    poll_event_loss(out);
 
     if (do_poll_ringbuf) {
       ready = ring_buffer__poll(ringbuf_, timeout_ms);
@@ -1073,7 +952,7 @@ void BPFtrace::poll_output(Output &out, bool drain)
         do_poll_ringbuf = false;
       }
     }
-    if (!do_poll_perf_event && !do_poll_ringbuf) {
+    if (!poll_skboutput && !do_poll_ringbuf) {
       return;
     }
 
@@ -1098,7 +977,7 @@ void BPFtrace::poll_output(Output &out, bool drain)
   }
 }
 
-int BPFtrace::poll_perf_events()
+int BPFtrace::poll_skboutput_events()
 {
   auto events = std::vector<struct epoll_event>(online_cpus_);
   int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);
@@ -1111,23 +990,15 @@ int BPFtrace::poll_perf_events()
   return ready;
 }
 
-void BPFtrace::handle_event_loss(Output &out)
+void BPFtrace::poll_event_loss(Output &out)
 {
-  uint64_t current_value = 0;
-  auto map = bytecode_.getMap(MapType::EventLossCounter);
-  auto ok = map.lookup_elem(const_cast<uint32_t *>(&event_loss_cnt_key_),
-                            &current_value);
-
-  if (!ok) {
-    LOG(ERROR) << "Failed to lookup event loss counter: " << ok.takeError();
-  } else {
-    if (current_value > event_loss_count_) {
-      out.lost_events(current_value - event_loss_count_);
-      event_loss_count_ = current_value;
-    } else if (current_value < event_loss_count_) {
-      LOG(ERROR) << "Invalid event loss count value: " << current_value
-                 << ", last seen: " << event_loss_count_;
-    }
+  auto current_value = bytecode_.get_event_loss_counter(*this);
+  if (current_value > event_loss_count_) {
+    out.lost_events(current_value - event_loss_count_);
+    event_loss_count_ = current_value;
+  } else if (current_value < event_loss_count_) {
+    LOG(ERROR) << "Invalid event loss count value: " << current_value
+               << ", last seen: " << event_loss_count_;
   }
 }
 

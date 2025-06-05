@@ -6,8 +6,31 @@
  * This uses kernel dynamic tracing of kernel functions, lookup_fast() and
  * d_lookup(), which will need to be modified to match kernel changes. See
  * code comments.
- *
- * USAGE: dcsnoop.bt
+ * 
+ * Example of usage:
+ * 
+ * # ./dcsnoop.bt
+ * Attaching 4 probes...
+ * Tracing dcache lookups... Hit Ctrl-C to end.
+ * TIME     PID    COMM             T FILE
+ * 427      1518   irqbalance       R proc/interrupts
+ * 427      1518   irqbalance       R interrupts
+ * 427      1518   irqbalance       R proc/stat
+ * 427      1518   irqbalance       R stat
+ * [...]
+ * 5173     934    cksum            R usr/bin/bdftruncate
+ * 5173     934    cksum            R bin/bdftruncate
+ * 5173     934    cksum            R bdftruncate
+ * 5173     934    cksum            M bdftruncate
+ * 
+ * The way the dcache is currently implemented, each component of a path is
+ * checked in turn. The first line, showing "proc/interrupts" from irqbalance,
+ * will be a lookup for "proc" in a directory (that isn't shown here). If it
+ * finds "proc", it will then lookup "interrupts" inside net.
+ * 
+ * The script is easily modifiable to only show misses, reducing the volume of
+ * the output. Or use the bcc version of this tool, which only shows misses by
+ * default: https://github.com/iovisor/bcc
  *
  * Copyright 2018 Netflix, Inc.
  *

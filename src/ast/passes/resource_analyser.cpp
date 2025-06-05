@@ -149,6 +149,8 @@ RequiredResources ResourceAnalyser::resources()
     resources_.needed_global_vars.insert(
         bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
   }
+  resources_.needed_global_vars.insert(
+      bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER);
 
   return std::move(resources_);
 }
@@ -314,7 +316,7 @@ void ResourceAnalyser::visit(Call &call)
     const auto &offset = call.vargs.at(3).as<Integer>()->value;
 
     resources_.skboutput_args_.emplace_back(file, offset);
-    resources_.needs_perf_event_map = true;
+    resources_.using_skboutput = true;
   } else if (call.func == "delete") {
     auto &arg0 = call.vargs.at(0);
     auto &map = *arg0.as<Map>();

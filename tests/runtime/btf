@@ -1,16 +1,16 @@
 NAME user_supplied_c_def_using_btf
 PROG struct foo { struct task_struct t; } BEGIN { exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
 NAME tracepoint_pointer_type_resolution
 PROG tracepoint:syscalls:sys_enter_nanosleep { args.rqtp->tv_sec; exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
 NAME tracepoint_nested_pointer_type_resolution
 PROG tracepoint:napi:napi_poll { args.napi->dev->name; exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
 NAME enum_value_reference
@@ -67,7 +67,7 @@ CLEANUP nft delete table bpftrace
 
 NAME kernel_module_tracepoint
 PROG tracepoint:xfs:xfs_setfilesize { print(args.offset) } i:ms:1 { exit(); }
-EXPECT Attaching 2 probes...
+EXPECT Attached 2 probes
 REQUIRES_FEATURE btf
 REQUIRES lsmod | grep "^xfs"
 
@@ -76,14 +76,14 @@ REQUIRES lsmod | grep "^xfs"
 # This tests checks that the correct BTF definition is pulled from 'kvm'.
 NAME kernel_module_type_fwd
 PROG fentry:kvm:x86_emulate_insn { printf("%d\n", args.ctxt->mode); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 TIMEOUT 2
 REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^kvm'
 
 NAME kprobe_kernel_module_type_fwd
 PROG kprobe:kvm:x86_emulate_insn { $ctxt = (struct x86_emulate_ctxt *) arg0; printf("%d\n", $ctxt->mode); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 TIMEOUT 2
 REQUIRES lsmod | grep '^kvm'
 

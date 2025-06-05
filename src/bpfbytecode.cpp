@@ -121,6 +121,14 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
                                  bpftrace);
 }
 
+uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
+{
+  return globalvars::get_global_var(bpf_object_.get(),
+                                    globalvars::EVENT_LOSS_COUNTER_SECTION_NAME,
+                                    section_names_to_global_vars_map_,
+                                    bpftrace);
+}
+
 namespace {
 // Searches the verifier's log for err_pattern. If a match is found, extracts
 // the name and ID of the problematic helper and throws a HelperVerifierError.

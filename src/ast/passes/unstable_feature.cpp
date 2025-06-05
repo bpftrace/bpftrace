@@ -1,5 +1,4 @@
 #include <cstring>
-#include <format>
 #include <string>
 
 #include "ast/ast.h"
@@ -14,18 +13,17 @@ namespace {
 
 std::string get_warning(const std::string &feature)
 {
-  return std::format("Script is using an unstable feature. To prevent this "
+  return std::string("Script is using an unstable feature. To prevent this "
                      "warning you must explicitly enable the unstable "
-                     "feature in the config e.g. {}=enable",
-                     feature);
+                     "feature in the config e.g. ") +
+         feature + std::string("=enable");
 }
 
 std::string get_error(std::string &&feature)
 {
-  return std::format(
-      "Feature not enabled by default. To enable "
-      "this unstable feature, set the config flag to enable. {}=enable",
-      feature);
+  return std::string("Feature not enabled by default. To enable "
+                     "this unstable feature, set the config flag to enable. ") +
+         feature + std::string("=enable");
 }
 
 class UnstableFeature : public Visitor<UnstableFeature> {

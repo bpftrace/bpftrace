@@ -1882,121 +1882,127 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | struct args
 | n/a
 | n/a
-| The struct of all arguments of the traced function. Available in `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
+| The struct of all arguments of the traced function. Available in `rawtracepoint`, `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
 
-| cgroup
+| `cgroup`
 | uint64
 | 4.18
 | get_current_cgroup_id
 | ID of the cgroup the current process belongs to. Only works with cgroupv2.
 
-| comm
+| `comm`
 | string
 | 4.2
 | get_current_comm
 | Name of the current thread
 
-| cpid
+| `cpid`
 | uint32
 | n/a
 | n/a
 | Child process ID, if bpftrace is invoked with `-c`
 
-| cpu
+| `cpu`
 | uint32
 | 4.1
 | raw_smp_processor_id
 | ID of the processor executing the BPF program
 
-| ncpus
+| `ncpus`
 | uint64
 | n/a
 | n/a
 | Number of CPUs
 
-| curtask
+| `curtask`
 | uint64
 | 4.8
 | get_current_task
 | Pointer to `struct task_struct` of the current task
 
-| elapsed
+| `elapsed`
 | uint64
 | (see nsec)
 | ktime_get_ns / ktime_get_boot_ns
 | Nanoseconds elapsed since bpftrace initialization, based on `nsecs`
 
-| func
+| `func`
 | string
 | n/a
 | n/a
 | Name of the current function being traced (kprobes,uprobes)
 
-| gid
+| `gid`
 | uint64
 | 4.2
 | get_current_uid_gid
 | Group ID of the current thread, as seen from the init namespace
 
-| jiffies
+| `jiffies`
 | uint64
 | 5.9
 | get_jiffies_64
 | Jiffies of the kernel. In 32-bit system, using this builtin might be slower.
 
-| numaid
+| `numaid`
 | uint32
 | 5.8
 | numa_node_id
 | ID of the NUMA node executing the BPF program
 
-| pid
+| `pid`
 | uint32
 | 4.2
 | get_current_pid_tgid
 | Process ID of the current thread (aka thread group ID), as seen from the init namespace
 
-| probe
+| `probe`
 | string
 | n/na
 | n/a
 | Name of the current probe
 
-| rand
+| `rand`
 | uint32
 | 4.1
 | get_prandom_u32
 | Random number
 
-| return
+| `return`
 | n/a
 | n/a
 | n/a
 | The return keyword is used to exit the current probe. This differs from exit() in that it doesn't exit bpftrace.
 
-| retval
+| `retval`
 | uint64
 | n/a
 | n/a
 | Value returned by the function being traced (kretprobe, uretprobe, fexit). For kretprobe and uretprobe, its type is `uint64`, but for fexit it depends. You can look up the type using `bpftrace -lv`
 
-| tid
+| `tid`
 | uint32
 | 4.2
 | get_current_pid_tgid
 | Thread ID of the current thread, as seen from the init namespace
 
-| uid
+| `uid`
 | uint64
 | 4.2
 | get_current_uid_gid
 | User ID of the current thread, as seen from the init namespace
 
-| username
+| `username`
 | string
 | n/a
 | get_current_uid_gid
 | User name of the current thread, as seen from the init namespace
+
+| `usermode`
+| uint8
+| n/a
+| n/a
+| Returns 1 if the current process is in user mode, 0 otherwise. Currently only available on x86_64.
 
 |===
 
@@ -2067,7 +2073,7 @@ With no arguments, `$1` defaults to zero:
 
 ----
 # ./bsize.bt
-Attaching 2 probes...
+Attached 2 probes
 Tracing block I/O sizes > 0 bytes
 ^C
 
@@ -2680,8 +2686,8 @@ This function can only be used by functions that are allowed to, these functions
 === percpu_kaddr
 
 .variants
-* `void *percpu_kaddr(const string name)`
-* `void *percpu_kaddr(const string name, int cpu)`
+* `uint64 *percpu_kaddr(const string name)`
+* `uint64 *percpu_kaddr(const string name, int cpu)`
 
 *sync*
 
@@ -3098,7 +3104,7 @@ interval:s:30 {
 Note how the async `time` and `printf` first print every second until the `interval:s:10` probe hits, then they print every 10 seconds due to bpftrace blocking on `sleep`.
 
 ----
-Attaching 3 probes...
+Attached 3 probes
 08:50:37: 0
 08:50:38: 1
 08:50:39: 2
@@ -3454,12 +3460,29 @@ interval:s:10 {
 === delete
 
 .variants
-* `void delete(map m, mapkey k)`
-* deprecated `void delete(mapkey k)`
+* `bool delete(map m, mapkey k)`
+* deprecated `bool delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
+
+If deletion fails (e.g. the key doesn't exist) the function returns false (0).
+Additionally, if the return value for `delete` is discarded, and deletion fails, you will get a warning.
+
+```
+@a[1] = 1;
+
+delete(@a, 1); // no warning (the key exists)
+
+if (delete(@a, 2)) { // no warning (return value is used)
+  ...
+}
+
+$did_delete = delete(@a, 2); // no warning (return value is used)
+
+delete(@a, 2); // warning (return value is discarded and the key doesn't exist)
+```
 
 The, now deprecated, API (supported in version <= 0.21.x) of passing map arguments with the key is still supported:
 e.g. `delete(@mymap[3, "hello"]);`.
@@ -3819,7 +3842,9 @@ The tradeoff is that bpftrace will use more memory.
 
 ==== show_debug_info
 
-This is only available if the link:https://github.com/libbpf/blazesym[Blazesym] library is available at build time. If it is available this defaults to 1, meaning that when printing ustack and kstack symbols bpftrace will also show (if debug info is available) symbol file and line ('bpftrace' stack mode) and a label if the function was inlined ('bpftrace' and 'perf' stack modes).
+Default: 1
+
+If enabled, when printing ustack and kstack symbols bpftrace will also show (if debug info is available) symbol file and line ('bpftrace' stack mode) and a label if the function was inlined ('bpftrace' and 'perf' stack modes).
 There might be a performance difference when symbolicating, which is the only reason to disable this.
 
 ==== stack_mode
@@ -4226,7 +4251,7 @@ foo.h
 
 # bpftrace -I /tmp/include program.bt
 
-Attaching 1 probe...
+Attached 1 probe
 ----
 
 The `--include` option can be used to include headers by default.
@@ -4237,7 +4262,7 @@ Headers are included in the order they are defined, and they are included before
 # bpftrace --include linux/path.h --include linux/dcache.h \
     -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
 
-Attaching 1 probe...
+Attached 1 probe
 open path: .com.google.Chrome.ASsbu2
 open path: .com.google.Chrome.gimc10
 open path: .com.google.Chrome.R1234s
@@ -4250,7 +4275,7 @@ The `-v` option prints more information about the program as it is run:
 ----
 # bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
 AST node count: 7
-Attaching 1 probe...
+Attached 1 probe
 
 load tracepoint:syscalls:sys_enter_nanosleep, with BTF, with func_infos: Success
 
@@ -4393,7 +4418,7 @@ And then calling it:
 ----
 # bpftrace sleepers.bt
 
-Attaching 1 probe...
+Attached 1 probe
 iscsid is sleeping.
 iscsid is sleeping.
 ----
@@ -4415,7 +4440,7 @@ Then make it executable:
 # chmod 755 sleepers.bt
 # ./sleepers.bt
 
-Attaching 1 probe...
+Attached 1 probe
 iscsid is sleeping.
 iscsid is sleeping.
 ----

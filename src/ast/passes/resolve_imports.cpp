@@ -150,7 +150,7 @@ Result<OK> ResolveImports::importObject([[maybe_unused]] Node &node,
     return OK(); // Already added.
   }
 
-  auto [_, added] = imports.objects.emplace(name, ExternalObject(path));
+  auto added = imports.objects.emplace(name, ExternalObject(path)).second;
   assert(added);
   return OK();
 }
@@ -163,7 +163,7 @@ Result<OK> ResolveImports::importBitcode([[maybe_unused]] Node &node,
     return OK(); // Already added.
   }
 
-  auto [_, added] = imports.bitcode.emplace(name, Bitcode(contents));
+  auto added = imports.bitcode.emplace(name, Bitcode(contents)).second;
   assert(added);
   return OK();
 }

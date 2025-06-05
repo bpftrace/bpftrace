@@ -121,7 +121,7 @@ public:
   int num_probes() const;
   int prerun() const;
   int run(Output &out, BpfBytecode bytecode);
-  virtual Result<std::vector<std::unique_ptr<AttachedProbe>>> attach_probe(
+  virtual Result<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
@@ -208,8 +208,6 @@ public:
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
-  static constexpr uint32_t event_loss_cnt_key_ = 0;
-  static constexpr uint64_t event_loss_cnt_val_ = 0;
   bool need_recursion_check_ = false;
 
   static void sort_by_key(
@@ -242,29 +240,11 @@ private:
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers_;
 
-  Result<std::vector<std::unique_ptr<AttachedProbe>>> attach_usdt_probe(
-      Probe &probe,
-      const BpfProgram &program,
-      std::optional<int> pid,
-      bool file_activation);
   int create_pcaps();
   void close_pcaps();
   int setup_output(void *ctx);
-  int setup_perf_events(void *ctx);
+  int setup_skboutput_perf_buffer(void *ctx);
   void setup_ringbuf(void *ctx);
-  int setup_event_loss();
-  // when the ringbuf feature is available, enable ringbuf for built-ins like
-  // printf, cat.
-  bool is_ringbuf_enabled() const
-  {
-    return feature_->has_map_ringbuf();
-  }
-  // when the ringbuf feature is unavailable or built-in skboutput is used,
-  // enable perf_event
-  bool is_perf_event_enabled() const
-  {
-    return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
-  }
   std::vector<std::string> resolve_ksym_stack(uint64_t addr,
                                               bool show_offset,
                                               bool perf_mode,
@@ -277,8 +257,8 @@ private:
                                               bool show_debug_info);
   void teardown_output();
   void poll_output(Output &out, bool drain = false);
-  int poll_perf_events();
-  void handle_event_loss(Output &out);
+  int poll_skboutput_events();
+  void poll_event_loss(Output &out);
   int print_map_hist(Output &out,
                      const BpfMap &map,
                      uint32_t top,

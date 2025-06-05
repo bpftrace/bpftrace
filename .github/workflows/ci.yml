@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master, release/* ]
   pull_request:
+    paths-ignore:
+      - "man/**"
+      - "docs/**"
 
 # Cancel previous run if a new one is started
 concurrency:

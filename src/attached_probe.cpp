@@ -6,6 +6,7 @@
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
+#include <filesystem>
 #include <iostream>
 #include <linux/hw_breakpoint.h>
 #include <linux/limits.h>
@@ -14,6 +15,7 @@
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+#include <utility>
 
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -102,222 +104,9 @@ std::string progtypeName(libbpf::bpf_prog_type t)
   }
 }
 
-Result<> AttachedProbe::attach_fentry()
+std::string eventprefix(ProbeType t)
 {
-  if (progfd_ < 0)
-    return make_error<AttachError>();
-
-  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
-  if (tracing_fd_ < 0) {
-    return make_error<AttachError>();
-  }
-  return OK();
-}
-
-int AttachedProbe::detach_fentry()
-{
-  close(tracing_fd_);
-  return 0;
-}
-
-Result<> AttachedProbe::attach_iter()
-{
-  if (!pid_.has_value()) {
-    linkfd_ = bpf_link_create(progfd_,
-                              0,
-                              static_cast<enum ::bpf_attach_type>(
-                                  libbpf::BPF_TRACE_ITER),
-                              nullptr);
-  } else {
-    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
-    union bpf_iter_link_info linfo;
-    memset(&linfo, 0, sizeof(linfo));
-    linfo.task.pid = *pid_;
-    opts.iter_info = &linfo;
-    opts.iter_info_len = sizeof(linfo);
-    linkfd_ = bpf_link_create(progfd_,
-                              0,
-                              static_cast<enum ::bpf_attach_type>(
-                                  libbpf::BPF_TRACE_ITER),
-                              &opts);
-  }
-
-  if (linkfd_ < 0) {
-    return make_error<AttachError>();
-  }
-  return OK();
-}
-
-int AttachedProbe::detach_iter()
-{
-  close(linkfd_);
-  return 0;
-}
-
-Result<> AttachedProbe::attach_raw_tracepoint()
-{
-  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
-  if (tracing_fd_ < 0) {
-    if (tracing_fd_ == -ENOENT) {
-      return make_error<AttachError>("Probe does not exist: " + probe_.name);
-    } else if (tracing_fd_ == -EINVAL) {
-      return make_error<AttachError>(
-          "Maybe trying to access arguments beyond what's available in "
-          "this tracepoint");
-    }
-    return make_error<AttachError>();
-  }
-  return OK();
-}
-
-int AttachedProbe::detach_raw_tracepoint()
-{
-  close(tracing_fd_);
-  return 0;
-}
-
-Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
-    Probe &probe,
-    const BpfProgram &prog,
-    std::optional<int> pid,
-    BPFtrace &bpftrace,
-    bool safe_mode)
-{
-  // Cannot use std::make_unique here b/c it won't have access to
-  // private constructor.
-  auto attached = std::unique_ptr<AttachedProbe>(
-      new AttachedProbe(probe, prog, pid, bpftrace, safe_mode));
-
-  auto result = attached->attach();
-  if (!result)
-    return result.takeError();
-
-  return attached;
-}
-
-AttachedProbe::AttachedProbe(Probe &probe,
-                             const BpfProgram &prog,
-                             std::optional<int> pid,
-                             BPFtrace &bpftrace,
-                             bool safe_mode)
-    : probe_(probe),
-      progfd_(prog.fd()),
-      bpftrace_(bpftrace),
-      pid_(pid),
-      safe_mode_(safe_mode)
-{
-}
-
-AttachedProbe::~AttachedProbe()
-{
-  int err = 0;
-  for (int perf_event_fd : perf_event_fds_) {
-    err = bpf_close_perf_event_fd(perf_event_fd);
-    if (err)
-      LOG(WARNING) << "failed to close perf event FDs for probe: "
-                   << probe_.name;
-  }
-
-  err = 0;
-  switch (probe_.type) {
-    case ProbeType::kprobe:
-    case ProbeType::kretprobe:
-      if (probe_.funcs.empty())
-        err = bpf_detach_kprobe(eventname().c_str());
-      else
-        close(linkfd_);
-      break;
-    case ProbeType::fentry:
-    case ProbeType::fexit:
-      err = detach_fentry();
-      break;
-    case ProbeType::iter:
-      err = detach_iter();
-      break;
-    case ProbeType::uprobe:
-    case ProbeType::uretprobe:
-    case ProbeType::usdt:
-      if (usdt_destructor_)
-        usdt_destructor_();
-      err = bpf_detach_uprobe(eventname().c_str());
-      break;
-    case ProbeType::tracepoint:
-      err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
-      break;
-    case ProbeType::special:
-    case ProbeType::profile:
-    case ProbeType::interval:
-    case ProbeType::software:
-    case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
-    case ProbeType::hardware:
-      break;
-    case ProbeType::rawtracepoint:
-      err = detach_raw_tracepoint();
-      break;
-    case ProbeType::invalid:
-      LOG(BUG) << "invalid attached probe type \"" << probe_.type
-               << "\" at destructor";
-  }
-
-  if (err)
-    LOG(WARNING) << "failed to detach probe: " << probe_.name;
-
-  if (close_progfd_ && progfd_ >= 0)
-    close(progfd_);
-}
-
-Result<> AttachedProbe::attach()
-{
-  LOG(V1) << "Trying to attach probe: " << probe_.orig_name;
-  switch (probe_.type) {
-    case ProbeType::kprobe:
-    case ProbeType::kretprobe:
-      return attach_kprobe();
-    case ProbeType::tracepoint:
-      return attach_tracepoint();
-    case ProbeType::profile:
-      return attach_profile();
-    case ProbeType::interval:
-      return attach_interval();
-    case ProbeType::software:
-      return attach_software();
-    case ProbeType::hardware:
-      return attach_hardware();
-    case ProbeType::fentry:
-    case ProbeType::fexit:
-      return attach_fentry();
-    case ProbeType::iter:
-      return attach_iter();
-    case ProbeType::rawtracepoint:
-      return attach_raw_tracepoint();
-    case ProbeType::usdt:
-      return attach_usdt(*bpftrace_.feature_);
-    case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
-      return attach_watchpoint(probe_.mode);
-    case ProbeType::uprobe:
-    case ProbeType::uretprobe:
-      return attach_uprobe(safe_mode_);
-    default:
-      LOG(BUG) << "invalid attached probe type \"" << probe_.type << "\"";
-  }
-  return OK();
-}
-
-const Probe &AttachedProbe::probe() const
-{
-  return probe_;
-}
-
-int AttachedProbe::progfd() const
-{
-  return progfd_;
-}
-
-std::string AttachedProbe::eventprefix() const
-{
-  switch (attachtype(probe_.type)) {
+  switch (attachtype(t)) {
     case BPF_PROBE_ENTRY:
       return "p_";
     case BPF_PROBE_RETURN:
@@ -327,41 +116,97 @@ std::string AttachedProbe::eventprefix() const
   return {}; // unreached
 }
 
-std::string AttachedProbe::eventname() const
+std::string eventname(const Probe &probe, uint64_t offset)
 {
   std::ostringstream offset_str;
-  std::string index_str = "_" + std::to_string(probe_.index);
-  switch (probe_.type) {
+  std::string index_str = "_" + std::to_string(probe.index);
+  switch (probe.type) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     case ProbeType::rawtracepoint:
-      offset_str << std::hex << offset_;
-      return eventprefix() +
-             util::sanitise_bpf_program_name(probe_.attach_point) + "_" +
+      offset_str << std::hex << offset;
+      return eventprefix(probe.type) +
+             util::sanitise_bpf_program_name(probe.attach_point) + "_" +
              offset_str.str() + index_str;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
-      offset_str << std::hex << offset_;
-      return eventprefix() + util::sanitise_bpf_program_name(probe_.path) +
-             "_" + offset_str.str() + index_str;
+      offset_str << std::hex << offset;
+      return eventprefix(probe.type) +
+             util::sanitise_bpf_program_name(probe.path) + "_" +
+             offset_str.str() + index_str;
     case ProbeType::tracepoint:
-      return probe_.attach_point;
+      return probe.attach_point;
     default:
-      LOG(BUG) << "invalid eventname probe \"" << probe_.type << "\"";
+      LOG(BUG) << "invalid eventname probe \"" << probe.type << "\"";
   }
 }
 
-Result<uint64_t> AttachedProbe::resolve_offset(const std::string &path,
-                                               const std::string &symbol,
-                                               uint64_t loc)
+Result<uint64_t> resolve_offset_kprobe(Probe &probe)
+{
+  uint64_t offset = probe.func_offset;
+
+  // If we are using only the symbol, we don't need to check the offset.
+  bool is_symbol_kprobe = !probe.attach_point.empty();
+  if (is_symbol_kprobe && probe.func_offset == 0)
+    return offset;
+
+  // Setup the symbol to resolve, either using the address or the name.
+  struct symbol sym = {};
+  if (is_symbol_kprobe)
+    sym.name = probe.attach_point;
+  else
+    sym.address = probe.address;
+
+  auto path = find_vmlinux(&sym);
+  if (!path.has_value()) {
+    if (!is_symbol_kprobe) {
+      return make_error<AttachError>("Could not resolve address: " +
+                                     std::to_string(probe.address));
+    }
+
+    LOG(V1) << "Could not resolve symbol " << probe.attach_point
+            << ". Skipping usermode offset checking.";
+    LOG(V1) << "The kernel will verify the safety of the location but "
+               "will also allow the offset to be in a different symbol.";
+    return offset;
+  }
+
+  // Populate probe_ fields according to the resolved symbol.
+  if (is_symbol_kprobe) {
+    probe.address = sym.start + probe.func_offset;
+  } else {
+    probe.attach_point = std::move(sym.name);
+    if (__builtin_sub_overflow(probe.address, sym.start, &probe.func_offset))
+      LOG(BUG) << "Offset before the function bounds ('" << probe.attach_point
+               << "' address is " << std::to_string(sym.start) << ")";
+    offset = probe.func_offset;
+    // Set the name of the probe to the resolved symbol+offset, so that failure
+    // to attach can be ignored if the user set ConfigMissingProbes::warn.
+    probe.name = "kprobe:" + probe.attach_point + "+" +
+                 std::to_string(probe.func_offset);
+  }
+
+  if (probe.func_offset >= sym.size) {
+    return make_error<AttachError>("Offset outside the function bounds ('" +
+                                   probe.attach_point + "' size is " +
+                                   std::to_string(sym.size) + ")");
+  }
+  return offset;
+}
+
+Result<uint64_t> resolve_offset(Probe &probe)
 {
   bcc_symbol bcc_sym;
 
-  if (bcc_resolve_symname(
-          path.c_str(), symbol.c_str(), loc, 0, nullptr, &bcc_sym)) {
-    return make_error<AttachError>("Could not resolve symbol: " + path + ":" +
-                                   symbol);
+  if (bcc_resolve_symname(probe.path.c_str(),
+                          probe.attach_point.c_str(),
+                          probe.loc,
+                          0,
+                          nullptr,
+                          &bcc_sym)) {
+    return make_error<AttachError>("Could not resolve symbol: " + probe.path +
+                                   ":" + probe.attach_point);
   }
 
   // Have to free sym.module, see:
@@ -376,100 +221,100 @@ static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
 
-Result<> AttachedProbe::check_alignment(std::string &path,
-                                        std::string &symbol,
-                                        uint64_t sym_offset,
-                                        uint64_t func_offset,
-                                        bool safe_mode,
-                                        ProbeType type)
+Result<> check_alignment(Probe &probe,
+                         std::string &symbol,
+                         uint64_t sym_offset,
+                         uint64_t func_offset,
+                         bool safe_mode)
 {
-  Disasm dasm(path);
+  Disasm dasm(probe.path);
   AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
 
-  std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
+  std::string tmp = probe.path + ":" + symbol + "+" +
+                    std::to_string(func_offset);
 
   switch (aligned) {
     case AlignState::Ok:
       return OK();
     case AlignState::NotAlign:
       if (safe_mode) {
-        return make_error<AttachError>("Could not add " + probetypeName(type) +
-                                       " into middle of instruction: " + tmp +
-                                       std::string{ hint_unsafe });
+        return make_error<AttachError>(
+            "Could not add " + probetypeName(probe.type) +
+            " into middle of instruction: " + tmp + std::string{ hint_unsafe });
       } else {
         std::string_view hint;
-        LOG(WARNING) << "Unsafe " << type
+        LOG(WARNING) << "Unsafe " << probe.type
                      << " in the middle of the instruction: " << tmp << hint;
         return OK();
       }
     case AlignState::Fail:
       if (safe_mode) {
         return make_error<AttachError>(
-            "Failed to check if " + probetypeName(type) +
+            "Failed to check if " + probetypeName(probe.type) +
             " is in proper place: " + tmp + std::string{ hint_unsafe });
       } else {
-        LOG(WARNING) << "Unchecked " << type << ": " << tmp;
+        LOG(WARNING) << "Unchecked " << probe.type << ": " << tmp;
         return OK();
       }
     case AlignState::NotSupp:
       if (safe_mode) {
-        return make_error<AttachError>("Can't check if " + probetypeName(type) +
+        return make_error<AttachError>("Can't check if " +
+                                       probetypeName(probe.type) +
                                        " is in proper place (compiled without "
                                        "(k|u)probe offset support): " +
                                        tmp + std::string{ hint_unsafe });
       } else {
-        LOG(WARNING) << "Unchecked " << type << ": " << tmp;
+        LOG(WARNING) << "Unchecked " << probe.type << ": " << tmp;
         return OK();
       }
   }
   return OK();
 }
 
-Result<> AttachedProbe::resolve_offset_uprobe(bool safe_mode)
+Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 {
   struct bcc_symbol_option option = {};
   struct symbol sym = {};
-  std::string &symbol = probe_.attach_point;
-  uint64_t func_offset = probe_.func_offset;
+  std::string &symbol = probe.attach_point;
+  uint64_t func_offset = probe.func_offset;
 
   sym.name = "";
   option.use_debug_file = 1;
   option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
 
   if (symbol.empty()) {
-    sym.address = probe_.address;
+    sym.address = probe.address;
     bcc_elf_foreach_sym(
-        probe_.path.c_str(), util::sym_address_cb, &option, &sym);
+        probe.path.c_str(), util::sym_address_cb, &option, &sym);
 
     if (!sym.start) {
       if (safe_mode) {
         std::stringstream ss;
-        ss << "0x" << std::hex << probe_.address;
+        ss << "0x" << std::hex << probe.address;
         return make_error<AttachError>(
-            "Could not resolve address: " + probe_.path + ":" + ss.str());
+            "Could not resolve address: " + probe.path + ":" + ss.str());
       } else {
         LOG(WARNING) << "Could not determine instruction boundary for "
-                     << probe_.name
+                     << probe.name
                      << " (binary appears stripped). Misaligned probes "
                         "can lead to tracee crashes!";
-        offset_ = probe_.address;
-        return OK();
+        return probe.address;
       }
     }
 
     symbol = sym.name;
-    func_offset = probe_.address - sym.start;
+    func_offset = probe.address - sym.start;
   } else {
     sym.name = symbol;
-    bcc_elf_foreach_sym(probe_.path.c_str(), util::sym_name_cb, &option, &sym);
+    bcc_elf_foreach_sym(probe.path.c_str(), util::sym_name_cb, &option, &sym);
 
     if (!sym.start) {
-      return make_error<AttachError>(
-          "Could not resolve symbol: " + probe_.path + ":" + symbol);
+      return make_error<AttachError>("Could not resolve symbol: " + probe.path +
+                                     ":" + symbol);
     }
   }
 
-  if (probe_.type == ProbeType::uretprobe && func_offset != 0) {
+  if (probe.type == ProbeType::uretprobe && func_offset != 0) {
     return make_error<AttachError>("uretprobes cannot be attached at function "
                                    "offset. (address resolved to: " +
                                    symbol + "+" + std::to_string(func_offset) +
@@ -481,7 +326,7 @@ Result<> AttachedProbe::resolve_offset_uprobe(bool safe_mode)
       std::stringstream msg;
       msg << "Could not determine boundary for " << sym.name
           << " (symbol has size 0).";
-      if (probe_.orig_name == probe_.name) {
+      if (probe.orig_name == probe.name) {
         msg << hint_unsafe;
         return make_error<AttachError>(msg.str());
       } else {
@@ -495,166 +340,26 @@ Result<> AttachedProbe::resolve_offset_uprobe(bool safe_mode)
                                    std::to_string(sym.size) + ")");
   }
 
-  auto sym_offset = resolve_offset(probe_.path,
-                                   probe_.attach_point,
-                                   probe_.loc);
+  auto sym_offset = resolve_offset(probe);
   if (!sym_offset) {
     return sym_offset.takeError();
   }
 
-  offset_ = *sym_offset + func_offset;
+  uint64_t offset = *sym_offset + func_offset;
 
   // If we are not aligned to the start of the symbol,
   // check if we are on the instruction boundary.
   if (func_offset == 0)
-    return OK();
+    return offset;
 
-  return check_alignment(
-      probe_.path, symbol, *sym_offset, func_offset, safe_mode, probe_.type);
-}
+  auto align_ok = check_alignment(
+      probe, symbol, *sym_offset, func_offset, safe_mode);
 
-Result<> AttachedProbe::resolve_offset_kprobe()
-{
-  offset_ = probe_.func_offset;
-
-  // If we are using only the symbol, we don't need to check the offset.
-  bool is_symbol_kprobe = !probe_.attach_point.empty();
-  if (is_symbol_kprobe && probe_.func_offset == 0)
-    return OK();
-
-  // Setup the symbol to resolve, either using the address or the name.
-  struct symbol sym = {};
-  if (is_symbol_kprobe)
-    sym.name = probe_.attach_point;
-  else
-    sym.address = probe_.address;
-
-  auto path = find_vmlinux(&sym);
-  if (!path.has_value()) {
-    if (!is_symbol_kprobe) {
-      return make_error<AttachError>("Could not resolve address: " +
-                                     std::to_string(probe_.address));
-    }
-
-    LOG(V1) << "Could not resolve symbol " << probe_.attach_point
-            << ". Skipping usermode offset checking.";
-    LOG(V1) << "The kernel will verify the safety of the location but "
-               "will also allow the offset to be in a different symbol.";
-    return OK();
+  if (!align_ok) {
+    return align_ok.takeError();
   }
 
-  // Populate probe_ fields according to the resolved symbol.
-  if (is_symbol_kprobe) {
-    probe_.address = sym.start + probe_.func_offset;
-  } else {
-    probe_.attach_point = std::move(sym.name);
-    if (__builtin_sub_overflow(probe_.address, sym.start, &probe_.func_offset))
-      LOG(BUG) << "Offset before the function bounds ('" << probe_.attach_point
-               << "' address is " << std::to_string(sym.start) << ")";
-    offset_ = probe_.func_offset;
-    // Set the name of the probe to the resolved symbol+offset, so that failure
-    // to attach can be ignored if the user set ConfigMissingProbes::warn.
-    probe_.name = "kprobe:" + probe_.attach_point + "+" +
-                  std::to_string(probe_.func_offset);
-  }
-
-  if (probe_.func_offset >= sym.size) {
-    return make_error<AttachError>("Offset outside the function bounds ('" +
-                                   probe_.attach_point + "' size is " +
-                                   std::to_string(sym.size) + ")");
-  }
-  return OK();
-}
-
-Result<> AttachedProbe::attach_multi_kprobe()
-{
-  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
-  std::vector<const char *> syms;
-  unsigned int i = 0;
-
-  for (i = 0; i < probe_.funcs.size(); i++) {
-    syms.push_back(probe_.funcs[i].c_str());
-  }
-
-  opts.kprobe_multi.syms = syms.data();
-  opts.kprobe_multi.cnt = syms.size();
-  opts.kprobe_multi.flags = probe_.type == ProbeType::kretprobe
-                                ? BPF_F_KPROBE_MULTI_RETURN
-                                : 0;
-
-  if (bt_verbose) {
-    LOG(V1) << "Attaching to " << probe_.funcs.size() << " functions";
-    for (i = 0; i < opts.kprobe_multi.cnt; i++) {
-      LOG(V1) << " " << syms[i];
-    }
-  }
-
-  auto attach_type = probe_.is_session ? libbpf::BPF_TRACE_KPROBE_SESSION
-                                       : libbpf::BPF_TRACE_KPROBE_MULTI;
-
-  linkfd_ = bpf_link_create(
-      progfd_, 0, static_cast<enum ::bpf_attach_type>(attach_type), &opts);
-  if (linkfd_ < 0) {
-    return make_error<AttachError>();
-  }
-
-  return OK();
-}
-
-Result<> AttachedProbe::attach_kprobe()
-{
-  if (!probe_.funcs.empty()) {
-    return attach_multi_kprobe();
-  }
-
-  if ((!probe_.attach_point.empty() || probe_.address != 0) &&
-      !bpftrace_.is_traceable_func(probe_.attach_point))
-    return make_error<AttachError>();
-
-  // Construct a string containing "module:function."
-  // Note that we do not pass vmlinux, if it is specified.
-  std::string funcname = probe_.attach_point;
-  const std::string &modname = probe_.path;
-  if ((!modname.empty()) && modname != "vmlinux") {
-    if (!util::is_module_loaded(modname)) {
-      return make_error<AttachError>("specified module " + modname +
-                                     " in probe " + probe_.name +
-                                     " is not loaded.");
-    }
-    funcname = modname + ":" + funcname;
-  }
-
-  // The kprobe can either be defined by a symbol+offset or an address:
-  // For symbol+offset kprobe, we need to check the validity of the offset.
-  // For address kprobe, we need to resolve into the symbol+offset and
-  // populate `funcname` with the results stored back in the probe_.
-  bool is_symbol_kprobe = !probe_.attach_point.empty();
-  auto offset_res = resolve_offset_kprobe();
-  if (!offset_res) {
-    return offset_res.takeError();
-  }
-  if (!is_symbol_kprobe)
-    funcname += probe_.attach_point;
-
-  LOG(V1) << "bpf_attach_kprobe(" << progfd_ << ", " << probe_.type << ", "
-          << eventname() << ", " << funcname << ", " << offset_ << ", 0)";
-  int perf_event_fd = bpf_attach_kprobe(progfd_,
-                                        attachtype(probe_.type),
-                                        eventname().c_str(),
-                                        funcname.c_str(),
-                                        offset_,
-                                        0);
-
-  if (perf_event_fd < 0) {
-    if (errno == EILSEQ)
-      return make_error<AttachError>(
-          "Possible attachment attempt in the middle of an instruction, "
-          "try a different offset.");
-    return make_error<AttachError>();
-  }
-
-  perf_event_fds_.push_back(perf_event_fd);
-  return OK();
+  return offset;
 }
 
 #ifdef HAVE_LIBBPF_UPROBE_MULTI
@@ -699,22 +404,20 @@ static int bcc_load_cb(uint64_t v_addr,
   return 0;
 }
 
-Result<> AttachedProbe::resolve_offset_uprobe_multi(
-    const std::string &path,
-    const std::string &probe_name,
-    const std::vector<std::string> &funcs,
-    std::vector<std::string> &syms,
-    std::vector<unsigned long> &offsets)
+Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
+    Probe &probe,
+    std::vector<std::string> &syms)
 {
+  std::vector<unsigned long> offsets;
   struct bcc_symbol_option option = {};
   int err;
 
   // Parse symbols names into syms vector
-  for (const std::string &func : funcs) {
+  for (const std::string &func : probe.funcs) {
     auto pos = func.find(':');
 
     if (pos == std::string::npos) {
-      return make_error<AttachError>("Error resolving probe: " + probe_name);
+      return make_error<AttachError>("Error resolving probe: " + probe.name);
     }
 
     syms.push_back(func.substr(pos + 1));
@@ -733,10 +436,10 @@ Result<> AttachedProbe::resolve_offset_uprobe_multi(
   };
 
   // Resolve symbols into addresses
-  err = bcc_elf_foreach_sym(path.c_str(), bcc_sym_cb, &option, &data);
+  err = bcc_elf_foreach_sym(probe.path.c_str(), bcc_sym_cb, &option, &data);
   if (err) {
     return make_error<AttachError>("Failed to list symbols for probe: " +
-                                   probe_name);
+                                   probe.name);
   }
 
   for (auto a : set) {
@@ -749,27 +452,289 @@ Result<> AttachedProbe::resolve_offset_uprobe_multi(
   }
 
   // Translate addresses into offsets
-  err = bcc_elf_foreach_load_section(path.c_str(), bcc_load_cb, &addrs);
+  err = bcc_elf_foreach_load_section(probe.path.c_str(), bcc_load_cb, &addrs);
   if (err) {
     return make_error<AttachError>(
-        "Failed to resolve symbols offsets for probe: " + probe_name);
+        "Failed to resolve symbols offsets for probe: " + probe.name);
   }
 
   for (auto a : addrs) {
     offsets.push_back(a.offset);
   }
-  return OK();
+
+  return offsets;
+}
+#endif // HAVE_LIBBPF_UPROBE_MULTI
+
+class AttachedKprobeProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedKprobeProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      BPFtrace &bpftrace);
+  ~AttachedKprobeProbe() override;
+
+  int link_fd() override;
+
+private:
+  AttachedKprobeProbe(const Probe &probe, struct bpf_link *link);
+  struct bpf_link *link_;
+};
+
+AttachedKprobeProbe::AttachedKprobeProbe(const Probe &probe,
+                                         struct bpf_link *link)
+    : AttachedProbe(probe), link_(link)
+{
 }
 
-Result<> AttachedProbe::attach_multi_uprobe()
+AttachedKprobeProbe::~AttachedKprobeProbe()
+{
+  if (bpf_link__destroy(link_)) {
+    LOG(WARNING) << "failed to destroy link for kprobe probe: "
+                 << strerror(errno);
+  }
+}
+
+int AttachedKprobeProbe::link_fd()
+{
+  return bpf_link__fd(link_);
+}
+
+Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    BPFtrace &bpftrace)
+{
+  if ((!probe.attach_point.empty() || probe.address != 0) &&
+      !bpftrace.is_traceable_func(probe.attach_point))
+    return make_error<AttachError>();
+
+  // Construct a string containing "module:function."
+  // Also log a warning or throw an error if the module doesn't exist,
+  // before attempting to attach.
+  // Note that we do not pass vmlinux, if it is specified.
+  std::string funcname = probe.attach_point;
+  const std::string &modname = probe.path;
+  if ((!modname.empty()) && modname != "vmlinux") {
+    if (!util::is_module_loaded(modname)) {
+      return make_error<AttachError>("specified module " + modname +
+                                     " in probe " + probe.name +
+                                     " is not loaded.");
+    }
+    funcname = modname + ":" + funcname;
+  }
+
+  // The kprobe can either be defined by a symbol+offset or an address:
+  // For symbol+offset kprobe, we need to check the validity of the offset.
+  // For address kprobe, we need to resolve into the symbol+offset and
+  // populate `funcname` with the results stored back in the probe.
+  bool is_symbol_kprobe = !probe.attach_point.empty();
+  auto offset_res = resolve_offset_kprobe(probe);
+  if (!offset_res) {
+    return offset_res.takeError();
+  }
+  uint64_t offset = *offset_res;
+  if (!is_symbol_kprobe)
+    funcname += probe.attach_point;
+
+  BPFTRACE_LIBBPF_OPTS(bpf_kprobe_opts,
+                       opts,
+                       .offset = offset,
+                       .retprobe = probe.type == ProbeType::kretprobe);
+
+  auto *link = bpf_program__attach_kprobe_opts(prog.bpf_prog(),
+                                               funcname.c_str(),
+                                               &opts);
+  if (!link) {
+    if (errno == EILSEQ)
+      return make_error<AttachError>(
+          "Possible attachment attempt in the middle of an instruction, "
+          "try a different offset.");
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedKprobeProbe>(
+      new AttachedKprobeProbe(probe, link));
+}
+
+class AttachedMultiKprobeProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedMultiKprobeProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog);
+  ~AttachedMultiKprobeProbe() override;
+
+  int link_fd() override;
+
+  size_t probe_count() const override;
+
+private:
+  AttachedMultiKprobeProbe(const Probe &probe, int link_fd);
+  int link_fd_;
+};
+
+AttachedMultiKprobeProbe::AttachedMultiKprobeProbe(const Probe &probe,
+                                                   int link_fd)
+    : AttachedProbe(probe), link_fd_(link_fd)
+{
+}
+
+AttachedMultiKprobeProbe::~AttachedMultiKprobeProbe()
+{
+  close(link_fd_);
+}
+
+int AttachedMultiKprobeProbe::link_fd()
+{
+  return link_fd_;
+}
+
+size_t AttachedMultiKprobeProbe::probe_count() const
+{
+  return probe_.funcs.size();
+}
+
+Result<std::unique_ptr<AttachedMultiKprobeProbe>> AttachedMultiKprobeProbe::
+    make(Probe &probe, const BpfProgram &prog)
+{
+  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+  std::vector<const char *> syms;
+  unsigned int i = 0;
+
+  for (i = 0; i < probe.funcs.size(); i++) {
+    syms.push_back(probe.funcs[i].c_str());
+  }
+
+  opts.kprobe_multi.syms = syms.data();
+  opts.kprobe_multi.cnt = syms.size();
+  opts.kprobe_multi.flags = probe.type == ProbeType::kretprobe
+                                ? BPF_F_KPROBE_MULTI_RETURN
+                                : 0;
+
+  if (bt_verbose) {
+    LOG(V1) << "Attaching to " << probe.funcs.size() << " functions";
+    for (i = 0; i < opts.kprobe_multi.cnt; i++) {
+      LOG(V1) << " " << syms[i];
+    }
+  }
+
+  auto attach_type = probe.is_session ? libbpf::BPF_TRACE_KPROBE_SESSION
+                                      : libbpf::BPF_TRACE_KPROBE_MULTI;
+
+  int link_fd = bpf_link_create(
+      prog.fd(), 0, static_cast<enum ::bpf_attach_type>(attach_type), &opts);
+  if (link_fd < 0) {
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedMultiKprobeProbe>(
+      new AttachedMultiKprobeProbe(probe, link_fd));
+}
+
+class AttachedUprobeProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedUprobeProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid,
+      bool safe_mode);
+  ~AttachedUprobeProbe() override;
+
+  int link_fd() override;
+
+private:
+  AttachedUprobeProbe(const Probe &probe, struct bpf_link *link);
+
+  struct bpf_link *link_;
+};
+
+AttachedUprobeProbe::AttachedUprobeProbe(const Probe &probe,
+                                         struct bpf_link *link)
+    : AttachedProbe(probe), link_(link)
+{
+}
+
+AttachedUprobeProbe::~AttachedUprobeProbe()
+{
+  if (bpf_link__destroy(link_))
+    LOG(WARNING) << "failed to destroy link for uprobe probe: "
+                 << strerror(errno);
+}
+
+int AttachedUprobeProbe::link_fd()
+{
+  return bpf_link__fd(link_);
+}
+
+Result<std::unique_ptr<AttachedUprobeProbe>> AttachedUprobeProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid,
+    bool safe_mode)
+{
+  auto offset_res = resolve_offset_uprobe(probe, safe_mode);
+  if (!offset_res) {
+    return offset_res.takeError();
+  }
+
+  BPFTRACE_LIBBPF_OPTS(bpf_uprobe_opts,
+                       opts,
+                       .retprobe = probe.type == ProbeType::uretprobe);
+
+  auto *link = bpf_program__attach_uprobe_opts(prog.bpf_prog(),
+                                               pid.has_value() ? *pid : -1,
+                                               probe.path.c_str(),
+                                               *offset_res,
+                                               &opts);
+
+  if (!link) {
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedUprobeProbe>(
+      new AttachedUprobeProbe(probe, link));
+}
+
+class AttachedMultiUprobeProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedMultiUprobeProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedMultiUprobeProbe() override;
+
+  size_t probe_count() const override;
+
+private:
+  AttachedMultiUprobeProbe(const Probe &probe, int link_fd);
+  int link_fd_;
+};
+
+AttachedMultiUprobeProbe::AttachedMultiUprobeProbe(const Probe &probe,
+                                                   int link_fd)
+    : AttachedProbe(probe), link_fd_(link_fd)
+{
+}
+
+AttachedMultiUprobeProbe::~AttachedMultiUprobeProbe()
+{
+  close(link_fd_);
+}
+
+size_t AttachedMultiUprobeProbe::probe_count() const
+{
+  return probe_.funcs.size();
+}
+
+#ifdef HAVE_LIBBPF_UPROBE_MULTI
+Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
+    make(Probe &probe, const BpfProgram &prog, std::optional<int> pid)
 {
   std::vector<std::string> syms;
-  std::vector<unsigned long> offsets;
   unsigned int i;
 
   // Resolve probe_.funcs into offsets and syms vector
-  auto offset_res = resolve_offset_uprobe_multi(
-      probe_.path, probe_.name, probe_.funcs, syms, offsets);
+  auto offset_res = resolve_offsets_uprobe_multi(probe, syms);
   if (!offset_res) {
     return offset_res.takeError();
   }
@@ -777,343 +742,450 @@ Result<> AttachedProbe::attach_multi_uprobe()
   // Attach uprobe through uprobe_multi link
   BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
 
-  opts.uprobe_multi.path = probe_.path.c_str();
-  opts.uprobe_multi.offsets = offsets.data();
-  opts.uprobe_multi.cnt = offsets.size();
-  opts.uprobe_multi.flags = probe_.type == ProbeType::uretprobe
+  opts.uprobe_multi.path = probe.path.c_str();
+  opts.uprobe_multi.offsets = offset_res->data();
+  opts.uprobe_multi.cnt = offset_res->size();
+  opts.uprobe_multi.flags = probe.type == ProbeType::uretprobe
                                 ? BPF_F_UPROBE_MULTI_RETURN
                                 : 0;
-  if (pid_.has_value()) {
-    opts.uprobe_multi.pid = *pid_;
+  if (pid.has_value()) {
+    opts.uprobe_multi.pid = *pid;
   }
 
   if (bt_verbose) {
-    LOG(V1) << "Attaching to " << probe_.funcs.size() << " functions";
+    LOG(V1) << "Attaching to " << probe.funcs.size() << " functions";
     for (i = 0; i < syms.size(); i++) {
-      LOG(V1) << probe_.path << ":" << syms[i];
+      LOG(V1) << probe.path << ":" << syms[i];
     }
   }
 
-  linkfd_ = bpf_link_create(progfd_,
-                            0,
-                            static_cast<enum ::bpf_attach_type>(
-                                libbpf::BPF_TRACE_UPROBE_MULTI),
-                            &opts);
+  int link_fd = bpf_link_create(prog.fd(),
+                                0,
+                                static_cast<enum ::bpf_attach_type>(
+                                    libbpf::BPF_TRACE_UPROBE_MULTI),
+                                &opts);
 
-  if (linkfd_ < 0) {
+  if (link_fd < 0) {
     return make_error<AttachError>();
   }
 
-  return OK();
+  return std::unique_ptr<AttachedMultiUprobeProbe>(
+      new AttachedMultiUprobeProbe(probe, link_fd));
 }
 #else
-void AttachedProbe::attach_multi_uprobe()
+Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
+    make(Probe &probe, const BpfProgram &prog, std::optional<int> pid)
 {
+  return make_error<AttachError>("uprobe multi not available on this system");
 }
 #endif // HAVE_LIBBPF_UPROBE_MULTI
 
-Result<> AttachedProbe::attach_uprobe(bool safe_mode)
+class AttachedUSDTProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedUSDTProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedUSDTProbe() override;
+
+private:
+  AttachedUSDTProbe(const Probe &probe, int perf_event_fd);
+  int perf_event_fd_;
+};
+
+AttachedUSDTProbe::AttachedUSDTProbe(const Probe &probe, int perf_event_fd)
+    : AttachedProbe(probe), perf_event_fd_(perf_event_fd)
 {
-  if (!probe_.funcs.empty()) {
-    return attach_multi_uprobe();
-  }
-
-  auto offset_res = resolve_offset_uprobe(safe_mode);
-  if (!offset_res) {
-    return offset_res.takeError();
-  }
-
-  int perf_event_fd = bpf_attach_uprobe(progfd_,
-                                        attachtype(probe_.type),
-                                        eventname().c_str(),
-                                        probe_.path.c_str(),
-                                        offset_,
-                                        pid_.has_value() ? *pid_ : -1,
-                                        0);
-
-  if (perf_event_fd < 0) {
-    return make_error<AttachError>();
-  }
-
-  perf_event_fds_.push_back(perf_event_fd);
-  return OK();
 }
 
-int AttachedProbe::usdt_sem_up_manual(const std::string &fn_name, void *ctx)
+AttachedUSDTProbe::~AttachedUSDTProbe()
 {
-  int err;
-
-#ifdef BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
-  if (probe_.ns.empty())
-    err = bcc_usdt_enable_probe(ctx,
-                                probe_.attach_point.c_str(),
-                                fn_name.c_str());
-  else
-    err = bcc_usdt_enable_fully_specified_probe(
-        ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), fn_name.c_str());
-#else
-  err = bcc_usdt_enable_probe(ctx,
-                              probe_.attach_point.c_str(),
-                              fn_name.c_str());
-#endif // BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
-
-  // Defer context destruction until probes are detached b/c context
-  // destruction will decrement usdt semaphore count.
-  usdt_destructor_ = [ctx]() { bcc_usdt_close(ctx); };
-
-  return err;
+  if (bpf_close_perf_event_fd(perf_event_fd_))
+    LOG(WARNING) << "failed to close perf event FD for usdt probe";
 }
 
-int AttachedProbe::usdt_sem_up_manual_addsem(int pid,
-                                             const std::string &fn_name,
-                                             void *ctx)
-{
-  // NB: we are careful to capture by value here everything that will not
-  // be available in AttachedProbe destructor.
-  auto addsem = [this, fn_name](void *c, int16_t val) -> int {
-    if (this->probe_.ns.empty())
-      return bcc_usdt_addsem_probe(
-          c, this->probe_.attach_point.c_str(), fn_name.c_str(), val);
-    else
-      return bcc_usdt_addsem_fully_specified_probe(
-          c,
-          this->probe_.ns.c_str(),
-          this->probe_.attach_point.c_str(),
-          fn_name.c_str(),
-          val);
-  };
-
-  // Set destructor to decrement the semaphore count
-  usdt_destructor_ = [pid, addsem]() {
-    void *c = bcc_usdt_new_frompid(pid, nullptr);
-    if (!c)
-      return;
-
-    addsem(c, -1);
-    bcc_usdt_close(c);
-  };
-
-  // Use semaphore increment API to avoid having to hold onto the usdt context
-  // for the entire tracing session. Reason we do it this way instead of
-  // holding onto usdt context is b/c each usdt context can take lots of memory
-  // (~10MB). This, coupled with --usdt-file-activation and tracees that have a
-  // forking model can cause bpftrace to use huge amounts of memory if we hold
-  // onto the contexts.
-  int err = addsem(ctx, +1);
-
-  // Now close the context to save some memory
-  bcc_usdt_close(ctx);
-
-  return err;
-}
-
-int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
-                               [[maybe_unused]] int pid,
-                               const std::string &fn_name,
-                               void *ctx)
-{
-  // If we have BCC and kernel support for uprobe refcnt API, then we don't
-  // need to do anything here. The kernel will increment the semaphore count
-  // for us when we provide the semaphore offset.
-  if (feature.has_uprobe_refcnt()) {
-    bcc_usdt_close(ctx);
-    return 0;
-  }
-
-  return usdt_sem_up_manual_addsem(pid, fn_name, ctx);
-}
-
-Result<> AttachedProbe::attach_usdt(BPFfeature &feature)
+Result<std::unique_ptr<AttachedUSDTProbe>> AttachedUSDTProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
 {
   struct bcc_usdt_location loc = {};
   int err;
   void *ctx;
   // TODO: fn_name may need a unique suffix for each attachment on the same
   // probe:
-  std::string fn_name = "probe_" + probe_.attach_point + "_1";
+  std::string fn_name = "probe_" + probe.attach_point + "_1";
 
-  if (pid_.has_value()) {
-    // FIXME when iovisor/bcc#2064 is merged, optionally pass probe_.path
-    ctx = bcc_usdt_new_frompid(*pid_, nullptr);
+  if (pid.has_value()) {
+    if (!probe.path.empty()) {
+      auto real_path = std::filesystem::absolute(probe.path).string();
+      ctx = bcc_usdt_new_frompid(*pid, real_path.c_str());
+    } else {
+      ctx = bcc_usdt_new_frompid(*pid, nullptr);
+    }
     if (!ctx) {
       return make_error<AttachError>(
-          "Error initializing context for probe: " + probe_.name +
-          ", for PID: " + std::to_string(*pid_));
+          "Error initializing context for probe: " + probe.name +
+          ", for PID: " + std::to_string(*pid));
     }
   } else {
-    ctx = bcc_usdt_new_frompath(probe_.path.c_str());
+    ctx = bcc_usdt_new_frompath(probe.path.c_str());
     if (!ctx) {
       return make_error<AttachError>("Error initializing context for probe: " +
-                                     probe_.name);
+                                     probe.name);
     }
   }
 
   // Resolve location of usdt probe
-  auto u = usdt_helper.find(pid_, probe_.path, probe_.ns, probe_.attach_point);
+  USDTHelper usdt_helper;
+  auto u = usdt_helper.find(pid, probe.path, probe.ns, probe.attach_point);
   if (!u.has_value()) {
-    return make_error<AttachError>("Failed to find usdt probe: " + eventname());
+    return make_error<AttachError>("Failed to find usdt probe: " +
+                                   eventname(probe, 0));
   }
-  probe_.path = u->path;
+  probe.path = u->path;
 
   err = bcc_usdt_get_location(ctx,
-                              probe_.ns.c_str(),
-                              probe_.attach_point.c_str(),
-                              probe_.usdt_location_idx,
+                              probe.ns.c_str(),
+                              probe.attach_point.c_str(),
+                              probe.usdt_location_idx,
                               &loc);
   if (err) {
     return make_error<AttachError>("Error finding location for probe: " +
-                                   probe_.name);
+                                   probe.name);
   }
-  probe_.loc = loc.address;
+  probe.loc = loc.address;
 
-  auto offset = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
+  auto offset_res = resolve_offset(probe);
 
-  if (!offset) {
-    return offset.takeError();
+  if (!offset_res) {
+    return offset_res.takeError();
   }
 
-  offset_ = *offset;
+  uint64_t offset = *offset_res;
 
   // Should be 0 if there's no semaphore
   // Cast to 32 bits b/c kernel API only takes 32 bit offset
   [[maybe_unused]] auto semaphore_offset = static_cast<uint32_t>(
       u->semaphore_offset);
 
-  // Increment the semaphore count (will noop if no semaphore)
-  // NB: Do *not* use `ctx` after this call. It may either be open or closed,
-  // depending on which path was taken.
-  err = usdt_sem_up(feature, pid_.value_or(0), fn_name, ctx);
+  bcc_usdt_close(ctx);
 
-  if (err) {
-    return make_error<AttachError>(
-        "Error finding or enabling probe: " + probe_.name +
-        "\n Try using -p or --usdt-file-activation if there's USDT semaphores");
-  }
-
-  int perf_event_fd = bpf_attach_uprobe(progfd_,
-                                        attachtype(probe_.type),
-                                        eventname().c_str(),
-                                        probe_.path.c_str(),
-                                        offset_,
-                                        pid_.has_value() ? *pid_ : -1,
+  int perf_event_fd = bpf_attach_uprobe(prog.fd(),
+                                        attachtype(probe.type),
+                                        eventname(probe, offset).c_str(),
+                                        probe.path.c_str(),
+                                        offset,
+                                        pid.has_value() ? *pid : -1,
                                         semaphore_offset);
 
   if (perf_event_fd < 0) {
-    if (pid_.has_value())
+    if (pid.has_value())
       return make_error<AttachError>("Does PID exist? PID: " +
-                                     std::to_string(*pid_));
+                                     std::to_string(*pid));
 
     return make_error<AttachError>();
   }
 
-  perf_event_fds_.push_back(perf_event_fd);
-  return OK();
+  return std::unique_ptr<AttachedUSDTProbe>(
+      new AttachedUSDTProbe(probe, perf_event_fd));
 }
 
-Result<> AttachedProbe::attach_tracepoint()
+class AttachedTracepointProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedTracepointProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog);
+  ~AttachedTracepointProbe() override;
+
+private:
+  AttachedTracepointProbe(const Probe &probe,
+                          int perf_event_fd,
+                          std::string event_name,
+                          std::string probe_path);
+  int perf_event_fd_;
+  const std::string event_name_;
+  const std::string probe_path_;
+};
+
+AttachedTracepointProbe::AttachedTracepointProbe(const Probe &probe,
+                                                 int perf_event_fd,
+                                                 std::string event_name,
+                                                 std::string probe_path)
+    : AttachedProbe(probe),
+      perf_event_fd_(perf_event_fd),
+      event_name_(std::move(event_name)),
+      probe_path_(std::move(probe_path))
 {
-  int perf_event_fd = bpf_attach_tracepoint(progfd_,
-                                            probe_.path.c_str(),
-                                            eventname().c_str());
+}
 
-  if (perf_event_fd < 0 && probe_.name == probe_.orig_name) {
+AttachedTracepointProbe::~AttachedTracepointProbe()
+{
+  if (bpf_close_perf_event_fd(perf_event_fd_))
+    LOG(WARNING) << "failed to close perf event FD for tracepoint probe";
+
+  bpf_detach_tracepoint(probe_path_.c_str(), event_name_.c_str());
+}
+
+Result<std::unique_ptr<AttachedTracepointProbe>> AttachedTracepointProbe::make(
+    Probe &probe,
+    const BpfProgram &prog)
+{
+  int perf_event_fd = bpf_attach_tracepoint(prog.fd(),
+                                            probe.path.c_str(),
+                                            eventname(probe, 0).c_str());
+
+  if (perf_event_fd < 0 && probe.name == probe.orig_name) {
     return make_error<AttachError>();
   }
 
-  perf_event_fds_.push_back(perf_event_fd);
-  return OK();
+  return std::unique_ptr<AttachedTracepointProbe>(new AttachedTracepointProbe(
+      probe, perf_event_fd, eventname(probe, 0), probe.path));
 }
 
-Result<> AttachedProbe::attach_profile()
+int open_perf_event(uint32_t ev_type,
+                    uint32_t ev_config,
+                    uint64_t sample_period,
+                    uint64_t sample_freq,
+                    pid_t pid,
+                    int cpu,
+                    int group_fd)
+{
+  if (sample_period > 0 && sample_freq > 0) {
+    LOG(BUG) << "Exactly one of sample_period / sample_freq should be set";
+    return -1;
+  }
+
+  struct perf_event_attr attr = {};
+  attr.type = ev_type;
+  attr.size = sizeof(struct perf_event_attr);
+  attr.config = ev_config;
+  if (sample_freq > 0) {
+    attr.freq = 1;
+    attr.sample_freq = sample_freq;
+  } else {
+    attr.sample_period = sample_period;
+  }
+  if (pid > 0)
+    attr.inherit = 1;
+
+  return syscall(
+      __NR_perf_event_open, &attr, pid, cpu, group_fd, PERF_FLAG_FD_CLOEXEC);
+}
+
+class AttachedProfileProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedProfileProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedProfileProbe() override;
+
+private:
+  AttachedProfileProbe(const Probe &probe,
+                       std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
+};
+
+AttachedProfileProbe::AttachedProfileProbe(const Probe &probe,
+                                           std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe), links_(std::move(links))
+{
+}
+
+AttachedProfileProbe::~AttachedProfileProbe()
+{
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for profile probe: "
+                   << strerror(errno);
+  }
+}
+
+Result<std::unique_ptr<AttachedProfileProbe>> AttachedProfileProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
 {
   int group_fd = -1;
 
   uint64_t period, freq;
-  if (probe_.path == "hz") {
+  if (probe.path == "hz") {
     period = 0;
-    freq = probe_.freq;
-  } else if (probe_.path == "s") {
-    period = probe_.freq * 1e9;
+    freq = probe.freq;
+  } else if (probe.path == "s") {
+    period = probe.freq * 1e9;
     freq = 0;
-  } else if (probe_.path == "ms") {
-    period = probe_.freq * 1e6;
+  } else if (probe.path == "ms") {
+    period = probe.freq * 1e6;
     freq = 0;
-  } else if (probe_.path == "us") {
-    period = probe_.freq * 1e3;
+  } else if (probe.path == "us") {
+    period = probe.freq * 1e3;
     freq = 0;
   } else {
-    return make_error<AttachError>("invalid profile path \"" + probe_.path +
+    return make_error<AttachError>("invalid profile path \"" + probe.path +
                                    "\"");
   }
 
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
-                                              PERF_TYPE_SOFTWARE,
-                                              PERF_COUNT_SW_CPU_CLOCK,
-                                              period,
-                                              freq,
-                                              pid_.has_value() ? *pid_ : -1,
-                                              cpu,
-                                              group_fd);
+    int perf_event_fd = open_perf_event(PERF_TYPE_SOFTWARE,
+                                        PERF_COUNT_SW_CPU_CLOCK,
+                                        period,
+                                        freq,
+                                        pid.has_value() ? *pid : -1,
+                                        cpu,
+                                        group_fd);
 
     if (perf_event_fd < 0) {
-      return make_error<AttachError>();
+      has_error = true;
+      break;
     }
 
-    perf_event_fds_.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
   }
-  return OK();
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for profile probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedProfileProbe>(
+      new AttachedProfileProbe(probe, links));
 }
 
-Result<> AttachedProbe::attach_interval()
+class AttachedIntervalProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedIntervalProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedIntervalProbe() override;
+
+  int link_fd() override;
+
+private:
+  AttachedIntervalProbe(const Probe &probe, struct bpf_link *link);
+  struct bpf_link *link_;
+};
+
+AttachedIntervalProbe::AttachedIntervalProbe(const Probe &probe,
+                                             struct bpf_link *link)
+    : AttachedProbe(probe), link_(link)
+{
+}
+
+AttachedIntervalProbe::~AttachedIntervalProbe()
+{
+  if (bpf_link__destroy(link_))
+    LOG(WARNING) << "failed to destroy link for interval probe: "
+                 << strerror(errno);
+}
+
+int AttachedIntervalProbe::link_fd()
+{
+  return bpf_link__fd(link_);
+}
+
+Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
 {
   int group_fd = -1;
   int cpu = 0;
 
   uint64_t period = 0, freq = 0;
-  if (probe_.path == "s") {
-    period = probe_.freq * 1e9;
-  } else if (probe_.path == "ms") {
-    period = probe_.freq * 1e6;
-  } else if (probe_.path == "us") {
-    period = probe_.freq * 1e3;
-  } else if (probe_.path == "hz") {
-    freq = probe_.freq;
+  if (probe.path == "s") {
+    period = probe.freq * 1e9;
+  } else if (probe.path == "ms") {
+    period = probe.freq * 1e6;
+  } else if (probe.path == "us") {
+    period = probe.freq * 1e3;
+  } else if (probe.path == "hz") {
+    freq = probe.freq;
   } else {
-    return make_error<AttachError>("invalid interval path \"" + probe_.path +
+    return make_error<AttachError>("invalid interval path \"" + probe.path +
                                    "\"");
   }
 
-  int perf_event_fd = bpf_attach_perf_event(progfd_,
-                                            PERF_TYPE_SOFTWARE,
-                                            PERF_COUNT_SW_CPU_CLOCK,
-                                            period,
-                                            freq,
-                                            pid_.has_value() ? *pid_ : -1,
-                                            cpu,
-                                            group_fd);
+  int perf_event_fd = open_perf_event(PERF_TYPE_SOFTWARE,
+                                      PERF_COUNT_SW_CPU_CLOCK,
+                                      period,
+                                      freq,
+                                      pid.has_value() ? *pid : -1,
+                                      cpu,
+                                      group_fd);
 
   if (perf_event_fd < 0) {
     return make_error<AttachError>();
   }
 
-  perf_event_fds_.push_back(perf_event_fd);
-  return OK();
+  auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+  if (!link) {
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedIntervalProbe>(
+      new AttachedIntervalProbe(probe, link));
 }
 
-Result<> AttachedProbe::attach_software()
+class AttachedSoftwareProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedSoftwareProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedSoftwareProbe() override;
+
+private:
+  AttachedSoftwareProbe(const Probe &probe,
+                        std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
+};
+
+AttachedSoftwareProbe::AttachedSoftwareProbe(
+    const Probe &probe,
+    std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe), links_(std::move(links))
+{
+}
+
+AttachedSoftwareProbe::~AttachedSoftwareProbe()
+{
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for software probe: "
+                   << strerror(errno);
+  }
+}
+
+Result<std::unique_ptr<AttachedSoftwareProbe>> AttachedSoftwareProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
 {
   int group_fd = -1;
 
-  uint64_t period = probe_.freq;
+  uint64_t period = probe.freq;
   uint64_t defaultp = 1;
   uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
   for (const auto &probeListItem : SW_PROBE_LIST) {
-    if (probe_.path == probeListItem.path ||
-        probe_.path == probeListItem.alias) {
+    if (probe.path == probeListItem.path || probe.path == probeListItem.alias) {
       type = probeListItem.type;
       defaultp = probeListItem.defaultp;
     }
@@ -1122,38 +1194,89 @@ Result<> AttachedProbe::attach_software()
   if (period == 0)
     period = defaultp;
 
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
-                                              PERF_TYPE_SOFTWARE,
-                                              type,
-                                              period,
-                                              0,
-                                              pid_.has_value() ? *pid_ : -1,
-                                              cpu,
-                                              group_fd);
+    int perf_event_fd = open_perf_event(PERF_TYPE_SOFTWARE,
+                                        type,
+                                        period,
+                                        0,
+                                        pid.has_value() ? *pid : -1,
+                                        cpu,
+                                        group_fd);
 
     if (perf_event_fd < 0) {
-      return make_error<AttachError>();
+      has_error = true;
+      break;
     }
 
-    perf_event_fds_.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
   }
-  return OK();
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for software probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedSoftwareProbe>(
+      new AttachedSoftwareProbe(probe, links));
 }
 
-Result<> AttachedProbe::attach_hardware()
+class AttachedHardwareProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedHardwareProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedHardwareProbe() override;
+
+private:
+  AttachedHardwareProbe(const Probe &probe,
+                        std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
+};
+
+AttachedHardwareProbe::AttachedHardwareProbe(
+    const Probe &probe,
+    std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe), links_(std::move(links))
+{
+}
+
+AttachedHardwareProbe::~AttachedHardwareProbe()
+{
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for hardware probe: "
+                   << strerror(errno);
+  }
+}
+
+Result<std::unique_ptr<AttachedHardwareProbe>> AttachedHardwareProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
 {
   int group_fd = -1;
 
-  uint64_t period = probe_.freq;
+  uint64_t period = probe.freq;
   uint64_t defaultp = 1000000;
   uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
   for (const auto &probeListItem : HW_PROBE_LIST) {
-    if (probe_.path == probeListItem.path ||
-        probe_.path == probeListItem.alias) {
+    if (probe.path == probeListItem.path || probe.path == probeListItem.alias) {
       type = probeListItem.type;
       defaultp = probeListItem.defaultp;
     }
@@ -1162,27 +1285,222 @@ Result<> AttachedProbe::attach_hardware()
   if (period == 0)
     period = defaultp;
 
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
   std::vector<int> cpus = util::get_online_cpus();
   for (int cpu : cpus) {
-    int perf_event_fd = bpf_attach_perf_event(progfd_,
-                                              PERF_TYPE_HARDWARE,
-                                              type,
-                                              period,
-                                              0,
-                                              pid_.has_value() ? *pid_ : -1,
-                                              cpu,
-                                              group_fd);
+    int perf_event_fd = open_perf_event(PERF_TYPE_HARDWARE,
+                                        type,
+                                        period,
+                                        0,
+                                        pid.has_value() ? *pid : -1,
+                                        cpu,
+                                        group_fd);
 
     if (perf_event_fd < 0) {
-      return make_error<AttachError>();
+      has_error = true;
+      break;
     }
 
-    perf_event_fds_.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
   }
-  return OK();
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for hardware probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedHardwareProbe>(
+      new AttachedHardwareProbe(probe, links));
 }
 
-Result<> AttachedProbe::attach_watchpoint(const std::string &mode)
+class AttachedFentryProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedFentryProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog);
+  ~AttachedFentryProbe() override;
+
+private:
+  AttachedFentryProbe(const Probe &probe, int tracing_fd);
+  int tracing_fd_;
+};
+
+AttachedFentryProbe::AttachedFentryProbe(const Probe &probe, int tracing_fd)
+    : AttachedProbe(probe), tracing_fd_(tracing_fd)
+{
+}
+
+AttachedFentryProbe::~AttachedFentryProbe()
+{
+  close(tracing_fd_);
+}
+
+Result<std::unique_ptr<AttachedFentryProbe>> AttachedFentryProbe::make(
+    Probe &probe,
+    const BpfProgram &prog)
+{
+  int tracing_fd = bpf_raw_tracepoint_open(nullptr, prog.fd());
+  if (tracing_fd < 0) {
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedFentryProbe>(
+      new AttachedFentryProbe(probe, tracing_fd));
+}
+
+class AttachedRawtracepointProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedRawtracepointProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog);
+  ~AttachedRawtracepointProbe() override;
+
+private:
+  AttachedRawtracepointProbe(const Probe &probe, int tracing_fd);
+  int tracing_fd_;
+};
+
+AttachedRawtracepointProbe::AttachedRawtracepointProbe(const Probe &probe,
+                                                       int tracing_fd)
+    : AttachedProbe(probe), tracing_fd_(tracing_fd)
+{
+}
+
+AttachedRawtracepointProbe::~AttachedRawtracepointProbe()
+{
+  close(tracing_fd_);
+}
+
+Result<std::unique_ptr<AttachedRawtracepointProbe>> AttachedRawtracepointProbe::
+    make(Probe &probe, const BpfProgram &prog)
+{
+  int tracing_fd = bpf_raw_tracepoint_open(nullptr, prog.fd());
+  if (tracing_fd < 0) {
+    if (tracing_fd == -ENOENT) {
+      return make_error<AttachError>("Probe does not exist: " + probe.name);
+    } else if (tracing_fd == -EINVAL) {
+      return make_error<AttachError>(
+          "Maybe trying to access arguments beyond what's available in "
+          "this tracepoint");
+    }
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedRawtracepointProbe>(
+      new AttachedRawtracepointProbe(probe, tracing_fd));
+}
+
+class AttachedIterProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedIterProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid);
+  ~AttachedIterProbe() override;
+
+  int link_fd() override;
+
+private:
+  AttachedIterProbe(const Probe &probe, int iter_link_fd);
+  const int iter_link_fd_;
+};
+
+AttachedIterProbe::AttachedIterProbe(const Probe &probe, int iter_link_fd)
+    : AttachedProbe(probe), iter_link_fd_(iter_link_fd)
+{
+}
+
+AttachedIterProbe::~AttachedIterProbe()
+{
+  close(iter_link_fd_);
+}
+
+Result<std::unique_ptr<AttachedIterProbe>> AttachedIterProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid)
+{
+  int iter_fd = -1;
+  if (!pid.has_value()) {
+    iter_fd = bpf_link_create(prog.fd(),
+                              0,
+                              static_cast<enum ::bpf_attach_type>(
+                                  libbpf::BPF_TRACE_ITER),
+                              nullptr);
+  } else {
+    BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+    union bpf_iter_link_info linfo;
+    memset(&linfo, 0, sizeof(linfo));
+    linfo.task.pid = *pid;
+    opts.iter_info = &linfo;
+    opts.iter_info_len = sizeof(linfo);
+    iter_fd = bpf_link_create(prog.fd(),
+                              0,
+                              static_cast<enum ::bpf_attach_type>(
+                                  libbpf::BPF_TRACE_ITER),
+                              &opts);
+  }
+
+  if (iter_fd < 0) {
+    return make_error<AttachError>();
+  }
+
+  return std::unique_ptr<AttachedIterProbe>(
+      new AttachedIterProbe(probe, iter_fd));
+}
+
+int AttachedIterProbe::link_fd()
+{
+  return iter_link_fd_;
+}
+
+class AttachedWatchpointProbe : public AttachedProbe {
+public:
+  static Result<std::unique_ptr<AttachedWatchpointProbe>> make(
+      Probe &probe,
+      const BpfProgram &prog,
+      std::optional<int> pid,
+      const std::string &mode);
+  ~AttachedWatchpointProbe() override;
+
+private:
+  AttachedWatchpointProbe(const Probe &probe,
+                          std::vector<struct bpf_link *> links);
+  std::vector<struct bpf_link *> links_;
+};
+
+AttachedWatchpointProbe::AttachedWatchpointProbe(
+    const Probe &probe,
+    std::vector<struct bpf_link *> links)
+    : AttachedProbe(probe), links_(std::move(links))
+{
+}
+
+AttachedWatchpointProbe::~AttachedWatchpointProbe()
+{
+  for (struct bpf_link *link : links_) {
+    if (bpf_link__destroy(link))
+      LOG(WARNING) << "failed to destroy link for watchpoint probe: "
+                   << strerror(errno);
+  }
+}
+
+Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid,
+    const std::string &mode)
 {
   struct perf_event_attr attr = {};
   attr.type = PERF_TYPE_BREAKPOINT;
@@ -1199,9 +1517,9 @@ Result<> AttachedProbe::attach_watchpoint(const std::string &mode)
       attr.bp_type |= HW_BREAKPOINT_X;
   }
 
-  attr.bp_addr = probe_.address;
+  attr.bp_addr = probe.address;
   // https://man7.org/linux/man-pages/man2/perf_event_open.2.html
-  attr.bp_len = (attr.bp_type & HW_BREAKPOINT_X) ? sizeof(long) : probe_.len;
+  attr.bp_len = (attr.bp_type & HW_BREAKPOINT_X) ? sizeof(long) : probe.len;
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;
   // Attach to threads.
@@ -1211,11 +1529,15 @@ Result<> AttachedProbe::attach_watchpoint(const std::string &mode)
   attr.inherit = 1;
 
   std::vector<int> cpus;
-  if (pid_.has_value()) {
+  if (pid.has_value()) {
     cpus = { -1 };
   } else {
     cpus = util::get_online_cpus();
   }
+
+  std::string err_msg;
+  bool has_error = false;
+  std::vector<struct bpf_link *> links;
 
   for (int cpu : cpus) {
     // We copy paste the code from bcc's bpf_attach_perf_event_raw here
@@ -1223,31 +1545,105 @@ Result<> AttachedProbe::attach_watchpoint(const std::string &mode)
     // want bcc's noisy error messages).
     int perf_event_fd = syscall(__NR_perf_event_open,
                                 &attr,
-                                pid_.has_value() ? *pid_ : -1,
+                                pid.has_value() ? *pid : -1,
                                 cpu,
                                 -1,
                                 PERF_FLAG_FD_CLOEXEC);
     if (perf_event_fd < 0) {
-      std::string err_msg;
       if (errno == ENOSPC)
         err_msg = "No more HW registers left";
 
-      return make_error<AttachError>(std::move(err_msg));
-    }
-    if (ioctl(perf_event_fd, PERF_EVENT_IOC_SET_BPF, progfd_) != 0) {
-      close(perf_event_fd);
-      return make_error<AttachError>(
-          std::system_error(errno, std::generic_category(), "").what());
-    }
-    if (ioctl(perf_event_fd, PERF_EVENT_IOC_ENABLE, 0) != 0) {
-      close(perf_event_fd);
-      return make_error<AttachError>(
-          std::system_error(errno, std::generic_category(), "").what());
+      has_error = true;
+      break;
     }
 
-    perf_event_fds_.push_back(perf_event_fd);
+    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
+    if (!link) {
+      has_error = true;
+      break;
+    }
+
+    links.push_back(link);
   }
-  return OK();
+
+  if (has_error) {
+    for (struct bpf_link *link : links) {
+      if (bpf_link__destroy(link))
+        LOG(WARNING) << "failed to destroy link for watchpoint probe: "
+                     << strerror(errno);
+    }
+    return make_error<AttachError>(std::move(err_msg));
+  }
+
+  return std::unique_ptr<AttachedWatchpointProbe>(
+      new AttachedWatchpointProbe(probe, links));
+}
+
+AttachedProbe::AttachedProbe(const Probe &probe) : probe_(probe)
+{
+}
+
+Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
+    Probe &probe,
+    const BpfProgram &prog,
+    std::optional<int> pid,
+    BPFtrace &bpftrace,
+    bool safe_mode)
+{
+  LOG(V1) << "Trying to attach probe: " << probe.orig_name;
+  switch (probe.type) {
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe: {
+      if (!probe.funcs.empty()) {
+        return AttachedMultiKprobeProbe::make(probe, prog);
+      }
+      return AttachedKprobeProbe::make(probe, prog, bpftrace);
+    }
+    case ProbeType::tracepoint: {
+      return AttachedTracepointProbe::make(probe, prog);
+    }
+    case ProbeType::profile: {
+      return AttachedProfileProbe::make(probe, prog, pid);
+    }
+    case ProbeType::interval: {
+      return AttachedIntervalProbe::make(probe, prog, pid);
+    }
+    case ProbeType::software: {
+      return AttachedSoftwareProbe::make(probe, prog, pid);
+    }
+    case ProbeType::hardware: {
+      return AttachedHardwareProbe::make(probe, prog, pid);
+    }
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
+      return AttachedFentryProbe::make(probe, prog);
+    }
+    case ProbeType::iter: {
+      return AttachedIterProbe::make(probe, prog, pid);
+    }
+    case ProbeType::rawtracepoint: {
+      return AttachedRawtracepointProbe::make(probe, prog);
+    }
+    case ProbeType::usdt: {
+      return AttachedUSDTProbe::make(probe, prog, pid);
+    }
+    case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint: {
+      return AttachedWatchpointProbe::make(probe, prog, pid, probe.mode);
+    }
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe: {
+      if (!probe.funcs.empty()) {
+        return AttachedMultiUprobeProbe::make(probe, prog, pid);
+      }
+      return AttachedUprobeProbe::make(probe, prog, pid, safe_mode);
+    }
+    case ProbeType::invalid:
+    case ProbeType::special: {
+      LOG(BUG) << "invalid attached probe type \"" << probe.type << "\"";
+    }
+  }
+  return make_error<AttachError>();
 }
 
 } // namespace bpftrace

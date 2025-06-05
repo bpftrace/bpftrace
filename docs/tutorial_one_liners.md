@@ -24,7 +24,7 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 
 ```
 # bpftrace -e 'BEGIN { printf("hello world\n"); }'
-Attaching 1 probe...
+Attached 1 probe
 hello world
 ^C
 ```
@@ -38,7 +38,7 @@ This prints a welcome message. Run it, then hit Ctrl-C to end.
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
-Attaching 1 probe...
+Attached 1 probe
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
 snmpd /proc/net/dev
@@ -61,7 +61,7 @@ members of this struct can be found with: `bpftrace -vl tracepoint:syscalls:sys_
 
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @[bpftrace]: 6
@@ -82,7 +82,7 @@ Maps are automatically printed when bpftrace ends (eg, via Ctrl-C).
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -108,7 +108,7 @@ This summarizes the return value of the sys_read() kernel function for PID 18644
 
 ```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @bytes:
@@ -135,7 +135,7 @@ Summarize read() bytes as a linear histogram, and traced using kernel dynamic tr
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
-Attaching 2 probes...
+Attached 2 probes
 
 [...]
 @ns[snmp-pass]:
@@ -174,7 +174,7 @@ Summarize the time spent in read(), in nanoseconds, as a histogram, by process n
 
 ```
 # bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
-Attaching 25 probes...
+Attached 25 probes
 @[tracepoint:sched:sched_wakeup_new]: 1
 @[tracepoint:sched:sched_process_fork]: 1
 @[tracepoint:sched:sched_process_exec]: 1
@@ -199,7 +199,7 @@ Count process-level events for five seconds, printing a summary.
 
 ```
 # bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 [...]
@@ -263,7 +263,7 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 
 ```
 # bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
-Attaching 1 probe...
+Attached 1 probe
 ^C
 
 @:
@@ -311,7 +311,7 @@ kprobe:vfs_open
 }
 
 # bpftrace path.bt
-Attaching 1 probe...
+Attached 1 probe
 open path: dev
 open path: if_inet6
 open path: retrans_time_ms

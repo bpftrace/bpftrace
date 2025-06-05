@@ -3,6 +3,20 @@
  * tcplife - Trace TCP session lifespans with connection details.
  *
  * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
+ * 
+ * Example of usage:
+ * 
+ * # ./tcplife.bt
+ * PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
+ * 20976 ssh        127.0.0.1       56766 127.0.0.1       22         6 10584 3059
+ * 20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059
+ * 14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
+ * 4496  Chrome_IOT 7f00:6:5ea7::a00:0 42846 0:0:bb01::      443        0     3 12441
+ * 
+ * The output begins with a localhost ssh connection, so both endpoints can be
+ * seen: the ssh process (PID 20976) which received 10584 Kbytes, and the sshd
+ * process (PID 20977) which transmitted 10584 Kbytes. This session lasted 3059
+ * milliseconds. Other sessions can also be seen, including IPv6 connections.
  *
  * Copyright (c) 2019 Brendan Gregg.
  * This was originally created for the BPF Performance Tools book
@@ -95,9 +109,10 @@ kprobe:tcp_set_state
 		printf("%5d %5d %d\n", $tp->bytes_acked / 1024,
 		    $tp->bytes_received / 1024, $delta_ms);
 
-		delete(@birth, $sk);
-		delete(@skpid, $sk);
-		delete(@skcomm, $sk);
+		// Swallowing deletion failures as they are expected
+		$ignore = delete(@birth, $sk);
+		$ignore = delete(@skpid, $sk);
+		$ignore = delete(@skcomm, $sk);
 	}
 }
 

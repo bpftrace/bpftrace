@@ -3,14 +3,28 @@
  * tcpdrop.bt   Trace TCP kernel-dropped packets/segments.
  *              For Linux, uses bpftrace and eBPF.
  *
- * USAGE: tcpdrop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
  * This provides information such as packet details, socket state, and kernel
  * stack trace for packets/segments that were dropped via kfree_skb.
  * It cannot show tcp flags.
- *
+ * 
+ * Example of usage:
+ * 
+ * # ./tcpdrop.bt
+ * TIME     PID      COMM             SADDR:SPORT           DADDR:DPORT           STATE
+ * 00:39:21 0        swapper/2         10.231.244.31:3306     10.229.20.82:50552  ESTABLISHE
+ * 	tcp_drop+0x1
+ * 	tcp_v4_do_rcv+0x135
+ * 	tcp_v4_rcv+0x9c7
+ * 	ip_local_deliver_finish+0x62
+ * [...]
+ * 
+ * The last column shows the state of the TCP session.
+ * 
+ * This tool is useful for debugging high rates of drops, which can cause the
+ * remote end to do timer-based retransmits, hurting performance.
+ * 
+ * This is a bpftrace version of the bcc tool of the same name.
+ * 
  * For Linux 5.17+ (see tools/old for script for lower versions).
  *
  * Copyright (c) 2018 Dale Hamel.
@@ -38,7 +52,7 @@ BEGIN
   printf("%-8s %-8s %-16s %-21s %-21s %-8s\n", "TIME", "PID", "COMM", "SADDR:SPORT", "DADDR:DPORT", "STATE");
 
   // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
-  @tcp_states[1] = "ESTABLISHED";
+  @tcp_states[(uint64)1] = "ESTABLISHED";
   @tcp_states[2] = "SYN_SENT";
   @tcp_states[3] = "SYN_RECV";
   @tcp_states[4] = "FIN_WAIT1";

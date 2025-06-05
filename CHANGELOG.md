@@ -20,6 +20,10 @@ and this project adheres to
   - [#3999](https://github.com/bpftrace/bpftrace/pull/3999)
 - Error by default if any probe fails to attach
   - [#4097](https://github.com/bpftrace/bpftrace/pull/4097)
+- Require BPF_MAP_TYPE_RINGBUF to be available
+  - [#3974](https://github.com/bpftrace/bpftrace/pull/3974)
+- Require kernel uprobe ref counting to be available for USDTs with semaphores
+  - [#4199](https://github.com/bpftrace/bpftrace/pull/4199)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)
@@ -43,6 +47,10 @@ and this project adheres to
   - [#4095](https://github.com/bpftrace/bpftrace/pull/4095)
 - Support accessing up to 255 USDT probe args
   - [#4118](https://github.com/bpftrace/bpftrace/pull/4118)
+- Add new builtin "usermode"
+  - [#4129](https://github.com/bpftrace/bpftrace/pull/4129)
+- Warn on discarded return values for specific builtin functions
+  - [#4191](https://github.com/bpftrace/bpftrace/pull/4191)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
@@ -52,6 +60,14 @@ and this project adheres to
   - [#3956](https://github.com/bpftrace/bpftrace/pull/3956)
 - Add signed type checking for map assignments
   - [#4132](https://github.com/bpftrace/bpftrace/pull/4132)
+- Add signed type checking for map keys
+  - [#4136](https://github.com/bpftrace/bpftrace/pull/4136)
+- `delete` now returns 1 if successful, 0 if not
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- if `delete` fails it will only print a warning if return value is not handled
+  - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
+- Change "Attaching N probes..." to "Attached N probes"
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Deprecated
 #### Removed
 #### Fixed
@@ -75,9 +91,13 @@ and this project adheres to
   - [#4139](https://github.com/bpftrace/bpftrace/pull/4139)
 - Attach watchpoint probes to newly created threads
   - [#4179](https://github.com/bpftrace/bpftrace/pull/4179)
+- Fix incorrect reporting of attached count for multi probes
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 #### Security
 #### Docs
 #### Tools
+- Remove tools example usage txt files and move info to comments
+  - [#4187](https://github.com/bpftrace/bpftrace/pull/4187)
 - Fix biosnoop.bt to print comm from block_io_start probe
   - [#4013](https://github.com/bpftrace/bpftrace/pull/4013)
 

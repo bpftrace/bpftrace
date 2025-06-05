@@ -40,11 +40,11 @@ EXPECT SUCCESS bpftrace
 
 NAME kstack
 PROG BEGIN { printf("%s\n", kstack); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME ustack
 PROG BEGIN { printf("%s\n", ustack); exit(); }
-EXPECT Attaching 1 probe...
+EXPECT Attached 1 probe
 
 NAME arg
 PROG k:vfs_read { printf("SUCCESS %p\n", arg0); exit(); }
@@ -242,3 +242,25 @@ NAME kstack builtin with stack_mode config
 RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } k:do_nanosleep { @c[kstack] = 1; exit(); }'
 EXPECT_REGEX ^@c\[\n[0-9a-f]+$
 AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME usermode_builtin_in_kprobe_fentry
+PROG k:vfs_read { printf("%d ", usermode); } fentry:vfs_open { print(usermode); }
+EXPECT 0 0
+AFTER ./testprogs/syscall read
+ARCH x86_64
+
+NAME usermode_builtin_in_uprobe
+PROG uprobe:./testprogs/uprobe_symres:test { print(usermode); exit(); }
+EXPECT 1
+AFTER ./testprogs/uprobe_symres
+ARCH x86_64
+
+NAME usermode_builtin_in_BEGIN_END
+PROG BEGIN { printf("%d ", usermode); exit(); } END { print(usermode); }
+EXPECT 1 1
+ARCH x86_64
+
+NAME usermode_builtin_in_unsupported_arch
+PROG BEGIN { printf("%d ", usermode); exit(); } END { print(usermode); }
+EXPECT ERROR: 'usermode' builtin is only supported on x86_64
+ARCH aarch64

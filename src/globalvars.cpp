@@ -147,6 +147,7 @@ static void update_global_vars_rodata(
       case GlobalVar::WRITE_MAP_VALUE_BUFFER:
       case GlobalVar::VARIABLE_BUFFER:
       case GlobalVar::MAP_KEY_BUFFER:
+      case GlobalVar::EVENT_LOSS_COUNTER:
         break;
     }
   }
@@ -226,7 +227,7 @@ void update_global_vars(const struct bpf_object *bpf_object,
                                 global_vars_map,
                                 needed_global_variables,
                                 bpftrace);
-    } else {
+    } else if (section_name != EVENT_LOSS_COUNTER_SECTION_NAME) {
       update_global_vars_custom_rw_section(bpf_object,
                                            section_name,
                                            global_vars_map,
@@ -303,6 +304,8 @@ SizedType get_type(bpftrace::globalvars::GlobalVar global_var,
       return make_rw_type(resources.map_key_buffers,
                           CreateArray(resources.max_map_key_size,
                                       CreateInt8()));
+    case GlobalVar::EVENT_LOSS_COUNTER:
+      return CreateUInt64();
   }
   return {}; // unreachable
 }
@@ -314,6 +317,56 @@ std::unordered_set<std::string> get_section_names()
     ret.insert(config.section);
   }
   return ret;
+}
+
+uint64_t get_global_var(const struct bpf_object *bpf_object,
+                        std::string_view target_section,
+                        const std::unordered_map<std::string, struct bpf_map *>
+                            &section_name_to_global_vars_map,
+                        const BPFtrace &bpftrace)
+{
+  verify_maps_found(section_name_to_global_vars_map, bpftrace);
+
+  auto it = std::ranges::find_if(section_name_to_global_vars_map,
+                                 [target_section](const auto &pair) {
+                                   return pair.first == target_section;
+                                 });
+
+  if (it == section_name_to_global_vars_map.end()) {
+    LOG(BUG) << target_section << " not found";
+  }
+
+  const auto &[section_name, global_vars_map] = *it;
+
+  const auto needed_global_variables = get_global_vars_for_section(section_name,
+                                                                   bpftrace);
+
+  if (needed_global_variables.empty()) {
+    LOG(BUG) << "No global variables found in section " << section_name;
+  } else if (needed_global_variables.size() > 1) {
+    LOG(BUG) << "Multiple read-write global variables are in same section "
+             << section_name;
+  }
+
+  auto global_var = *needed_global_variables.begin();
+  auto vars_and_offsets = find_btf_var_offsets(bpf_object,
+                                               section_name,
+                                               needed_global_variables);
+
+  if (vars_and_offsets.at(global_var) != 0) {
+    LOG(BUG) << "Read-write global variable " << to_string(global_var)
+             << " must be at offset 0 in section " << section_name;
+  }
+
+  size_t v_size;
+  auto *target_var = reinterpret_cast<uint64_t *>(
+      bpf_map__initial_value(global_vars_map, &v_size));
+
+  if (!target_var) {
+    LOG(BUG) << "Failed to get array buf for global variable map";
+  }
+
+  return *target_var;
 }
 
 } // namespace bpftrace::globalvars
