@@ -54,6 +54,10 @@
 #include "util/system.h"
 #include "util/wildcard.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 std::set<DebugStage> bt_debug = {};
@@ -992,6 +996,7 @@ int BPFtrace::poll_skboutput_events()
 
 void BPFtrace::poll_event_loss(Output &out)
 {
+  // Check for losses that we have wired up
   auto current_value = bytecode_.get_event_loss_counter(*this);
   if (current_value > event_loss_count_) {
     out.lost_events(current_value - event_loss_count_);
@@ -999,6 +1004,29 @@ void BPFtrace::poll_event_loss(Output &out)
   } else if (current_value < event_loss_count_) {
     LOG(ERROR) << "Invalid event loss count value: " << current_value
                << ", last seen: " << event_loss_count_;
+  }
+
+  // Check for per-attachment losses BPF subsystem has wired up
+  for (auto &ap : attached_probes_) {
+    const auto &name = ap->probe().name;
+    auto lost = ap->missed();
+    if (!lost) {
+      LOG(WARNING) << "Failed to query probe " << name
+                   << " for misses: " << lost.takeError();
+    } else if (*lost) {
+      out.lost_executions(name, *lost);
+    }
+  }
+
+  // Check for per-program losses BPF subsystem has wired up
+  for (auto &[name, program] : bytecode_.progs()) {
+    auto lost = program.missed();
+    if (!lost) {
+      LOG(WARNING) << "Failed to query program " << name
+                   << " for misses: " << lost.takeError();
+    } else if (*lost) {
+      out.lost_executions(name, *lost);
+    }
   }
 }
 
