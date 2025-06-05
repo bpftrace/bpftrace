@@ -304,7 +304,9 @@ SizedType CreateEnum(size_t bits, const std::string &name)
 
 SizedType CreateString(size_t size)
 {
-  return { Type::string, size, AddrSpace::kernel };
+  auto ty = SizedType(Type::string, size, AddrSpace::kernel);
+  ty.is_internal = true;
+  return ty;
 }
 
 SizedType CreateNone()
@@ -375,6 +377,7 @@ SizedType CreateStack(bool kernel, StackType stack)
                       kernel ? 16 : 24,
                       AddrSpace::kernel);
   st.stack_type = stack;
+  st.is_internal = true;
   return st;
 }
 
@@ -432,7 +435,9 @@ SizedType CreateHist()
 
 SizedType CreateUSym()
 {
-  return { Type::usym_t, 16, AddrSpace::kernel };
+  auto ty = SizedType(Type::usym_t, 16, AddrSpace::kernel);
+  ty.is_internal = true;
+  return ty;
 }
 
 SizedType CreateKSym()
@@ -444,19 +449,26 @@ SizedType CreateBuffer(size_t size)
 {
   auto metadata_headroom_bytes = sizeof(AsyncEvent::Buf);
   // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
-  // The result of buf is copied to bpf stack. Hence kernel probe read
-  return { Type::buffer, size + metadata_headroom_bytes, AddrSpace::kernel };
+  // The result of buf is copied to bpf stack. Hence kernel probe read };
+  auto ty = SizedType(Type::buffer,
+                      size + metadata_headroom_bytes,
+                      AddrSpace::kernel);
+  ty.is_internal = true;
+  return ty;
 }
 
 SizedType CreateTimestamp()
 {
-  return { Type::timestamp, 16, AddrSpace::kernel };
+  auto ty = SizedType(Type::timestamp, 16, AddrSpace::kernel);
+  ty.is_internal = true;
+  return ty;
 }
 
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 {
   auto s = SizedType(Type::tuple, tuple->size, AddrSpace::kernel);
   s.inner_struct_ = std::move(tuple);
+  s.is_internal = true;
   return s;
 }
 
@@ -469,7 +481,9 @@ SizedType CreateMacAddress()
 
 SizedType CreateCgroupPath()
 {
-  return { Type::cgroup_path_t, 16, AddrSpace::kernel };
+  auto st = SizedType(Type::cgroup_path_t, 16, AddrSpace::kernel);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateStrerror()

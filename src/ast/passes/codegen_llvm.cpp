@@ -1692,7 +1692,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &macaddr = call.vargs.front();
     auto scoped_arg = visit(macaddr);
 
-    if (inBpfMemory(macaddr.type()))
+    if (macaddr.type().is_internal)
       b_.CreateMemcpyBPF(buf, scoped_arg.value(), macaddr.type().GetSize());
     else
       b_.CreateProbeRead(buf, macaddr.type(), scoped_arg.value(), call.loc);
@@ -2301,7 +2301,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
   const auto &field = type.GetField(acc.field);
 
-  if (inBpfMemory(type)) {
+  if (type.is_internal) {
     return readDatastructElemFromStack(
         std::move(scoped_arg), b_.getInt64(field.offset), type, field.type);
   } else {
@@ -2396,7 +2396,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
   auto scoped_expr = visit(arr.expr);
   auto scoped_index = visit(arr.indexpr);
 
-  if (inBpfMemory(arr.element_type) && !type.IsPtrTy())
+  if (arr.element_type.is_internal && !type.IsPtrTy())
     return readDatastructElemFromStack(
         std::move(scoped_expr), scoped_index.value(), type, arr.element_type);
   else {
@@ -2431,7 +2431,7 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
                             { b_.getInt32(0), b_.getInt32(acc.index) });
   SizedType &elem_type = type.GetFields()[acc.index].type;
 
-  if (shouldBeInBpfMemoryAlready(elem_type)) {
+  if (elem_type.is_internal) {
     // Extend lifetime of source buffer
     return ScopedExpr(src, std::move(scoped_arg));
   } else {
@@ -2562,7 +2562,7 @@ Value *CodegenLLVM::createTuple(
                               buf,
                               { b_.getInt32(0), b_.getInt32(i) });
 
-    if (inBpfMemory(type))
+    if (type.is_internal)
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsRecordTy())
       b_.CreateProbeRead(dst, type, val, vloc);
@@ -2646,7 +2646,18 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
                                                             "_val",
                                                         assignment.loc)
                      : expr;
-  if (shouldBeInBpfMemoryAlready(expr_type)) {
+  if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
+    if (!expr_type.is_internal) {
+      // expr currently contains a pointer to the struct or array
+      // We now want to read the entire struct/array in so we can save it
+      b_.CreateProbeRead(
+          value, map_type, expr, assignment.loc, expr_type.GetAS());
+    }
+  } else if (assignment.map->type().IsIntTy()) {
+    // Integers are always stored as 64-bit in map values
+    expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map_type.IsSigned());
+    b_.CreateStore(expr, value);
+  } else if (expr_type.is_internal) {
     if (!expr_type.IsSameSizeRecursive(map_type)) {
       b_.CreateMemsetBPF(value, b_.getInt8(0), map_type.GetSize());
       if (expr_type.IsTupleTy()) {
@@ -2658,18 +2669,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
                  << " Expression Type Size: " << expr_type.GetSize();
       }
     }
-  } else if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
-    if (!expr_type.is_internal) {
-      // expr currently contains a pointer to the struct or array
-      // We now want to read the entire struct/array in so we can save it
-      b_.CreateProbeRead(
-          value, map_type, expr, assignment.loc, expr_type.GetAS());
-    }
   } else {
-    if (assignment.map->type().IsIntTy()) {
-      // Integers are always stored as 64-bit in map values
-      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map_type.IsSigned());
-    }
     b_.CreateStore(expr, value);
   }
   b_.CreateMapUpdateElem(
@@ -3327,7 +3327,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                                                map.ident + "_key",
                                                map.loc)
                    : scoped_key_expr.value();
-  if (inBpfMemory(key_expr.type())) {
+  if (key_expr.type().is_internal) {
     if (!key_expr.type().IsSameSizeRecursive(key_type)) {
       b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
       if (key_expr.type().IsTupleTy()) {
@@ -3400,7 +3400,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   size_t map_key_size = map.key_type.GetSize();
   size_t expr_size = key_expr.type().GetSize();
 
-  if (inBpfMemory(key_expr.type())) {
+  if (key_expr.type().is_internal) {
     if (!key_expr.type().IsSameSizeRecursive(map.key_type)) {
       b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
       if (key_expr.type().IsTupleTy()) {
@@ -4067,7 +4067,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
                                        { b_.getInt32(0), b_.getInt32(2) });
   b_.CreateMemsetBPF(content_offset, b_.getInt8(0), arg.type().GetSize());
   if (needMemcpy(arg.type())) {
-    if (inBpfMemory(arg.type()))
+    if (arg.type().is_internal)
       b_.CreateMemcpyBPF(content_offset, value, arg.type().GetSize());
     else
       b_.CreateProbeRead(content_offset, arg.type(), value, call.loc);
@@ -4641,7 +4641,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
 
   auto &key_type = f.decl->type().GetField(0).type;
   Value *key = callback->getArg(1);
-  if (!inBpfMemory(key_type)) {
+  if (!key_type.is_internal) {
     key = b_.CreateLoad(b_.GetType(key_type), key, "key");
   }
 
@@ -4657,7 +4657,7 @@ llvm::Function *CodegenLLVM::createForEachMapCallback(For &f, llvm::Type *ctx_t)
   if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
     val = b_.CreatePerCpuMapAggElems(
         *f.map, callback->getArg(1), map_val_type, f.loc);
-  } else if (!inBpfMemory(val_type)) {
+  } else if (!val_type.is_internal) {
     val = b_.CreateLoad(b_.GetType(val_type), val, "val");
   }
 
