@@ -7,7 +7,7 @@ function(embed NAME SOURCE)
     ARG
     ""
     "OUTPUT;HEX;VAR"
-    "DEPENDS"
+    ""
     ${ARGN}
   )
   if (NOT DEFINED ARG_HEX)
@@ -23,7 +23,7 @@ function(embed NAME SOURCE)
     OUTPUT ${ARG_HEX}
     COMMAND ${XXD} -i < ${SOURCE} > ${ARG_HEX}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${ARG_DEPENDS}
+    DEPENDS ${SOURCE}
     VERBATIM
   )
   add_custom_command(
