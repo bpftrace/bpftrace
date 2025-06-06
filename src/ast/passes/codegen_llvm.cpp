@@ -2368,7 +2368,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                                                   4)));
         value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
         value = b_.CreateAnd(value, b_.getInt64(0xFFFF));
-        value = b_.CreateSafeGEP(b_.getInt32Ty(), ctx_, value);
+        value = b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, value);
         return ScopedExpr(value);
       }
     } else {

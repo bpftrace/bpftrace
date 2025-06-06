@@ -93,6 +93,8 @@ and this project adheres to
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 - Attach watchpoint probes to newly created threads
   - [#4239](https://github.com/bpftrace/bpftrace/pull/4239)
+- Fix reading of __data_loc tracepoint arguments
+  - [#4238](https://github.com/bpftrace/bpftrace/pull/4238)
 #### Security
 #### Docs
 #### Tools
