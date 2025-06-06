@@ -96,6 +96,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- killsnoop.bt: display signal name instead of value
+  - [#4234](https://github.com/bpftrace/bpftrace/pull/4234)
 - killsnoop.bt: support tkill() and tgkill()
   - [#4190](https://github.com/bpftrace/bpftrace/pull/4190)
 - Remove tools example usage txt files and move info to comments
