@@ -2,9 +2,6 @@
 
 FROM alpine:3.21
 
-# Add edge community repository
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
-
 RUN apk add --update \
   asciidoctor \
   argp-standalone \
@@ -13,8 +10,6 @@ RUN apk add --update \
   bcc-static \
   binutils-dev \
   bison \
-  blazesym-dev \
-  blazesym-static \
   bpftool \
   bzip2-static \
   build-base \
@@ -46,6 +41,13 @@ RUN apk add --update \
   zlib-static \
   zstd-dev \
   zstd-static
+
+# Add edge community repository
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+
+RUN apk add --update \
+  blazesym-dev \
+  blazesym-static
 
 # It looks like llvm18 prefers to dynamically link against zstd. Extremely
 # unclear why.  Work around it by modifying LLVMExports.cmake.
