@@ -4,9 +4,36 @@
 #include <optional>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <variant>
 
+#include "util/result.h"
+
 namespace bpftrace::util {
+
+class OverflowError : public ErrorInfo<OverflowError> {
+public:
+  OverflowError(std::string num, uint64_t max)
+      : num_(std::move(num)), max_(max) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+private:
+  std::string num_;
+  uint64_t max_;
+};
+
+class NumberFormatError : public ErrorInfo<NumberFormatError> {
+public:
+  NumberFormatError(std::string msg, std::string num)
+      : msg_(std::move(msg)), num_(std::move(num)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+private:
+  std::string msg_;
+  std::string num_;
+};
 
 //   String -> int conversion specific to bpftrace
 //
@@ -15,14 +42,6 @@ namespace bpftrace::util {
 //    - error when out of int range (1e20)
 //    - error when base > 9 (12e3)
 //   - support underscore as separator, e.g. 1_234_000
-//
-//   All errors are raised as std::invalid_argument exception
-int64_t to_int(const std::string &num, int base);
-uint64_t to_uint(const std::string &num, int base);
-
-std::optional<std::variant<int64_t, uint64_t>> get_int_from_str(
-    const std::string &s);
-
-std::optional<pid_t> parse_pid(const std::string &str, std::string &err);
+Result<uint64_t> to_uint(const std::string &num, int base = 0);
 
 } // namespace bpftrace::util
