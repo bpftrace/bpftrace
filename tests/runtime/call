@@ -82,6 +82,12 @@ PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit()
 AFTER ./testprogs/syscall execve ./testprogs/true
 EXPECT_REGEX P: /*.
 
+NAME str_data_loc
+PROG t:sched:sched_process_exec { printf("P: %s\n", str(args.filename)); }
+AFTER ./testprogs/syscall execve ./testprogs/true
+EXPECT_REGEX P: .*testprogs/true
+TIMEOUT 1
+
 NAME str_truncated
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5
