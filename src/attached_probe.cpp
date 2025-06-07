@@ -931,14 +931,21 @@ Result<std::unique_ptr<AttachedTracepointProbe>> AttachedTracepointProbe::make(
     Probe &probe,
     const BpfProgram &prog)
 {
-  int perf_event_fd = bpf_attach_tracepoint(prog.fd(),
-                                            probe.path.c_str(),
-                                            eventname(probe, 0).c_str());
+  auto *link = bpf_program__attach_tracepoint(prog.bpf_prog(),
+                                              probe.path.c_str(),
+                                              eventname(probe, 0).c_str());
 
-  if (perf_event_fd < 0 && probe.name == probe.orig_name) {
-    return make_error<AttachError>();
+  if (!link) {
+    return make_error<AttachError>("failed to attach tracepoint probe: " +
+                                   probe.name);
   }
 
+  int perf_event_fd = bpf_link__fd(link);
+  if (perf_event_fd < 0) {
+    return make_error<AttachError>("failed to get perf event FD for tracepoint "
+                                   "probe: " +
+                                   probe.name);
+  }
   return std::unique_ptr<AttachedTracepointProbe>(new AttachedTracepointProbe(
       probe, perf_event_fd, eventname(probe, 0), probe.path));
 }
