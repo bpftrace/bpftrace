@@ -16,7 +16,7 @@ public:
   explicit ConfigAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<ConfigAnalyser>::visit;
-  void visit(AssignConfigVarStatement &assignment);
+  void visit(AssignNonProgVarStatement &assignment);
 
 private:
   BPFtrace &bpftrace_;
@@ -29,7 +29,7 @@ static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
   "max_type_res_iterations",
 };
 
-void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
+void ConfigAnalyser::visit(AssignNonProgVarStatement &assignment)
 {
   // If this is deprecated, just emit a warning and move on. This is done here
   // because they are no longer understood by the actual config type.

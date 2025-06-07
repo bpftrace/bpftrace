@@ -149,7 +149,7 @@ public:
     visitImpl(assignment.expr);
     return default_value();
   }
-  R visit([[maybe_unused]] AssignConfigVarStatement &assignment)
+  R visit([[maybe_unused]] AssignNonProgVarStatement &assignment)
   {
     return default_value();
   }

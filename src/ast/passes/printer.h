@@ -40,13 +40,15 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignScalarMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
-  void visit(AssignConfigVarStatement &assignment);
+  void visit(AssignNonProgVarStatement &assignment);
   void visit(VarDeclStatement &decl);
   void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(While &while_block);
   void visit(For &for_loop);
   void visit(Config &config);
+  void visit(Opts &opts);
+  void visit(OptBlock &opt_block);
   void visit(Jump &jump);
   void visit(Predicate &pred);
   void visit(AttachPoint &ap);

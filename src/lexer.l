@@ -165,6 +165,7 @@ oct_esc  [0-7]{1,3}
 "unroll"                { return Parser::make_UNROLL(yytext, driver.loc); }
 "while"                 { return Parser::make_WHILE(yytext, driver.loc); }
 "config"                { return Parser::make_CONFIG(yytext, driver.loc); }
+"opts"                  { return Parser::make_OPTS(yytext, driver.loc); }
 "for"                   { return Parser::make_FOR(yytext, driver.loc); }
 "return"                { return Parser::make_RETURN(yytext, driver.loc); }
 "continue"              { return Parser::make_CONTINUE(yytext, driver.loc); }
