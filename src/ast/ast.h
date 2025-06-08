@@ -216,6 +216,19 @@ public:
 };
 using StatementList = std::vector<Statement>;
 
+class Macro;
+class MapDeclStatement;
+class Probe;
+class Subprog;
+
+class RootStatement
+    : public VariantNode<Probe, Subprog, Macro, MapDeclStatement> {
+public:
+  using VariantNode::VariantNode;
+  RootStatement() : RootStatement(static_cast<Probe *>(nullptr)) {};
+};
+using RootStatements = std::vector<RootStatement>;
+
 class Integer : public Node {
 public:
   explicit Integer(ASTContext &ctx, uint64_t n, Location &&loc)
@@ -1247,19 +1260,25 @@ public:
                    std::string c_definitions,
                    Config *config,
                    ImportList &&imports,
-                   MapDeclList &&map_decls,
-                   MacroList &&macros,
-                   SubprogList &&functions,
-                   ProbeList &&probes,
+                   RootStatements &&root_statements,
                    Location &&loc)
       : Node(ctx, std::move(loc)),
         c_definitions(std::move(c_definitions)),
         config(config),
-        imports(std::move(imports)),
-        map_decls(std::move(map_decls)),
-        macros(std::move(macros)),
-        functions(std::move(functions)),
-        probes(std::move(probes)) {};
+        imports(std::move(imports))
+  {
+    for (auto &stmt : root_statements) {
+      if (auto *map_decl = stmt.as<MapDeclStatement>()) {
+        map_decls.push_back(map_decl);
+      } else if (auto *macro = stmt.as<Macro>()) {
+        macros.push_back(macro);
+      } else if (auto *function = stmt.as<Subprog>()) {
+        functions.push_back(function);
+      } else if (auto *probe = stmt.as<Probe>()) {
+        probes.push_back(probe);
+      }
+    }
+  };
   explicit Program(ASTContext &ctx, const Program &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         c_definitions(other.c_definitions),

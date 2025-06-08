@@ -148,25 +148,20 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Expression> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList> vargs
-%type <ast::Subprog *> subprog
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
-%type <ast::Macro *> macro
 %type <ast::ExpressionList> macro_args
 %type <ast::Map *> map
 %type <ast::MapAccess *> map_expr
-%type <ast::MapDeclStatement *> map_decl_stmt
 %type <ast::PositionalParameter *> param
 %type <ast::PositionalParameterCount *> param_count
 %type <ast::Predicate *> pred
-%type <ast::Probe *> probe
-%type <std::pair<ast::ProbeList, ast::SubprogList>> body probes_and_subprogs
-%type <ast::MacroList> macros
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
 %type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
-%type <ast::MapDeclList> map_decl_list
+%type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
+%type <ast::RootStatements> root_stmts
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
@@ -220,8 +215,8 @@ start:          START_PROGRAM program END { driver.result = $2; }
                 ;
 
 program:
-                c_definitions config imports map_decl_list macros body {
-                    $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), std::move($5), std::move($6.second), std::move($6.first), @$);
+                c_definitions config imports root_stmts {
+                    $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), @$);
                 }
                 ;
 
@@ -357,10 +352,6 @@ subprog_arg:
                 VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
                 ;
 
-macros:
-                macros macro { $$ = std::move($1); $$.push_back($2); }
-        |       %empty       { $$ = ast::MacroList{}; }
-
 macro:
                 MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
         |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
@@ -373,16 +364,15 @@ macro_args:
         |       %empty             { $$ = ast::ExpressionList{}; }
                 ;
 
-body:
-                probes_and_subprogs { $$ = std::move($1); }
-        |       %empty              { $$ = { ast::ProbeList{}, ast::SubprogList{}}; }
-                ;
+root_stmts:
+                root_stmts root_stmt { $$ = std::move($1); $$.push_back($2); }
+        |       %empty               { $$ = ast::RootStatements{}; }
 
-probes_and_subprogs:
-                probes_and_subprogs probe   { $$ = std::move($1); $$.first.push_back($2); }
-        |       probes_and_subprogs subprog { $$ = std::move($1); $$.second.push_back($2); }
-        |       probe        { $$ = { ast::ProbeList{$1}, ast::SubprogList{}}; }
-        |       subprog      { $$ = { ast::ProbeList{}, ast::SubprogList{$1}}; }
+root_stmt:
+                macro         { $$ = $1; }
+        |       map_decl_stmt { $$ = $1; }
+        |       subprog       { $$ = $1; }
+        |       probe         { $$ = $1; }
                 ;
 
 probe:
@@ -540,13 +530,8 @@ assign_stmt:
                 }
         ;
 
-map_decl_list:
-                map_decl_list map_decl_stmt ";"      { $$ = std::move($1); $$.push_back($2); }
-        |        %empty                              { $$ = ast::MapDeclList{}; }
-        ;
-
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN UNSIGNED_INT RPAREN { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
+                LET MAP ASSIGN IDENT LPAREN UNSIGNED_INT RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
         ;
 
 var_decl_stmt:

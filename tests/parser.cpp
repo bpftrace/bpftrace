@@ -2770,10 +2770,16 @@ TEST(Parser, keywords_as_identifiers)
   }
 }
 
-TEST(Parser, subprog_probe_mixed)
+TEST(Parser, prog_body_items)
 {
-  test("i:s:1 {} fn f1(): void {} i:s:1 {} fn f2(): void {}",
+  // This includes probes, subprogs, macros, and map declarations.
+  // Note: macros are not printed in the AST.
+  test("i:s:1 {} macro add_one() {} fn f1(): void {} let @a = hash(5); i:s:1 "
+       "{} fn f2(): void {} macro add_two() {}",
        "Program\n"
+       " map decl: @a\n"
+       "  bpf type: hash\n"
+       "  max entries: 5\n"
        " subprog: f1 :: [void]\n"
        " subprog: f2 :: [void]\n"
        " interval:s:1\n"

@@ -4995,16 +4995,16 @@ let @a = percpuarray(1); BEGIN { @a[1] = count(); }
                                  ~~
 )");
   test_error(*bpftrace, "let @a = potato(2); BEGIN { @a[1] = count(); }", R"(
-stdin:1:1-19: ERROR: Invalid bpf map type: potato
+stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); BEGIN { @a[1] = count(); }
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 HINT: Valid map types: percpulruhash, percpuarray, percpuhash, lruhash, hash
 )");
 
   test_error(*bpftrace, "let @a = percpuarray(10); BEGIN { @a = count(); }", R"(
-stdin:1:1-25: ERROR: Max entries can only be 1 for map type percpuarray
+stdin:1:1-26: ERROR: Max entries can only be 1 for map type percpuarray
 let @a = percpuarray(10); BEGIN { @a = count(); }
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
