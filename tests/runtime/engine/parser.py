@@ -216,7 +216,7 @@ class TestParser(object):
             elif item_name == "RETURN_CODE":
                 return_code = int(line.strip(' '))
             else:
-                raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
+                raise UnknownFieldError('Field %s is not a runtime test directive. Suite: %s' % (item_name, test_suite))
 
         if name == '':
             raise RequiredFieldError('Test NAME is required. Suite: ' + test_suite)

@@ -25,7 +25,7 @@ def main(test_filter, allowlist_file, run_aot_tests):
         test_suite = sorted(TestParser.read_all(run_aot_tests))
         test_suite = [ (n, sorted(t)) for n, t in test_suite ]
     except (UnknownFieldError, RequiredFieldError) as error:
-        print(fail(str(error)))
+        print(fail(f"[  FAILED  ] {str(error)}"))
         exit(1)
 
     # Apply filter
