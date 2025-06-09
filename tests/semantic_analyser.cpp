@@ -4493,18 +4493,9 @@ stdin:4:11-15: ERROR: Loop declaration shadows existing variable: $kv
 
 TEST(semantic_analyser, for_loop_control_flow)
 {
-  // Error location is incorrect: #3063
-  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { break; } }", R"(
-stdin:1:42-47: ERROR: 'break' statement is not allowed in a for-loop
-BEGIN { @map[0] = 1; for ($kv : @map) { break; } }
-                                         ~~~~~
-)");
-  // Error location is incorrect: #3063
-  test_error("BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }", R"(
-stdin:1:42-50: ERROR: 'continue' statement is not allowed in a for-loop
-BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }
-                                         ~~~~~~~~
-)");
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { break; } }");
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }");
+
   // Error location is incorrect: #3063
   test_error("BEGIN { @map[0] = 1; for ($kv : @map) { return; } }", R"(
 stdin:1:42-48: ERROR: 'return' statement is not allowed in a for-loop
@@ -4602,17 +4593,8 @@ BEGIN { for ($i : 0.0..5) { printf("%d", $i); } }
 
 TEST(semantic_analyser, for_range_control_flow)
 {
-  test_error("BEGIN { for ($i : 0..5) { break; } }", R"(
-stdin:1:28-33: ERROR: 'break' statement is not allowed in a for-loop
-BEGIN { for ($i : 0..5) { break; } }
-                           ~~~~~
-)");
-
-  test_error("BEGIN { for ($i : 0..5) { continue; } }", R"(
-stdin:1:28-36: ERROR: 'continue' statement is not allowed in a for-loop
-BEGIN { for ($i : 0..5) { continue; } }
-                           ~~~~~~~~
-)");
+  test("BEGIN { for ($i : 0..5) { break; } }");
+  test("BEGIN { for ($i : 0..5) { continue; } }");
 
   test_error("BEGIN { for ($i : 0..5) { return; } }", R"(
 stdin:1:28-34: ERROR: 'return' statement is not allowed in a for-loop

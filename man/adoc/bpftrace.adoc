@@ -514,6 +514,19 @@ for ($i : 0..$a) {
 }
 ----
 
+Both `for` loops support the following control flow statements:
+
+[cols="~,~"]
+|===
+
+| continue
+| skip processing of the rest of the block and proceed to the next iteration
+
+| break
+| terminate the loop
+
+|===
+
 ==== While
 
 Since kernel 5.3 BPF supports `while` loops as long as the verifier can prove they're bounded and fit within the instruction limit.
@@ -523,19 +536,6 @@ while (condition) {
   block;
 }
 ----
-
-Within a `while` loop the following control flow statements can be used:
-
-[cols="~,~"]
-|===
-
-| continue
-| skip processing of the rest of the block and jump back to the evaluation of the conditional
-
-| break
-| Terminate the loop
-
-|===
 
 ----
 interval:s:1 {
@@ -550,6 +550,19 @@ interval:s:1 {
   printf("\n");
 }
 ----
+
+The `while` loop supports the following control flow statements:
+
+[cols="~,~"]
+|===
+
+| continue
+| skip processing of the rest of the block and return to the conditional
+
+| break
+| terminate the loop
+
+|===
 
 ==== Unroll
 

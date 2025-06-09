@@ -53,6 +53,8 @@ and this project adheres to
   - [#4191](https://github.com/bpftrace/bpftrace/pull/4191)
 - For loops now support `..` ranges
   - [#4126](https://github.com/bpftrace/bpftrace/pull/4126)
+- For loops now support `break` and `continue`
+  - [#4250](https://github.com/bpftrace/bpftrace/pull/4250)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
