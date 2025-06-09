@@ -176,6 +176,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 i
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !94 {
+for_body:
   %"$res" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
   store i64 0, ptr %"$res", align 8
@@ -191,54 +192,60 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section 
   store i64 0, ptr %val_2, align 8
   br label %while_cond
 
-while_cond:                                       ; preds = %lookup_success, %4
-  %5 = load i32, ptr @num_cpus, align 4
-  %6 = load i32, ptr %i, align 4
-  %num_cpu.cmp = icmp ult i32 %6, %5
+for_continue:                                     ; preds = %while_end
+  ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
+
+while_cond:                                       ; preds = %lookup_success, %for_body
+  %4 = load i32, ptr @num_cpus, align 4
+  %5 = load i32, ptr %i, align 4
+  %num_cpu.cmp = icmp ult i32 %5, %4
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %7 = load i32, ptr %i, align 4
-  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %1, i32 %7)
+  %6 = load i32, ptr %i, align 4
+  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %1, i32 %6)
   %map_lookup_cond = icmp ne ptr %lookup_percpu_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
-  %8 = load i64, ptr %val_1, align 8
+  %7 = load i64, ptr %val_1, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 24, i1 false)
-  %9 = getelementptr %kstack_count_t__tuple_t, ptr %"$kv", i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %9, ptr align 1 %1, i64 16, i1 false)
+  %8 = getelementptr %kstack_count_t__tuple_t, ptr %"$kv", i32 0, i32 0
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %8, ptr align 1 %1, i64 16, i1 false)
+  %9 = getelementptr %kstack_count_t__tuple_t, ptr %"$kv", i32 0, i32 1
+  store i64 %7, ptr %9, align 8
   %10 = getelementptr %kstack_count_t__tuple_t, ptr %"$kv", i32 0, i32 1
-  store i64 %8, ptr %10, align 8
-  %11 = getelementptr %kstack_count_t__tuple_t, ptr %"$kv", i32 0, i32 1
-  %12 = load i64, ptr %11, align 8
-  store i64 %12, ptr %"$res", align 8
-  ret i64 0
+  %11 = load i64, ptr %10, align 8
+  store i64 %11, ptr %"$res", align 8
+  br label %for_continue
 
 lookup_success:                                   ; preds = %while_body
-  %13 = load i64, ptr %val_1, align 8
-  %14 = load i64, ptr %lookup_percpu_elem, align 8
-  %15 = add i64 %14, %13
-  store i64 %15, ptr %val_1, align 8
-  %16 = load i32, ptr %i, align 4
-  %17 = add i32 %16, 1
-  store i32 %17, ptr %i, align 4
+  %12 = load i64, ptr %val_1, align 8
+  %13 = load i64, ptr %lookup_percpu_elem, align 8
+  %14 = add i64 %13, %12
+  store i64 %14, ptr %val_1, align 8
+  %15 = load i32, ptr %i, align 4
+  %16 = add i32 %15, 1
+  store i32 %16, ptr %i, align 4
   br label %while_cond
 
 lookup_failure:                                   ; preds = %while_body
-  %18 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %18, 0
+  %17 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %17, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %19 = load i32, ptr %i, align 4
+  %18 = load i32, ptr %i, align 4
   br label %while_end
 }
 

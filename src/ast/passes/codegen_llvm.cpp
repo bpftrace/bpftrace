@@ -4673,8 +4673,16 @@ llvm::Function *CodegenLLVM::createForCallback(
   debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   // Start our basic function block.
-  auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
-  b_.SetInsertPoint(bb);
+  auto *for_body = BasicBlock::Create(module_->getContext(),
+                                      "for_body",
+                                      callback);
+  auto *for_continue = BasicBlock::Create(module_->getContext(),
+                                          "for_continue",
+                                          callback);
+  auto *for_break = BasicBlock::Create(module_->getContext(),
+                                       "for_break",
+                                       callback);
+  b_.SetInsertPoint(for_body);
 
   // Extract our context type and value. As noted, this requires that some
   // member of `debug_args` is named `ctx`.
@@ -4710,8 +4718,14 @@ llvm::Function *CodegenLLVM::createForCallback(
   }
 
   // Generate code for the loop body.
+  loops_.emplace_back(for_continue, for_break);
   visit(f.stmts);
+  b_.CreateBr(for_continue);
+  loops_.pop_back();
+  b_.SetInsertPoint(for_continue);
   b_.CreateRet(b_.getInt64(0));
+  b_.SetInsertPoint(for_break);
+  b_.CreateRet(b_.getInt64(1));
 
   // Restore original non-context variables.
   for (const auto &[ident, expr] : orig_ctx_vars) {

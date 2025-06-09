@@ -84,6 +84,14 @@ REQUIRES_FEATURE lookup_percpu_elem
 PROG BEGIN { @map[kstack(raw)] = count(); for ($kv : @map) { print($kv.1); } exit(); }
 EXPECT 1
 
+NAME map with break
+PROG BEGIN { @map["foo"] = 1; @map["bar"] = 2; print("start"); for ($i : @map) { print($i.0); break; } print("done"); exit(); }
+EXPECT_REGEX .*start\n(foo|bar)\ndone\n\n
+
+NAME map with continue
+PROG BEGIN { @map["foo"] = 1; @map["bar"] = 2; print("start"); for ($i : @map) { if ($i.0 == "bar") { continue; } print($i.0); } exit(); }
+EXPECT_REGEX .*start\nfoo\n\n
+
 NAME range basic
 PROG BEGIN { for ($i : 0..5) { print($i); } exit(); }
 EXPECT_REGEX .*\n0\n1\n2\n3\n4\n\n

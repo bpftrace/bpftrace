@@ -65,6 +65,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !60 {
+for_body:
   %"$res" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
   store i64 0, ptr %"$res", align 8
@@ -82,85 +83,91 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section 
   store i64 0, ptr %val_2, align 8
   br label %while_cond
 
-while_cond:                                       ; preds = %lookup_success, %4
-  %5 = load i32, ptr @num_cpus, align 4
-  %6 = load i32, ptr %i, align 4
-  %num_cpu.cmp = icmp ult i32 %6, %5
+for_continue:                                     ; preds = %is_negative_merge_block
+  ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
+
+while_cond:                                       ; preds = %lookup_success, %for_body
+  %4 = load i32, ptr @num_cpus, align 4
+  %5 = load i32, ptr %i, align 4
+  %num_cpu.cmp = icmp ult i32 %5, %4
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %7 = load i32, ptr %i, align 4
-  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %1, i32 %7)
+  %6 = load i32, ptr %i, align 4
+  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_x, ptr %1, i32 %6)
   %map_lookup_cond = icmp ne ptr %lookup_percpu_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 while_end:                                        ; preds = %error_failure, %error_success, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ret)
-  %8 = load i64, ptr %val_1, align 8
-  %is_negative_cond = icmp slt i64 %8, 0
+  %7 = load i64, ptr %val_1, align 8
+  %is_negative_cond = icmp slt i64 %7, 0
   br i1 %is_negative_cond, label %is_negative, label %is_positive
 
 lookup_success:                                   ; preds = %while_body
-  %9 = getelementptr %avg_stas_val, ptr %lookup_percpu_elem, i64 0, i32 0
-  %10 = load i64, ptr %9, align 8
-  %11 = getelementptr %avg_stas_val, ptr %lookup_percpu_elem, i64 0, i32 1
-  %12 = load i64, ptr %11, align 8
-  %13 = load i64, ptr %val_1, align 8
-  %14 = add i64 %10, %13
-  store i64 %14, ptr %val_1, align 8
-  %15 = load i64, ptr %val_2, align 8
-  %16 = add i64 %12, %15
-  store i64 %16, ptr %val_2, align 8
-  %17 = load i32, ptr %i, align 4
-  %18 = add i32 %17, 1
-  store i32 %18, ptr %i, align 4
+  %8 = getelementptr %avg_stas_val, ptr %lookup_percpu_elem, i64 0, i32 0
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr %avg_stas_val, ptr %lookup_percpu_elem, i64 0, i32 1
+  %11 = load i64, ptr %10, align 8
+  %12 = load i64, ptr %val_1, align 8
+  %13 = add i64 %9, %12
+  store i64 %13, ptr %val_1, align 8
+  %14 = load i64, ptr %val_2, align 8
+  %15 = add i64 %11, %14
+  store i64 %15, ptr %val_2, align 8
+  %16 = load i32, ptr %i, align 4
+  %17 = add i32 %16, 1
+  store i32 %17, ptr %i, align 4
   br label %while_cond
 
 lookup_failure:                                   ; preds = %while_body
-  %19 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %19, 0
+  %18 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %18, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure
   br label %while_end
 
 error_failure:                                    ; preds = %lookup_failure
-  %20 = load i32, ptr %i, align 4
+  %19 = load i32, ptr %i, align 4
   br label %while_end
 
 is_negative:                                      ; preds = %while_end
-  %21 = load i64, ptr %val_1, align 8
-  %22 = xor i64 %21, -1
-  %23 = add i64 %22, 1
-  %24 = load i64, ptr %val_2, align 8
-  %25 = udiv i64 %23, %24
-  %26 = sub i64 0, %25
-  store i64 %26, ptr %ret, align 8
+  %20 = load i64, ptr %val_1, align 8
+  %21 = xor i64 %20, -1
+  %22 = add i64 %21, 1
+  %23 = load i64, ptr %val_2, align 8
+  %24 = udiv i64 %22, %23
+  %25 = sub i64 0, %24
+  store i64 %25, ptr %ret, align 8
   br label %is_negative_merge_block
 
 is_positive:                                      ; preds = %while_end
-  %27 = load i64, ptr %val_2, align 8
-  %28 = load i64, ptr %val_1, align 8
-  %29 = udiv i64 %28, %27
-  store i64 %29, ptr %ret, align 8
+  %26 = load i64, ptr %val_2, align 8
+  %27 = load i64, ptr %val_1, align 8
+  %28 = udiv i64 %27, %26
+  store i64 %28, ptr %ret, align 8
   br label %is_negative_merge_block
 
 is_negative_merge_block:                          ; preds = %is_positive, %is_negative
-  %30 = load i64, ptr %ret, align 8
+  %29 = load i64, ptr %ret, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %ret)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %31 = getelementptr %int64_avg_t__tuple_t, ptr %"$kv", i32 0, i32 0
-  store i64 %key, ptr %31, align 8
+  %30 = getelementptr %int64_avg_t__tuple_t, ptr %"$kv", i32 0, i32 0
+  store i64 %key, ptr %30, align 8
+  %31 = getelementptr %int64_avg_t__tuple_t, ptr %"$kv", i32 0, i32 1
+  store i64 %29, ptr %31, align 8
   %32 = getelementptr %int64_avg_t__tuple_t, ptr %"$kv", i32 0, i32 1
-  store i64 %30, ptr %32, align 8
-  %33 = getelementptr %int64_avg_t__tuple_t, ptr %"$kv", i32 0, i32 1
-  %34 = load i64, ptr %33, align 8
-  store i64 %34, ptr %"$res", align 8
-  ret i64 0
+  %33 = load i64, ptr %32, align 8
+  store i64 %33, ptr %"$res", align 8
+  br label %for_continue
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
