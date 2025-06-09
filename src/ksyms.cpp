@@ -1,6 +1,9 @@
 #include <bcc/bcc_syms.h>
-#include <blazesym.h>
 #include <sstream>
+
+#ifdef HAVE_BLAZESYM
+#include <blazesym.h>
+#endif
 
 #include "ksyms.h"
 #include "scopeguard.h"
@@ -13,6 +16,7 @@ std::string stringify_addr(uint64_t addr)
   return symbol.str();
 }
 
+#ifdef HAVE_BLAZESYM
 std::string stringify_ksym(const char *name,
                            const blaze_symbolize_code_info *code_info,
                            uint64_t offset,
@@ -51,6 +55,7 @@ std::string stringify_ksym(const char *name,
 
   return symbol.str();
 }
+#endif
 
 } // namespace
 
@@ -65,8 +70,10 @@ Ksyms::~Ksyms()
   if (ksyms_)
     bcc_free_symcache(ksyms_, -1);
 
+#ifdef HAVE_BLAZESYM
   if (symbolizer_)
     blaze_symbolizer_free(symbolizer_);
+#endif
 }
 
 std::string Ksyms::resolve_bcc(uint64_t addr, bool show_offset)
@@ -86,6 +93,7 @@ std::string Ksyms::resolve_bcc(uint64_t addr, bool show_offset)
   return stringify_addr(addr);
 }
 
+#ifdef HAVE_BLAZESYM
 std::vector<std::string> Ksyms::resolve_blazesym_impl(uint64_t addr,
                                                       bool show_offset,
                                                       bool perf_mode,
@@ -164,15 +172,17 @@ std::vector<std::string> Ksyms::resolve_blazesym(uint64_t addr,
 
   return syms;
 }
+#endif
 
 std::vector<std::string> Ksyms::resolve(uint64_t addr,
                                         bool show_offset,
                                         [[maybe_unused]] bool perf_mode,
                                         [[maybe_unused]] bool show_debug_info)
 {
+#ifdef HAVE_BLAZESYM
   if (config_.use_blazesym)
     return resolve_blazesym(addr, show_offset, perf_mode, show_debug_info);
-
+#endif
   return std::vector<std::string>{ resolve_bcc(addr, show_offset) };
 }
 

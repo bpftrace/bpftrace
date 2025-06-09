@@ -33,6 +33,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  blazesym (advanced symbolization): "
+#ifdef HAVE_BLAZESYM
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
 
   return buf.str();
 }

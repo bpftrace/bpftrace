@@ -141,14 +141,7 @@ if(ENABLE_SYSTEMD)
   pkg_check_modules(libsystemd REQUIRED IMPORTED_TARGET libsystemd)
 endif()
 
-find_package(LibBlazesym REQUIRED)
-if("${LIBBLAZESYM_VERSION}" VERSION_LESS 0.1.1)
-  message(SEND_ERROR "bpftrace requires libblazesym 0.1.1 or greater")
-endif()
-
-if("${LIBBLAZESYM_VERSION}" VERSION_GREATER_EQUAL 0.2.0)
-  message(SEND_ERROR "bpftrace requires libblazesym 0.1.x")
-endif()
+find_package(LibBlazesym)
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
@@ -225,6 +218,10 @@ endif(HAVE_LIBBPF_UPROBE_MULTI)
 
 if(ENABLE_SYSTEMD)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBSYSTEMD)
+endif()
+
+if(LIBBLAZESYM_FOUND)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BLAZESYM)
 endif()
 
 add_subdirectory(src)
