@@ -44,7 +44,7 @@ const int timeout_ms = 100;
 
 struct stack_key {
   int64_t stackid;
-  uint32_t nr_stack_frames;
+  int64_t nr_stack_frames;
 };
 
 enum class DebugStage;

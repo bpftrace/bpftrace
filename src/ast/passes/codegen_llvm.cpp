@@ -3831,7 +3831,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(stack_type.name(),
                         libbpf::BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
-                        CreateArray(12, CreateInt8()),
+                        CreateArray(16, CreateInt8()),
                         CreateArray(stack_type.limit, CreateUInt64()));
     max_stack_limit = std::max(stack_type.limit, max_stack_limit);
   }
