@@ -899,48 +899,38 @@ public:
   ~AttachedTracepointProbe() override;
 
 private:
-  AttachedTracepointProbe(const Probe &probe,
-                          int perf_event_fd,
-                          std::string event_name,
-                          std::string probe_path);
-  int perf_event_fd_;
-  const std::string event_name_;
-  const std::string probe_path_;
+  AttachedTracepointProbe(const Probe &probe, struct bpf_link *link);
+  struct bpf_link *link_;
 };
 
 AttachedTracepointProbe::AttachedTracepointProbe(const Probe &probe,
-                                                 int perf_event_fd,
-                                                 std::string event_name,
-                                                 std::string probe_path)
-    : AttachedProbe(probe),
-      perf_event_fd_(perf_event_fd),
-      event_name_(std::move(event_name)),
-      probe_path_(std::move(probe_path))
+                                                 struct bpf_link *link)
+    : AttachedProbe(probe), link_(link)
 {
 }
 
 AttachedTracepointProbe::~AttachedTracepointProbe()
 {
-  if (bpf_close_perf_event_fd(perf_event_fd_))
-    LOG(WARNING) << "failed to close perf event FD for tracepoint probe";
-
-  bpf_detach_tracepoint(probe_path_.c_str(), event_name_.c_str());
+  if (bpf_link__destroy(link_)) {
+    LOG(WARNING) << "failed to destroy link for tracepiont probe: "
+                 << strerror(errno);
+  }
 }
 
 Result<std::unique_ptr<AttachedTracepointProbe>> AttachedTracepointProbe::make(
     Probe &probe,
     const BpfProgram &prog)
 {
-  int perf_event_fd = bpf_attach_tracepoint(prog.fd(),
-                                            probe.path.c_str(),
-                                            eventname(probe, 0).c_str());
+  auto *link = bpf_program__attach_tracepoint(prog.bpf_prog(),
+                                              probe.path.c_str(),
+                                              eventname(probe, 0).c_str());
 
-  if (perf_event_fd < 0 && probe.name == probe.orig_name) {
+  if (!link) {
     return make_error<AttachError>();
   }
 
-  return std::unique_ptr<AttachedTracepointProbe>(new AttachedTracepointProbe(
-      probe, perf_event_fd, eventname(probe, 0), probe.path));
+  return std::unique_ptr<AttachedTracepointProbe>(
+      new AttachedTracepointProbe(probe, link));
 }
 
 int open_perf_event(uint32_t ev_type,

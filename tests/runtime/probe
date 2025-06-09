@@ -386,8 +386,9 @@ WILL_FAIL
 
 NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT hit
-AFTER ./testprogs/syscall nanosleep 1e8
+EXPECT stdin:1:31-50: WARNING: tracepoint not found: syscalls:nonsense
+EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+WILL_FAIL
 
 NAME tracepoint args
 PROG tracepoint:syscalls:sys_enter_read { printf("%d\n", args.count); exit(); }
