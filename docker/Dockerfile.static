@@ -42,10 +42,8 @@ RUN apk add --update \
   zstd-dev \
   zstd-static
 
-# Add edge community repository
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
-
 RUN apk add --update \
+  --repository https://dl-cdn.alpinelinux.org/alpine/edge/community \
   blazesym-dev \
   blazesym-static
 
