@@ -1,8 +1,11 @@
 #include "types.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
-#include <blazesym.h>
 #include <sstream>
+
+#ifdef HAVE_BLAZESYM
+#include <blazesym.h>
+#endif
 
 #include "config.h"
 #include "scopeguard.h"
@@ -14,6 +17,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 namespace {
+#ifdef HAVE_BLAZESYM
 std::string stringify_addr(uint64_t addr, bool perf_mode)
 {
   std::ostringstream symbol;
@@ -101,6 +105,8 @@ void add_symbols(const blaze_sym *sym,
                                    perf_mode,
                                    false));
 }
+
+#endif
 } // namespace
 
 namespace bpftrace {
@@ -121,8 +127,10 @@ Usyms::~Usyms()
       bcc_free_symcache(pair.second, pair.first);
   }
 
+#ifdef HAVE_BLAZESYM
   if (symbolizer_)
     blaze_symbolizer_free(symbolizer_);
+#endif
 }
 
 void Usyms::cache_bcc(const std::string &elf_file)
@@ -145,6 +153,7 @@ void Usyms::cache_bcc(const std::string &elf_file)
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
 }
 
+#ifdef HAVE_BLAZESYM
 struct blaze_symbolizer *Usyms::create_symbolizer() const
 {
   blaze_symbolizer_opts opts = {
@@ -193,13 +202,16 @@ void Usyms::cache_blazesym(const std::string &elf_file)
     }
   }
 }
+#endif
 
 void Usyms::cache(const std::string &elf_file)
 {
+#ifdef HAVE_BLAZESYM
   if (config_.use_blazesym) {
     cache_blazesym(elf_file);
     return;
   }
+#endif
   cache_bcc(elf_file);
 }
 
@@ -293,6 +305,7 @@ std::string Usyms::resolve_bcc(uint64_t addr,
   return symbol.str();
 }
 
+#ifdef HAVE_BLAZESYM
 std::vector<std::string> Usyms::resolve_blazesym_impl(
     uint64_t addr,
     int32_t pid,
@@ -380,6 +393,7 @@ std::vector<std::string> Usyms::resolve_blazesym(uint64_t addr,
   }
   return syms;
 }
+#endif
 
 std::vector<std::string> Usyms::resolve(uint64_t addr,
                                         int32_t pid,
@@ -388,9 +402,11 @@ std::vector<std::string> Usyms::resolve(uint64_t addr,
                                         bool perf_mode,
                                         [[maybe_unused]] bool show_debug_info)
 {
+#ifdef HAVE_BLAZESYM
   if (config_.use_blazesym)
     return resolve_blazesym(
         addr, pid, pid_exe, show_offset, perf_mode, show_debug_info);
+#endif
   return std::vector<std::string>{
     resolve_bcc(addr, pid, pid_exe, show_offset, perf_mode)
   };
