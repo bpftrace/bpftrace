@@ -95,8 +95,12 @@ std::ostream &operator<<(std::ostream &out, MessageType type)
     case MessageType::lost_events:
       out << "lost_events";
       break;
-    default:
-      out << "?";
+    case MessageType::helper_error:
+      out << "helper_error";
+      break;
+    case MessageType::lost_executions:
+      out << "lost_executions";
+      break;
   }
   return out;
 }
@@ -851,6 +855,11 @@ void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
       << ", retcode: " << retcode;
 }
 
+void TextOutput::lost_executions(const std::string &which, uint64_t lost) const
+{
+  out_ << "Lost " << lost << " executions for " << which << std::endl;
+}
+
 std::string TextOutput::field_to_str(const std::string &name,
                                      const std::string &value) const
 {
@@ -1148,6 +1157,11 @@ void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
        << libbpf::bpf_func_name[info.func_id] << R"(", "retcode": )" << retcode
        << R"(, "filename": ")" << info.filename << R"(", "line": )" << info.line
        << R"(, "col": )" << info.column << "}" << std::endl;
+}
+
+void JsonOutput::lost_executions(const std::string &which, uint64_t lost) const
+{
+  message(MessageType::lost_executions, which, lost);
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,
