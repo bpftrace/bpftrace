@@ -95,6 +95,8 @@ and this project adheres to
   - [#4239](https://github.com/bpftrace/bpftrace/pull/4239)
 - Fix reading of __data_loc tracepoint arguments
   - [#4238](https://github.com/bpftrace/bpftrace/pull/4238)
+- Fix kstack/ustack on big-endian systems
+  - [#4244](https://github.com/bpftrace/bpftrace/pull/4244)
 #### Security
 #### Docs
 #### Tools
