@@ -2603,8 +2603,10 @@ void SemanticAnalyser::visit(For &f)
   CollectNodes<Jump> jumps;
   jumps.visit(f.stmts);
   for (const Jump &n : jumps.nodes()) {
-    n.addError() << "'" << opstr(n)
-                 << "' statement is not allowed in a for-loop";
+    if (n.ident == JumpType::RETURN) {
+      n.addError() << "'" << opstr(n)
+                   << "' statement is not allowed in a for-loop";
+    }
   }
 
   if (!ctx_.diagnostics().ok())

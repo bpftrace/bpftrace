@@ -66,21 +66,28 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !52 {
+for_body:
   %"$_" = alloca %int64_int64__tuple_t, align 8
   %key = load i64, ptr %1, align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$_")
   call void @llvm.memset.p0.i64(ptr align 1 %"$_", i8 0, i64 16, i1 false)
-  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
-  store i64 %key, ptr %5, align 8
-  %6 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
-  store i64 %val, ptr %6, align 8
+  %4 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
+  store i64 %key, ptr %4, align 8
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
+  store i64 %val, ptr %5, align 8
   %"ctx.$var1" = getelementptr %ctx_t, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
-  %7 = load i64, ptr %"$var1", align 8
-  %8 = add i64 %7, 1
-  store i64 %8, ptr %"$var1", align 8
+  %6 = load i64, ptr %"$var1", align 8
+  %7 = add i64 %6, 1
+  store i64 %7, ptr %"$var1", align 8
+  br label %for_continue
+
+for_continue:                                     ; preds = %for_body
   ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
@@ -88,26 +95,33 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 i
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb.1(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !60 {
+for_body:
   %"$_" = alloca %int64_int64__tuple_t, align 8
   %key = load i64, ptr %1, align 8
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$_")
   call void @llvm.memset.p0.i64(ptr align 1 %"$_", i8 0, i64 16, i1 false)
-  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
-  store i64 %key, ptr %5, align 8
-  %6 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
-  store i64 %val, ptr %6, align 8
+  %4 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 0
+  store i64 %key, ptr %4, align 8
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
+  store i64 %val, ptr %5, align 8
   %"ctx.$var1" = getelementptr %ctx_t.1, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
   %"ctx.$var2" = getelementptr %ctx_t.1, ptr %3, i64 0, i32 1
   %"$var2" = load ptr, ptr %"ctx.$var2", align 8
-  %7 = load i64, ptr %"$var1", align 8
-  %8 = add i64 %7, 1
-  store i64 %8, ptr %"$var1", align 8
-  %9 = load i64, ptr %"$var2", align 8
-  %10 = add i64 %9, 1
-  store i64 %10, ptr %"$var2", align 8
+  %6 = load i64, ptr %"$var1", align 8
+  %7 = add i64 %6, 1
+  store i64 %7, ptr %"$var1", align 8
+  %8 = load i64, ptr %"$var2", align 8
+  %9 = add i64 %8, 1
+  store i64 %9, ptr %"$var2", align 8
+  br label %for_continue
+
+for_continue:                                     ; preds = %for_body
   ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
 }
 
 attributes #0 = { nounwind }

@@ -79,6 +79,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !54 {
+for_body:
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
@@ -87,12 +88,18 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section 
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %5 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
-  store i64 %key, ptr %5, align 8
-  %6 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
-  store i64 %val, ptr %6, align 8
+  %4 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
+  store i64 %key, ptr %4, align 8
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
+  store i64 %val, ptr %5, align 8
   store i64 4, ptr %"$x", align 8
+  br label %for_continue
+
+for_continue:                                     ; preds = %for_body
   ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

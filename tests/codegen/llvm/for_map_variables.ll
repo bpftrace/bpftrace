@@ -83,6 +83,7 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #4
 
 ; Function Attrs: nounwind
 define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !57 {
+for_body:
   %"$can_read" = alloca [4 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$can_read")
   call void @llvm.memset.p0.i64(ptr align 1 %"$can_read", i8 0, i64 4, i1 false)
@@ -91,19 +92,25 @@ define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section 
   %val = load i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$kv")
   call void @llvm.memset.p0.i64(ptr align 1 %"$kv", i8 0, i64 16, i1 false)
-  %5 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
-  store i64 %key, ptr %5, align 8
-  %6 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
-  store i64 %val, ptr %6, align 8
+  %4 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 0
+  store i64 %key, ptr %4, align 8
+  %5 = getelementptr %int64_int64__tuple_t, ptr %"$kv", i32 0, i32 1
+  store i64 %val, ptr %5, align 8
   %"ctx.$var1" = getelementptr %ctx_t, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
   %"ctx.$var3" = getelementptr %ctx_t, ptr %3, i64 0, i32 1
   %"$var3" = load ptr, ptr %"ctx.$var3", align 8
-  %7 = load i64, ptr %"$var1", align 8
-  %8 = add i64 %7, 1
-  store i64 %8, ptr %"$var1", align 8
+  %6 = load i64, ptr %"$var1", align 8
+  %7 = add i64 %6, 1
+  store i64 %7, ptr %"$var1", align 8
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$can_read", ptr align 1 %"$var3", i64 4, i1 false)
+  br label %for_continue
+
+for_continue:                                     ; preds = %for_body
   ret i64 0
+
+for_break:                                        ; No predecessors!
+  ret i64 1
 }
 
 attributes #0 = { nounwind }
