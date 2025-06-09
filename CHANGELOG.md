@@ -8,6 +8,10 @@ and this project adheres to
 
 ## Unreleased
 
+#### Fixed
+- Fix kstack/ustack on big-endian systems
+  - [#4244](https://github.com/bpftrace/bpftrace/pull/4244)
+
 ## [0.23.4] 2025-05-30
 
 #### Fixed
