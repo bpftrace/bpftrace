@@ -23,7 +23,7 @@ function(embed NAME SOURCE)
     OUTPUT ${ARG_HEX}
     COMMAND ${XXD} -i < ${SOURCE} > ${ARG_HEX}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${ARG_DEPENDS}
+    DEPENDS ${SOURCE} ${ARG_DEPENDS}
     VERBATIM
   )
   add_custom_command(
