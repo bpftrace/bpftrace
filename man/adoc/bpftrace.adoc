@@ -1988,7 +1988,7 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | `pid`
 | uint32
 | 4.2
-| get_current_pid_tgid / bpf_get_ns_current_pid_tgid
+| get_current_pid_tgid / get_ns_current_pid_tgid
 | Process ID of the current thread (aka thread group ID), as seen from the PID namespace of bpftrace
 
 | `probe`
@@ -2018,7 +2018,7 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | `tid`
 | uint32
 | 4.2
-| get_current_pid_tgid / bpf_get_ns_current_pid_tgid
+| get_current_pid_tgid / get_ns_current_pid_tgid
 | Thread ID of the current thread, as seen from the PID namespace of bpftrace
 
 | `uid`
@@ -2140,6 +2140,14 @@ Tracing block I/O sizes > 0 bytes
 | <<functions-cat, `cat`>>
 | Print file content
 | Async
+
+| <<functions-pid, `pid`>>
+| Process ID of the current thread
+| Sync
+
+| <<functions-tid, `tid`>>
+| Thread ID of the current thread
+| Sync
 
 | <<functions-cgroupid, `cgroupid`>>
 | Resolve cgroup ID
@@ -2349,6 +2357,28 @@ tracepoint:syscalls:sys_enter_execve {
 55f683edf000-55f683ee2000 rw-p 00021000 08:01 1843399                    /usr/bin/ls
 55f683ee2000-55f683ee3000 rw-p 00000000 00:00 0
 ----
+
+[#functions-pid]
+=== pid
+.variants
+* `uint32 pid([curr_ns|init])`
+
+Returns the process ID of the current thread.
+Defaults to `curr_ns`.
+
+- `pid(curr_ns)` - The process ID as seen from the PID namespace of bpftrace.
+- `pid(init)` - The process ID as seen from the initial PID namespace.
+
+[#functions-tid]
+=== pid
+.variants
+* `uint32 tid([curr_ns|init])`
+
+Returns the thread ID of the current thread.
+Defaults to `curr_ns`.
+
+- `tid(curr_ns)` - The thread ID as seen from the PID namespace of bpftrace.
+- `tid(init)` - The thread ID as seen from the initial PID namespace.
 
 [#functions-cgroupid]
 === cgroupid

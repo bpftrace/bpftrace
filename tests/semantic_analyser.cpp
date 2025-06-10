@@ -332,6 +332,8 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { cgroupid(\"/sys/fs/cgroup/unified/mycg\"); }");
   test("kprobe:f { macaddr(0xffff) }");
   test("kprobe:f { nsecs() }");
+  test("kprobe:f { pid() }");
+  test("kprobe:f { tid() }");
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -487,6 +489,8 @@ TEST(semantic_analyser, ternary_expressions)
     { "usym(arg0)", "usym(arg1)" },
     { "cgroup_path(1)", "cgroup_path(2)" },
     { "strerror(1)", "strerror(2)" },
+    { "pid(curr_ns)", "pid(init)" },
+    { "tid(curr_ns)", "tid(init)" },
   };
 
   for (const auto &[left, right] : supported_types) {
@@ -3973,6 +3977,26 @@ TEST(semantic_analyser, call_nsecs)
 stdin:1:15-24: ERROR: Invalid timestamp mode: xxx
 BEGIN { $ns = nsecs(xxx); }
               ~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, call_pid_tid)
+{
+  test("BEGIN { $i = tid(); }");
+  test("BEGIN { $i = pid(); }");
+  test("BEGIN { $i = tid(curr_ns); }");
+  test("BEGIN { $i = pid(curr_ns); }");
+  test("BEGIN { $i = tid(init); }");
+  test("BEGIN { $i = pid(init); }");
+  test_error("BEGIN { $i = tid(xxx); }", R"(
+stdin:1:14-21: ERROR: Invalid PID namespace mode: xxx (expects: curr_ns or init)
+BEGIN { $i = tid(xxx); }
+             ~~~~~~~
+)");
+  test_error("BEGIN { $i = tid(1); }", R"(
+stdin:1:14-20: ERROR: tid() only supports curr_ns and init as the argument (int provided)
+BEGIN { $i = tid(1); }
+             ~~~~~~
 )");
 }
 

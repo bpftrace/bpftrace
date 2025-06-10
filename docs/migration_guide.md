@@ -24,6 +24,14 @@ config = {
 }
 ```
 
+## Versions 0.22.x (or earlier) to 0.24.x (or later)
+After https://github.com/bpftrace/bpftrace/pull/3428 `pid` and `tid` are no
+longer from the initial namespace.
+
+https://github.com/bpftrace/bpftrace/pull/3428 introduced `pid(init)` and
+`tid(init)` which have the old behavior.
+Unfortunately, there are no equivalent workarounds in 0.23.x.
+
 ## Versions 0.21.x (or earlier) to 0.22.x (or later)
 
 ### Added block scoping for scratch variables
