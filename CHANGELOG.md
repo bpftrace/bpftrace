@@ -196,6 +196,8 @@ and this project adheres to
   - [#4126](https://github.com/bpftrace/bpftrace/pull/4126)
 - For loops now support `break` and `continue`
   - [#4250](https://github.com/bpftrace/bpftrace/pull/4250)
+- For loops now support `return`
+  - [#4255](https://github.com/bpftrace/bpftrace/pull/4255)
 - Add `pid` and `tid` functions for choosing between the initial or the current namespace
   - [#4254](https://github.com/bpftrace/bpftrace/pull/4254)
 - Add boolean values (`true` and `false`)

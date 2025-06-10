@@ -581,6 +581,7 @@ Both `for` loops support the following control flow statements:
 | --- | --- |
 | continue | skip processing of the rest of the block and proceed to the next iteration |
 | break | terminate the loop |
+| return | return from the current probe |
 
 ### While
 
