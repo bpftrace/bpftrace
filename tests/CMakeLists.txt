@@ -32,6 +32,7 @@ add_executable(bpftrace_test
   bpftrace.cpp
   child.cpp
   clang_parser.cpp
+  cli_opts.cpp
   config.cpp
   collect_nodes.cpp
   deprecated.cpp

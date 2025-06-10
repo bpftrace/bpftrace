@@ -5,7 +5,7 @@
 #include "ast/context.h"
 #include "attached_probe.h"
 #include "log.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace bpftrace::ast {
 

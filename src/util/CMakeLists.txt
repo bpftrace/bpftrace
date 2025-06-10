@@ -4,13 +4,13 @@ add_library(util STATIC
   cpus.cpp
   env.cpp
   exceptions.cpp
-  format.cpp
   int_parser.cpp
   io.cpp
   kernel.cpp
   math.cpp
   paths.cpp
   result.cpp
+  strings.cpp
   symbols.cpp
   system.cpp
   temp.cpp

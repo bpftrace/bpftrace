@@ -20,6 +20,7 @@ add_library(ast STATIC
   passes/c_macro_expansion.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
+  passes/cli_opts.cpp
   passes/codegen_resources.cpp
   passes/config_analyser.cpp
   passes/deprecated.cpp

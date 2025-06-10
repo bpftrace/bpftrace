@@ -5,7 +5,7 @@
 #include "format_string.h"
 #include "struct.h"
 #include "util/exceptions.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace bpftrace {
 
