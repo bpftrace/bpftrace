@@ -24,10 +24,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: DeterminateSystems/nix-installer-action@v16
+    - uses: DeterminateSystems/nix-installer-action@v17
       with:
         determinate: true
-    - uses: DeterminateSystems/flakehub-cache-action@v1
+    - uses: DeterminateSystems/flakehub-cache-action@v2
 
     - name: Build appimage
       run: |
