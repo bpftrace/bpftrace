@@ -57,7 +57,6 @@ enum class AddrSpace : uint8_t {
   none,
   kernel,
   user,
-  bpf,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -160,6 +159,10 @@ public:
   {
   }
   SizedType(Type type, size_t size_) : type_(type), size_bits_(size_ * 8)
+  {
+  }
+  SizedType(Type type, size_t size_, AddrSpace as)
+      : type_(type), size_bits_(size_ * 8), as_(as)
   {
   }
 

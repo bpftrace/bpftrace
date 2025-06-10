@@ -21,7 +21,7 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
 {
   const auto &map = *assignment.map;
   const auto &expr_type = assignment.expr.type();
-  if (shouldBeInBpfMemoryAlready(expr_type)) {
+  if (expr_type.is_internal) {
     return !expr_type.IsSameSizeRecursive(map.value_type);
   } else if (map.value_type.IsRecordTy() || map.value_type.IsArrayTy()) {
     return !expr_type.is_internal;
@@ -31,7 +31,7 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
 
 bool needMapKeyAllocation(const Map &map, const Expression &key_expr)
 {
-  if (inBpfMemory(key_expr.type())) {
+  if (key_expr.type().is_internal) {
     return !key_expr.type().IsSameSizeRecursive(map.key_type);
   }
   return true;

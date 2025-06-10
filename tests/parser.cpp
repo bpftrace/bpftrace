@@ -2817,7 +2817,7 @@ TEST(Parser, subprog_string_arg)
        "Program\n"
        " subprog: f :: [void]\n"
        "  args\n"
-       "   $a :: [string[0]]\n");
+       "   $a :: [string[0], AS(kernel)]\n");
 }
 
 TEST(Parser, subprog_struct_arg)
@@ -2872,7 +2872,7 @@ TEST(Parser, subprog_string)
 {
   test("fn f(): string {}",
        "Program\n"
-       " subprog: f :: [string[0]]\n");
+       " subprog: f :: [string[0], AS(kernel)]\n");
 }
 
 TEST(Parser, subprog_struct)

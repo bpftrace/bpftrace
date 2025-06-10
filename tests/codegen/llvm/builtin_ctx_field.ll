@@ -25,6 +25,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !54 {
 entry:
+  %"@e_val" = alloca [4 x i8], align 1
   %"@e_key" = alloca i64, align 8
   %"struct x.e" = alloca [4 x i8], align 1
   %"@d_val" = alloca i64, align 8
@@ -112,7 +113,10 @@ entry:
   %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct x.e", i32 4, ptr %37)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@e_key")
   store i64 0, ptr %"@e_key", align 8
-  %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_e, ptr %"@e_key", ptr %"struct x.e", i64 0)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@e_val")
+  store ptr %"struct x.e", ptr %"@e_val", align 8
+  %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_e, ptr %"@e_key", ptr %"@e_val", i64 0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@e_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@e_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct x.e")
   ret i64 0

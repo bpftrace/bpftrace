@@ -509,14 +509,14 @@ TEST(semantic_analyser, ternary_expressions)
       R"(
 Program
  kprobe:f
-  ?: :: [(string[13],string[13])]
+  ?: :: [(string[13],string[13]), AS(kernel)]
    < :: [uint64]
     builtin: pid :: [uint32]
     int: 10000
-   tuple: :: [(string[2],string[13])]
+   tuple: :: [(string[2],string[13]), AS(kernel)]
     string: a
     string: hellolongstr
-   tuple: :: [(string[13],string[2])]
+   tuple: :: [(string[13],string[2]), AS(kernel)]
     string: hellolongstr
     string: b
 )");
@@ -4237,11 +4237,11 @@ Program
    int: 1
   for
    decl
-    variable: $kv :: [(int64,int64)]
+    variable: $kv :: [(int64,int64), AS(kernel)]
     map: @map :: [int64]int64
    stmts
     call: print
-     variable: $kv :: [(int64,int64)]
+     variable: $kv :: [(int64,int64), AS(kernel)]
 )");
 }
 
@@ -4252,17 +4252,17 @@ Program
  BEGIN
   =
    map: @map :: [(int64,int64)]int64
-    tuple: :: [(int64,int64)]
+    tuple: :: [(int64,int64), AS(kernel)]
      int: 0
      int: 0
    int: 1
   for
    decl
-    variable: $kv :: [((int64,int64),int64)]
+    variable: $kv :: [((int64,int64),int64), AS(kernel)]
     map: @map :: [(int64,int64)]int64
    stmts
     call: print
-     variable: $kv :: [((int64,int64),int64)]
+     variable: $kv :: [((int64,int64),int64), AS(kernel)]
 )");
 }
 
@@ -4361,7 +4361,7 @@ TEST(semantic_analyser, for_loop_variables_read_only)
        R"(*
   for
    ctx
-    $var :: [int64 *, AS(bpf)]
+    $var :: [int64 *, AS(kernel)]
    decl
 *)");
 }
@@ -4380,7 +4380,7 @@ TEST(semantic_analyser, for_loop_variables_modified_during_loop)
        R"(*
   for
    ctx
-    $var :: [int64 *, AS(bpf)]
+    $var :: [int64 *, AS(kernel)]
    decl
 *)");
 }
@@ -4418,8 +4418,8 @@ TEST(semantic_analyser, for_loop_variables_multiple)
        R"(*
   for
    ctx
-    $var1 :: [int64 *, AS(bpf)]
-    $var3 :: [string[4] *, AS(bpf)]
+    $var1 :: [int64 *, AS(kernel)]
+    $var3 :: [string[4] *, AS(kernel)]
    decl
 *)");
 }
