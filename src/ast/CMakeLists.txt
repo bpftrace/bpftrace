@@ -25,6 +25,7 @@ add_library(ast STATIC
   passes/fold_literals.cpp
   passes/import_scripts.cpp
   passes/link.cpp
+  passes/loop_return.cpp
   passes/map_sugar.cpp
   passes/macro_expansion.cpp
   passes/portability_analyser.cpp

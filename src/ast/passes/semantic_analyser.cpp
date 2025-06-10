@@ -2598,17 +2598,6 @@ void SemanticAnalyser::visit(For &f)
       }
     }
   }
-
-  // Validate body. We may relax this in the future.
-  CollectNodes<Jump> jumps;
-  jumps.visit(f.stmts);
-  for (const Jump &n : jumps.nodes()) {
-    if (n.ident == JumpType::RETURN) {
-      n.addError() << "'" << opstr(n)
-                   << "' statement is not allowed in a for-loop";
-    }
-  }
-
   if (!ctx_.diagnostics().ok())
     return;
 
