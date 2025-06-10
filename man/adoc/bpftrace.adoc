@@ -1949,8 +1949,8 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | `pid`
 | uint32
 | 4.2
-| get_current_pid_tgid
-| Process ID of the current thread (aka thread group ID), as seen from the init namespace
+| get_current_pid_tgid / bpf_get_ns_current_pid_tgid
+| Process ID of the current thread (aka thread group ID), as seen from the PID namespace of bpftrace
 
 | `probe`
 | string
@@ -1979,8 +1979,8 @@ For string arguments in an action block use the `str()` call to retrieve the val
 | `tid`
 | uint32
 | 4.2
-| get_current_pid_tgid
-| Thread ID of the current thread, as seen from the init namespace
+| get_current_pid_tgid / bpf_get_ns_current_pid_tgid
+| Thread ID of the current thread, as seen from the PID namespace of bpftrace
 
 | `uid`
 | uint64
