@@ -19,6 +19,7 @@ define i64 @fexit_mock_vmlinux_sk_alloc_1(ptr %0) #0 section "s_fexit_mock_vmlin
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  %"struct sock_common.skc_daddr" = alloca i32, align 4
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 5
   %retval = load volatile i64, ptr %2, align 8
@@ -27,7 +28,10 @@ entry:
   %5 = getelementptr i8, ptr %4, i64 0
   %6 = call ptr @llvm.preserve.static.offset(ptr %5)
   %7 = getelementptr i8, ptr %6, i64 0
-  %8 = load volatile i32, ptr %7, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct sock_common.skc_daddr")
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct sock_common.skc_daddr", i32 4, ptr %7)
+  %8 = load i32, ptr %"struct sock_common.skc_daddr", align 4
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct sock_common.skc_daddr")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   %9 = zext i32 %8 to i64
   store i64 %9, ptr %"@_key", align 8

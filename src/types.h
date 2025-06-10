@@ -165,7 +165,6 @@ public:
 
   StackType stack_type;
   int funcarg_idx = -1;
-  bool is_internal = false;
   bool is_tparg = false;
   bool is_funcarg = false;
   bool is_btftype = false;
@@ -196,7 +195,6 @@ private:
   {
     archive(type_,
             stack_type,
-            is_internal,
             is_tparg,
             is_funcarg,
             is_btftype,
