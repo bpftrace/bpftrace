@@ -18,8 +18,8 @@
 #include "log.h"
 #include "resources/headers.h"
 #include "types.h"
-#include "util/format.h"
 #include "util/io.h"
+#include "util/strings.h"
 #include "util/system.h"
 
 namespace bpftrace {

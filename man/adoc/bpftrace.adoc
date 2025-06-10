@@ -188,6 +188,17 @@ Print bpftrace version information.
 Enable verbose messages.
 For more details see the <<Verbose Output>> section.
 
+=== Program Options
+
+You can also pass custom options to a bpftrace program/script itself via positional or named parameters.
+All positional and named parameters should come after a double dash e.g.
+```
+# bpftrace -e 'BEGIN { ... }' -- p1 --aa=20 --bb p2
+```
+In this example there are two positional parameters (p1, p2) and two named parameters (aa - set to 20 and bb - set to true).
+Named program parameters require the `=` unless they are boolean parameters (like 'bb' above).
+Read about how to access <<builtins-positional-parameters, positional>> or <<functions-getopt, named>> parameters in a bpftrace script below.
+
 == The Language
 
 The `bpftrace` (`bt`) language is inspired by the D language used by `dtrace` and uses the same program structure.
@@ -2161,6 +2172,10 @@ Tracing block I/O sizes > 0 bytes
 | Quit bpftrace with an optional exit code
 | Async
 
+| <<functions-getopt, `getopt`>>
+| Get named command line option/parameter
+| Sync
+
 | <<functions-join, `join`>>
 | Combine an array of char* into one string and print it
 | Async
@@ -2450,6 +2465,32 @@ BEGIN {
   exit(1);
 }
 ----
+
+[#functions-getopt]
+=== getopt
+
+.variants
+* `int getopt(string arg_name)`
+* `string getopt(string arg_name, string default_value)`
+* `int getopt(string arg_name, int default_value)`
+
+Get the named command line argument/option e.g.
+```
+# bpftrace -e 'BEGIN { print(getopt("hello", 1)); }' --hello=5
+
+// 5 is printed
+```
+
+`getopt` defines the type of the argument by the default value's type.
+If no default type is provided, the option is treated like a boolean arg e.g. `getopt("hello")` would evaluate to `0` if `--hello` is not specified on the command line or `1` if `--hello` is passed or set to one of the following values: `1`, `true`, `on`, `yes`.
+Additionally, boolean args accept the following false values: `0`, `false`, `off`, `no` e.g. `--hello=false`.
+If the arg is not set on the command line, the default value is used.
+
+```
+# bpftrace -e 'BEGIN { print((getopt("aa", 10), getopt("bb", "hello"), getopt("cc"))); }' -- --cc --bb=bye
+
+// (10, bye, 1) is printed
+```
 
 [#functions-join]
 === join

@@ -11,8 +11,8 @@
 #include "log.h"
 #include "scopeguard.h"
 #include "util/exceptions.h"
-#include "util/format.h"
 #include "util/paths.h"
+#include "util/strings.h"
 
 namespace bpftrace::util {
 

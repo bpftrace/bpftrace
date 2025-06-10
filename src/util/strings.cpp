@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <cstdint>
 #include <sstream>
 
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace bpftrace::util {
 
@@ -95,6 +96,27 @@ std::string hex_format_buffer(const char *buf,
   // Fit return value to actual length
   str.resize(offset);
   return str;
+}
+
+std::string to_lower(const std::string &original)
+{
+  std::string lower(original);
+  std::ranges::transform(lower, lower.begin(), [](unsigned char c) {
+    return std::tolower(c);
+  });
+  return lower;
+}
+
+bool is_str_bool_truthy(const std::string &value)
+{
+  auto val = util::to_lower(value);
+  return val == "1" || val == "true" || val == "on" || val == "yes";
+}
+
+bool is_str_bool_falsy(const std::string &value)
+{
+  auto val = util::to_lower(value);
+  return val == "0" || val == "false" || val == "off" || val == "no";
 }
 
 } // namespace bpftrace::util
