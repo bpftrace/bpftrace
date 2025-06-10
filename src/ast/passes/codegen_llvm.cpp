@@ -201,6 +201,7 @@ public:
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
   ScopedExpr visit(NegativeInteger &integer);
+  ScopedExpr visit(NamedParameter &global_var);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -516,6 +517,28 @@ ScopedExpr CodegenLLVM::visit(Integer &integer)
 ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
 {
   return ScopedExpr(b_.getInt64(integer.value));
+}
+
+ScopedExpr CodegenLLVM::visit(NamedParameter &named_param)
+{
+  if (named_param.type().IsStringTy()) {
+    const auto max_strlen = bpftrace_.config_->max_strlen;
+    Value *np_alloc = b_.CreateGetStrAllocation(named_param.name,
+                                                named_param.loc);
+    b_.CreateMemsetBPF(np_alloc, b_.getInt8(0), max_strlen);
+    auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
+        named_param.name, bpftrace_.resources, *bpftrace_.config_);
+    b_.CreateMemcpyBPF(np_alloc,
+                       module_->getGlobalVariable(named_param.name),
+                       sized_type.GetSize());
+
+    return ScopedExpr(np_alloc,
+                      [this, np_alloc]() { b_.CreateLifetimeEnd(np_alloc); });
+  }
+
+  return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
+                                  module_->getGlobalVariable(named_param.name),
+                                  named_param.name));
 }
 
 ScopedExpr CodegenLLVM::visit(String &string)

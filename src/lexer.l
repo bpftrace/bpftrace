@@ -8,7 +8,7 @@
 #include "driver.h"
 #include "parser.tab.hh"
 #include "util/int_parser.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 #define YY_USER_ACTION driver.loc.columns(yyleng);
 #define yyterminate() return bpftrace::Parser::make_END(driver.loc)

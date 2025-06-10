@@ -10,6 +10,7 @@ TIMEOUT 1
 
 NAME it shows usage with bad flag
 RUN {{BPFTRACE}} -idonotexist
+EXPECT ERROR: Unrecognized option: i
 EXPECT USAGE:
 TIMEOUT 1
 WILL_FAIL

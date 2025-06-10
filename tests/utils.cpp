@@ -9,12 +9,12 @@
 
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
-#include "util/format.h"
 #include "util/io.h"
 #include "util/kernel.h"
 #include "util/math.h"
 #include "util/paths.h"
 #include "util/similar.h"
+#include "util/strings.h"
 #include "util/symbols.h"
 #include "util/system.h"
 #include "util/wildcard.h"

@@ -5,8 +5,8 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
-#include "util/format.h"
 #include "util/result.h"
+#include "util/strings.h"
 #include "gmock/gmock-function-mocker.h"
 
 namespace bpftrace::test {

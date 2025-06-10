@@ -1,3 +1,4 @@
 tests/data/data_source.c
 tests/testprogs/usdt_inlined.c
 tests/testprogs/watchpoint_exec.c
+tests/testprogs/watchpoint_threaded.c

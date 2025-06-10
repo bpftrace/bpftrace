@@ -2,7 +2,7 @@
 
 #include "log.h"
 #include "printf.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace bpftrace {
 

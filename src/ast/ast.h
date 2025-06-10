@@ -154,6 +154,7 @@ class Cast;
 class Tuple;
 class Ternary;
 class BlockExpr;
+class NamedParameter;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -176,7 +177,8 @@ class Expression : public VariantNode<Integer,
                                       Cast,
                                       Tuple,
                                       Ternary,
-                                      BlockExpr> {
+                                      BlockExpr,
+                                      NamedParameter> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -269,6 +271,41 @@ public:
   }
 
   const int64_t value;
+};
+
+class NamedParameter : public Node {
+public:
+  explicit NamedParameter(ASTContext &ctx,
+                          std::string name,
+                          SizedType s_type,
+                          std::string default_value,
+                          bool is_bool,
+                          Location &&loc)
+      : Node(ctx, std::move(loc)),
+        name(std::move(name)),
+        type_(std::move(s_type)),
+        default_value(std::move(default_value)),
+        is_bool(is_bool) {};
+  explicit NamedParameter(ASTContext &ctx,
+                          const NamedParameter &other,
+                          const Location &loc)
+      : Node(ctx, loc + other.loc),
+        name(other.name),
+        type_(other.type_),
+        default_value(other.default_value),
+        is_bool(other.is_bool) {};
+
+  const SizedType &type() const
+  {
+    return type_;
+  }
+
+  std::string name;
+  SizedType type_;
+  // Ints are turned into strings as that's how they come across on the command
+  // line
+  std::string default_value;
+  bool is_bool;
 };
 
 class PositionalParameter : public Node {
