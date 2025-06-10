@@ -92,6 +92,11 @@ NAME map with continue
 PROG begin { @map["foo"] = 1; @map["bar"] = 2; print("start"); for ($i : @map) { if ($i.0 == "bar") { continue; } print($i.0); }  }
 EXPECT_REGEX .*start\nfoo\n\n
 
+NAME map with return
+PROG begin { @map["foo"] = 1; @map["bar"] = 2; for ($i : @map) { if ($i.0 == "bar") { print($i.0); return; } } print("end"); }
+EXPECT bar
+EXPECT_NONE end
+
 NAME range basic
 PROG begin { for ($i : 0..5) { print($i); }  }
 EXPECT_REGEX .*\n0\n1\n2\n3\n4\n\n
@@ -135,6 +140,13 @@ EXPECT_REGEX .*\n1\n5\n\n
 NAME range with continue
 PROG begin { for ($i : 1..4) { if ($i == 2) { continue; } print($i); }  }
 EXPECT_REGEX .*\n1\n3\n\n
+
+NAME range with nested return
+PROG begin { for ($i : 1..4) { for ($j : 1..$i) { print($j); if ($j == 2) { return; } } } print("end"); }
+EXPECT 1
+EXPECT 1
+EXPECT 2
+EXPECT_NONE end
 
 NAME external function call map
 PROG begin { @map[1] = 1; $x = 1; for ($kv : @map) { print(has_key(@map, $x)); }  }
