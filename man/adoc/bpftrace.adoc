@@ -527,6 +527,20 @@ Both `for` loops support the following control flow statements:
 
 |===
 
+While you can `break` during a range iteration to stop the loop, you cannot adjust the range itself after the loop has started.
+
+The `for` start and end values are evaluated once, not on each loop iteration.
+
+For example, the following will print `0` through `9`:
+
+----
+$a = 10;
+for ($i : 0..$a) {
+  print($i);
+  $a--;
+}
+----
+
 ==== While
 
 Since kernel 5.3 BPF supports `while` loops as long as the verifier can prove they're bounded and fit within the instruction limit.
