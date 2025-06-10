@@ -67,9 +67,10 @@ TEST(control_flow_analyser, if_without_else)
 
 TEST(control_flow_analyser, while_loop)
 {
-  // This is allowed, as we can detect that this will always return. However,
-  // the verifier may reject it.
-  test("fn test($x: int64): int64 { while ($x) { return 0; } }", 0);
+  // This was previously allowed, but is no longer allowed. All loops
+  // are treated equally, and therefore we require all paths to return
+  // appropriately ahead of any folding, etc.
+  test("fn test($x: int64): int64 { while ($x) { return 0; } }", 1);
 }
 
 TEST(control_flow_analyser, if_branches)

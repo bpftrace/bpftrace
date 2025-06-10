@@ -3087,7 +3087,7 @@ void SemanticAnalyser::visit(For &f)
   auto [iter, _] = for_vars_referenced_.try_emplace(&f);
   auto &collector = iter->second;
   for (const Variable &var : collector.nodes()) {
-    ctx_types.push_back(CreatePointer(var.var_type, AddrSpace::kernel));
+    ctx_types.push_back(CreatePointer(var.var_type, AddrSpace::none));
     ctx_idents.push_back(var.ident);
   }
   f.ctx_type = CreateRecord(Struct::CreateRecord(ctx_types, ctx_idents));
