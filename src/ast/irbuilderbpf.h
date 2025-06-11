@@ -199,8 +199,8 @@ public:
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
-  Value *CreateGetPid(const Location &loc);
-  Value *CreateGetTid(const Location &loc);
+  Value *CreateGetPid(const Location &loc, bool force_init);
+  Value *CreateGetTid(const Location &loc, bool force_init);
   AllocaInst *CreateUSym(Value *val, int probe_id, const Location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);

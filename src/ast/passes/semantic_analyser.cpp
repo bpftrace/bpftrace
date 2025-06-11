@@ -590,6 +590,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         map_type_spec{},
       } } },
+  { "pid",
+    { .min_args=0,
+      .max_args=1,
+      .discard_ret_warn = true },
+  },
 };
 // clang-format on
 
@@ -753,6 +758,12 @@ void SemanticAnalyser::visit(Identifier &identifier)
       identifier.ident_type.ts_mode = TimestampMode::sw_tai;
     } else {
       identifier.addError() << "Invalid timestamp mode: " << identifier.ident;
+    }
+  } else if (func_ == "pid" || func_ == "tid") {
+    if (identifier.ident != "curr_ns" && identifier.ident != "init") {
+      identifier.addError()
+          << "Invalid PID namespace mode: " << identifier.ident
+          << " (expects: curr_ns or init)";
     }
   } else {
     // Final attempt: try to parse as a stack mode.
@@ -1728,6 +1739,16 @@ If you're seeing errors, try clamping the string sizes. For example:
         !bpftrace_.delta_taitime_.has_value()) {
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
+    }
+  } else if (call.func == "pid" || call.func == "tid") {
+    call.return_type = CreateUInt32();
+    if (call.vargs.size() == 1) {
+      auto &arg = call.vargs.at(0);
+      if (!(arg.as<Identifier>())) {
+        call.addError() << call.func
+                        << "() only supports curr_ns and init as the argument ("
+                        << arg.type().GetTy() << " provided)";
+      }
     }
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";

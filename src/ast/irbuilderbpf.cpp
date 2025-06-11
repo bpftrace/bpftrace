@@ -8,6 +8,7 @@
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
+#include "types.h"
 #include "util/exceptions.h"
 #include <filesystem>
 #include <llvm/IR/DataLayout.h>
@@ -74,10 +75,10 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
 // It represents the inode of the initial (global) PID namespace
 constexpr uint32_t PROC_PID_INIT_INO = 0xeffffffc;
 
-Value *IRBuilderBPF::CreateGetPid(const Location &loc)
+Value *IRBuilderBPF::CreateGetPid(const Location &loc, bool force_init)
 {
   const auto &pidns = bpftrace_.get_pidns_self_stat();
-  if (pidns && pidns->st_ino != PROC_PID_INIT_INO) {
+  if (!force_init && pidns && pidns->st_ino != PROC_PID_INIT_INO) {
     // Get namespaced target PID when we're running in a namespace
     AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
     CreateGetNsPidTgid(
@@ -89,16 +90,16 @@ Value *IRBuilderBPF::CreateGetPid(const Location &loc)
     return pid;
   }
 
-  // Get global target PID when we're in the initial namespace
+  // Get global target PID otherwise
   Value *pidtgid = CreateGetPidTgid(loc);
   Value *pid = CreateTrunc(CreateLShr(pidtgid, 32), getInt32Ty(), "pid");
   return pid;
 }
 
-Value *IRBuilderBPF::CreateGetTid(const Location &loc)
+Value *IRBuilderBPF::CreateGetTid(const Location &loc, bool force_init)
 {
   const auto &pidns = bpftrace_.get_pidns_self_stat();
-  if (pidns && pidns->st_ino != PROC_PID_INIT_INO) {
+  if (!force_init && pidns && pidns->st_ino != PROC_PID_INIT_INO) {
     // Get namespaced target TID when we're running in a namespace
     AllocaInst *res = CreateAllocaBPF(BpfPidnsInfoType(), "bpf_pidns_info");
     CreateGetNsPidTgid(
@@ -110,7 +111,7 @@ Value *IRBuilderBPF::CreateGetTid(const Location &loc)
     return tid;
   }
 
-  // Get global target TID when we're in the initial namespace
+  // Get global target TID otherwise
   Value *pidtgid = CreateGetPidTgid(loc);
   Value *tid = CreateTrunc(pidtgid, getInt32Ty(), "tid");
   return tid;
@@ -128,7 +129,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *val,
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
-  Value *pid = CreateGetPid(loc);
+  Value *pid = CreateGetPid(loc, false);
   Value *probe_id_val = Constant::getIntegerValue(getInt32Ty(),
                                                   APInt(32, probe_id));
 

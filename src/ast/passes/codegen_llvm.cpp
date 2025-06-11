@@ -96,6 +96,11 @@ static auto getTargetMachine()
   return target;
 }
 
+static bool shouldForceInitPidNs(const ExpressionList &args)
+{
+  return args.size() == 1 && args.at(0).as<Identifier>()->ident == "init";
+}
+
 using namespace llvm;
 
 namespace {
@@ -622,7 +627,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   // ustack keys are special: see IRBuilderBPF::GetStackStructType()
   if (is_ustack) {
     // store pid
-    b_.CreateStore(b_.CreateGetPid(loc),
+    b_.CreateStore(b_.CreateGetPid(loc, false),
                    b_.CreateGEP(stack_key_struct,
                                 stack_key,
                                 { b_.getInt64(0), b_.getInt32(2) }));
@@ -669,9 +674,9 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                          builtin.builtin_type.stack_type,
                          builtin.loc);
   } else if (builtin.ident == "pid") {
-    return ScopedExpr(b_.CreateGetPid(builtin.loc));
+    return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
-    return ScopedExpr(b_.CreateGetTid(builtin.loc));
+    return ScopedExpr(b_.CreateGetTid(builtin.loc, false));
   } else if (builtin.ident == "cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
   } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
@@ -1807,6 +1812,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     } else {
       return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
     }
+  } else if (call.func == "pid") {
+    bool force_init = shouldForceInitPidNs(call.vargs);
+
+    return ScopedExpr(b_.CreateGetPid(call.loc, force_init));
+  } else if (call.func == "tid") {
+    bool force_init = shouldForceInitPidNs(call.vargs);
+
+    return ScopedExpr(b_.CreateGetTid(call.loc, force_init));
   } else {
     LOG(BUG) << "missing codegen for function \"" << call.func << "\"";
     __builtin_unreachable();
