@@ -22,7 +22,7 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !52 {
 entry:
   %"@x_key" = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 13
+  %2 = getelementptr i8, ptr %1, i64 104
   %arg1 = load volatile i64, ptr %2, align 8
   %length.cmp = icmp ule i64 %arg1, 1020
   %length.select = select i1 %length.cmp, i64 %arg1, i64 1020
@@ -36,7 +36,7 @@ entry:
   %7 = getelementptr %buffer_1020_t, ptr %4, i32 0, i32 1
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %7, i32 1020, ptr null)
   %8 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %9 = getelementptr i64, ptr %8, i64 14
+  %9 = getelementptr i8, ptr %8, i64 112
   %arg0 = load volatile i64, ptr %9, align 8
   %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %7, i32 %6, i64 %arg0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")

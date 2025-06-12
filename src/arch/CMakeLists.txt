@@ -1,19 +1,10 @@
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)")
-    add_library(arch STATIC arm.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR
-       CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-    add_library(arch STATIC ppc64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "s390" OR
-       CMAKE_SYSTEM_PROCESSOR STREQUAL "s390x")
-    add_library(arch STATIC s390.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    add_library(arch STATIC x86_64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "mips64")
-    add_library(arch STATIC  mips64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
-    add_library(arch STATIC riscv64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "loongarch64")
-    add_library(arch STATIC loongarch64.cpp)
-else()
-  message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-endif()
+add_library(arch STATIC
+  arm.cpp
+  ppc64.cpp
+  s390.cpp
+  arch.cpp
+  x86_64.cpp
+  mips64.cpp
+  riscv64.cpp
+  loongarch64.cpp
+)

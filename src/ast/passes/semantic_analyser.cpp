@@ -1004,8 +1004,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
                            << " builtin can only be used with "
                            << "'kprobes', 'uprobes' and 'usdt' probes";
       // argx in USDT probes doesn't need to check against arch::max_arg()
-      if (type != ProbeType::usdt && arg_num > arch::max_arg())
-        builtin.addError() << arch::name() << " doesn't support "
+      if (type != ProbeType::usdt &&
+          static_cast<size_t>(arg_num) >= arch::Host::arguments().size())
+        builtin.addError() << arch::Host::Machine << " doesn't support "
                            << builtin.ident;
     }
     builtin.builtin_type = CreateUInt64();
@@ -1059,7 +1060,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "usermode") {
-    if (arch::name() != "x86_64") {
+    if (arch::Host::Machine != arch::Machine::X86_64) {
       builtin.addError() << "'usermode' builtin is only supported on x86_64";
       return;
     }
@@ -1415,11 +1416,11 @@ void SemanticAnalyser::visit(Call &call)
     }
   } else if (call.func == "reg") {
     auto reg_name = call.vargs.at(0).as<String>()->value;
-    int offset = arch::offset(reg_name);
-    if (offset == -1) {
+    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
+    if (!offset) {
       call.addError() << "'" << reg_name
                       << "' is not a valid register on this architecture"
-                      << " (" << arch::name() << ")";
+                      << " (" << arch::Host::Machine << ")";
     }
     call.return_type = CreateUInt64();
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -3551,8 +3552,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (!bpftrace_.pid().has_value() && !has_child_)
         ap.addError() << "-p PID or -c CMD required for watchpoint";
 
-      if (ap.address > static_cast<uint64_t>(arch::max_arg()))
-        ap.addError() << arch::name() << " doesn't support arg" << ap.address;
+      if (ap.address >= static_cast<uint64_t>(arch::Host::arguments().size()))
+        ap.addError() << arch::Host::Machine << " doesn't support arg"
+                      << ap.address;
     } else if (ap.provider == "asyncwatchpoint")
       ap.addError() << ap.provider << " requires a function name";
     else if (!ap.address)
@@ -3570,7 +3572,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (ap.mode[i - 1] == ap.mode[i])
         ap.addError() << "watchpoint modes may not be duplicated";
     }
-    const auto &modes = arch::watchpoint_modes();
+    const auto &modes = arch::Host::watchpoint_modes();
     if (!modes.contains(ap.mode)) {
       if (modes.empty()) {
         // There are no valid modes.

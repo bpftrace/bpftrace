@@ -23,7 +23,7 @@ entry:
   %tuple = alloca %uint8_usym_t_int64__tuple_t, align 8
   %usym = alloca %usym_t, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 16
+  %2 = getelementptr i8, ptr %1, i64 128
   %reg_ip = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()

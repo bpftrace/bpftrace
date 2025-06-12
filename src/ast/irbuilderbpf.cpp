@@ -39,6 +39,7 @@ std::string probeReadHelperName(libbpf::bpf_func_id id)
     default:
       LOG(BUG) << "unknown probe_read id: " << std::to_string(id);
   }
+  __builtin_unreachable();
 }
 } // namespace
 
@@ -1454,32 +1455,31 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   }
   Value *result = nullptr;
   if (argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME) {
-    int offset = 0;
-    offset = arch::offset(argument->base_register_name);
-    if (offset < 0) {
-      LOG(BUG) << "offset for register " << argument->base_register_name
-               << " not known";
+    auto offset = arch::Host::register_to_pt_regs_offset(
+        argument->base_register_name);
+    if (!offset) {
+      builtin.addError() << "offset for register "
+                         << argument->base_register_name << " not known";
+      return getInt32(0);
     }
 
     // bpftrace's args are internally represented as 64 bit integers. However,
     // the underlying argument (of the target program) may be less than 64
     // bits. So we must be careful to zero out unused bits.
-    Value *reg = CreateSafeGEP(getInt8Ty(),
-                               ctx,
-                               getInt64(offset * sizeof(uintptr_t)),
-                               "load_register");
+    Value *reg = CreateSafeGEP(
+        getInt8Ty(), ctx, getInt64(offset.value()), "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.builtin_type, builtin.ident);
     Value *index_offset = nullptr;
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME) {
-      int ioffset = arch::offset(argument->index_register_name);
-      if (ioffset < 0) {
+      auto ioffset = arch::Host::register_to_pt_regs_offset(
+          argument->index_register_name);
+      if (!ioffset) {
         builtin.addError() << "offset for register "
                            << argument->index_register_name << " not known";
+        return getInt32(0);
       }
-      index_offset = CreateSafeGEP(getInt8Ty(),
-                                   ctx,
-                                   getInt64(ioffset * sizeof(uintptr_t)),
-                                   "load_register");
+      index_offset = CreateSafeGEP(
+          getInt8Ty(), ctx, getInt64(ioffset.value()), "load_register");
       index_offset = CreateLoad(getInt64Ty(), index_offset);
       if (argument->valid & BCC_USDT_ARGUMENT_SCALE) {
         index_offset = CreateMul(index_offset, getInt64(argument->scale));
@@ -2429,27 +2429,46 @@ llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
 
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
 {
-  int offset;
-  if (builtin == "retval")
-    offset = arch::ret_offset();
-  else if (builtin == "func")
-    offset = arch::pc_offset();
-  else // argX
-    offset = arch::arg_offset(atoi(builtin.substr(3).c_str()));
+  std::optional<std::string> reg;
+  if (builtin == "retval") {
+    reg = arch::Host::return_value();
+  } else if (builtin == "func") {
+    reg = arch::Host::pc_value();
+  } else if (builtin.starts_with("arg")) {
+    size_t n = static_cast<size_t>(atoi(builtin.substr(3).c_str()));
+    const auto &arguments = arch::Host::arguments();
+    if (n < arguments.size()) {
+      reg = arguments[n];
+    }
+  }
+  if (!reg.has_value()) {
+    LOG(BUG) << "unknown builtin: " << builtin;
+    __builtin_unreachable();
+  }
 
-  return CreateRegisterRead(ctx, offset, builtin);
+  auto offset = arch::Host::register_to_pt_regs_offset(reg.value());
+  if (!offset.has_value()) {
+    LOG(BUG) << "invalid register `" << reg.value()
+             << " for builtin: " << builtin;
+    __builtin_unreachable();
+  }
+
+  return CreateRegisterRead(ctx, offset.value(), builtin);
 }
 
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
-                                        int offset,
+                                        size_t offset,
                                         const std::string &name)
 {
   // Bitwidth of register values in struct pt_regs is the same as the kernel
   // pointer width on all supported architectures.
+  //
+  // FIXME(#3873): Not clear if this applies as a general rule, best to allow
+  // these to be resolved via field names and BTF directly in the future.
   llvm::Type *registerTy = getKernelPointerStorageTy();
 
   Value *result = CreateLoad(registerTy,
-                             CreateSafeGEP(registerTy, ctx, getInt64(offset)),
+                             CreateSafeGEP(getInt8Ty(), ctx, getInt64(offset)),
                              name);
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
   // so call setVolatile() manually
@@ -2713,8 +2732,7 @@ llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
 
 llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
 {
-  static int ptr_width = arch::get_kernel_ptr_width();
-
+  static int ptr_width = arch::Host::kernel_ptr_width();
   return getIntNTy(ptr_width);
 }
 

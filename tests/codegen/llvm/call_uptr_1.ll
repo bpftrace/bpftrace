@@ -21,7 +21,7 @@ entry:
   %"@_key" = alloca i64, align 8
   %deref = alloca i16, align 2
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
   %probe_read_user = call i64 inttoptr (i64 112 to ptr)(ptr %deref, i32 2, i64 %arg0)
