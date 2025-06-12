@@ -495,7 +495,7 @@ std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
 
   const struct btf_param *p = btf_params(t);
   __u16 vlen = btf_vlen(t);
-  if (vlen > arch::max_arg() + 1) {
+  if (vlen >= arch::Host::arguments().size()) {
     err = "functions with more than 6 parameters are "
           "not supported.";
     return nullptr;
@@ -574,7 +574,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
     if (bpftrace_ && !bpftrace_->is_traceable_func(func_name))
       continue;
 
-    if (btf_vlen(t) > arch::max_arg() + 1)
+    if (btf_vlen(t) >= arch::Host::arguments().size())
       continue;
 
     funcs += btf_obj.name + ":" + func_name + "\n";
@@ -615,7 +615,7 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
       break;
     }
 
-    if (btf_vlen(t) > arch::max_arg() + 1)
+    if (btf_vlen(t) >= arch::Host::arguments().size())
       continue;
 
     bool found = false;

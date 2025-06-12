@@ -108,11 +108,24 @@ static bool shouldForceInitPidNs(const ExpressionList &args)
   return args.size() == 1 && args.at(0).as<Identifier>()->ident == "init";
 }
 
-using namespace llvm;
-
 namespace {
 
 using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
+
+class InternalError : public ErrorInfo<InternalError> {
+public:
+  InternalError(std::string msg) : msg_(std::move(msg)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << msg_;
+  }
+
+private:
+  std::string msg_;
+};
+
+char InternalError::ID;
 
 struct VariableLLVM {
   llvm::Value *value;
@@ -339,11 +352,11 @@ private:
   //
   // We need a separate "setup" probe per probe because we hard code the index
   // of the "real" probe the setup probe is to be replaced by.
-  void generateWatchpointSetupProbe(FunctionType *func_type,
-                                    const std::string &expanded_probe_name,
-                                    int arg_num,
-                                    int index,
-                                    const Location &loc);
+  Result<> generateWatchpointSetupProbe(FunctionType *func_type,
+                                        const std::string &expanded_probe_name,
+                                        int arg_num,
+                                        int index,
+                                        const Location &loc);
 
   ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
                                          Value *index,
@@ -696,16 +709,27 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     }
     __builtin_unreachable();
   } else if (builtin.ident == "usermode") {
-    int cs_offset = arch::offset("cs");
-    Value *cs = b_.CreateRegisterRead(ctx_, cs_offset, "reg_cs");
-    Value *mask = b_.getInt64(0x3);
-    Value *is_usermode = b_.CreateICmpEQ(b_.CreateAnd(cs, mask),
-                                         b_.getInt64(3),
-                                         "is_usermode");
-    Value *expr = b_.CreateZExt(is_usermode,
-                                b_.GetType(builtin.builtin_type),
-                                "usermode_result");
-    return ScopedExpr(expr);
+    if (arch::Host::Machine == arch::Machine::X86_64) {
+      auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");
+      if (!cs_offset) {
+        builtin.addError() << "No CS register?";
+        return ScopedExpr(b_.getInt64(0));
+      }
+      Value *cs = b_.CreateRegisterRead(ctx_, cs_offset.value(), "reg_cs");
+      Value *mask = b_.getInt64(0x3);
+      Value *is_usermode = b_.CreateICmpEQ(b_.CreateAnd(cs, mask),
+                                           b_.getInt64(3),
+                                           "is_usermode");
+      Value *expr = b_.CreateZExt(is_usermode,
+                                  b_.GetType(builtin.builtin_type),
+                                  "usermode_result");
+      return ScopedExpr(expr);
+    } else {
+      // We lack an implementation.
+      builtin.addError() << "not supported on architecture "
+                         << arch::Host::Machine;
+      return ScopedExpr(b_.getInt64(0));
+    }
   } else if (builtin.ident == "numaid") {
     return ScopedExpr(b_.CreateGetNumaId(builtin.loc));
   } else if (builtin.ident == "cpu") {
@@ -795,13 +819,14 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   } else if (!builtin.ident.compare(0, 4, "sarg") &&
              builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
              builtin.ident.at(4) <= '9') {
-    int sp_offset = arch::sp_offset();
-    if (sp_offset == -1) {
-      LOG(BUG) << "negative offset for stack pointer";
+    auto sp_offset = arch::Host::register_to_pt_regs_offset(
+        arch::Host::sp_value());
+    if (!sp_offset) {
+      builtin.addError() << "no stack offset available";
+      return ScopedExpr(b_.getInt64(0));
     }
-
     int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *sp = b_.CreateRegisterRead(ctx_, sp_offset, "reg_sp");
+    Value *sp = b_.CreateRegisterRead(ctx_, sp_offset.value(), "reg_sp");
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.builtin_type, builtin.ident);
 
     // Pointer width is used when calculating the SP offset and the number of
@@ -816,7 +841,9 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     assert(builtin.builtin_type.GetSize() == arg_type.GetSize());
 
     Value *src = b_.CreateAdd(
-        sp, b_.getInt64((arg_num + arch::arg_stack_offset()) * arg_width));
+        sp,
+        b_.getInt64((arg_num + arch::Host::argument_stack_offset()) *
+                    arg_width));
     b_.CreateProbeRead(dst, arg_type, src, builtin.loc);
     Value *expr = b_.CreateLoad(b_.GetType(builtin.builtin_type), dst);
     b_.CreateLifetimeEnd(dst);
@@ -1403,13 +1430,17 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "reg") {
     auto reg_name = call.vargs.at(0).as<String>()->value;
-    int offset = arch::offset(reg_name);
-    if (offset == -1) {
-      call.addError() << "negative offset on reg() call";
+    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
+    if (!offset) {
+      call.addError() << "register " << reg_name
+                      << " not available on architecture "
+                      << arch::Host::Machine;
+      return ScopedExpr(b_.getInt64(0));
     }
 
-    return ScopedExpr(
-        b_.CreateRegisterRead(ctx_, offset, call.func + "_" + reg_name));
+    return ScopedExpr(b_.CreateRegisterRead(ctx_,
+                                            offset.value(),
+                                            call.func + "_" + reg_name));
   } else if (call.func == "printf") {
     // We overload printf call for iterator probe's seq_printf helper.
     if (!inside_subprog_ &&
@@ -3132,9 +3163,13 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
-      !current_attach_point_->func.empty())
-    generateWatchpointSetupProbe(
+      !current_attach_point_->func.empty()) {
+    auto ok = generateWatchpointSetupProbe(
         func_type, name, current_attach_point_->address, index, probe.loc);
+    if (!ok) {
+      probe.addError() << "unable to setup watchpoint: " << ok.takeError();
+    }
+  }
 }
 
 void CodegenLLVM::add_probe(AttachPoint &ap,
@@ -3919,13 +3954,22 @@ void CodegenLLVM::createFormatStringCall(Call &call,
     b_.CreateLifetimeEnd(fmt_args);
 }
 
-void CodegenLLVM::generateWatchpointSetupProbe(
+Result<> CodegenLLVM::generateWatchpointSetupProbe(
     FunctionType *func_type,
     const std::string &expanded_probe_name,
     int arg_num,
     int index,
     const Location &loc)
 {
+  const auto &arguments = arch::Host::arguments();
+  if (static_cast<size_t>(arg_num) >= arguments.size()) {
+    return make_error<InternalError>("argument out of range");
+  }
+  auto offset = arch::Host::register_to_pt_regs_offset(arguments[arg_num]);
+  if (!offset) {
+    return make_error<InternalError>("invalid register");
+  }
+
   auto func_name = util::get_function_name_for_watchpoint_setup(
       expanded_probe_name, index);
   auto *func = llvm::Function::Create(
@@ -3943,9 +3987,8 @@ void CodegenLLVM::generateWatchpointSetupProbe(
 
   // Pull out function argument
   Value *ctx = func->arg_begin();
-  int offset = arch::arg_offset(arg_num);
   Value *addr = b_.CreateRegisterRead(ctx,
-                                      offset,
+                                      offset.value(),
                                       "arg" + std::to_string(arg_num));
 
   // Tell userspace to setup the real watchpoint
@@ -3971,6 +4014,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreateLifetimeEnd(buf);
 
   createRet();
+  return OK();
 }
 
 void CodegenLLVM::createPrintMapCall(Call &call)

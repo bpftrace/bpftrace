@@ -21,10 +21,10 @@ entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %"struct Foo_int32[4]__tuple_t", align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %4 = getelementptr i64, ptr %3, i64 13
+  %4 = getelementptr i8, ptr %3, i64 104
   %arg1 = load volatile i64, ptr %4, align 8
   %5 = inttoptr i64 %arg1 to ptr
   %6 = call ptr @llvm.preserve.static.offset(ptr %5)

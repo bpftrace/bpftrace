@@ -22,28 +22,28 @@ entry:
   %args = alloca %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %args)
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   %3 = trunc i64 %arg0 to i32
   %4 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 0
   store i32 %3, ptr %4, align 4
   %5 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %6 = getelementptr i64, ptr %5, i64 13
+  %6 = getelementptr i8, ptr %5, i64 104
   %arg1 = load volatile i64, ptr %6, align 8
   %7 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 1
   store i64 %arg1, ptr %7, align 8
   %8 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %9 = getelementptr i64, ptr %8, i64 12
+  %9 = getelementptr i8, ptr %8, i64 96
   %arg2 = load volatile i64, ptr %9, align 8
   %10 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 2
   store i64 %arg2, ptr %10, align 8
   %11 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %12 = getelementptr i64, ptr %11, i64 11
+  %12 = getelementptr i8, ptr %11, i64 88
   %arg3 = load volatile i64, ptr %12, align 8
   %13 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 3
   store i64 %arg3, ptr %13, align 8
   %14 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %15 = getelementptr i64, ptr %14, i64 9
+  %15 = getelementptr i8, ptr %14, i64 72
   %arg4 = load volatile i64, ptr %15, align 8
   %16 = getelementptr %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args", ptr %args, i64 0, i32 4
   store i64 %arg4, ptr %16, align 8

@@ -20,7 +20,7 @@ entry:
   %"@foo_val" = alloca [12 x i8], align 1
   %"@foo_key" = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@foo_key")
   store i64 0, ptr %"@foo_key", align 8

@@ -1,164 +1,231 @@
-#include <algorithm>
-#include <array>
+#include <unordered_map>
 
 #include "arch.h"
 
-// SP + 8 points to the first argument that is passed on the stack
-#define ARG0_STACK 8
-
 namespace bpftrace::arch {
 
-// clang-format off
-static std::array<std::string, 32> registers = {
-  "zero",
-  "at",
-  "v0",
-  "v1",
-  "a0",
-  "a1",
-  "a2",
-  "a3",
-  "a4",
-  "a5",
-  "a6",
-  "a7",
-  "t0",
-  "t1",
-  "t2",
-  "t3",
-  "s0",
-  "s1",
-  "s2",
-  "s3",
-  "s4",
-  "s5",
-  "s6",
-  "s7",
-  "t8",
-  "t9",
-  "k0",
-  "k1",
-  "gp",
-  "sp",
-  "fp/s8",
-  "ra",
-};
-
-// Alternative register names that match struct pt_regs
-static std::array<std::string, 38> ptrace_registers = {
-  "regs[0]",
-  "regs[1]",
-  "regs[2]",
-  "regs[3]",
-  "regs[4]",
-  "regs[5]",
-  "regs[6]",
-  "regs[7]",
-  "regs[8]",
-  "regs[9]",
-  "regs[10]",
-  "regs[11]",
-  "regs[12]",
-  "regs[13]",
-  "regs[14]",
-  "regs[15]",
-  "regs[16]",
-  "regs[17]",
-  "regs[18]",
-  "regs[19]",
-  "regs[20]",
-  "regs[21]",
-  "regs[22]",
-  "regs[23]",
-  "regs[24]",
-  "regs[25]",
-  "regs[26]",
-  "regs[27]",
-  "regs[28]",
-  "regs[29]",
-  "regs[30]",
-  "regs[31]",
-  // This layout supports only MIP64, which does not have the option
-  // `CONFIG_CPU_HAS_SMARTMIPS`. See the `pt_regs` defintion for MIP64 [1].
-  // [1] https://github.com/torvalds/linux/blob/848e076317446f9c663771ddec142d7c2eb4cb43/arch/mips/include/asm/ptrace.h#L28
-  "cp0_status";
-  "hi",
-  "lo",
-  "cp0_badvaddr",
-  "cp0_cause",
-  "cp0_epc",
-};
-
-static std::array<std::string, 8> arg_registers = {
-  "a0",
-  "a1",
-  "a2",
-  "a3",
-  "a4",
-  "a5",
-  "a6",
-  "a7",
-};
-// clang-format on
-
-int offset(std::string reg_name)
-{
-  auto it = find(registers.begin(), registers.end(), reg_name);
-  if (it == registers.end()) {
-    // Also allow register names that match the fields in struct pt_regs.
-    // These appear in USDT probe arguments.
-    it = find(ptrace_registers.begin(), ptrace_registers.end(), reg_name);
-    if (it == ptrace_registers.end()) {
-      return -1;
-    }
-    return distance(ptrace_registers.begin(), it);
-  }
-  return distance(registers.begin(), it);
-}
-
-int max_arg()
-{
-  return arg_registers.size() - 1;
-}
-
-int arg_offset(int arg_num)
-{
-  return offset(arg_registers.at(arg_num));
-}
-
-int pc_offset()
-{
-  return offset("cp0_epc");
-}
-
-int ret_offset()
-{
-  return offset("v0");
-}
-
-int sp_offset()
-{
-  return offset("sp");
-}
-
-int arg_stack_offset()
-{
-  return ARG0_STACK / 8;
-}
-
-std::string name()
-{
-  return std::string("mips64");
-}
-
-const std::unordered_set<std::string> &watchpoint_modes()
-{
-  return {}; // Not supported.
-}
-
-int get_kernel_ptr_width()
+template <>
+size_t Arch<Machine::MIPS64>::kernel_ptr_width()
 {
   return 64;
+}
+
+template <>
+std::optional<std::string> Arch<Machine::MIPS64>::register_to_pt_regs_expr(
+    const std::string& name)
+{
+  static const std::unordered_map<std::string, std::string> register_exprs = {
+    { "zero", "regs[0]" },
+    { "at", "regs[1]" },
+    { "v0", "regs[2]" },
+    { "v1", "regs[3]" },
+    { "a0", "regs[4]" },
+    { "a1", "regs[5]" },
+    { "a2", "regs[6]" },
+    { "a3", "regs[7]" },
+    { "a4", "regs[8]" },
+    { "a5", "regs[9]" },
+    { "a6", "regs[10]" },
+    { "a7", "regs[11]" },
+    { "t0", "regs[12]" },
+    { "t1", "regs[13]" },
+    { "t2", "regs[14]" },
+    { "t3", "regs[15]" },
+    { "s0", "regs[16]" },
+    { "s1", "regs[17]" },
+    { "s2", "regs[18]" },
+    { "s3", "regs[19]" },
+    { "s4", "regs[20]" },
+    { "s5", "regs[21]" },
+    { "s6", "regs[22]" },
+    { "s7", "regs[23]" },
+    { "t8", "regs[24]" },
+    { "t9", "regs[25]" },
+    { "k0", "regs[26]" },
+    { "k1", "regs[27]" },
+    { "gp", "regs[28]" },
+    { "sp", "regs[29]" },
+    { "fp", "regs[30]" },
+    { "fp/s8", "regs[30]" },
+    { "ra", "regs[31]" },
+
+    // Support full expressions as string literals.
+    { "regs[0]", "regs[0]" },
+    { "regs[1]", "regs[1]" },
+    { "regs[2]", "regs[2]" },
+    { "regs[3]", "regs[3]" },
+    { "regs[4]", "regs[4]" },
+    { "regs[5]", "regs[5]" },
+    { "regs[6]", "regs[6]" },
+    { "regs[7]", "regs[7]" },
+    { "regs[8]", "regs[8]" },
+    { "regs[9]", "regs[9]" },
+    { "regs[10]", "regs[10]" },
+    { "regs[11]", "regs[11]" },
+    { "regs[12]", "regs[12]" },
+    { "regs[13]", "regs[13]" },
+    { "regs[14]", "regs[14]" },
+    { "regs[15]", "regs[15]" },
+    { "regs[16]", "regs[16]" },
+    { "regs[17]", "regs[17]" },
+    { "regs[18]", "regs[18]" },
+    { "regs[19]", "regs[19]" },
+    { "regs[20]", "regs[20]" },
+    { "regs[21]", "regs[21]" },
+    { "regs[22]", "regs[22]" },
+    { "regs[23]", "regs[23]" },
+    { "regs[24]", "regs[24]" },
+    { "regs[25]", "regs[25]" },
+    { "regs[26]", "regs[26]" },
+    { "regs[27]", "regs[27]" },
+    { "regs[28]", "regs[28]" },
+    { "regs[29]", "regs[29]" },
+    { "regs[30]", "regs[30]" },
+    { "regs[31]", "regs[31]" },
+
+    // System registers.
+    { "cp0_status", "cp0_status" },
+    { "hi", "hi" },
+    { "lo", "lo" },
+    { "cp0_badvaddr", "cp0_badvaddr" },
+    { "cp0_cause", "cp0_cause" },
+    { "cp0_epc", "cp0_epc" },
+  };
+
+  auto it = register_exprs.find(name);
+  if (it != register_exprs.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+template <>
+std::optional<size_t> Arch<Machine::MIPS64>::register_to_pt_regs_offset(
+    const std::string& name)
+{
+  static const std::unordered_map<std::string, size_t> register_offsets = {
+    { "zero", 0 },
+    { "at", 8 },
+    { "v0", 16 },
+    { "v1", 24 },
+    { "a0", 32 },
+    { "a1", 40 },
+    { "a2", 48 },
+    { "a3", 56 },
+    { "a4", 64 },
+    { "a5", 72 },
+    { "a6", 80 },
+    { "a7", 88 },
+    { "t0", 96 },
+    { "t1", 104 },
+    { "t2", 112 },
+    { "t3", 120 },
+    { "s0", 128 },
+    { "s1", 136 },
+    { "s2", 144 },
+    { "s3", 152 },
+    { "s4", 160 },
+    { "s5", 168 },
+    { "s6", 176 },
+    { "s7", 184 },
+    { "t8", 192 },
+    { "t9", 200 },
+    { "k0", 208 },
+    { "k1", 216 },
+    { "gp", 224 },
+    { "sp", 232 },
+    { "fp", 240 },
+    { "fp/s8", 240 },
+    { "ra", 248 },
+
+    // Support full expressions as literals.
+    { "regs[0]", 0 },
+    { "regs[1]", 8 },
+    { "regs[2]", 16 },
+    { "regs[3]", 24 },
+    { "regs[4]", 32 },
+    { "regs[5]", 40 },
+    { "regs[6]", 48 },
+    { "regs[7]", 56 },
+    { "regs[8]", 64 },
+    { "regs[9]", 72 },
+    { "regs[10]", 80 },
+    { "regs[11]", 88 },
+    { "regs[12]", 96 },
+    { "regs[13]", 104 },
+    { "regs[14]", 112 },
+    { "regs[15]", 120 },
+    { "regs[16]", 128 },
+    { "regs[17]", 136 },
+    { "regs[18]", 144 },
+    { "regs[19]", 152 },
+    { "regs[20]", 160 },
+    { "regs[21]", 168 },
+    { "regs[22]", 176 },
+    { "regs[23]", 184 },
+    { "regs[24]", 192 },
+    { "regs[25]", 200 },
+    { "regs[26]", 208 },
+    { "regs[27]", 216 },
+    { "regs[28]", 224 },
+    { "regs[29]", 232 },
+    { "regs[30]", 240 },
+    { "regs[31]", 248 },
+
+    // System registers.
+    { "cp0_status", 256 },
+    { "hi", 264 },
+    { "lo", 272 },
+    { "cp0_badvaddr", 280 },
+    { "cp0_cause", 288 },
+    { "cp0_epc", 296 },
+  };
+
+  auto it = register_offsets.find(name);
+  if (it != register_offsets.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+template <>
+const std::vector<std::string>& Arch<Machine::MIPS64>::arguments()
+{
+  static std::vector<std::string> args = {
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
+  };
+  return args;
+}
+
+template <>
+size_t Arch<Machine::MIPS64>::argument_stack_offset()
+{
+  return 8;
+}
+
+template <>
+std::string Arch<Machine::MIPS64>::return_value()
+{
+  return "v0";
+}
+
+template <>
+std::string Arch<Machine::MIPS64>::pc_value()
+{
+  return "cp0_epc";
+}
+
+template <>
+std::string Arch<Machine::MIPS64>::sp_value()
+{
+  return "sp";
+}
+
+template <>
+const std::unordered_set<std::string>& Arch<Machine::MIPS64>::watchpoint_modes()
+{
+  static std::unordered_set<std::string> valid_modes = {};
+  return valid_modes;
 }
 
 } // namespace bpftrace::arch

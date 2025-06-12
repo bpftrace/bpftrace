@@ -203,7 +203,7 @@ public:
   Value *CreateGetTid(const Location &loc, bool force_init);
   AllocaInst *CreateUSym(Value *val, int probe_id, const Location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
-  Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
+  Value *CreateRegisterRead(Value *ctx, size_t offset, const std::string &name);
   Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
