@@ -26,10 +26,10 @@ entry:
   %"@x_key" = alloca i64, align 8
   %sarg0 = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 19
+  %2 = getelementptr i8, ptr %1, i64 152
   %reg_sp = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg0)
-  %3 = add i64 %reg_sp, 8
+  %3 = add i64 %reg_sp, 64
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %sarg0, i32 8, i64 %3)
   %4 = load i64, ptr %sarg0, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg0)
@@ -41,10 +41,10 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   %5 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %6 = getelementptr i64, ptr %5, i64 19
+  %6 = getelementptr i8, ptr %5, i64 152
   %reg_sp1 = load volatile i64, ptr %6, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg2)
-  %7 = add i64 %reg_sp1, 24
+  %7 = add i64 %reg_sp1, 80
   %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %sarg2, i32 8, i64 %7)
   %8 = load i64, ptr %sarg2, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg2)

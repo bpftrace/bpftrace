@@ -29,7 +29,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   %3 = inttoptr i64 %arg0 to ptr
   %4 = call ptr @llvm.preserve.static.offset(ptr %3)
@@ -37,7 +37,7 @@ entry:
   %6 = ptrtoint ptr %5 to i64
   store i64 %6, ptr %"$a", align 8
   %7 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %8 = getelementptr i64, ptr %7, i64 14
+  %8 = getelementptr i8, ptr %7, i64 112
   %arg01 = load volatile i64, ptr %8, align 8
   %9 = inttoptr i64 %arg01 to ptr
   %10 = call ptr @llvm.preserve.static.offset(ptr %9)

@@ -28,7 +28,7 @@ entry:
   %4 = getelementptr [1 x [2 x [8 x i8]]], ptr @var_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 0, ptr %4, align 8
   %5 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %6 = getelementptr i64, ptr %5, i64 14
+  %6 = getelementptr i8, ptr %5, i64 112
   %arg0 = load volatile i64, ptr %6, align 8
   %7 = icmp ugt i64 %arg0, 0
   %true_cond = icmp ne i1 %7, false

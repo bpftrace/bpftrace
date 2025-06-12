@@ -20,7 +20,7 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca [4 x i8], align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 14
+  %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"@x_key", i32 4, i64 %arg0)

@@ -1,202 +1,143 @@
-#include <algorithm>
-#include <array>
-#include <cstring>
-#include <sys/utsname.h>
 #include <unordered_map>
 
 #include "arch.h"
 
 namespace bpftrace::arch {
 
-namespace {
-
-// clang-format off
-std::array<std::string, 17> registers_aarch32 = {
-  "r0",
-  "r1",
-  "r2",
-  "r3",
-  "r4",
-  "r5",
-  "r6",
-  "r7",
-  "r8",
-  "r9",
-  "r10",
-  "fp",
-  "ip",
-  "sp",
-  "lr",
-  "pc",
-  "cpsr",
-};
-
-std::array<std::string, 34> registers_aarch64 = {
-  "r0",
-  "r1",
-  "r2",
-  "r3",
-  "r4",
-  "r5",
-  "r6",
-  "r7",
-  "r8",
-  "r9",
-  "r10",
-  "r11",
-  "r12",
-  "r13",
-  "r14",
-  "r15",
-  "r16",
-  "r17",
-  "r18",
-  "r19",
-  "r20",
-  "r21",
-  "r22",
-  "r23",
-  "r24",
-  "r25",
-  "r26",
-  "r27",
-  "r28",
-  "r29",
-  "r30",
-  "sp",
-  "pc",
-  "pstate",
-};
-
-// Alternative register names that match struct pt_regs
-std::array<std::string, 34> ptrace_registers = {
-  "regs[0]",
-  "regs[1]",
-  "regs[2]",
-  "regs[3]",
-  "regs[4]",
-  "regs[5]",
-  "regs[6]",
-  "regs[7]",
-  "regs[8]",
-  "regs[9]",
-  "regs[10]",
-  "regs[11]",
-  "regs[12]",
-  "regs[13]",
-  "regs[14]",
-  "regs[15]",
-  "regs[16]",
-  "regs[17]",
-  "regs[18]",
-  "regs[19]",
-  "regs[20]",
-  "regs[21]",
-  "regs[22]",
-  "regs[23]",
-  "regs[24]",
-  "regs[25]",
-  "regs[26]",
-  "regs[27]",
-  "regs[28]",
-  "regs[29]",
-  "regs[30]",
-  "sp",
-  "pc",
-  "pstate",
-};
-
-std::unordered_map<std::string, int> compat_offsets = {
-  {"compat_fp", 11},
-  {"compat_sp", 13},
-  {"compat_lr", 14},
-};
-
-// clang-format on
-
-bool is_arm64()
+template <>
+size_t Arch<Machine::ARM>::kernel_ptr_width()
 {
-  static int ptr_width = get_kernel_ptr_width();
-
-  return ptr_width == 64;
+  return 32;
 }
 
-int offset_aarch32(const std::string& reg_name)
+template <>
+std::optional<std::string> Arch<Machine::ARM>::register_to_pt_regs_expr(
+    const std::string& name)
 {
-  auto it = find(registers_aarch32.begin(), registers_aarch32.end(), reg_name);
-  if (it == registers_aarch32.end())
-    return -1;
-  return distance(registers_aarch32.begin(), it);
+  static const std::unordered_map<std::string, std::string> register_exprs = {
+    { "r0", "uregs[0]" },
+    { "r1", "uregs[1]" },
+    { "r2", "uregs[2]" },
+    { "r3", "uregs[3]" },
+    { "r4", "uregs[4]" },
+    { "r5", "uregs[5]" },
+    { "r6", "uregs[6]" },
+    { "r7", "uregs[7]" },
+    { "r8", "uregs[8]" },
+    { "r9", "uregs[9]" },
+    { "r10", "uregs[10]" },
+
+    // Support the expressions as string literals.
+    { "regs[0]", "uregs[0]" },
+    { "regs[1]", "uregs[1]" },
+    { "regs[2]", "uregs[2]" },
+    { "regs[3]", "uregs[3]" },
+    { "regs[4]", "uregs[4]" },
+    { "regs[5]", "uregs[5]" },
+    { "regs[6]", "uregs[6]" },
+    { "regs[7]", "uregs[7]" },
+    { "regs[8]", "uregs[8]" },
+    { "regs[9]", "uregs[9]" },
+    { "regs[10]", "uregs[10]" },
+
+    // Special registers.
+    { "fp", "uregs[11]" },
+    { "ip", "uregs[12]" },
+    { "sp", "uregs[13]" },
+    { "lr", "uregs[14]" },
+    { "pc", "uregs[15]" },
+    { "cpsr", "uregs[16]" },
+  };
+  auto it = register_exprs.find(name);
+  if (it != register_exprs.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
-int offset_aarch64(const std::string& reg_name)
+template <>
+std::optional<size_t> Arch<Machine::ARM>::register_to_pt_regs_offset(
+    const std::string& name)
 {
-  auto it = find(registers_aarch64.begin(), registers_aarch64.end(), reg_name);
-  if (it != registers_aarch64.end())
-    return distance(registers_aarch64.begin(), it);
+  static const std::unordered_map<std::string, size_t> register_offsets = {
+    { "r0", 0 },
+    { "r1", 4 },
+    { "r2", 8 },
+    { "r3", 12 },
+    { "r4", 16 },
+    { "r5", 20 },
+    { "r6", 24 },
+    { "r7", 28 },
+    { "r8", 32 },
+    { "r9", 36 },
+    { "r10", 40 },
 
-  // Support compat aliases for userspace code executing in the AArch32 state
-  auto it_compat = compat_offsets.find(reg_name);
-  if (it_compat != compat_offsets.end())
-    return it_compat->second;
+    // As above, support expressions as string literals.
+    { "regs[0]", 0 },
+    { "regs[1]", 4 },
+    { "regs[2]", 8 },
+    { "regs[3]", 12 },
+    { "regs[4]", 16 },
+    { "regs[5]", 20 },
+    { "regs[6]", 24 },
+    { "regs[7]", 28 },
+    { "regs[8]", 32 },
+    { "regs[9]", 36 },
+    { "regs[10]", 40 },
 
-  // Also allow register names that match the fields in struct pt_regs.
-  // These appear in USDT probe arguments.
-  it = find(ptrace_registers.begin(), ptrace_registers.end(), reg_name);
-  if (it != ptrace_registers.end())
-    return distance(ptrace_registers.begin(), it);
-
-  return -1;
+    // Special registers.
+    { "fp", 44 },
+    { "ip", 48 },
+    { "sp", 52 },
+    { "lr", 56 },
+    { "pc", 60 },
+    { "cpsr", 64 },
+  };
+  auto it = register_offsets.find(name);
+  if (it != register_offsets.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
-} // anonymous namespace
-
-int offset(std::string reg_name)
+template <>
+const std::vector<std::string>& Arch<Machine::ARM>::arguments()
 {
-  // TODO: consider making this based on the execution state bit in pstate
-  return is_arm64() ? offset_aarch64(reg_name) : offset_aarch32(reg_name);
+  static std::vector<std::string> args = {
+    "r0",
+    "r1",
+    "r2",
+    "r3",
+  };
+  return args;
 }
 
-int max_arg()
+template <>
+size_t Arch<Machine::ARM>::argument_stack_offset()
 {
-  return (is_arm64() ? 8 : 4) - 1; // r0 to r7 on arm64
-}
-
-int arg_offset(int arg_num)
-{
-  // Nth argument is stored at offset N in struct pt_regs
-  return arg_num;
-}
-
-int ret_offset()
-{
-  return offset("r0");
-}
-
-int pc_offset()
-{
-  return offset("pc");
-}
-
-int sp_offset()
-{
-  // TODO: this needs to be compat_sp on arm64 if accessing the stack of a
-  // 32-bit process (AArch32), but we don't currently have a way to detect that.
-  return offset("sp");
-}
-
-int arg_stack_offset()
-{
-  // SP points to the first argument that is passed on the stack
   return 0;
 }
 
-std::string name()
+template <>
+std::string Arch<Machine::ARM>::return_value()
 {
-  return std::string(is_arm64() ? "arm64" : "arm");
+  return "r0";
 }
 
-const std::unordered_set<std::string>& watchpoint_modes()
+template <>
+std::string Arch<Machine::ARM>::pc_value()
+{
+  return "pc";
+}
+
+template <>
+std::string Arch<Machine::ARM>::sp_value()
+{
+  return "sp";
+}
+
+template <>
+const std::unordered_set<std::string>& Arch<Machine::ARM>::watchpoint_modes()
 {
   // See arch/arm/kernel/hw_breakpoint.c:arch_build_bp_info in kernel source.
   static std::unordered_set<std::string> valid_modes = {
@@ -208,20 +149,236 @@ const std::unordered_set<std::string>& watchpoint_modes()
   return valid_modes;
 }
 
-int get_kernel_ptr_width()
+template <>
+size_t Arch<Machine::ARM64>::kernel_ptr_width()
 {
-  // We can't assume that sizeof(void*) in bpftrace is the same as the kernel
-  // pointer size (bpftrace can be compiled as a 32-bit binary and run on a
-  // 64-bit kernel), so we guess based on the machine field of struct utsname.
-  // Note that the uname() syscall can return different values for compat mode
-  // processes (e.g. "armv8l" instead of "aarch64"; see COMPAT_UTS_MACHINE), so
-  // make sure this is taken into account.
-  struct utsname utsname;
-  if (uname(&utsname) >= 0) {
-    if (!strncmp(utsname.machine, "armv", 4) && utsname.machine[4] < '8')
-      return 32;
-  }
   return 64;
+}
+
+template <>
+std::optional<std::string> Arch<Machine::ARM64>::register_to_pt_regs_expr(
+    const std::string& name)
+{
+  static const std::unordered_map<std::string, std::string> register_exprs = {
+    { "r0", "regs[0]" },
+    { "r1", "regs[1]" },
+    { "r2", "regs[2]" },
+    { "r3", "regs[3]" },
+    { "r4", "regs[4]" },
+    { "r5", "regs[5]" },
+    { "r6", "regs[6]" },
+    { "r7", "regs[7]" },
+    { "r8", "regs[8]" },
+    { "r9", "regs[9]" },
+    { "r10", "regs[10]" },
+    { "r11", "regs[11]" },
+    { "r12", "regs[12]" },
+    { "r13", "regs[13]" },
+    { "r14", "regs[14]" },
+    { "r15", "regs[15]" },
+    { "r16", "regs[16]" },
+    { "r17", "regs[17]" },
+    { "r18", "regs[18]" },
+    { "r19", "regs[19]" },
+    { "r20", "regs[20]" },
+    { "r21", "regs[21]" },
+    { "r22", "regs[22]" },
+    { "r23", "regs[23]" },
+    { "r24", "regs[24]" },
+    { "r25", "regs[25]" },
+    { "r26", "regs[26]" },
+    { "r27", "regs[27]" },
+    { "r28", "regs[28]" },
+    { "r29", "regs[29]" },
+    { "r30", "regs[30]" },
+
+    // Support expressions as string literals.
+    { "regs[0]", "regs[0]" },
+    { "regs[1]", "regs[1]" },
+    { "regs[2]", "regs[2]" },
+    { "regs[3]", "regs[3]" },
+    { "regs[4]", "regs[4]" },
+    { "regs[5]", "regs[5]" },
+    { "regs[6]", "regs[6]" },
+    { "regs[7]", "regs[7]" },
+    { "regs[8]", "regs[8]" },
+    { "regs[9]", "regs[9]" },
+    { "regs[10]", "regs[10]" },
+    { "regs[11]", "regs[11]" },
+    { "regs[12]", "regs[12]" },
+    { "regs[13]", "regs[13]" },
+    { "regs[14]", "regs[14]" },
+    { "regs[15]", "regs[15]" },
+    { "regs[16]", "regs[16]" },
+    { "regs[17]", "regs[17]" },
+    { "regs[18]", "regs[18]" },
+    { "regs[19]", "regs[19]" },
+    { "regs[20]", "regs[20]" },
+    { "regs[21]", "regs[21]" },
+    { "regs[22]", "regs[22]" },
+    { "regs[23]", "regs[23]" },
+    { "regs[24]", "regs[24]" },
+    { "regs[25]", "regs[25]" },
+    { "regs[26]", "regs[26]" },
+    { "regs[27]", "regs[27]" },
+    { "regs[28]", "regs[28]" },
+    { "regs[29]", "regs[29]" },
+    { "regs[30]", "regs[30]" },
+
+    // Compat registers for 32-bit userspace.
+    {
+        "compat_fp",
+        "regs[11]",
+    },
+    {
+        "compat_sp",
+        "regs[13]",
+    },
+    { "compat_lr", "regs[14]" },
+
+    // Special registers.
+    { "sp", "sp" },
+    { "pc", "pc" },
+    { "pstate", "pstate" },
+  };
+  auto it = register_exprs.find(name);
+  if (it != register_exprs.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+template <>
+std::optional<size_t> Arch<Machine::ARM64>::register_to_pt_regs_offset(
+    const std::string& name)
+{
+  static const std::unordered_map<std::string, size_t> register_offsets = {
+    { "r0", 0 },
+    { "r1", 8 },
+    { "r2", 16 },
+    { "r3", 24 },
+    { "r4", 32 },
+    { "r5", 40 },
+    { "r6", 48 },
+    { "r7", 56 },
+    { "r8", 64 },
+    { "r9", 72 },
+    { "r10", 80 },
+    { "r11", 88 },
+    { "r12", 96 },
+    { "r13", 104 },
+    { "r14", 112 },
+    { "r15", 120 },
+    { "r16", 128 },
+    { "r17", 136 },
+    { "r18", 144 },
+    { "r19", 152 },
+    { "r20", 160 },
+    { "r21", 168 },
+    { "r22", 176 },
+    { "r23", 184 },
+    { "r24", 192 },
+    { "r25", 200 },
+    { "r26", 208 },
+    { "r27", 216 },
+    { "r28", 224 },
+    { "r29", 232 },
+    { "r30", 240 },
+
+    // Full expressions as string literals.
+    { "regs[0]", 0 },
+    { "regs[1]", 8 },
+    { "regs[2]", 16 },
+    { "regs[3]", 24 },
+    { "regs[4]", 32 },
+    { "regs[5]", 40 },
+    { "regs[6]", 48 },
+    { "regs[7]", 56 },
+    { "regs[8]", 64 },
+    { "regs[9]", 72 },
+    { "regs[10]", 80 },
+    { "regs[11]", 88 },
+    { "regs[12]", 96 },
+    { "regs[13]", 104 },
+    { "regs[14]", 112 },
+    { "regs[15]", 120 },
+    { "regs[16]", 128 },
+    { "regs[17]", 136 },
+    { "regs[18]", 144 },
+    { "regs[19]", 152 },
+    { "regs[20]", 160 },
+    { "regs[21]", 168 },
+    { "regs[22]", 176 },
+    { "regs[23]", 184 },
+    { "regs[24]", 192 },
+    { "regs[25]", 200 },
+    { "regs[26]", 208 },
+    { "regs[27]", 216 },
+    { "regs[28]", 224 },
+    { "regs[29]", 232 },
+    { "regs[30]", 240 },
+
+    // Compat registers for 32-bit userspace.
+    { "compat_fp", 88 },
+    { "compat_sp", 104 },
+    { "compat_lr", 112 },
+
+    // Special registers.
+    { "sp", 248 },
+    { "pc", 256 },
+    { "pstate", 264 },
+  };
+  auto it = register_offsets.find(name);
+  if (it != register_offsets.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+template <>
+const std::vector<std::string>& Arch<Machine::ARM64>::arguments()
+{
+  static std::vector<std::string> args = {
+    "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+  };
+  return args;
+}
+
+template <>
+size_t Arch<Machine::ARM64>::argument_stack_offset()
+{
+  return 0;
+}
+
+template <>
+std::string Arch<Machine::ARM64>::return_value()
+{
+  return "r0";
+}
+
+template <>
+std::string Arch<Machine::ARM64>::pc_value()
+{
+  return "pc";
+}
+
+template <>
+std::string Arch<Machine::ARM64>::sp_value()
+{
+  return "sp";
+}
+
+template <>
+const std::unordered_set<std::string>& Arch<Machine::ARM64>::watchpoint_modes()
+{
+  // See arch/arm/kernel/hw_breakpoint.c:arch_build_bp_info in kernel source.
+  static std::unordered_set<std::string> valid_modes = {
+    "r",
+    "w",
+    "x",
+    "rw",
+  };
+  return valid_modes;
 }
 
 } // namespace bpftrace::arch
