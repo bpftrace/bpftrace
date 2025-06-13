@@ -13,6 +13,7 @@ RUN dnf install -y \
         bpftool \
         cereal-devel \
         clang-devel \
+        clang-libs \
         cmake \
         elfutils-devel \
         elfutils-libelf-devel \
@@ -33,7 +34,7 @@ COPY . /src
 WORKDIR /src
 
 # Use CMAKE_BUILD_TYPE=Release if you don't plan on developing bpftrace
-RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug
+RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug -DUSE_CLANG_CPP=ON
 RUN make -C /build -j$(nproc)
 
 ENTRYPOINT ["/build/src/bpftrace"]
