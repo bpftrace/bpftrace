@@ -48,11 +48,17 @@ target_link_libraries(ast PRIVATE debugfs tracefs util stdlib)
 target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser)
 
 if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
-  MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
+  message(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")
 endif()
 target_compile_definitions(ast PUBLIC SYSTEM_INCLUDE_PATHS="${SYSTEM_INCLUDE_PATHS}")
 
 if(STATIC_LINKING)
+  if(USE_CLANG_CPP)
+    # The `USE_CLANG_CPP` exists to support linking for Fedora, which is
+    # unlikely to require `STATIC_LINKING`.
+    message(FATAL_ERROR "STATIC_LINKING and USE_CLANG_CPP are incompatible")
+  endif()
+
   include(Util)
 
   set(llvm_lib_names
@@ -98,5 +104,9 @@ else()
     # have libLLVM.so, drop `USE_SHARED` to avoid forcing link to `-lLLVM`.
     llvm_config(ast bpfcodegen ipo irreader mcjit orcjit)
   endif()
-  target_link_libraries(ast PUBLIC libclang clangDriver clangFrontend clangCodeGen)
+  if(USE_CLANG_CPP)
+    target_link_libraries(ast PUBLIC libclang libclang-cpp)
+  else()
+    target_link_libraries(ast PUBLIC libclang clangDriver clangFrontend clangCodeGen)
+  endif()
 endif()

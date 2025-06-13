@@ -21,6 +21,7 @@ set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")
 set(ENABLE_SYSTEMD OFF CACHE BOOL "Enable systemd integration")
 set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 set(SYSTEM_INCLUDE_PATHS "auto" CACHE STRING "Hard-code system include paths (colon separated, the default value \"auto\" queries clang at runtime)")
+set(USE_CLANG_CPP OFF CACHE BOOL "Link against clang-cpp instead of the usual names")
 
 set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
 
