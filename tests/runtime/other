@@ -351,3 +351,18 @@ NAME invalid license
 PROG config={license="Potato"} BEGIN { @p[1] = 1; print(len(@p)); exit(); }
 EXPECT ERROR: Your bpftrace program cannot load because you are using a license that is non-GPL compatible. License: Potato
 WILL_FAIL
+
+NAME named command line params
+RUN {{BPFTRACE}} -e 'BEGIN { print((getopt("aa", 10), getopt("cc", 1), getopt("dd"), getopt("ee", "hello"))); exit(); }' -- --dd --aa=20 --cc=False
+EXPECT (20, 0, 1, hello)
+TIMEOUT 1
+
+NAME named and positional params
+RUN {{BPFTRACE}} -e 'BEGIN { print(($1, getopt("aa", 10), $2, getopt("bb", "hello"), getopt("cc"))); exit(); }' --aa=20 pos1 --bb=bye -- pos2 --cc
+EXPECT (pos1, 20, pos2, bye, 1)
+TIMEOUT 1
+
+NAME named command line params not found
+RUN {{BPFTRACE}} -e 'BEGIN { exit(); }' --aa=20
+EXPECT ERROR: Unexpected command line options: aa
+WILL_FAIL

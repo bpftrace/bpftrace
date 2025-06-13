@@ -20,6 +20,7 @@
 #include "ast/pass_manager.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/cli_opts.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -48,9 +49,9 @@
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
+#include "util/strings.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -166,6 +167,19 @@ void usage(std::ostream& out)
   out << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   out << "    count syscalls by process name" << std::endl;
   // clang-format on
+}
+
+template <typename T, typename... Ts>
+void log_pass_error(Result<T>&& res)
+{
+  auto ok = handleErrors(std::move(res),
+                         [&](const ast::CliOptsError& cli_opts_err) {
+                           LOG(ERROR) << cli_opts_err.err();
+                           usage(std::cerr);
+                         });
+  if (!ok) {
+    LOG(ERROR) << ok.takeError();
+  }
 }
 
 static void enforce_infinite_rlimit()
@@ -297,10 +311,39 @@ std::vector<std::string> extra_flags(
   return extra_flags;
 }
 
-void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
+struct Args {
+  std::string pid_str;
+  std::string cmd_str;
+  bool listing = false;
+  bool safe_mode = true;
+  bool usdt_file_activation = false;
+  int helper_check_level = 1;
+  bool no_warnings = false;
+  TestMode test_mode = TestMode::NONE;
+  std::string script;
+  std::string search;
+  std::string filename;
+  std::string output_file;
+  std::string output_format;
+  std::string output_elf;
+  std::string output_llvm;
+  std::string aot;
+  BPFnofeature no_feature;
+  OutputBufferConfig obc = OutputBufferConfig::UNSET;
+  BuildMode build_mode = BuildMode::DYNAMIC;
+  std::vector<std::string> include_dirs;
+  std::vector<std::string> include_files;
+  std::vector<std::string> params;
+  std::vector<std::string> debug_stages;
+  std::unordered_map<std::string, std::string> named_args;
+};
+
+void CreateDynamicPasses(const Args& args,
+                         std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
   add(ast::CreatePidFilterPass());
+  add(ast::CreateCLIOptsPass(args.named_args));
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
@@ -328,32 +371,6 @@ ast::Pass printPass(const std::string& name)
     printer.visit(ast.root);
     std::cerr << std::endl;
   });
-};
-
-struct Args {
-  std::string pid_str;
-  std::string cmd_str;
-  bool listing = false;
-  bool safe_mode = true;
-  bool usdt_file_activation = false;
-  int helper_check_level = 1;
-  bool no_warnings = false;
-  TestMode test_mode = TestMode::NONE;
-  std::string script;
-  std::string search;
-  std::string filename;
-  std::string output_file;
-  std::string output_format;
-  std::string output_elf;
-  std::string output_llvm;
-  std::string aot;
-  BPFnofeature no_feature;
-  OutputBufferConfig obc = OutputBufferConfig::UNSET;
-  BuildMode build_mode = BuildMode::DYNAMIC;
-  std::vector<std::string> include_dirs;
-  std::vector<std::string> include_files;
-  std::vector<std::string> params;
-  std::vector<std::string> debug_stages;
 };
 
 static bool parse_debug_stages(const std::string& arg)
@@ -446,8 +463,21 @@ Args parse_args(int argc, char* argv[])
                                                                         // last
   };
 
+  auto add_named_arg = [&](std::string&& named_arg) {
+    auto arg = named_arg.substr(2);
+    if (arg.find("=") != std::string::npos) {
+      auto split = util::split_string(arg,
+                                      '=',
+                                      /* remove_empty= */ true);
+      args.named_args[split[0]] = split[1];
+    } else {
+      args.named_args[arg] = "true";
+    }
+  };
+
   int c;
   bool has_k = false;
+  opterr = 0; // Don't print warning messages for unregonized options
   while ((c = getopt_long(argc, argv, short_options, long_options, nullptr)) !=
          -1) {
     switch (c) {
@@ -568,9 +598,20 @@ Args parse_args(int argc, char* argv[])
         }
         has_k = true;
         break;
-      default:
-        usage(std::cerr);
-        exit(1);
+      default: {
+        auto unrecognized_opt = std::string(argv[optind - 1]);
+        if (unrecognized_opt.starts_with("--")) {
+          add_named_arg(std::move(unrecognized_opt));
+          // We'll error later via CLIOptsPass if we confirm this is an
+          // unexpected long arg
+          break;
+        } else {
+          LOG(ERROR) << "Unrecognized option: " << static_cast<char>(optopt)
+                     << "\n";
+          usage(std::cerr);
+          exit(1);
+        }
+      }
     }
   }
 
@@ -625,14 +666,17 @@ Args parse_args(int argc, char* argv[])
       optind++;
     }
 
-    // Load positional parameters before driver runs so positional
-    // parameters used inside attach point definitions can be resolved.
+    // Parse positional and named parameters.
     while (optind < argc) {
-      args.params.emplace_back(argv[optind]);
+      auto pos_arg = std::string(argv[optind]);
+      if (pos_arg.starts_with("--")) {
+        add_named_arg(std::move(pos_arg));
+      } else {
+        args.params.emplace_back(argv[optind]);
+      }
       optind++;
     }
   }
-
   return args;
 }
 
@@ -729,7 +773,8 @@ int main(int argc, char* argv[])
     if (*maybe_pid > 0x400000) {
       // The actual maximum pid depends on the configuration for the specific
       // system, i.e. read from `/proc/sys/kernel/pid_max`. We can impose a
-      // basic sanity check here against the nominal maximum for 64-bit systems.
+      // basic sanity check here against the nominal maximum for 64-bit
+      // systems.
       LOG(ERROR) << "Pid out of range: " << *maybe_pid;
       exit(1);
     }
@@ -751,9 +796,9 @@ int main(int argc, char* argv[])
     }
   }
 
-  // This is our primary program AST context. Initially it is empty, i.e. there
-  // is no filename set or source file. The way we set it up depends on the
-  // mode of execution below, and we expect that it will be reinitialized.
+  // This is our primary program AST context. Initially it is empty, i.e.
+  // there is no filename set or source file. The way we set it up depends on
+  // the mode of execution below, and we expect that it will be reinitialized.
   ast::ASTContext ast;
 
   // Listing probes when there is no program.
@@ -775,19 +820,22 @@ int main(int argc, char* argv[])
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
     ast::CDefinitions no_c_defs; // No external C definitions may be used.
 
-    // Parse and expand all the attachpoints. We don't need to descend into the
-    // actual driver here, since we know that the program is already formed.
-    auto ok = ast::PassManager()
-                  .put(ast)
-                  .put(bpftrace)
-                  .put(no_c_defs)
-                  .add(ast::CreateParseAttachpointsPass(args.listing))
-                  .add(CreateParseBTFPass())
-                  .add(ast::CreateMapSugarPass())
-                  .add(ast::CreateSemanticPass(args.listing))
-                  .run();
-    if (!ok) {
-      std::cerr << ok.takeError() << "\n";
+    // Parse and expand all the attachpoints. We don't need to descend into
+    // the actual driver here, since we know that the program is already
+    // formed.
+    auto pmresult = ast::PassManager()
+                        .put(ast)
+                        .put(bpftrace)
+                        .put(no_c_defs)
+                        .add(ast::CreateParseAttachpointsPass(args.listing))
+                        .add(CreateParseBTFPass())
+                        .add(ast::CreateMapSugarPass())
+                        .add(ast::CreateCLIOptsPass(args.named_args))
+                        .add(ast::CreateSemanticPass(args.listing))
+                        .run();
+
+    if (!pmresult) {
+      log_pass_error(std::move(pmresult));
       return 2;
     } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
@@ -853,10 +901,10 @@ int main(int argc, char* argv[])
 
   // Temporarily, we make the full `BPFTrace` object available via the pass
   // manager (and objects are temporarily mutable). As passes are refactored
-  // into lighter-weight components, the `BPFTrace` object should be decomposed
-  // into its meaningful parts. Furthermore, the codegen and field analysis
-  // passes will be rolled into the pass manager as regular passes; the final
-  // binary is merely one of the outputs that can be extracted.
+  // into lighter-weight components, the `BPFTrace` object should be
+  // decomposed into its meaningful parts. Furthermore, the codegen and field
+  // analysis passes will be rolled into the pass manager as regular passes;
+  // the final binary is merely one of the outputs that can be extracted.
   ast::PassManager pm;
   pm.put(ast);
   pm.put(bpftrace);
@@ -869,11 +917,12 @@ int main(int argc, char* argv[])
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
+        .add(ast::CreateCLIOptsPass(args.named_args))
         .add(ast::CreateSemanticPass(args.listing));
 
-    auto ok = pm.run();
-    if (!ok) {
-      std::cerr << ok.takeError() << "\n";
+    auto pmresult = pm.run();
+    if (!pmresult) {
+      log_pass_error(std::move(pmresult));
       return 2;
     } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
@@ -900,7 +949,7 @@ int main(int argc, char* argv[])
 
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
-      CreateDynamicPasses(addPass);
+      CreateDynamicPasses(args, addPass);
       break;
     case BuildMode::AHEAD_OF_TIME:
       CreateAotPasses(addPass);
@@ -971,7 +1020,7 @@ int main(int argc, char* argv[])
 
   auto pmresult = pm.run();
   if (!pmresult) {
-    std::cerr << pmresult.takeError() << "\n";
+    log_pass_error(std::move(pmresult));
     return 2;
   } else if (!ast.diagnostics().ok()) {
     ast.diagnostics().emit(std::cerr);
