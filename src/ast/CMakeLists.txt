@@ -77,15 +77,7 @@ if(STATIC_LINKING)
   unlink_transitive_dependency("${CLANG_EXPORTED_TARGETS}" "LLVM")
   unlink_transitive_dependency("${CLANG_EXPORTED_TARGETS}" "$<LINK_ONLY:clang-cpp>")
 
-  if(TARGET libclang_static)
-    target_link_libraries(ast PUBLIC libclang_static)
-  else()
-    # old LLVM versions don't export libclang_static in ClangTargets.cmake; fall back to
-    # libclang.a in that case
-    target_link_libraries(ast PUBLIC libclang.a)
-  endif()
-
-  target_link_libraries(ast PUBLIC clangDriver clangFrontend clangCodeGen)
+  target_link_libraries(ast PUBLIC libclang_static clangDriver clangFrontend clangCodeGen)
   target_link_libraries(ast PUBLIC ${llvm_libs})
 else()
   if (TARGET LLVM)
@@ -98,5 +90,6 @@ else()
     # have libLLVM.so, drop `USE_SHARED` to avoid forcing link to `-lLLVM`.
     llvm_config(ast bpfcodegen ipo irreader mcjit orcjit)
   endif()
-  target_link_libraries(ast PUBLIC libclang clangDriver clangFrontend clangCodeGen)
+
+  target_link_libraries(ast PUBLIC libclang clang-cpp)
 endif()

@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     libpcap-dev \
     llvm-dev \
     libclang-dev \
+    libclang-cpp-dev \
     pahole \
     systemtap-sdt-dev \
     xxd \
