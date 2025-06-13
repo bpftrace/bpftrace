@@ -8,9 +8,9 @@ target triple = "bpf"
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !22
-@max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !25
-@get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !27
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !22
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !25
+@__bt__get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !27
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -20,9 +20,9 @@ define i64 @fentry_mock_vmlinux_filp_close_1(ptr %0) #0 section "s_fentry_mock_v
 entry:
   %helper_error_t = alloca %helper_error_t, align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
+  %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
   %d_path = call i64 inttoptr (i64 147 to ptr)(ptr null, ptr %2, i32 1024)
   %3 = trunc i64 %d_path to i32
@@ -45,7 +45,7 @@ helper_merge:                                     ; preds = %counter_merge, %ent
   ret i64 0
 
 event_loss_counter:                               ; preds = %helper_failure
-  %8 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %8 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
@@ -88,12 +88,12 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !20 = !{!21}
 !21 = !DISubrange(count: 262144, lowerBound: 0)
 !22 = !DIGlobalVariableExpression(var: !23, expr: !DIExpression())
-!23 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!23 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !24 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !25 = !DIGlobalVariableExpression(var: !26, expr: !DIExpression())
-!26 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!26 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !27 = !DIGlobalVariableExpression(var: !28, expr: !DIExpression())
-!28 = distinct !DIGlobalVariable(name: "get_str_buf", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
+!28 = distinct !DIGlobalVariable(name: "__bt__get_str_buf", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
 !29 = !DICompositeType(tag: DW_TAG_array_type, baseType: !30, size: 8192, elements: !34)
 !30 = !DICompositeType(tag: DW_TAG_array_type, baseType: !31, size: 8192, elements: !34)
 !31 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 8192, elements: !32)

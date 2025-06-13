@@ -11,11 +11,11 @@ target triple = "bpf"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !35
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !49
-@map_key_buf = dso_local externally_initialized global [1 x [2 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !51
-@write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !60
-@max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !64
-@read_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !66
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !49
+@__bt__map_key_buf = dso_local externally_initialized global [1 x [2 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !51
+@__bt__write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !60
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !64
+@__bt__read_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !66
 @yyyy = global [5 x i8] c"yyyy\00"
 
 ; Function Attrs: nounwind
@@ -25,26 +25,26 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !72 {
 entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
+  %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [2 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %2 = getelementptr [1 x [2 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 1, ptr %2, align 8
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
-  %3 = load i64, ptr @max_cpu_id, align 8
+  %3 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %3
-  %4 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
+  %4 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
   store i64 1, ptr %4, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %2, ptr %4, i64 0)
   %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)()
-  %5 = load i64, ptr @max_cpu_id, align 8
+  %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded4 = and i64 %get_cpu_id3, %5
-  %6 = getelementptr [1 x [2 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded4, i64 1, i64 0
+  %6 = getelementptr [1 x [2 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded4, i64 1, i64 0
   store i64 1, ptr %6, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %6)
   %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)()
-  %7 = load i64, ptr @max_cpu_id, align 8
+  %7 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded6 = and i64 %get_cpu_id5, %7
-  %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @read_map_val_buf, i64 0, i64 %cpu.id.bounded6, i64 0, i64 0
+  %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__read_map_val_buf, i64 0, i64 %cpu.id.bounded6, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
@@ -60,9 +60,9 @@ lookup_failure:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %10 = load i64, ptr %8, align 8
   %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
-  %11 = load i64, ptr @max_cpu_id, align 8
+  %11 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded8 = and i64 %get_cpu_id7, %11
-  %12 = getelementptr [1 x [1 x [8 x i8]]], ptr @write_map_val_buf, i64 0, i64 %cpu.id.bounded8, i64 0, i64 0
+  %12 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded8, i64 0, i64 0
   store i64 %10, ptr %12, align 8
   %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr @yyyy, ptr %12, i64 0)
   ret i64 0
@@ -123,9 +123,9 @@ attributes #0 = { nounwind }
 !47 = !{!48}
 !48 = !DISubrange(count: 262144, lowerBound: 0)
 !49 = !DIGlobalVariableExpression(var: !50, expr: !DIExpression())
-!50 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!50 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
-!52 = distinct !DIGlobalVariable(name: "map_key_buf", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
+!52 = distinct !DIGlobalVariable(name: "__bt__map_key_buf", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
 !53 = !DICompositeType(tag: DW_TAG_array_type, baseType: !54, size: 128, elements: !15)
 !54 = !DICompositeType(tag: DW_TAG_array_type, baseType: !55, size: 128, elements: !58)
 !55 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !56)
@@ -134,13 +134,13 @@ attributes #0 = { nounwind }
 !58 = !{!59}
 !59 = !DISubrange(count: 2, lowerBound: 0)
 !60 = !DIGlobalVariableExpression(var: !61, expr: !DIExpression())
-!61 = distinct !DIGlobalVariable(name: "write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !62, isLocal: false, isDefinition: true)
+!61 = distinct !DIGlobalVariable(name: "__bt__write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !62, isLocal: false, isDefinition: true)
 !62 = !DICompositeType(tag: DW_TAG_array_type, baseType: !63, size: 64, elements: !15)
 !63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !55, size: 64, elements: !15)
 !64 = !DIGlobalVariableExpression(var: !65, expr: !DIExpression())
-!65 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!65 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !66 = !DIGlobalVariableExpression(var: !67, expr: !DIExpression())
-!67 = distinct !DIGlobalVariable(name: "read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !62, isLocal: false, isDefinition: true)
+!67 = distinct !DIGlobalVariable(name: "__bt__read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !62, isLocal: false, isDefinition: true)
 !68 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !69)
 !69 = !{!0, !7, !26, !35, !49, !51, !60, !64, !66}
 !70 = !{i32 2, !"Debug Info Version", i32 3}

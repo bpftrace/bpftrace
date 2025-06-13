@@ -540,7 +540,7 @@ Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
 {
   const auto max_strlen = bpftrace_.config_->max_strlen;
   const auto str_type = CreateArray(max_strlen, CreateInt8());
-  return createAllocation(bpftrace::globalvars::GlobalVar::GET_STR_BUFFER,
+  return createAllocation(bpftrace::globalvars::GET_STR_BUFFER,
                           GetType(str_type),
                           name,
                           loc,
@@ -551,17 +551,15 @@ Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                                       const std::string &name,
                                                       const Location &loc)
 {
-  return createAllocation(bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER,
-                          struct_type,
-                          name,
-                          loc);
+  return createAllocation(
+      bpftrace::globalvars::FMT_STRINGS_BUFFER, struct_type, name, loc);
 }
 
 Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
                                            const std::string &name,
                                            const Location &loc)
 {
-  return createAllocation(bpftrace::globalvars::GlobalVar::TUPLE_BUFFER,
+  return createAllocation(bpftrace::globalvars::TUPLE_BUFFER,
                           GetType(tuple_type),
                           name,
                           loc,
@@ -574,23 +572,23 @@ Value *IRBuilderBPF::CreateReadMapValueAllocation(const SizedType &value_type,
                                                   const std::string &name,
                                                   const Location &loc)
 {
-  return createAllocation(
-      bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER,
-      GetType(value_type),
-      name,
-      loc,
-      [](AsyncIds &async_ids) { return async_ids.read_map_value(); });
+  return createAllocation(bpftrace::globalvars::READ_MAP_VALUE_BUFFER,
+                          GetType(value_type),
+                          name,
+                          loc,
+                          [](AsyncIds &async_ids) {
+                            return async_ids.read_map_value();
+                          });
 }
 
 Value *IRBuilderBPF::CreateWriteMapValueAllocation(const SizedType &value_type,
                                                    const std::string &name,
                                                    const Location &loc)
 {
-  return createAllocation(
-      bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER,
-      GetType(value_type),
-      name,
-      loc);
+  return createAllocation(bpftrace::globalvars::WRITE_MAP_VALUE_BUFFER,
+                          GetType(value_type),
+                          name,
+                          loc);
 }
 
 Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
@@ -603,7 +601,7 @@ Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
   // stack-only variable implementation.
   Value *alloc;
   hoist([this, &value_type, &name, &loc, &alloc] {
-    alloc = createAllocation(bpftrace::globalvars::GlobalVar::VARIABLE_BUFFER,
+    alloc = createAllocation(bpftrace::globalvars::VARIABLE_BUFFER,
                              GetType(value_type),
                              name,
                              loc,
@@ -619,7 +617,7 @@ Value *IRBuilderBPF::CreateMapKeyAllocation(const SizedType &value_type,
                                             const std::string &name,
                                             const Location &loc)
 {
-  return createAllocation(bpftrace::globalvars::GlobalVar::MAP_KEY_BUFFER,
+  return createAllocation(bpftrace::globalvars::MAP_KEY_BUFFER,
                           GetType(value_type),
                           name,
                           loc,
@@ -629,7 +627,7 @@ Value *IRBuilderBPF::CreateMapKeyAllocation(const SizedType &value_type,
 }
 
 Value *IRBuilderBPF::createAllocation(
-    bpftrace::globalvars::GlobalVar globalvar,
+    std::string_view global_var_name,
     llvm::Type *obj_type,
     const std::string &name,
     const Location &loc,
@@ -638,28 +636,28 @@ Value *IRBuilderBPF::createAllocation(
   const auto obj_size = module_.getDataLayout().getTypeAllocSize(obj_type);
   const auto on_stack_limit = bpftrace_.config_->on_stack_limit;
   if (obj_size > on_stack_limit) {
-    return createScratchBuffer(
-        globalvar, loc, gen_async_id_cb ? (*gen_async_id_cb)(async_ids_) : 0);
+    return createScratchBuffer(global_var_name,
+                               loc,
+                               gen_async_id_cb ? (*gen_async_id_cb)(async_ids_)
+                                               : 0);
   }
   return CreateAllocaBPF(obj_type, name);
 }
 
-Value *IRBuilderBPF::createScratchBuffer(
-    bpftrace::globalvars::GlobalVar globalvar,
-    const Location &loc,
-    size_t key)
+Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
+                                         const Location &loc,
+                                         size_t key)
 {
-  auto config = globalvars::get_config(globalvar);
+  const auto global_name = std::string(global_var_name);
   // ValueType var[MAX_CPU_ID + 1][num_elements]
-  auto type = globalvars::get_type(globalvar,
-                                   bpftrace_.resources,
-                                   *bpftrace_.config_);
+  auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
+      global_name, bpftrace_.resources, *bpftrace_.config_);
 
   // Get CPU ID
   auto *cpu_id = CreateGetCpuId(loc);
   auto *max = CreateLoad(getInt64Ty(),
-                         module_.getGlobalVariable(to_string(
-                             bpftrace::globalvars::GlobalVar::MAX_CPU_ID)));
+                         module_.getGlobalVariable(
+                             std::string(bpftrace::globalvars::MAX_CPU_ID)));
   // Mask CPU ID by MAX_CPU_ID to ensure BPF verifier knows CPU ID is bounded
   // on older kernels. Note this means MAX_CPU_ID must be 2^N - 1 for some N.
   // See get_max_cpu_id() for more details.
@@ -669,8 +667,8 @@ Value *IRBuilderBPF::createScratchBuffer(
   // ValueType var[MAX_CPU_ID + 1][num_elements]
   // 2nd/3rd/4th indexes actually index into the array
   // See https://llvm.org/docs/LangRef.html#id236
-  return CreateGEP(GetType(type),
-                   module_.getGlobalVariable(config.name),
+  return CreateGEP(GetType(sized_type),
+                   module_.getGlobalVariable(global_name),
                    { getInt64(0), bounded_cpu_id, getInt64(key), getInt64(0) });
 }
 
@@ -832,13 +830,12 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
   CreateBr(while_cond);
   SetInsertPoint(while_cond);
 
-  auto *cond = CreateICmp(
-      CmpInst::ICMP_ULT,
-      CreateLoad(getInt32Ty(), i),
-      CreateLoad(getInt32Ty(),
-                 module_.getGlobalVariable(
-                     to_string(bpftrace::globalvars::GlobalVar::NUM_CPUS))),
-      "num_cpu.cmp");
+  auto *cond = CreateICmp(CmpInst::ICMP_ULT,
+                          CreateLoad(getInt32Ty(), i),
+                          CreateLoad(getInt32Ty(),
+                                     module_.getGlobalVariable(std::string(
+                                         bpftrace::globalvars::NUM_CPUS))),
+                          "num_cpu.cmp");
   CreateCondBr(cond, while_body, while_end);
 
   SetInsertPoint(while_body);
@@ -2196,7 +2193,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
 void IRBuilderBPF::CreateIncEventLossCounter()
 {
   auto *global_event_loss_counter = module_.getGlobalVariable(
-      to_string(bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER));
+      std::string(bpftrace::globalvars::EVENT_LOSS_COUNTER));
   CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Add,
                     global_event_loss_counter,
                     getInt64(1),
