@@ -50,14 +50,14 @@ private:
                        bool ignore_unknown);
   Result<OK> importAny(Node &node,
                        const std::string &name,
-                       const std::string &data,
+                       const std::string_view &data,
                        bool ignore_unknown);
   Result<OK> importScript(Node &node,
                           const std::string &name,
                           const std::filesystem::path &path);
   Result<OK> importScript(Node &node,
                           const std::string &name,
-                          const std::string &contents);
+                          const std::string &&contents);
   Result<OK> importObject(Node &node,
                           const std::string &name,
                           const std::filesystem::path &path);
@@ -67,7 +67,7 @@ private:
                             std::map<std::string, LoadedObject> &where);
   static Result<OK> importC(Node &node,
                             const std::string &name,
-                            const std::string &contents,
+                            const std::string_view &contents,
                             std::map<std::string, LoadedObject> &where);
 
   BPFtrace &bpftrace_;
@@ -118,7 +118,7 @@ Result<OK> ResolveImports::importScript(Node &node,
 
 Result<OK> ResolveImports::importScript([[maybe_unused]] Node &node,
                                         const std::string &name,
-                                        const std::string &contents)
+                                        const std::string &&contents)
 {
   if (imports.scripts.contains(name)) {
     return OK(); // Already added.
@@ -192,7 +192,7 @@ Result<OK> ResolveImports::importC(Node &node,
 
 Result<OK> ResolveImports::importC(Node &node,
                                    const std::string &name,
-                                   const std::string &contents,
+                                   const std::string_view &contents,
                                    std::map<std::string, LoadedObject> &where)
 {
   if (where.contains(name)) {
@@ -247,13 +247,13 @@ Result<OK> ResolveImports::importAny(Node &node,
 
 Result<OK> ResolveImports::importAny(Node &node,
                                      const std::string &name,
-                                     const std::string &data,
+                                     const std::string_view &data,
                                      bool ignore_unknown)
 {
   // Import supported extensions.
   std::filesystem::path path(name);
   if (path.extension() == ".bt") {
-    return importScript(node, name, data);
+    return importScript(node, name, std::string(data));
   } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
     return importC(node, name, data, imports.c_sources);
   } else if (path.extension() == ".h") {
