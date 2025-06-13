@@ -12,6 +12,7 @@
 #include "ast/helpers.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -4325,7 +4326,8 @@ Pass CreateSemanticPass(bool listing)
   auto fn = [listing](ASTContext &ast,
                       BPFtrace &b,
                       CDefinitions &c_definitions,
-                      MapMetadata &mm) {
+                      MapMetadata &mm,
+                      [[maybe_unused]] TypeMetadata &types) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,

@@ -32,6 +32,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "benchmark.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
@@ -328,6 +329,8 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateFoldLiteralsPass());
   add(ast::CreatePidFilterPass());
   add(ast::CreateNamedParamsPass());
+  add(ast::CreateClangBuildPass());
+  add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
@@ -339,6 +342,8 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreatePortabilityPass());
   add(ast::CreateFoldLiteralsPass());
   add(ast::CreateNamedParamsPass());
+  add(ast::CreateClangBuildPass());
+  add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
@@ -778,6 +783,7 @@ int main(int argc, char* argv[])
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
     ast::CDefinitions no_c_defs; // No external C definitions may be used.
+    ast::TypeMetadata no_types;  // No external types may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into
     // the actual driver here, since we know that the program is already
@@ -786,6 +792,7 @@ int main(int argc, char* argv[])
                         .put(ast)
                         .put(bpftrace)
                         .put(no_c_defs)
+                        .put(no_types)
                         .add(ast::CreateParseAttachpointsPass(args.listing))
                         .add(CreateParseBTFPass())
                         .add(ast::CreateMapSugarPass())
@@ -871,8 +878,10 @@ int main(int argc, char* argv[])
 
   if (args.listing) {
     ast::CDefinitions no_c_defs; // See above.
+    ast::TypeMetadata no_types;  // See above.
     pm.add(CreateParsePass(bpftrace.max_ast_nodes_))
         .put(no_c_defs)
+        .put(no_types)
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
@@ -905,6 +914,7 @@ int main(int argc, char* argv[])
   for (auto& pass : ast::AllParsePasses(std::move(flags))) {
     addPass(std::move(pass));
   }
+  pm.add(ast::CreateLLVMInitPass());
 
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
@@ -915,8 +925,9 @@ int main(int argc, char* argv[])
       break;
   }
 
-  pm.add(ast::CreateLLVMInitPass());
-  pm.add(ast::CreateClangBuildPass());
+  if (bt_debug.contains(DebugStage::Types)) {
+    pm.add(ast::CreateDumpTypesPass(std::cout));
+  }
   pm.add(ast::CreateCompilePass());
   pm.add(ast::CreateLinkBitcodePass());
   if (bt_debug.contains(DebugStage::Codegen)) {

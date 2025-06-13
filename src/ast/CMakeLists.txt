@@ -30,6 +30,7 @@ add_library(ast STATIC
   passes/link.cpp
   passes/map_sugar.cpp
   passes/macro_expansion.cpp
+  passes/pid_filter_pass.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/probe_expansion.cpp
@@ -38,8 +39,8 @@ add_library(ast STATIC
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/return_path_analyser.cpp
-  passes/pid_filter_pass.cpp
   passes/recursion_check.cpp
+  passes/type_system.cpp
   passes/unstable_feature.cpp
 )
 

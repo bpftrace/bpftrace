@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "ast/pass_manager.h"
-#include "ast/passes/clang_build.h"
 #include "ast/passes/link.h"
 #include "usdt.h"
 
@@ -70,9 +69,7 @@ inline std::vector<Pass> AllCompilePasses(
         std::nullopt)
 {
   std::vector<Pass> passes;
-  passes.emplace_back(CreateLLVMInitPass());
   passes.emplace_back(CreateCompilePass(std::move(usdt_helper)));
-  passes.emplace_back(CreateClangBuildPass());
   passes.emplace_back(CreateLinkBitcodePass());
   passes.emplace_back(CreateVerifyPass());
   passes.emplace_back(CreateOptimizePass());

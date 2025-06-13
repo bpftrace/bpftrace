@@ -1,4 +1,5 @@
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
@@ -6,6 +7,7 @@
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "btf_common.h"
@@ -38,6 +40,9 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateNamedParamsPass())
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
