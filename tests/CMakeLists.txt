@@ -66,6 +66,7 @@ add_executable(bpftrace_test
   temp.cpp
   tracepoint_format_parser.cpp
   types.cpp
+  type_system.cpp
   unstable_feature.cpp
   utils.cpp
 

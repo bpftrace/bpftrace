@@ -9,6 +9,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "btf_common.h"
@@ -112,11 +113,14 @@ static auto parse_probe(const std::string &str,
 {
   ast::ASTContext ast("stdin", str);
 
+  ast::TypeMetadata no_types; // No external types defined.
+
   // N.B. Don't use tracepoint format parser here.
   auto usdt = get_mock_usdt_helper(usdt_num_locations);
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())

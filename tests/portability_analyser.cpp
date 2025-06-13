@@ -3,6 +3,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
@@ -19,12 +20,14 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   ast::CDefinitions no_c_defs; // Output from clang parser.
+  ast::TypeMetadata no_types;  // No external types defined.
 
   // N.B. No macro or tracepoint expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
                 .put(no_c_defs)
+                .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateMapSugarPass())

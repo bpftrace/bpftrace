@@ -6,6 +6,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/c_macro_expansion.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
@@ -16,8 +17,10 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/recursion_check.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
@@ -70,12 +73,15 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateNamedParamsPass())
+                .add(ast::CreateResolveImportsPass({}))
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreatePidFilterPass())
                 .add(ast::CreateRecursionCheckPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
-                .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateCompilePass())
                 .add(ast::CreateDumpIRPass(out))
                 .run();

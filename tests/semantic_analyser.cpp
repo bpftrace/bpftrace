@@ -12,6 +12,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
@@ -42,6 +43,9 @@ struct NoWarning {
 };
 struct Error {
   std::string_view str;
+};
+struct Types {
+  ast::TypeMetadata &types;
 };
 struct ExpectedAST {
   std::string_view str;
@@ -88,7 +92,8 @@ public:
               std::is_same_v<std::decay_t<Ts>, Warning> ||
               std::is_same_v<std::decay_t<Ts>, NoWarning> ||
               std::is_same_v<std::decay_t<Ts>, Error> ||
-              std::is_same_v<std::decay_t<Ts>, ExpectedAST>) &&
+              std::is_same_v<std::decay_t<Ts>, ExpectedAST> ||
+              std::is_same_v<std::decay_t<Ts>, Types>) &&
              ...)
   ast::ASTContext test(std::string_view input, Ts &&...args)
   {
@@ -97,6 +102,7 @@ public:
     // Reset for each iteration. We only guarantee that the types remain
     // valid after the ASTContext has been returned.
     bpftrace_.reset();
+    types_.reset();
 
     // Extract all extra arguments.
     auto mock = extract<Mock>(args...);
@@ -106,6 +112,7 @@ public:
     auto warning = extract<Warning>(args...);
     auto nowarning = extract<NoWarning>(args...);
     auto error = extract<Error>(args...);
+    auto types = extract<Types>(args...);
     auto expected_ast = extract<ExpectedAST>(args...);
 
     if (!mock) {
@@ -119,10 +126,15 @@ public:
     if (child.has_value()) {
       mock->bpftrace.cmd_ = "not-empty"; // Used by SemanticAnalyser.
     }
+    if (!types) {
+      types_.emplace();
+      types.emplace(*types_);
+    }
 
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(mock->bpftrace)
+                  .put(types->types)
                   .add(CreateParsePass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
@@ -173,6 +185,7 @@ public:
 
 private:
   std::unique_ptr<MockBPFtrace> bpftrace_;
+  std::optional<ast::TypeMetadata> types_;
 };
 
 class SemanticAnalyserTest : public SemanticAnalyserHarness,

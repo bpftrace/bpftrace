@@ -65,7 +65,8 @@ enum class DebugStage {
   CodegenOpt,
   Disassemble,
   Libbpf,
-  Verifier
+  Verifier,
+  Types,
 };
 
 const std::unordered_map<std::string_view, DebugStage> debug_stages = {
@@ -79,6 +80,7 @@ const std::unordered_map<std::string_view, DebugStage> debug_stages = {
 #endif
   { "libbpf", DebugStage::Libbpf },
   { "verifier", DebugStage::Verifier },
+  { "types", DebugStage::Types },
   // clang-format on
 };
 
