@@ -9,9 +9,9 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !38
-@max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !40
-@map_key_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !42
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !38
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !40
+@__bt__map_key_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !42
 @"tracepoint:sched:sched_one" = global [27 x i8] c"tracepoint:sched:sched_one\00"
 
 ; Function Attrs: nounwind
@@ -21,9 +21,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @tracepoint_sched_sched_one_1(ptr %0) #0 section "s_tracepoint_sched_sched_one_1" !dbg !53 {
 entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
-  %1 = load i64, ptr @max_cpu_id, align 8
+  %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %2 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 0, ptr %2, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %2, ptr @"tracepoint:sched:sched_one", i64 0)
   ret i64 1
@@ -73,11 +73,11 @@ attributes #0 = { nounwind }
 !36 = !{!37}
 !37 = !DISubrange(count: 262144, lowerBound: 0)
 !38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
-!39 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!39 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !40 = !DIGlobalVariableExpression(var: !41, expr: !DIExpression())
-!41 = distinct !DIGlobalVariable(name: "max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!41 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !42 = !DIGlobalVariableExpression(var: !43, expr: !DIExpression())
-!43 = distinct !DIGlobalVariable(name: "map_key_buf", linkageName: "global", scope: !2, file: !2, type: !44, isLocal: false, isDefinition: true)
+!43 = distinct !DIGlobalVariable(name: "__bt__map_key_buf", linkageName: "global", scope: !2, file: !2, type: !44, isLocal: false, isDefinition: true)
 !44 = !DICompositeType(tag: DW_TAG_array_type, baseType: !45, size: 64, elements: !15)
 !45 = !DICompositeType(tag: DW_TAG_array_type, baseType: !46, size: 64, elements: !15)
 !46 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !47)
