@@ -8,6 +8,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "driver.h"
 #include "mocks.h"
@@ -30,11 +31,14 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
   ast::ASTContext ast("stdin", input);
   bpftrace.safe_mode_ = safe_mode;
 
+  ast::TypeMetadata no_types; // No external types defined.
+
   // N.B. No tracepoint expansion, but we will do the double parse to enable
   // macro expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateFieldAnalyserPass())
@@ -87,10 +91,13 @@ ast::ASTContext test(BPFtrace &bpftrace,
     bpftrace.cmd_ = "not-empty"; // Used by SemanticAnalyser.
   }
 
+  ast::TypeMetadata no_types; // No external types defined.
+
   // N.B. See above.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())

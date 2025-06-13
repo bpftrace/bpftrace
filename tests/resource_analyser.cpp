@@ -1,6 +1,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_system.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -18,9 +19,12 @@ void test(BPFtrace &bpftrace,
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
+  ast::TypeMetadata no_types; // No external types defined.
+
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(no_types)
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
