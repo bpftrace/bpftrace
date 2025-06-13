@@ -21,7 +21,7 @@ entry:
   %"@_key" = alloca i64, align 8
   %deref = alloca i8, align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i64, ptr %1, i64 4
+  %2 = getelementptr i8, ptr %1, i64 32
   %reg_bp = load volatile i64, ptr %2, align 8
   %3 = sub i64 %reg_bp, 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
