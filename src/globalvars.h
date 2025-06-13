@@ -1,5 +1,6 @@
 #pragma once
 
+#include "log.h"
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <optional>
@@ -17,27 +18,19 @@ class RequiredResources;
 
 namespace globalvars {
 
-enum class GlobalVar {
-  // Number of online CPUs at runtime, used for metric aggregation for functions
-  // like sum and avg
-  NUM_CPUS,
-  // Max CPU ID returned by bpf_get_smp_processor_id, used for simulating
-  // per-CPU maps in read-write global variables
-  MAX_CPU_ID,
-  // Scratch buffers used to avoid BPF stack allocation limits
-  FMT_STRINGS_BUFFER,
-  TUPLE_BUFFER,
-  GET_STR_BUFFER,
-  READ_MAP_VALUE_BUFFER,
-  WRITE_MAP_VALUE_BUFFER,
-  VARIABLE_BUFFER,
-  MAP_KEY_BUFFER,
-  EVENT_LOSS_COUNTER,
-};
+// Known global variables
+constexpr std::string_view NUM_CPUS = "num_cpus";
+constexpr std::string_view MAX_CPU_ID = "max_cpu_id";
+constexpr std::string_view FMT_STRINGS_BUFFER = "fmt_str_buf";
+constexpr std::string_view TUPLE_BUFFER = "tuple_buf";
+constexpr std::string_view GET_STR_BUFFER = "get_str_buf";
+constexpr std::string_view READ_MAP_VALUE_BUFFER = "read_map_val_buf";
+constexpr std::string_view WRITE_MAP_VALUE_BUFFER = "write_map_val_buf";
+constexpr std::string_view VARIABLE_BUFFER = "var_buf";
+constexpr std::string_view MAP_KEY_BUFFER = "map_key_buf";
+constexpr std::string_view EVENT_LOSS_COUNTER = "event_loss_counter";
 
-std::string to_string(GlobalVar global_var);
-std::optional<GlobalVar> from_string(std::string_view name);
-
+// Section names
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
@@ -53,70 +46,103 @@ constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
     ".data.event_loss_counter";
 
 struct GlobalVarConfig {
-  std::string name;
   std::string section;
   bool read_only;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(section, read_only);
+  }
 };
 
-const std::unordered_map<GlobalVar, GlobalVarConfig> GLOBAL_VAR_CONFIGS = {
-  { GlobalVar::NUM_CPUS,
-    { .name = "num_cpus",
-      .section = std::string(RO_SECTION_NAME),
-      .read_only = true } },
-  { GlobalVar::MAX_CPU_ID,
-    { .name = "max_cpu_id",
-      .section = std::string(RO_SECTION_NAME),
-      .read_only = true } },
-  { GlobalVar::FMT_STRINGS_BUFFER,
-    { .name = "fmt_str_buf",
-      .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::TUPLE_BUFFER,
-    { .name = "tuple_buf",
-      .section = std::string(TUPLE_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::GET_STR_BUFFER,
-    { .name = "get_str_buf",
-      .section = std::string(GET_STR_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::READ_MAP_VALUE_BUFFER,
-    { .name = "read_map_val_buf",
-      .section = std::string(READ_MAP_VALUE_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::WRITE_MAP_VALUE_BUFFER,
-    { .name = "write_map_val_buf",
-      .section = std::string(WRITE_MAP_VALUE_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::VARIABLE_BUFFER,
-    { .name = "var_buf",
-      .section = std::string(VARIABLE_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::MAP_KEY_BUFFER,
-    { .name = "map_key_buf",
-      .section = std::string(MAP_KEY_BUFFER_SECTION_NAME),
-      .read_only = false } },
-  { GlobalVar::EVENT_LOSS_COUNTER,
-    { .name = "event_loss_counter",
-      .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
-      .read_only = false } },
+struct KnownGlobalVarValues {
+  int num_cpus;
+  int max_cpu_id;
 };
 
-void update_global_vars(
-    const struct bpf_object *bpf_object,
-    const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
-    const BPFtrace &bpftrace);
+const std::unordered_map<std::string_view, GlobalVarConfig>
+    GLOBAL_VAR_CONFIGS = {
+      { NUM_CPUS,
+        { .section = std::string(RO_SECTION_NAME), .read_only = true } },
+      { MAX_CPU_ID,
+        { .section = std::string(RO_SECTION_NAME), .read_only = true } },
+      { FMT_STRINGS_BUFFER,
+        { .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { TUPLE_BUFFER,
+        { .section = std::string(TUPLE_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { GET_STR_BUFFER,
+        { .section = std::string(GET_STR_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { READ_MAP_VALUE_BUFFER,
+        { .section = std::string(READ_MAP_VALUE_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { WRITE_MAP_VALUE_BUFFER,
+        { .section = std::string(WRITE_MAP_VALUE_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { VARIABLE_BUFFER,
+        { .section = std::string(VARIABLE_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { MAP_KEY_BUFFER,
+        { .section = std::string(MAP_KEY_BUFFER_SECTION_NAME),
+          .read_only = false } },
+      { EVENT_LOSS_COUNTER,
+        { .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
+          .read_only = false } },
+    };
 
-const GlobalVarConfig &get_config(GlobalVar global_var);
-SizedType get_type(GlobalVar global_var,
+class GlobalVars {
+public:
+  GlobalVars() = default;
+  GlobalVars(std::unordered_map<std::string, GlobalVarConfig> global_var_map)
+      : global_var_map_(std::move(global_var_map))
+  {
+  }
+
+  void add_known_global_var(const std::string_view &name);
+  const GlobalVarConfig &get_config(const std::string &name) const;
+
+  const std::unordered_map<std::string, GlobalVarConfig> &global_var_map() const
+  {
+    return global_var_map_;
+  }
+
+  void update_global_vars(
+      const struct bpf_object *bpf_object,
+      const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
+      KnownGlobalVarValues known_global_var_values);
+
+  std::unordered_set<std::string> get_global_vars_for_section(
+      std::string_view target_section);
+  uint64_t get_global_var(
+      const struct bpf_object *bpf_object,
+      std::string_view target_section,
+      const std::unordered_map<std::string, struct bpf_map *>
+          &section_name_to_global_vars_map);
+
+protected:
+  std::unordered_map<std::string, GlobalVarConfig> global_var_map_;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(global_var_map_);
+  }
+
+  void verify_maps_found(const std::unordered_map<std::string, struct bpf_map *>
+                             &section_name_to_global_vars_map);
+};
+
+SizedType get_type(const std::string &global_var_name,
                    const RequiredResources &resources,
                    const Config &bpftrace_config);
 std::unordered_set<std::string> get_section_names();
-
-uint64_t get_global_var(const struct bpf_object *bpf_object,
-                        std::string_view target_section,
-                        const std::unordered_map<std::string, struct bpf_map *>
-                            &section_name_to_global_vars_map,
-                        const BPFtrace &bpftrace);
 
 } // namespace globalvars
 } // namespace bpftrace
