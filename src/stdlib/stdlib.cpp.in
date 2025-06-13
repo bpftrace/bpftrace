@@ -1,0 +1,17 @@
+#include "stdlib/stdlib.h"
+
+${STDLIB_INCLUDES}
+
+namespace bpftrace::stdlib {
+
+inline std::string_view make_view(const unsigned char *v, size_t sz)
+{
+  return { reinterpret_cast<const char *>(v), sz };
+}
+
+const std::map<std::string, std::string_view> Stdlib::files = {
+    ${STDLIB_FILES}
+};
+
+} // namespace bpftrace::stdlib
+

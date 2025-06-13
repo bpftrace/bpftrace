@@ -16,18 +16,15 @@ namespace bpftrace::ast {
 // or has been loaded off the filesystem. We no longer depend on any files.
 class LoadedObject {
 public:
-  LoadedObject(Node &node, const std::string &data)
-      : node(node), data_(std::ref(data)) {};
+  LoadedObject(Node &node, const std::string_view &data)
+      : node(node), data_(data) {};
   LoadedObject(Node &node, std::string &&data)
       : node(node), data_(std::move(data)) {};
 
-  const std::string &data()
+  std::string_view data()
   {
-    if (std::holds_alternative<std::string>(data_)) {
-      return std::get<std::string>(data_);
-    } else {
-      return std::get<std::reference_wrapper<std::string>>(data_).get();
-    }
+    return std::visit([](const auto &v) -> std::string_view { return v; },
+                      data_);
   }
 
   // Original node, for errors.
@@ -36,7 +33,7 @@ public:
 private:
   // The reason for this extra indirection: the data is either owned,
   // or it will be a reference to something immutable in the binary.
-  std::variant<std::reference_wrapper<std::string>, std::string> data_;
+  const std::variant<std::string_view, std::string> data_;
 };
 
 class ExternalObject {
