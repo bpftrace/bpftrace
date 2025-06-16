@@ -11,8 +11,8 @@ target triple = "bpf"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !35
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !49
-@num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !51
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !49
+@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !51
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -223,9 +223,9 @@ attributes #2 = { alwaysinline nounwind }
 !47 = !{!48}
 !48 = !DISubrange(count: 262144, lowerBound: 0)
 !49 = !DIGlobalVariableExpression(var: !50, expr: !DIExpression())
-!50 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!50 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !51 = !DIGlobalVariableExpression(var: !52, expr: !DIExpression())
-!52 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!52 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !53 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !54)
 !54 = !{!0, !7, !26, !35, !49, !51}
 !55 = !{i32 2, !"Debug Info Version", i32 3}

@@ -15,6 +15,7 @@ public:
   using Visitor<Printer>::visit;
   void visit(Integer &integer);
   void visit(NegativeInteger &integer);
+  void visit(NamedParameter &named_param);
   void visit(PositionalParameter &param);
   void visit(PositionalParameterCount &param);
   void visit(String &string);

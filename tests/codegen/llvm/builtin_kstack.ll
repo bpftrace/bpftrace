@@ -14,7 +14,7 @@ target triple = "bpf"
 @stack_bpftrace_127 = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !26
 @stack_scratch = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !46
 @ringbuf = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !58
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !72
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !72
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -235,7 +235,7 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !70 = !{!71}
 !71 = !DISubrange(count: 262144, lowerBound: 0)
 !72 = !DIGlobalVariableExpression(var: !73, expr: !DIExpression())
-!73 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!73 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !74 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !75)
 !75 = !{!0, !7, !26, !46, !58, !72}
 !76 = !{i32 2, !"Debug Info Version", i32 3}

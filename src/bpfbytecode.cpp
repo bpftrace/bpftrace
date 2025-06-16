@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "ast/passes/cli_opts.h"
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
@@ -114,19 +115,24 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
       const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
 }
 
-void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
+void BpfBytecode::update_global_vars(
+    BPFtrace &bpftrace,
+    globalvars::GlobalVarVals &&global_var_vals)
 {
-  globalvars::update_global_vars(bpf_object_.get(),
-                                 section_names_to_global_vars_map_,
-                                 bpftrace);
+  return bpftrace.resources.global_vars.update_global_vars(
+      bpf_object_.get(),
+      section_names_to_global_vars_map_,
+      std::move(global_var_vals),
+      bpftrace.ncpus_,
+      bpftrace.max_cpu_id_);
 }
 
 uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
 {
-  return globalvars::get_global_var(bpf_object_.get(),
-                                    globalvars::EVENT_LOSS_COUNTER_SECTION_NAME,
-                                    section_names_to_global_vars_map_,
-                                    bpftrace);
+  return bpftrace.resources.global_vars.get_global_var(
+      bpf_object_.get(),
+      globalvars::EVENT_LOSS_COUNTER_SECTION_NAME,
+      section_names_to_global_vars_map_);
 }
 
 namespace {

@@ -12,7 +12,7 @@ target triple = "bpf"
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !24
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !38
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !38
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -67,7 +67,7 @@ helper_merge:                                     ; preds = %counter_merge, %ent
   br i1 %10, label %helper_merge4, label %helper_failure3
 
 event_loss_counter:                               ; preds = %helper_failure
-  %11 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %11 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
@@ -92,7 +92,7 @@ helper_merge4:                                    ; preds = %counter_merge8, %he
   ret i64 0
 
 event_loss_counter7:                              ; preds = %helper_failure3
-  %15 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %15 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge8
 
 counter_merge8:                                   ; preds = %event_loss_counter7, %helper_failure3
@@ -151,7 +151,7 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !36 = !{!37}
 !37 = !DISubrange(count: 262144, lowerBound: 0)
 !38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
-!39 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!39 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !40 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !41)
 !41 = !{!0, !7, !22, !24, !38}
 !42 = !{i32 2, !"Debug Info Version", i32 3}

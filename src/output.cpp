@@ -8,8 +8,8 @@
 #include "log.h"
 #include "output.h"
 #include "required_resources.h"
-#include "util/format.h"
 #include "util/stats.h"
+#include "util/strings.h"
 
 namespace libbpf {
 #define __BPF_NAME_FN(x) #x

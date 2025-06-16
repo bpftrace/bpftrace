@@ -35,6 +35,12 @@ void Printer::visit(NegativeInteger &integer)
   out_ << indent << "signed int: " << integer.value << std::endl;
 }
 
+void Printer::visit(NamedParameter &named_param)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "named param: " << named_param.name << std::endl;
+}
+
 void Printer::visit(PositionalParameter &param)
 {
   std::string indent(depth_, ' ');

@@ -201,6 +201,7 @@ public:
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
   ScopedExpr visit(NegativeInteger &integer);
+  ScopedExpr visit(NamedParameter &global_var);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -518,6 +519,28 @@ ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
   return ScopedExpr(b_.getInt64(integer.value));
 }
 
+ScopedExpr CodegenLLVM::visit(NamedParameter &named_param)
+{
+  if (named_param.type().IsStringTy()) {
+    const auto max_strlen = bpftrace_.config_->max_strlen;
+    Value *np_alloc = b_.CreateGetStrAllocation(named_param.name,
+                                                named_param.loc);
+    b_.CreateMemsetBPF(np_alloc, b_.getInt8(0), max_strlen);
+    auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
+        named_param.name, bpftrace_.resources, *bpftrace_.config_);
+    b_.CreateMemcpyBPF(np_alloc,
+                       module_->getGlobalVariable(named_param.name),
+                       sized_type.GetSize());
+
+    return ScopedExpr(np_alloc,
+                      [this, np_alloc]() { b_.CreateLifetimeEnd(np_alloc); });
+  }
+
+  return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
+                                  module_->getGlobalVariable(named_param.name),
+                                  named_param.name));
+}
+
 ScopedExpr CodegenLLVM::visit(String &string)
 {
   std::string s(string.value);
@@ -712,11 +735,10 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));
   } else if (builtin.ident == "ncpus") {
-    return ScopedExpr(
-        b_.CreateLoad(b_.getInt64Ty(),
-                      module_->getGlobalVariable(
-                          to_string(bpftrace::globalvars::GlobalVar::NUM_CPUS)),
-                      "num_cpu.cmp"));
+    return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
+                                    module_->getGlobalVariable(std::string(
+                                        bpftrace::globalvars::NUM_CPUS)),
+                                    "num_cpu.cmp"));
   } else if (builtin.ident == "curtask") {
     return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
   } else if (builtin.ident == "rand") {
@@ -4269,19 +4291,18 @@ void CodegenLLVM::generate_global_vars(
     const RequiredResources &resources,
     const ::bpftrace::Config &bpftrace_config)
 {
-  for (const auto global_var : resources.needed_global_vars) {
-    auto config = bpftrace::globalvars::get_config(global_var);
-    auto type = bpftrace::globalvars::get_type(global_var,
-                                               resources,
-                                               bpftrace_config);
+  for (const auto &[name, config] : resources.global_vars.global_var_map()) {
+    auto sized_type = resources.global_vars.get_sized_type(name,
+                                                           resources,
+                                                           bpftrace_config);
     auto *var = llvm::dyn_cast<GlobalVariable>(
-        module_->getOrInsertGlobal(config.name, b_.GetType(type)));
-    var->setInitializer(Constant::getNullValue(b_.GetType(type)));
-    var->setConstant(config.read_only);
+        module_->getOrInsertGlobal(name, b_.GetType(sized_type)));
+    var->setInitializer(Constant::getNullValue(b_.GetType(sized_type)));
+    var->setConstant(config.section == globalvars::RO_SECTION_NAME);
     var->setSection(config.section);
     var->setExternallyInitialized(true);
     var->setDSOLocal(true);
-    var->addDebugInfo(debug_.createGlobalVariable(config.name, type));
+    var->addDebugInfo(debug_.createGlobalVariable(name, sized_type));
   }
 }
 

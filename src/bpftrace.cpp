@@ -46,11 +46,11 @@
 #include "util/cgroup.h"
 #include "util/cpus.h"
 #include "util/exceptions.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/stats.h"
+#include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
 
@@ -633,7 +633,6 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
 
   bytecode_ = std::move(bytecode);
   bytecode_.set_map_ids(resources);
-  bytecode_.update_global_vars(*this);
 
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);

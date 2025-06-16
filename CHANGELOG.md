@@ -57,6 +57,8 @@ and this project adheres to
   - [#4250](https://github.com/bpftrace/bpftrace/pull/4250)
 - Add `pid` and `tid` functions for choosing between the initial or the current namespace
   - [#4254](https://github.com/bpftrace/bpftrace/pull/4254)
+- Add `getopt` function to handle named command line program arguments
+  - [#4258](https://github.com/bpftrace/bpftrace/pull/4258)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
