@@ -11,6 +11,15 @@ size_t Arch<Machine::S390X>::kernel_ptr_width()
 }
 
 template <>
+const std::vector<std::string>& Arch<Machine::S390X>::c_defs()
+{
+  static std::vector<std::string> defs = {
+    "__TARGET_ARCH_s390",
+  };
+  return defs;
+}
+
+template <>
 std::optional<std::string> Arch<Machine::S390X>::register_to_pt_regs_expr(
     const std::string& name)
 {
