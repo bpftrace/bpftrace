@@ -840,10 +840,9 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                                        builtin.builtin_type.GetAS());
     assert(builtin.builtin_type.GetSize() == arg_type.GetSize());
 
-    Value *src = b_.CreateAdd(
-        sp,
-        b_.getInt64((arg_num + arch::Host::argument_stack_offset()) *
-                    arg_width));
+    Value *src = b_.CreateAdd(sp,
+                              b_.getInt64((arg_num * arg_width) +
+                                          arch::Host::argument_stack_offset()));
     b_.CreateProbeRead(dst, arg_type, src, builtin.loc);
     Value *expr = b_.CreateLoad(b_.GetType(builtin.builtin_type), dst);
     b_.CreateLifetimeEnd(dst);
