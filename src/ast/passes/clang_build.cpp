@@ -13,6 +13,10 @@
 #include <llvm/TargetParser/Host.h>
 #include <sstream>
 
+#if LLVM_VERSION_MAJOR <= 16
+#include <clang/Basic/DebugInfoOptions.h>
+#endif
+
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/resolve_imports.h"
@@ -152,6 +156,12 @@ static Result<> build(const std::string &name,
                                             llvm::ArrayRef<const char *>(args),
                                             *diags);
   inv->getTargetOpts().Triple = "bpf";
+#if LLVM_VERSION_MAJOR <= 16
+  inv->getCodeGenOpts().setDebugInfo(clang::codegenoptions::FullDebugInfo);
+#else
+  inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
+#endif
+  inv->getCodeGenOpts().DebugColumnInfo = true;
 
   clang::CompilerInstance ci;
   ci.setInvocation(inv);
