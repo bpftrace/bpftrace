@@ -34,6 +34,9 @@ public:
   // Returns the width of bits in kernel pointers.
   static size_t kernel_ptr_width();
 
+  // Returns additional C definitions that should be applied to compiled code.
+  static const std::vector<std::string>& c_defs();
+
   // Given a conventional register name, return the expression that should be
   // used to access this from `struct pt_regs`. This will be dynamically added
   // and evaluated using the standard type inference mechanisms.

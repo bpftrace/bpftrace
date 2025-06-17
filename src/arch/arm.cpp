@@ -11,6 +11,15 @@ size_t Arch<Machine::ARM>::kernel_ptr_width()
 }
 
 template <>
+const std::vector<std::string>& Arch<Machine::ARM>::c_defs()
+{
+  static std::vector<std::string> defs = {
+    "__TARGET_ARCH_arm",
+  };
+  return defs;
+}
+
+template <>
 std::optional<std::string> Arch<Machine::ARM>::register_to_pt_regs_expr(
     const std::string& name)
 {
@@ -153,6 +162,15 @@ template <>
 size_t Arch<Machine::ARM64>::kernel_ptr_width()
 {
   return 64;
+}
+
+template <>
+const std::vector<std::string>& Arch<Machine::ARM64>::c_defs()
+{
+  static std::vector<std::string> defs = {
+    "__TARGET_ARCH_arm64",
+  };
+  return defs;
 }
 
 template <>
