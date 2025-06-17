@@ -5101,16 +5101,20 @@ Pass CreateLinkBitcodePass()
   return Pass::create(
       "LinkBitcode", [](BitcodeModules &bm, CompiledModule &cm) -> Result<> {
         for (auto &mod : bm.modules) {
-          // Modify to ensure everything is inlined. Note that
-          // this is also marking all these functions for
-          // below, which will adjust their linkage.
+          // Make a copy of the module, to ensure this is not modifying the
+          // original. The link step must consume the module below.
+          auto copy = llvm::CloneModule(*mod);
+
+          // Modify to ensure everything is inlined. Note that this is also
+          // marking all these functions for below, which will adjust their
+          // linkage.
           //
-          // We also want to ensure that we remove any
-          // attributes that prevent any subsequent inline
-          // (such as "OptimizeNone"), and suitably tag these
-          // functions are "NoUnwind", like the rest.
-          for (auto &fn : mod->functions()) {
-            if (fn.isDSOLocal()) {
+          // We also want to ensure that we remove any attributes that prevent
+          // any subsequent inline (such as "OptimizeNone"), and suitably tag
+          // these functions are "NoUnwind", like the rest. There is no
+          // unwinding in BPF, and these attributes are just ensuring that.
+          for (auto &fn : copy->functions()) {
+            if (fn.isDSOLocal() && !fn.isIntrinsic()) {
               fn.removeFnAttr(Attribute::NoInline);
               fn.removeFnAttr(Attribute::OptimizeNone);
               fn.addFnAttr(Attribute::AlwaysInline);
@@ -5118,24 +5122,15 @@ Pass CreateLinkBitcodePass()
             }
           }
 
-          // Link into the original source module, consume the
-          // new one. This function returns `false` on success.
-          // Hopefully this path is unlikely to cause errors,
-          // since it seems the information available is sparse.
-          auto err = Linker::linkModules(*cm.module, llvm::CloneModule(*mod));
+          // Link into the original source module, consume the new one. This
+          // function returns `false` on success.  Hopefully this path is
+          // unlikely to cause errors, since it seems the information available
+          // is sparse.
+          auto err = Linker::linkModules(*cm.module,
+                                         std::move(copy),
+                                         Linker::LinkOnlyNeeded);
           if (err) {
             return make_error<LinkError>("error during LLVM linking", EINVAL);
-          }
-        }
-
-        // Remark all defined functions as having internal
-        // linkage. This is using all the functions marked
-        // above. It doesn't really make sense to have
-        // `always_inline` but be an external linkage.
-        for (auto &fn : cm.module->functions()) {
-          if (fn.hasFnAttribute(Attribute::AlwaysInline)) {
-            fn.setLinkage(llvm::Function::InternalLinkage);
-            llvm::stripDebugInfo(fn);
           }
         }
 

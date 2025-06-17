@@ -9,7 +9,6 @@ namespace bpftrace::ast {
 
 class BitcodeModules : public State<"bitcode"> {
 public:
-  std::vector<std::unique_ptr<llvm::LLVMContext>> contexts;
   std::vector<std::unique_ptr<llvm::Module>> modules;
   std::vector<std::string> objects;
 };
