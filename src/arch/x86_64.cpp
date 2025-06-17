@@ -11,6 +11,15 @@ size_t Arch<Machine::X86_64>::kernel_ptr_width()
 }
 
 template <>
+const std::vector<std::string>& Arch<Machine::X86_64>::c_defs()
+{
+  static std::vector<std::string> defs = {
+    "__TARGET_ARCH_x86",
+  };
+  return defs;
+}
+
+template <>
 std::optional<size_t> Arch<Machine::X86_64>::register_to_pt_regs_offset(
     const std::string& name)
 {

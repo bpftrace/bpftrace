@@ -41,6 +41,11 @@ TYPED_TEST(ArchTest, Sanity)
   EXPECT_GT(TypeParam::kernel_ptr_width(), 0);
 }
 
+TYPED_TEST(ArchTest, CDefs)
+{
+  EXPECT_TRUE(!TypeParam::c_defs().empty());
+}
+
 TYPED_TEST(ArchTest, ValidArguments)
 {
   for (const auto &reg : TypeParam::arguments()) {
