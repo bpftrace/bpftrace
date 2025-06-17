@@ -29,7 +29,7 @@ entry:
   %2 = getelementptr i8, ptr %1, i64 152
   %reg_sp = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg0)
-  %3 = add i64 %reg_sp, 64
+  %3 = add i64 %reg_sp, 8
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %sarg0, i32 8, i64 %3)
   %4 = load i64, ptr %sarg0, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg0)
@@ -44,7 +44,7 @@ entry:
   %6 = getelementptr i8, ptr %5, i64 152
   %reg_sp1 = load volatile i64, ptr %6, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %sarg2)
-  %7 = add i64 %reg_sp1, 80
+  %7 = add i64 %reg_sp1, 24
   %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %sarg2, i32 8, i64 %7)
   %8 = load i64, ptr %sarg2, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %sarg2)
