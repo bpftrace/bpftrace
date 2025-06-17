@@ -901,6 +901,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
           builtin.builtin_type = CreatePointer(
               CreateRecord("struct pt_regs", record), AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
+        } else {
+          builtin.builtin_type = CreatePointer(CreateNone());
         }
         break;
       }

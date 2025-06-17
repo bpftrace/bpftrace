@@ -13,6 +13,7 @@
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
+#include "ast/passes/usdt_arguments.h"
 #include "btf.h"
 #include "driver.h"
 #include "tracepoint_format_parser.h"
@@ -41,6 +42,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
+  passes.emplace_back(CreateUSDTArgumentsPass());
   return passes;
 }
 
