@@ -117,12 +117,16 @@ static Result<> build(CompileContext &ctx,
 {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> vfs(
       new llvm::vfs::InMemoryFileSystem());
-  vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBuffer(obj.data()));
+  vfs->addFile(name,
+               0,
+               llvm::MemoryBuffer::getMemBufferCopy(obj.data(), "main"));
   for (const auto &[name, other] : stdlib::Stdlib::files) {
-    vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBuffer(other));
+    vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBufferCopy(other, name));
   }
   for (auto &[name, other] : imports.c_headers) {
-    vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBuffer(other.data()));
+    vfs->addFile(name,
+                 0,
+                 llvm::MemoryBuffer::getMemBufferCopy(other.data(), name));
   }
 
   // Create the diagnostic options and client. We emit the error to
