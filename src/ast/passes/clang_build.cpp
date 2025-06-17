@@ -19,6 +19,7 @@
 
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
+#include "ast/passes/codegen_llvm.h"
 #include "ast/passes/resolve_imports.h"
 #include "stdlib/stdlib.h"
 #include "util/result.h"
@@ -108,7 +109,8 @@ Result<PipeFds> create_pipe()
 
 } // namespace
 
-static Result<> build(const std::string &name,
+static Result<> build(CompileContext &ctx,
+                      const std::string &name,
                       LoadedObject &obj,
                       Imports &imports,
                       BitcodeModules &result)
@@ -173,7 +175,7 @@ static Result<> build(const std::string &name,
   // debug information. This also generates the module as a
   // side-effect, which is what we actually extract for linking.
   std::unique_ptr<clang::CodeGenAction> action =
-      std::make_unique<clang::EmitObjAction>();
+      std::make_unique<clang::EmitObjAction>(ctx.context.get());
   if (!ci.ExecuteAction(*action)) {
     // This is likely a build failure, we can surface this directly
     // into the user context. We first highlight the location of the
@@ -190,14 +192,12 @@ static Result<> build(const std::string &name,
     e << "found external warnings";
     e.addHint() << errstr;
   }
-  std::unique_ptr<llvm::LLVMContext> ctx(action->takeLLVMContext());
   std::unique_ptr<llvm::Module> mod = action->takeModule();
   if (!mod) {
     // This is an internal error, not suitable to surface as a user
     // diagnostic. Surface it directly as an error in the pipeline.
     return make_error<ClangBuildError>("failed to generate module");
   }
-  result.contexts.emplace_back(std::move(ctx));
   result.modules.emplace_back(std::move(mod));
   result.objects.emplace_back(pipefds->read_all());
   return OK();
@@ -206,13 +206,14 @@ static Result<> build(const std::string &name,
 ast::Pass CreateClangBuildPass()
 {
   return ast::Pass::create("ClangBuilder",
-                           [](ast::Imports &imports) -> Result<BitcodeModules> {
+                           [](CompileContext &ctx,
+                              ast::Imports &imports) -> Result<BitcodeModules> {
                              BitcodeModules result;
 
                              // For each of the source files in the imports, we
                              // build it and turn it into a bitcode file.
                              for (auto &[name, obj] : imports.c_sources) {
-                               auto ok = build(name, obj, imports, result);
+                               auto ok = build(ctx, name, obj, imports, result);
                                if (!ok) {
                                  return ok.takeError();
                                }
