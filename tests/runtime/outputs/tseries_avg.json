@@ -1,0 +1,28 @@
+{
+  "type": "tseries",
+  "data": {
+    "@a": [
+      {
+        "interval_start": "$timestamp",
+        "value": 4
+      },
+      {
+        "interval_start": "$timestamp",
+        "value": 4
+      },
+      {
+        "interval_start": "$timestamp",
+        "value": 4
+      },
+      {
+        "interval_start": "$timestamp",
+        "value": 4
+      },
+      {
+        "interval_start": "$timestamp",
+        "value": 4
+      }
+    ]
+  }
+}
+
