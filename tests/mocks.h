@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bpffeature.h"
+#include "bpfmap.h"
 #include "bpftrace.h"
 #include "child.h"
 #include "probe_matcher.h"
@@ -52,6 +53,8 @@ public:
   MOCK_CONST_METHOD2(collect_histogram_data,
                      Result<HistogramMap>(const MapInfo &map_info,
                                           int nvalues));
+  MOCK_CONST_METHOD2(collect_tseries_data,
+                     Result<TSeriesMap>(const MapInfo &map_info, int nvalues));
 };
 
 class MockBPFtrace : public BPFtrace {

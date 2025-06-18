@@ -19,6 +19,7 @@ enum class MessageType {
   map,
   value,
   hist,
+  tseries,
   stats,
   printf,
   time,
@@ -76,6 +77,14 @@ public:
           &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
           &total_counts_by_key) const = 0;
+  // Write map tseries to output
+  virtual void map_tseries(BPFtrace &bpftrace,
+                           const BpfMap &map,
+                           uint32_t top,
+                           uint32_t div,
+                           const TSeriesMap &values_by_key,
+                           const std::vector<std::pair<KeyType, EpochType>>
+                               &latest_epoch_by_key) const = 0;
   // Write map statistics to output
   virtual void map_stats(
       BPFtrace &bpftrace,
@@ -125,6 +134,14 @@ protected:
                                    int min,
                                    int max,
                                    int step) const = 0;
+  // Convert a time series into string
+  virtual std::string tseries_to_str(BPFtrace &bpftrace,
+                                     const TSeries &values,
+                                     uint32_t div,
+                                     EpochType last_epoch,
+                                     uint64_t interval_ns,
+                                     uint64_t buckets,
+                                     const SizedType &inner_type) const = 0;
 
   // Convert map into string
   // Default behaviour: format each (key, value) pair using output-specific
@@ -148,6 +165,17 @@ protected:
           &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
           &total_counts_by_key) const;
+  // Convert map tseries into string
+  // Default behaviour: format each (key, tseries) pair using output-specific
+  // methods and join them into a single string
+  virtual void map_tseries_contents(
+      BPFtrace &bpftrace,
+      const BpfMap &map,
+      uint32_t top,
+      uint32_t div,
+      const TSeriesMap &values_by_key,
+      const std::vector<std::pair<KeyType, EpochType>> &latest_epoch_by_key)
+      const;
   // Convert map statistics into string
   // Default behaviour: format each (key, stats) pair using output-specific
   // methods and join them into a single string
@@ -225,6 +253,13 @@ public:
                     &values_by_key,
                 const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
                     &total_counts_by_key) const override;
+  void map_tseries(BPFtrace &bpftrace,
+                   const BpfMap &map,
+                   uint32_t top,
+                   uint32_t div,
+                   const TSeriesMap &values_by_key,
+                   const std::vector<std::pair<KeyType, EpochType>>
+                       &latest_epoch_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
       const BpfMap &map,
@@ -259,6 +294,13 @@ protected:
                            int min,
                            int max,
                            int step) const override;
+  std::string tseries_to_str(BPFtrace &bpftrace,
+                             const TSeries &values,
+                             uint32_t div,
+                             EpochType last_epoch,
+                             uint64_t interval_ns,
+                             uint64_t buckets,
+                             const SizedType &inner_type) const override;
 
   std::string map_key_to_str(BPFtrace &bpftrace,
                              const BpfMap &map,
@@ -299,6 +341,13 @@ public:
                     &values_by_key,
                 const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
                     &total_counts_by_key) const override;
+  void map_tseries(BPFtrace &bpftrace,
+                   const BpfMap &map,
+                   uint32_t top,
+                   uint32_t div,
+                   const TSeriesMap &values_by_key,
+                   const std::vector<std::pair<KeyType, EpochType>>
+                       &latest_epoch_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
       const BpfMap &map,
@@ -337,6 +386,13 @@ protected:
                            int min,
                            int max,
                            int step) const override;
+  std::string tseries_to_str(BPFtrace &bpftrace,
+                             const TSeries &values,
+                             uint32_t div,
+                             EpochType last_epoch,
+                             uint64_t interval_ns,
+                             uint64_t buckets,
+                             const SizedType &inner_type) const override;
 
   std::string map_key_to_str(BPFtrace &bpftrace,
                              const BpfMap &map,
