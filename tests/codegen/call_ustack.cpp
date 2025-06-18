@@ -1,3 +1,4 @@
+#include "ast/passes/named_param.h"
 #include "common.h"
 
 #include <iterator>
@@ -26,6 +27,7 @@ kprobe:f {
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
+                .add(ast::CreateNamedParamPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
@@ -57,6 +59,7 @@ kprobe:f {
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
+                .add(ast::CreateNamedParamPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())

@@ -4,6 +4,7 @@
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -30,7 +31,9 @@ namespace {
 // example the helper error metadata is still being collected during codegen.
 class ResourceAnalyser : public Visitor<ResourceAnalyser> {
 public:
-  ResourceAnalyser(BPFtrace &bpftrace, MapMetadata &mm);
+  ResourceAnalyser(BPFtrace &bpftrace,
+                   MapMetadata &mm,
+                   NamedParamDefaults &named_param_defaults);
 
   using Visitor<ResourceAnalyser>::visit;
   void visit(Probe &probe);
@@ -67,6 +70,7 @@ private:
   RequiredResources resources_;
   BPFtrace &bpftrace_;
   MapMetadata map_metadata_;
+  NamedParamDefaults &named_param_defaults_;
 
   // Current probe we're analysing
   Probe *probe_{ nullptr };
@@ -90,67 +94,58 @@ static ProbeType single_provider_type_postsema(Probe *probe)
   return ProbeType::invalid;
 }
 
-ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace, MapMetadata &mm)
-    : bpftrace_(bpftrace), map_metadata_(mm)
+ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace,
+                                   MapMetadata &mm,
+                                   NamedParamDefaults &named_param_defaults)
+    : bpftrace_(bpftrace),
+      map_metadata_(mm),
+      named_param_defaults_(named_param_defaults)
 {
 }
 
 RequiredResources ResourceAnalyser::resources()
 {
   if (resources_.max_fmtstring_args_size > 0) {
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::FMT_STRINGS_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::FMT_STRINGS_BUFFER);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_tuple_size > 0) {
     assert(resources_.tuple_buffers > 0);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::TUPLE_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::TUPLE_BUFFER);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.str_buffers > 0) {
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::GET_STR_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::GET_STR_BUFFER);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_read_map_value_size > 0) {
     assert(resources_.read_map_value_buffers > 0);
-    resources_.global_vars.add_known_global_var(
+    resources_.global_vars.add_known(
         bpftrace::globalvars::READ_MAP_VALUE_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_write_map_value_size > 0) {
-    resources_.global_vars.add_known_global_var(
+    resources_.global_vars.add_known(
         bpftrace::globalvars::WRITE_MAP_VALUE_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_variable_size > 0) {
     assert(resources_.variable_buffers > 0);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::VARIABLE_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::VARIABLE_BUFFER);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_map_key_size > 0) {
     assert(resources_.map_key_buffers > 0);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAP_KEY_BUFFER);
-    resources_.global_vars.add_known_global_var(
-        bpftrace::globalvars::MAX_CPU_ID);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAP_KEY_BUFFER);
+    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
-  resources_.global_vars.add_known_global_var(
-      bpftrace::globalvars::EVENT_LOSS_COUNTER);
+  resources_.global_vars.add_known(bpftrace::globalvars::EVENT_LOSS_COUNTER);
 
   return std::move(resources_);
 }
@@ -174,7 +169,7 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
   } else if (builtin.ident == "ncpus") {
-    resources_.global_vars.add_known_global_var(bpftrace::globalvars::NUM_CPUS);
+    resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   }
 }
 
@@ -245,7 +240,7 @@ void ResourceAnalyser::visit(Call &call)
     resources_.join_args.push_back(delim);
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
-    resources_.global_vars.add_known_global_var(bpftrace::globalvars::NUM_CPUS);
+    resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   } else if (call.func == "hist") {
     Map *map = call.vargs.at(0).as<Map>();
     uint64_t bits = call.vargs.at(3).as<Integer>()->value;
@@ -411,6 +406,24 @@ void ResourceAnalyser::visit(MapDeclStatement &decl)
 void ResourceAnalyser::visit(Map &map)
 {
   Visitor<ResourceAnalyser>::visit(map);
+
+  if (map.read_only) {
+    // This becomes a read-only global
+    auto it = named_param_defaults_.defaults.find(map.ident);
+    if (it == named_param_defaults_.defaults.end()) {
+      // TODO: implement this optimization for read-only maps.
+      // This currently only works for named params via (`getopt`).
+      LOG(BUG) << "No default value for read-only map: " << map.ident;
+      return;
+    }
+    resources_.global_vars.add_named_param(map.ident, it->second);
+    if (std::holds_alternative<std::string>(it->second)) {
+      const auto max_strlen = bpftrace_.config_->max_strlen;
+      if (exceeds_stack_limit(max_strlen))
+        resources_.str_buffers++;
+    }
+    return;
+  }
 
   update_map_info(map);
 }
@@ -581,8 +594,11 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map,
 
 Pass CreateResourcePass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b, MapMetadata &mm) {
-    ResourceAnalyser analyser(b, mm);
+  auto fn = [](ASTContext &ast,
+               BPFtrace &b,
+               MapMetadata &mm,
+               NamedParamDefaults &named_param_defaults) {
+    ResourceAnalyser analyser(b, mm, named_param_defaults);
     analyser.visit(ast.root);
     b.resources = analyser.resources();
   };

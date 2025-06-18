@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "ast/passes/named_param.h"
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
@@ -114,16 +115,14 @@ BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe)
       const_cast<const BpfBytecode *>(this)->getProgramForProbe(probe));
 }
 
-void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
+void BpfBytecode::update_global_vars(BPFtrace &bpftrace,
+                                     globalvars::GlobalVarMap &&global_var_vals)
 {
-  std::unordered_map<std::string, int> known_global_var_values = {
-    { std::string(globalvars::NUM_CPUS), bpftrace.ncpus_ },
-    { std::string(globalvars::MAX_CPU_ID), bpftrace.max_cpu_id_ },
-  };
   bpftrace.resources.global_vars.update_global_vars(
       bpf_object_.get(),
       section_names_to_global_vars_map_,
-      known_global_var_values,
+      std::move(global_var_vals),
+      bpftrace.ncpus_,
       bpftrace.max_cpu_id_);
 }
 
