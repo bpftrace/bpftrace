@@ -175,10 +175,10 @@ public:
                                Value *key,
                                Value *val,
                                const Location &loc);
-  void CreatePerCpuMapElemAdd(Map &map,
-                              Value *key,
-                              Value *val,
-                              const Location &loc);
+  Value *CreatePerCpuMapElemAdd(Map &map,
+                                Value *key,
+                                Value *val,
+                                const Location &loc);
   void CreateDebugOutput(std::string fmt_str,
                          const std::vector<Value *> &values,
                          const Location &loc);

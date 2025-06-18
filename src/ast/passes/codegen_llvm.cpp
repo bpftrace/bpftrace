@@ -881,9 +881,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   if (call.func == "count") {
     Map &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
-    b_.CreatePerCpuMapElemAdd(
-        map, scoped_key.value(), b_.getInt64(1), call.loc);
-    return ScopedExpr();
+    return ScopedExpr(b_.CreatePerCpuMapElemAdd(
+        map, scoped_key.value(), b_.getInt64(1), call.loc));
 
   } else if (call.func == "sum") {
     Map &map = *call.vargs.at(0).as<Map>();
@@ -894,13 +893,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
                                    call.vargs.front().type().IsSigned());
-    b_.CreatePerCpuMapElemAdd(map, scoped_key.value(), cast, call.loc);
-    return ScopedExpr();
+    return ScopedExpr(
+        b_.CreatePerCpuMapElemAdd(map, scoped_key.value(), cast, call.loc));
 
   } else if (call.func == "max" || call.func == "min") {
     bool is_max = call.func == "max";
     Map &map = *call.vargs.at(0).as<Map>();
     ScopedExpr scoped_key = getMapKey(map, call.vargs.at(1));
+    AllocaInst *mm_result = b_.CreateAllocaBPF(b_.getInt64Ty(), "mm_result");
 
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
     ScopedExpr scoped_expr = visit(call.vargs.at(2));
@@ -968,6 +968,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                               : b_.CreateICmpUGE(mm_val, expr);
     }
 
+    b_.CreateStore(mm_val, mm_result);
+
     b_.CreateCondBr(min_max_condition, min_max_block, lookup_merge_block);
 
     b_.SetInsertPoint(min_max_block);
@@ -975,6 +977,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateStore(
         expr,
         b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(expr, mm_result);
     b_.CreateStore(
         b_.getInt64(1),
         b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }));
@@ -989,6 +992,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                    b_.CreateGEP(mm_struct_ty,
                                 mm_struct,
                                 { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(expr, mm_result);
     b_.CreateStore(b_.getInt64(1),
                    b_.CreateGEP(mm_struct_ty,
                                 mm_struct,
@@ -1001,11 +1005,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateBr(lookup_merge_block);
     b_.SetInsertPoint(lookup_merge_block);
 
-    return ScopedExpr();
+    return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(), mm_result));
 
   } else if (call.func == "avg" || call.func == "stats") {
     Map &map = *call.vargs.at(0).as<Map>();
     ScopedExpr scoped_key = getMapKey(map, call.vargs.at(1));
+    AllocaInst *total = b_.CreateAllocaBPF(b_.getInt64Ty(), "total");
     CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
     ScopedExpr scoped_expr = visit(call.vargs.at(2));
 
@@ -1049,7 +1054,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                                   { b_.getInt64(0),
                                                     b_.getInt32(1) }));
 
-    b_.CreateStore(b_.CreateAdd(total_val, expr),
+    Value *new_total_val = b_.CreateAdd(total_val, expr);
+
+    b_.CreateStore(new_total_val,
                    b_.CreateGEP(avg_struct_ty,
                                 lookup,
                                 { b_.getInt64(0), b_.getInt32(0) }));
@@ -1057,6 +1064,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                    b_.CreateGEP(avg_struct_ty,
                                 lookup,
                                 { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateStore(new_total_val, total);
 
     b_.CreateBr(lookup_merge_block);
 
@@ -1077,10 +1086,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     b_.CreateLifetimeEnd(avg_struct);
 
+    b_.CreateStore(expr, total);
+
     b_.CreateBr(lookup_merge_block);
     b_.SetInsertPoint(lookup_merge_block);
 
-    return ScopedExpr();
+    return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(), total));
 
   } else if (call.func == "hist") {
     if (!log2_func_)

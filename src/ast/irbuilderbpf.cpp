@@ -2212,10 +2212,10 @@ void IRBuilderBPF::CreatePerCpuMapElemInit(Map &map,
   CreateLifetimeEnd(initValue);
 }
 
-void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
-                                          Value *key,
-                                          Value *val,
-                                          const Location &loc)
+Value *IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
+                                            Value *key,
+                                            Value *val,
+                                            const Location &loc)
 {
   CallInst *call = CreateMapLookup(map, key);
 
@@ -2242,16 +2242,20 @@ void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
   auto *cast = CreatePtrToInt(call, value->getType(), "cast");
   CreateStore(CreateAdd(CreateLoad(value->getAllocatedType(), cast), val),
               cast);
+  CreateStore(CreateLoad(value->getAllocatedType(), cast), value);
 
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
 
   CreatePerCpuMapElemInit(map, key, val, loc);
+  CreateStore(val, value);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
+  Value *result = CreateLoad(value->getAllocatedType(), value);
   CreateLifetimeEnd(value);
+  return result;
 }
 
 void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,

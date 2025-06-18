@@ -34,6 +34,8 @@ lookup_success:                                   ; preds = %entry
   %1 = load i64, ptr %lookup_elem, align 8
   %2 = add i64 %1, 1
   store i64 %2, ptr %lookup_elem, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  store i64 %3, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
@@ -41,26 +43,28 @@ lookup_failure:                                   ; preds = %entry
   store i64 1, ptr %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %initial_value, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
+  store i64 1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %4 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"print_@")
-  %3 = getelementptr %print_t, ptr %"print_@", i64 0, i32 0
-  store i64 30001, ptr %3, align 8
-  %4 = getelementptr %print_t, ptr %"print_@", i64 0, i32 1
-  store i32 0, ptr %4, align 4
-  %5 = getelementptr %print_t, ptr %"print_@", i64 0, i32 2
-  store i32 0, ptr %5, align 4
-  %6 = getelementptr %print_t, ptr %"print_@", i64 0, i32 3
+  %5 = getelementptr %print_t, ptr %"print_@", i64 0, i32 0
+  store i64 30001, ptr %5, align 8
+  %6 = getelementptr %print_t, ptr %"print_@", i64 0, i32 1
   store i32 0, ptr %6, align 4
+  %7 = getelementptr %print_t, ptr %"print_@", i64 0, i32 2
+  store i32 0, ptr %7, align 4
+  %8 = getelementptr %print_t, ptr %"print_@", i64 0, i32 3
+  store i32 0, ptr %8, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %"print_@", i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %lookup_merge
-  %7 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
+  %9 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %lookup_merge
