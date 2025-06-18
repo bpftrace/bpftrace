@@ -241,7 +241,7 @@ void MapFunctionAliases::visit(Call &call)
 // Similarly these are syntactic sugar over operating on a map. This list could
 // also be dynamically generated based on some underlying annotation.
 static std::unordered_set<std::string> ASSIGN_REWRITE = {
-  "hist", "lhist", "count", "sum", "min", "max", "avg", "stats",
+  "hist", "lhist", "count", "sum", "min", "max", "avg", "stats", "tseries",
 };
 
 static std::optional<Expression> injectMap(Expression expr,

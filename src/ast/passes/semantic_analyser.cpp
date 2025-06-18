@@ -399,6 +399,18 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::integer, .literal=true },
         arg_type_spec{ .type=Type::integer, .literal=true },
         arg_type_spec{ .type=Type::integer, .literal=true } } } },
+  { "tseries",
+    { .min_args=5,
+      .max_args=6,
+      .arg_types={
+        map_type_spec{
+          .type = std::function<SizedType(const ast::Call&)>([]([[maybe_unused]] const ast::Call &call) -> SizedType { return CreateTSeries(); })
+        },
+        map_key_spec{ .map_index=0 },
+        arg_type_spec{ .type=Type::integer },
+        arg_type_spec{ .type=Type::integer, .literal=true },
+        arg_type_spec{ .type=Type::integer, .literal=true },
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "macaddr",
     { .min_args=1,
       .max_args=1,
@@ -670,6 +682,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::count_t:
     case Type::hist_t:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::max_t:
     case Type::min_t:
     case Type::stats_t:
@@ -1231,6 +1244,67 @@ void SemanticAnalyser::visit(Call &call)
             << step->value << " for range " << (max->value - min->value) << ")";
       }
     }
+  } else if (call.func == "tseries") {
+    const static std::set<std::string> ALLOWED_AGG_FUNCS = {
+      "avg",
+      "sum",
+      "max",
+      "min",
+    };
+    if (is_final_pass()) {
+      Expression &interval_ns_arg = call.vargs.at(3);
+      Expression &num_intervals_arg = call.vargs.at(4);
+
+      auto *interval_ns = interval_ns_arg.as<Integer>();
+      auto *num_intervals = num_intervals_arg.as<Integer>();
+
+      if (!interval_ns) {
+        call.addError()
+            << call.func
+            << ": invalid interval_ns value (must be non-negative literal)";
+        return;
+      }
+      if (!num_intervals) {
+        call.addError()
+            << call.func
+            << ": invalid num_intervals value (must be non-negative literal)";
+        return;
+      }
+
+      if (interval_ns->value <= 0) {
+        call.addError() << "tseries() interval_ns must be >= 1 ("
+                        << interval_ns->value << " provided)";
+        return;
+      }
+
+      if (num_intervals->value <= 0) {
+        call.addError() << "tseries() num_intervals must be >= 1 ("
+                        << num_intervals->value << " provided)";
+        return;
+      } else if (num_intervals->value > 1000000) {
+        call.addError() << "tseries() num_intervals must be < 1000000 ("
+                        << num_intervals->value << " provided)";
+      }
+
+      if (call.vargs.size() == 6) {
+        auto &aggregator = *call.vargs.at(5).as<String>();
+        if (!ALLOWED_AGG_FUNCS.contains(aggregator.value)) {
+          auto &err = call.addError();
+          err << "tseries() expects one of the following aggregation "
+                 "functions: ";
+          size_t i = 0;
+          for (const std::string &agg : ALLOWED_AGG_FUNCS) {
+            err << agg;
+            if (i++ != ALLOWED_AGG_FUNCS.size() - 1) {
+              err << ", ";
+            }
+          }
+          err << " (\"" << aggregator.value << "\" provided)";
+        }
+      }
+    }
+
+    call.return_type = CreateTSeries();
   } else if (call.func == "count") {
     call.return_type = CreateCount();
   } else if (call.func == "sum") {
@@ -1894,7 +1968,8 @@ void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
     node.addError() << "context cannot be used as a map key";
   }
 
-  if (key.IsHistTy() || key.IsLhistTy() || key.IsStatsTy()) {
+  if (key.IsHistTy() || key.IsLhistTy() || key.IsStatsTy() ||
+      key.IsTSeriesTy()) {
     node.addError() << key << " cannot be used as a map key";
   }
 
@@ -3052,6 +3127,7 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
   { Type::avg_t, "avg(retval)" },
   { Type::hist_t, "hist(retval)" },
   { Type::lhist_t, "lhist(rand %10, 0, 10, 1)" },
+  { Type::tseries_t, "tseries(rand %10, 10s, 1)" },
   { Type::stats_t, "stats(arg2)" },
 };
 
