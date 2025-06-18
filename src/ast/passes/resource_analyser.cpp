@@ -98,59 +98,59 @@ ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace, MapMetadata &mm)
 RequiredResources ResourceAnalyser::resources()
 {
   if (resources_.max_fmtstring_args_size > 0) {
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::FMT_STRINGS_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::FMT_STRINGS_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_tuple_size > 0) {
     assert(resources_.tuple_buffers > 0);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::TUPLE_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::TUPLE_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.str_buffers > 0) {
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::GET_STR_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::GET_STR_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_read_map_value_size > 0) {
     assert(resources_.read_map_value_buffers > 0);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::READ_MAP_VALUE_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::READ_MAP_VALUE_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_write_map_value_size > 0) {
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::WRITE_MAP_VALUE_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::WRITE_MAP_VALUE_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_variable_size > 0) {
     assert(resources_.variable_buffers > 0);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::VARIABLE_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::VARIABLE_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_map_key_size > 0) {
     assert(resources_.map_key_buffers > 0);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAP_KEY_BUFFER);
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::MAX_CPU_ID);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAP_KEY_BUFFER);
+    resources_.global_vars.add_known_global_var(
+        bpftrace::globalvars::MAX_CPU_ID);
   }
-  resources_.needed_global_vars.insert(
-      bpftrace::globalvars::GlobalVar::EVENT_LOSS_COUNTER);
+  resources_.global_vars.add_known_global_var(
+      bpftrace::globalvars::EVENT_LOSS_COUNTER);
 
   return std::move(resources_);
 }
@@ -174,8 +174,7 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
   } else if (builtin.ident == "ncpus") {
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::NUM_CPUS);
+    resources_.global_vars.add_known_global_var(bpftrace::globalvars::NUM_CPUS);
   }
 }
 
@@ -246,8 +245,7 @@ void ResourceAnalyser::visit(Call &call)
     resources_.join_args.push_back(delim);
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
-    resources_.needed_global_vars.insert(
-        bpftrace::globalvars::GlobalVar::NUM_CPUS);
+    resources_.global_vars.add_known_global_var(bpftrace::globalvars::NUM_CPUS);
   } else if (call.func == "hist") {
     Map *map = call.vargs.at(0).as<Map>();
     uint64_t bits = call.vargs.at(3).as<Integer>()->value;

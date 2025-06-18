@@ -292,14 +292,14 @@ private:
   Value *CreateReadMapValueAllocation(const SizedType &value_type,
                                       const std::string &name,
                                       const Location &loc);
-  Value *createAllocation(globalvars::GlobalVar globalvar,
+  Value *createAllocation(std::string_view global_var_name,
                           llvm::Type *obj_type,
                           const std::string &name,
                           const Location &loc,
                           std::optional<std::function<size_t(AsyncIds &)>>
                               gen_async_id_cb = std::nullopt);
   void CreateAllocationInit(const SizedType &stype, Value *alloc);
-  Value *createScratchBuffer(globalvars::GlobalVar globalvar,
+  Value *createScratchBuffer(std::string_view global_var_name,
                              const Location &loc,
                              size_t key);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);

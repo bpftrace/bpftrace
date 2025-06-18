@@ -10,7 +10,7 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @join = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !30
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !44
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !44
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -142,7 +142,7 @@ lookup_join_merge:                                ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %lookup_join_merge
-  %56 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %56 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %lookup_join_merge
@@ -214,7 +214,7 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !42 = !{!43}
 !43 = !DISubrange(count: 262144, lowerBound: 0)
 !44 = !DIGlobalVariableExpression(var: !45, expr: !DIExpression())
-!45 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
+!45 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
 !46 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
 !48 = !{!0, !7, !30, !44}

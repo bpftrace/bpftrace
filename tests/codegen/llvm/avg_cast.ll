@@ -10,8 +10,8 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !32
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !46
-@num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !48
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !46
+@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !48
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -71,7 +71,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br label %while_cond
 
 while_cond:                                       ; preds = %lookup_success2, %lookup_merge
-  %11 = load i32, ptr @num_cpus, align 4
+  %11 = load i32, ptr @__bt__num_cpus, align 4
   %12 = load i32, ptr %i, align 4
   %num_cpu.cmp = icmp ult i32 %12, %11
   br i1 %num_cpu.cmp, label %while_body, label %while_end
@@ -203,9 +203,9 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !44 = !{!45}
 !45 = !DISubrange(count: 262144, lowerBound: 0)
 !46 = !DIGlobalVariableExpression(var: !47, expr: !DIExpression())
-!47 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!47 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !48 = !DIGlobalVariableExpression(var: !49, expr: !DIExpression())
-!49 = distinct !DIGlobalVariable(name: "num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!49 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
 !50 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !51)
 !51 = !{!0, !7, !32, !46, !48}
 !52 = !{i32 2, !"Debug Info Version", i32 3}

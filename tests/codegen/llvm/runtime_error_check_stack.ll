@@ -18,7 +18,7 @@ target triple = "bpf"
 @stack_bpftrace_127 = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !35
 @stack_scratch = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !55
 @ringbuf = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !67
-@event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !81
+@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !81
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -108,7 +108,7 @@ helper_merge:                                     ; preds = %counter_merge, %loo
   br i1 %17, label %get_stack_success, label %get_stack_fail
 
 event_loss_counter:                               ; preds = %helper_failure
-  %18 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %18 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
@@ -131,7 +131,7 @@ helper_merge2:                                    ; preds = %counter_merge6, %ge
   br label %merge_block
 
 event_loss_counter5:                              ; preds = %helper_failure1
-  %22 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %22 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge6
 
 counter_merge6:                                   ; preds = %event_loss_counter5, %helper_failure1
@@ -162,7 +162,7 @@ helper_merge10:                                   ; preds = %counter_merge14, %m
   br i1 %lookup_stack_scratch_cond23, label %lookup_stack_scratch_merge22, label %lookup_stack_scratch_failure21
 
 event_loss_counter13:                             ; preds = %helper_failure9
-  %26 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %26 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge14
 
 counter_merge14:                                  ; preds = %event_loss_counter13, %helper_failure9
@@ -223,7 +223,7 @@ helper_merge29:                                   ; preds = %counter_merge33, %l
   br i1 %40, label %get_stack_success25, label %get_stack_fail26
 
 event_loss_counter32:                             ; preds = %helper_failure28
-  %41 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %41 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge33
 
 counter_merge33:                                  ; preds = %event_loss_counter32, %helper_failure28
@@ -246,7 +246,7 @@ helper_merge38:                                   ; preds = %counter_merge42, %g
   br label %merge_block18
 
 event_loss_counter41:                             ; preds = %helper_failure37
-  %45 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %45 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge42
 
 counter_merge42:                                  ; preds = %event_loss_counter41, %helper_failure37
@@ -270,7 +270,7 @@ helper_merge46:                                   ; preds = %counter_merge50, %m
   ret i64 0
 
 event_loss_counter49:                             ; preds = %helper_failure45
-  %49 = atomicrmw add ptr @event_loss_counter, i64 1 seq_cst, align 8
+  %49 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge50
 
 counter_merge50:                                  ; preds = %event_loss_counter49, %helper_failure45
@@ -454,7 +454,7 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !79 = !{!80}
 !80 = !DISubrange(count: 262144, lowerBound: 0)
 !81 = !DIGlobalVariableExpression(var: !82, expr: !DIExpression())
-!82 = distinct !DIGlobalVariable(name: "event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!82 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !83 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !84)
 !84 = !{!0, !7, !26, !35, !55, !67, !81}
 !85 = !{i32 2, !"Debug Info Version", i32 3}
