@@ -1,15 +1,23 @@
 #include <algorithm>
 #include <bpf/libbpf.h>
+#include <chrono>
 #include <iomanip>
+#include <limits>
 #include <string>
 
 #include "ast/async_event_types.h"
+#include "bpfmap.h"
 #include "bpftrace.h"
 #include "log.h"
+#include "map_info.h"
 #include "output.h"
 #include "required_resources.h"
+#include "types.h"
 #include "util/stats.h"
 #include "util/strings.h"
+#include "util/tseries.h"
+
+using namespace std::chrono_literals;
 
 namespace bpftrace {
 
@@ -36,6 +44,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::hist_t:
     case Type::integer:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::mac_address:
     case Type::max_t:
     case Type::min_t:
@@ -65,6 +74,9 @@ std::ostream &operator<<(std::ostream &out, MessageType type)
       break;
     case MessageType::hist:
       out << "hist";
+      break;
+    case MessageType::tseries:
+      out << "tseries";
       break;
     case MessageType::stats:
       out << "stats";
@@ -421,6 +433,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     case Type::voidtype:
     case Type::hist_t:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::stack_mode:
     case Type::pointer:
     case Type::stats_t:
@@ -473,6 +486,7 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
     case Type::strerror_t:
     case Type::hist_t:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::none:
     case Type::stack_mode:
     case Type::stats_t:
@@ -566,6 +580,39 @@ void Output::map_hist_contents(
       const auto &args = std::get<LinearHistogramArgs>(map_info.detail);
       val_str = lhist_to_str(value, args.min, args.max, args.step);
     }
+    map_key_val(map_type, key_str, val_str);
+  }
+}
+
+void Output::map_tseries_contents(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    const TSeriesMap &values_by_key,
+    const std::vector<std::pair<KeyType, EpochType>> &latest_epoch_by_key) const
+{
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
+  const auto &map_type = map_info.value_type;
+  EpochType last_epoch = util::tseries_last_epoch(values_by_key);
+  bool first = true;
+  for (const auto &key_epoch : latest_epoch_by_key) {
+    const auto &key = key_epoch.first;
+    const auto &value = values_by_key.at(key);
+
+    if (first)
+      first = false;
+    else
+      map_elem_delim(map_type);
+
+    if (!std::holds_alternative<TSeriesArgs>(map_info.detail))
+      LOG(BUG) << "call to tseries with missing arguments";
+    const auto &args = std::get<TSeriesArgs>(map_info.detail);
+    auto key_str = map_key_to_str(bpftrace, map, key);
+    std::string val_str = tseries_to_str(bpftrace,
+                                         value,
+                                         last_epoch,
+                                         args.interval_ns,
+                                         args.num_intervals,
+                                         args.value_type);
     map_key_val(map_type, key_str, val_str);
   }
 }
@@ -742,6 +789,149 @@ void TextOutput::map_hist(
   out_ << std::endl;
 }
 
+void TextOutput::map_tseries(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    const TSeriesMap &values_by_key,
+    const std::vector<std::pair<KeyType, EpochType>> &latest_epoch_by_key) const
+{
+  map_tseries_contents(bpftrace, map, values_by_key, latest_epoch_by_key);
+  out_ << std::endl;
+}
+
+template <typename T>
+std::string tseries_to_str_text(BPFtrace &bpftrace,
+                                const TSeries &values,
+                                EpochType last_epoch,
+                                uint64_t interval_ns,
+                                uint64_t buckets)
+{
+  constexpr int graph_width = 53;
+  std::ostringstream res;
+
+  // We have no reference point from which to render the rest of the graph.
+  // Just print <no data> instead.
+  if (!last_epoch) {
+    res << "<no data>" << std::endl;
+    return res.str();
+  }
+
+  auto min_max = util::tseries_bounds<T>(values,
+                                         last_epoch - buckets + 1,
+                                         last_epoch);
+  T min_value = min_max.first;
+  T max_value = min_max.second;
+
+  // Ensure a range of at least three, so that we have concrete values for the
+  if (min_value == max_value) {
+    // Generally prefer if we can add some buffer on both sides of the points
+    // in the graph, but don't overflow if our min or max is at the upper
+    // bound of the range.
+    if (min_value > std::numeric_limits<T>::min()) {
+      min_value -= 1;
+    }
+    if (max_value < std::numeric_limits<T>::max()) {
+      max_value += 1;
+    }
+  }
+
+  std::string time_fmt = "%H:%M:%S";
+  std::string time_legend = "hh:mm:ss";
+  if (interval_ns <
+      static_cast<uint64_t>(std::chrono::nanoseconds(1us).count())) {
+    time_fmt += ".%k";
+    time_legend += ".ns       ";
+  } else if (interval_ns <
+             static_cast<uint64_t>(std::chrono::nanoseconds(1ms).count())) {
+    time_fmt += ".%f";
+    time_legend += ".us    ";
+  } else if (interval_ns <
+             static_cast<uint64_t>(std::chrono::nanoseconds(1s).count())) {
+    time_fmt += ".%l";
+    time_legend += ".ms ";
+  }
+
+  constexpr int padding = 21;
+  res << std::setw(time_legend.length()) << "" << " " << std::setw(padding)
+      << std::left << min_value << std::setw(graph_width - padding)
+      << std::right << max_value << std::endl;
+  std::string top(graph_width - 2, '_');
+  res << time_legend << " |" << top << "|" << std::endl;
+
+  int zero_offset = 0;
+  if (min_value < 0 && max_value > 0) {
+    zero_offset = -1 * min_value / static_cast<float>(max_value - min_value) *
+                  graph_width;
+  }
+
+  // First bucket that actually has data.
+  EpochType first_epoch = util::tseries_first_epoch(values,
+                                                    last_epoch,
+                                                    buckets);
+
+  for (EpochType epoch = last_epoch - buckets + 1; epoch <= last_epoch;
+       epoch++) {
+    const auto &v = values.find(epoch);
+    auto ts = bpftrace.resolve_timestamp(static_cast<uint32_t>(
+                                             TimestampMode::tai),
+                                         epoch * interval_ns,
+                                         time_fmt,
+                                         false);
+    std::string line(graph_width, ' ');
+
+    res << ts << " ";
+
+    line[0] = '|';
+    line[graph_width - 1] = '|';
+    if (zero_offset > 0) {
+      line[zero_offset] = '.';
+    }
+
+    if (v != values.end() && epoch >= first_epoch) {
+      T val = 0;
+      if (v != values.end()) {
+        val = util::read_data<T>(v->second.data());
+      }
+
+      int point_offset = (val - min_value) /
+                         static_cast<float>(max_value - min_value) *
+                         (graph_width - 1);
+      line[point_offset] = '*';
+      res << line << " " << val;
+    } else {
+      res << line << " -";
+    }
+
+    res << std::endl;
+  }
+
+  std::string bottom(graph_width, '_');
+  bottom[0] = 'v';
+  bottom[graph_width - 1] = 'v';
+  res << std::setw(time_legend.length()) << "" << " " << bottom << std::endl;
+  res << std::setw(time_legend.length()) << "" << " " << std::setw(padding)
+      << std::left << min_value << std::setw(graph_width - padding)
+      << std::right << max_value << std::endl;
+
+  return res.str();
+}
+
+std::string TextOutput::tseries_to_str(BPFtrace &bpftrace,
+                                       const TSeries &values,
+                                       EpochType last_epoch,
+                                       uint64_t interval_ns,
+                                       uint64_t num_intervals,
+                                       const SizedType &value_type) const
+{
+  if (value_type.IsSigned()) {
+    return tseries_to_str_text<int64_t>(
+        bpftrace, values, last_epoch, interval_ns, num_intervals);
+  } else {
+    return tseries_to_str_text<uint64_t>(
+        bpftrace, values, last_epoch, interval_ns, num_intervals);
+  }
+}
+
 void TextOutput::map_stats(
     BPFtrace &bpftrace,
     const BpfMap &map,
@@ -883,7 +1073,7 @@ void TextOutput::map_key_val(const SizedType &map_type,
                              const std::string &val) const
 {
   out_ << key;
-  if (map_type.IsHistTy() || map_type.IsLhistTy())
+  if (map_type.IsHistTy() || map_type.IsLhistTy() || map_type.IsTSeriesTy())
     out_ << ":\n";
   else
     out_ << ": ";
@@ -1079,6 +1269,90 @@ void JsonOutput::map_hist(
   if (!map_info.is_scalar)
     out_ << "}";
   out_ << "}}" << std::endl;
+}
+
+void JsonOutput::map_tseries(
+    BPFtrace &bpftrace,
+    const BpfMap &map,
+    const TSeriesMap &values_by_key,
+    const std::vector<std::pair<KeyType, EpochType>> &latest_epoch_by_key) const
+{
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
+
+  out_ << R"({"type": ")" << MessageType::tseries << R"(", "data": {)";
+  out_ << "\"" << json_escape(map.name()) << "\": ";
+  if (!map_info.is_scalar) // check if this map has keys
+    out_ << "{";
+
+  map_tseries_contents(bpftrace, map, values_by_key, latest_epoch_by_key);
+
+  if (!map_info.is_scalar) // check if this map has keys
+    out_ << "}";
+  out_ << "}}" << std::endl;
+}
+
+template <typename T>
+std::string tseries_to_str_json(BPFtrace &bpftrace,
+                                const TSeries &values,
+                                EpochType last_epoch,
+                                uint64_t interval_ns,
+                                uint64_t num_intervals)
+{
+  EpochType first_epoch = util::tseries_first_epoch(values,
+                                                    last_epoch,
+                                                    num_intervals);
+  std::ostringstream res;
+
+  if (!first_epoch) {
+    return "[]";
+  }
+
+  bool first = true;
+  res << "[";
+  for (EpochType epoch = first_epoch; epoch <= last_epoch; epoch++) {
+    const auto &v = values.find(epoch);
+    if (v == values.end()) {
+      continue;
+    }
+
+    if (!first) {
+      res << ",";
+    } else {
+      first = false;
+    }
+
+    T val = util::read_data<T>(v->second.data());
+
+    auto ts = bpftrace.resolve_timestamp(static_cast<uint32_t>(
+                                             TimestampMode::tai),
+                                         epoch * interval_ns,
+                                         "%FT%H:%M:%S.%kZ",
+                                         true);
+
+    res << "{";
+    res << "\"interval_start\"" << ":" << "\"" << ts << "\"," << "\"value\""
+        << ":" << val;
+    res << "}";
+  }
+  res << "]";
+
+  return res.str();
+}
+
+std::string JsonOutput::tseries_to_str(BPFtrace &bpftrace,
+                                       const TSeries &values,
+                                       EpochType last_epoch,
+                                       uint64_t interval_ns,
+                                       uint64_t num_intervals,
+                                       const SizedType &value_type) const
+{
+  if (value_type.IsSigned()) {
+    return tseries_to_str_json<int64_t>(
+        bpftrace, values, last_epoch, interval_ns, num_intervals);
+  } else {
+    return tseries_to_str_json<uint64_t>(
+        bpftrace, values, last_epoch, interval_ns, num_intervals);
+  }
 }
 
 void JsonOutput::map_stats(

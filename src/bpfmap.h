@@ -40,6 +40,9 @@ using MapElements = std::vector<std::pair<KeyType, ValueType>>;
 using BucketUnit = uint64_t;
 using BucketType = std::vector<BucketUnit>;
 using HistogramMap = std::map<KeyType, BucketType>;
+using EpochType = uint64_t;
+using TSeries = std::map<EpochType, ValueType>;
+using TSeriesMap = std::map<KeyType, TSeries>;
 
 class BpfMap {
 public:
@@ -82,6 +85,8 @@ public:
   virtual Result<MapElements> collect_elements(int nvalues) const;
   virtual Result<HistogramMap> collect_histogram_data(const MapInfo &map_info,
                                                       int nvalues) const;
+  virtual Result<TSeriesMap> collect_tseries_data(const MapInfo &map_info,
+                                                  int nvalues) const;
   Result<> zero_out(int nvalues) const;
   Result<> clear(int nvalues) const;
   Result<> update_elem(const void *key, const void *value) const;
