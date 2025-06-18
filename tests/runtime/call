@@ -207,6 +207,14 @@ NAME lhist_scalar_map_key_scratch_buf
 PROG config = { on_stack_limit = 0 } BEGIN { @ = lhist(2,0,10,2); exit() }
 EXPECT @:
 
+NAME tseries_map_key_scratch_buf
+PROG BEGIN { @["ok_key"] = tseries(2,1s,1); exit() }
+EXPECT @[ok_key]:
+
+NAME tseries_scalar_map_key_scratch_buf
+PROG BEGIN { @ = tseries(2,1s,2); exit() }
+EXPECT @:
+
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
 ENV BPFTRACE_MAX_STRLEN=9999
