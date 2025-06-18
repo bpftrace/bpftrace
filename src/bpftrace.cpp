@@ -1031,6 +1031,8 @@ int BPFtrace::print_map(Output &out,
   const auto &value_type = map_info.value_type;
   if (value_type.IsHistTy() || value_type.IsLhistTy())
     return print_map_hist(out, map, top, div);
+  else if (value_type.IsTSeriesTy())
+    return print_map_tseries(out, map, top, div);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   auto values_by_key = map.collect_elements(nvalues);
@@ -1130,6 +1132,41 @@ int BPFtrace::print_map_hist(Output &out,
   if (div == 0)
     div = 1;
   out.map_hist(*this, map, top, div, *values_by_key, total_counts_by_key);
+  return 0;
+}
+
+int BPFtrace::print_map_tseries(Output &out,
+                                const BpfMap &map,
+                                uint32_t top,
+                                uint32_t div)
+{
+  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
+  const auto &map_info = resources.maps_info.at(map.name());
+  auto values_by_key = map.collect_tseries_data(map_info, nvalues);
+  if (!values_by_key) {
+    LOG(ERROR) << "Failed to collect time series data: "
+               << values_by_key.takeError();
+    return -1;
+  }
+
+  // Sort from least to most recently updated.
+  std::vector<std::pair<KeyType, EpochType>> latest_epoch_by_key;
+  for (auto &tseries : *values_by_key) {
+    uint64_t latest_epoch = 0;
+
+    for (const auto &bucket : tseries.second) {
+      latest_epoch = std::max(latest_epoch, bucket.first);
+    }
+
+    latest_epoch_by_key.emplace_back(tseries.first, latest_epoch);
+  }
+  std::ranges::sort(latest_epoch_by_key,
+                    [&](auto &a, auto &b) { return a.second < b.second; });
+
+  if (div == 0)
+    div = 1;
+  out.map_tseries(*this, map, top, div, *values_by_key, latest_epoch_by_key);
+
   return 0;
 }
 
