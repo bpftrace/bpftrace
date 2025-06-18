@@ -14,6 +14,7 @@ namespace {
 const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
 const auto MACROS = "macros";
+const auto TSERIES = "tseries";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -39,6 +40,7 @@ public:
   void visit(MapDeclStatement &decl);
   void visit(Import &imp);
   void visit(Macro &macro);
+  void visit(Call &call);
 
 private:
   BPFtrace &bpftrace_;
@@ -90,6 +92,23 @@ void UnstableFeature::visit(Macro &macro)
       !warned_features.contains(UNSTABLE_MACRO)) {
     LOG(WARNING) << get_warning(MACROS, UNSTABLE_MACRO);
     warned_features.insert(UNSTABLE_MACRO);
+  }
+}
+
+void UnstableFeature::visit(Call &call)
+{
+  if (call.func != "tseries") {
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::error) {
+    call.addError() << get_error(TSERIES, UNSTABLE_TSERIES);
+    return;
+  }
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_TSERIES)) {
+    LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
+    warned_features.insert(UNSTABLE_TSERIES);
   }
 }
 
