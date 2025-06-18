@@ -11,9 +11,9 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "types.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/paths.h"
+#include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
 

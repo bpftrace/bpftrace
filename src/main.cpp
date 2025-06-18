@@ -48,9 +48,9 @@
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
+#include "util/strings.h"
 #include "version.h"
 
 using namespace bpftrace;

@@ -46,11 +46,11 @@
 #include "util/cgroup.h"
 #include "util/cpus.h"
 #include "util/exceptions.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/stats.h"
+#include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
 
