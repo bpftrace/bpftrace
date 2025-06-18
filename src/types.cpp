@@ -632,4 +632,28 @@ bool SizedType::NeedsPercpuMap() const
   return IsHistTy() || IsLhistTy() || IsCountTy() || IsSumTy() || IsMinTy() ||
          IsMaxTy() || IsAvgTy() || IsStatsTy() || IsTSeriesTy();
 }
+
+std::ostream &operator<<(std::ostream &os, TSeriesAggFunc agg)
+{
+  switch (agg) {
+    case TSeriesAggFunc::none:
+      os << "none";
+      break;
+    case TSeriesAggFunc::avg:
+      os << "avg";
+      break;
+    case TSeriesAggFunc::max:
+      os << "max";
+      break;
+    case TSeriesAggFunc::min:
+      os << "min";
+      break;
+    case TSeriesAggFunc::sum:
+      os << "sum";
+      break;
+  }
+
+  return os;
+}
+
 } // namespace bpftrace

@@ -11,6 +11,7 @@
 #include "log.h"
 #include "required_resources.h"
 #include "struct.h"
+#include "types.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -280,6 +281,45 @@ void ResourceAnalyser::visit(Call &call)
     } else {
       call.addError() << "Different lhist bounds in a single map unsupported";
     }
+  } else if (call.func == "tseries") {
+    Map *map = call.vargs.at(0).as<Map>();
+
+    Expression &n_arg = call.vargs.at(2);
+    Expression &interval_ns_arg = call.vargs.at(3);
+    Expression &num_intervals_arg = call.vargs.at(4);
+    auto &interval_ns = *interval_ns_arg.as<Integer>();
+    auto &num_intervals = *num_intervals_arg.as<Integer>();
+
+    auto args = TSeriesArgs{
+      .interval_ns = static_cast<long>(interval_ns.value),
+      .num_intervals = static_cast<long>(num_intervals.value),
+      .value_type = n_arg.type(),
+      .agg = TSeriesAggFunc::none,
+    };
+
+    if (call.vargs.size() == 6) {
+      auto &agg_func = *call.vargs.at(5).as<String>();
+
+      if (agg_func.value == "avg") {
+        args.agg = TSeriesAggFunc::avg;
+      } else if (agg_func.value == "max") {
+        args.agg = TSeriesAggFunc::max;
+      } else if (agg_func.value == "min") {
+        args.agg = TSeriesAggFunc::min;
+      } else if (agg_func.value == "sum") {
+        args.agg = TSeriesAggFunc::sum;
+      }
+    }
+
+    auto &map_info = resources_.maps_info[map->ident];
+    if (std::holds_alternative<std::monostate>(map_info.detail)) {
+      map_info.detail.emplace<TSeriesArgs>(args);
+    } else if (std::holds_alternative<TSeriesArgs>(map_info.detail) &&
+               std::get<TSeriesArgs>(map_info.detail) == args) {
+      // Same arguments.
+    } else {
+      call.addError() << "Different tseries bounds in a single map unsupported";
+    }
   } else if (call.func == "time") {
     if (!call.vargs.empty())
       resources_.time_args.push_back(call.vargs.at(0).as<String>()->value);
@@ -341,18 +381,18 @@ void ResourceAnalyser::visit(Call &call)
   // buffer here.
   //
   // The exceptions are:
-  // 1. lhist/hist because the map key buffer includes both the key itself
-  //    and the bucket ID from a call to linear/log2 functions.
+  // 1. lhist/hist/tseries because the map key buffer includes both the key
+  //    itself and the bucket ID from a call to linear/log2/tseries functions.
   // 2. has_key/delete because the map key buffer allocation depends on
   //    arguments to the function e.g.
   //      delete(@, 2)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
-  if (call.func == "lhist" || call.func == "hist") {
+  if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
     auto &map = *call.vargs.at(0).as<Map>();
-    // Allocation is always needed for lhist/hist. But we need to allocate
-    // space for both map key and the bucket ID from a call to linear/log2
-    // functions.
+    // Allocation is always needed for lhist/hist/tseries. But we need to
+    // allocate space for both map key and the bucket ID from a call to
+    // linear/log2/tseries functions.
     const auto map_key_size = map.key_type.GetSize() + CreateUInt64().GetSize();
     if (exceeds_stack_limit(map_key_size)) {
       resources_.map_key_buffers++;
