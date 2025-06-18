@@ -83,6 +83,11 @@ TEST(unstable_feature, check_warnings)
                "warning you must explicitly enable the unstable "
                "feature in the config e.g. unstable_macro=enable");
 
+  test_warning("BEGIN { @ = tseries(4, \"1s\", 10); }",
+               "Script is using an unstable feature. To prevent this "
+               "warning you must explicitly enable the unstable "
+               "feature in the config e.g. unstable_tseries=enable");
+
   test_no_warning(
       "config = { unstable_map_decl=enable } let @a = lruhash(5); BEGIN "
       "{ @a[0] = 0; }",
@@ -94,6 +99,9 @@ TEST(unstable_feature, check_warnings)
       "config = { unstable_macro=enable } macro add_one($x) { $x } BEGIN "
       "{ @a[0] = 0; }",
       "Script is using an unstable feature");
+  test_no_warning("config = { unstable_tseries=enable } BEGIN { @ = tseries(4, "
+                  "\"1s\", 10); }",
+                  "Script is using an unstable feature");
 }
 
 TEST(unstable_feature, check_error)
@@ -111,6 +119,10 @@ TEST(unstable_feature, check_error)
       "@a[0] = 0; }",
       "Feature not enabled by default. To enable this unstable feature, "
       "set the config flag to enable. unstable_macro=enable");
+  test_error("config = { unstable_tseries=error } BEGIN { @ = tseries(4, "
+             "\"1s\", 10); }",
+             "Feature not enabled by default. To enable this unstable feature, "
+             "set the config flag to enable. unstable_tseries=enable");
 }
 
 } // namespace bpftrace::test::unstable_feature
