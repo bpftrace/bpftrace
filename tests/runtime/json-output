@@ -55,6 +55,36 @@ NAME multiple linear histograms
 PROG begin { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10);  }
 EXPECT_JSON runtime/outputs/lhist_multiple.json
 
+NAME time series
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_JSON runtime/outputs/tseries.json
+
+NAME time series min
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "min"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_JSON runtime/outputs/tseries_min.json
+
+NAME time series max
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "max"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_JSON runtime/outputs/tseries_max.json
+
+NAME time series avg
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "avg"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_JSON runtime/outputs/tseries_avg.json
+
+NAME time series zero
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "avg"); @ts += 10 * $ms; $i++; } clear(@ts); zero(@a); exit(); }
+EXPECT_JSON runtime/outputs/tseries_zero.json
+
+NAME multiple time series
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 5) { @a["one"] = tseries(5, 100ms, 10); @ts += 100 * $ms; $i++; } $i = 0; while($i < 5) { @a["two"] = tseries(4, 100ms, 10); @ts += 100 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_JSON runtime/outputs/tseries_multiple.json
+
 NAME stats
 PROG begin { @stats = stats(2); @stats = stats(10);  }
 EXPECT_JSON runtime/outputs/stats.json
