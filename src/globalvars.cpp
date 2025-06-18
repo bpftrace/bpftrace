@@ -3,14 +3,30 @@
 #include <elf.h>
 #include <sys/mman.h>
 
+#include "ast/passes/named_param.h"
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
 #include "required_resources.h"
 #include "types.h"
 #include "util/exceptions.h"
+#include "util/strings.h"
 
-namespace bpftrace::globalvars {
+namespace bpftrace {
+
+char NamedParamError::ID;
+void NamedParamError::log(llvm::raw_ostream &OS) const
+{
+  OS << err_ << "\n";
+}
+
+char UnknownParamError::ID;
+void UnknownParamError::log(llvm::raw_ostream &OS) const
+{
+  OS << err_ << "\n";
+}
+
+namespace globalvars {
 
 static std::map<std::string, int> find_btf_var_offsets(
     const struct bpf_object *bpf_object,
@@ -76,16 +92,11 @@ static std::map<std::string, int> find_btf_var_offsets(
 }
 
 void update_global_vars_rodata(
-    const struct bpf_object *bpf_object,
-    std::string_view section_name,
     struct bpf_map *global_vars_map,
-    const std::unordered_set<std::string> &needed_global_vars,
-    const std::unordered_map<std::string, int> &known_global_var_values)
+    const std::unordered_map<std::string, GlobalVarConfig> &added_global_vars,
+    const std::map<std::string, int> &vars_and_offsets,
+    const GlobalVarVals &global_var_vals)
 {
-  auto vars_and_offsets = find_btf_var_offsets(bpf_object,
-                                               section_name,
-                                               needed_global_vars);
-
   size_t v_size;
   char *global_vars_buf = reinterpret_cast<char *>(
       bpf_map__initial_value(global_vars_map, &v_size));
@@ -96,19 +107,26 @@ void update_global_vars_rodata(
 
   // Update the values for the global vars (using the above offsets)
   for (const auto &[global_var, offset] : vars_and_offsets) {
-    auto *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
-
-    auto it = known_global_var_values.find(global_var);
-    if (it != known_global_var_values.end()) {
-      *var = it->second;
+    auto it = global_var_vals.find(global_var);
+    if (it != global_var_vals.end()) {
+      const auto &config = added_global_vars.at(global_var);
+      if (config.type == GlobalVarType::integer ||
+          config.type == GlobalVarType::boolean) {
+        auto *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
+        *var = std::get<int64_t>(it->second);
+      } else if (config.type == GlobalVarType::string) {
+        auto *var = reinterpret_cast<char *>(global_vars_buf + offset);
+        const auto &val = std::get<std::string>(it->second);
+        strncpy(var, val.data(), val.size() + 1);
+      }
     }
   }
 }
 
 void update_global_vars_custom_rw_section(
-    const struct bpf_object *bpf_object,
     const std::string &section_name,
     struct bpf_map *global_vars_map,
+    const std::map<std::string, int> &vars_and_offsets,
     const std::unordered_set<std::string> &needed_global_vars,
     int max_cpu_id)
 {
@@ -151,10 +169,7 @@ void update_global_vars_custom_rw_section(
 
   // Verify we can still find variable name via BTF and it hasn't been cleared
   // after size changes
-  auto vars_and_offset = find_btf_var_offsets(bpf_object,
-                                              section_name,
-                                              needed_global_vars);
-  if (vars_and_offset.at(global_var) != 0) {
+  if (vars_and_offsets.at(global_var) != 0) {
     LOG(BUG) << "Read-write global variable " << global_var
              << " must be at offset 0 in section " << section_name;
   }
@@ -172,6 +187,8 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
                                      const RequiredResources &resources,
                                      const Config &bpftrace_config) const
 {
+  const auto &config = get_config(global_var_name);
+
   if (global_var_name == FMT_STRINGS_BUFFER) {
     assert(resources.max_fmtstring_args_size > 0);
     return make_rw_type(
@@ -220,6 +237,17 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
                         CreateArray(resources.max_map_key_size, CreateInt8()));
   }
 
+  if (config.type == GlobalVarType::integer ||
+      config.type == GlobalVarType::boolean) {
+    return CreateInt64();
+  }
+
+  if (config.type == GlobalVarType::string) {
+    const auto max_strlen = bpftrace_config.max_strlen;
+    return make_rw_type(1, CreateArray(max_strlen, CreateInt8()));
+  }
+
+  LOG(BUG) << "Unknown global variable " << global_var_name;
   return CreateInt64();
 }
 
@@ -232,23 +260,40 @@ std::unordered_set<std::string> get_section_names()
   return ret;
 }
 
-void GlobalVars::add_known_global_var(const std::string_view &name)
+void GlobalVars::add_known(const std::string_view &name)
 {
   if (!GLOBAL_VAR_CONFIGS.contains(name)) {
     LOG(BUG) << "Unknown global variable: " << name;
   }
   auto str_name = std::string(name);
 
-  if (global_var_map_.contains(str_name)) {
+  if (added_global_vars_.contains(str_name)) {
     return;
   }
-  global_var_map_[std::move(str_name)] = GLOBAL_VAR_CONFIGS.at(name);
+  added_global_vars_[std::move(str_name)] = GLOBAL_VAR_CONFIGS.at(name);
+}
+
+void GlobalVars::add_named_param(const std::string &name,
+                                 Type type,
+                                 bool is_bool,
+                                 const std::string &default_val)
+{
+  if (added_global_vars_.contains(name)) {
+    return;
+  }
+  added_global_vars_[name] = GlobalVarConfig({
+      .section = std::string(RO_SECTION_NAME),
+      .type = type == Type::string ? GlobalVarType::string
+              : is_bool            ? GlobalVarType::boolean
+                                   : GlobalVarType::integer,
+  });
+  named_param_defaults_[name] = default_val;
 }
 
 const GlobalVarConfig &GlobalVars::get_config(const std::string &name) const
 {
-  auto it = global_var_map_.find(name);
-  if (it == global_var_map_.end()) {
+  auto it = added_global_vars_.find(name);
+  if (it == added_global_vars_.end()) {
     LOG(BUG) << "Unknown global variable: " << name;
   }
   return it->second;
@@ -258,7 +303,7 @@ void GlobalVars::verify_maps_found(
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map)
 {
-  for (const auto &[name, config] : global_var_map_) {
+  for (const auto &[name, config] : added_global_vars_) {
     if (!section_name_to_global_vars_map.contains(config.section)) {
       LOG(BUG) << "No map found in " << config.section
                << " which is needed to set global variable " << name;
@@ -266,11 +311,91 @@ void GlobalVars::verify_maps_found(
   }
 }
 
+Result<GlobalVarVals> GlobalVars::get_named_param_vals(
+    std::unordered_map<std::string, std::string> named_params)
+{
+  GlobalVarVals named_param_vals;
+
+  std::string expected_args_str;
+  for (const auto &[name, default_val] : named_param_defaults_) {
+    auto &config = added_global_vars_.at(name);
+    auto it = named_params.find(name);
+    std::string val = default_val;
+
+    if (it != named_params.end()) {
+      val = it->second;
+      named_params.erase(name);
+    }
+
+    if (config.type == GlobalVarType::integer) {
+      try {
+        named_param_vals[name] = std::stoll(val);
+      } catch (const std::invalid_argument &) {
+        return make_error<NamedParamError>(
+            "Command line option --" + name +
+            " is expecting an integer. Got: " + val);
+      } catch (const std::out_of_range &) {
+        return make_error<NamedParamError>("Value for command line option --" +
+                                           name +
+                                           " is out of range. Got: " + val);
+      }
+    } else if (config.type == GlobalVarType::boolean) {
+      if (val.empty()) {
+        named_param_vals[name] = 1;
+      } else if (util::is_str_bool_truthy(val)) {
+        named_param_vals[name] = 1;
+      } else if (util::is_str_bool_falsy(val)) {
+        named_param_vals[name] = 0;
+      } else {
+        return make_error<NamedParamError>(
+            "Command line option --" + name +
+            " is expecting a boolean (e.g. 'true'). Got: " + val);
+      }
+    } else if (config.type == GlobalVarType::string) {
+      if (val.empty()) {
+        return make_error<NamedParamError>(
+            "Command line option --" + name +
+            " is expecting a string. Got a boolean flag.");
+      }
+      named_param_vals[name] = val;
+    }
+
+    expected_args_str += "--" + name + ", ";
+  }
+
+  std::string unexpected_args_str;
+  for (const auto &[name, val] : named_params) {
+    unexpected_args_str += "--" + name + ", ";
+  }
+
+  if (!unexpected_args_str.empty()) {
+    // Remove the last comma and space
+    unexpected_args_str.pop_back();
+    unexpected_args_str.pop_back();
+
+    if (expected_args_str.empty()) {
+      return make_error<UnknownParamError>("Unexpected command line options: " +
+                                               unexpected_args_str,
+                                           "");
+    }
+
+    // Remove the last comma and space
+    expected_args_str.pop_back();
+    expected_args_str.pop_back();
+
+    return make_error<UnknownParamError>(
+        "Unexpected command line options: " + unexpected_args_str,
+        "Expected script options: " + expected_args_str);
+  }
+
+  return named_param_vals;
+}
+
 std::unordered_set<std::string> GlobalVars::get_global_vars_for_section(
     std::string_view target_section)
 {
   std::unordered_set<std::string> ret;
-  for (const auto &[name, config] : global_var_map_) {
+  for (const auto &[name, config] : added_global_vars_) {
     if (config.section == target_section) {
       ret.insert(name);
     }
@@ -282,9 +407,13 @@ void GlobalVars::update_global_vars(
     const struct bpf_object *bpf_object,
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map,
-    const std::unordered_map<std::string, int> &known_global_var_values,
+    GlobalVarVals &&global_var_vals,
+    int ncpus,
     int max_cpu_id)
 {
+  global_var_vals[std::string(globalvars::NUM_CPUS)] = ncpus;
+  global_var_vals[std::string(globalvars::MAX_CPU_ID)] = max_cpu_id;
+
   verify_maps_found(section_name_to_global_vars_map);
   for (const auto &[section_name, global_vars_map] :
        section_name_to_global_vars_map) {
@@ -293,16 +422,17 @@ void GlobalVars::update_global_vars(
     if (needed_global_variables.empty()) {
       continue;
     }
+    std::map<std::string, int> vars_and_offsets = find_btf_var_offsets(
+        bpf_object, section_name, needed_global_variables);
     if (section_name == RO_SECTION_NAME) {
-      update_global_vars_rodata(bpf_object,
-                                section_name,
-                                global_vars_map,
-                                needed_global_variables,
-                                known_global_var_values);
+      update_global_vars_rodata(global_vars_map,
+                                added_global_vars_,
+                                vars_and_offsets,
+                                global_var_vals);
     } else if (section_name != EVENT_LOSS_COUNTER_SECTION_NAME) {
-      update_global_vars_custom_rw_section(bpf_object,
-                                           section_name,
+      update_global_vars_custom_rw_section(section_name,
                                            global_vars_map,
+                                           vars_and_offsets,
                                            needed_global_variables,
                                            max_cpu_id);
     }
@@ -359,4 +489,5 @@ uint64_t GlobalVars::get_global_var(
   return *target_var;
 }
 
-} // namespace bpftrace::globalvars
+} // namespace globalvars
+} // namespace bpftrace

@@ -33,12 +33,14 @@ add_executable(bpftrace_test
   bpftrace.cpp
   child.cpp
   clang_parser.cpp
+  named_param.cpp
   config.cpp
   collect_nodes.cpp
   deprecated.cpp
   field_analyser.cpp
   fold_literals.cpp
   function_registry.cpp
+  globalvars.cpp
   imports.cpp
   location.cpp
   log.cpp

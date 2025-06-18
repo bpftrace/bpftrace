@@ -6,9 +6,11 @@
 
 #include "aot.h"
 #include "bpftrace.h"
+#include "globalvars.h"
 #include "log.h"
 #include "output.h"
 #include "run_bpftrace.h"
+#include "util/strings.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -68,6 +70,8 @@ int main(int argc, char* argv[])
   std::string output_file, output_format;
   int c;
 
+  std::unordered_map<std::string, std::string> named_params;
+
   // TODO: which other options from `bpftrace` should be included?
   const char* const short_opts = "d:f:hVo:qv";
   option long_opts[] = {
@@ -99,6 +103,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  opterr = 0; // Don't print warning messages for unregonized options
   while ((c = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1) {
     switch (c) {
       case 'o':
@@ -132,8 +137,25 @@ int main(int argc, char* argv[])
         }
         break;
       default:
-        usage(std::cerr, argv[0]);
-        return 1;
+        auto unrecognized_opt = std::string(argv[optind - 1]);
+        if (unrecognized_opt.starts_with("--")) {
+          auto arg = unrecognized_opt.substr(2);
+          if (arg.find("=") != std::string::npos) {
+            auto split = util::split_string(arg,
+                                            '=',
+                                            /* remove_empty= */ true);
+            named_params[split[0]] = split[1];
+          } else {
+            named_params[arg] = "";
+          }
+          // We'll error later if we confirm this is an unexpected long arg
+          break;
+        } else {
+          LOG(ERROR) << "Unrecognized option: " << static_cast<char>(optopt)
+                     << "\n";
+          usage(std::cerr, argv[0]);
+          return 1;
+        }
     }
   }
 
@@ -158,5 +180,14 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  return run_bpftrace(bpftrace, *output, bpftrace.bytecode_);
+  const auto usage_and_exit = [filename = argv[0]]() {
+    usage(std::cerr, filename);
+    exit(1);
+  };
+
+  return run_bpftrace(bpftrace,
+                      *output,
+                      bpftrace.bytecode_,
+                      std::move(named_params),
+                      usage_and_exit);
 }
