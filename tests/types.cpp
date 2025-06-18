@@ -71,6 +71,7 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateStrerror()), "strerror_t");
   EXPECT_EQ(to_str(CreateHist()), "hist_t");
   EXPECT_EQ(to_str(CreateLhist()), "lhist_t");
+  EXPECT_EQ(to_str(CreateTSeries()), "tseries_t");
   EXPECT_EQ(to_str(CreateNone()), "none");
   EXPECT_EQ(to_str(CreateVoid()), "void");
 }
