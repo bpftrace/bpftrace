@@ -8,9 +8,9 @@
 #include "bpftrace.h"
 #include "driver.h"
 #include "stdlib/stdlib.h"
-#include "util/format.h"
 #include "util/result.h"
 #include "util/similar.h"
+#include "util/strings.h"
 
 namespace bpftrace::ast {
 

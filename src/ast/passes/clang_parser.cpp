@@ -23,8 +23,8 @@
 #include "log.h"
 #include "stdlib/stdlib.h"
 #include "types.h"
-#include "util/format.h"
 #include "util/io.h"
+#include "util/strings.h"
 #include "util/system.h"
 
 namespace bpftrace::ast {
