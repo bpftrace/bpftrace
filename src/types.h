@@ -580,6 +580,10 @@ std::string typestr(Type t);
 std::string typestr(const SizedType &type, bool debug = false);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
+enum class TSeriesAggFunc { none, avg, max, min, sum };
+
+std::ostream &operator<<(std::ostream &os, TSeriesAggFunc agg);
+
 } // namespace bpftrace
 
 namespace std {
