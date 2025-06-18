@@ -689,9 +689,17 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
   // ValueType var[MAX_CPU_ID + 1][num_elements]
   // 2nd/3rd/4th indexes actually index into the array
   // See https://llvm.org/docs/LangRef.html#id236
+  // The last element might be an array or just a single value
+  if (sized_type.GetElementTy()->GetElementTy()->IsArrayTy()) {
+    return CreateGEP(
+        GetType(sized_type),
+        module_.getGlobalVariable(global_name),
+        { getInt64(0), bounded_cpu_id, getInt64(key), getInt64(0) });
+  }
+
   return CreateGEP(GetType(sized_type),
                    module_.getGlobalVariable(global_name),
-                   { getInt64(0), bounded_cpu_id, getInt64(key), getInt64(0) });
+                   { getInt64(0), bounded_cpu_id, getInt64(key) });
 }
 
 // Failure to lookup a scratch map will result in a jump to the
@@ -1296,7 +1304,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
   // Most of the time this will happen for the functions that can lead
   // to a crash e.g. "queued_spin_lock_slowpath" but it can also happen
   // for nested probes e.g. "page_fault_user" -> "print".
-  CreateIncEventLossCounter();
+  CreateIncEventLossCounter(loc);
   CreateRet(getInt64(early_exit_ret));
 
   SetInsertPoint(lookup_failure_block);
@@ -2224,21 +2232,18 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
   CreateCondBr(condition, loss_block, merge_block);
 
   SetInsertPoint(loss_block);
-  CreateIncEventLossCounter();
+  CreateIncEventLossCounter(loc);
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
 }
 
-void IRBuilderBPF::CreateIncEventLossCounter()
+void IRBuilderBPF::CreateIncEventLossCounter(const Location &loc)
 {
-  auto *global_event_loss_counter = module_.getGlobalVariable(
-      std::string(bpftrace::globalvars::EVENT_LOSS_COUNTER));
-  CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Add,
-                    global_event_loss_counter,
-                    getInt64(1),
-                    8,
-                    AtomicOrdering::SequentiallyConsistent);
+  auto *value = createScratchBuffer(bpftrace::globalvars::EVENT_LOSS_COUNTER,
+                                    loc,
+                                    0);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), value), getInt64(1)), value);
 }
 
 void IRBuilderBPF::CreatePerCpuMapElemInit(Map &map,

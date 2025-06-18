@@ -35,7 +35,7 @@ public:
 
   void update_global_vars(BPFtrace &bpftrace,
                           globalvars::GlobalVarMap &&global_var_vals);
-  uint64_t get_event_loss_counter(BPFtrace &bpftrace);
+  uint64_t get_event_loss_counter(BPFtrace &bpftrace, int max_cpu_id);
   void load_progs(const RequiredResources &resources,
                   const BTF &btf,
                   BPFfeature &feature,

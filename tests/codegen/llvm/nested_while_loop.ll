@@ -9,13 +9,14 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !36
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !36
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !40
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @interval_s_1_1(ptr %0) #0 section "s_interval_s_1_1" !dbg !42 {
+define i64 @interval_s_1_1(ptr %0) #0 section "s_interval_s_1_1" !dbg !46 {
 entry:
   %"@_newval" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -33,7 +34,7 @@ while_cond:                                       ; preds = %while_end3, %entry
   %1 = load i64, ptr %"$i", align 8
   %2 = icmp sle i64 %1, 100
   %true_cond = icmp ne i1 %2, false
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !48
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !52
 
 while_body:                                       ; preds = %while_cond
   store i64 0, ptr %"$j", align 8
@@ -49,7 +50,7 @@ while_cond1:                                      ; preds = %lookup_merge, %whil
   %5 = load i64, ptr %"$j", align 8
   %6 = icmp sle i64 %5, 100
   %true_cond4 = icmp ne i1 %6, false
-  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !48
+  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !52
 
 while_body2:                                      ; preds = %while_cond1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
@@ -95,8 +96,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!38}
-!llvm.module.flags = !{!40, !41}
+!llvm.dbg.cu = !{!42}
+!llvm.module.flags = !{!44, !45}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -135,16 +136,20 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !34 = !{!35}
 !35 = !DISubrange(count: 262144, lowerBound: 0)
 !36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
-!37 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
-!38 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !39)
-!39 = !{!0, !7, !22, !36}
-!40 = !{i32 2, !"Debug Info Version", i32 3}
-!41 = !{i32 7, !"uwtable", i32 0}
-!42 = distinct !DISubprogram(name: "interval_s_1_1", linkageName: "interval_s_1_1", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
-!43 = !DISubroutineType(types: !44)
-!44 = !{!20, !45}
-!45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!46 = !{!47}
-!47 = !DILocalVariable(name: "ctx", arg: 1, scope: !42, file: !2, type: !45)
-!48 = distinct !{!48, !49}
-!49 = !{!"llvm.loop.unroll.disable"}
+!37 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !38, isLocal: false, isDefinition: true)
+!38 = !DICompositeType(tag: DW_TAG_array_type, baseType: !39, size: 64, elements: !15)
+!39 = !DICompositeType(tag: DW_TAG_array_type, baseType: !20, size: 64, elements: !15)
+!40 = !DIGlobalVariableExpression(var: !41, expr: !DIExpression())
+!41 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!42 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !43)
+!43 = !{!0, !7, !22, !36, !40}
+!44 = !{i32 2, !"Debug Info Version", i32 3}
+!45 = !{i32 7, !"uwtable", i32 0}
+!46 = distinct !DISubprogram(name: "interval_s_1_1", linkageName: "interval_s_1_1", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
+!47 = !DISubroutineType(types: !48)
+!48 = !{!20, !49}
+!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!50 = !{!51}
+!51 = !DILocalVariable(name: "ctx", arg: 1, scope: !46, file: !2, type: !49)
+!52 = distinct !{!52, !53}
+!53 = !{!"llvm.loop.unroll.disable"}

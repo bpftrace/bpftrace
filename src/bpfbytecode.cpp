@@ -126,12 +126,19 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace,
       bpftrace.max_cpu_id_);
 }
 
-uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
+uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace, int max_cpu_id)
 {
-  return bpftrace.resources.global_vars.get_global_var(
+  auto *current_values = bpftrace.resources.global_vars.get_global_var(
       bpf_object_.get(),
       globalvars::EVENT_LOSS_COUNTER_SECTION_NAME,
       section_names_to_global_vars_map_);
+  uint64_t current_value = 0;
+  for (int i = 0; i < max_cpu_id; ++i) {
+    current_value += *current_values;
+    current_values++;
+  }
+
+  return current_value;
 }
 
 namespace {

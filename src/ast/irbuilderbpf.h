@@ -171,7 +171,7 @@ public:
                        const Twine &Name);
   void CreateGetCurrentComm(AllocaInst *buf, size_t size, const Location &loc);
   void CreateOutput(Value *data, size_t size, const Location &loc);
-  void CreateIncEventLossCounter();
+  void CreateIncEventLossCounter(const Location &loc);
   void CreatePerCpuMapElemInit(Map &map,
                                Value *key,
                                Value *val,
