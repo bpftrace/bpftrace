@@ -214,6 +214,63 @@ DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
   return result;
 }
 
+DIType *DIBuilderBPF::CreateTSeriesStructType(const SizedType &stype)
+{
+  assert(stype.IsTSeriesTy());
+
+  // The first field is the value, the second field is metadata associated with
+  // the value, and the third field is the epoch, a number representing the
+  // bucket's time interval. The interpretation of the value and metadata fields
+  // depends on the time series's aggregation function:
+  //
+  // +-----+-------+----------+----------------------------------------------+
+  // | agg | value | metadata | explanation                                  |
+  // +-----+-------+----------+----------------------------------------------+
+  // | avg | total | count    | avg = total / count                          |
+  // | max | max   | is_set   | is_set = "value is set"                      |
+  // | min | min   | is_set   | is_set = "value is set"                      |
+  // | sum | sum   | -        | metadata not used                            |
+  // | -   | value | now      | now is the timestamp when value was recorded |
+  // +-----+-------+----------+----------------------------------------------+
+  SmallVector<Metadata *, 3> fields = { createMemberType(file,
+                                                         "",
+                                                         file,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         0,
+                                                         0,
+                                                         DINode::FlagZero,
+                                                         getInt64Ty()),
+                                        createMemberType(file,
+                                                         "",
+                                                         file,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         DINode::FlagZero,
+                                                         getInt64Ty()),
+                                        createMemberType(file,
+                                                         "",
+                                                         file,
+                                                         0,
+                                                         stype.GetSize() * 8,
+                                                         0,
+                                                         stype.GetSize() * 16,
+                                                         DINode::FlagZero,
+                                                         getInt64Ty()) };
+  DICompositeType *result = createStructType(file,
+                                             "",
+                                             file,
+                                             0,
+                                             (stype.GetSize() * 8) * 3,
+                                             0,
+                                             DINode::FlagZero,
+                                             nullptr,
+                                             getOrCreateArray(fields));
+  return result;
+}
+
 DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 {
   auto *subrange = getOrCreateSubrange(0, num_bytes);
@@ -278,6 +335,8 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
   if (stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy() ||
       stype.IsStatsTy())
     return CreateMapStructType(stype);
+  else if (stype.IsTSeriesTy())
+    return CreateTSeriesStructType(stype);
 
   if (stype.IsPtrTy())
     return emit_codegen_types ? getInt64Ty()
@@ -319,7 +378,8 @@ DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
   }
 
   // Some map types need an extra 8-byte key.
-  if (value_type.IsHistTy() || value_type.IsLhistTy()) {
+  if (value_type.IsHistTy() || value_type.IsLhistTy() ||
+      value_type.IsTSeriesTy()) {
     uint64_t size = key_type.GetSize() + 8;
     return CreateByteArrayType(size);
   }

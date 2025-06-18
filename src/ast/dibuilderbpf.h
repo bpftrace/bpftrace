@@ -36,6 +36,7 @@ public:
   DIType *GetType(const SizedType &stype, bool emit_codegen_types = true);
   DIType *CreateTupleType(const SizedType &stype);
   DIType *CreateMapStructType(const SizedType &stype);
+  DIType *CreateTSeriesStructType(const SizedType &stype);
   DIType *CreateByteArrayType(uint64_t num_bytes);
   DIType *createPointerMemberType(const std::string &name,
                                   uint64_t offset,

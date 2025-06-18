@@ -430,6 +430,11 @@ llvm::Type *IRBuilderBPF::GetMapValueType(const SizedType &stype)
     // The second is the count value
     std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
     ty = GetStructType("avg_stas_val", llvm_elems, false);
+  } else if (stype.IsTSeriesTy()) {
+    std::vector<llvm::Type *> llvm_elems = { getInt64Ty(),
+                                             getInt64Ty(),
+                                             getInt64Ty() };
+    ty = GetStructType("t_series_val", llvm_elems, false);
   } else {
     ty = GetType(stype);
   }
