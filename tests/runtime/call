@@ -228,6 +228,14 @@ NAME tseries_scalar_map_key_scratch_buf
 PROG begin { @ = tseries(2,1s,2); exit() }
 EXPECT @:
 
+NAME tseries_map_key_scratch_buf
+PROG BEGIN { @["ok_key"] = tseries(2,1s,1); exit() }
+EXPECT @[ok_key]:
+
+NAME tseries_scalar_map_key_scratch_buf
+PROG BEGIN { @ = tseries(2,1s,2); exit() }
+EXPECT @:
+
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
 ENV BPFTRACE_MAX_STRLEN=9999
@@ -343,6 +351,42 @@ TIMEOUT 1
 NAME lhist
 PROG begin { @=lhist(2,0,10,2); @=lhist(3,0,10,2); @=lhist(7,0,10,2); @=lhist(-1,0,10,2); @=lhist(11,0,10,2); exit()}
 EXPECT_FILE runtime/outputs/lhist.txt
+
+NAME tseries
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_FILE runtime/outputs/tseries.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME tseries_min
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "min"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_FILE runtime/outputs/tseries_min.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME tseries_max
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "max"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_FILE runtime/outputs/tseries_max.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME tseries_avg
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "avg"); @ts += 10 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_FILE runtime/outputs/tseries_avg.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME tseries multiple
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 5) { @a["one"] = tseries(5, 100ms, 10); @ts += 100 * $ms; $i++; } $i = 0; while($i < 5) { @a["two"] = tseries(4, 100ms, 10); @ts += 100 * $ms; $i++; } clear(@ts); exit(); }
+EXPECT_FILE runtime/outputs/tseries_multiple.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME tseries zigzag
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @dir = 1; @c = -5; @ts = (uint64)100ms; } i:ms:1 { $i = 0; while ($i < 20) { @ = tseries(@c, 100ms, 20); @ts += 100ms; @c += @dir; $i++; if (@c > 5) { @dir = -1; @c = 4 } else if (@c < -5) { @dir = 1; @c = -4; } } clear(@ts); clear(@c); clear(@dir); exit(); }
+EXPECT_FILE runtime/outputs/tseries_zigzag.txt
+LOCALIZE_TIMESTAMPS 0
 
 NAME kstack
 PROG k:do_nanosleep { printf("%s\n%s\n", kstack(), kstack(1)); exit(); }
