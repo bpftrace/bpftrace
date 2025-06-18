@@ -9,13 +9,14 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @recursion_prevention = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !28
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !42
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !42
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.event_loss_counter", !dbg !44
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @fentry_mock_vmlinux_queued_spin_lock_slowpath_1(ptr %0) #0 section "s_fentry_mock_vmlinux_queued_spin_lock_slowpath_1" !dbg !48 {
+define i64 @fentry_mock_vmlinux_queued_spin_lock_slowpath_1(ptr %0) #0 section "s_fentry_mock_vmlinux_queued_spin_lock_slowpath_1" !dbg !55 {
 entry:
   %lookup_key8 = alloca i32, align 4
   %lookup_key1 = alloca i32, align 4
@@ -47,7 +48,13 @@ lookup_merge:                                     ; preds = %lookup_success
   br i1 %predcond, label %pred_false, label %pred_true
 
 value_is_set:                                     ; preds = %lookup_success
-  %6 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %6 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %6
+  %7 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %8 = load i64, ptr %7, align 8
+  %9 = add i64 %8, 1
+  store i64 %9, ptr %7, align 8
   ret i64 0
 
 pred_false:                                       ; preds = %lookup_merge
@@ -98,8 +105,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!44}
-!llvm.module.flags = !{!46, !47}
+!llvm.dbg.cu = !{!51}
+!llvm.module.flags = !{!53, !54}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -144,14 +151,21 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !40 = !{!41}
 !41 = !DISubrange(count: 262144, lowerBound: 0)
 !42 = !DIGlobalVariableExpression(var: !43, expr: !DIExpression())
-!43 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
-!44 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !45)
-!45 = !{!0, !7, !28, !42}
-!46 = !{i32 2, !"Debug Info Version", i32 3}
-!47 = !{i32 7, !"uwtable", i32 0}
-!48 = distinct !DISubprogram(name: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", linkageName: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !52)
-!49 = !DISubroutineType(types: !50)
-!50 = !{!27, !51}
-!51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!52 = !{!53}
-!53 = !DILocalVariable(name: "ctx", arg: 1, scope: !48, file: !2, type: !51)
+!43 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !27, isLocal: false, isDefinition: true)
+!44 = !DIGlobalVariableExpression(var: !45, expr: !DIExpression())
+!45 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !46, isLocal: false, isDefinition: true)
+!46 = !DICompositeType(tag: DW_TAG_array_type, baseType: !47, size: 64, elements: !20)
+!47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !48, size: 64, elements: !20)
+!48 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !49)
+!49 = !{!50}
+!50 = !DISubrange(count: 8, lowerBound: 0)
+!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !52)
+!52 = !{!0, !7, !28, !42, !44}
+!53 = !{i32 2, !"Debug Info Version", i32 3}
+!54 = !{i32 7, !"uwtable", i32 0}
+!55 = distinct !DISubprogram(name: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", linkageName: "fentry_mock_vmlinux_queued_spin_lock_slowpath_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!56 = !DISubroutineType(types: !57)
+!57 = !{!27, !58}
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)

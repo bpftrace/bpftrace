@@ -13,7 +13,7 @@ target triple = "bpf"
 @ringbuf = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !35
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !49
 @__bt__write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !51
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !60
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.event_loss_counter", !dbg !60
 @__bt__map_key_buf = dso_local externally_initialized global [1 x [3 x [16 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !62
 @__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !68
 
@@ -242,7 +242,7 @@ attributes #2 = { alwaysinline nounwind }
 !58 = !{!59}
 !59 = !DISubrange(count: 1, lowerBound: 0)
 !60 = !DIGlobalVariableExpression(var: !61, expr: !DIExpression())
-!61 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!61 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !53, isLocal: false, isDefinition: true)
 !62 = !DIGlobalVariableExpression(var: !63, expr: !DIExpression())
 !63 = distinct !DIGlobalVariable(name: "__bt__map_key_buf", linkageName: "global", scope: !2, file: !2, type: !64, isLocal: false, isDefinition: true)
 !64 = !DICompositeType(tag: DW_TAG_array_type, baseType: !65, size: 384, elements: !58)
