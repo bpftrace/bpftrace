@@ -63,6 +63,8 @@ and this project adheres to
   - [#4280](https://github.com/bpftrace/bpftrace/pull/4280)
 - Add duration literals - suffixes include: `ns`, `us`, `ms`, `s`, `m`, `h`, `d`
   - [#4317](https://github.com/bpftrace/bpftrace/pull/4317)
+- Add `getopt` function to handle named command line program arguments
+  - [#4258](https://github.com/bpftrace/bpftrace/pull/4258)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

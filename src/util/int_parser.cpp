@@ -126,4 +126,35 @@ Result<uint64_t> to_uint(const std::string &num, int base)
   return ret * typespec->second.second;
 }
 
+Result<int64_t> to_int(const std::string &num, int base)
+{
+  if (num.empty()) {
+    return 0;
+  }
+
+  if (num[0] == '-') {
+    auto int_val = to_uint(num.substr(1, num.size() - 1), base);
+    if (!int_val) {
+      return int_val;
+    }
+    // Converting without overflow.
+    auto neg = -static_cast<int64_t>(*int_val - 1) - 1;
+    if (neg > 0) {
+      return make_error<OverflowError>(num,
+                                       std::numeric_limits<int64_t>::max());
+    }
+    return neg;
+  } else {
+    auto int_val = to_uint(num);
+    if (!int_val) {
+      return int_val;
+    }
+    if (*int_val > std::numeric_limits<int64_t>::max()) {
+      return make_error<OverflowError>(num,
+                                       std::numeric_limits<int64_t>::max());
+    }
+    return *int_val;
+  }
+}
+
 } // namespace bpftrace::util

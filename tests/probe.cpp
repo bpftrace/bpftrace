@@ -2,6 +2,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -37,6 +38,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(CreateParseBTFPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())

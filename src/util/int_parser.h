@@ -29,6 +29,10 @@ public:
       : msg_(std::move(msg)), num_(std::move(num)) {};
   static char ID;
   void log(llvm::raw_ostream &OS) const override;
+  std::string msg() const
+  {
+    return msg_;
+  }
 
 private:
   std::string msg_;
@@ -43,5 +47,6 @@ private:
 //    - error when base > 9 (12e3)
 //   - support underscore as separator, e.g. 1_234_000
 Result<uint64_t> to_uint(const std::string &num, int base = 0);
+Result<int64_t> to_int(const std::string &num, int base = 0);
 
 } // namespace bpftrace::util

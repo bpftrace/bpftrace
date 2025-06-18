@@ -7,4 +7,5 @@ void check_is_root();
 
 int run_bpftrace(bpftrace::BPFtrace &bpftrace,
                  bpftrace::Output &output,
-                 bpftrace::BpfBytecode &bytecode);
+                 bpftrace::BpfBytecode &bytecode,
+                 std::vector<std::string> &&named_params);

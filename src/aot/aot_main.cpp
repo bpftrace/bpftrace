@@ -9,6 +9,7 @@
 #include "log.h"
 #include "output.h"
 #include "run_bpftrace.h"
+#include "util/strings.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -67,6 +68,8 @@ int main(int argc, char* argv[])
 {
   std::string output_file, output_format;
   int c;
+
+  std::vector<std::string> named_params;
 
   // TODO: which other options from `bpftrace` should be included?
   const char* const short_opts = "d:f:hVo:qv";
@@ -137,6 +140,18 @@ int main(int argc, char* argv[])
     }
   }
 
+  while (optind < argc) {
+    auto pos_arg = std::string(argv[optind]);
+    if (pos_arg.starts_with("--")) {
+      named_params.emplace_back(pos_arg.substr(2));
+    } else {
+      // AOT does not support positional parameters
+      LOG(ERROR) << "AOT does not support positional parameters";
+      return 1;
+    }
+    optind++;
+  }
+
   if (argv[optind]) {
     usage(std::cerr, argv[0]);
     return 1;
@@ -158,5 +173,6 @@ int main(int argc, char* argv[])
     return err;
   }
 
-  return run_bpftrace(bpftrace, *output, bpftrace.bytecode_);
+  return run_bpftrace(
+      bpftrace, *output, bpftrace.bytecode_, std::move(named_params));
 }
