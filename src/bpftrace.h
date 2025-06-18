@@ -270,6 +270,7 @@ private:
                      const BpfMap &map,
                      uint32_t top,
                      uint32_t div);
+  int print_map_tseries(Output &out, const BpfMap &map);
   static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,
