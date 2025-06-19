@@ -1832,6 +1832,57 @@ CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
   return CreateHelperCall(fn, gettime_func_type, {}, false, "get_ns", loc);
 }
 
+Value *IRBuilderBPF::CreateGetNsWithFixture(TimestampMode ts,
+                                            const Location &loc)
+{
+  // This function is a drop-in replacement for CreateGetNs that allows for
+  // deterministic control over timestamps for runtime tests. If
+  // the BPFTRACE_DUMMY_TS_MAP environment variable is set, generate code that
+  // simply reads an unsigned integer from a map instead of generating a call
+  // to a BPF time helper. Currently, this is only used by tseries. Example:
+  //
+  // my_script.bt:
+  //
+  // BEGIN {
+  //   @ts = nsecs;
+  // }
+  //
+  // interval:1:ms {
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  // }
+  //
+  // $ BPFTRACE_DUMMY_TS_MAP=@ts bpftrace my_script.bt
+  const char *dummy_ts_map_env = std::getenv("BPFTRACE_DUMMY_TS_MAP");
+
+  if (dummy_ts_map_env) {
+    std::string dummy_ts_map = dummy_ts_map_env;
+    auto map_info = bpftrace_.resources.maps_info.find(dummy_ts_map);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" not found";
+    } else if (!map_info->second.is_scalar) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" must be scalar";
+    } else if (!map_info->second.value_type.IsIntegerTy() ||
+               map_info->second.value_type.IsSigned()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map
+                 << "\" value must must be an unsigned integer";
+    } else {
+      AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "dummy_ts_map_key");
+      CreateStore(getInt64(0), key);
+
+      Value *val = CreateMapLookupElem(
+          dummy_ts_map, key, map_info->second.value_type, loc);
+      CreateLifetimeEnd(key);
+      return val;
+    }
+  }
+
+  return CreateGetNs(ts, loc);
+}
+
 CallInst *IRBuilderBPF::CreateJiffies64(const Location &loc)
 {
   // u64 bpf_jiffies64()

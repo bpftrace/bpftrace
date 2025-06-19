@@ -122,6 +122,7 @@ public:
                                const Location &loc,
                                MDNode *metadata);
   CallInst *CreateGetNs(TimestampMode ts, const Location &loc);
+  Value *CreateGetNsWithFixture(TimestampMode ts, const Location &loc);
   CallInst *CreateJiffies64(const Location &loc);
   CallInst *CreateGetCurrentCgroupId(const Location &loc);
   CallInst *CreateGetUidGid(const Location &loc);

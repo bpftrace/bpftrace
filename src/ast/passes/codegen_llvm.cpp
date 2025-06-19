@@ -1181,7 +1181,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &tseries_args = std::get<TSeriesArgs>(map_info->second.detail);
     Value *interval = b_.getInt64(tseries_args.interval_ns);
     Value *buckets = b_.getInt64(tseries_args.buckets);
-    Value *now = b_.CreateGetNs(TimestampMode::boot, call.loc);
+    Value *now = b_.CreateGetNsWithFixture(TimestampMode::boot, call.loc);
     Value *epoch = b_.CreateUDiv(now, interval);
     Value *bucket = b_.CreateURem(epoch, buckets);
     auto scoped_key = getMultiMapKey(
