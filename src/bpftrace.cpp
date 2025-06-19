@@ -1252,7 +1252,9 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint32_t strftime_id,
                                         uint64_t nsecs)
 {
+  static const auto nsec_regex = std::regex("%k");
   static const auto usec_regex = std::regex("%f");
+  static const auto msec_regex = std::regex("%l");
   uint64_t ns = 0;
   time_t time = time_since_epoch(mode, nsecs, &ns);
 
@@ -1268,9 +1270,26 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   }
 
   const auto &raw_fmt = resources.strftime_args[strftime_id];
+
+  // Process strftime() format string extensions
+  std::chrono::nanoseconds ns_rem(ns);
+  char nsecs_buf[10];
+  snprintf(nsecs_buf, sizeof(nsecs_buf), "%09" PRIu64, ns_rem.count());
   char usecs_buf[7];
-  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, ns / 1000);
+  snprintf(
+      usecs_buf,
+      sizeof(usecs_buf),
+      "%06" PRIu64,
+      std::chrono::duration_cast<std::chrono::microseconds>(ns_rem).count());
+  char msecs_buf[4];
+  snprintf(
+      msecs_buf,
+      sizeof(msecs_buf),
+      "%03" PRIu64,
+      std::chrono::duration_cast<std::chrono::milliseconds>(ns_rem).count());
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
+  fmt = std::regex_replace(fmt, nsec_regex, nsecs_buf);
+  fmt = std::regex_replace(fmt, msec_regex, msecs_buf);
 
   const auto timestr_size = config_->max_strlen;
   std::string timestr(timestr_size, '\0');
