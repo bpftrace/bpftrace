@@ -1246,11 +1246,18 @@ std::string BPFtrace::resolve_uid(uint64_t addr) const
   return username;
 }
 
-static constexpr auto ns_in_sec = 1'000'000'000;
-
 std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint32_t strftime_id,
                                         uint64_t nsecs)
+{
+  return resolve_timestamp(mode, nsecs, resources.strftime_args[strftime_id]);
+}
+
+static constexpr auto ns_in_sec = 1'000'000'000;
+
+std::string BPFtrace::resolve_timestamp(uint32_t mode,
+                                        uint64_t nsecs,
+                                        const std::string &raw_fmt)
 {
   static const auto nsec_regex = std::regex("%k");
   static const auto usec_regex = std::regex("%f");
@@ -1268,8 +1275,6 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
     LOG(ERROR) << "localtime_r: " << strerror(errno);
     return "(?)";
   }
-
-  const auto &raw_fmt = resources.strftime_args[strftime_id];
 
   // Silence warnings about truncation in snprintf by explicitly limiting the
   // range. Apparently ns %= ns_in_sec is not sufficient here; we have to
