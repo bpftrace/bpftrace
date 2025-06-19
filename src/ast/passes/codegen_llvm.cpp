@@ -464,7 +464,7 @@ private:
   std::unordered_map<std::string, bool> probe_names_;
   std::unordered_map<std::string, llvm::Function *> extern_funcs_;
 
-  llvm::Value *createGetNsSwTAI(const Location &loc);
+  llvm::Value *createGetNs(TimestampMode ts, const Location &loc);
 };
 
 } // namespace
@@ -682,7 +682,7 @@ int CodegenLLVM::get_probe_id()
 ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs") {
-    return ScopedExpr(b_.CreateGetNs(TimestampMode::boot, builtin.loc));
+    return ScopedExpr(createGetNs(TimestampMode::boot, builtin.loc));
   } else if (builtin.ident == "__builtin_elapsed") {
     AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
     b_.CreateStore(b_.getInt64(0), key);
@@ -690,7 +690,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     auto type = CreateUInt64();
     auto *start = b_.CreateMapLookupElem(
         to_string(MapType::Elapsed), key, type, builtin.loc);
-    Value *ns_value = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
+    Value *ns_value = createGetNs(TimestampMode::boot, builtin.loc);
     Value *ns_delta = b_.CreateSub(ns_value, start);
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
@@ -1172,7 +1172,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &tseries_args = std::get<TSeriesArgs>(map_info->second.detail);
     Value *interval_ns = b_.getInt64(tseries_args.interval_ns);
     Value *num_intervals = b_.getInt64(tseries_args.num_intervals);
-    Value *now = createGetNsSwTAI(call.loc);
+    Value *now = createGetNs(TimestampMode::sw_tai, call.loc);
     Value *epoch = b_.CreateUDiv(now, interval_ns);
     Value *bucket = b_.CreateURem(epoch, num_intervals);
     auto scoped_key = getMultiMapKey(
@@ -2044,7 +2044,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                        async_action::AsyncAction::skboutput)),
                    aid_addr);
     b_.CreateStore(b_.getInt64(async_ids_.skb_output()), id_addr);
-    b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
+    b_.CreateStore(createGetNs(TimestampMode::boot, call.loc), time_addr);
 
     auto scoped_skb = visit(call.vargs.at(1));
     auto scoped_arg_len = visit(call.vargs.at(2));
@@ -2055,11 +2055,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         scoped_skb.value(), len, data, getStructSize(hdr_t));
     return ScopedExpr(ret);
   } else if (call.func == "nsecs") {
-    if (call.return_type.ts_mode == TimestampMode::sw_tai) {
-      return ScopedExpr(createGetNsSwTAI(call.loc));
-    } else {
-      return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
-    }
+    return ScopedExpr(createGetNs(call.return_type.ts_mode, call.loc));
   } else if (call.func == "pid") {
     bool force_init = shouldForceInitPidNs(call.vargs);
 
@@ -2120,14 +2116,63 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   }
 }
 
-llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
+llvm::Value *CodegenLLVM::createGetNs(TimestampMode ts, const Location &loc)
 {
-  if (!bpftrace_.delta_taitime_.has_value())
-    LOG(BUG) << "delta_taitime_ should have been checked in semantic analysis";
-  uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
-                   bpftrace_.delta_taitime_->tv_nsec;
-  Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
-  return b_.CreateAdd(ns, b_.getInt64(delta));
+  // If the BPFTRACE_DUMMY_TS_MAP environment variable is set, generate code
+  // that simply reads an unsigned integer from a map instead of generating a
+  // call to a BPF time helper. Currently, this is only used by tseries.
+  // Example:
+  //
+  // my_script.bt:
+  //
+  // BEGIN {
+  //   @ts = nsecs;
+  // }
+  //
+  // interval:1:ms {
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  // }
+  //
+  // $ BPFTRACE_DUMMY_TS_MAP=@ts bpftrace my_script.bt
+  const char *dummy_ts_map_env = std::getenv("BPFTRACE_DUMMY_TS_MAP");
+
+  if (dummy_ts_map_env) {
+    std::string dummy_ts_map = dummy_ts_map_env;
+    auto map_info = bpftrace_.resources.maps_info.find(dummy_ts_map);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map << "\" not found";
+    } else if (!map_info->second.is_scalar) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map << "\" must be scalar";
+    } else if (!map_info->second.value_type.IsIntegerTy() ||
+               map_info->second.value_type.IsSigned()) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map
+               << "\" value must must be an unsigned integer";
+    } else {
+      AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "dummy_ts_map_key");
+      b_.CreateStore(b_.getInt64(0), key);
+
+      Value *val = b_.CreateMapLookupElem(
+          dummy_ts_map, key, map_info->second.value_type, loc);
+      b_.CreateLifetimeEnd(key);
+      return val;
+    }
+  }
+
+  if (ts == TimestampMode::sw_tai) {
+    if (!bpftrace_.delta_taitime_.has_value())
+      LOG(BUG)
+          << "delta_taitime_ should have been checked in semantic analysis";
+    uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
+                     bpftrace_.delta_taitime_->tv_nsec;
+    Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
+    return b_.CreateAdd(ns, b_.getInt64(delta));
+  }
+
+  return b_.CreateGetNs(ts, loc);
 }
 
 ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
