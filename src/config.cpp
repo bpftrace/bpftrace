@@ -289,6 +289,7 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "print_maps_on_exit", CONFIG_FIELD_PARSER(print_maps_on_exit) },
   { "use_blazesym", CONFIG_FIELD_PARSER(use_blazesym) },
   { "show_debug_info", CONFIG_FIELD_PARSER(show_debug_info) },
+  { "dummy_tseries_time_map", CONFIG_FIELD_PARSER(dummy_tseries_time_map) },
   { UNSTABLE_IMPORT, CONFIG_FIELD_PARSER(unstable_import) },
   { UNSTABLE_MACRO, CONFIG_FIELD_PARSER(unstable_macro) },
   { UNSTABLE_MAP_DECL, CONFIG_FIELD_PARSER(unstable_map_decl) },

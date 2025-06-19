@@ -66,6 +66,7 @@ public:
   std::string str_trunc_trailer = "..";
   ConfigMissingProbes missing_probes = ConfigMissingProbes::error;
   StackMode stack_mode = StackMode::bpftrace;
+  std::string dummy_tseries_time_map;
 
   // Initialized in the constructor.
   UserSymbolCacheType user_symbol_cache_type;

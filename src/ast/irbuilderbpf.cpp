@@ -1783,8 +1783,31 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
   return CreateIntCast(phi, getInt64Ty(), false);
 }
 
-CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
+Value *IRBuilderBPF::CreateGetNs(TimestampMode ts,
+                                 const Location &loc,
+                                 const std::string &dummy_ts_map)
 {
+  if (!dummy_ts_map.empty()) {
+    auto map_info = bpftrace_.resources.maps_info.find(dummy_ts_map);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" not found";
+    } else if (!map_info->second.is_scalar) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" must be scalar";
+    } else if (!map_info->second.value_type.IsIntegerTy() ||
+               map_info->second.value_type.IsSigned()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map
+                 << "\" value must must be unsigned";
+    } else {
+      AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "dummy_ts_map_key");
+      CreateStore(getInt64(0), key);
+
+      Value *val = CreateMapLookupElem(
+          dummy_ts_map, key, map_info->second.value_type, loc);
+      CreateLifetimeEnd(key);
+      return val;
+    }
+  }
+
   // Random default value to silence compiler warning
   libbpf::bpf_func_id fn = libbpf::BPF_FUNC_ktime_get_ns;
   switch (ts) {
