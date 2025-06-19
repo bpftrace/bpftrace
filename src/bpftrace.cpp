@@ -1252,12 +1252,14 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint32_t strftime_id,
                                         uint64_t nsecs)
 {
-  return resolve_timestamp(mode, nsecs, resources.strftime_args[strftime_id]);
+  return resolve_timestamp(
+      mode, nsecs, resources.strftime_args[strftime_id], false);
 }
 
 std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint64_t nsecs,
-                                        const std::string &raw_fmt)
+                                        const std::string &raw_fmt,
+                                        bool utc)
 {
   static const auto nsec_regex = std::regex("%k");
   static const auto usec_regex = std::regex("%f");
@@ -1271,9 +1273,16 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
 
   // Calculate and localize timestamp
   struct tm tmp;
-  if (!localtime_r(&time, &tmp)) {
-    LOG(ERROR) << "localtime_r: " << strerror(errno);
-    return "(?)";
+  if (utc) {
+    if (!gmtime_r(&time, &tmp)) {
+      LOG(ERROR) << "gmtime_r: " << strerror(errno);
+      return "(?)";
+    }
+  } else {
+    if (!localtime_r(&time, &tmp)) {
+      LOG(ERROR) << "localtime_r: " << strerror(errno);
+      return "(?)";
+    }
   }
 
   // Process strftime() format string extensions
