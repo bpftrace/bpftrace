@@ -7,6 +7,7 @@
 #include <bpf/libbpf.h>
 #include <cassert>
 #include <cerrno>
+#include <chrono>
 #include <cinttypes>
 #include <csignal>
 #include <cstdio>
@@ -53,6 +54,8 @@
 #include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
+
+using namespace std::chrono_literals;
 
 namespace bpftrace {
 
@@ -1250,34 +1253,23 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint64_t nsecs)
 {
   static const auto usec_regex = std::regex("%f");
-  static constexpr auto ns_in_sec = 1'000'000'000;
-  auto ts_mode = static_cast<TimestampMode>(mode);
-  struct timespec zero = {};
-  struct timespec *basetime = &zero;
+  uint64_t ns = 0;
+  time_t time = time_since_epoch(mode, nsecs, &ns);
 
-  if (ts_mode == TimestampMode::boot) {
-    if (!boottime_) {
-      LOG(ERROR)
-          << "Cannot resolve timestamp due to failed boot time calculation";
-      return "(?)";
-    } else {
-      basetime = &boottime_.value();
-    }
+  if (!time) {
+    return "(?)";
   }
 
   // Calculate and localize timestamp
   struct tm tmp;
-  time_t time = basetime->tv_sec + ((basetime->tv_nsec + nsecs) / ns_in_sec);
   if (!localtime_r(&time, &tmp)) {
     LOG(ERROR) << "localtime_r: " << strerror(errno);
     return "(?)";
   }
 
-  // Process strftime() format string extensions
   const auto &raw_fmt = resources.strftime_args[strftime_id];
-  uint64_t us = ((basetime->tv_nsec + nsecs) % ns_in_sec) / 1000;
   char usecs_buf[7];
-  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
+  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, ns / 1000);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
   const auto timestr_size = config_->max_strlen;
@@ -1292,6 +1284,33 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   // Fit return value to formatted length
   timestr.resize(timestr_len);
   return timestr;
+}
+
+time_t BPFtrace::time_since_epoch(uint32_t mode,
+                                  uint64_t timestamp_ns,
+                                  uint64_t *nsecs)
+{
+  auto ts_mode = static_cast<TimestampMode>(mode);
+  struct timespec zero = {};
+  struct timespec *basetime = &zero;
+
+  if (ts_mode == TimestampMode::boot) {
+    if (!boottime_) {
+      LOG(ERROR)
+          << "Cannot resolve timestamp due to failed boot time calculation";
+      return 0;
+    } else {
+      basetime = &boottime_.value();
+    }
+  }
+
+  if (nsecs != nullptr) {
+    *nsecs = ((basetime->tv_nsec + timestamp_ns) %
+              std::chrono::nanoseconds(1s).count());
+  }
+
+  return basetime->tv_sec + ((basetime->tv_nsec + timestamp_ns) /
+                             std::chrono::nanoseconds(1s).count());
 }
 
 std::string BPFtrace::resolve_buf(const char *buf, size_t size)
