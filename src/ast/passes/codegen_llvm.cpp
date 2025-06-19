@@ -463,8 +463,6 @@ private:
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
   std::unordered_map<std::string, llvm::Function *> extern_funcs_;
-
-  llvm::Value *createGetNsSwTAI(const Location &loc);
 };
 
 } // namespace
@@ -1170,7 +1168,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &tseries_args = std::get<TSeriesArgs>(map_info->second.detail);
     Value *interval_ns = b_.getInt64(tseries_args.interval_ns);
     Value *num_intervals = b_.getInt64(tseries_args.num_intervals);
-    Value *now = createGetNsSwTAI(call.loc);
+    Value *now = b_.CreateGetNs(TimestampMode::sw_tai, call.loc);
     Value *epoch = b_.CreateUDiv(now, interval_ns);
     Value *bucket = b_.CreateURem(epoch, num_intervals);
     auto scoped_key = getMultiMapKey(
@@ -2042,11 +2040,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         scoped_skb.value(), len, data, getStructSize(hdr_t));
     return ScopedExpr(ret);
   } else if (call.func == "nsecs") {
-    if (call.return_type.ts_mode == TimestampMode::sw_tai) {
-      return ScopedExpr(createGetNsSwTAI(call.loc));
-    } else {
-      return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
-    }
+    return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
   } else if (call.func == "pid") {
     bool force_init = shouldForceInitPidNs(call.vargs);
 
@@ -2105,16 +2099,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
           debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
     });
   }
-}
-
-llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
-{
-  if (!bpftrace_.delta_taitime_.has_value())
-    LOG(BUG) << "delta_taitime_ should have been checked in semantic analysis";
-  uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
-                   bpftrace_.delta_taitime_->tv_nsec;
-  Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
-  return b_.CreateAdd(ns, b_.getInt64(delta));
 }
 
 ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
