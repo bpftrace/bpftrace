@@ -1249,10 +1249,11 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint32_t strftime_id,
                                         uint64_t nsecs)
 {
+  static const auto nsec_regex = std::regex("%k");
   static const auto usec_regex = std::regex("%f");
+  static const auto msec_regex = std::regex("%l");
   uint64_t ns = 0;
   time_t time = time_since_epoch(mode, nsecs, &ns);
-
   if (!time) {
     return "(?)";
   }
@@ -1265,9 +1266,21 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   }
 
   const auto &raw_fmt = resources.strftime_args[strftime_id];
+
+  // Silence warnings about truncation in snprintf by explicitly limiting the
+  // range. Apparently ns %= ns_in_sec is not sufficient here; we have to
+  // declare a new variable.
+  uint64_t ns_rem = ns % ns_in_sec;
+  // Process strftime() format string extensions
+  char nsecs_buf[10];
+  snprintf(nsecs_buf, sizeof(nsecs_buf), "%09" PRIu64, ns_rem);
   char usecs_buf[7];
-  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, ns / 1000);
+  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, ns_rem / 1000);
+  char msecs_buf[4];
+  snprintf(msecs_buf, sizeof(msecs_buf), "%03" PRIu64, ns_rem / 1000 / 1000);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
+  fmt = std::regex_replace(fmt, nsec_regex, nsecs_buf);
+  fmt = std::regex_replace(fmt, msec_regex, msecs_buf);
 
   const auto timestr_size = config_->max_strlen;
   std::string timestr(timestr_size, '\0');
