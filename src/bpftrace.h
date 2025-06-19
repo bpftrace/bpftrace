@@ -144,7 +144,8 @@ public:
                                 uint64_t nsecs);
   std::string resolve_timestamp(uint32_t mode,
                                 uint64_t nsecs,
-                                const std::string &raw_fmt);
+                                const std::string &raw_fmt,
+                                bool utc);
   time_t time_since_epoch(uint32_t mode,
                           uint64_t timestamp_ns,
                           uint64_t *nsecs);
