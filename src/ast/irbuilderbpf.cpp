@@ -1513,8 +1513,52 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   return result;
 }
 
-CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
+Value *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
 {
+  // If the BPFTRACE_DUMMY_TS_MAP environment variable is set, generate code
+  // that simply reads an unsigned integer from a map instead of generating a
+  // call to a BPF time helper. Currently, this is only used by tseries runtime
+  // tests. Example:
+  //
+  // my_script.bt:
+  //
+  // BEGIN {
+  //   @ts = nsecs;
+  // }
+  //
+  // interval:1:ms {
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  //   @ts += 1000000; // +1ms
+  //   @ = tseries(5, "1ms", 5);
+  // }
+  //
+  // $ BPFTRACE_DUMMY_TS_MAP=@ts bpftrace my_script.bt
+  const char *dummy_ts_map_env = std::getenv("BPFTRACE_DUMMY_TS_MAP");
+
+  if (dummy_ts_map_env) {
+    std::string dummy_ts_map = dummy_ts_map_env;
+    auto map_info = bpftrace_.resources.maps_info.find(dummy_ts_map);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map << "\" not found";
+    } else if (!map_info->second.is_scalar) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map << "\" must be scalar";
+    } else if (!map_info->second.value_type.IsIntegerTy() ||
+               map_info->second.value_type.IsSigned()) {
+      LOG(BUG) << "dummy_ts_map: \"" << dummy_ts_map
+               << "\" value must must be an unsigned integer";
+    } else {
+      AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "dummy_ts_map_key");
+      CreateStore(getInt64(0), key);
+
+      Value *val = CreateMapLookupElem(
+          dummy_ts_map, key, map_info->second.value_type, loc);
+      CreateLifetimeEnd(key);
+      return val;
+    }
+  }
+
   // Random default value to silence compiler warning
   bpf_func_id fn = BPF_FUNC_ktime_get_ns;
   switch (ts) {
@@ -1528,9 +1572,13 @@ CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
       fn = BPF_FUNC_ktime_get_tai_ns;
       break;
     case TimestampMode::sw_tai:
-      LOG(BUG) << "Invalid timestamp mode: "
-               << std::to_string(
-                      static_cast<std::underlying_type_t<TimestampMode>>(ts));
+      if (!bpftrace_.delta_taitime_.has_value())
+        LOG(BUG)
+            << "delta_taitime_ should have been checked in semantic analysis";
+      uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
+                       bpftrace_.delta_taitime_->tv_nsec;
+      Value *ns = CreateGetNs(TimestampMode::boot, loc);
+      return CreateAdd(ns, getInt64(delta));
   }
 
   // u64 ktime_get_*ns()
