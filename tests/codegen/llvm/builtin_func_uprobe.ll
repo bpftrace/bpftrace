@@ -24,7 +24,7 @@ entry:
   %2 = getelementptr i8, ptr %1, i64 128
   %func = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %3 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %3 to i32
   %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
@@ -53,6 +53,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!42}
 !llvm.module.flags = !{!44, !45}

@@ -27,7 +27,7 @@ entry:
   %"@x_key" = alloca i64, align 8
   %bpf_pidns_info = alloca %bpf_pidns_info, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %bpf_pidns_info)
-  %get_ns_pid_tgid = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info, i32 8)
+  %get_ns_pid_tgid = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info, i32 8) #2
   %1 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info, i32 0, i32 0
   %2 = load i32, ptr %1, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %bpf_pidns_info)
@@ -40,7 +40,7 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %bpf_pidns_info1)
-  %get_ns_pid_tgid2 = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info1, i32 8)
+  %get_ns_pid_tgid2 = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info1, i32 8) #2
   %4 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info1, i32 0, i32 1
   %5 = load i32, ptr %4, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %bpf_pidns_info1)
@@ -63,6 +63,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { memory(none) }
 
 !llvm.dbg.cu = !{!40}
 !llvm.module.flags = !{!42, !43}

@@ -20,7 +20,7 @@ entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@x_key" = alloca [16 x i8], align 1
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
@@ -132,6 +132,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48, !49}

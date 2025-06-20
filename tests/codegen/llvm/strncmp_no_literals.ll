@@ -23,7 +23,7 @@ entry:
   %"@_key" = alloca i64, align 8
   %strcmp.result = alloca i1, align 1
   %comm = alloca [16 x i8], align 1
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
@@ -34,7 +34,7 @@ entry:
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %5)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
   call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16) #4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcmp.result)
   store i1 false, ptr %strcmp.result, align 1
   %6 = getelementptr i8, ptr %2, i32 0
@@ -273,6 +273,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!47}
 !llvm.module.flags = !{!49, !50}
