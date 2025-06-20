@@ -70,7 +70,7 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
-  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 0)
+  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 0) #4
   %1 = icmp sge i64 %get_stack, 0
   br i1 %1, label %get_stack_success, label %get_stack_fail
 
@@ -110,7 +110,7 @@ lookup_stack_scratch_failure7:                    ; preds = %merge_block
 
 lookup_stack_scratch_merge8:                      ; preds = %merge_block
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_stack_scratch_map6, i8 0, i64 48, i1 false)
-  %get_stack12 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 0)
+  %get_stack12 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 0) #4
   %6 = icmp sge i64 %get_stack12, 0
   br i1 %6, label %get_stack_success10, label %get_stack_fail11
 
@@ -143,7 +143,7 @@ lookup_stack_scratch_failure21:                   ; preds = %merge_block4
 
 lookup_stack_scratch_merge22:                     ; preds = %merge_block4
   %probe_read_kernel24 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map20, i32 1016, ptr null)
-  %get_stack27 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0)
+  %get_stack27 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0) #4
   %11 = icmp sge i64 %get_stack27, 0
   br i1 %11, label %get_stack_success25, label %get_stack_fail26
 
@@ -252,6 +252,7 @@ attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!87}
 !llvm.module.flags = !{!89, !90}

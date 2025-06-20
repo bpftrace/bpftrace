@@ -19,7 +19,7 @@ define i64 @tracepoint_syscalls_sys_enter_openat_1(ptr %0) #0 section "s_tracepo
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)()
+  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)() #2
   %1 = icmp eq i64 %get_cgroup_id, 4294967297
   %2 = zext i1 %1 to i64
   %predcond = icmp eq i64 %2, 0
@@ -29,7 +29,7 @@ pred_false:                                       ; preds = %entry
   ret i64 1
 
 pred_true:                                        ; preds = %entry
-  %get_cgroup_id1 = call i64 inttoptr (i64 80 to ptr)()
+  %get_cgroup_id1 = call i64 inttoptr (i64 80 to ptr)() #2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
@@ -48,6 +48,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { memory(none) }
 
 !llvm.dbg.cu = !{!38}
 !llvm.module.flags = !{!40, !41}

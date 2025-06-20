@@ -24,7 +24,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key")
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #2
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
@@ -67,6 +67,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { memory(none) }
 
 !llvm.dbg.cu = !{!50}
 !llvm.module.flags = !{!52, !53}

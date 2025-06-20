@@ -52,7 +52,7 @@ stack_scratch_failure:                            ; preds = %lookup_stack_scratc
 
 merge_block:                                      ; preds = %stack_scratch_failure, %helper_merge2, %get_stack_fail
   %1 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 2
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #4
   %2 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %2 to i32
   store i32 %pid, ptr %1, align 4
@@ -70,7 +70,7 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
-  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256)
+  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256) #4
   %6 = trunc i64 %get_stack to i32
   %7 = icmp sge i32 %6, 0
   br i1 %7, label %helper_merge, label %helper_failure
@@ -185,7 +185,7 @@ lookup_stack_scratch_failure21:                   ; preds = %helper_merge10
 
 lookup_stack_scratch_merge22:                     ; preds = %helper_merge10
   %probe_read_kernel24 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map20, i32 1016, ptr null)
-  %get_stack27 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0)
+  %get_stack27 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map20, i32 1016, i64 0) #4
   %29 = trunc i64 %get_stack27 to i32
   %30 = icmp sge i32 %29, 0
   br i1 %30, label %helper_merge29, label %helper_failure28
@@ -368,6 +368,7 @@ attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!83}
 !llvm.module.flags = !{!85, !86}

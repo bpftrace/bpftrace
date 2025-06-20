@@ -23,7 +23,7 @@ entry:
   %"@y_key" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %get_uid_gid = call i64 inttoptr (i64 15 to ptr)()
+  %get_uid_gid = call i64 inttoptr (i64 15 to ptr)() #2
   %1 = and i64 %get_uid_gid, 4294967295
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
@@ -32,7 +32,7 @@ entry:
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  %get_uid_gid1 = call i64 inttoptr (i64 15 to ptr)()
+  %get_uid_gid1 = call i64 inttoptr (i64 15 to ptr)() #2
   %2 = lshr i64 %get_uid_gid1, 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
@@ -52,6 +52,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { memory(none) }
 
 !llvm.dbg.cu = !{!40}
 !llvm.module.flags = !{!42, !43}

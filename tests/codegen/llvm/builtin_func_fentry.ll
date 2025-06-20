@@ -19,7 +19,7 @@ define i64 @fentry_mock_vmlinux_f_1(ptr %0) #0 section "s_fentry_mock_vmlinux_f_
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %get_func_ip = call i64 inttoptr (i64 173 to ptr)(ptr %0)
+  %get_func_ip = call i64 inttoptr (i64 173 to ptr)(ptr %0) #2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
@@ -38,6 +38,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { memory(none) }
 
 !llvm.dbg.cu = !{!38}
 !llvm.module.flags = !{!40, !41}

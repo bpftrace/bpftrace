@@ -27,7 +27,7 @@ entry:
   %lookup_elem_val7 = alloca i64, align 8
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
@@ -53,7 +53,7 @@ lookup_failure:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   %log2 = call i64 @log2(i64 10, i64 0)
-  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #3
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
   %6 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
@@ -82,14 +82,14 @@ lookup_failure5:                                  ; preds = %lookup_merge
 lookup_merge6:                                    ; preds = %lookup_failure5, %lookup_success4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val7)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %6)
-  %get_cpu_id11 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id11 = call i64 inttoptr (i64 8 to ptr)() #3
   %11 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded12 = and i64 %get_cpu_id11, %11
   %12 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
   store i64 1, ptr %12, align 8
   %lookup_elem13 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %12)
   %has_key = icmp ne ptr %lookup_elem13, null
-  %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)() #3
   %13 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded15 = and i64 %get_cpu_id14, %13
   %14 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
@@ -177,6 +177,7 @@ hist.is_not_zero:                                 ; preds = %hist.is_not_less_th
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { alwaysinline nounwind }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!70}
 !llvm.module.flags = !{!72, !73}

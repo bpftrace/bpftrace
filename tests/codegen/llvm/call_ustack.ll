@@ -53,7 +53,7 @@ stack_scratch_failure:                            ; preds = %lookup_stack_scratc
 
 merge_block:                                      ; preds = %stack_scratch_failure, %get_stack_success, %get_stack_fail
   %1 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 2
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #4
   %2 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %2 to i32
   store i32 %pid, ptr %1, align 4
@@ -77,7 +77,7 @@ lookup_stack_scratch_failure:                     ; preds = %entry
 
 lookup_stack_scratch_merge:                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map, i32 1016, ptr null)
-  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256)
+  %get_stack = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map, i32 1016, i64 256) #4
   %4 = icmp sge i64 %get_stack, 0
   br i1 %4, label %get_stack_success, label %get_stack_fail
 
@@ -100,7 +100,7 @@ stack_scratch_failure3:                           ; preds = %lookup_stack_scratc
 
 merge_block4:                                     ; preds = %stack_scratch_failure3, %get_stack_success10, %get_stack_fail11
   %9 = getelementptr %ustack_key, ptr %stack_key2, i64 0, i32 2
-  %get_pid_tgid15 = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid15 = call i64 inttoptr (i64 14 to ptr)() #4
   %10 = lshr i64 %get_pid_tgid15, 32
   %pid16 = trunc i64 %10 to i32
   store i32 %pid16, ptr %9, align 4
@@ -124,7 +124,7 @@ lookup_stack_scratch_failure7:                    ; preds = %merge_block
 
 lookup_stack_scratch_merge8:                      ; preds = %merge_block
   call void @llvm.memset.p0.i64(ptr align 1 %lookup_stack_scratch_map6, i8 0, i64 48, i1 false)
-  %get_stack12 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 256)
+  %get_stack12 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map6, i32 48, i64 256) #4
   %12 = icmp sge i64 %get_stack12, 0
   br i1 %12, label %get_stack_success10, label %get_stack_fail11
 
@@ -147,7 +147,7 @@ stack_scratch_failure19:                          ; preds = %lookup_stack_scratc
 
 merge_block20:                                    ; preds = %stack_scratch_failure19, %get_stack_success27, %get_stack_fail28
   %17 = getelementptr %ustack_key, ptr %stack_key18, i64 0, i32 2
-  %get_pid_tgid32 = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid32 = call i64 inttoptr (i64 14 to ptr)() #4
   %18 = lshr i64 %get_pid_tgid32, 32
   %pid33 = trunc i64 %18 to i32
   store i32 %pid33, ptr %17, align 4
@@ -164,7 +164,7 @@ lookup_stack_scratch_failure23:                   ; preds = %merge_block4
 
 lookup_stack_scratch_merge24:                     ; preds = %merge_block4
   %probe_read_kernel26 = call i64 inttoptr (i64 113 to ptr)(ptr %lookup_stack_scratch_map22, i32 1016, ptr null)
-  %get_stack29 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map22, i32 1016, i64 256)
+  %get_stack29 = call i64 inttoptr (i64 67 to ptr)(ptr %0, ptr %lookup_stack_scratch_map22, i32 1016, i64 256) #4
   %20 = icmp sge i64 %get_stack29, 0
   br i1 %20, label %get_stack_success27, label %get_stack_fail28
 
@@ -273,6 +273,7 @@ attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!91}
 !llvm.module.flags = !{!93, !94}

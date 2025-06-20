@@ -19,7 +19,7 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !29 {
 entry:
   %printf_args1 = alloca %printf_t.0, align 8
   %printf_args = alloca %printf_t, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
@@ -77,6 +77,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!25}
 !llvm.module.flags = !{!27, !28}

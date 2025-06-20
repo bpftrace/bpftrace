@@ -30,7 +30,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i64 0, ptr %"$foo", align 8
   store i64 0, ptr %"$foo", align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [1 x [40 x i8]]], ptr @__bt__fmt_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
@@ -173,6 +173,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!36}
 !llvm.module.flags = !{!38, !39}

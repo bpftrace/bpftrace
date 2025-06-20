@@ -23,24 +23,24 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !61 {
 entry:
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #1
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [3 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 0, ptr %2, align 8
-  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #1
   %3 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %3
   %4 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
   store i64 1, ptr %4, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %2, ptr %4, i64 0)
-  %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)() #1
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded4 = and i64 %get_cpu_id3, %5
   %6 = getelementptr [1 x [3 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded4, i64 1, i64 0
   store i64 0, ptr %6, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %6)
-  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)() #1
   %7 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded6 = and i64 %get_cpu_id5, %7
   %8 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__read_map_val_buf, i64 0, i64 %cpu.id.bounded6, i64 0, i64 0
@@ -58,12 +58,12 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %10 = load i64, ptr %8, align 8
-  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)() #1
   %11 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded8 = and i64 %get_cpu_id7, %11
   %12 = getelementptr [1 x [3 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded8, i64 2, i64 0
   store i64 0, ptr %12, align 8
-  %get_cpu_id9 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id9 = call i64 inttoptr (i64 8 to ptr)() #1
   %13 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded10 = and i64 %get_cpu_id9, %13
   %14 = getelementptr [1 x [1 x [8 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded10, i64 0, i64 0
@@ -73,6 +73,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 }
 
 attributes #0 = { nounwind }
+attributes #1 = { memory(none) }
 
 !llvm.dbg.cu = !{!57}
 !llvm.module.flags = !{!59, !60}

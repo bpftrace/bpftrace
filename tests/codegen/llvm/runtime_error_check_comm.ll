@@ -24,7 +24,7 @@ entry:
   %comm = alloca [16 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
   call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16) #3
   %1 = trunc i64 %get_comm to i32
   %2 = icmp sge i32 %1, 0
   br i1 %2, label %helper_merge, label %helper_failure
@@ -95,6 +95,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!42}
 !llvm.module.flags = !{!44, !45}
