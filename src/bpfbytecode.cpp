@@ -127,7 +127,7 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace)
       bpftrace.max_cpu_id_);
 }
 
-uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
+uint64_t *BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace)
 {
   return bpftrace.resources.global_vars.get_global_var(
       bpf_object_.get(),

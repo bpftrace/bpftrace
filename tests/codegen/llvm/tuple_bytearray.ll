@@ -11,13 +11,14 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_t = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !31
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !45
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !45
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.event_loss_counter", !dbg !47
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !51 {
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !58 {
 entry:
   %"@t_key" = alloca i64, align 8
   %tuple = alloca %uint8_usym_t_int64__tuple_t, align 8
@@ -72,8 +73,8 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!47}
-!llvm.module.flags = !{!49, !50}
+!llvm.dbg.cu = !{!54}
+!llvm.module.flags = !{!56, !57}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -121,14 +122,21 @@ attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !43 = !{!44}
 !44 = !DISubrange(count: 262144, lowerBound: 0)
 !45 = !DIGlobalVariableExpression(var: !46, expr: !DIExpression())
-!46 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
-!47 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !48)
-!48 = !{!0, !7, !31, !45}
-!49 = !{i32 2, !"Debug Info Version", i32 3}
-!50 = !{i32 7, !"uwtable", i32 0}
-!51 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !52, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !47, retainedNodes: !55)
-!52 = !DISubroutineType(types: !53)
-!53 = !{!20, !54}
-!54 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!55 = !{!56}
-!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !51, file: !2, type: !54)
+!46 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!47 = !DIGlobalVariableExpression(var: !48, expr: !DIExpression())
+!48 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !49, isLocal: false, isDefinition: true)
+!49 = !DICompositeType(tag: DW_TAG_array_type, baseType: !50, size: 64, elements: !15)
+!50 = !DICompositeType(tag: DW_TAG_array_type, baseType: !51, size: 64, elements: !15)
+!51 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !52)
+!52 = !{!53}
+!53 = !DISubrange(count: 8, lowerBound: 0)
+!54 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !55)
+!55 = !{!0, !7, !31, !45, !47}
+!56 = !{i32 2, !"Debug Info Version", i32 3}
+!57 = !{i32 7, !"uwtable", i32 0}
+!58 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !59, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !54, retainedNodes: !62)
+!59 = !DISubroutineType(types: !60)
+!60 = !{!20, !61}
+!61 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!62 = !{!63}
+!63 = !DILocalVariable(name: "ctx", arg: 1, scope: !58, file: !2, type: !61)
