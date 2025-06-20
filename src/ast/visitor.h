@@ -29,6 +29,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] Boolean &boolean)
+  {
+    return default_value();
+  }
   R visit([[maybe_unused]] PositionalParameter &param)
   {
     return default_value();

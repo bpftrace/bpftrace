@@ -35,6 +35,12 @@ void Printer::visit(NegativeInteger &integer)
   out_ << indent << "signed int: " << integer.value << std::endl;
 }
 
+void Printer::visit(Boolean &boolean)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "bool: " << (boolean.value ? "true" : "false") << std::endl;
+}
+
 void Printer::visit(PositionalParameter &param)
 {
   std::string indent(depth_, ' ');

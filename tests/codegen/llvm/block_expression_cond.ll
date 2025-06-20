@@ -20,7 +20,7 @@ entry:
   %"$a" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
-  store i64 1, ptr %"$a", align 8
+  store i8 1, ptr %"$a", align 1
   %1 = load i64, ptr %"$a", align 8
   %true_cond = icmp ne i64 %1, 0
   br i1 %true_cond, label %if_body, label %if_end
