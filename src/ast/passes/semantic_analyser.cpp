@@ -690,6 +690,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::strerror_t:
     case Type::none:
     case Type::timestamp_mode:
+    case Type::boolean:
       return true;
   }
   return false; // unreachable
@@ -1241,10 +1242,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "delete") {
     call.return_type = CreateUInt8();
   } else if (call.func == "has_key") {
-    // TODO: this should be a bool type but that type is currently broken
-    // as a value for variables and maps
-    // https://github.com/bpftrace/bpftrace/issues/3502
-    call.return_type = CreateUInt8();
+    call.return_type = CreateBool();
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();
@@ -1666,7 +1664,7 @@ If you're seeing errors, try clamping the string sizes. For example:
         call.addWarning() << warning;
       }
     }
-    call.return_type = CreateUInt64();
+    call.return_type = CreateBool();
   } else if (call.func == "override") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
@@ -2329,7 +2327,7 @@ void SemanticAnalyser::visit(Unop &unop)
   if (is_final_pass()) {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
     // and context (we allow args->field for backwards compatibility)
-    if (!type.IsIntegerTy() &&
+    if (!type.IsIntegerTy() && !type.IsBoolTy() &&
         !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
       unop.addError() << "The " << opstr(unop)
                       << " operator can not be used on expressions of type '"
@@ -2405,7 +2403,8 @@ void SemanticAnalyser::visit(Ternary &ternary)
     return;
   }
 
-  if (is_final_pass() && cond != Type::integer && cond != Type::pointer) {
+  if (is_final_pass() && cond != Type::integer && cond != Type::pointer &&
+      cond != Type::boolean) {
     ternary.addError() << "Invalid condition in ternary: " << cond;
     return;
   }
@@ -2429,7 +2428,7 @@ void SemanticAnalyser::visit(If &if_node)
 
   if (is_final_pass()) {
     const Type &cond = if_node.cond.type().GetTy();
-    if (cond != Type::integer && cond != Type::pointer)
+    if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean)
       if_node.addError() << "Invalid condition in if(): " << cond;
   }
 
@@ -2905,9 +2904,12 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (!cast.cast_type.IsIntTy() && !cast.cast_type.IsPtrTy() &&
+      !cast.cast_type.IsBoolTy() &&
       (!cast.cast_type.IsPtrTy() || cast.cast_type.GetElementTy()->IsIntTy() ||
        cast.cast_type.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
+      !(cast.cast_type.IsArrayTy() &&
+        cast.cast_type.GetElementTy()->IsBoolTy()) &&
       !(cast.cast_type.IsArrayTy() &&
         cast.cast_type.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();
@@ -2919,11 +2921,6 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (cast.cast_type.IsArrayTy()) {
-    if (cast.cast_type.GetElementTy()->IsBoolTy()) {
-      cast.addError() << "Bit arrays are not supported";
-      return;
-    }
-
     if (cast.cast_type.GetNumElements() == 0) {
       if (cast.cast_type.GetElementTy()->GetSize() == 0)
         cast.addError() << "Could not determine size of the array";
@@ -2940,7 +2937,7 @@ void SemanticAnalyser::visit(Cast &cast)
       }
     }
 
-    if (rhs.IsIntTy())
+    if (rhs.IsIntTy() || rhs.IsBoolTy())
       cast.cast_type.is_internal = true;
   }
 
@@ -2959,10 +2956,20 @@ void SemanticAnalyser::visit(Cast &cast)
     }
   }
 
+  if (cast.cast_type.IsBoolTy() && !rhs.IsIntTy() && !rhs.IsStringTy() &&
+      !rhs.IsPtrTy() && !rhs.IsCastableMapTy()) {
+    if (is_final_pass()) {
+      cast.addError() << "Cannot cast from \"" << rhs << "\" to \""
+                      << cast.cast_type << "\"";
+    }
+  }
+
   if ((cast.cast_type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
-       !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
+       !rhs.IsBoolTy() && !rhs.IsCtxAccess() && !rhs.IsArrayTy() &&
+       !rhs.IsCastableMapTy()) ||
       // casting from/to int arrays must respect the size
       (cast.cast_type.IsArrayTy() &&
+       (!rhs.IsBoolTy() || cast.cast_type.GetSize() != rhs.GetSize()) &&
        (!rhs.IsIntTy() || cast.cast_type.GetSize() != rhs.GetSize())) ||
       (rhs.IsArrayTy() && (!cast.cast_type.IsIntTy() ||
                            cast.cast_type.GetSize() != rhs.GetSize()))) {

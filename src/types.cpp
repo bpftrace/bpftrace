@@ -88,6 +88,7 @@ std::string typestr(const SizedType &type, bool debug)
     case Type::lhist_t:
     case Type::none:
     case Type::voidtype:
+    case Type::boolean:
       return typestr(type.GetTy());
   }
 
@@ -229,6 +230,7 @@ std::string typestr(Type t)
     case Type::cgroup_path_t: return "cgroup_path_t"; break;
     case Type::strerror_t: return "strerror_t"; break;
     case Type::timestamp_mode: return "timestamp_mode"; break;
+    case Type::boolean:     return "bool";     break;
       // clang-format on
   }
 
@@ -245,7 +247,7 @@ SizedType CreateInteger(size_t bits, bool is_signed)
 
 SizedType CreateBool()
 {
-  return CreateInteger(1, false);
+  return { Type::boolean, 1 };
 }
 
 SizedType CreateInt(size_t bits)

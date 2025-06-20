@@ -134,6 +134,7 @@ public:
 
 class Integer;
 class NegativeInteger;
+class Boolean;
 class PositionalParameter;
 class PositionalParameterCount;
 class String;
@@ -157,6 +158,7 @@ class BlockExpr;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
+                                      Boolean,
                                       PositionalParameter,
                                       PositionalParameterCount,
                                       String,
@@ -269,6 +271,22 @@ public:
   }
 
   const int64_t value;
+};
+
+class Boolean : public Node {
+public:
+  explicit Boolean(ASTContext &ctx, bool val, Location &&loc)
+      : Node(ctx, std::move(loc)), value(val) {};
+  explicit Boolean(ASTContext &ctx, const Boolean &other, const Location &loc)
+      : Node(ctx, loc + other.loc), value(other.value) {};
+
+  const SizedType &type() const
+  {
+    static SizedType boolean = CreateBool();
+    return boolean;
+  }
+
+  const bool value;
 };
 
 class PositionalParameter : public Node {
@@ -852,12 +870,17 @@ public:
         var(std::move(var)),
         value(std::move(value)) {};
   explicit AssignConfigVarStatement(ASTContext &ctx,
+                                    std::string var,
+                                    bool value,
+                                    Location &&loc)
+      : Node(ctx, std::move(loc)), var(std::move(var)), value(value) {};
+  explicit AssignConfigVarStatement(ASTContext &ctx,
                                     const AssignConfigVarStatement &other,
                                     const Location &loc)
       : Node(ctx, loc + other.loc), var(other.var), value(other.value) {};
 
   std::string var;
-  std::variant<uint64_t, std::string> value;
+  std::variant<uint64_t, std::string, bool> value;
 };
 using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
 
@@ -1332,6 +1355,7 @@ public:
 std::string opstr(const Binop &binop);
 std::string opstr(const Unop &unop);
 std::string opstr(const Jump &jump);
+bool is_comparison_op(Operator op);
 
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);

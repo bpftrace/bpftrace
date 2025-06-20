@@ -1,0 +1,60 @@
+NAME bool values
+PROG BEGIN { print((true, false)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME bool in conditional
+PROG BEGIN { if (true) { print(1); } if (false) { print(2); } exit(); }
+EXPECT 1
+EXPECT_NONE 2
+TIMEOUT 1
+
+NAME bool as map keys and values
+PROG BEGIN { @a[true] = false; exit(); }
+EXPECT @a[true]: false
+TIMEOUT 1
+
+NAME bool as a variable
+PROG BEGIN { $b = true; $c = false; print(($b, $c)); exit(); }
+EXPECT (true, false)
+
+NAME cast int to bool
+PROG BEGIN{ print(((bool)1, (bool)0)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast string to bool
+PROG BEGIN{ print(((bool)"hello", (bool)"")); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast ptr to bool
+PROG BEGIN { $a = (int64*)0; $b = (int64*)1; print(((bool)$b, (bool)$a)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast castable map to bool
+PROG BEGIN{ @a = count(); @b = sum(0); print(((bool)@a, (bool)@b)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast bool to int
+PROG BEGIN{ print(((int64)true, (int64)false)); exit(); }
+EXPECT (1, 0)
+TIMEOUT 1
+
+NAME bool array
+PROG BEGIN { @a = (bool[2])(uint16)1; exit(); }
+EXPECT @a: [true,false]
+TIMEOUT 1
+
+NAME bool logical not
+PROG BEGIN{ print((!0, !10)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME bool in resized tuples
+PROG BEGIN { @a[false, 1, true] = 1; @a[true, (int32)2, false] = 2; exit(); }
+EXPECT @a[false, 1, true]: 1
+EXPECT @a[true, 2, false]: 2
+TIMEOUT 1

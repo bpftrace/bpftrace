@@ -161,7 +161,7 @@ EXPECT ERROR: failed to open file '/does/not/exist/file': No such file or direct
 
 NAME sizeof
 PROG struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x)); exit(); }
-EXPECT 8 4 1 8 8
+EXPECT 8 4 1 1 8
 
 NAME sizeof_ints
 PROG BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32)); exit(); }

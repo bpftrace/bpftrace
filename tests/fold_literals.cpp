@@ -62,87 +62,97 @@ void test_warning(const std::string& input, const std::string& warn)
 
 TEST(fold_literals, equals)
 {
-  test("0 == 0", "int: 1");
-  test("0 == 1", "int: 0");
-  test("-1 == 1", "int: 0");
-  test("-1 == -1", "int: 1");
-  test(R"("foo" == "bar")", "int: 0");
-  test(R"("foo" == "foo")", "int: 1");
-  test("\"foo\" == 1", "=="); // Left as is
-  test("str($1) == \"\"", "int: 1");
-  test("str($1) == \"foo\"", "int: 0");
-  test("$1 == 0", "int: 1");
-  test("$1 == 1", "int: 0");
+  test("0 == 0", "bool: true");
+  test("0 == 1", "bool: false");
+  test("-1 == 1", "bool: false");
+  test("-1 == -1", "bool: true");
+  test("true == true", "bool: true");
+  test("false == false", "bool: true");
+  test(R"("foo" == "bar")", "bool: false");
+  test(R"("foo" == "foo")", "bool: true");
+  test("\"foo\" == 1", "==");    // Left as is
+  test("\"foo\" == true", "=="); // Left as is
+  test("str($1) == \"\"", "bool: true");
+  test("str($1) == \"foo\"", "bool: false");
+  test("$1 == 0", "bool: true");
+  test("$1 == 1", "bool: false");
 }
 
 TEST(fold_literals, not_equals)
 {
-  test("0 != 0", "int: 0");
-  test("0 != 1", "int: 1");
-  test("-1 != 1", "int: 1");
-  test("-1 != -1", "int: 0");
-  test(R"("foo" != "bar")", "int: 1");
-  test(R"("foo" != "foo")", "int: 0");
-  test(R"("foo" != 1)", "!="); // Left as is
-  test(R"(str($1) != "")", "int: 0");
-  test(R"(str($1) != "foo")", "int: 1");
-  test("$1 != 0", "int: 0");
-  test("$1 != 1", "int: 1");
+  test("0 != 0", "bool: false");
+  test("0 != 1", "bool: true");
+  test("-1 != 1", "bool: true");
+  test("-1 != -1", "bool: false");
+  test("false != true", "bool: true");
+  test("false != false", "bool: false");
+  test(R"("foo" != "bar")", "bool: true");
+  test(R"("foo" != "foo")", "bool: false");
+  test(R"("foo" != 1)", "!=");     // Left as is
+  test(R"("foo" != false)", "!="); // Left as is
+  test(R"(str($1) != "")", "bool: false");
+  test(R"(str($1) != "foo")", "bool: true");
+  test("$1 != 0", "bool: false");
+  test("$1 != 1", "bool: true");
 }
 
 TEST(fold_literals, comparison)
 {
-  test("0 < 1", "int: 1");
-  test("1 < 0", "int: 0");
-  test("0 < 0", "int: 0");
-  test("-1 < 0", "int: 1");
-  test("-1 < -2", "int: 0");
-  test("0x7fffffffffffffff < 0x8000000000000000", "int: 1");
-  test("0xffffffffffffffff < 0", "int: 0");
-  test(R"("a" < "b")", "int: 1");
-  test(R"("b" < "a")", "int: 0");
-  test(R"("a" < "a")", "int: 0");
-  test(R"("" < "a")", "int: 1");
-  test(R"("abc" < "abd")", "int: 1");
+  test("0 < 1", "bool: true");
+  test("1 < 0", "bool: false");
+  test("0 < 0", "bool: false");
+  test("-1 < 0", "bool: true");
+  test("-1 < -2", "bool: false");
+  test("true < false", "bool: false");
+  test("0x7fffffffffffffff < 0x8000000000000000", "bool: true");
+  test("0xffffffffffffffff < 0", "bool: false");
+  test(R"("a" < "b")", "bool: true");
+  test(R"("b" < "a")", "bool: false");
+  test(R"("a" < "a")", "bool: false");
+  test(R"("" < "a")", "bool: true");
+  test(R"("abc" < "abd")", "bool: true");
 
-  test("0 > 1", "int: 0");
-  test("1 > 0", "int: 1");
-  test("0 > 0", "int: 0");
-  test("-1 > 0", "int: 0");
-  test("-1 > -2", "int: 1");
-  test("0x7fffffffffffffff > 0x8000000000000000", "int: 0");
-  test("0xffffffffffffffff > 0", "int: 1");
-  test(R"("a" > "b")", "int: 0");
-  test(R"("b" > "a")", "int: 1");
-  test(R"("a" > "a")", "int: 0");
-  test(R"("" > "a")", "int: 0");
-  test(R"("abc" > "abd")", "int: 0");
+  test("0 > 1", "bool: false");
+  test("1 > 0", "bool: true");
+  test("0 > 0", "bool: false");
+  test("-1 > 0", "bool: false");
+  test("-1 > -2", "bool: true");
+  test("true > false", "bool: true");
+  test("0x7fffffffffffffff > 0x8000000000000000", "bool: false");
+  test("0xffffffffffffffff > 0", "bool: true");
+  test(R"("a" > "b")", "bool: false");
+  test(R"("b" > "a")", "bool: true");
+  test(R"("a" > "a")", "bool: false");
+  test(R"("" > "a")", "bool: false");
+  test(R"("abc" > "abd")", "bool: false");
 
-  test("0 <= 1", "int: 1");
-  test("1 <= 0", "int: 0");
-  test("0 <= 0", "int: 1");
-  test("-1 <= 0", "int: 1");
-  test("-1 <= -1", "int: 1");
-  test("0x7fffffffffffffff <= 0x8000000000000000", "int: 1");
-  test("0xffffffffffffffff <= 0", "int: 0");
-  test(R"("a" <= "b")", "int: 1");
-  test(R"("b" <= "a")", "int: 0");
-  test(R"("a" <= "a")", "int: 1");
-  test(R"("" <= "a")", "int: 1");
-  test(R"("abc" <= "abd")", "int: 1");
+  test("0 <= 1", "bool: true");
+  test("1 <= 0", "bool: false");
+  test("0 <= 0", "bool: true");
+  test("-1 <= 0", "bool: true");
+  test("-1 <= -1", "bool: true");
+  test("false <= true", "bool: true");
+  test("0x7fffffffffffffff <= 0x8000000000000000", "bool: true");
+  test("0xffffffffffffffff <= 0", "bool: false");
+  test(R"("a" <= "b")", "bool: true");
+  test(R"("b" <= "a")", "bool: false");
+  test(R"("a" <= "a")", "bool: true");
+  test(R"("" <= "a")", "bool: true");
+  test(R"("abc" <= "abd")", "bool: true");
 
-  test("0 >= 1", "int: 0");
-  test("1 >= 0", "int: 1");
-  test("0 >= 0", "int: 1");
-  test("-1 >= 0", "int: 0");
-  test("-1 >= -1", "int: 1");
-  test("0x7fffffffffffffff >= 0x8000000000000000", "int: 0");
-  test("0xffffffffffffffff >= 0", "int: 1");
-  test(R"("a" >= "b")", "int: 0");
-  test(R"("b" >= "a")", "int: 1");
-  test(R"("a" >= "a")", "int: 1");
-  test(R"("" >= "a")", "int: 0");
-  test(R"("abc" >= "abd")", "int: 0");
+  test("0 >= 1", "bool: false");
+  test("1 >= 0", "bool: true");
+  test("0 >= 0", "bool: true");
+  test("-1 >= 0", "bool: false");
+  test("-1 >= -1", "bool: true");
+  test("true <= false", "bool: false");
+  test("0x7fffffffffffffff >= 0x8000000000000000", "bool: false");
+  test("0xffffffffffffffff >= 0", "bool: true");
+  test(R"("a" >= "b")", "bool: false");
+  test(R"("b" >= "a")", "bool: true");
+  test(R"("a" >= "a")", "bool: true");
+  test(R"("" >= "a")", "bool: false");
+  test(R"("abc" >= "abd")", "bool: false");
 }
 
 TEST(fold_literals, plus)
@@ -352,18 +362,42 @@ TEST(fold_literals, binary)
 
 TEST(fold_literals, logical)
 {
-  test("1 && 1", "int: 1");
-  test("0 && 1", "int: 0");
-  test("0 && 0", "int: 0");
-  test("-1 && 0", "int: 0");
-  test("1 && -1", "int: 1");
+  test("1 && 1", "bool: true");
+  test("0 && 1", "bool: false");
+  test("0 && 0", "bool: false");
+  test("-1 && 0", "bool: false");
+  test("1 && -1", "bool: true");
+  test("true && true", "bool: true");
+  test("true && false", "bool: false");
+  test("false && false", "bool: false");
+  test("\"foo\" && true", "bool: true");
+  test("\"\" && true", "bool: false");
+  test("\"\" && false", "bool: false");
+  test("1 && true", "bool: true");
+  test("0 && true", "bool: false");
+  test("1 && false", "bool: false");
+  test("0 && false", "bool: false");
+  test("-1 && true", "bool: true");
+  test("-1 && false", "bool: false");
   test("\"foo\" && 1", "&&"); // Left as is
 
-  test("1 || 1", "int: 1");
-  test("0 || 1", "int: 1");
-  test("0 || 0", "int: 0");
-  test("-1 || 0", "int: 1");
-  test("1 || -1", "int: 1");
+  test("1 || 1", "bool: true");
+  test("0 || 1", "bool: true");
+  test("0 || 0", "bool: false");
+  test("-1 || 0", "bool: true");
+  test("1 || -1", "bool: true");
+  test("true || true", "bool: true");
+  test("true || false", "bool: true");
+  test("false || false", "bool: false");
+  test("\"foo\" || true", "bool: true");
+  test("\"\" || true", "bool: true");
+  test("\"\" || false", "bool: false");
+  test("1 || true", "bool: true");
+  test("0 || true", "bool: true");
+  test("1 || false", "bool: true");
+  test("0 || false", "bool: false");
+  test("-1 || true", "bool: true");
+  test("-1 || false", "bool: true");
   test("\"foo\" || 1", "||"); // Left as is
 }
 
@@ -373,9 +407,11 @@ TEST(fold_literals, unary)
   test("~0xfffffffffffffffe", "int: 1");
   test("~0", "int: 18446744073709551615");
 
-  test("!0", "int: 1");
-  test("!1", "int: 0");
-  test("!-1", "int: 0");
+  test("!0", "bool: true");
+  test("!1", "bool: false");
+  test("!-1", "bool: false");
+  test("!false", "bool: true");
+  test("!true", "bool: false");
 
   test("-1", "signed int: -1");
   test("-0", "int: 0");

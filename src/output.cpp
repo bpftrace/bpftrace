@@ -53,6 +53,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::timestamp_mode:
     case Type::tuple:
     case Type::voidtype:
+    case Type::boolean:
       return false;
   }
   return false;
@@ -372,6 +373,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
           return {};
       }
     }
+    case Type::boolean: {
+      return util::read_data<uint8_t>(value.data()) ? "true" : "false";
+    }
     case Type::sum_t: {
       if (type.IsSigned())
         return std::to_string(util::reduce_value<int64_t>(value, nvalues) /
@@ -439,6 +443,7 @@ std::string Output::map_key_str(BPFtrace &bpftrace,
   std::ostringstream ptr;
   switch (arg.GetTy()) {
     case Type::integer:
+    case Type::boolean:
     case Type::kstack_t:
     case Type::ustack_t:
     case Type::timestamp:

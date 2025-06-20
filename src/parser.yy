@@ -133,6 +133,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
+%token <bool> BOOL "bool"
 
 %type <ast::Operator> unary_op compound_op
 %type <std::string> attach_point_def c_definitions ident keyword external_name
@@ -333,6 +334,7 @@ config_assign_stmt:
                 IDENT ASSIGN UNSIGNED_INT { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
         |       IDENT ASSIGN IDENT        { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
         |       IDENT ASSIGN STRING       { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN BOOL         { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
                 ;
 
 subprog:
@@ -547,6 +549,7 @@ var_decl_stmt:
 
 primary_expr:
                 UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
+        |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       BUILTIN            { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
         |       LPAREN expr RPAREN { $$ = $2; }

@@ -214,6 +214,7 @@ public:
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
   ScopedExpr visit(NegativeInteger &integer);
+  ScopedExpr visit(Boolean &boolean);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -529,6 +530,11 @@ ScopedExpr CodegenLLVM::visit(Integer &integer)
 ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
 {
   return ScopedExpr(b_.getInt64(integer.value));
+}
+
+ScopedExpr CodegenLLVM::visit(Boolean &boolean)
+{
+  return ScopedExpr(b_.getInt8(boolean.value ? 1 : 0));
 }
 
 ScopedExpr CodegenLLVM::visit(String &string)
@@ -2246,7 +2252,7 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
 ScopedExpr CodegenLLVM::visit(Unop &unop)
 {
   const SizedType &type = unop.expr.type();
-  if (type.IsIntegerTy()) {
+  if (type.IsIntegerTy() || type.IsBoolTy()) {
     return unop_int(unop);
   } else if (type.IsPtrTy() || type.IsCtxAccess()) // allow dereferencing args
   {
@@ -2597,6 +2603,19 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     auto *v = b_.CreateAllocaBPF(scoped_expr.value()->getType());
     b_.CreateStore(scoped_expr.value(), v);
     return ScopedExpr(v, [this, v] { b_.CreateLifetimeEnd(v); });
+  } else if (cast.cast_type.IsBoolTy()) {
+    if (cast.expr.type().IsStringTy()) {
+      auto *first_char = b_.CreateGEP(b_.getInt8Ty(),
+                                      scoped_expr.value(),
+                                      { b_.getInt32(0) });
+      Value *cond = b_.CreateICmpNE(b_.CreateLoad(b_.getInt8Ty(), first_char),
+                                    b_.getInt8(0),
+                                    "bool_cast");
+      return ScopedExpr(cond);
+    }
+    Value *zero_value = Constant::getNullValue(scoped_expr.value()->getType());
+    Value *cond = b_.CreateICmpNE(scoped_expr.value(), zero_value, "bool_cast");
+    return ScopedExpr(cond);
   } else {
     // FIXME(amscanne): The existing behavior is to simply pass the existing
     // expression back up when it is neither an integer nor an array.
@@ -3440,6 +3459,9 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                                     b_.getInt64Ty(),
                                     key_type.IsSigned()),
                    key);
+  } else if (map.key_type.IsBoolTy()) {
+    b_.CreateStore(
+        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt8Ty(), false), key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
@@ -4347,7 +4369,7 @@ ScopedExpr CodegenLLVM::readDatastructElemFromStack(ScopedExpr &&scoped_src,
 
   Value *src = b_.CreateGEP(data_type, src_data, { b_.getInt32(0), index });
 
-  if (elem_type.IsIntegerTy() || elem_type.IsPtrTy()) {
+  if (elem_type.IsIntegerTy() || elem_type.IsPtrTy() || elem_type.IsBoolTy()) {
     // Load the correct type from src
     return ScopedExpr(
         b_.CreateDatastructElemLoad(elem_type, src, true, elem_type.GetAS()));

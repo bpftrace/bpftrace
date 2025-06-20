@@ -358,14 +358,6 @@ NAME has_key map value as key
 PROG BEGIN { @g = 2; @a[2] = 0; if (has_key(@a, @g)) { printf("ok\n"); } exit(); }
 EXPECT ok
 
-NAME has_key map keys and values
-PROG BEGIN { @a[1] = 1; @b[has_key(@a, 1)] = has_key(@a, 2); exit(); }
-EXPECT @b[1]: 0
-
-NAME has_key as a variable
-PROG BEGIN { @a[1] = 1; $b = has_key(@a, 1); $c = has_key(@a, 2); print(($b, $c)); exit(); }
-EXPECT (1, 0)
-
 NAME exit code
 PROG BEGIN { exit(69); }
 RETURN_CODE 69
