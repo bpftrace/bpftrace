@@ -8,7 +8,7 @@
 #include "scopeguard.h"
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
-#include "util/format.h"
+#include "util/strings.h"
 #include "util/wildcard.h"
 
 namespace bpftrace {

@@ -3,7 +3,7 @@
 #include <ranges>
 #include <vector>
 
-#include "util/format.h"
+#include "util/strings.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::util {

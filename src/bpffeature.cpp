@@ -16,8 +16,8 @@
 #include "btf.h"
 #include "dwarf_parser.h"
 #include "tracefs/tracefs.h"
-#include "util/format.h"
 #include "util/kernel.h"
+#include "util/strings.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

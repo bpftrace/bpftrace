@@ -21,8 +21,8 @@
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
-#include "util/format.h"
 #include "util/paths.h"
+#include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
 
@@ -2857,7 +2857,7 @@ void SemanticAnalyser::visit(MapAccess &acc)
   } else {
     // If there is no record of any assignment after the first pass
     // then it's safe to say this map is undefined.
-    if (!is_first_pass()) {
+    if (!is_first_pass() && !acc.map->read_only) {
       acc.addError() << "Undefined map: " << acc.map->ident;
     }
     pass_tracker_.inc_num_unresolved();

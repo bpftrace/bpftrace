@@ -24,6 +24,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
@@ -41,6 +42,7 @@
 #include "build_info.h"
 #include "child.h"
 #include "config.h"
+#include "globalvars.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
@@ -48,9 +50,9 @@
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
-#include "util/format.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
+#include "util/strings.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -297,39 +299,6 @@ std::vector<std::string> extra_flags(
   return extra_flags;
 }
 
-void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
-{
-  add(ast::CreateFoldLiteralsPass());
-  add(ast::CreatePidFilterPass());
-  add(ast::CreateSemanticPass());
-  add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
-  add(ast::CreateProbePass());
-}
-
-void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
-{
-  add(ast::CreatePortabilityPass());
-  add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateSemanticPass());
-  add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
-  add(ast::CreateProbePass());
-}
-
-ast::Pass printPass(const std::string& name)
-{
-  return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
-    std::cerr << "AST after: " << name << std::endl;
-    std::cerr << "-------------------" << std::endl;
-    ast::Printer printer(std::cerr);
-    printer.visit(ast.root);
-    std::cerr << std::endl;
-  });
-};
-
 struct Args {
   std::string pid_str;
   std::string cmd_str;
@@ -354,6 +323,42 @@ struct Args {
   std::vector<std::string> include_files;
   std::vector<std::string> params;
   std::vector<std::string> debug_stages;
+  std::unordered_map<std::string, std::string> named_params;
+};
+
+void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
+{
+  add(ast::CreateFoldLiteralsPass());
+  add(ast::CreatePidFilterPass());
+  add(ast::CreateNamedParamPass());
+  add(ast::CreateSemanticPass());
+  add(ast::CreateResourcePass());
+  add(ast::CreateRecursionCheckPass());
+  add(ast::CreateReturnPathPass());
+  add(ast::CreateProbePass());
+}
+
+void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
+{
+  add(ast::CreatePortabilityPass());
+  add(ast::CreateFoldLiteralsPass());
+  add(ast::CreateNamedParamPass());
+  add(ast::CreateSemanticPass());
+  add(ast::CreateResourcePass());
+  add(ast::CreateRecursionCheckPass());
+  add(ast::CreateReturnPathPass());
+  add(ast::CreateProbePass());
+}
+
+ast::Pass printPass(const std::string& name)
+{
+  return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
+    std::cerr << "AST after: " << name << std::endl;
+    std::cerr << "-------------------" << std::endl;
+    ast::Printer printer(std::cerr);
+    printer.visit(ast.root);
+    std::cerr << std::endl;
+  });
 };
 
 static bool parse_debug_stages(const std::string& arg)
@@ -446,8 +451,21 @@ Args parse_args(int argc, char* argv[])
                                                                         // last
   };
 
+  auto add_named_param = [&](std::string&& named_param) {
+    auto arg = named_param.substr(2);
+    if (arg.find("=") != std::string::npos) {
+      auto split = util::split_string(arg,
+                                      '=',
+                                      /* remove_empty= */ true);
+      args.named_params[split[0]] = split[1];
+    } else {
+      args.named_params[arg] = "";
+    }
+  };
+
   int c;
   bool has_k = false;
+  opterr = 0; // Don't print warning messages for unregonized options
   while ((c = getopt_long(argc, argv, short_options, long_options, nullptr)) !=
          -1) {
     switch (c) {
@@ -568,9 +586,20 @@ Args parse_args(int argc, char* argv[])
         }
         has_k = true;
         break;
-      default:
-        usage(std::cerr);
-        exit(1);
+      default: {
+        auto unrecognized_opt = std::string(argv[optind - 1]);
+        if (unrecognized_opt.starts_with("--")) {
+          add_named_param(std::move(unrecognized_opt));
+          // We'll error later via NamedParamPass if we confirm this is an
+          // unexpected long arg
+          break;
+        } else {
+          LOG(ERROR) << "Unrecognized option: " << static_cast<char>(optopt)
+                     << "\n";
+          usage(std::cerr);
+          exit(1);
+        }
+      }
     }
   }
 
@@ -625,14 +654,17 @@ Args parse_args(int argc, char* argv[])
       optind++;
     }
 
-    // Load positional parameters before driver runs so positional
-    // parameters used inside attach point definitions can be resolved.
+    // Parse positional and named parameters.
     while (optind < argc) {
-      args.params.emplace_back(argv[optind]);
+      auto pos_arg = std::string(argv[optind]);
+      if (pos_arg.starts_with("--")) {
+        add_named_param(std::move(pos_arg));
+      } else {
+        args.params.emplace_back(argv[optind]);
+      }
       optind++;
     }
   }
-
   return args;
 }
 
@@ -675,7 +707,7 @@ static ast::ASTContext buildListProgram(const std::string& search)
 int main(int argc, char* argv[])
 {
   Log::get().set_colorize(is_colorize());
-  const Args args = parse_args(argc, argv);
+  Args args = parse_args(argc, argv);
   std::ostream* os = &std::cout;
   std::ofstream outputstream;
   if (!args.output_file.empty()) {
@@ -729,7 +761,8 @@ int main(int argc, char* argv[])
     if (*maybe_pid > 0x400000) {
       // The actual maximum pid depends on the configuration for the specific
       // system, i.e. read from `/proc/sys/kernel/pid_max`. We can impose a
-      // basic sanity check here against the nominal maximum for 64-bit systems.
+      // basic sanity check here against the nominal maximum for 64-bit
+      // systems.
       LOG(ERROR) << "Pid out of range: " << *maybe_pid;
       exit(1);
     }
@@ -751,9 +784,9 @@ int main(int argc, char* argv[])
     }
   }
 
-  // This is our primary program AST context. Initially it is empty, i.e. there
-  // is no filename set or source file. The way we set it up depends on the
-  // mode of execution below, and we expect that it will be reinitialized.
+  // This is our primary program AST context. Initially it is empty, i.e.
+  // there is no filename set or source file. The way we set it up depends on
+  // the mode of execution below, and we expect that it will be reinitialized.
   ast::ASTContext ast;
 
   // Listing probes when there is no program.
@@ -775,19 +808,22 @@ int main(int argc, char* argv[])
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
     ast::CDefinitions no_c_defs; // No external C definitions may be used.
 
-    // Parse and expand all the attachpoints. We don't need to descend into the
-    // actual driver here, since we know that the program is already formed.
-    auto ok = ast::PassManager()
-                  .put(ast)
-                  .put(bpftrace)
-                  .put(no_c_defs)
-                  .add(ast::CreateParseAttachpointsPass(args.listing))
-                  .add(CreateParseBTFPass())
-                  .add(ast::CreateMapSugarPass())
-                  .add(ast::CreateSemanticPass(args.listing))
-                  .run();
-    if (!ok) {
-      std::cerr << ok.takeError() << "\n";
+    // Parse and expand all the attachpoints. We don't need to descend into
+    // the actual driver here, since we know that the program is already
+    // formed.
+    auto pmresult = ast::PassManager()
+                        .put(ast)
+                        .put(bpftrace)
+                        .put(no_c_defs)
+                        .add(ast::CreateParseAttachpointsPass(args.listing))
+                        .add(CreateParseBTFPass())
+                        .add(ast::CreateMapSugarPass())
+                        .add(ast::CreateNamedParamPass())
+                        .add(ast::CreateSemanticPass(args.listing))
+                        .run();
+
+    if (!pmresult) {
+      std::cerr << pmresult.takeError() << "\n";
       return 2;
     } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
@@ -853,10 +889,10 @@ int main(int argc, char* argv[])
 
   // Temporarily, we make the full `BPFTrace` object available via the pass
   // manager (and objects are temporarily mutable). As passes are refactored
-  // into lighter-weight components, the `BPFTrace` object should be decomposed
-  // into its meaningful parts. Furthermore, the codegen and field analysis
-  // passes will be rolled into the pass manager as regular passes; the final
-  // binary is merely one of the outputs that can be extracted.
+  // into lighter-weight components, the `BPFTrace` object should be
+  // decomposed into its meaningful parts. Furthermore, the codegen and field
+  // analysis passes will be rolled into the pass manager as regular passes;
+  // the final binary is merely one of the outputs that can be extracted.
   ast::PassManager pm;
   pm.put(ast);
   pm.put(bpftrace);
@@ -869,11 +905,12 @@ int main(int argc, char* argv[])
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
+        .add(ast::CreateNamedParamPass())
         .add(ast::CreateSemanticPass(args.listing));
 
-    auto ok = pm.run();
-    if (!ok) {
-      std::cerr << ok.takeError() << "\n";
+    auto pmresult = pm.run();
+    if (!pmresult) {
+      std::cerr << pmresult.takeError() << "\n";
       return 2;
     } else if (!ast.diagnostics().ok()) {
       ast.diagnostics().emit(std::cerr);
@@ -1014,5 +1051,15 @@ int main(int argc, char* argv[])
   }
 
   auto& bytecode = pmresult->get<BpfBytecode>();
-  return run_bpftrace(bpftrace, *output, bytecode);
+
+  const auto usage_and_exit = []() {
+    usage(std::cerr);
+    exit(1);
+  };
+
+  return run_bpftrace(bpftrace,
+                      *output,
+                      bytecode,
+                      std::move(args.named_params),
+                      usage_and_exit);
 }
