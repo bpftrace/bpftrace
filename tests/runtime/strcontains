@@ -12,7 +12,7 @@ TIMEOUT 1
 NAME no literals
 PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1]), str(args.argv[2]))); exit(); }
 AFTER ./testprogs/true zztest test
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 # Clamping is done to not blow verifier complexity limits
 ENV BPFTRACE_MAX_STRLEN=64
@@ -20,89 +20,89 @@ ENV BPFTRACE_MAX_STRLEN=64
 NAME string truncation does not affect matching
 PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1], 6), str(args.argv[2], 4))); exit(); }
 AFTER ./testprogs/true zztest test
-EXPECT 1
+EXPECT true
 
 NAME basic substring match
 PROG BEGIN { print(strcontains("hello-test-world", "test")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME substring at end
 PROG BEGIN { print(strcontains("hello-test-world", "world")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME substring at beginning
 PROG BEGIN { print(strcontains("hello-test-world", "hello")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME no match
 PROG BEGIN { print(strcontains("hello-test-world", "not-there")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME empty haystack, empty needle
 PROG BEGIN { print(strcontains("", "")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME non-empty haystack, empty needle
 PROG BEGIN { print(strcontains("hello", "")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME empty haystack, non-empty needle
 PROG BEGIN { print(strcontains("", "test")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME exact match
 PROG BEGIN { print(strcontains("hello", "hello")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME needle longer than haystack
 PROG BEGIN { print(strcontains("hello", "hello-longer")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME case sensitivity check
 PROG BEGIN { print(strcontains("Hello World", "hello")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME multiple occurrences
 PROG BEGIN { print(strcontains("test-test-test", "test")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME overlapping potential matches
 PROG BEGIN { print(strcontains("ababac", "abac")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME special characters
 PROG BEGIN { print(strcontains("hello\tworld", "\two")); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME null terminator inside haystack
 PROG BEGIN { $str = "hello\0world"; print(strcontains($str, "world")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME content after null terminator
 PROG BEGIN { $str = "hello\0test"; print(strcontains($str, "test")); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1
 
 NAME null character in needle
 PROG BEGIN { $needle = "wo\0rld"; print(strcontains("hello world", $needle)); exit(); }
-EXPECT 1
+EXPECT true
 TIMEOUT 1
 
 NAME null character in both
 PROG BEGIN { $haystack = "hello\0world"; $needle = "wo\0rld"; print(strcontains($haystack, $needle)); exit(); }
-EXPECT 0
+EXPECT false
 TIMEOUT 1

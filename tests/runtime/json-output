@@ -185,3 +185,8 @@ NAME none type
 RUN {{BPFTRACE}} -q -f json -e 'union N { int i; float f; }; struct Foo { int m; union N n; }; uprobe:./testprogs/struct_with_union:func { print(*((struct Foo *) arg0)); exit(); }'
 EXPECT {"type": "value", "data": { "m": 2, "n": { "i": 5, "f": "" } }}
 AFTER ./testprogs/struct_with_union
+
+NAME print bool type
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print((true, false)); exit(); }'
+EXPECT {"type": "value", "data": [true,false]}
+TIMEOUT 1

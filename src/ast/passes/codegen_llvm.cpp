@@ -73,6 +73,7 @@ using namespace llvm;
 
 static constexpr char LLVMTargetTriple[] = "bpf";
 static constexpr auto LICENSE = "LICENSE";
+static constexpr auto EMPTY_STR = "EMPTY_STR";
 
 static auto getTargetMachine()
 {
@@ -214,6 +215,7 @@ public:
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
   ScopedExpr visit(NegativeInteger &integer);
+  ScopedExpr visit(Boolean &boolean);
   ScopedExpr visit(String &string);
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
@@ -529,6 +531,11 @@ ScopedExpr CodegenLLVM::visit(Integer &integer)
 ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
 {
   return ScopedExpr(b_.getInt64(integer.value));
+}
+
+ScopedExpr CodegenLLVM::visit(Boolean &boolean)
+{
+  return ScopedExpr(b_.getInt8(boolean.value ? 1 : 0));
 }
 
 ScopedExpr CodegenLLVM::visit(String &string)
@@ -2246,7 +2253,7 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
 ScopedExpr CodegenLLVM::visit(Unop &unop)
 {
   const SizedType &type = unop.expr.type();
-  if (type.IsIntegerTy()) {
+  if (type.IsIntegerTy() || type.IsBoolTy()) {
     return unop_int(unop);
   } else if (type.IsPtrTy() || type.IsCtxAccess()) // allow dereferencing args
   {
@@ -2597,6 +2604,22 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     auto *v = b_.CreateAllocaBPF(scoped_expr.value()->getType());
     b_.CreateStore(scoped_expr.value(), v);
     return ScopedExpr(v, [this, v] { b_.CreateLifetimeEnd(v); });
+  } else if (cast.cast_type.IsBoolTy()) {
+    if (cast.expr.type().IsStringTy()) {
+      if (cast.expr.type().GetSize() == 0) {
+        return ScopedExpr(b_.getInt8(0));
+      }
+      auto *empty_str = llvm::dyn_cast<GlobalVariable>(
+          module_->getOrInsertGlobal(EMPTY_STR,
+                                     ArrayType::get(b_.getInt8Ty(), 1)));
+      empty_str->setInitializer(
+          ConstantDataArray::getString(module_->getContext(), "\0"));
+      return ScopedExpr(
+          b_.CreateStrncmp(scoped_expr.value(), empty_str, 1, false));
+    }
+    Value *zero_value = Constant::getNullValue(scoped_expr.value()->getType());
+    Value *cond = b_.CreateICmpNE(scoped_expr.value(), zero_value, "bool_cast");
+    return ScopedExpr(cond);
   } else {
     // FIXME(amscanne): The existing behavior is to simply pass the existing
     // expression back up when it is neither an integer nor an array.

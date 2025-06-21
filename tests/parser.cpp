@@ -735,6 +735,22 @@ TEST(Parser, integer_sizes)
        "   int: 4919131752149309048\n");
 }
 
+TEST(Parser, booleans)
+{
+  test("kprobe:do_nanosleep { $x = true; }",
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   bool: true\n");
+  test("kprobe:do_nanosleep { $x = false; }",
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   bool: false\n");
+}
+
 TEST(Parser, map_key)
 {
   test("kprobe:sys_open { @x[0] = 1; @x[0,1,2] = 1; }",

@@ -347,6 +347,9 @@ the type upon declaration.
 |*Type*
 |*Description*
 
+|bool
+|`true` or `false`
+
 |uint8
 |Unsigned 8 bit integer
 

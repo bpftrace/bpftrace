@@ -134,6 +134,7 @@ public:
 
 class Integer;
 class NegativeInteger;
+class Boolean;
 class PositionalParameter;
 class PositionalParameterCount;
 class String;
@@ -157,6 +158,7 @@ class BlockExpr;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
+                                      Boolean,
                                       PositionalParameter,
                                       PositionalParameterCount,
                                       String,
@@ -269,6 +271,22 @@ public:
   }
 
   const int64_t value;
+};
+
+class Boolean : public Node {
+public:
+  explicit Boolean(ASTContext &ctx, bool val, Location &&loc)
+      : Node(ctx, std::move(loc)), value(val) {};
+  explicit Boolean(ASTContext &ctx, const Boolean &other, const Location &loc)
+      : Node(ctx, loc + other.loc), value(other.value) {};
+
+  const SizedType &type() const
+  {
+    static SizedType boolean = CreateBool();
+    return boolean;
+  }
+
+  const bool value;
 };
 
 class PositionalParameter : public Node {

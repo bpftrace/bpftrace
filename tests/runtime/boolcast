@@ -1,0 +1,24 @@
+NAME cast int to bool
+PROG BEGIN{ print(((bool)1, (bool)0)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast string to bool
+PROG BEGIN{ print(((bool)"hello", (bool)"")); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast ptr to bool
+PROG BEGIN{ $a = (int64*)0; print(((bool)percpu_kaddr("process_counts", 0), (bool)$a)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast castable map to bool
+PROG BEGIN{ @a = count(); @b = sum(0); print(((bool)@a, (bool)@b)); exit(); }
+EXPECT (true, false)
+TIMEOUT 1
+
+NAME cast bool to int
+PROG BEGIN{ print(((int64)true, (int64)false)); exit(); }
+EXPECT (1, 0)
+TIMEOUT 1

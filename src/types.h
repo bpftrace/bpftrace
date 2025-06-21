@@ -24,6 +24,7 @@ enum class Type : uint8_t {
   none,
   voidtype,
   integer, // int is a protected keyword
+  boolean,
   pointer,
   record, // struct/union, as struct is a protected keyword
   hist_t,
@@ -350,7 +351,7 @@ public:
     return element_type_.get();
   }
 
-  bool IsBoolTy() const
+  bool IsBitIntTy() const
   {
     return type_ == Type::integer && size_bits_ == 1;
   };
@@ -362,6 +363,10 @@ public:
   {
     return type_ == Type::integer;
   };
+  bool IsBoolTy() const
+  {
+    return type_ == Type::boolean;
+  }
   bool IsEnumTy() const
   {
     return IsIntTy() && !name_.empty();
