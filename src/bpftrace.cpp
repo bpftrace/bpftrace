@@ -216,8 +216,12 @@ void BPFtrace::request_finalize()
 
 // PerfEventContext is our callback wrapper.
 struct PerfEventContext {
-  PerfEventContext(BPFtrace &b, Output &o) : bpftrace(b), output(o) {};
+  PerfEventContext(BPFtrace &b,
+                   async_action::AsyncHandlers &handlers,
+                   Output &o)
+      : bpftrace(b), handlers(handlers), output(o) {};
   BPFtrace &bpftrace;
+  async_action::AsyncHandlers &handlers;
   Output &output;
 };
 
@@ -249,51 +253,49 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   // async actions
   if (printf_id == async_action::AsyncAction::exit) {
-    async_action::exit_handler(ctx->bpftrace, data);
+    ctx->handlers.exit(data);
     return;
   } else if (printf_id == async_action::AsyncAction::print) {
-    async_action::print_map_handler(ctx->bpftrace, ctx->output, data);
+    ctx->handlers.print_map(data);
     return;
   } else if (printf_id == async_action::AsyncAction::print_non_map) {
-    async_action::print_non_map_handler(ctx->bpftrace, ctx->output, data);
+    ctx->handlers.print_non_map(data);
     return;
   } else if (printf_id == async_action::AsyncAction::clear) {
-    async_action::clear_map_handler(ctx->bpftrace, data);
+    ctx->handlers.clear_map(data);
     return;
   } else if (printf_id == async_action::AsyncAction::zero) {
-    async_action::zero_map_handler(ctx->bpftrace, data);
+    ctx->handlers.zero_map(data);
     return;
   } else if (printf_id == async_action::AsyncAction::time) {
-    async_action::time_handler(ctx->bpftrace, ctx->output, data);
+    ctx->handlers.time(data);
     return;
   } else if (printf_id == async_action::AsyncAction::join) {
-    async_action::join_handler(ctx->bpftrace, ctx->output, data);
+    ctx->handlers.join(data);
     return;
   } else if (printf_id == async_action::AsyncAction::helper_error) {
-    async_action::helper_error_handler(ctx->bpftrace, ctx->output, data);
+    ctx->handlers.helper_error(data);
     return;
   } else if (printf_id == async_action::AsyncAction::watchpoint_attach) {
-    async_action::watchpoint_attach_handler(ctx->bpftrace, data);
+    ctx->handlers.watchpoint_attach(data);
     return;
   } else if (printf_id == async_action::AsyncAction::watchpoint_detach) {
-    async_action::watchpoint_detach_handler(ctx->bpftrace, data);
+    ctx->handlers.watchpoint_detach(data);
     return;
   } else if (printf_id == async_action::AsyncAction::skboutput) {
-    async_action::skboutput_handler(ctx->bpftrace, data, size);
+    ctx->handlers.skboutput(data, size);
     return;
   } else if (printf_id >= async_action::AsyncAction::syscall &&
              printf_id <= async_action::AsyncAction::syscall_end) {
-    async_action::syscall_handler(
-        ctx->bpftrace, ctx->output, printf_id, arg_data);
+    ctx->handlers.syscall(printf_id, arg_data);
     return;
   } else if (printf_id >= async_action::AsyncAction::cat &&
              printf_id <= async_action::AsyncAction::cat_end) {
-    async_action::cat_handler(ctx->bpftrace, ctx->output, printf_id, arg_data);
+    ctx->handlers.cat(printf_id, arg_data);
     return;
   } else if (printf_id >= async_action::AsyncAction::printf &&
              printf_id <= async_action::AsyncAction::printf_end) {
-    async_action::printf_handler(
-        ctx->bpftrace, ctx->output, printf_id, arg_data);
+    ctx->handlers.printf(printf_id, arg_data);
     return;
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
@@ -652,7 +654,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     return -1;
   }
 
-  PerfEventContext ctx(*this, out);
+  async_action::AsyncHandlers handlers(*this, out);
+  PerfEventContext ctx(*this, handlers, out);
   err = setup_output(&ctx);
   if (err)
     return err;

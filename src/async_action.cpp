@@ -3,24 +3,22 @@
 
 #include "ast/async_event_types.h"
 #include "async_action.h"
-#include "attached_probe.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "util/exceptions.h"
 #include "util/io.h"
-#include "util/result.h"
 #include "util/system.h"
 
 namespace bpftrace::async_action {
 
-void exit_handler(BPFtrace &bpftrace, const void *data)
+void AsyncHandlers::exit(const void *data)
 {
   const auto *exit = static_cast<const AsyncEvent::Exit *>(data);
   BPFtrace::exit_code = exit->exit_code;
   bpftrace.request_finalize();
 }
 
-void join_handler(BPFtrace &bpftrace, Output &out, const void *data)
+void AsyncHandlers::join(const void *data)
 {
   const auto *join = static_cast<const AsyncEvent::Join *>(data);
   uint64_t join_id = join->join_id;
@@ -37,13 +35,13 @@ void join_handler(BPFtrace &bpftrace, Output &out, const void *data)
   out.message(MessageType::join, joined.str());
 }
 
-void time_handler(BPFtrace &bpftrace, Output &out, const void *data)
+void AsyncHandlers::time(const void *data)
 {
   // not respecting config_->get(ConfigKeyInt::max_strlen)
-  char timestr[MAX_TIME_STR_LEN];
+  char timestr[AsyncHandlers::MAX_TIME_STR_LEN];
   time_t t;
   struct tm tmp;
-  t = time(nullptr);
+  t = ::time(nullptr);
   if (!localtime_r(&t, &tmp)) {
     LOG(WARNING) << "localtime_r: " << strerror(errno);
     return;
@@ -57,7 +55,7 @@ void time_handler(BPFtrace &bpftrace, Output &out, const void *data)
   out.message(MessageType::time, timestr, false);
 }
 
-void helper_error_handler(BPFtrace &bpftrace, Output &out, const void *data)
+void AsyncHandlers::helper_error(const void *data)
 {
   const auto *helper_error = static_cast<const AsyncEvent::HelperError *>(data);
   auto error_id = helper_error->error_id;
@@ -66,7 +64,7 @@ void helper_error_handler(BPFtrace &bpftrace, Output &out, const void *data)
   out.helper_error(return_value, info);
 }
 
-void print_non_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
+void AsyncHandlers::print_non_map(const void *data)
 {
   const auto *print = static_cast<const AsyncEvent::PrintNonMap *>(data);
   const SizedType &ty = bpftrace.resources.non_map_print_args.at(
@@ -79,7 +77,7 @@ void print_non_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
   out.value(bpftrace, ty, bytes);
 }
 
-void print_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
+void AsyncHandlers::print_map(const void *data)
 {
   const auto *print = static_cast<const AsyncEvent::Print *>(data);
   const auto &map = bpftrace.bytecode_.getMap(print->mapid);
@@ -91,7 +89,7 @@ void print_map_handler(BPFtrace &bpftrace, Output &out, const void *data)
              << "\", err=" << std::to_string(err);
 }
 
-void zero_map_handler(BPFtrace &bpftrace, const void *data)
+void AsyncHandlers::zero_map(const void *data)
 {
   const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
@@ -104,7 +102,7 @@ void zero_map_handler(BPFtrace &bpftrace, const void *data)
   }
 }
 
-void clear_map_handler(BPFtrace &bpftrace, const void *data)
+void AsyncHandlers::clear_map(const void *data)
 {
   const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
   const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
@@ -116,7 +114,7 @@ void clear_map_handler(BPFtrace &bpftrace, const void *data)
   }
 }
 
-void watchpoint_attach_handler(BPFtrace &bpftrace, const void *data)
+void AsyncHandlers::watchpoint_attach(const void *data)
 {
   const auto *watchpoint = static_cast<const AsyncEvent::Watchpoint *>(data);
   uint64_t probe_idx = watchpoint->watchpoint_idx;
@@ -167,7 +165,7 @@ out:
   }
 }
 
-void watchpoint_detach_handler(BPFtrace &bpftrace, const void *data)
+void AsyncHandlers::watchpoint_detach(const void *data)
 {
   const auto *unwatch = static_cast<const AsyncEvent::WatchpointUnwatch *>(
       data);
@@ -184,7 +182,7 @@ void watchpoint_detach_handler(BPFtrace &bpftrace, const void *data)
   bpftrace.attached_probes_.erase(it.begin(), it.end());
 }
 
-void skboutput_handler(BPFtrace &bpftrace, void *data, int size)
+void AsyncHandlers::skboutput(void *data, int size)
 {
   struct hdr_t {
     uint64_t aid;
@@ -201,10 +199,7 @@ void skboutput_handler(BPFtrace &bpftrace, void *data, int size)
       hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
 }
 
-void syscall_handler(BPFtrace &bpftrace,
-                     Output &out,
-                     AsyncAction printf_id,
-                     uint8_t *arg_data)
+void AsyncHandlers::syscall(AsyncAction printf_id, uint8_t *arg_data)
 {
   if (bpftrace.safe_mode_) {
     throw util::FatalUserException(
@@ -222,10 +217,7 @@ void syscall_handler(BPFtrace &bpftrace,
               false);
 }
 
-void cat_handler(BPFtrace &bpftrace,
-                 Output &out,
-                 AsyncAction printf_id,
-                 uint8_t *arg_data)
+void AsyncHandlers::cat(AsyncAction printf_id, uint8_t *arg_data)
 {
   auto id = static_cast<size_t>(printf_id) -
             static_cast<size_t>(AsyncAction::cat);
@@ -240,10 +232,7 @@ void cat_handler(BPFtrace &bpftrace,
   out.message(MessageType::cat, buf.str(), false);
 }
 
-void printf_handler(BPFtrace &bpftrace,
-                    Output &out,
-                    AsyncAction printf_id,
-                    uint8_t *arg_data)
+void AsyncHandlers::printf(AsyncAction printf_id, uint8_t *arg_data)
 {
   auto id = static_cast<size_t>(printf_id) -
             static_cast<size_t>(AsyncAction::printf);
