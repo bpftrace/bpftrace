@@ -285,6 +285,53 @@ void ResourceAnalyser::visit(Call &call)
     } else {
       call.addError() << "Different lhist bounds in a single map unsupported";
     }
+  } else if (call.func == "tseries") {
+    Map *map = call.vargs.at(0).as<Map>();
+
+    Expression &value_arg = call.vargs.at(2);
+    Expression &interval_arg = call.vargs.at(3);
+    Expression &buckets_arg = call.vargs.at(4);
+    auto &interval = *interval_arg.as<String>();
+    auto &buckets = *buckets_arg.as<Integer>();
+
+    int64_t interval_ns = std::stol(interval.value);
+    char unit = interval.value[interval.value.length() - 2];
+    unit = ('0' <= unit && unit <= '9') ? 's' : unit;
+
+    switch (unit) {
+      case 's':
+        interval_ns *= 1000;
+        [[fallthrough]];
+      case 'm':
+        interval_ns *= 1000;
+        [[fallthrough]];
+      case 'u':
+        interval_ns *= 1000;
+    }
+
+    auto args = TSeriesArgs{
+      .interval_ns = static_cast<long>(interval_ns),
+      .buckets = static_cast<long>(buckets.value),
+      .inner_type = value_arg.type(),
+    };
+
+    if (auto *inner_call = value_arg.as<Call>()) {
+      Expression &anon_map_arg = inner_call->vargs.at(0);
+
+      if (auto *anon_map = anon_map_arg.as<Map>()) {
+        update_map_info(*anon_map);
+      }
+    }
+
+    auto &map_info = resources_.maps_info[map->ident];
+    if (std::holds_alternative<std::monostate>(map_info.detail)) {
+      map_info.detail.emplace<TSeriesArgs>(args);
+    } else if (std::holds_alternative<TSeriesArgs>(map_info.detail) &&
+               std::get<TSeriesArgs>(map_info.detail) == args) {
+      // Same arguments.
+    } else {
+      call.addError() << "Different tseries bounds in a single map unsupported";
+    }
   } else if (call.func == "time") {
     if (!call.vargs.empty())
       resources_.time_args.push_back(call.vargs.at(0).as<String>()->value);
@@ -346,18 +393,18 @@ void ResourceAnalyser::visit(Call &call)
   // buffer here.
   //
   // The exceptions are:
-  // 1. lhist/hist because the map key buffer includes both the key itself
-  //    and the bucket ID from a call to linear/log2 functions.
+  // 1. lhist/hist/tseries because the map key buffer includes both the key
+  //    itself and the bucket ID from a call to linear/log2/tseries functions.
   // 2. has_key/delete because the map key buffer allocation depends on
   //    arguments to the function e.g.
   //      delete(@, 2)
   //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
   //    so the map key buffer check in visit(Map &map) doesn't work as is.
-  if (call.func == "lhist" || call.func == "hist") {
+  if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
     auto &map = *call.vargs.at(0).as<Map>();
-    // Allocation is always needed for lhist/hist. But we need to allocate
-    // space for both map key and the bucket ID from a call to linear/log2
-    // functions.
+    // Allocation is always needed for lhist/hist/tseries. But we need to
+    // allocate space for both map key and the bucket ID from a call to
+    // linear/log2/tseries functions.
     const auto map_key_size = map.key_type.GetSize() + CreateUInt64().GetSize();
     if (exceeds_stack_limit(map_key_size)) {
       resources_.map_key_buffers++;

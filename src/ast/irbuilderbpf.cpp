@@ -433,6 +433,11 @@ llvm::Type *IRBuilderBPF::GetMapValueType(const SizedType &stype)
     // The second is the count value
     std::vector<llvm::Type *> llvm_elems = { getInt64Ty(), getInt64Ty() };
     ty = GetStructType("avg_stas_val", llvm_elems, false);
+  } else if (stype.IsTSeriesTy()) {
+    std::vector<llvm::Type *> llvm_elems = { getInt64Ty(),
+                                             getInt64Ty(),
+                                             getInt64Ty() };
+    ty = GetStructType("t_series_val", llvm_elems, false);
   } else {
     ty = GetType(stype);
   }
@@ -1778,8 +1783,31 @@ Value *IRBuilderBPF::CreateStrcontains(Value *haystack,
   return CreateIntCast(phi, getInt64Ty(), false);
 }
 
-CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
+Value *IRBuilderBPF::CreateGetNs(TimestampMode ts,
+                                 const Location &loc,
+                                 const std::string &dummy_ts_map)
 {
+  if (!dummy_ts_map.empty()) {
+    auto map_info = bpftrace_.resources.maps_info.find(dummy_ts_map);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" not found";
+    } else if (!map_info->second.is_scalar) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map << "\" must be scalar";
+    } else if (!map_info->second.value_type.IsIntegerTy() ||
+               map_info->second.value_type.IsSigned()) {
+      LOG(ERROR) << "dummy_ts_map: \"" << dummy_ts_map
+                 << "\" value must must be unsigned";
+    } else {
+      AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "dummy_ts_map_key");
+      CreateStore(getInt64(0), key);
+
+      Value *val = CreateMapLookupElem(
+          dummy_ts_map, key, map_info->second.value_type, loc);
+      CreateLifetimeEnd(key);
+      return val;
+    }
+  }
+
   // Random default value to silence compiler warning
   libbpf::bpf_func_id fn = libbpf::BPF_FUNC_ktime_get_ns;
   switch (ts) {
@@ -2212,10 +2240,10 @@ void IRBuilderBPF::CreatePerCpuMapElemInit(Map &map,
   CreateLifetimeEnd(initValue);
 }
 
-void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
-                                          Value *key,
-                                          Value *val,
-                                          const Location &loc)
+Value *IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
+                                            Value *key,
+                                            Value *val,
+                                            const Location &loc)
 {
   CallInst *call = CreateMapLookup(map, key);
 
@@ -2242,16 +2270,20 @@ void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
   auto *cast = CreatePtrToInt(call, value->getType(), "cast");
   CreateStore(CreateAdd(CreateLoad(value->getAllocatedType(), cast), val),
               cast);
+  CreateStore(CreateLoad(value->getAllocatedType(), cast), value);
 
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
 
   CreatePerCpuMapElemInit(map, key, val, loc);
+  CreateStore(val, value);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
+  Value *result = CreateLoad(value->getAllocatedType(), value);
   CreateLifetimeEnd(value);
+  return result;
 }
 
 void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,

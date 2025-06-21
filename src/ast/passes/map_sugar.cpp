@@ -38,6 +38,18 @@ public:
   void visit(Call &call);
 };
 
+class AnonymousMaps : public Visitor<AnonymousMaps> {
+public:
+  explicit AnonymousMaps(ASTContext &ast) : ast_(ast) {};
+
+  using Visitor<AnonymousMaps>::visit;
+  void visit(Call &call);
+
+private:
+  ASTContext &ast_;
+  int next_index = 0;
+};
+
 class MapAssignmentCall : public Visitor<MapAssignmentCall> {
 public:
   explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {};
@@ -238,10 +250,32 @@ void MapFunctionAliases::visit(Call &call)
   }
 }
 
+void AnonymousMaps::visit(Call &call)
+{
+  if (call.func == "tseries" && !call.vargs.empty()) {
+    if (auto *inner_call = call.vargs.at(0).as<Call>()) {
+      Map *map = ast_.make_node<Map>("anonymous_map_" +
+                                         std::to_string(next_index++),
+                                     Location(inner_call->loc));
+      auto args = std::move(inner_call->vargs);
+      inner_call->vargs.emplace_back(map);
+      // Default key.
+      inner_call->vargs.emplace_back(
+          ast_.make_node<Integer>(0, Location(map->loc)));
+      inner_call->injected_args += 2;
+      inner_call->vargs.insert(inner_call->vargs.end(),
+                               args.begin(),
+                               args.end());
+    }
+  }
+
+  Visitor<AnonymousMaps>::visit(call);
+}
+
 // Similarly these are syntactic sugar over operating on a map. This list could
 // also be dynamically generated based on some underlying annotation.
 static std::unordered_set<std::string> ASSIGN_REWRITE = {
-  "hist", "lhist", "count", "sum", "min", "max", "avg", "stats",
+  "hist", "lhist", "count", "sum", "min", "max", "avg", "stats", "tseries"
 };
 
 static std::optional<Expression> injectMap(Expression expr,
@@ -300,6 +334,8 @@ Pass CreateMapSugarPass()
       // No consistent defaults.
       return std::move(defaults.metadata);
     }
+    AnonymousMaps anon(ast);
+    anon.visit(ast.root);
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
     MapAssignmentCheck check;

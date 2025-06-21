@@ -73,6 +73,8 @@ lookup_success:                                   ; preds = %merge_block
   %6 = load i64, ptr %lookup_elem, align 8
   %7 = add i64 %6, 1
   store i64 %7, ptr %lookup_elem, align 8
+  %8 = load i64, ptr %lookup_elem, align 8
+  store i64 %8, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %merge_block
@@ -80,9 +82,11 @@ lookup_failure:                                   ; preds = %merge_block
   store i64 1, ptr %initial_value, align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %stack_key, ptr %initial_value, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
+  store i64 1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %9 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_for_each_cb, ptr null, i64 0)
   ret i64 0

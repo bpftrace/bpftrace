@@ -23,6 +23,7 @@ enum class ConfigUnstable {
 static const auto UNSTABLE_MACRO = "unstable_macro";
 static const auto UNSTABLE_MAP_DECL = "unstable_map_decl";
 static const auto UNSTABLE_IMPORT = "unstable_import";
+static const auto UNSTABLE_TSERIES = "unstable_tseries";
 
 class Config {
 public:
@@ -45,6 +46,7 @@ public:
   ConfigUnstable unstable_macro = ConfigUnstable::warn;
   ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
   ConfigUnstable unstable_import = ConfigUnstable::error;
+  ConfigUnstable unstable_tseries = ConfigUnstable::warn;
 #ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
   bool show_debug_info = true;
@@ -64,6 +66,7 @@ public:
   std::string str_trunc_trailer = "..";
   ConfigMissingProbes missing_probes = ConfigMissingProbes::error;
   StackMode stack_mode = StackMode::bpftrace;
+  std::string dummy_tseries_time_map;
 
   // Initialized in the constructor.
   UserSymbolCacheType user_symbol_cache_type;

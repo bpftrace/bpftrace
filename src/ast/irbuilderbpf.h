@@ -121,7 +121,9 @@ public:
                                bool inverse,
                                const Location &loc,
                                MDNode *metadata);
-  CallInst *CreateGetNs(TimestampMode ts, const Location &loc);
+  Value *CreateGetNs(TimestampMode ts,
+                     const Location &loc,
+                     const std::string &dummy_ts_map = "");
   CallInst *CreateJiffies64(const Location &loc);
   CallInst *CreateGetCurrentCgroupId(const Location &loc);
   CallInst *CreateGetUidGid(const Location &loc);
@@ -175,10 +177,10 @@ public:
                                Value *key,
                                Value *val,
                                const Location &loc);
-  void CreatePerCpuMapElemAdd(Map &map,
-                              Value *key,
-                              Value *val,
-                              const Location &loc);
+  Value *CreatePerCpuMapElemAdd(Map &map,
+                                Value *key,
+                                Value *val,
+                                const Location &loc);
   void CreateDebugOutput(std::string fmt_str,
                          const std::vector<Value *> &values,
                          const Location &loc);

@@ -10,6 +10,7 @@ import time
 from looseversion import LooseVersion
 import re
 from functools import lru_cache
+import datetime
 
 import cmake_vars
 
@@ -246,12 +247,97 @@ class Runner(object):
         def get_pid_ns_cmd(cmd):
             return nsenter + [os.path.abspath(x) for x in cmd.split()]
 
+        def timestamps(output, interval, format):
+            def find_start_time(output, format):
+                lengths = {
+                    "%Y": 4, "%m": 2, "%d": 2, "%H": 2, "%M": 2, "%S": 2,
+                    "%l": 3, "%f": 6, "%k": 9
+                }
+                sub_second_specifiers = {"%l","%f","%k"}
+                sub_sec = ""
+                rgx = format
+                groups = {}
+
+                for i, s in enumerate(re.findall(r"%[YmdHMSlfk]", format)):
+                    if s in groups:
+                        raise ValueError("Timestamp format string %s repeats format specifier %", (format, s))
+
+                    if s in sub_second_specifiers:
+                        if sub_sec != "":
+                            raise ValueError("Only one of %%l, %%f, or %%k can be specified: %s" % format)
+                        sub_sec = s
+                    groups[s] = i+1
+                    rgx = rgx.replace(s, "(\\d{%d})" % lengths[s])
+
+                m = re.search(rgx, output)
+                if m is None:
+                    raise ValueError("String does not contain timestamps of format: %s" % format)
+
+                start_ts = m.group(0)
+                start_ts_ns = 0
+
+                if sub_sec == "%l":   # millisecond
+                    start_ts = start_ts[:m.end(groups[sub_sec])] + "000" + start_ts[m.end(groups[sub_sec]):]
+                    format = format.replace("%l", "%f")
+                elif sub_sec == "%k": # nanosecond
+                    start_ts_ns = int(m.group(groups[sub_sec])[-3:])
+                    ns_start = m.start(groups[sub_sec]) - m.start(0)
+                    ns_end = ns_start + len(m.group(groups[sub_sec]))
+                    start_ts = start_ts[:ns_end-3] + start_ts[ns_end:]
+                    format = format.replace("%k", "%f")
+
+                return datetime.datetime.strptime(start_ts, format), start_ts_ns
+
+            def parse_interval(interval):
+                m = re.match(r"^(\d+)(s|ms|us)$", interval)
+                if m is None:
+                    raise ValueError("Invalid invterval: %s" % interval)
+
+                n = int(m.group(1))
+
+                match m.group(2):
+                    case "s":
+                        td = datetime.timedelta(seconds=n)
+                    case "ms":
+                        td = datetime.timedelta(microseconds=n*1000)
+                    case "us":
+                        td = datetime.timedelta(microseconds=n)
+
+                return td
+
+            def strftime(dt, dt_ns, format):
+                if "%k" in format:
+                    format = format.replace("%k", "%%f%03d" % dt_ns)
+                if "%l" in format:
+                    format = format.replace("%l", "%03d" % (dt.microsecond / 1000))
+
+                return dt.strftime(format)
+
+            dt, dt_ns = find_start_time(output, format)
+            td = parse_interval(interval)
+
+            while True:
+                yield strftime(dt, dt_ns, format)
+                dt += td
+
+        def render_timestamps(template, output, interval, format):
+            ts = timestamps(output, interval, format)
+
+            for _ in range(template.count("$timestamp")):
+                template = template.replace("$timestamp", next(ts), 1)
+
+            return template
+
         def check_expect(expect, output):
             try:
                 if expect.mode == "text":
+                    if test.timestamp_interval:
+                        expect.expect = render_timestamps(expect.expect, output, test.timestamp_interval, test.timestamp_format)
                     # Raw text match on an entire line, ignoring leading/trailing whitespace
                     return re.search(f"^\\s*{re.escape(expect.expect)}\\s*$", output, re.M)
                 elif expect.mode == "text_none":
+                    if test.timestamp_interval:
+                        expect.expect = render_timestamps(expect.expect, output, test.timestamp_interval, test.timestamp_format)
                     return not re.search(f"^\\s*{re.escape(expect.expect)}\\s*$", output, re.M)
                 elif expect.mode == "regex":
                     return re.search(expect.expect, output, re.M)
@@ -260,17 +346,22 @@ class Runner(object):
                 elif expect.mode == "file":
                     with open(expect.expect) as expect_file:
                         # remove leading and trailing empty lines
-                        return output.strip() == expect_file.read().strip()
+                        expect.expect = expect_file.read().strip()
+                        if test.timestamp_interval:
+                            expect.expect = render_timestamps(expect.expect, output, test.timestamp_interval, test.timestamp_format)
+                        return output.strip() == expect.expect
                 else:
                     with open(expect.expect) as expect_file:
+                        expect_file_content = expect_file.read()
                         _, file_extension = os.path.splitext(expect.expect)
+                        expect.expect = expect_file_content
                         stripped_output = output.strip()
                         output_lines = stripped_output.splitlines()
 
                         # ndjson files are new line delimited blocks of json
                         # https://github.com/ndjson/ndjson-spec
                         if file_extension == ".ndjson":
-                            stripped_file = expect_file.read().strip()
+                            stripped_file = expect.expect.strip()
                             file_lines = stripped_file.splitlines()
 
                             if len(file_lines) != len(output_lines):
@@ -285,7 +376,9 @@ class Runner(object):
                         if len(output_lines) != 1:
                             print(f"Expected a single line of json ouput. Got {len(output_lines)} lines")
                             return False
-                        return json.loads(stripped_output) == json.load(expect_file)
+                        if test.timestamp_interval:
+                            expect.expect = render_timestamps(expect.expect, output, test.timestamp_interval, test.timestamp_format)
+                        return json.loads(stripped_output) == json.loads(expect.expect)
 
 
             except Exception as err:
@@ -581,9 +674,9 @@ class Runner(object):
                                 print("Could not parse JSON: " + str(err) + '\n' + "Raw Output: " + x)
                     else:
                         try:
-                            expected = json.dumps(json.loads(open(failed_expect.expect).read()), indent=2)
+                            expected = json.dumps(json.loads(failed_expect.expect), indent=2)
                         except json.decoder.JSONDecodeError as err:
-                            expected = "Could not parse JSON: " + str(err) + '\n' + "Raw File: " + expected
+                            expected = "Could not parse JSON: " + str(err) + '\n' + "Raw File: " + failed_expect.expect
                         try:
                             found = json.dumps(json.loads(output), indent=2)
                         except json.decoder.JSONDecodeError as err:
@@ -591,7 +684,7 @@ class Runner(object):
                         print('\tExpected JSON:\n' + expected)
                         print('\tFound:\n' + found)
                 else:
-                    print('\tExpected FILE:\n\t\t' + to_utf8(open(failed_expect.expect).read()))
+                    print('\tExpected FILE:\n\t\t' + to_utf8(failed_expect.expect))
                     print('\tFound:\n\t\t' + to_utf8(output))
             print_befores_and_after_output()
             return Runner.FAIL

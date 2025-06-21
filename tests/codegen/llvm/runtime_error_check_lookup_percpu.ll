@@ -42,17 +42,20 @@ lookup_success:                                   ; preds = %entry
   %1 = load i64, ptr %lookup_elem, align 8
   %2 = add i64 %1, 1
   store i64 %2, ptr %lookup_elem, align 8
+  %3 = load i64, ptr %lookup_elem, align 8
+  store i64 %3, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
   store i64 1, ptr %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %initial_value, i64 0)
-  %3 = trunc i64 %update_elem to i32
-  %4 = icmp sge i32 %3, 0
-  br i1 %4, label %helper_merge, label %helper_failure
+  %4 = trunc i64 %update_elem to i32
+  %5 = icmp sge i32 %4, 0
+  br i1 %5, label %helper_merge, label %helper_failure
 
 lookup_merge:                                     ; preds = %helper_merge, %lookup_success
+  %6 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key1")
@@ -67,22 +70,23 @@ lookup_merge:                                     ; preds = %helper_merge, %look
 
 helper_failure:                                   ; preds = %lookup_failure
   call void @llvm.lifetime.start.p0(i64 -1, ptr %helper_error_t)
-  %5 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 0
-  store i64 30006, ptr %5, align 8
-  %6 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
-  store i64 0, ptr %6, align 8
-  %7 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
-  store i32 %3, ptr %7, align 4
+  %7 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 0
+  store i64 30006, ptr %7, align 8
+  %8 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
+  store i64 0, ptr %8, align 8
+  %9 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
+  store i32 %4, ptr %9, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 helper_merge:                                     ; preds = %counter_merge, %lookup_failure
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
+  store i64 1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 event_loss_counter:                               ; preds = %helper_failure
-  %8 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
+  %10 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
@@ -90,59 +94,59 @@ counter_merge:                                    ; preds = %event_loss_counter,
   br label %helper_merge
 
 while_cond:                                       ; preds = %lookup_success2, %lookup_merge
-  %9 = load i32, ptr @__bt__num_cpus, align 4
-  %10 = load i32, ptr %i, align 4
-  %num_cpu.cmp = icmp ult i32 %10, %9
+  %11 = load i32, ptr @__bt__num_cpus, align 4
+  %12 = load i32, ptr %i, align 4
+  %num_cpu.cmp = icmp ult i32 %12, %11
   br i1 %num_cpu.cmp, label %while_body, label %while_end
 
 while_body:                                       ; preds = %while_cond
-  %11 = load i32, ptr %i, align 4
-  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_, ptr %"@_key1", i32 %11)
+  %13 = load i32, ptr %i, align 4
+  %lookup_percpu_elem = call ptr inttoptr (i64 195 to ptr)(ptr @AT_, ptr %"@_key1", i32 %13)
   %map_lookup_cond4 = icmp ne ptr %lookup_percpu_elem, null
   br i1 %map_lookup_cond4, label %lookup_success2, label %lookup_failure3
 
 while_end:                                        ; preds = %error_failure, %counter_merge8, %while_cond
   call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
-  %12 = load i64, ptr %val_1, align 8
+  %14 = load i64, ptr %val_1, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %val_2)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key1")
-  store i64 %12, ptr %"$a", align 8
+  store i64 %14, ptr %"$a", align 8
   ret i64 0
 
 lookup_success2:                                  ; preds = %while_body
-  %13 = load i64, ptr %val_1, align 8
-  %14 = load i64, ptr %lookup_percpu_elem, align 8
-  %15 = add i64 %14, %13
-  store i64 %15, ptr %val_1, align 8
-  %16 = load i32, ptr %i, align 4
-  %17 = add i32 %16, 1
-  store i32 %17, ptr %i, align 4
+  %15 = load i64, ptr %val_1, align 8
+  %16 = load i64, ptr %lookup_percpu_elem, align 8
+  %17 = add i64 %16, %15
+  store i64 %17, ptr %val_1, align 8
+  %18 = load i32, ptr %i, align 4
+  %19 = add i32 %18, 1
+  store i32 %19, ptr %i, align 4
   br label %while_cond
 
 lookup_failure3:                                  ; preds = %while_body
-  %18 = load i32, ptr %i, align 4
-  %error_lookup_cond = icmp eq i32 %18, 0
+  %20 = load i32, ptr %i, align 4
+  %error_lookup_cond = icmp eq i32 %20, 0
   br i1 %error_lookup_cond, label %error_success, label %error_failure
 
 error_success:                                    ; preds = %lookup_failure3
   call void @llvm.lifetime.start.p0(i64 -1, ptr %helper_error_t5)
-  %19 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 0
-  store i64 30006, ptr %19, align 8
-  %20 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 1
-  store i64 1, ptr %20, align 8
-  %21 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 2
-  store i32 0, ptr %21, align 4
+  %21 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 0
+  store i64 30006, ptr %21, align 8
+  %22 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 1
+  store i64 1, ptr %22, align 8
+  %23 = getelementptr %helper_error_t, ptr %helper_error_t5, i64 0, i32 2
+  store i32 0, ptr %23, align 4
   %ringbuf_output6 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t5, i64 20, i64 0)
   %ringbuf_loss9 = icmp slt i64 %ringbuf_output6, 0
   br i1 %ringbuf_loss9, label %event_loss_counter7, label %counter_merge8
 
 error_failure:                                    ; preds = %lookup_failure3
-  %22 = load i32, ptr %i, align 4
+  %24 = load i32, ptr %i, align 4
   br label %while_end
 
 event_loss_counter7:                              ; preds = %error_success
-  %23 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
+  %25 = atomicrmw add ptr @__bt__event_loss_counter, i64 1 seq_cst, align 8
   br label %counter_merge8
 
 counter_merge8:                                   ; preds = %event_loss_counter7, %error_success

@@ -86,6 +86,7 @@ std::string typestr(const SizedType &type, bool debug)
     case Type::strerror_t:
     case Type::hist_t:
     case Type::lhist_t:
+    case Type::tseries_t:
     case Type::none:
     case Type::voidtype:
       return typestr(type.GetTy());
@@ -207,6 +208,7 @@ std::string typestr(Type t)
     case Type::record:   return "record";   break;
     case Type::hist_t:     return "hist_t";     break;
     case Type::lhist_t:    return "lhist_t";    break;
+    case Type::tseries_t:    return "tseries_t";    break;
     case Type::count_t:    return "count_t";    break;
     case Type::sum_t:      return "sum_t";      break;
     case Type::min_t:      return "min_t";      break;
@@ -432,6 +434,11 @@ SizedType CreateHist()
   return { Type::hist_t, 8 };
 }
 
+SizedType CreateTSeries()
+{
+  return { Type::tseries_t, 8 };
+}
+
 SizedType CreateUSym()
 {
   return { Type::usym_t, 16 };
@@ -624,6 +631,6 @@ bool SizedType::FitsInto(const SizedType &t) const
 bool SizedType::NeedsPercpuMap() const
 {
   return IsHistTy() || IsLhistTy() || IsCountTy() || IsSumTy() || IsMinTy() ||
-         IsMaxTy() || IsAvgTy() || IsStatsTy();
+         IsMaxTy() || IsAvgTy() || IsStatsTy() || IsTSeriesTy();
 }
 } // namespace bpftrace

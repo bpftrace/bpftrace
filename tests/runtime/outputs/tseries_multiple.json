@@ -1,0 +1,52 @@
+{
+  "type": "tseries",
+  "data": {
+    "@a": {
+      "one": [
+        {
+          "interval_start": "$timestamp",
+          "value": 5
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 5
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 5
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 5
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 5
+        }
+      ],
+      "two": [
+        {
+          "interval_start": "$timestamp",
+          "value": 4
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 4
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 4
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 4
+        },
+        {
+          "interval_start": "$timestamp",
+          "value": 4
+        }
+      ]
+    }
+  }
+}
+

@@ -41,6 +41,8 @@ lookup_success:                                   ; preds = %entry
   %3 = load i64, ptr %lookup_elem, align 8
   %4 = add i64 %3, 1
   store i64 %4, ptr %lookup_elem, align 8
+  %5 = load i64, ptr %lookup_elem, align 8
+  store i64 %5, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
@@ -48,53 +50,59 @@ lookup_failure:                                   ; preds = %entry
   store i64 1, ptr %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %2, ptr %initial_value, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
+  store i64 1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %6 = load i64, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
   %log2 = call i64 @log2(i64 10, i64 0)
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
-  %5 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
-  %6 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
-  %7 = getelementptr [16 x i8], ptr %6, i64 0, i64 0
-  store i64 0, ptr %7, align 8
-  %8 = getelementptr [16 x i8], ptr %6, i64 0, i64 8
-  store i64 %log2, ptr %8, align 8
-  %lookup_elem3 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_y, ptr %6)
+  %7 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded2 = and i64 %get_cpu_id1, %7
+  %8 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
+  %9 = getelementptr [16 x i8], ptr %8, i64 0, i64 0
+  store i64 0, ptr %9, align 8
+  %10 = getelementptr [16 x i8], ptr %8, i64 0, i64 8
+  store i64 %log2, ptr %10, align 8
+  %lookup_elem3 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_y, ptr %8)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val7)
   %map_lookup_cond8 = icmp ne ptr %lookup_elem3, null
   br i1 %map_lookup_cond8, label %lookup_success4, label %lookup_failure5
 
 lookup_success4:                                  ; preds = %lookup_merge
-  %9 = load i64, ptr %lookup_elem3, align 8
-  %10 = add i64 %9, 1
-  store i64 %10, ptr %lookup_elem3, align 8
+  %11 = load i64, ptr %lookup_elem3, align 8
+  %12 = add i64 %11, 1
+  store i64 %12, ptr %lookup_elem3, align 8
+  %13 = load i64, ptr %lookup_elem3, align 8
+  store i64 %13, ptr %lookup_elem_val7, align 8
   br label %lookup_merge6
 
 lookup_failure5:                                  ; preds = %lookup_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value9)
   store i64 1, ptr %initial_value9, align 8
-  %update_elem10 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %6, ptr %initial_value9, i64 0)
+  %update_elem10 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %8, ptr %initial_value9, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value9)
+  store i64 1, ptr %lookup_elem_val7, align 8
   br label %lookup_merge6
 
 lookup_merge6:                                    ; preds = %lookup_failure5, %lookup_success4
+  %14 = load i64, ptr %lookup_elem_val7, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val7)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %6)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %8)
   %get_cpu_id11 = call i64 inttoptr (i64 8 to ptr)()
-  %11 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded12 = and i64 %get_cpu_id11, %11
-  %12 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
-  store i64 1, ptr %12, align 8
-  %lookup_elem13 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %12)
+  %15 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded12 = and i64 %get_cpu_id11, %15
+  %16 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
+  store i64 1, ptr %16, align 8
+  %lookup_elem13 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %16)
   %has_key = icmp ne ptr %lookup_elem13, null
   %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)()
-  %13 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded15 = and i64 %get_cpu_id14, %13
-  %14 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
-  store i64 1, ptr %14, align 8
-  %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %14)
+  %17 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded15 = and i64 %get_cpu_id14, %17
+  %18 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
+  store i64 1, ptr %18, align 8
+  %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %18)
   %delete_ret = icmp eq i64 %delete_elem, 0
   ret i64 0
 }
