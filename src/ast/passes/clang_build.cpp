@@ -17,6 +17,7 @@
 #include <clang/Basic/DebugInfoOptions.h>
 #endif
 
+#include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
@@ -151,9 +152,16 @@ static Result<> build(CompileContext &ctx,
   // that seem to be load-bearing with respect to generating useful debug
   // information, for some reason. The generated module will be linked and
   // optimized again regardless, but it is better safe than sorry.
-  std::vector<const char *> args = {
-    "-O2", "-Iinclude", "-o", pipefds->write_file().c_str(), name.c_str()
-  };
+  std::vector<const char *> args;
+  args.push_back("-O2");
+  args.push_back("-Iinclude");
+  for (const auto &s : arch::Host::c_defs()) {
+    args.push_back("-D");
+    args.push_back(s.c_str());
+  }
+  args.push_back("-o");
+  args.push_back(pipefds->write_file().c_str());
+  args.push_back(name.c_str());
 
   // Configure the instance. We want to read the source file named
   // by `name` above, enable debug information and optimization.
