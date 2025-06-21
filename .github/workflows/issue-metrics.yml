@@ -1,4 +1,4 @@
-name: Generate Issue Metrics
+name: Generate Issue and PR Metrics
 on:
   workflow_dispatch:
 
@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   build:
-    name: issue metrics
+    name: issue pr metrics
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -26,13 +26,26 @@ jobs:
           echo "$first_day..$last_day"
           echo "last_month=$first_day..$last_day" >> "$GITHUB_ENV"
 
-      - name: Run issue-metrics tool
+      - name: Run issue-metrics tool for issues
         uses: github/issue-metrics@v3
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SEARCH_QUERY: 'repo:bpftrace/bpftrace created:${{ env.last_month }} -reason:"not planned"'
+          SEARCH_QUERY: 'repo:bpftrace/bpftrace is:issue created:${{ env.last_month }} -reason:"not planned"'
+          HIDE_ASSIGNEE: true
+          HIDE_TIME_TO_ANSWER: true
+          OUTPUT_FILE: issue_metrics.md
 
-      - name: Generate issue metrics report
+      - name: Run issue-metrics tool for PRs
+        uses: github/issue-metrics@v3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEARCH_QUERY: 'repo:bpftrace/bpftrace is:pr created:${{ env.last_month }} -reason:"not planned"'
+          HIDE_ASSIGNEE: true
+          HIDE_TIME_TO_ANSWER: true
+          OUTPUT_FILE: pr_metrics.md
+
+      - name: Generate metrics report
         shell: bash
         run: |
-          cat ./issue_metrics.md > $GITHUB_STEP_SUMMARY
+          cat ./issue_metrics.md >> $GITHUB_STEP_SUMMARY
+          cat ./pr_metrics.md >> $GITHUB_STEP_SUMMARY
