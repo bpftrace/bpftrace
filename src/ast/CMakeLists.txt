@@ -40,6 +40,7 @@ add_library(ast STATIC
   passes/pid_filter_pass.cpp
   passes/recursion_check.cpp
   passes/unstable_feature.cpp
+  passes/usdt_arguments.cpp
 )
 
 add_dependencies(ast parser)
