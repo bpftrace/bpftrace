@@ -472,6 +472,7 @@ private:
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
+  std::unordered_map<std::string, llvm::Function *> extern_funcs_;
 };
 
 } // namespace
@@ -1863,28 +1864,42 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateGetTid(call.loc, force_init));
   } else {
-    // If we don't know about this function for codegen, then it is very likely
-    // something that will be linked in from the standard library. Assume that
-    // the semantic analyser has provided the types correctly, and set
-    // everything up for success.
-    llvm::Type *result_type = b_.GetType(call.return_type);
+    auto *func = extern_funcs_[call.func];
+    if (!func) {
+      // If we don't know about this function for codegen, then it is very
+      // likely something that will be linked in from the standard library.
+      // Assume that the semantic analyser has provided the types correctly,
+      // and set everything up for success.
+      llvm::Type *result_type = b_.GetType(call.return_type);
+      SmallVector<llvm::Type *> arg_types;
+      for (const auto &expr : call.vargs) {
+        arg_types.push_back(b_.GetType(expr.type()));
+      }
+      FunctionType *function_type = FunctionType::get(result_type,
+                                                      arg_types,
+                                                      false);
+      func = llvm::Function::Create(function_type,
+                                    llvm::Function::ExternalLinkage,
+                                    call.func,
+                                    module_.get());
+      func->addFnAttr(Attribute::AlwaysInline);
+      func->addFnAttr(Attribute::NoUnwind);
+      func->setDSOLocal(true);
+
+      // Add noundef attribute to each argument.
+      for (auto &arg : func->args()) {
+        arg.addAttr(Attribute::NoUndef);
+      }
+      extern_funcs_[call.func] = func;
+    }
+
     std::vector<ScopedExpr> args;
-    SmallVector<llvm::Type *> arg_types;
     SmallVector<llvm::Value *> arg_values;
     for (auto &expr : call.vargs) {
       args.emplace_back(visit(expr));
-      arg_types.push_back(b_.GetType(expr.type()));
       arg_values.push_back(args.back().value());
     }
 
-    FunctionType *function_type = FunctionType::get(result_type,
-                                                    arg_types,
-                                                    false);
-    auto *func = llvm::Function::Create(function_type,
-                                        llvm::Function::ExternalLinkage,
-                                        call.func,
-                                        module_.get());
-    func->addFnAttr(Attribute::AlwaysInline);
     return ScopedExpr(b_.CreateCall(func, arg_values, call.func));
   }
 }
