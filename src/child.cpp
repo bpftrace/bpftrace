@@ -15,8 +15,8 @@
 
 #include "child.h"
 #include "log.h"
-#include "util/format.h"
 #include "util/paths.h"
+#include "util/strings.h"
 
 namespace bpftrace {
 

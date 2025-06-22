@@ -6,7 +6,7 @@
 #include "bpftrace.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"

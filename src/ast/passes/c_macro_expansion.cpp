@@ -6,7 +6,7 @@
 #include "ast/visitor.h"
 #include "clang_parser.h"
 #include "driver.h"
-#include "util/format.h"
+#include "util/strings.h"
 
 namespace bpftrace::ast {
 
