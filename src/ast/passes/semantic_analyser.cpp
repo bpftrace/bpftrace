@@ -895,7 +895,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
               CreateRecord(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
-          builtin.builtin_type.is_btftype = true;
         } else {
           builtin.addError() << "invalid program type";
         }
@@ -936,7 +935,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                       RETVAL_FIELD_NAME);
       if (arg) {
         builtin.builtin_type = arg->type;
-        builtin.builtin_type.is_btftype = true;
       } else
         builtin.addError() << "Can't find a field " << RETVAL_FIELD_NAME;
     } else {
@@ -1987,15 +1985,13 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   arr.element_type.SetAS(type.GetAS());
 
   // BPF verifier cannot track BTF information for double pointers so we
-  // cannot propagate is_btftype for arrays of pointers and we need to reset
+  // cannot propagate is_internal for arrays of pointers and we need to reset
   // it on the array type as well. Indexing a pointer as an array also can't
   // be verified, so the same applies there.
   if (arr.element_type.IsPtrTy() || type.IsPtrTy()) {
     arr.element_type.is_internal = false;
-    arr.element_type.is_btftype = false;
   } else {
     arr.element_type.is_internal = type.is_internal;
-    arr.element_type.is_btftype = type.is_btftype;
   }
 }
 
@@ -2344,10 +2340,6 @@ void SemanticAnalyser::visit(Unop &unop)
         unop.result_type.MarkCtxAccess();
       unop.result_type.is_internal = type.is_internal;
       unop.result_type.SetAS(type.GetAS());
-
-      // BPF verifier cannot track BTF information for double pointers
-      if (!unop.result_type.IsPtrTy())
-        unop.result_type.is_btftype = type.is_btftype;
     } else if (type.IsRecordTy()) {
       // We allow dereferencing "args" with no effect (for backwards compat)
       if (type.IsCtxAccess())
@@ -2748,14 +2740,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       acc.field_type = arg->type;
       acc.field_type.SetAS(acc.expr.type().GetAS());
 
-      if (is_final_pass()) {
-        if (acc.field_type.IsNoneTy())
-          acc.addError() << acc.field << " has unsupported type";
-
-        ProbeType probetype = single_provider_type(probe);
-        if (probetype == ProbeType::fentry || probetype == ProbeType::fexit) {
-          acc.field_type.is_btftype = true;
-        }
+      if (is_final_pass() && acc.field_type.IsNoneTy()) {
+        acc.addError() << acc.field << " has unsupported type";
       }
     } else {
       acc.addError() << "Can't find function parameter " << acc.field;
@@ -2828,7 +2814,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         acc.field_type.MarkCtxAccess();
       }
       acc.field_type.is_internal = type.is_internal;
-      acc.field_type.is_btftype = type.is_btftype;
       acc.field_type.SetAS(acc.expr.type().GetAS());
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
