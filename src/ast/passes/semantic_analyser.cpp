@@ -595,6 +595,14 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1,
       .discard_ret_warn = true },
   },
+  // N.B. This is a special generated builtin that refers to the C interop. It
+  // accepts a context as the first arugment, but we have no way to represent
+  // that currently.
+  { "__usdt_arg",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true },
+  },
 };
 // clang-format on
 
@@ -870,13 +878,17 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << progtypeName(bt) << " and " << progtypeName(bt2);
     }
     switch (bt) {
-      case libbpf::BPF_PROG_TYPE_KPROBE:
-        builtin.builtin_type = CreatePointer(
-            CreateRecord("struct pt_regs",
-                         bpftrace_.structs.Lookup("struct pt_regs")),
-            AddrSpace::kernel);
+      case libbpf::BPF_PROG_TYPE_KPROBE: {
+        auto pt_regs = bpftrace_.structs.Lookup("struct pt_regs");
+        if (pt_regs.lock()) {
+          builtin.builtin_type = CreatePointer(
+              CreateRecord("struct pt_regs", pt_regs), AddrSpace::kernel);
+        } else {
+          builtin.builtin_type = CreatePointer(CreateNone());
+        }
         builtin.builtin_type.MarkCtxAccess();
         break;
+      }
       case libbpf::BPF_PROG_TYPE_TRACEPOINT:
         builtin.addError() << "Use args instead of ctx in tracepoint";
         break;
@@ -1751,6 +1763,8 @@ If you're seeing errors, try clamping the string sizes. For example:
                         << arg.type().GetTy() << " provided)";
       }
     }
+  } else if (call.func == "__usdt_arg") {
+    call.return_type = CreateUInt64();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
   }
