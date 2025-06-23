@@ -8,6 +8,7 @@
 #include "bpfmap.h"
 #include "required_resources.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 
 namespace bpftrace {
 
@@ -115,7 +116,8 @@ protected:
                      int &buckets,
                      int &start_value,
                      int &end_value) const;
-  std::string get_helper_error_msg(int func_id, int retcode) const;
+  std::string get_helper_error_msg(libbpf::bpf_func_id func_id,
+                                   int retcode) const;
   // Convert a log2 histogram into string
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,

@@ -1,4 +1,5 @@
 add_library(util STATIC
+  bpf_funcs.cpp
   bpf_names.cpp
   cgroup.cpp
   cpus.cpp

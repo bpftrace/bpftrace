@@ -11,12 +11,6 @@
 #include "util/stats.h"
 #include "util/strings.h"
 
-namespace libbpf {
-#define __BPF_NAME_FN(x) #x
-const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
-#undef __BPF_NAME_FN
-} // namespace libbpf
-
 namespace bpftrace {
 
 namespace {
@@ -217,7 +211,8 @@ void Output::lhist_prepare(const std::vector<uint64_t> &values,
   }
 }
 
-std::string Output::get_helper_error_msg(int func_id, int retcode) const
+std::string Output::get_helper_error_msg(libbpf::bpf_func_id func_id,
+                                         int retcode) const
 {
   std::string msg;
   if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG) {
@@ -852,7 +847,7 @@ void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
       std::vector(info.source_context),
       out_)
       << get_helper_error_msg(info.func_id, retcode)
-      << "\nAdditional Info - helper: " << libbpf::bpf_func_name[info.func_id]
+      << "\nAdditional Info - helper: " << info.func_id
       << ", retcode: " << retcode;
 }
 
@@ -1150,9 +1145,9 @@ void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
 {
   out_ << R"({"type": "helper_error", "msg": ")"
        << get_helper_error_msg(info.func_id, retcode) << R"(", "helper": ")"
-       << libbpf::bpf_func_name[info.func_id] << R"(", "retcode": )" << retcode
-       << R"(, "filename": ")" << info.filename << R"(", "line": )" << info.line
-       << R"(, "col": )" << info.column << "}" << std::endl;
+       << info.func_id << R"(", "retcode": )" << retcode << R"(, "filename": ")"
+       << info.filename << R"(", "line": )" << info.line << R"(, "col": )"
+       << info.column << "}" << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,
