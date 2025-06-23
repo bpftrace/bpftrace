@@ -407,7 +407,6 @@ struct TextEmitter<Value::TimeSeries> {
                     static_cast<float>(distance(min_value, 0)) /
                     static_cast<float>(distance(min_value, max_value));
     }
-
     for (const auto &[epoch, v] : ts.values) {
       std::string line(graph_width, ' ');
       TextEmitter<Primitive::Timestamp>::emit(res, epoch, time_format, unit);
@@ -420,10 +419,14 @@ struct TextEmitter<Value::TimeSeries> {
       }
       // There may be epochs with no valid entry.
       if (!std::holds_alternative<std::monostate>(v.variant)) {
-        int point_offset = static_cast<float>(graph_width - 1) *
-                           static_cast<float>(distance(min_value, v)) /
-                           static_cast<float>(distance(min_value, max_value));
-        line[point_offset] = '*';
+        int point_offset = graph_width / 2;
+        if (min_value != max_value) {
+          point_offset = static_cast<float>(graph_width - 1) *
+                         static_cast<float>(distance(min_value, v)) /
+                         static_cast<float>(distance(min_value, max_value));
+        }
+        // Ensure that we don't have floating point issues.
+        line[std::max(0, std::min(graph_width - 1, point_offset))] = '*';
         res << line << " ";
         TextEmitter<Primitive>::emit(res, v);
       } else {
