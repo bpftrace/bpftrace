@@ -26,7 +26,7 @@ entry:
   %2 = getelementptr i8, ptr %1, i64 128
   %reg_ip = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #5
   %3 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %3 to i32
   %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
@@ -71,6 +71,7 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #5 = { memory(none) }
 
 !llvm.dbg.cu = !{!47}
 !llvm.module.flags = !{!49, !50}

@@ -22,7 +22,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %cgroup_path_args)
   %1 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 0
   store i64 0, ptr %1, align 8
-  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)()
+  %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)() #4
   %2 = getelementptr %cgroup_path_t, ptr %cgroup_path_args, i64 0, i32 1
   store i64 %get_cgroup_id, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_cgroup_path_t_16_t)
@@ -63,6 +63,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!25}
 !llvm.module.flags = !{!27, !28}
