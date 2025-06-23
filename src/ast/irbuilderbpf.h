@@ -162,6 +162,7 @@ public:
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,
+                             bool is_pure,
                              const Twine &Name,
                              const Location &loc);
   CallInst *createCall(FunctionType *callee_type,

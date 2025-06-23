@@ -32,7 +32,7 @@ entry:
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %2 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %2
   %3 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
@@ -45,7 +45,7 @@ left:                                             ; preds = %entry
   br label %done
 
 right:                                            ; preds = %entry
-  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #4
   %6 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %6
   %7 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
@@ -79,6 +79,7 @@ attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!38}
 !llvm.module.flags = !{!40, !41}

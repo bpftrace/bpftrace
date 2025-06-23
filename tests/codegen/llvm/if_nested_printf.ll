@@ -17,7 +17,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !29 {
 entry:
   %printf_args = alloca %printf_t, align 8
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
@@ -26,7 +26,7 @@ entry:
   br i1 %true_cond, label %if_body, label %if_end
 
 if_body:                                          ; preds = %entry
-  %get_pid_tgid3 = call i64 inttoptr (i64 14 to ptr)()
+  %get_pid_tgid3 = call i64 inttoptr (i64 14 to ptr)() #3
   %4 = lshr i64 %get_pid_tgid3, 32
   %pid4 = trunc i64 %4 to i32
   %5 = zext i32 %pid4 to i64
@@ -71,6 +71,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!25}
 !llvm.module.flags = !{!27, !28}

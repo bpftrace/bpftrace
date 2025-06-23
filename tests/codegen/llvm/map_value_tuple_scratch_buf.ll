@@ -28,7 +28,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !73 {
 entry:
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [2 x [16 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
@@ -37,12 +37,12 @@ entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @xxx, i64 4, i1 false)
   %4 = getelementptr %"string[4]_int64__tuple_t", ptr %2, i32 0, i32 1
   store i64 1, ptr %4, align 8
-  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #3
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
   %6 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 0, i64 0
   store i64 0, ptr %6, align 8
-  %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)() #3
   %7 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded4 = and i64 %get_cpu_id3, %7
   %8 = getelementptr [1 x [1 x [16 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded4, i64 0, i64 0
@@ -54,7 +54,7 @@ entry:
   %12 = getelementptr %"string[8]_int64__tuple_t", ptr %8, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %12, ptr align 1 %11, i64 8, i1 false)
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %6, ptr %8, i64 0)
-  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)() #3
   %13 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded6 = and i64 %get_cpu_id5, %13
   %14 = getelementptr [1 x [2 x [16 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded6, i64 1, i64 0
@@ -63,19 +63,19 @@ entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %15, ptr align 1 @xxxxxxx, i64 8, i1 false)
   %16 = getelementptr %"string[8]_int64__tuple_t", ptr %14, i32 0, i32 1
   store i64 1, ptr %16, align 8
-  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)() #3
   %17 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded8 = and i64 %get_cpu_id7, %17
   %18 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded8, i64 1, i64 0
   store i64 0, ptr %18, align 8
   %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %18, ptr %14, i64 0)
-  %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)() #3
   %19 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded11 = and i64 %get_cpu_id10, %19
   %20 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded11, i64 2, i64 0
   store i64 0, ptr %20, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %20)
-  %get_cpu_id12 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id12 = call i64 inttoptr (i64 8 to ptr)() #3
   %21 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded13 = and i64 %get_cpu_id12, %21
   %22 = getelementptr [1 x [1 x [16 x i8]]], ptr @__bt__read_map_val_buf, i64 0, i64 %cpu.id.bounded13, i64 0, i64 0
@@ -91,7 +91,7 @@ lookup_failure:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)()
+  %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)() #3
   %23 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded15 = and i64 %get_cpu_id14, %23
   %24 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
@@ -109,6 +109,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noal
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!69}
 !llvm.module.flags = !{!71, !72}
