@@ -1,6 +1,6 @@
 # This Dockerfile is used to test STATIC_LINKING=ON builds in the CI
 
-FROM alpine:3.21
+FROM alpine:3.22
 
 RUN apk add --update \
   asciidoctor \
@@ -10,6 +10,8 @@ RUN apk add --update \
   bcc-static \
   binutils-dev \
   bison \
+  blazesym-dev \
+  blazesym-static \
   bpftool \
   bzip2-static \
   build-base \
@@ -41,11 +43,6 @@ RUN apk add --update \
   zlib-static \
   zstd-dev \
   zstd-static
-
-RUN apk add --update \
-  --repository https://dl-cdn.alpinelinux.org/alpine/edge/community \
-  blazesym-dev \
-  blazesym-static
 
 # It looks like llvm18 prefers to dynamically link against zstd. Extremely
 # unclear why.  Work around it by modifying LLVMExports.cmake.
