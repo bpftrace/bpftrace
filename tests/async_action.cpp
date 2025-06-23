@@ -222,7 +222,7 @@ TEST_F(AsyncActionTest, time_invalid_format)
 TEST_F(AsyncActionTest, helper_error)
 {
   struct TestCase {
-    int func_id;
+    libbpf::bpf_func_id func_id;
     int return_value;
     std::string expected_substring;
     std::string filename;

@@ -1,22 +1,19 @@
-#include "ast/irbuilderbpf.h"
+#include <filesystem>
+#include <llvm/IR/DataLayout.h>
+#include <llvm/IR/Module.h>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "ast/irbuilderbpf.h"
 #include "async_action.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "globalvars.h"
 #include "log.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 #include "util/exceptions.h"
-#include <filesystem>
-#include <llvm/IR/DataLayout.h>
-#include <llvm/IR/Module.h>
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace::ast {
 

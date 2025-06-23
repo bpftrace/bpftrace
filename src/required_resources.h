@@ -27,7 +27,7 @@ public:
   // This class effectively wraps a location, but preserves only the parts that
   // are needed to emit the error in a useful way. This is because it may be
   // serialized and used by a separate runtime.
-  HelperErrorInfo(int func_id, const ast::Location &loc)
+  HelperErrorInfo(libbpf::bpf_func_id func_id, const ast::Location &loc)
       : func_id(func_id),
         filename(loc->filename()),
         line(loc->line()),
@@ -36,12 +36,10 @@ public:
         source_context(loc->source_context())
   {
   }
+  HelperErrorInfo()
+      : func_id(static_cast<libbpf::bpf_func_id>(-1)), line(0), column(0) {};
 
-  // This is only used in the case that for some reason there is no helper
-  // registered for the specific instance.
-  HelperErrorInfo() : func_id(-1), line(0), column(0) {};
-
-  const int func_id;
+  const libbpf::bpf_func_id func_id;
   const std::string filename;
   const int line;
   const int column;
