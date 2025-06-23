@@ -311,7 +311,7 @@ EXPECT @max: 3
 
 NAME stats
 PROG BEGIN { @stats = stats(1); @stats = stats(2); @stats = stats(3); }
-EXPECT @stats: count 3, average 2, total 6
+EXPECT @stats: { .count = 3, .average = 2, .total = 6 }
 
 NAME hist
 PROG BEGIN { @=hist(-1); @=hist(2); @=hist(3); @=hist(7); @=hist(20); }

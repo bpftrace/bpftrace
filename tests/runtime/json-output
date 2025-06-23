@@ -99,7 +99,7 @@ EXPECT {"type": "map", "data": {"@": [1,2,"string",[4,5]]}}
 
 NAME tuple_with_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); @ = (0, $f); exit(); }'
-EXPECT {"type": "map", "data": {"@": [0,{ "m": 2, "n": 3 }]}}
+EXPECT {"type": "map", "data": {"@": [0,{"m": 2, "n": 3}]}}
 AFTER ./testprogs/simple_struct
 
 NAME tuple_with_escaped_string
@@ -123,12 +123,12 @@ TIMEOUT 1
 
 NAME print_non_map_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
-EXPECT {"type": "value", "data": { "m": 2, "n": 3 }}
+EXPECT {"type": "value", "data": {"m": 2, "n": 3}}
 AFTER ./testprogs/simple_struct
 
 NAME print_non_map_nested_struct
 RUN {{BPFTRACE}} -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
-EXPECT {"type": "value", "data": { "y": { "m": [2] }, "a": { "n": 3 } }}
+EXPECT {"type": "value", "data": {"y": {"m": [2]}, "a": {"n": 3}}}
 AFTER ./testprogs/simple_struct
 
 NAME print_avg_map_args
@@ -183,7 +183,7 @@ EXPECT {"type": "printf", "data": "1 ONE 2 TWO 99999 OTHER\n"}
 # or anon structs, then we will need to change/delete this test
 NAME none type
 RUN {{BPFTRACE}} -q -f json -e 'union N { int i; float f; }; struct Foo { int m; union N n; }; uprobe:./testprogs/struct_with_union:func { print(*((struct Foo *) arg0)); exit(); }'
-EXPECT {"type": "value", "data": { "m": 2, "n": { "i": 5, "f": "" } }}
+EXPECT {"type": "value", "data": {"m": 2, "n": {"i": 5, "f": null}}}
 AFTER ./testprogs/struct_with_union
 
 NAME print bool type
@@ -193,11 +193,11 @@ TIMEOUT 1
 
 NAME BENCH
 RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'BENCH:a { @ = count(); }'
-EXPECT_REGEX {"type": "benchmark_results", "data": {"a":\d+}}
+EXPECT_REGEX {"type": "benchmark_results", "data": {"a": \d+}}
 TIMEOUT 2
 
 NAME BENCH multiple
 RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'BENCH:a { @a++; } BENCH:b { @b++; } BENCH:c { @c++; }'
-EXPECT_REGEX {"type": "benchmark_results", "data": {"a":\d+,"b":\d+,"c":\d+}}
+EXPECT_REGEX {"type": "benchmark_results", "data": {"a": \d+, "b": \d+, "c": \d+}}
 TIMEOUT 5
 

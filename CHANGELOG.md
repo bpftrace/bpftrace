@@ -26,6 +26,9 @@ and this project adheres to
   - [#4199](https://github.com/bpftrace/bpftrace/pull/4199)
 - `strcontains` and `has_key` now return boolean values instead of 1 and 0
   - [#4280](https://github.com/bpftrace/bpftrace/pull/4280)
+- JSON serialization for unsupported and unknown types (e.g. `float`) may now
+  use `null` now rather than the empty string
+  - [#4302](https://github.com/bpftrace/bpftrace/pull/4302)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)

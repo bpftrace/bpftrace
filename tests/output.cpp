@@ -2,17 +2,18 @@
 
 #include "bpfmap.h"
 #include "mocks.h"
-#include "output.h"
+#include "output/text.h"
+#include "types_format.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::output {
 
+static ast::CDefinitions no_c_defs; // Used for format below.
+
 TEST(TextOutput, lhist_no_suffix)
 {
-  ast::CDefinitions c_definitions;
   std::stringstream out;
-  std::stringstream err;
-  TextOutput output{ c_definitions, out, err };
+  ::bpftrace::output::TextOutput output(out);
 
   auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
@@ -24,20 +25,21 @@ TEST(TextOutput, lhist_no_suffix)
     .id = {},
     .is_scalar = true,
   };
-  BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
-
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key = {
     {
         { 0 },
         { 0, 1, 1, 1, 1, 1, 1, 0 },
     },
   };
+  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                               "@mymap");
+  EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+      .WillOnce(testing::Return(
+          testing::ByMove(Result<HistogramMap>(values_by_key))));
 
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key = {
-    { { 0 }, 6 }
-  };
-
-  output.map_hist(*bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
+  auto hist = format(*bpftrace, no_c_defs, *mock_map);
+  ASSERT_TRUE(bool(hist));
+  output.map(mock_map->name(), *hist);
 
   // The buckets for this test case have been specifically chosen: 640000 can
   // also be written as 625K, while the other bucket boundaries can not be
@@ -53,15 +55,12 @@ TEST(TextOutput, lhist_no_suffix)
 
 )",
             out.str());
-  EXPECT_TRUE(err.str().empty());
 }
 
 TEST(TextOutput, lhist_suffix)
 {
-  ast::CDefinitions c_definitions;
   std::stringstream out;
-  std::stringstream err;
-  TextOutput output{ c_definitions, out, err };
+  ::bpftrace::output::TextOutput output(out);
 
   auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
@@ -71,20 +70,21 @@ TEST(TextOutput, lhist_suffix)
     .id = {},
     .is_scalar = true,
   };
-  BpfMap map{ libbpf::BPF_MAP_TYPE_HASH, "@mymap", 8, 8, 1000 };
-
   std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key = {
     {
         { 0 },
         { 0, 1, 1, 1, 1, 1, 0 },
     },
   };
+  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                               "@mymap");
+  EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+      .WillOnce(testing::Return(
+          testing::ByMove(Result<HistogramMap>(values_by_key))));
 
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key = {
-    { { 0 }, 5 }
-  };
-
-  output.map_hist(*bpftrace, map, 0, 0, values_by_key, total_counts_by_key);
+  auto hist = format(*bpftrace, no_c_defs, *mock_map);
+  ASSERT_TRUE(bool(hist));
+  output.map(mock_map->name(), *hist);
 
   EXPECT_EQ(R"(@mymap:
 [0, 1K)                1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
@@ -95,7 +95,6 @@ TEST(TextOutput, lhist_suffix)
 
 )",
             out.str());
-  EXPECT_TRUE(err.str().empty());
 }
 
 } // namespace bpftrace::test::output

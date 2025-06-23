@@ -6,7 +6,7 @@ EXPECT @[-100]: 1
 NAME Sum casted retval
 PROG ur:./testprogs/uprobe_negative_retval:function1 { @=stats((int32)retval); exit();} ur:./testprogs/uprobe_negative_retval:main { exit() }
 AFTER ./testprogs/uprobe_negative_retval
-EXPECT @: count 221, average -10, total -2210
+EXPECT @: { .count = 221, .average = -10, .total = -2210 }
 
 NAME Casting ints
 PROG BEGIN{printf("Values: %d %d\n", (uint8) -10, (uint16) 131087); exit(); }

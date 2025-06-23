@@ -1,6 +1,6 @@
 NAME stats with negative values
 PROG BEGIN { @=stats(-10); @=stats(-5); @=stats(5); exit() }
-EXPECT @: count 3, average -3, total -10
+EXPECT @: { .count = 3, .average = -3, .total = -10 }
 
 NAME avg with negative values
 PROG BEGIN { @=avg(-30); @=avg(-10);  }

@@ -17,6 +17,7 @@
 #include "map_info.h"
 #include "struct.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 
 namespace bpftrace {
 

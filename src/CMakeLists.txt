@@ -28,7 +28,6 @@ add_library(runtime STATIC
   format_string.cpp
   globalvars.cpp
   log.cpp
-  output.cpp
   probe_matcher.cpp
   probe_types.cpp
   procmon.cpp
@@ -36,6 +35,7 @@ add_library(runtime STATIC
   run_bpftrace.cpp
   usdt.cpp
   pcap_writer.cpp
+  types_format.cpp
   ksyms.cpp
   usyms.cpp
   ${BFD_DISASM_SRC}
@@ -94,7 +94,7 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
-target_link_libraries(runtime debugfs tracefs util)
+target_link_libraries(runtime debugfs output tracefs util)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
 target_link_libraries(libbpftrace parser runtime aot ast arch util cxxdemangler_llvm)
 
