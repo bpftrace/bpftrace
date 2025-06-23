@@ -2,8 +2,6 @@
 #include <unordered_map>
 
 #include "bpfmap.h"
-#include "log.h"
-#include "util/exceptions.h"
 #include "util/stats.h"
 #include "util/tseries.h"
 
