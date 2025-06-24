@@ -20,11 +20,11 @@
     "blazesym": {
       "flake": false,
       "locked": {
-        "lastModified": 1742330784,
-        "narHash": "sha256-bnXRy6Me+5bzUB/1i53qLCbAkvrAA/Ihxm24el/906Y=",
+        "lastModified": 1750785918,
+        "narHash": "sha256-3xBEvLWE+UfLKHrnBrhM9iTF+cvD0shBheME2g+GeKY=",
         "owner": "libbpf",
         "repo": "blazesym",
-        "rev": "48014fdc07a18a084a3a4b7ef78239c8cee1afec",
+        "rev": "4d2e36289c647480bcea84e158aa852624bfac69",
         "type": "github"
       },
       "original": {
