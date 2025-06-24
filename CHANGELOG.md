@@ -74,6 +74,8 @@ and this project adheres to
   - [#4186](https://github.com/bpftrace/bpftrace/pull/4186)
 - Change "Attaching N probes..." to "Attached N probes"
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
+- runqlat.bt: ignore idle task
+    [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
 #### Deprecated
 #### Removed
 #### Fixed
