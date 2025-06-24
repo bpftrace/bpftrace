@@ -11,6 +11,15 @@ size_t Arch<Machine::PPC64>::kernel_ptr_width()
 }
 
 template <>
+const std::vector<std::string>& Arch<Machine::PPC64>::c_defs()
+{
+  static std::vector<std::string> defs = {
+    "__TARGET_ARCH_powerpc",
+  };
+  return defs;
+}
+
+template <>
 std::optional<std::string> Arch<Machine::PPC64>::register_to_pt_regs_expr(
     const std::string& name)
 {
