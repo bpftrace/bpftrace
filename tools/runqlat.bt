@@ -191,6 +191,10 @@ tracepoint:sched:sched_switch
 	if (args.prev_state == TASK_RUNNING) {
 		@qtime[args.prev_pid] = nsecs;
 	}
+	// Ignore the idle task
+	if (args.next_pid == 0) {
+		return;
+	}
 
 	$ns = @qtime[args.next_pid];
 	if ($ns) {
