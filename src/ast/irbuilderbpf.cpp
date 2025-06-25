@@ -2797,4 +2797,54 @@ llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
   return getKernelPointerStorageTy();
 }
 
+void IRBuilderBPF::CreateMinMax(Value *val,
+                                Value *val_ptr,
+                                Value *is_set_ptr,
+                                bool max,
+                                bool is_signed)
+{
+  llvm::Function *parent = GetInsertBlock()->getParent();
+
+  BasicBlock *is_set_block = BasicBlock::Create(module_.getContext(),
+                                                "is_set",
+                                                parent);
+  BasicBlock *min_max_block = BasicBlock::Create(module_.getContext(),
+                                                 "min_max",
+                                                 parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "merge",
+                                               parent);
+
+  Value *curr = CreateLoad(getInt64Ty(), val_ptr);
+  Value *is_set_condition = CreateICmpEQ(CreateLoad(getInt64Ty(), is_set_ptr),
+                                         getInt64(1),
+                                         "is_set_cond");
+
+  CreateCondBr(is_set_condition, is_set_block, min_max_block);
+
+  SetInsertPoint(is_set_block);
+
+  Value *min_max_condition;
+
+  if (max) {
+    min_max_condition = is_signed ? CreateICmpSGE(val, curr)
+                                  : CreateICmpUGE(val, curr);
+  } else {
+    min_max_condition = is_signed ? CreateICmpSGE(curr, val)
+                                  : CreateICmpUGE(curr, val);
+  }
+
+  CreateCondBr(min_max_condition, min_max_block, merge_block);
+
+  SetInsertPoint(min_max_block);
+
+  CreateStore(val, val_ptr);
+
+  CreateStore(getInt64(1), is_set_ptr);
+
+  CreateBr(merge_block);
+
+  SetInsertPoint(merge_block);
+}
+
 } // namespace bpftrace::ast
