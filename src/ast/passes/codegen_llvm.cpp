@@ -2366,7 +2366,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   bool is_tparg = type.is_tparg;
   bool is_internal = type.is_internal;
   bool is_funcarg = type.is_funcarg;
-  bool is_btftype = type.is_btftype;
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2393,7 +2392,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   type.is_tparg = is_tparg;
   type.is_internal = is_internal;
   type.is_funcarg = is_funcarg;
-  type.is_btftype = is_btftype;
   // Restore the addrspace info
   // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
   type.SetAS(addrspace);
@@ -2486,7 +2484,6 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
   // is specifically because the semantic analyzer has marked these cases to
   // avoid copying through two pointers.
   SizedType type = arr.expr.type();
-  type.is_btftype = type.is_btftype && arr.element_type.is_btftype;
 
   // We can allow the lifetime of the index to expire by the time the array
   // expression is complete, but we must preserve the lifetime of the
@@ -2571,8 +2568,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (cast.expr.type().IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (cast.expr.type().is_internal || cast.expr.type().IsCtxAccess() ||
-          cast.expr.type().is_btftype) {
+      if (cast.expr.type().is_internal || cast.expr.type().IsCtxAccess()) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
@@ -4394,7 +4390,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (elem_type.IsStringTy() && data_type.is_btftype) {
+    if (elem_type.IsStringTy() && data_type.is_internal) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
@@ -4407,7 +4403,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(dst, [this, dst]() { b_.CreateLifetimeEnd(dst); });
   } else {
     // Read data onto stack
-    if (data_type.IsCtxAccess() || data_type.is_btftype) {
+    if (data_type.IsCtxAccess()) {
       // Types have already been suitably casted; just do the access.
       Value *expr = b_.CreateDatastructElemLoad(
           elem_type, src, true, data_type.GetAS());
