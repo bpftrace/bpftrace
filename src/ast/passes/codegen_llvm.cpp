@@ -939,52 +939,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(lookup_success_block);
 
-    Value *mm_val = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }));
-
-    Value *is_set_val = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }));
-
-    BasicBlock *is_set_block = BasicBlock::Create(module_->getContext(),
-                                                  "is_set",
-                                                  parent);
-    BasicBlock *min_max_block = BasicBlock::Create(module_->getContext(),
-                                                   "min_max",
-                                                   parent);
-
-    Value *is_set_condition = b_.CreateICmpEQ(is_set_val,
-                                              b_.getInt64(1),
-                                              "is_set_cond");
-
-    // If the value has not been set jump past the min_max_condition
-    b_.CreateCondBr(is_set_condition, is_set_block, min_max_block);
-
-    b_.SetInsertPoint(is_set_block);
-
-    Value *min_max_condition;
-
-    if (is_max) {
-      min_max_condition = map.value_type.IsSigned()
-                              ? b_.CreateICmpSGE(expr, mm_val)
-                              : b_.CreateICmpUGE(expr, mm_val);
-    } else {
-      min_max_condition = map.value_type.IsSigned()
-                              ? b_.CreateICmpSGE(mm_val, expr)
-                              : b_.CreateICmpUGE(mm_val, expr);
-    }
-
-    b_.CreateCondBr(min_max_condition, min_max_block, lookup_merge_block);
-
-    b_.SetInsertPoint(min_max_block);
-
-    b_.CreateStore(
+    b_.CreateMinMax(
         expr,
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }));
-    b_.CreateStore(
-        b_.getInt64(1),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }));
+        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }),
+        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }),
+        is_max,
+        map.value_type.IsSigned());
 
     b_.CreateBr(lookup_merge_block);
 
