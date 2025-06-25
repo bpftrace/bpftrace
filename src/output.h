@@ -28,6 +28,7 @@ enum class MessageType {
   attached_probes,
   lost_events,
   helper_error,
+  lost_executions,
 };
 
 std::ostream &operator<<(std::ostream &out, MessageType type);
@@ -97,6 +98,8 @@ public:
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
   virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
+  virtual void lost_executions(const std::string &which,
+                               uint64_t lost) const = 0;
 
 protected:
   ast::CDefinitions &c_definitions_;
@@ -242,6 +245,7 @@ public:
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void lost_executions(const std::string &which, uint64_t lost) const override;
 
 protected:
   std::string value_to_str(BPFtrace &bpftrace,
@@ -319,6 +323,7 @@ public:
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void lost_executions(const std::string &which, uint64_t lost) const override;
 
 private:
   std::string json_escape(const std::string &str) const;
