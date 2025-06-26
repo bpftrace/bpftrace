@@ -21,8 +21,7 @@ void TypeFormatError::log(llvm::raw_ostream &OS) const
 Result<output::Primitive> format(BPFtrace &bpftrace,
                                  const ast::CDefinitions &c_definitions,
                                  const SizedType &type,
-                                 const std::vector<uint8_t> &value,
-                                 size_t nvalues,
+                                 const OpaqueValue &value,
                                  uint32_t div)
 {
   switch (type.GetTy()) {
@@ -36,20 +35,20 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     case Type::voidtype:
       return std::monostate{};
     case Type::boolean:
-      return util::read_data<uint8_t>(value.data()) != 0;
+      return value.bitcast<uint8_t>() != 0;
     case Type::pointer: {
       // Print a pointer as a clear hex value. This could optionally include
       // the type or other information, but for now leave the existing format
       // as is. We encode this as a symbolic value because the JSON backend
       // will emit the raw number as a numeric value explicitly.
-      auto n = util::read_data<uint64_t>(value.data());
+      auto n = value.bitcast<uint64_t>();
       std::ostringstream res;
       res << "0x" << std::hex << n;
       return output::Primitive::Symbolic(res.str(), n);
     }
     case Type::kstack_t: {
-      return bpftrace.get_stack(util::read_data<uint64_t>(value.data()),
-                                util::read_data<uint64_t>(value.data() + 8),
+      return bpftrace.get_stack(value.bitcast<uint64_t>(0),
+                                value.bitcast<uint64_t>(1),
                                 -1,
                                 -1,
                                 false,
@@ -57,40 +56,38 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
                                 8);
     }
     case Type::ustack_t: {
-      return bpftrace.get_stack(util::read_data<uint64_t>(value.data()),
-                                util::read_data<uint64_t>(value.data() + 8),
-                                util::read_data<int32_t>(value.data() + 16),
-                                util::read_data<int32_t>(value.data() + 20),
+      return bpftrace.get_stack(value.bitcast<uint64_t>(0),
+                                value.bitcast<uint64_t>(1),
+                                value.slice(16, 4).bitcast<int32_t>(),
+                                value.slice(20, 4).bitcast<int32_t>(),
                                 true,
                                 type.stack_type,
                                 8);
     }
     case Type::ksym_t: {
-      return bpftrace.resolve_ksym(util::read_data<uint64_t>(value.data()));
+      return bpftrace.resolve_ksym(value.bitcast<uint64_t>());
     }
     case Type::usym_t: {
-      return bpftrace.resolve_usym(util::read_data<uint64_t>(value.data()),
-                                   util::read_data<uint32_t>(value.data() + 8),
-                                   util::read_data<uint32_t>(value.data() +
-                                                             12));
+      return bpftrace.resolve_usym(value.bitcast<uint64_t>(),
+                                   value.slice(8, 4).bitcast<int32_t>(),
+                                   value.slice(12, 4).bitcast<int32_t>());
     }
     case Type::inet: {
-      return bpftrace.resolve_inet(util::read_data<uint64_t>(value.data()),
-                                   static_cast<const uint8_t *>(value.data() +
-                                                                8));
+      return bpftrace.resolve_inet(value.bitcast<uint64_t>(),
+                                   value.slice(8).data());
     }
     case Type::username: {
-      return bpftrace.resolve_uid(util::read_data<uint64_t>(value.data()));
+      return bpftrace.resolve_uid(value.bitcast<uint64_t>());
     }
     case Type::buffer: {
-      const auto *buf = reinterpret_cast<const AsyncEvent::Buf *>(value.data());
+      auto &buf = value.bitcast<AsyncEvent::Buf>();
       output::Primitive::Buffer v;
-      v.data.resize(buf->length);
-      memcpy(v.data.data(), buf->content, buf->length);
+      v.data.resize(buf.length);
+      memcpy(v.data.data(), buf.content, buf.length);
       return v;
     }
     case Type::string: {
-      const auto *p = reinterpret_cast<const char *>(value.data());
+      const char *p = value.data();
       std::string s(p, strnlen(p, type.GetSize()));
       // Add a trailer if string is truncated
       //
@@ -107,10 +104,9 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       size_t elem_size = type.GetElementTy()->GetSize();
       output::Primitive::Array array;
       for (size_t i = 0; i < type.GetNumElements(); i++) {
-        std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
-                                       value.begin() + (i + 1) * elem_size);
+        auto elem_data = value.slice(i * elem_size, elem_size);
         auto val = format(
-            bpftrace, c_definitions, *type.GetElementTy(), elem_data, 1, div);
+            bpftrace, c_definitions, *type.GetElementTy(), elem_data, div);
         if (!val) {
           return val.takeError();
         }
@@ -121,11 +117,8 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     case Type::record: {
       output::Primitive::Record record;
       for (auto &field : type.GetFields()) {
-        std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                       value.begin() + field.offset +
-                                           field.type.GetSize());
-        auto val = format(
-            bpftrace, c_definitions, field.type, elem_data, 1, div);
+        auto elem_data = value.slice(field.offset, field.type.GetSize());
+        auto val = format(bpftrace, c_definitions, field.type, elem_data, div);
         if (!val) {
           return val.takeError();
         }
@@ -136,11 +129,8 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     case Type::tuple: {
       output::Primitive::Tuple tuple;
       for (auto &field : type.GetFields()) {
-        std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                       value.begin() + field.offset +
-                                           field.type.GetSize());
-        auto val = format(
-            bpftrace, c_definitions, field.type, elem_data, 1, div);
+        auto elem_data = value.slice(field.offset, field.type.GetSize());
+        auto val = format(bpftrace, c_definitions, field.type, elem_data, div);
         if (!val) {
           return val.takeError();
         }
@@ -149,27 +139,24 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return tuple;
     }
     case Type::count_t: {
-      return util::reduce_value<uint64_t>(value, nvalues) / div;
+      return util::reduce_value<uint64_t>(value) / div;
     }
     case Type::integer: {
       if (type.IsEnumTy()) {
-        assert(nvalues == 1);
-
-        const auto *data = value.data();
         const auto &enum_name = type.GetName();
         uint64_t enum_val;
         switch (type.GetIntBitWidth()) {
           case 64:
-            enum_val = util::read_data<uint64_t>(data);
+            enum_val = value.bitcast<uint64_t>();
             break;
           case 32:
-            enum_val = util::read_data<uint32_t>(data);
+            enum_val = value.bitcast<uint32_t>();
             break;
           case 16:
-            enum_val = util::read_data<uint16_t>(data);
+            enum_val = value.bitcast<uint16_t>();
             break;
           case 8:
-            enum_val = util::read_data<uint8_t>(data);
+            enum_val = value.bitcast<uint8_t>();
             break;
           default:
             return make_error<TypeFormatError>(type);
@@ -191,23 +178,23 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
           // clang-format off
           case 64:
             if (sign)
-              return util::reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div);
-            return util::reduce_value<uint64_t>(value, nvalues) / div;
+              return util::reduce_value<int64_t>(value) / static_cast<int64_t>(div);
+            return util::reduce_value<uint64_t>(value) / div;
           case 32:
             if (sign)
               return static_cast<int64_t>(
-                  util::reduce_value<int32_t>(value, nvalues) / static_cast<int32_t>(div));
-            return static_cast<uint64_t>(util::reduce_value<uint32_t>(value, nvalues) / div);
+                  util::reduce_value<int32_t>(value) / static_cast<int32_t>(div));
+            return static_cast<uint64_t>(util::reduce_value<uint32_t>(value) / div);
           case 16:
             if (sign)
               return
-                  static_cast<int64_t>(util::reduce_value<int16_t>(value, nvalues) / static_cast<int16_t>(div));
-            return static_cast<uint64_t>(util::reduce_value<uint16_t>(value, nvalues) / div);
+                  static_cast<int64_t>(util::reduce_value<int16_t>(value) / static_cast<int16_t>(div));
+            return static_cast<uint64_t>(util::reduce_value<uint16_t>(value) / div);
           case 8:
             if (sign)
               return
-                  static_cast<int64_t>(util::reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
-            return static_cast<uint64_t>(util::reduce_value<uint8_t>(value, nvalues) / div);
+                  static_cast<int64_t>(util::reduce_value<int8_t>(value) / static_cast<int8_t>(div));
+            return static_cast<uint64_t>(util::reduce_value<uint8_t>(value) / div);
           default:
             // This type cannot be handled.
             return make_error<TypeFormatError>(type);
@@ -216,63 +203,55 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     }
     case Type::sum_t: {
       if (type.IsSigned())
-        return util::reduce_value<int64_t>(value, nvalues) / div;
-      return util::reduce_value<uint64_t>(value, nvalues) / div;
+        return util::reduce_value<int64_t>(value) / div;
+      return util::reduce_value<uint64_t>(value) / div;
     }
     case Type::max_t:
     case Type::min_t: {
-      if (nvalues == 1 && value.size() == sizeof(int64_t)) {
+      if (value.count<uint64_t>() == 1) {
         // See avg_t below, this may be collapsed.
         if (type.IsSigned()) {
-          return util::read_data<int64_t>(value.data()) / div;
+          return value.bitcast<int64_t>() / div;
         }
-        return util::read_data<uint64_t>(value.data()) / div;
+        return value.bitcast<uint64_t>() / div;
       }
       if (type.IsSigned()) {
-        return util::min_max_value<int64_t>(value, nvalues, type.IsMaxTy()) /
-               div;
+        return util::min_max_value<int64_t>(value, type.IsMaxTy()) / div;
       }
-      return util::min_max_value<uint64_t>(value, nvalues, type.IsMaxTy()) /
-             div;
+      return util::min_max_value<uint64_t>(value, type.IsMaxTy()) / div;
     }
     case Type::timestamp: {
-      return bpftrace.resolve_timestamp(
-          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())->mode,
-          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())
-              ->strftime_id,
-          reinterpret_cast<const AsyncEvent::Strftime *>(value.data())->nsecs);
+      const auto &s = value.bitcast<const AsyncEvent::Strftime>();
+      return bpftrace.resolve_timestamp(s.mode, s.strftime_id, s.nsecs);
     }
     case Type::mac_address: {
       return bpftrace.resolve_mac_address(value.data());
     }
     case Type::cgroup_path_t: {
-      return bpftrace.resolve_cgroup_path(
-          reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
-              ->cgroup_path_id,
-          reinterpret_cast<const AsyncEvent::CgroupPath *>(value.data())
-              ->cgroup_id);
+      const auto &c = value.bitcast<const AsyncEvent::CgroupPath>();
+      return bpftrace.resolve_cgroup_path(c.cgroup_path_id, c.cgroup_id);
     }
     case Type::strerror_t: {
-      return strerror(util::read_data<uint64_t>(value.data()));
+      return strerror(value.bitcast<uint64_t>());
     }
     case Type::avg_t:
     case Type::stats_t: {
-      if (type.IsAvgTy() && nvalues == 1 && value.size() == sizeof(int64_t)) {
+      if (type.IsAvgTy() && value.count<uint64_t>() == 1) {
         // on this code path, avg is calculated in the kernel while printing the
         // entire map is handled in a different function.
         if (type.IsSigned()) {
-          return util::read_data<int64_t>(value.data()) / div;
+          return value.bitcast<int64_t>() / div;
         }
-        return util::read_data<uint64_t>(value.data()) / div;
+        return value.bitcast<uint64_t>() / div;
       }
       std::optional<output::Primitive> average, total, count;
       if (type.IsSigned()) {
-        auto stats = util::stats_value<int64_t>(value, nvalues);
+        auto stats = util::stats_value<int64_t>(value);
         average.emplace(stats.avg / div);
         total.emplace(stats.total);
         count.emplace(stats.count);
       } else {
-        auto stats = util::stats_value<uint64_t>(value, nvalues);
+        auto stats = util::stats_value<uint64_t>(value);
         average.emplace(stats.avg / div);
         total.emplace(stats.total);
         count.emplace(stats.count);
@@ -429,10 +408,20 @@ static output::Value::Histogram build_linear_histogram(
   return hist;
 }
 
+template <typename T>
+void sort_by_key_type(
+    std::vector<std::pair<OpaqueValue, OpaqueValue>> &values_by_key,
+    size_t offset)
+{
+  std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
+    return a.first.slice(offset).template bitcast<T>() <
+           b.first.slice(offset).template bitcast<T>();
+  });
+}
+
 void sort_by_key(
     const SizedType &key,
-    std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-        &values_by_key)
+    std::vector<std::pair<OpaqueValue, OpaqueValue>> &values_by_key)
 {
   if (key.IsTupleTy()) {
     // Sort the key arguments in reverse order so the results are sorted by
@@ -442,53 +431,34 @@ void sort_by_key(
       const auto &field = fields.at(i);
       if (field.type.IsIntTy()) {
         if (field.type.GetSize() == 8) {
-          std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-            auto va = util::read_data<uint64_t>(a.first.data() + field.offset);
-            auto vb = util::read_data<uint64_t>(b.first.data() + field.offset);
-            return va < vb;
-          });
+          sort_by_key_type<int64_t>(values_by_key, field.offset);
         } else if (field.type.GetSize() == 4) {
-          std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-            auto va = util::read_data<uint32_t>(a.first.data() + field.offset);
-            auto vb = util::read_data<uint32_t>(b.first.data() + field.offset);
-            return va < vb;
-          });
+          sort_by_key_type<int32_t>(values_by_key, field.offset);
         } else {
           LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
                    << field.type.GetSize() << " provided";
         }
       } else if (field.type.IsStringTy()) {
         std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-          return strncmp(reinterpret_cast<const char *>(a.first.data() +
-                                                        field.offset),
-                         reinterpret_cast<const char *>(b.first.data() +
-                                                        field.offset),
-                         field.type.GetSize()) < 0;
+          // This will actually do a string-like comparison between the opaque
+          // value memory blocks, which is exactly what we want for a string.
+          return a.first.slice(field.offset, field.type.GetSize()) <
+                 b.first.slice(field.offset, field.type.GetSize());
         });
       }
     }
   } else if (key.IsIntTy()) {
     if (key.GetSize() == 8) {
-      std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-        auto va = util::read_data<uint64_t>(a.first.data());
-        auto vb = util::read_data<uint64_t>(b.first.data());
-        return va < vb;
-      });
+      sort_by_key_type<int64_t>(values_by_key, 0);
     } else if (key.GetSize() == 4) {
-      std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-        auto va = util::read_data<uint32_t>(a.first.data());
-        auto vb = util::read_data<uint32_t>(b.first.data());
-        return va < vb;
-      });
+      sort_by_key_type<int32_t>(values_by_key, 0);
     } else {
       LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
                << key.GetSize() << " provided";
     }
   } else if (key.IsStringTy()) {
     std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-      return strncmp(reinterpret_cast<const char *>(a.first.data()),
-                     reinterpret_cast<const char *>(b.first.data()),
-                     key.GetSize()) < 0;
+      return a.first < b.first; // See above.
     });
   }
 }
@@ -520,7 +490,7 @@ Result<output::Value> format(BPFtrace &bpftrace,
     }
 
     // Sort based on sum of counts in all buckets.
-    std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
+    std::vector<std::pair<OpaqueValue, uint64_t>> total_counts_by_key;
     for (auto &[key, value] : *values_by_key) {
       int64_t sum = 0;
       for (unsigned long i : value) {
@@ -581,31 +551,27 @@ Result<output::Value> format(BPFtrace &bpftrace,
     bool is_signed = value_type.IsSigned();
     std::ranges::sort(*values_by_key, [&](auto &a, auto &b) {
       if (is_signed)
-        return util::reduce_value<int64_t>(a.second, nvalues) <
-               util::reduce_value<int64_t>(b.second, nvalues);
-      return util::reduce_value<uint64_t>(a.second, nvalues) <
-             util::reduce_value<uint64_t>(b.second, nvalues);
+        return util::reduce_value<int64_t>(a.second) <
+               util::reduce_value<int64_t>(b.second);
+      return util::reduce_value<uint64_t>(a.second) <
+             util::reduce_value<uint64_t>(b.second);
     });
   } else if (value_type.IsMinTy() || value_type.IsMaxTy()) {
     std::ranges::sort(*values_by_key, [&](auto &a, auto &b) {
-      return util::min_max_value<uint64_t>(a.second,
-                                           nvalues,
-                                           value_type.IsMaxTy()) <
-             util::min_max_value<uint64_t>(b.second,
-                                           nvalues,
-                                           value_type.IsMaxTy());
+      return util::min_max_value<uint64_t>(a.second, value_type.IsMaxTy()) <
+             util::min_max_value<uint64_t>(b.second, value_type.IsMaxTy());
     });
   } else if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
     stats = true;
     if (value_type.IsSigned()) {
       std::ranges::sort(*values_by_key, [&](auto &a, auto &b) {
-        return util::avg_value<int64_t>(a.second, nvalues) <
-               util::avg_value<int64_t>(b.second, nvalues);
+        return util::avg_value<int64_t>(a.second) <
+               util::avg_value<int64_t>(b.second);
       });
     } else {
       std::ranges::sort(*values_by_key, [&](auto &a, auto &b) {
-        return util::avg_value<uint64_t>(a.second, nvalues) <
-               util::avg_value<uint64_t>(b.second, nvalues);
+        return util::avg_value<uint64_t>(a.second) <
+               util::avg_value<uint64_t>(b.second);
       });
     }
   } else {
@@ -623,8 +589,7 @@ Result<output::Value> format(BPFtrace &bpftrace,
       continue;
     }
 
-    auto val_res = format(
-        bpftrace, c_definitions, value_type, value, nvalues, div);
+    auto val_res = format(bpftrace, c_definitions, value_type, value, div);
     if (!val_res) {
       return val_res.takeError();
     }
