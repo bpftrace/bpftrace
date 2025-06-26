@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, struct_nested_struct_named)
 {
@@ -23,6 +21,4 @@ TEST(codegen, struct_nested_struct_named)
        std::string(NAME) + "_2");
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

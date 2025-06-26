@@ -3,9 +3,7 @@
 #include "../dwarf_common.h"
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 class codegen_dwarf : public test_dwarf {};
 
@@ -15,8 +13,6 @@ TEST_F(codegen_dwarf, map_args)
   test(uprobe + "{ @ = args }", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen
 
 #endif // HAVE_LIBDW

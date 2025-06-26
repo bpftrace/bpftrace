@@ -2,13 +2,11 @@
 
 #include <iterator>
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, call_ustack)
 {
-  auto result = NAME;
+  const auto *result = NAME;
 
   test("kprobe:f { @x = ustack(); @y = ustack(6); @z = ustack(perf) }", result);
 }
@@ -76,6 +74,4 @@ kprobe:f {
   ASSERT_TRUE(bpftrace->bytecode_.hasMap(stack_type));
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

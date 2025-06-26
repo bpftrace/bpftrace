@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, intcast_call)
 {
@@ -10,6 +8,4 @@ TEST(codegen, intcast_call)
   test("kretprobe:f { @=sum((int32)retval) }", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

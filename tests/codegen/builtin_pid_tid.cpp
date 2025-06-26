@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, builtin_pid_tid)
 {
@@ -18,6 +16,4 @@ TEST(codegen, builtin_pid_tid_namespace)
   test(*bpftrace, "kprobe:f { @x = pid; @y = tid }", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

@@ -1,9 +1,7 @@
 #include "common.h"
 #include "config.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, call_join)
 {
@@ -22,6 +20,4 @@ TEST(codegen, call_join_with_debug)
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

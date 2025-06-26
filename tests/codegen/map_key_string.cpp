@@ -1,16 +1,12 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, map_key_string)
 {
-  test("kprobe:f { @x[\"a\", \"b\"] = 44 }",
+  test(R"(kprobe:f { @x["a", "b"] = 44 })",
 
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

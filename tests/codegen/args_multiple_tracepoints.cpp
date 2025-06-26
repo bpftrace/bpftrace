@@ -4,9 +4,7 @@
 using ::testing::_;
 using ::testing::Return;
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, args_multiple_tracepoints)
 {
@@ -15,6 +13,4 @@ TEST(codegen, args_multiple_tracepoints)
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

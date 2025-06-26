@@ -3,9 +3,7 @@
 
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 using ::testing::_;
 
@@ -33,6 +31,4 @@ TEST(codegen, regression_957)
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

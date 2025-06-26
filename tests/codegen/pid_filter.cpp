@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, pid_filter)
 {
@@ -12,6 +10,4 @@ TEST(codegen, pid_filter)
   test(*bpftrace, "kprobe:f { $x = 1 }", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen
