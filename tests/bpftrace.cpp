@@ -37,69 +37,6 @@ static const std::optional<int> no_pid = std::nullopt;
 
 static ast::CDefinitions no_c_defs; // Not used for tests.
 
-template <typename K, typename V>
-MapElements generate_kv_pairs(const std::vector<K> &keys,
-                              const std::vector<V> &values)
-{
-  MapElements kv_pairs;
-  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
-    std::vector<uint8_t> key_bytes(sizeof(K));
-    std::vector<uint8_t> value_bytes(sizeof(V));
-    memcpy(key_bytes.data(), &keys[i], sizeof(K));
-    memcpy(value_bytes.data(), &values[i], sizeof(V));
-    kv_pairs.emplace_back(key_bytes, value_bytes);
-  }
-  return kv_pairs;
-}
-
-template <typename K>
-MapElements generate_kv_pairs(const std::vector<K> &keys,
-                              const std::vector<std::string> &values)
-{
-  MapElements kv_pairs;
-  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
-    std::vector<uint8_t> key_bytes(sizeof(K));
-    memcpy(key_bytes.data(), &keys[i], sizeof(K));
-    std::vector<uint8_t> value_bytes(values[i].size() + 1);
-    std::copy(values[i].begin(), values[i].end(), value_bytes.begin());
-    value_bytes[values[i].size()] = '\0';
-    kv_pairs.emplace_back(key_bytes, value_bytes);
-  }
-  return kv_pairs;
-}
-
-template <typename K>
-MapElements generate_kv_pairs(const std::vector<K> &keys,
-                              const std::vector<std::vector<uint8_t>> &values)
-{
-  MapElements kv_pairs;
-  for (size_t i = 0; i < keys.size() && i < values.size(); ++i) {
-    std::vector<uint8_t> key_bytes(sizeof(K));
-    memcpy(key_bytes.data(), &keys[i], sizeof(K));
-    kv_pairs.emplace_back(key_bytes, values[i]);
-  }
-  return kv_pairs;
-}
-
-std::vector<uint8_t> generate_percpu_data(
-    const std::vector<std::pair<uint64_t, bool>> &values)
-{
-  std::vector<uint8_t> value;
-
-  value.resize(values.size() * (sizeof(uint64_t) * 2), 0);
-  for (size_t i = 0; i < values.size(); i++) {
-    auto is_set = static_cast<uint32_t>(values[i].second);
-    std::memcpy(value.data() + (i * (sizeof(uint64_t) * 2)),
-                &values[i].first,
-                sizeof(uint64_t));
-    std::memcpy(value.data() +
-                    (sizeof(uint64_t) + (i * (sizeof(uint64_t) * 2))),
-                &is_set,
-                sizeof(uint32_t));
-  }
-  return value;
-}
-
 static std::string kprobe_name(const std::string &attach_point,
                                const std::string &target,
                                uint64_t func_offset)
@@ -1058,90 +995,23 @@ TEST(bpftrace, empty_attachpoint)
   EXPECT_FALSE(ast.diagnostics().ok());
 }
 
-std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(
-    std::vector<uint64_t> key,
-    int val)
-{
-  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
-  pair.first = std::vector<uint8_t>(sizeof(uint64_t) * key.size());
-  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
-
-  uint8_t *key_data = pair.first.data();
-  uint8_t *val_data = pair.second.data();
-
-  for (size_t i = 0; i < key.size(); i++) {
-    uint64_t k = key.at(i);
-    std::memcpy(key_data + (sizeof(uint64_t) * i), &k, sizeof(k));
-  }
-  uint64_t v = val;
-  std::memcpy(val_data, &v, sizeof(v));
-
-  return pair;
-}
-
-std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(
-    std::vector<std::string> key,
-    int val)
-{
-  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
-  pair.first = std::vector<uint8_t>(STRING_SIZE * key.size());
-  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
-
-  uint8_t *key_data = pair.first.data();
-  uint8_t *val_data = pair.second.data();
-
-  for (size_t i = 0; i < key.size(); i++) {
-    strncpy(reinterpret_cast<char *>(key_data) + (STRING_SIZE * i),
-            key.at(i).c_str(),
-            STRING_SIZE);
-  }
-  uint64_t v = val;
-  std::memcpy(val_data, &v, sizeof(v));
-
-  return pair;
-}
-
-std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(
-    int myint,
-    std::string mystr,
-    int val)
-{
-  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
-  pair.first = std::vector<uint8_t>(sizeof(uint64_t) + STRING_SIZE);
-  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
-
-  uint8_t *key_data = pair.first.data();
-  uint8_t *val_data = pair.second.data();
-
-  uint64_t k = myint, v = val;
-  std::memcpy(key_data, &k, sizeof(k));
-  strncpy(reinterpret_cast<char *>(key_data) + sizeof(uint64_t),
-          mystr.c_str(),
-          STRING_SIZE);
-  std::memcpy(val_data, &v, sizeof(v));
-
-  return pair;
-}
-
 TEST(bpftrace, sort_by_key_int)
 {
   auto bpftrace = get_strict_mock_bpftrace();
 
   SizedType key_arg = CreateUInt64();
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      values_by_key = {
-        key_value_pair_int({ 2 }, 12),
-        key_value_pair_int({ 3 }, 11),
-        key_value_pair_int({ 1 }, 10),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> values_by_key = {
+    { OpaqueValue::from<uint64_t>(2), OpaqueValue::from<uint64_t>(12) },
+    { OpaqueValue::from<uint64_t>(3), OpaqueValue::from<uint64_t>(11) },
+    { OpaqueValue::from<uint64_t>(1), OpaqueValue::from<uint64_t>(10) },
+  };
   sort_by_key(key_arg, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      expected_values = {
-        key_value_pair_int({ 1 }, 10),
-        key_value_pair_int({ 2 }, 12),
-        key_value_pair_int({ 3 }, 11),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> expected_values = {
+    { OpaqueValue::from<uint64_t>(1), OpaqueValue::from<uint64_t>(10) },
+    { OpaqueValue::from<uint64_t>(2), OpaqueValue::from<uint64_t>(12) },
+    { OpaqueValue::from<uint64_t>(3), OpaqueValue::from<uint64_t>(11) },
+  };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -1153,20 +1023,36 @@ TEST(bpftrace, sort_by_key_int_int)
   SizedType key = CreateTuple(
       Struct::CreateTuple({ CreateInt64(), CreateInt64(), CreateInt64() }));
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      values_by_key = {
-        key_value_pair_int({ 5, 2, 1 }, 1), key_value_pair_int({ 5, 3, 1 }, 2),
-        key_value_pair_int({ 5, 1, 1 }, 3), key_value_pair_int({ 2, 2, 2 }, 4),
-        key_value_pair_int({ 2, 3, 2 }, 5), key_value_pair_int({ 2, 1, 2 }, 6),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> values_by_key = {
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 2, 1 }),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 3, 1 }),
+      OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 1, 1 }),
+      OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 2, 2 }),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 3, 2 }),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 1, 2 }),
+      OpaqueValue::from<uint64_t>(6) },
+  };
   sort_by_key(key, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      expected_values = {
-        key_value_pair_int({ 2, 1, 2 }, 6), key_value_pair_int({ 2, 2, 2 }, 4),
-        key_value_pair_int({ 2, 3, 2 }, 5), key_value_pair_int({ 5, 1, 1 }, 3),
-        key_value_pair_int({ 5, 2, 1 }, 1), key_value_pair_int({ 5, 3, 1 }, 2),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> expected_values = {
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 1, 2 }),
+      OpaqueValue::from<uint64_t>(6) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 2, 2 }),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 2, 3, 2 }),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 1, 1 }),
+      OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 2, 1 }),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::from<std::vector<uint64_t>>({ 5, 3, 1 }),
+      OpaqueValue::from<uint64_t>(2) },
+  };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -1176,22 +1062,20 @@ TEST(bpftrace, sort_by_key_str)
   auto bpftrace = get_strict_mock_bpftrace();
 
   SizedType key_arg = CreateString(STRING_SIZE);
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      values_by_key = {
-        key_value_pair_str({ "z" }, 1),
-        key_value_pair_str({ "a" }, 2),
-        key_value_pair_str({ "x" }, 3),
-        key_value_pair_str({ "d" }, 4),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> values_by_key = {
+    { OpaqueValue::string("z", STRING_SIZE), OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::string("a", STRING_SIZE), OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::string("x", STRING_SIZE), OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::string("d", STRING_SIZE), OpaqueValue::from<uint64_t>(4) },
+  };
   sort_by_key(key_arg, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      expected_values = {
-        key_value_pair_str({ "a" }, 2),
-        key_value_pair_str({ "d" }, 4),
-        key_value_pair_str({ "x" }, 3),
-        key_value_pair_str({ "z" }, 1),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> expected_values = {
+    { OpaqueValue::string("a", STRING_SIZE), OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::string("d", STRING_SIZE), OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::string("x", STRING_SIZE), OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::string("z", STRING_SIZE), OpaqueValue::from<uint64_t>(1) },
+  };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -1205,26 +1089,60 @@ TEST(bpftrace, sort_by_key_str_str)
                             CreateString(STRING_SIZE),
                             CreateString(STRING_SIZE) }));
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      values_by_key = {
-        key_value_pair_str({ "z", "a", "l" }, 1),
-        key_value_pair_str({ "a", "a", "m" }, 2),
-        key_value_pair_str({ "z", "c", "n" }, 3),
-        key_value_pair_str({ "a", "c", "o" }, 4),
-        key_value_pair_str({ "z", "b", "p" }, 5),
-        key_value_pair_str({ "a", "b", "q" }, 6),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> values_by_key = {
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("l", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("m", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("c", STRING_SIZE) +
+          OpaqueValue::string("n", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("c", STRING_SIZE) +
+          OpaqueValue::string("o", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("b", STRING_SIZE) +
+          OpaqueValue::string("p", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("b", STRING_SIZE) +
+          OpaqueValue::string("q", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(6) },
+  };
   sort_by_key(key, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      expected_values = {
-        key_value_pair_str({ "a", "a", "m" }, 2),
-        key_value_pair_str({ "a", "b", "q" }, 6),
-        key_value_pair_str({ "a", "c", "o" }, 4),
-        key_value_pair_str({ "z", "a", "l" }, 1),
-        key_value_pair_str({ "z", "b", "p" }, 5),
-        key_value_pair_str({ "z", "c", "n" }, 3),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> expected_values = {
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("m", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("b", STRING_SIZE) +
+          OpaqueValue::string("q", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(6) },
+    { OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("c", STRING_SIZE) +
+          OpaqueValue::string("o", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("a", STRING_SIZE) +
+          OpaqueValue::string("l", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("b", STRING_SIZE) +
+          OpaqueValue::string("p", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::string("z", STRING_SIZE) +
+          OpaqueValue::string("c", STRING_SIZE) +
+          OpaqueValue::string("n", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(3) },
+  };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -1236,20 +1154,36 @@ TEST(bpftrace, sort_by_key_int_str)
   SizedType key = CreateTuple(
       Struct::CreateTuple({ CreateUInt64(), CreateString(STRING_SIZE) }));
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      values_by_key = {
-        key_value_pair_int_str(1, "b", 1), key_value_pair_int_str(2, "b", 2),
-        key_value_pair_int_str(3, "b", 3), key_value_pair_int_str(1, "a", 4),
-        key_value_pair_int_str(2, "a", 5), key_value_pair_int_str(3, "a", 6),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> values_by_key = {
+    { OpaqueValue::from<uint64_t>(1) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::from<uint64_t>(2) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::from<uint64_t>(3) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(3) },
+    { OpaqueValue::from<uint64_t>(1) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::from<uint64_t>(2) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::from<uint64_t>(3) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(6) },
+  };
   sort_by_key(key, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      expected_values = {
-        key_value_pair_int_str(1, "a", 4), key_value_pair_int_str(1, "b", 1),
-        key_value_pair_int_str(2, "a", 5), key_value_pair_int_str(2, "b", 2),
-        key_value_pair_int_str(3, "a", 6), key_value_pair_int_str(3, "b", 3),
-      };
+  std::vector<std::pair<OpaqueValue, OpaqueValue>> expected_values = {
+    { OpaqueValue::from<uint64_t>(1) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::from<uint64_t>(1) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(1) },
+    { OpaqueValue::from<uint64_t>(2) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::from<uint64_t>(2) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(2) },
+    { OpaqueValue::from<uint64_t>(3) + OpaqueValue::string("a", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(6) },
+    { OpaqueValue::from<uint64_t>(3) + OpaqueValue::string("b", STRING_SIZE),
+      OpaqueValue::from<uint64_t>(3) },
+  };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -1549,8 +1483,13 @@ TEST(bpftrace, print_basic_map)
     std::string expected_output;
   };
 
-  const auto keys = std::vector<uint64_t>{ 1, 3, 5, 7, 9 };
-  const auto values = std::vector<uint64_t>{ 5, 10, 4, 11, 7 };
+  const MapElements key_values = {
+    { OpaqueValue::from<uint64_t>(1), OpaqueValue::from<uint64_t>(5) },
+    { OpaqueValue::from<uint64_t>(3), OpaqueValue::from<uint64_t>(10) },
+    { OpaqueValue::from<uint64_t>(5), OpaqueValue::from<uint64_t>(4) },
+    { OpaqueValue::from<uint64_t>(7), OpaqueValue::from<uint64_t>(11) },
+    { OpaqueValue::from<uint64_t>(9), OpaqueValue::from<uint64_t>(7) },
+  };
   auto map_info = MapInfo{
     .key_type = CreateInt64(),
     .value_type = CreateInt64(),
@@ -1599,10 +1538,8 @@ basic_map_4[7]: 5
     auto bpftrace = get_mock_bpftrace();
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<MapElements>(returned_kvs))));
+        .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto val = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -1622,11 +1559,19 @@ TEST(bpftrace, print_max_map)
     std::string expected_output;
   };
 
-  const auto keys = std::vector<uint64_t>{ 1, 2, 3 };
-  const auto values = std::vector<std::vector<uint8_t>>{
-    generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
-    generate_percpu_data({ { 15, false }, { 0, false }, { 12, true } }),
-    generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
+  const MapElements key_values = {
+    { OpaqueValue::from<uint64_t>(1),
+      OpaqueValue::from<std::vector<uint64_t>>({ 5, true }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 8, true }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 3, true }) },
+    { OpaqueValue::from<uint64_t>(2),
+      OpaqueValue::from<std::vector<uint64_t>>({ 15, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 0, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 12, true }) },
+    { OpaqueValue::from<uint64_t>(3),
+      OpaqueValue::from<std::vector<uint64_t>>({ 100, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 80, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 20, true }) },
   };
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
@@ -1670,10 +1615,8 @@ max_map_4[3]: 10
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
-    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<MapElements>(returned_kvs))));
+        .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -1693,13 +1636,20 @@ TEST(bpftrace, print_avg_map)
     std::string expected_output;
   };
 
-  const auto keys = std::vector<uint64_t>{ 1, 2, 3 };
-  const auto values = std::vector<std::vector<uint8_t>>{
-    generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
-    generate_percpu_data({ { 16, true }, { 0, false }, { 12, true } }),
-    generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
+  const MapElements key_values = {
+    { OpaqueValue::from<uint64_t>(1),
+      OpaqueValue::from<std::vector<uint64_t>>({ 5, true }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 8, true }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 3, true }) },
+    { OpaqueValue::from<uint64_t>(2),
+      OpaqueValue::from<std::vector<uint64_t>>({ 16, true }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 0, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 12, true }) },
+    { OpaqueValue::from<uint64_t>(3),
+      OpaqueValue::from<std::vector<uint64_t>>({ 100, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 80, false }) +
+          OpaqueValue::from<std::vector<uint64_t>>({ 20, true }) },
   };
-
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateAvg(false),
                            .detail = std::monostate{} };
@@ -1741,10 +1691,8 @@ avg_map_4[3]: 100
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
-    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<MapElements>(returned_kvs))));
+        .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -1764,8 +1712,14 @@ TEST(bpftrace, print_map_sort_by_key)
     std::string expected_output;
   };
 
-  std::vector<uint64_t> keys{ 3, 1, 2 };
-  std::vector<std::string> values{ "hello", "world", "bpftrace" };
+  const MapElements key_values = {
+    { OpaqueValue::from<uint64_t>(3),
+      OpaqueValue::string("hello", STRING_SIZE) },
+    { OpaqueValue::from<uint64_t>(1),
+      OpaqueValue::string("world", STRING_SIZE) },
+    { OpaqueValue::from<uint64_t>(2),
+      OpaqueValue::string("bpftrace", STRING_SIZE) },
+  };
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateString(32),
@@ -1807,10 +1761,8 @@ string_map_4[3]: hello
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<MapElements>(returned_kvs))));
+        .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -1830,6 +1782,10 @@ TEST(bpftrace, print_lhist_map)
     std::string expected_output;
   };
 
+  const HistogramMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), { 0, 10, 20, 30, 40, 50, 0 } },
+    { OpaqueValue::from<uint64_t>(1), { 0, 2, 2, 2, 2, 2, 0 } },
+  };
   auto map_info = MapInfo{
     .key_type = CreateInt64(),
     .value_type = CreateLhist(),
@@ -1899,13 +1855,9 @@ lhist_map_3[0]:
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    HistogramMap values_by_key = {
-      { { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-      { { 1, 0, 0, 0, 0, 0, 0, 0 }, { 0, 2, 2, 2, 2, 2, 0 } },
-    };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<HistogramMap>(values_by_key))));
+        .WillOnce(
+            testing::Return(testing::ByMove(HistogramMap(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -1925,6 +1877,10 @@ TEST(bpftrace, print_hist_map)
     std::string expected_output;
   };
 
+  const HistogramMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), { 0, 10, 20, 30, 40, 50, 0 } },
+    { OpaqueValue::from<uint64_t>(1), { 0, 2, 2, 2, 2, 2, 0 } },
+  };
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateHist(),
                            .detail = HistogramArgs{ .bits = 10 },
@@ -2002,13 +1958,9 @@ hist_map_3[0]:
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
-    HistogramMap values_by_key = {
-      { { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-      { { 1, 0, 0, 0, 0, 0, 0, 0 }, { 0, 2, 2, 2, 2, 2, 0 } },
-    };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
-        .WillOnce(testing::Return(
-            testing::ByMove(Result<HistogramMap>(values_by_key))));
+        .WillOnce(
+            testing::Return(testing::ByMove(HistogramMap(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
@@ -2029,27 +1981,28 @@ TEST(bpftrace, print_tseries_map)
   constexpr uint64_t base_time_ns = 173482610888837;
   constexpr int ns_in_ms = std::chrono::nanoseconds(1ms).count();
   constexpr int interval = ns_in_ms;
-  constexpr uint64_t first_epoch = base_time_ns / interval;
+  constexpr auto first_epoch = base_time_ns / interval;
 
-  std::vector<std::pair<EpochType, ValueType>> v1 = {
-    { (first_epoch + 1), { 1, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 2), { 2, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 3), { 3, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 4), { 4, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 5), { 5, 0, 0, 0, 0, 0, 0, 0 } },
+  std::vector<std::pair<uint64_t, OpaqueValue>> v1 = {
+    { (first_epoch + 1), OpaqueValue::from<uint64_t>(1) },
+    { (first_epoch + 2), OpaqueValue::from<uint64_t>(2) },
+    { (first_epoch + 3), OpaqueValue::from<uint64_t>(3) },
+    { (first_epoch + 4), OpaqueValue::from<uint64_t>(4) },
+    { (first_epoch + 5), OpaqueValue::from<uint64_t>(5) },
   };
 
-  std::vector<std::pair<EpochType, ValueType>> v2 = {
-    { (first_epoch + 2), { 1, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 3), { 2, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 4), { 3, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 5), { 4, 0, 0, 0, 0, 0, 0, 0 } },
-    { (first_epoch + 6), { 5, 0, 0, 0, 0, 0, 0, 0 } },
+  std::vector<std::pair<uint64_t, OpaqueValue>> v2 = {
+    { (first_epoch + 2), OpaqueValue::from<uint64_t>(1) },
+    { (first_epoch + 3), OpaqueValue::from<uint64_t>(2) },
+    { (first_epoch + 4), OpaqueValue::from<uint64_t>(3) },
+    { (first_epoch + 5), OpaqueValue::from<uint64_t>(4) },
+    { (first_epoch + 6), OpaqueValue::from<uint64_t>(5) },
   };
 
-  TSeriesMap values_by_key;
-  values_by_key[{ 0, 0, 0, 0, 0, 0, 0, 0 }] = TSeries(v1.begin(), v1.end());
-  values_by_key[{ 1, 0, 0, 0, 0, 0, 0, 0 }] = TSeries(v2.begin(), v2.end());
+  const TSeriesMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), TSeries(v1.begin(), v1.end()) },
+    { OpaqueValue::from<uint64_t>(1), TSeries(v2.begin(), v2.end()) },
+  };
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateTSeries(),
@@ -2094,7 +2047,7 @@ hh:mm:ss.ms  |___________________________________________________|
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
     EXPECT_CALL(*mock_map, collect_tseries_data(testing::_, testing::_))
-        .WillOnce(testing::Return(values_by_key));
+        .WillOnce(testing::Return(testing::ByMove(TSeriesMap(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     auto val = format(*bpftrace, no_c_defs, *mock_map);

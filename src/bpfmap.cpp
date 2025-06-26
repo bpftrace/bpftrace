@@ -59,16 +59,19 @@ bool BpfMap::is_printable() const
   return bpf_name().starts_with("AT_");
 }
 
-KeyVec BpfMap::collect_keys() const
+std::vector<OpaqueValue> BpfMap::collect_keys() const
 {
-  uint8_t *old_key = nullptr;
-  auto key = KeyType(key_size_);
-
-  // snapshot keys, then operate on them
-  KeyVec keys;
-  while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
-    keys.push_back(key);
-    old_key = key.data();
+  const void *last_key = nullptr;
+  std::vector<OpaqueValue> keys;
+  while (true) {
+    int rc = 0;
+    auto key = OpaqueValue::alloc(key_size_, [&](void *data) {
+      rc = bpf_map_get_next_key(fd(), last_key, data);
+    });
+    if (rc != 0) {
+      break;
+    }
+    last_key = keys.emplace_back(std::move(key)).data();
   }
   return keys;
 }
@@ -78,10 +81,11 @@ Result<> BpfMap::zero_out(int nvalues) const
   auto keys = collect_keys();
   auto value_size = static_cast<size_t>(value_size_) *
                     static_cast<size_t>(nvalues);
-  ValueType zero(value_size, 0);
+  auto zero = OpaqueValue::alloc(value_size, [&](void *data) {
+    memset(data, 0, value_size);
+  });
   for (auto &k : keys) {
     int err = bpf_map_update_elem(fd(), k.data(), zero.data(), BPF_EXIST);
-
     if (err && err != -ENOENT) {
       return make_error<BpfMapError>(name_, "zero", err);
     }
@@ -124,25 +128,23 @@ Result<> BpfMap::lookup_elem(const void *key, void *value) const
 
 Result<MapElements> BpfMap::collect_elements(int nvalues) const
 {
-  uint8_t *old_key = nullptr;
-  auto key = KeyType(key_size_);
+  auto keys = collect_keys();
   MapElements values_by_key;
 
-  while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
-    auto value = ValueType(static_cast<size_t>(value_size_) *
-                           static_cast<size_t>(nvalues));
-    int err = bpf_map_lookup_elem(fd(), key.data(), value.data());
+  for (auto &key : keys) {
+    int err = 0;
+    auto value = OpaqueValue::alloc(
+        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
+        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
     if (err == -ENOENT) {
       // key was removed by the eBPF program during bpf_map_get_next_key() and
-      // bpf_map_lookup_elem(), let's skip this key
+      // bpf_map_lookup_elem(), let's skip this key.
       continue;
     } else if (err) {
       return make_error<BpfMapError>(name_, "lookup", err);
     }
 
-    values_by_key.emplace_back(key, value);
-
-    old_key = key.data();
+    values_by_key.emplace_back(std::move(key), std::move(value));
   }
   return values_by_key;
 }
@@ -150,23 +152,14 @@ Result<MapElements> BpfMap::collect_elements(int nvalues) const
 Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
                                                     int nvalues) const
 {
-  uint8_t *old_key = nullptr;
-  auto key = KeyType(key_size_);
-
+  auto keys = collect_keys();
   HistogramMap values_by_key;
 
-  while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
-    auto key_prefix = KeyType(map_info.key_type.GetSize());
-    auto bucket = util::read_data<BucketUnit>(key.data() +
-                                              map_info.key_type.GetSize());
-
-    std::ranges::copy(key.begin(),
-                      key.begin() + map_info.key_type.GetSize(),
-                      key_prefix.begin());
-
-    auto value = ValueType(static_cast<size_t>(value_size_) *
-                           static_cast<size_t>(nvalues));
-    int err = bpf_map_lookup_elem(fd(), key.data(), value.data());
+  for (auto &key : keys) {
+    int err = 0;
+    auto value = OpaqueValue::alloc(
+        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
+        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
     if (err == -ENOENT) {
       // key was removed by the eBPF program during bpf_map_get_next_key() and
       // bpf_map_lookup_elem(), let's skip this key
@@ -175,17 +168,17 @@ Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
       return make_error<BpfMapError>(name_, "lookup", err);
     }
 
-    if (!values_by_key.contains(key_prefix)) {
+    auto prefix = key.slice(0, map_info.key_type.GetSize());
+    auto bucket = key.slice(map_info.key_type.GetSize(), sizeof(uint64_t));
+    if (!values_by_key.contains(prefix)) {
       // New key - create a list of buckets for it
       if (map_info.value_type.IsHistTy())
-        values_by_key[key_prefix] = BucketType(65 * 32);
+        values_by_key[prefix].resize(65 * 32, 0);
       else
-        values_by_key[key_prefix] = BucketType(1002);
+        values_by_key[prefix].resize(1002, 0);
     }
-    values_by_key[key_prefix].at(
-        bucket) = util::reduce_value<BucketUnit>(value, nvalues);
-
-    old_key = key.data();
+    auto idx = bucket.bitcast<uint64_t>();
+    values_by_key[prefix].at(idx) = util::reduce_value<uint64_t>(value);
   }
   return values_by_key;
 }
@@ -193,37 +186,30 @@ Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
 Result<TSeriesMap> BpfMap::collect_tseries_data(const MapInfo &map_info,
                                                 int nvalues) const
 {
-  uint8_t *old_key = nullptr;
-  auto key = KeyType(key_size_);
-
+  auto keys = collect_keys();
   TSeriesMap values_by_key;
 
   const auto &tseries_args = std::get<TSeriesArgs>(map_info.detail);
-  while (bpf_map_get_next_key(fd(), old_key, key.data()) == 0) {
-    auto key_prefix = std::vector<uint8_t>(map_info.key_type.GetSize());
-
-    for (size_t i = 0; i < map_info.key_type.GetSize(); i++)
-      key_prefix.at(i) = key.at(i);
-
-    auto value = std::vector<uint8_t>(static_cast<size_t>(value_size_) *
-                                      static_cast<size_t>(nvalues));
-    int err = bpf_map_lookup_elem(fd(), key.data(), value.data());
+  for (auto &key : keys) {
+    int err = 0;
+    auto value = OpaqueValue::alloc(
+        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
+        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
     if (err == -ENOENT) {
-      // key was removed by the eBPF program during bpf_get_next_key() and
-      // bpf_lookup_elem(), let's skip this key
+      // key was removed by the eBPF program during bpf_map_get_next_key() and
+      // bpf_map_lookup_elem(), let's skip this key
       continue;
     } else if (err) {
       return make_error<BpfMapError>(name_, "lookup", err);
     }
 
-    if (!values_by_key.contains(key_prefix)) {
-      values_by_key[key_prefix] = TSeries();
-    }
-
-    auto v = util::reduce_tseries_value(
-        value, nvalues, tseries_args.value_type, tseries_args.agg);
-    values_by_key[key_prefix][v.second] = v.first;
-    old_key = key.data();
+    auto prefix = key.slice(0, map_info.key_type.GetSize());
+    auto bucket = key.slice(map_info.key_type.GetSize(), sizeof(uint64_t));
+    auto tseries = values_by_key.try_emplace(prefix).first;
+    auto [epoch, v] = util::reduce_tseries_value(value,
+                                                 tseries_args.value_type,
+                                                 tseries_args.agg);
+    tseries->second.emplace(epoch, std::move(v));
   }
 
   return values_by_key;

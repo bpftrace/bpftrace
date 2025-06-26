@@ -420,9 +420,9 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
             *reinterpret_cast<int32_t *>(arg_data + arg.offset + 12))));
         break;
       case Type::inet:
-        arg_values.push_back(std::make_unique<PrintableString>(resolve_inet(
-            *reinterpret_cast<int64_t *>(arg_data + arg.offset),
-            reinterpret_cast<uint8_t *>(arg_data + arg.offset + 8))));
+        arg_values.push_back(std::make_unique<PrintableString>(
+            resolve_inet(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
+                         reinterpret_cast<char *>(arg_data + arg.offset + 8))));
         break;
       case Type::username:
         arg_values.push_back(std::make_unique<PrintableString>(
@@ -463,7 +463,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
       case Type::mac_address:
         arg_values.push_back(
             std::make_unique<PrintableString>(resolve_mac_address(
-                reinterpret_cast<uint8_t *>(arg_data + arg.offset))));
+                reinterpret_cast<char *>(arg_data + arg.offset))));
         break;
       case Type::cgroup_path_t:
         arg_values.push_back(std::make_unique<PrintableString>(
@@ -1267,11 +1267,6 @@ std::string BPFtrace::format_timestamp(
   return timestr;
 }
 
-std::string BPFtrace::resolve_buf(const char *buf, size_t size)
-{
-  return util::hex_format_buffer(buf, size);
-}
-
 std::string BPFtrace::resolve_ksym(uint64_t addr)
 {
   auto syms = resolve_ksym_stack(addr, false, false, false);
@@ -1341,7 +1336,7 @@ int BPFtrace::resolve_uname(const std::string &name,
   return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
 }
 
-std::string BPFtrace::resolve_mac_address(const uint8_t *mac_addr) const
+std::string BPFtrace::resolve_mac_address(const char *mac_addr) const
 {
   const size_t SIZE = 18;
   char addr[SIZE];
@@ -1377,21 +1372,21 @@ uint64_t BPFtrace::read_address_from_output(std::string output)
   return std::stoull(first_word, nullptr, 16);
 }
 
-static std::string resolve_inetv4(const uint8_t *inet)
+static std::string resolve_inetv4(const char *inet)
 {
   char addr_cstr[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, inet, addr_cstr, INET_ADDRSTRLEN);
   return addr_cstr;
 }
 
-static std::string resolve_inetv6(const uint8_t *inet)
+static std::string resolve_inetv6(const char *inet)
 {
   char addr_cstr[INET6_ADDRSTRLEN];
   inet_ntop(AF_INET6, inet, addr_cstr, INET6_ADDRSTRLEN);
   return addr_cstr;
 }
 
-std::string BPFtrace::resolve_inet(int af, const uint8_t *inet) const
+std::string BPFtrace::resolve_inet(int af, const char *inet) const
 {
   std::string addrstr;
   switch (af) {
