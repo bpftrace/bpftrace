@@ -47,6 +47,7 @@ add_executable(bpftrace_test
   macro_expansion.cpp
   main.cpp
   mocks.cpp
+  opaque.cpp
   output.cpp
   parser.cpp
   portability_analyser.cpp
