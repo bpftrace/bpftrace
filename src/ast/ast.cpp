@@ -116,6 +116,40 @@ std::string opstr(const Unop &unop)
   return {}; // unreached
 }
 
+bool is_comparison_op(Operator op)
+{
+  switch (op) {
+    case Operator::EQ:
+    case Operator::NE:
+    case Operator::LE:
+    case Operator::GE:
+    case Operator::LT:
+    case Operator::GT:
+    case Operator::LAND:
+    case Operator::LOR:
+      return true;
+    case Operator::PLUS:
+    case Operator::MINUS:
+    case Operator::MUL:
+    case Operator::DIV:
+    case Operator::MOD:
+    case Operator::BAND:
+    case Operator::BOR:
+    case Operator::BXOR:
+    case Operator::LEFT:
+    case Operator::RIGHT:
+    case Operator::INVALID:
+    case Operator::ASSIGN:
+    case Operator::INCREMENT:
+    case Operator::DECREMENT:
+    case Operator::LNOT:
+    case Operator::BNOT:
+      return false;
+  }
+
+  return false; // unreached
+}
+
 AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
                                                 const std::string &match) const
 {

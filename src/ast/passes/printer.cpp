@@ -35,6 +35,12 @@ void Printer::visit(NegativeInteger &integer)
   out_ << indent << "signed int: " << integer.value << std::endl;
 }
 
+void Printer::visit(Boolean &boolean)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "bool: " << (boolean.value ? "true" : "false") << std::endl;
+}
+
 void Printer::visit(PositionalParameter &param)
 {
   std::string indent(depth_, ' ');
@@ -330,6 +336,8 @@ void Printer::visit(AssignConfigVarStatement &assignment)
       [&](auto &v) {
         if constexpr (std::is_same_v<std::decay_t<decltype(v)>, std::string>) {
           out_ << indentVar << "string: " << v << std::endl;
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(v)>, bool>) {
+          out_ << indentVar << "bool: " << (v ? "true" : "false") << std::endl;
         } else {
           out_ << indentVar << "int: " << v << std::endl;
         }

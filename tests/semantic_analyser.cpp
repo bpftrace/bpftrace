@@ -441,6 +441,8 @@ BEGIN { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } }
 
 TEST(semantic_analyser, if_statements)
 {
+  test("kprobe:f { if(true) { 123 } }");
+  test("kprobe:f { if(false) { 123 } }");
   test("kprobe:f { if(1) { 123 } }");
   test("kprobe:f { if(1) { 123 } else { 456 } }");
   test("kprobe:f { if(0) { 123 } else if(1) { 456 } else { 789 } }");
@@ -476,6 +478,7 @@ TEST(semantic_analyser, ternary_expressions)
   // map aggregate functions and builtins
   std::unordered_map<std::string, std::string> supported_types = {
     { "1", "2" },
+    { "true", "false" },
     { "\"lo\"", "\"high\"" },
     { "(\"hi\", 1)", "(\"bye\", 2)" },
     { "printf(\"lo\")", "exit()" },
@@ -1897,6 +1900,7 @@ TEST(semantic_analyser, unop_not)
 TEST(semantic_analyser, unop_lnot)
 {
   test("kprobe:f { !0; }");
+  test("kprobe:f { !false; }");
   test("kprobe:f { !(int32)0; }");
   test("struct X { int n; } kprobe:f { $x = (struct X*)0; !$x; }", 2);
   test("struct X { int n; } kprobe:f { $x = *(struct X*)0; !$x; }", 2);
@@ -2567,6 +2571,27 @@ struct mytype { int field; } BEGIN { (struct mytype)cpu }
 )");
 }
 
+TEST(semantic_analyser, cast_bool)
+{
+  test("kprobe:f { $a = (bool)1; }");
+  test("kprobe:f { $a = (bool)\"str\"; }");
+  test("kprobe:f { $a = (bool)comm; }");
+  test("kprobe:f { $a = (int64 *)0; $b = (bool)$a; }");
+  test("kprobe:f { $a = (int64)true; $b = (int64)false; }");
+
+  test_error("kprobe:f { $a = (bool)kstack; }", R"(
+stdin:1:17-23: ERROR: Cannot cast from "kstack" to "bool"
+kprobe:f { $a = (bool)kstack; }
+                ~~~~~~
+)");
+
+  test_error("kprobe:f { $a = (bool)pton(\"127.0.0.1\"); }", R"(
+stdin:1:17-23: ERROR: Cannot cast from "uint8[4]" to "bool"
+kprobe:f { $a = (bool)pton("127.0.0.1"); }
+                ~~~~~~
+)");
+}
+
 TEST(semantic_analyser, field_access)
 {
   std::string structs = "struct type1 { int field; }";
@@ -3039,10 +3064,20 @@ TEST(semantic_analyser, intarray_cast_types)
   test("kretprobe:f { @ = (int8[8])retval }");
 
   test("kprobe:f { @ = (int8[4])1 }", 1);
-  test("kprobe:f { @ = (bool[64])1 }", 1);
   test("kprobe:f { @ = (int32[])(int16)1 }", 1);
   test("kprobe:f { @ = (int8[6])\"hello\" }", 1);
+
   test("struct Foo { int x; } kprobe:f { @ = (struct Foo [2])1 }", 1);
+}
+
+TEST(semantic_analyser, bool_array_cast_types)
+{
+  test("kprobe:f { @ = (bool[8])1 }");
+  test("kprobe:f { @ = (bool[4])(uint32)1 }");
+  test("kprobe:f { @ = (bool[2])(uint16)1 }");
+
+  test("kprobe:f { @ = (bool[4])1 }", 1);
+  test("kprobe:f { @ = (bool[64])1 }", 1);
 }
 
 TEST(semantic_analyser, intarray_cast_usage)

@@ -347,6 +347,9 @@ the type upon declaration.
 |*Type*
 |*Description*
 
+|bool
+|`true` or `false`
+
 |uint8
 |Unsigned 8 bit integer
 
@@ -3813,17 +3816,17 @@ If there are many processes running, it will consume a lot of a memory.
 
 ==== cpp_demangle
 
-Default: 1
+Default: true
 
 C++ symbol demangling in userspace stack traces is enabled by default.
 
-This feature can be turned off by setting the value of this environment variable to `0`.
+This feature can be turned off by setting the value of this variable to `false`.
 
 ==== lazy_symbolication
 
-Default: 0
+Default: false
 
-For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
+For user space symbols, symbolicate lazily/on-demand (`true`) or symbolicate everything ahead of time (`false`).
 
 ==== license
 
@@ -3907,7 +3910,7 @@ The tradeoff is that bpftrace will use more memory.
 
 ==== show_debug_info
 
-This is only available if the link:https://github.com/libbpf/blazesym[Blazesym] library is available at build time. If it is available this defaults to 1, meaning that when printing ustack and kstack symbols bpftrace will also show (if debug info is available) symbol file and line ('bpftrace' stack mode) and a label if the function was inlined ('bpftrace' and 'perf' stack modes).
+This is only available if the link:https://github.com/libbpf/blazesym[Blazesym] library is available at build time. If it is available this defaults to `true`, meaning that when printing ustack and kstack symbols bpftrace will also show (if debug info is available) symbol file and line ('bpftrace' stack mode) and a label if the function was inlined ('bpftrace' and 'perf' stack modes).
 There might be a performance difference when symbolicating, which is the only reason to disable this.
 
 ==== stack_mode
@@ -3932,9 +3935,9 @@ Set to empty string to disable truncation trailers.
 
 ==== print_maps_on_exit
 
-Default: 1
+Default: true
 
-Controls whether maps are printed on exit. Set to `0` in order to change the default behavior and not automatically print maps at program exit.
+Controls whether maps are printed on exit. Set to `false` in order to change the default behavior and not automatically print maps at program exit.
 
 ==== unstable_macro
 

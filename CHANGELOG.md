@@ -24,6 +24,8 @@ and this project adheres to
   - [#3974](https://github.com/bpftrace/bpftrace/pull/3974)
 - Require kernel uprobe ref counting to be available for USDTs with semaphores
   - [#4199](https://github.com/bpftrace/bpftrace/pull/4199)
+- `strcontains` and `has_key` now return boolean values instead of 1 and 0
+  - [#4280](https://github.com/bpftrace/bpftrace/pull/4280)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)
@@ -57,6 +59,8 @@ and this project adheres to
   - [#4250](https://github.com/bpftrace/bpftrace/pull/4250)
 - Add `pid` and `tid` functions for choosing between the initial or the current namespace
   - [#4254](https://github.com/bpftrace/bpftrace/pull/4254)
+- Add boolean values (`true` and `false`)
+  - [#4280](https://github.com/bpftrace/bpftrace/pull/4280)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
