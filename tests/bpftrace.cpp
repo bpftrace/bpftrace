@@ -1441,9 +1441,8 @@ TEST(bpftrace, print_basic_map)
     std::string expected_output;
   };
 
-  auto keys = std::vector<uint64_t>{ 1, 3, 5, 7, 9 };
-  auto values = std::vector<uint64_t>{ 5, 10, 4, 11, 7 };
-  auto returned_kvs = generate_kv_pairs(keys, values);
+  const auto keys = std::vector<uint64_t>{ 1, 3, 5, 7, 9 };
+  const auto values = std::vector<uint64_t>{ 5, 10, 4, 11, 7 };
   auto map_info = MapInfo{
     .key_type = CreateInt64(),
     .value_type = CreateInt64(),
@@ -1493,8 +1492,10 @@ basic_map_4[7]: 5
     auto bpftrace = get_mock_bpftrace();
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
+    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(returned_kvs));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
@@ -1511,14 +1512,12 @@ TEST(bpftrace, print_max_map)
     std::string expected_output;
   };
 
-  auto keys = std::vector<uint64_t>{ 1, 2, 3 };
-  auto values = std::vector<std::vector<uint8_t>>{
+  const auto keys = std::vector<uint64_t>{ 1, 2, 3 };
+  const auto values = std::vector<std::vector<uint8_t>>{
     generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
     generate_percpu_data({ { 15, false }, { 0, false }, { 12, true } }),
     generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
   };
-
-  auto returned_kvs = generate_kv_pairs(keys, values);
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateMax(false),
@@ -1562,8 +1561,10 @@ max_map_4[3]: 10
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(returned_kvs));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
@@ -1580,14 +1581,12 @@ TEST(bpftrace, print_avg_map)
     std::string expected_output;
   };
 
-  auto keys = std::vector<uint64_t>{ 1, 2, 3 };
-  auto values = std::vector<std::vector<uint8_t>>{
+  const auto keys = std::vector<uint64_t>{ 1, 2, 3 };
+  const auto values = std::vector<std::vector<uint8_t>>{
     generate_percpu_data({ { 5, true }, { 8, true }, { 3, true } }),
     generate_percpu_data({ { 16, true }, { 0, false }, { 12, true } }),
     generate_percpu_data({ { 100, false }, { 80, false }, { 20, true } }),
   };
-
-  auto returned_kvs = generate_kv_pairs(keys, values);
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateAvg(false),
@@ -1635,8 +1634,10 @@ avg_map_4[3]: 100
     bpftrace->ncpus_ = 3;
     auto mock_map = std::make_unique<MockBpfMap>(
         libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(returned_kvs));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
@@ -1656,7 +1657,6 @@ TEST(bpftrace, print_map_sort_by_key)
 
   std::vector<uint64_t> keys{ 3, 1, 2 };
   std::vector<std::string> values{ "hello", "world", "bpftrace" };
-  auto returned_kvs = generate_kv_pairs(keys, values);
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateString(32),
@@ -1699,8 +1699,10 @@ string_map_4[3]: hello
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
+    auto returned_kvs = generate_kv_pairs(keys, values);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
-        .WillOnce(testing::Return(returned_kvs));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
@@ -1716,11 +1718,6 @@ TEST(bpftrace, print_lhist_map)
     uint32_t top;
     uint32_t div;
     std::string expected_output;
-  };
-
-  HistogramMap values_by_key = {
-    { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-    { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
   };
 
   auto map_info = MapInfo{
@@ -1794,8 +1791,13 @@ lhist_map_3:
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
+    HistogramMap values_by_key = {
+      { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+      { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+    };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
-        .WillOnce(testing::Return(values_by_key));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<HistogramMap>(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
@@ -1811,11 +1813,6 @@ TEST(bpftrace, print_hist_map)
     uint32_t top;
     uint32_t div;
     std::string expected_output;
-  };
-
-  HistogramMap values_by_key = {
-    { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-    { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
   };
 
   auto map_info = MapInfo{ .key_type = CreateInt64(),
@@ -1897,8 +1894,13 @@ hist_map_3:
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
+    HistogramMap values_by_key = {
+      { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+      { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+    };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
-        .WillOnce(testing::Return(values_by_key));
+        .WillOnce(testing::Return(
+            testing::ByMove(Result<HistogramMap>(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
