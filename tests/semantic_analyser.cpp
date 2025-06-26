@@ -4385,7 +4385,7 @@ TEST(semantic_analyser, for_loop_variables_read_only)
        R"(*
   for
    ctx
-    $var :: [int64 *, AS(bpf)]
+    $var :: [int64 *, AS(kernel)]
    decl
 *)");
 }
@@ -4404,7 +4404,7 @@ TEST(semantic_analyser, for_loop_variables_modified_during_loop)
        R"(*
   for
    ctx
-    $var :: [int64 *, AS(bpf)]
+    $var :: [int64 *, AS(kernel)]
    decl
 *)");
 }
@@ -4442,8 +4442,8 @@ TEST(semantic_analyser, for_loop_variables_multiple)
        R"(*
   for
    ctx
-    $var1 :: [int64 *, AS(bpf)]
-    $var3 :: [string[4] *, AS(bpf)]
+    $var1 :: [int64 *, AS(kernel)]
+    $var3 :: [string[4] *, AS(kernel)]
    decl
 *)");
 }
