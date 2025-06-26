@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, builtin_numaid)
 {
@@ -11,6 +9,4 @@ TEST(codegen, builtin_numaid)
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

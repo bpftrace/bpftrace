@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, fentry_recursion_check)
 {
@@ -23,6 +21,4 @@ TEST(codegen, fentry_recursion_check_with_predicate)
   test(*bpftrace, "fentry:queued_spin_lock_slowpath / pid == 1234 / { }", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

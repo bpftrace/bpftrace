@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, pred_binop)
 {
@@ -11,6 +9,4 @@ TEST(codegen, pred_binop)
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

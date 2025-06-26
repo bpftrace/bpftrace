@@ -4,9 +4,7 @@
 using ::testing::_;
 using ::testing::Return;
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, strncmp_one_literal)
 {
@@ -34,6 +32,4 @@ TEST(codegen, string_not_equal_comparison)
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

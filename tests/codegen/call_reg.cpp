@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 #ifdef __x86_64__
 TEST(codegen, call_reg) // Identical to builtin_func apart from variable names
@@ -13,6 +11,4 @@ TEST(codegen, call_reg) // Identical to builtin_func apart from variable names
 }
 #endif
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

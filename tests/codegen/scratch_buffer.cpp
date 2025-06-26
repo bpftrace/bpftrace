@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 static constexpr uint64_t SMALL_ON_STACK_LIMIT = 0;
 static constexpr uint64_t LARGE_ON_STACK_LIMIT = 128;
@@ -36,14 +34,14 @@ TEST(codegen, tuple_stack)
 
 TEST(codegen, fmt_str_args_scratch_buf)
 {
-  test_stack_or_scratch_buffer("kprobe:f { printf(\"%s %d\\n\", \"xxxx\", 1) }",
+  test_stack_or_scratch_buffer(R"(kprobe:f { printf("%s %d\n", "xxxx", 1) })",
                                NAME,
                                SMALL_ON_STACK_LIMIT);
 }
 
 TEST(codegen, fmt_str_args_stack)
 {
-  test_stack_or_scratch_buffer("kprobe:f { printf(\"%s %d\\n\", \"xxxx\", 1) }",
+  test_stack_or_scratch_buffer(R"(kprobe:f { printf("%s %d\n", "xxxx", 1) })",
                                NAME,
                                LARGE_ON_STACK_LIMIT);
 }
@@ -81,7 +79,7 @@ TEST(codegen, map_value_int_stack)
 TEST(codegen, map_value_tuple_scratch_buf)
 {
   test_stack_or_scratch_buffer(
-      "kprobe:f { @x = (\"xxx\", 1); @x = (\"xxxxxxx\", 1); @y = @x }",
+      R"(kprobe:f { @x = ("xxx", 1); @x = ("xxxxxxx", 1); @y = @x })",
       NAME,
       SMALL_ON_STACK_LIMIT);
 }
@@ -89,7 +87,7 @@ TEST(codegen, map_value_tuple_scratch_buf)
 TEST(codegen, map_value_tuple_stack)
 {
   test_stack_or_scratch_buffer(
-      "kprobe:f { @x = (\"xxx\", 1); @x = (\"xxxxxxx\", 1); @y = @x }",
+      R"(kprobe:f { @x = ("xxx", 1); @x = ("xxxxxxx", 1); @y = @x })",
       NAME,
       LARGE_ON_STACK_LIMIT);
 }
@@ -157,6 +155,4 @@ TEST(codegen, probe_str_stack)
                                LARGE_ON_STACK_LIMIT);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

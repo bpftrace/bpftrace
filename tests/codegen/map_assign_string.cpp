@@ -1,8 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, map_assign_string)
 {
@@ -13,11 +11,9 @@ TEST(codegen, map_assign_string)
 
 TEST(codegen, map_assign_string_shorter)
 {
-  test("kprobe:f { @x = \"xxxxx\"; @x = \"a\"; }",
+  test(R"(kprobe:f { @x = "xxxxx"; @x = "a"; })",
 
        NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

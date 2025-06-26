@@ -1,9 +1,7 @@
 #include "../mocks.h"
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 TEST(codegen, strcontains)
 {
@@ -20,6 +18,4 @@ TEST(codegen, strcontains_no_literals)
   test(R"(k:foo { strcontains(str(arg0), str(arg1)) })", NAME);
 }
 
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen

@@ -1,10 +1,6 @@
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
-
-namespace call_len {
+namespace bpftrace::test::codegen::call_len {
 constexpr auto PROG = "BEGIN { @x[1] = 1; } kprobe:f { $s = len(@x); }";
 
 TEST_F(codegen_btf, call_len_for_each_map_elem)
@@ -30,8 +26,4 @@ TEST_F(codegen_btf, call_len_ustack_kstack)
   test("kprobe:f { @x = len(ustack); @y = len(kstack); }", NAME);
 }
 
-} // namespace call_len
-
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen::call_len

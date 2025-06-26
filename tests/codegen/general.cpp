@@ -5,9 +5,7 @@
 #include "ast/context.h"
 #include "common.h"
 
-namespace bpftrace {
-namespace test {
-namespace codegen {
+namespace bpftrace::test::codegen {
 
 using ::testing::_;
 
@@ -36,12 +34,12 @@ public:
   }
 
   bool is_traceable_func(
-      const std::string &__attribute__((unused))) const override
+      const std::string &__attribute__((unused)) /*func_name*/) const override
   {
     return true;
   }
 
-  bool has_kprobe_multi(void)
+  bool has_kprobe_multi()
   {
     return feature_->has_kprobe_multi();
   }
@@ -114,6 +112,4 @@ kprobe:f { 1; } kprobe:d { 1; }
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 }
-} // namespace codegen
-} // namespace test
-} // namespace bpftrace
+} // namespace bpftrace::test::codegen
