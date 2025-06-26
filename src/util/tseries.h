@@ -1,16 +1,15 @@
 #pragma once
 
-#include <cstdint>
 #include <cstring>
-#include <vector>
 
+#include "bpfmap.h"
 #include "types.h"
+#include "util/opaque.h"
 
 namespace bpftrace::util {
 
-std::pair<std::vector<uint8_t>, uint64_t> reduce_tseries_value(
-    const std::vector<uint8_t> &values,
-    int nvalues,
+std::pair<uint64_t, OpaqueValue> reduce_tseries_value(
+    const OpaqueValue &value,
     const SizedType &value_type,
     TSeriesAggFunc agg);
 
