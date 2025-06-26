@@ -68,7 +68,9 @@ stats<T> stats_value(const std::vector<uint8_t> &value, int nvalues)
     ret.count += cpu_count;
     ret.total += val;
   }
-  ret.avg = static_cast<T>(ret.total / ret.count);
+  if (ret.count > 0) {
+    ret.avg = static_cast<T>(ret.total / ret.count);
+  }
   return ret;
 }
 
