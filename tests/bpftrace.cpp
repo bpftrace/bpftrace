@@ -1792,8 +1792,8 @@ lhist_map_3:
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
     HistogramMap values_by_key = {
-      { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-      { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+      { { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+      { { 1, 0, 0, 0, 0, 0, 0, 0 }, { 0, 2, 2, 2, 2, 2, 0 } },
     };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
         .WillOnce(testing::Return(
@@ -1895,8 +1895,8 @@ hist_map_3:
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
     HistogramMap values_by_key = {
-      { { 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
-      { { 1 }, { 0, 2, 2, 2, 2, 2, 0 } },
+      { { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 10, 20, 30, 40, 50, 0 } },
+      { { 1, 0, 0, 0, 0, 0, 0, 0 }, { 0, 2, 2, 2, 2, 2, 0 } },
     };
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
         .WillOnce(testing::Return(
