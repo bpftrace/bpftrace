@@ -112,7 +112,9 @@ TEST(resource_analyser, fmt_string_args_non_map_print_arr)
       R"(struct Foo { char a[24]; } begin { print(5); $foo = (struct Foo *)0; print($foo->a) })",
       true,
       &resources);
-  EXPECT_EQ(resources.max_fmtstring_args_size, 40);
+
+  // See clang_parser.cpp; the increase signal well-formedness.
+  EXPECT_EQ(resources.max_fmtstring_args_size, 40U + 1U);
 }
 
 } // namespace bpftrace::test::resource_analyser

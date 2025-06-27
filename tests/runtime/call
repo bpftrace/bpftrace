@@ -92,7 +92,7 @@ NAME str_truncated
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5
 AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
-EXPECT_REGEX P: /...\.\.
+EXPECT_REGEX P: /....\.\.
 
 NAME explicit string truncation
 PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(str(args.argv[1], 5)); exit(); }
@@ -103,7 +103,7 @@ NAME str_truncated_custom
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
 AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
-EXPECT_REGEX P: /..._xxx
+EXPECT_REGEX P: /...._xxx
 
 NAME str_big
 PROG t:syscalls:sys_enter_execve { @[str(args.filename)] = count() }

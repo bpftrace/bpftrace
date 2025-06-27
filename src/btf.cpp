@@ -449,7 +449,13 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     const auto &elem_type = get_stype(
         BTFId{ .btf = btf_id.btf, .id = array->type });
     if (elem_type.IsIntTy() && elem_type.GetSize() == 1) {
-      stype = CreateString(array->nelems);
+      // Note that we allocate an extra element in this case, since it is
+      // necessary for the frontend to detect when a well-formed string is
+      // stored versus a non-well-formed string. We consider the array to be
+      // well-formed even if it does not contain a NUL-terminator, since it has
+      // a known size up front. However, our string must store the terminator
+      // to signal that it is well-formed.
+      stype = CreateString(array->nelems + 1);
     } else {
       stype = CreateArray(array->nelems, elem_type);
     }

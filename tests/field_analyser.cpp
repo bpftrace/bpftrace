@@ -159,8 +159,12 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
   EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
 
+  // See type construction in btf.cpp; for fixed sized fields our string type
+  // has an extra character because we need to be able to signal that it is
+  // well-formed (including the NUL), even if the field itself contains no NUL
+  // character, because the field has a known fixed size.
   EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
-  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U + 1U);
   EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
 
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());

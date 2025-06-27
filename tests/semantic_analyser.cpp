@@ -1352,7 +1352,11 @@ TEST_F(SemanticAnalyserTest, call_str_2_lit)
 
   auto *x =
       ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateString(3), x->var()->var_type);
+
+  // N.B. the string buffer is 1 larger than the parameter passed to the `str`
+  // function, since it needs to be capable of signalling well-formedness to
+  // the runtime while having a string of length 3.
+  EXPECT_EQ(CreateString(4), x->var()->var_type);
 }
 
 TEST_F(SemanticAnalyserTest, call_str_2_expr)
@@ -1687,7 +1691,7 @@ TEST_F(SemanticAnalyserTest, call_stack)
 TEST_F(SemanticAnalyserTest, call_macaddr)
 {
   std::string structs = "struct mac { char addr[6]; }; "
-                        "struct invalid { char addr[7]; }; ";
+                        "struct invalid { char addr[4]; }; ";
 
   test("kprobe:f { macaddr(arg0); }");
 
@@ -1703,7 +1707,7 @@ TEST_F(SemanticAnalyserTest, call_macaddr)
   test(structs + "kprobe:f { macaddr(*(struct mac*)arg0); }", Error{});
 
   test("kprobe:f { macaddr(); }", Error{});
-  test("kprobe:f { macaddr(\"hello\"); }", Error{});
+  test("kprobe:f { macaddr(\"foo\"); }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, call_bswap)
@@ -2195,15 +2199,16 @@ TEST_F(SemanticAnalyserTest, printf_format_string)
   test("kprobe:f { printf(\"str: %s\", str(arg0)) }");
   test(R"(kprobe:f { @x = "hi"; printf("str: %s", @x) })");
   test(R"(kprobe:f { $x = "hi"; printf("str: %s", $x) })");
+
+  // Most types support automatic string conversion.
+  test("kprobe:f { printf(\"%s\", 1234) }");
+  test("kprobe:f { printf(\"%s\", arg0) }");
 }
 
 TEST_F(SemanticAnalyserTest, printf_bad_format_string)
 {
   test(R"(kprobe:f { printf("%d", "mystr") })", Error{});
   test("kprobe:f { printf(\"%d\", str(arg0)) }", Error{});
-
-  test("kprobe:f { printf(\"%s\", 1234) }", Error{});
-  test("kprobe:f { printf(\"%s\", arg0) }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, printf_format_buf)
@@ -2981,13 +2986,6 @@ TEST_F(SemanticAnalyserTest, enums)
   test("enum named { a = 1, b } kprobe:f { printf(\"%s\", a); }");
   test("enum named { a = 1, b } kprobe:f { $e = a; printf(\"%s\", $e); }");
   test("enum named { a = 1, b } kprobe:f { printf(\"%15s %-15s\", a, a); }");
-
-  // Cannot symbolize a non-enum
-  test("kprobe:f { $x = (uint8)1; printf(\"%s\", $x) }", Error{ R"(
-stdin:1:27-43: ERROR: printf: %s specifier expects a value of type string (int supplied)
-kprobe:f { $x = (uint8)1; printf("%s", $x) }
-                          ~~~~~~~~~~~~~~~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, enum_casts)
@@ -5568,6 +5566,16 @@ stdin:1:28-56: ERROR: Type mismatch for $x: trying to assign value of type 'int3
 kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }
                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
+}
+
+TEST_F(SemanticAnalyserTest, printf_str_conversion)
+{
+  // %s just uses the default text output representation, and therefore can
+  // print any type that can be serialized.
+  test("kprobe:f { $x = (uint8)1; printf(\"%s\", $x) }");
+  test("kprobe:f { $x = (uint8*)0; printf(\"%s\", $x) }");
+  test("kprobe:f { $x = (1, 1); printf(\"%s\", $x) }");
+  test(R"(kprobe:f { $x = "foo"; printf("%s", $x) })");
 }
 
 } // namespace bpftrace::test::semantic_analyser

@@ -192,7 +192,8 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
         if (dwarf_tag(&inner_type_die) == DW_TAG_base_type &&
             (inner_enc == DW_ATE_signed_char ||
              inner_enc == DW_ATE_unsigned_char))
-          result = CreateString(size);
+          // See btf.cpp; we need to signal well-formedness.
+          result = CreateString(size + 1);
         else
           result = CreateArray(size, inner_type);
         inner_type = result;

@@ -19,7 +19,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !50 {
 entry:
   %"@mystr_key" = alloca i64, align 8
-  %"struct Foo.str" = alloca [32 x i8], align 1
+  %"struct Foo.str" = alloca [33 x i8], align 1
   %"$foo" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i64 0, ptr %"$foo", align 8
@@ -32,7 +32,7 @@ entry:
   %5 = call ptr @llvm.preserve.static.offset(ptr %4)
   %6 = getelementptr i8, ptr %5, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.str")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 32, ptr %6)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 33, ptr %6)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@mystr_key")
   store i64 0, ptr %"@mystr_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_mystr, ptr %"@mystr_key", ptr %"struct Foo.str", i64 0)
@@ -80,9 +80,9 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !20 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !22, size: 64, offset: 192)
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
-!23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 256, elements: !24)
+!23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 264, elements: !24)
 !24 = !{!25}
-!25 = !DISubrange(count: 32, lowerBound: 0)
+!25 = !DISubrange(count: 33, lowerBound: 0)
 !26 = !DIGlobalVariableExpression(var: !27, expr: !DIExpression())
 !27 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !28, isLocal: false, isDefinition: true)
 !28 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !29)
