@@ -4090,51 +4090,51 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                          const std::string &call_name,
                                          async_action::AsyncAction async_action)
 {
-  // perf event output has: uint64_t id, vargs
-  // The id maps to bpftrace_.*_args_, and is a way to define the
-  // types and offsets of each of the arguments, and share that between BPF and
-  // user-space for printing.
-  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
-
+  std::vector<llvm::Type *> elements;
   const auto &args = std::get<1>(call_args.at(id));
   for (const Field &arg : args) {
     llvm::Type *ty = b_.GetType(arg.type);
     elements.push_back(ty);
   }
-  StructType *fmt_struct = StructType::create(elements,
-                                              call_name + "_t",
-                                              false);
-  int struct_size = datalayout().getTypeAllocSize(fmt_struct);
 
-  // Check that offsets created during resource analysis match what LLVM
-  // expects. This is just a guard rail against bad padding analysis logic.
-  const auto *struct_layout = datalayout().getStructLayout(fmt_struct);
-  for (size_t i = 0; i < args.size(); i++) {
-    auto offset = static_cast<size_t>(args[i].offset);
-    // +1 for the id field
-    size_t expected_offset = struct_layout->getElementOffset(i + 1);
-    if (offset != expected_offset)
-      LOG(BUG) << "Calculated offset=" << offset
-               << " does not match LLVM offset=" << expected_offset;
+  // perf event output has: uint64_t id, vargs
+  // The id maps to bpftrace_.*_args_, and is a way to define the
+  // types and offsets of each of the arguments, and share that between BPF and
+  // user-space for printing.
+  std::vector<llvm::Type *> ringbuf_elems = { b_.getInt64Ty() };
+  StructType *fmt_struct = nullptr;
+  if (!elements.empty()) {
+    fmt_struct = StructType::create(elements, call_name + "_args_t", false);
+    ringbuf_elems.push_back(fmt_struct);
   }
+  StructType *ringbuf_struct = StructType::create(ringbuf_elems,
+                                                  call_name + "_t",
+                                                  false);
 
-  Value *fmt_args = b_.CreateGetFmtStringArgsAllocation(fmt_struct,
+  int struct_size = datalayout().getTypeAllocSize(ringbuf_struct);
+  Value *fmt_args = b_.CreateGetFmtStringArgsAllocation(ringbuf_struct,
                                                         call_name + "_args",
                                                         call.loc);
   // The struct is not packed so we need to memset it
   b_.CreateMemsetBPF(fmt_args, b_.getInt8(0), struct_size);
 
-  Value *id_offset = b_.CreateGEP(fmt_struct,
+  Value *id_offset = b_.CreateGEP(ringbuf_struct,
                                   fmt_args,
                                   { b_.getInt32(0), b_.getInt32(0) });
   b_.CreateStore(b_.getInt64(id + static_cast<int>(async_action)), id_offset);
+  Value *fmt_offset = nullptr;
+  if (fmt_struct) {
+    fmt_offset = b_.CreateGEP(ringbuf_struct,
+                              fmt_args,
+                              { b_.getInt32(0), b_.getInt32(1) });
+  }
 
   for (size_t i = 1; i < call.vargs.size(); i++) {
     Expression &arg = call.vargs.at(i);
     auto scoped_arg = visit(arg);
     Value *offset = b_.CreateGEP(fmt_struct,
-                                 fmt_args,
-                                 { b_.getInt32(0), b_.getInt32(i) });
+                                 fmt_offset,
+                                 { b_.getInt32(0), b_.getInt32(i - 1) });
     if (needMemcpy(arg.type()))
       b_.CreateMemcpyBPF(offset, scoped_arg.value(), arg.type().GetSize());
     else if (arg.type().IsIntegerTy() && arg.type().GetSize() < 8)

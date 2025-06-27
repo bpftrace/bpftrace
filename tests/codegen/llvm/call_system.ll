@@ -4,7 +4,8 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_t" = type { ptr, ptr }
-%system_t = type { i64, i64 }
+%system_t = type { i64, %system_args_t }
+%system_args_t = type { i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
@@ -23,19 +24,20 @@ entry:
   %1 = getelementptr %system_t, ptr %system_args, i32 0, i32 0
   store i64 10000, ptr %1, align 8
   %2 = getelementptr %system_t, ptr %system_args, i32 0, i32 1
-  store i64 100, ptr %2, align 8
+  %3 = getelementptr %system_args_t, ptr %2, i32 0, i32 0
+  store i64 100, ptr %3, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %system_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %entry
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %3 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %3
-  %4 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %5 = load i64, ptr %4, align 8
-  %6 = add i64 %5, 1
-  store i64 %6, ptr %4, align 8
+  %4 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %4
+  %5 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %6 = load i64, ptr %5, align 8
+  %7 = add i64 %6, 1
+  store i64 %7, ptr %5, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry

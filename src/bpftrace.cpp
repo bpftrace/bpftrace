@@ -228,21 +228,16 @@ struct PerfEventContext {
   output::Output &output;
 };
 
-void perf_event_printer(void *cb_cookie, void *data, int size)
+void perf_event_printer(void *cb_cookie, void *raw_data, int size)
 {
-  // The perf event data is not aligned, so we use memcpy to copy the data and
-  // avoid UBSAN errors. Using an std::vector guarantees that it will be aligned
-  // to the largest type. See:
-  // https://stackoverflow.com/questions/8456236/how-is-a-vectors-data-aligned.
-  std::vector<uint8_t> data_aligned;
-  data_aligned.resize(size);
-  memcpy(data_aligned.data(), data, size);
-
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
-  auto *arg_data = data_aligned.data();
 
-  auto printf_id = async_action::AsyncAction(
-      *reinterpret_cast<uint64_t *>(arg_data));
+  // N.B. This will copy the value into its own buffer, potentially allocating
+  // and freeing a new chunk if it is larger than a single word. This is
+  // guaranteed to be aligned.
+  auto data = OpaqueValue::alloc(size, [&](char *data) {
+    memcpy(data, raw_data, size);
+  });
 
   // Ignore the remaining events if perf_event_printer is called during
   // finalization stage (exit() builtin has been called)
@@ -255,6 +250,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 
   // async actions
+  auto printf_id = async_action::AsyncAction(data.bitcast<uint64_t>());
   if (printf_id == async_action::AsyncAction::exit) {
     ctx->handlers.exit(data);
     return;
@@ -286,19 +282,19 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     ctx->handlers.watchpoint_detach(data);
     return;
   } else if (printf_id == async_action::AsyncAction::skboutput) {
-    ctx->handlers.skboutput(data, size);
+    ctx->handlers.skboutput(data);
     return;
   } else if (printf_id >= async_action::AsyncAction::syscall &&
              printf_id <= async_action::AsyncAction::syscall_end) {
-    ctx->handlers.syscall(printf_id, arg_data);
+    ctx->handlers.syscall(data);
     return;
   } else if (printf_id >= async_action::AsyncAction::cat &&
              printf_id <= async_action::AsyncAction::cat_end) {
-    ctx->handlers.cat(printf_id, arg_data);
+    ctx->handlers.cat(data);
     return;
   } else if (printf_id >= async_action::AsyncAction::printf &&
              printf_id <= async_action::AsyncAction::printf_end) {
-    ctx->handlers.printf(printf_id, arg_data);
+    ctx->handlers.printf(data);
     return;
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
@@ -314,7 +310,7 @@ int ringbuf_printer(void *cb_cookie, void *data, size_t size)
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
     const ast::CDefinitions &c_definitions,
     const std::vector<Field> &args,
-    uint8_t *arg_data)
+    const char *arg_data)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
 
@@ -322,26 +318,26 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
     switch (arg.type.GetTy()) {
       case Type::boolean:
         arg_values.push_back(std::make_unique<PrintableInt>(
-            *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
+            *reinterpret_cast<const uint8_t *>(arg_data + arg.offset)));
         break;
       case Type::integer:
         if (arg.type.IsSigned()) {
           int64_t val = 0;
           switch (arg.type.GetIntBitWidth()) {
             case 64:
-              val = *reinterpret_cast<int64_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const int64_t *>(arg_data + arg.offset);
               break;
             case 32:
-              val = *reinterpret_cast<int32_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const int32_t *>(arg_data + arg.offset);
               break;
             case 16:
-              val = *reinterpret_cast<int16_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const int16_t *>(arg_data + arg.offset);
               break;
             case 8:
-              val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const int8_t *>(arg_data + arg.offset);
               break;
             case 1:
-              val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const int8_t *>(arg_data + arg.offset);
               break;
             default:
               throw util::FatalUserException(
@@ -354,19 +350,19 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
           uint64_t val = 0;
           switch (arg.type.GetIntBitWidth()) {
             case 64:
-              val = *reinterpret_cast<uint64_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const uint64_t *>(arg_data + arg.offset);
               break;
             case 32:
-              val = *reinterpret_cast<uint32_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const uint32_t *>(arg_data + arg.offset);
               break;
             case 16:
-              val = *reinterpret_cast<uint16_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const uint16_t *>(arg_data + arg.offset);
               break;
             case 8:
-              val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const uint8_t *>(arg_data + arg.offset);
               break;
             case 1:
-              val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
+              val = *reinterpret_cast<const uint8_t *>(arg_data + arg.offset);
               break;
             default:
               throw util::FatalUserException(
@@ -394,7 +390,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         }
         break;
       case Type::string: {
-        auto *p = reinterpret_cast<char *>(arg_data + arg.offset);
+        const auto *p = reinterpret_cast<const char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
             std::string(p, strnlen(p, arg.type.GetSize())),
             config_->max_strlen,
@@ -402,54 +398,56 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
         break;
       }
       case Type::buffer: {
-        auto length =
-            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)->length;
+        auto length = reinterpret_cast<const AsyncEvent::Buf *>(arg_data +
+                                                                arg.offset)
+                          ->length;
         arg_values.push_back(std::make_unique<PrintableBuffer>(
-            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)->content,
+            reinterpret_cast<const AsyncEvent::Buf *>(arg_data + arg.offset)
+                ->content,
             length));
         break;
       }
       case Type::ksym_t:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_ksym(
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
+            *reinterpret_cast<const uint64_t *>(arg_data + arg.offset))));
         break;
       case Type::usym_t:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_usym(
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset),
-            *reinterpret_cast<int32_t *>(arg_data + arg.offset + 8),
-            *reinterpret_cast<int32_t *>(arg_data + arg.offset + 12))));
+            *reinterpret_cast<const uint64_t *>(arg_data + arg.offset),
+            *reinterpret_cast<const int32_t *>(arg_data + arg.offset + 8),
+            *reinterpret_cast<const int32_t *>(arg_data + arg.offset + 12))));
         break;
       case Type::inet:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            resolve_inet(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
-                         reinterpret_cast<char *>(arg_data + arg.offset + 8))));
+        arg_values.push_back(std::make_unique<PrintableString>(resolve_inet(
+            *reinterpret_cast<const int64_t *>(arg_data + arg.offset),
+            reinterpret_cast<const char *>(arg_data + arg.offset + 8))));
         break;
       case Type::username:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            resolve_uid(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
+        arg_values.push_back(std::make_unique<PrintableString>(resolve_uid(
+            *reinterpret_cast<const uint64_t *>(arg_data + arg.offset))));
         break;
       case Type::kstack_t:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
-                      *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
-                      -1,
-                      -1,
-                      false,
-                      arg.type.stack_type,
-                      8)));
+        arg_values.push_back(std::make_unique<PrintableString>(get_stack(
+            *reinterpret_cast<const int64_t *>(arg_data + arg.offset),
+            *reinterpret_cast<const uint32_t *>(arg_data + arg.offset + 8),
+            -1,
+            -1,
+            false,
+            arg.type.stack_type,
+            8)));
         break;
       case Type::ustack_t:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            get_stack(*reinterpret_cast<int64_t *>(arg_data + arg.offset),
-                      *reinterpret_cast<uint32_t *>(arg_data + arg.offset + 8),
-                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 16),
-                      *reinterpret_cast<int32_t *>(arg_data + arg.offset + 20),
-                      true,
-                      arg.type.stack_type,
-                      8)));
+        arg_values.push_back(std::make_unique<PrintableString>(get_stack(
+            *reinterpret_cast<const int64_t *>(arg_data + arg.offset),
+            *reinterpret_cast<const uint32_t *>(arg_data + arg.offset + 8),
+            *reinterpret_cast<const int32_t *>(arg_data + arg.offset + 16),
+            *reinterpret_cast<const int32_t *>(arg_data + arg.offset + 20),
+            true,
+            arg.type.stack_type,
+            8)));
         break;
       case Type::timestamp: {
-        const auto *strftime = reinterpret_cast<AsyncEvent::Strftime *>(
+        const auto *strftime = reinterpret_cast<const AsyncEvent::Strftime *>(
             arg_data + arg.offset);
         auto ts = resolve_timestamp(strftime->mode, strftime->nsecs);
         auto s = format_timestamp(ts, strftime->strftime_id);
@@ -458,25 +456,26 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
       }
       case Type::pointer:
         arg_values.push_back(std::make_unique<PrintableInt>(
-            *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
+            *reinterpret_cast<const uint64_t *>(arg_data + arg.offset)));
         break;
       case Type::mac_address:
         arg_values.push_back(
             std::make_unique<PrintableString>(resolve_mac_address(
-                reinterpret_cast<char *>(arg_data + arg.offset))));
+                reinterpret_cast<const char *>(arg_data + arg.offset))));
         break;
       case Type::cgroup_path_t:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            resolve_cgroup_path(reinterpret_cast<AsyncEvent::CgroupPath *>(
-                                    arg_data + arg.offset)
-                                    ->cgroup_path_id,
-                                reinterpret_cast<AsyncEvent::CgroupPath *>(
-                                    arg_data + arg.offset)
-                                    ->cgroup_id)));
+        arg_values.push_back(
+            std::make_unique<PrintableString>(resolve_cgroup_path(
+                reinterpret_cast<const AsyncEvent::CgroupPath *>(arg_data +
+                                                                 arg.offset)
+                    ->cgroup_path_id,
+                reinterpret_cast<const AsyncEvent::CgroupPath *>(arg_data +
+                                                                 arg.offset)
+                    ->cgroup_id)));
         break;
       case Type::strerror_t:
-        arg_values.push_back(std::make_unique<PrintableString>(
-            strerror(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
+        arg_values.push_back(std::make_unique<PrintableString>(strerror(
+            *reinterpret_cast<const uint64_t *>(arg_data + arg.offset))));
         break;
         // fall through
       default:
@@ -1552,10 +1551,7 @@ void BPFtrace::close_pcaps()
   }
 }
 
-bool BPFtrace::write_pcaps(uint64_t id,
-                           uint64_t ns,
-                           uint8_t *pkt,
-                           unsigned int size)
+bool BPFtrace::write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt)
 {
   if (boottime_) {
     ns = (boottime_->tv_sec * 1e9) + (boottime_->tv_nsec + ns);
@@ -1564,7 +1560,7 @@ bool BPFtrace::write_pcaps(uint64_t id,
   auto file = std::get<0>(resources.skboutput_args_.at(id));
   auto &writer = pcap_writers_.at(file);
 
-  return writer->write(ns, pkt, size);
+  return writer->write(ns, pkt.data(), pkt.size());
 }
 
 void BPFtrace::parse_module_btf(const std::set<std::string> &modules)

@@ -12,31 +12,30 @@
 
 namespace bpftrace::async_action {
 
-void AsyncHandlers::exit(const void *data)
+void AsyncHandlers::exit(const OpaqueValue &data)
 {
-  const auto *exit = static_cast<const AsyncEvent::Exit *>(data);
-  BPFtrace::exit_code = exit->exit_code;
+  const auto &exit = data.bitcast<AsyncEvent::Exit>();
+  BPFtrace::exit_code = exit.exit_code;
   bpftrace.request_finalize();
 }
 
-void AsyncHandlers::join(const void *data)
+void AsyncHandlers::join(const OpaqueValue &data)
 {
-  const auto *join = static_cast<const AsyncEvent::Join *>(data);
-  uint64_t join_id = join->join_id;
+  const auto &join = data.bitcast<AsyncEvent::Join>();
+  uint64_t join_id = join.join_id;
   const auto *delim = bpftrace.resources.join_args[join_id].c_str();
+  auto arg = data.slice(sizeof(AsyncEvent::Join));
+  size_t arg_count = arg.count<char>() / bpftrace.join_argsize_;
   std::stringstream joined;
-  for (unsigned int i = 0; i < bpftrace.join_argnum_; i++) {
-    const auto *arg = join->content + (i * bpftrace.join_argsize_);
-    if (arg[0] == 0)
-      break;
+  for (unsigned int i = 0; i < arg_count; i++) {
     if (i)
       joined << delim;
-    joined << arg;
+    joined << (arg.data() + (i * bpftrace.join_argsize_));
   }
   out.join(joined.str());
 }
 
-void AsyncHandlers::time(const void *data)
+void AsyncHandlers::time(const OpaqueValue &data)
 {
   // not respecting config_->get(ConfigKeyInt::max_strlen)
   char timestr[AsyncHandlers::MAX_TIME_STR_LEN];
@@ -47,8 +46,8 @@ void AsyncHandlers::time(const void *data)
     LOG(WARNING) << "localtime_r: " << strerror(errno);
     return;
   }
-  const auto *time = static_cast<const AsyncEvent::Time *>(data);
-  const auto *fmt = bpftrace.resources.time_args[time->time_id].c_str();
+  const auto &time = data.bitcast<AsyncEvent::Time>();
+  const auto *fmt = bpftrace.resources.time_args[time.time_id].c_str();
   if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
     LOG(WARNING) << "strftime returned 0";
     return;
@@ -56,37 +55,37 @@ void AsyncHandlers::time(const void *data)
   out.time(timestr);
 }
 
-void AsyncHandlers::helper_error(const void *data)
+void AsyncHandlers::helper_error(const OpaqueValue &data)
 {
-  const auto *helper_error = static_cast<const AsyncEvent::HelperError *>(data);
-  auto error_id = helper_error->error_id;
-  const auto return_value = helper_error->return_value;
+  const auto &helper_error = data.bitcast<AsyncEvent::HelperError>();
+  auto error_id = helper_error.error_id;
+  const auto return_value = helper_error.return_value;
   const auto &info = bpftrace.resources.helper_error_info[error_id];
   out.helper_error(return_value, info);
 }
 
-void AsyncHandlers::print_non_map(const void *data)
+void AsyncHandlers::print_non_map(const OpaqueValue &data)
 {
-  const auto *print = static_cast<const AsyncEvent::PrintNonMap *>(data);
+  const auto &print = data.bitcast<AsyncEvent::PrintNonMap>();
   const SizedType &ty = bpftrace.resources.non_map_print_args.at(
-      print->print_id);
+      print.print_id);
 
   auto v = format(bpftrace,
                   c_definitions,
                   ty,
-                  OpaqueValue::from(print->content, ty.GetSize()));
+                  OpaqueValue::from(&print.content[0], ty.GetSize()));
   if (!v) {
     LOG(BUG) << "error printing non-map value: " << v.takeError();
   }
   out.value(*v);
 }
 
-void AsyncHandlers::print_map(const void *data)
+void AsyncHandlers::print_map(const OpaqueValue &data)
 {
-  const auto *print = static_cast<const AsyncEvent::Print *>(data);
-  const auto &map = bpftrace.bytecode_.getMap(print->mapid);
+  const auto &print = data.bitcast<AsyncEvent::Print>();
+  const auto &map = bpftrace.bytecode_.getMap(print.mapid);
 
-  auto res = format(bpftrace, c_definitions, map, print->top, print->div);
+  auto res = format(bpftrace, c_definitions, map, print.top, print.div);
   if (!res) {
     LOG(BUG) << "Could not print map with ident \"" << map.name()
              << "\": " << res.takeError();
@@ -95,10 +94,10 @@ void AsyncHandlers::print_map(const void *data)
   out.map(map.name(), *res);
 }
 
-void AsyncHandlers::zero_map(const void *data)
+void AsyncHandlers::zero_map(const OpaqueValue &data)
 {
-  const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
-  const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
+  const auto &mapevent = data.bitcast<AsyncEvent::MapEvent>();
+  const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
   uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
   auto ok = map.zero_out(nvalues);
 
@@ -108,10 +107,10 @@ void AsyncHandlers::zero_map(const void *data)
   }
 }
 
-void AsyncHandlers::clear_map(const void *data)
+void AsyncHandlers::clear_map(const OpaqueValue &data)
 {
-  const auto *mapevent = static_cast<const AsyncEvent::MapEvent *>(data);
-  const auto &map = bpftrace.bytecode_.getMap(mapevent->mapid);
+  const auto &mapevent = data.bitcast<AsyncEvent::MapEvent>();
+  const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
   uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
   auto ok = map.clear(nvalues);
   if (!ok) {
@@ -120,11 +119,11 @@ void AsyncHandlers::clear_map(const void *data)
   }
 }
 
-void AsyncHandlers::watchpoint_attach(const void *data)
+void AsyncHandlers::watchpoint_attach(const OpaqueValue &data)
 {
-  const auto *watchpoint = static_cast<const AsyncEvent::Watchpoint *>(data);
-  uint64_t probe_idx = watchpoint->watchpoint_idx;
-  uint64_t addr = watchpoint->addr;
+  const auto &watchpoint = data.bitcast<AsyncEvent::Watchpoint>();
+  uint64_t probe_idx = watchpoint.watchpoint_idx;
+  uint64_t addr = watchpoint.addr;
 
   if (probe_idx >= bpftrace.resources.watchpoint_probes.size()) {
     LOG(BUG) << "Invalid watchpoint probe idx=" << probe_idx;
@@ -171,11 +170,10 @@ out:
   }
 }
 
-void AsyncHandlers::watchpoint_detach(const void *data)
+void AsyncHandlers::watchpoint_detach(const OpaqueValue &data)
 {
-  const auto *unwatch = static_cast<const AsyncEvent::WatchpointUnwatch *>(
-      data);
-  uint64_t addr = unwatch->addr;
+  const auto &unwatch = data.bitcast<AsyncEvent::WatchpointUnwatch>();
+  uint64_t addr = unwatch.addr;
 
   // Remove all probes watching `addr`. Note how we fail silently here
   // (ie invalid addr). This lets script writers be a bit more aggressive
@@ -188,46 +186,44 @@ void AsyncHandlers::watchpoint_detach(const void *data)
   bpftrace.attached_probes_.erase(it.begin(), it.end());
 }
 
-void AsyncHandlers::skboutput(void *data, int size)
+void AsyncHandlers::skboutput(const OpaqueValue &data)
 {
-  struct hdr_t {
-    uint64_t aid;
-    uint64_t id;
-    uint64_t ns;
-    uint8_t pkt[];
-  } __attribute__((packed)) * hdr;
-
-  hdr = static_cast<struct hdr_t *>(data);
-
-  int offset = std::get<1>(bpftrace.resources.skboutput_args_.at(hdr->id));
-
-  bpftrace.write_pcaps(
-      hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
+  const auto &hdr = data.bitcast<AsyncEvent::SkbOutput>();
+  int offset = std::get<1>(
+      bpftrace.resources.skboutput_args_.at(hdr.skb_output_id));
+  auto pkt = data.slice(sizeof(hdr));
+  if (static_cast<size_t>(offset) >= pkt.size()) {
+    return; // Nothing to dump.
+  }
+  bpftrace.write_pcaps(hdr.skb_output_id,
+                       hdr.nsecs_since_boot,
+                       pkt.slice(offset));
 }
 
-void AsyncHandlers::syscall(AsyncAction printf_id, uint8_t *arg_data)
+void AsyncHandlers::syscall(const OpaqueValue &data)
 {
   if (bpftrace.safe_mode_) {
     throw util::FatalUserException(
         "syscall() not allowed in safe mode. Use '--unsafe'.");
   }
 
-  auto id = static_cast<uint64_t>(printf_id) -
+  auto id = data.bitcast<uint64_t>() -
             static_cast<uint64_t>(AsyncAction::syscall);
   auto &fmt = std::get<0>(bpftrace.resources.system_args[id]);
   auto &args = std::get<1>(bpftrace.resources.system_args[id]);
-  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(
+      c_definitions, args, data.slice(sizeof(uint64_t)).data());
 
   out.syscall(util::exec_system(fmt.format_str(arg_values).c_str()));
 }
 
-void AsyncHandlers::cat(AsyncAction printf_id, uint8_t *arg_data)
+void AsyncHandlers::cat(const OpaqueValue &data)
 {
-  auto id = static_cast<size_t>(printf_id) -
-            static_cast<size_t>(AsyncAction::cat);
+  auto id = data.bitcast<uint64_t>() - static_cast<uint64_t>(AsyncAction::cat);
   auto &fmt = std::get<0>(bpftrace.resources.cat_args[id]);
   auto &args = std::get<1>(bpftrace.resources.cat_args[id]);
-  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(
+      c_definitions, args, data.slice(sizeof(uint64_t)).data());
 
   std::stringstream buf;
   util::cat_file(fmt.format_str(arg_values).c_str(),
@@ -236,13 +232,14 @@ void AsyncHandlers::cat(AsyncAction printf_id, uint8_t *arg_data)
   out.cat(buf.str());
 }
 
-void AsyncHandlers::printf(AsyncAction printf_id, uint8_t *arg_data)
+void AsyncHandlers::printf(const OpaqueValue &data)
 {
-  auto id = static_cast<size_t>(printf_id) -
-            static_cast<size_t>(AsyncAction::printf);
+  auto id = data.bitcast<uint64_t>() -
+            static_cast<uint64_t>(AsyncAction::printf);
   auto &fmt = std::get<0>(bpftrace.resources.printf_args[id]);
   auto &args = std::get<1>(bpftrace.resources.printf_args[id]);
-  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(
+      c_definitions, args, data.slice(sizeof(uint64_t)).data());
 
   out.printf(fmt.format_str(arg_values));
 }

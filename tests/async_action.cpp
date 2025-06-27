@@ -31,73 +31,36 @@ public:
 };
 
 // Process string type argument - handle const char*
-template <typename T>
-void process_arg(std::vector<Field> &fields,
-                 ssize_t &offset,
-                 size_t &total_size,
-                 T arg,
-                 [[maybe_unused]] std::enable_if_t<
-                     std::is_convertible_v<T, const char *>> *unused = nullptr)
+template <typename T, typename... R>
+void build_each_field(std::vector<Field> &fields,
+                      ssize_t offset,
+                      T arg,
+                      R... rest)
 {
-  const char *str = arg;
-  size_t arg_len = strlen(str) + 1;
-
-  fields.push_back(Field{ .name = "arg",
-                          .type = CreateString(arg_len),
-                          .offset = offset,
-                          .bitfield = std::nullopt });
-
-  offset += arg_len;
-  total_size += arg_len;
+  SizedType ty;
+  // We only pack string and integer values.
+  if constexpr (std::is_same_v<T, std::string>) {
+    ty = CreateString(arg.size() + 1);
+  } else if constexpr (std::is_integral_v<T>) {
+    ty = CreateInt(sizeof(T) * 8);
+  } else {
+    static_assert(false, "unknown field type");
+  }
+  fields.push_back(Field{
+      .name = "arg", .type = ty, .offset = offset, .bitfield = std::nullopt });
+  if constexpr (sizeof...(R) != 0) {
+    build_each_field(fields, offset + ty.GetSize(), rest...);
+  }
 }
 
-// Process integer type argument
-template <typename T>
-void process_arg(std::vector<Field> &fields,
-                 ssize_t &offset,
-                 size_t &total_size,
-                 [[maybe_unused]] T arg,
-                 [[maybe_unused]] std::enable_if_t<std::is_integral_v<T> &&
-                                                   !std::is_same_v<T, char *>>
-                     *unused = nullptr)
+template <typename... Ts>
+std::vector<Field> build_fields(Ts... args)
 {
-  size_t arg_size = sizeof(T);
-
-  fields.push_back(Field{ .name = "arg",
-                          .type = CreateInt(arg_size * 8),
-                          .offset = offset,
-                          .bitfield = std::nullopt });
-
-  offset += arg_size;
-  total_size += arg_size;
-}
-
-template <typename T>
-void fill_arg_data(
-    uint8_t *data,
-    ssize_t &offset,
-    T arg,
-    [[maybe_unused]] std::enable_if_t<std::is_convertible_v<T, const char *>>
-        *unused = nullptr)
-{
-  const char *str = arg;
-  size_t arg_len = strlen(str) + 1;
-  memcpy(data + offset, str, arg_len);
-  offset += arg_len;
-}
-
-// Fill data for integer, unsigned long long and char type arguments
-template <typename T>
-void fill_arg_data(
-    uint8_t *data,
-    ssize_t &offset,
-    T arg,
-    [[maybe_unused]] std::enable_if_t<!std::is_convertible_v<T, const char *> &&
-                                      !std::is_same_v<T, std::string>> *unused =
-        nullptr)
-{
-  memcpy(data + offset, &arg, sizeof(T));
-  offset += sizeof(T);
+  std::vector<Field> fields;
+  if constexpr (sizeof...(Ts) != 0) {
+    build_each_field(fields, 0, args...);
+  }
+  return fields;
 }
 
 template <AsyncAction id, typename... Args>
@@ -106,35 +69,23 @@ std::string handler_proxy(AsyncActionTest &test,
                           [[maybe_unused]] Args... args)
 {
   FormatString fmt(fmt_str);
-  std::vector<Field> fields;
-  size_t total_args_size = 0;
 
-  if constexpr (sizeof...(Args) > 0) {
-    ssize_t offset = sizeof(uint64_t);
-    (process_arg(fields, offset, total_args_size, args), ...);
-  }
-
-  auto printf_id = static_cast<uint64_t>(id);
-  size_t data_size = sizeof(uint64_t) + total_args_size;
-  std::vector<uint8_t> arg_data(data_size, 0);
-  memcpy(arg_data.data(), &printf_id, sizeof(printf_id));
-  if constexpr (sizeof...(Args) > 0) {
-    ssize_t offset = sizeof(uint64_t);
-    (fill_arg_data(arg_data.data(), offset, args), ...);
-  }
+  auto fields = build_fields(args...);
+  auto arg_data = OpaqueValue::from(static_cast<uint64_t>(id));
+  arg_data = (arg_data + ... + OpaqueValue::from<Args>(args));
 
   static_assert((id == AsyncAction::syscall || id == AsyncAction::cat ||
                  id == AsyncAction::printf) &&
                 "Only support syscall, cat, and printf");
   if (id == AsyncAction::syscall) {
     test.bpftrace->resources.system_args.emplace_back(fmt, fields);
-    test.handlers.syscall(id, arg_data.data());
+    test.handlers.syscall(arg_data);
   } else if (id == AsyncAction::cat) {
     test.bpftrace->resources.cat_args.emplace_back(fmt, fields);
-    test.handlers.cat(id, arg_data.data());
+    test.handlers.cat(arg_data);
   } else if (id == AsyncAction::printf) {
     test.bpftrace->resources.printf_args.emplace_back(fmt, fields);
-    test.handlers.printf(id, arg_data.data());
+    test.handlers.printf(arg_data);
   }
 
   auto s = test.out.str();
@@ -146,24 +97,17 @@ TEST_F(AsyncActionTest, join)
 {
   bpftrace->resources.join_args.emplace_back(",");
 
-  unsigned int content_size = bpftrace->join_argsize_ * bpftrace->join_argnum_;
-  size_t total_size = sizeof(AsyncEvent::Join) + content_size;
-  std::vector<char> buffer(total_size);
-  buffer.clear();
+  auto join = AsyncEvent::Join{
+    .action_id = static_cast<uint64_t>(AsyncAction::join),
+    .join_id = 0,
+    .content = {},
+  };
+  auto arg = OpaqueValue::from(join) +
+             OpaqueValue::string("/bin/ls", bpftrace->join_argsize_) +
+             OpaqueValue::string("-la", bpftrace->join_argsize_) +
+             OpaqueValue::string("/tmp", bpftrace->join_argsize_);
 
-  auto *join = reinterpret_cast<AsyncEvent::Join *>(buffer.data());
-  join->action_id = static_cast<uint64_t>(AsyncAction::join);
-  join->join_id = 0;
-
-  const char *arg1 = "/bin/ls";
-  const char *arg2 = "-la";
-  const char *arg3 = "/tmp";
-
-  memcpy(join->content, arg1, strlen(arg1) + 1);
-  memcpy(join->content + bpftrace->join_argsize_, arg2, strlen(arg2) + 1);
-  memcpy(join->content + (2 * bpftrace->join_argsize_), arg3, strlen(arg3) + 1);
-
-  handlers.join(join);
+  handlers.join(arg);
   EXPECT_EQ("/bin/ls,-la,/tmp\n", out.str());
 }
 
@@ -176,7 +120,7 @@ TEST_F(AsyncActionTest, time)
   // The first format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
-    handlers.time(&time_event);
+    handlers.time(OpaqueValue::from(time_event));
 
     std::regex pattern(R"(\d{4}-\d{2}-\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -186,7 +130,7 @@ TEST_F(AsyncActionTest, time)
   // The second format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 1);
-    handlers.time(&time_event);
+    handlers.time(OpaqueValue::from(time_event));
 
     std::regex pattern(R"(\d{2}:\d{2}:\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -196,7 +140,7 @@ TEST_F(AsyncActionTest, time)
   // The third format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 2);
-    handlers.time(&time_event);
+    handlers.time(OpaqueValue::from(time_event));
 
     std::regex pattern(R"([A-Za-z]+, \d{2} [A-Za-z]+ \d{4})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -214,7 +158,7 @@ TEST_F(AsyncActionTest, time_invalid_format)
 
   testing::internal::CaptureStderr();
 
-  handlers.time(&time_event);
+  handlers.time(OpaqueValue::from(time_event));
   EXPECT_TRUE(out.str().empty());
 
   std::string log = testing::internal::GetCapturedStderr();
@@ -279,7 +223,7 @@ TEST_F(AsyncActionTest, helper_error)
                                         tc.func_id,
                                         tc.return_value);
 
-    handlers.helper_error(&error_event);
+    handlers.helper_error(OpaqueValue::from(error_event));
 
     auto s = out.str();
     EXPECT_THAT(s, testing::HasSubstr(tc.expected_substring))
@@ -300,7 +244,7 @@ TEST_F(AsyncActionTest, syscall)
 {
   struct TestCase {
     std::string cmd;
-    std::optional<const char *> args;
+    std::optional<std::string> args;
     std::string expected_substring;
   };
 
@@ -362,7 +306,7 @@ TEST_F(AsyncActionTest, cat)
   auto cmd = std::string("%s/%s");
   std::string basename = std::string(filename).substr(5);
   std::string out = handler_proxy<AsyncAction::cat>(
-      *this, cmd, "/tmp", basename.c_str());
+      *this, cmd, std::string("/tmp"), basename);
 
   EXPECT_EQ(test_content, out)
       << "cat_handler should output the file content correctly";
@@ -383,8 +327,13 @@ TEST_F(AsyncActionTest, printf)
            'a');
   std::string expected(expected_buffer);
 
-  std::string out = handler_proxy<AsyncAction::printf>(
-      *this, format, "answer", 42, 0xDEADBEEFULL, 'a');
+  std::string out = handler_proxy<AsyncAction::printf>(*this,
+                                                       format,
+                                                       std::string("answer"),
+                                                       42ULL,
+                                                       0xDEADBEEFULL,
+                                                       static_cast<uint64_t>(
+                                                           'a'));
 
   EXPECT_EQ(expected, out)
       << "printf_handler should format multiple arguments correctly";
@@ -394,51 +343,31 @@ TEST_F(AsyncActionTest, print_non_map)
 {
   struct TestCase {
     SizedType type;
-    std::vector<uint8_t> content;
+    OpaqueValue content;
     std::string expected_output;
   };
 
   std::vector<TestCase> test_cases = {
     // Integer type test
     { .type = CreateInt64(),
-      .content =
-          []() {
-            int64_t value = 123456789;
-            std::vector<uint8_t> bytes(sizeof(value));
-            for (size_t i = 0; i < sizeof(value); i++) {
-              bytes[i] = reinterpret_cast<uint8_t *>(&value)[i];
-            }
-            return bytes;
-          }(),
+      .content = OpaqueValue::from<int64_t>(123456789),
       .expected_output = "123456789\n" },
     // String type test
     { .type = CreateString(12),
-      .content =
-          []() {
-            const char *value = "Hello world";
-            std::vector<uint8_t> bytes(strlen(value) + 1);
-            for (size_t i = 0; i < bytes.size(); i++) {
-              bytes[i] = static_cast<uint8_t>(value[i]);
-            }
-            return bytes;
-          }(),
+      .content = OpaqueValue::string("Hello world", 12),
       .expected_output = "Hello world\n" }
   };
 
   for (const auto &tc : test_cases) {
     bpftrace->resources.non_map_print_args.clear();
     bpftrace->resources.non_map_print_args.emplace_back(tc.type);
-    size_t total_size = sizeof(AsyncEvent::PrintNonMap) + tc.content.size();
-    std::vector<char> buffer(total_size);
-    buffer.clear();
 
-    auto *print_event = reinterpret_cast<AsyncEvent::PrintNonMap *>(
-        buffer.data());
-    print_event->action_id = static_cast<uint64_t>(AsyncAction::print_non_map);
-    print_event->print_id = 0;
-    std::ranges::copy(tc.content, print_event->content);
-
-    handlers.print_non_map(print_event);
+    auto print_event = AsyncEvent::PrintNonMap{
+      .action_id = static_cast<uint64_t>(AsyncAction::print_non_map),
+      .print_id = 0,
+      .content = {},
+    };
+    handlers.print_non_map(OpaqueValue::from(print_event) + tc.content);
 
     EXPECT_EQ(tc.expected_output, out.str());
     out.str("");
@@ -456,7 +385,7 @@ TEST_F(AsyncActionTest, watchpoint_attach_out_of_bound)
   // FYI: https://github.com/google/googletest/issues/1004
   auto watchpoint_attach_handler_op = [&] {
     EXPECT_CALL(*bpftrace, resume_tracee(testing::_)).Times(1);
-    handlers.watchpoint_attach(&watch_event);
+    handlers.watchpoint_attach(OpaqueValue::from(watch_event));
   };
 
   EXPECT_DEATH(watchpoint_attach_handler_op(),
@@ -474,7 +403,7 @@ TEST_F(AsyncActionTest, watchpoint_attach_duplicated_address)
   bpftrace->resources.watchpoint_probes.push_back(std::move(probe));
   EXPECT_CALL(*bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*bpftrace, resume_tracee(testing::_)).Times(1);
-  handlers.watchpoint_attach(&watch_event);
+  handlers.watchpoint_attach(OpaqueValue::from(watch_event));
 }
 
 TEST_F(AsyncActionTest, watchpoint_attach_probe_error)
@@ -491,7 +420,7 @@ TEST_F(AsyncActionTest, watchpoint_attach_probe_error)
                    [[maybe_unused]] const BpfBytecode &bytecode) {
         return make_error<AttachError>();
       });
-  EXPECT_THROW(handlers.watchpoint_attach(&watch_event),
+  EXPECT_THROW(handlers.watchpoint_attach(OpaqueValue::from(watch_event)),
                util::FatalUserException);
 }
 
@@ -507,7 +436,7 @@ TEST_F(AsyncActionTest, watchpoint_attach_resume_tracee_failed)
   EXPECT_CALL(*bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*bpftrace, resume_tracee(testing::_))
       .WillOnce(testing::Return(-1));
-  EXPECT_THROW(handlers.watchpoint_attach(&watch_event),
+  EXPECT_THROW(handlers.watchpoint_attach(OpaqueValue::from(watch_event)),
                util::FatalUserException);
 }
 
@@ -523,6 +452,6 @@ TEST_F(AsyncActionTest, asyncwatchpoint_attach_ignore_duplicated_addr)
   bpftrace->resources.watchpoint_probes.push_back(std::move(probe));
   EXPECT_CALL(*bpftrace, attach_probe(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*bpftrace, resume_tracee(testing::_)).Times(0);
-  handlers.watchpoint_attach(&watch_event);
+  handlers.watchpoint_attach(OpaqueValue::from(watch_event));
 }
 } // namespace bpftrace::test::async_action
