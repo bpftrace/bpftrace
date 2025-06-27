@@ -23,20 +23,20 @@ entry:
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
   %2 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1025, ptr null)
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
   %4 = getelementptr i8, ptr %3, i64 112
   %arg0 = load volatile i64, ptr %4, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %arg0)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1025, i64 %arg0)
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #3
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
   %6 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
-  %probe_read_kernel3 = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 1024, ptr null)
+  %probe_read_kernel3 = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 1025, ptr null)
   %7 = call ptr @llvm.preserve.static.offset(ptr %0)
   %8 = getelementptr i8, ptr %7, i64 104
   %arg1 = load volatile i64, ptr %8, align 8
-  %probe_read_kernel_str4 = call i64 inttoptr (i64 115 to ptr)(ptr %6, i32 1024, i64 %arg1)
+  %probe_read_kernel_str4 = call i64 inttoptr (i64 115 to ptr)(ptr %6, i32 1025, i64 %arg1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcontains.i)
   store i64 0, ptr %strcontains.i, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcontains.j)

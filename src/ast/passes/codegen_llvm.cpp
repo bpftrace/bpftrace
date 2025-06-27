@@ -1400,12 +1400,19 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    Value *buf = b_.CreateGetStrAllocation("str", call.loc);
-    b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
+    // Note that the successful copying of the string will always include the
+    // NULL byte, so we explicitly poison the string value up front. This
+    // allows the conversion to know when the string has been truncated. We
+    // have added an extra byte to the kernel copy to account for this.
+    // Anything copied out of this will be copied as a str[N] type that may
+    // omit the NUL byte (which indicates that it has been truncated).
+    Value *buf = b_.CreateGetStrAllocation("str", call.loc, 1);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0xff), max_strlen + 1);
     auto &arg0 = call.vargs.front();
     auto scoped_expr = visit(call.vargs.front());
+    Value *extra_strlen = b_.CreateAdd(strlen, b_.getInt64(1));
     b_.CreateProbeReadStr(
-        buf, strlen, scoped_expr.value(), arg0.type().GetAS(), call.loc);
+        buf, extra_strlen, scoped_expr.value(), arg0.type().GetAS(), call.loc);
 
     if (dyn_cast<AllocaInst>(buf))
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
@@ -1679,12 +1686,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       // pick the current format string
       auto print_id = async_ids_.bpf_print();
       auto *fmt = createFmtString(print_id);
-      auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
+      const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
 
       // and finally the seq_printf call
       b_.CreateSeqPrintf(ctx_,
                          b_.CreateIntToPtr(fmt, b_.getPtrTy()),
-                         b_.getInt32(size),
+                         b_.getInt32(s.size() + 1),
                          data,
                          b_.getInt32(data_size),
                          call.loc);
@@ -1701,7 +1708,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "debugf") {
     auto print_id = async_ids_.bpf_print();
     auto *fmt = createFmtString(print_id);
-    auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
+    const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
 
     std::vector<Value *> values;
     std::vector<ScopedExpr> exprs;
@@ -1713,7 +1720,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
 
     b_.CreateTracePrintk(b_.CreateIntToPtr(fmt, b_.getPtrTy()),
-                         b_.getInt32(size),
+                         b_.getInt32(s.size() + 1),
                          values,
                          call.loc);
     return ScopedExpr();
@@ -5148,13 +5155,13 @@ bool CodegenLLVM::canAggPerCpuMapElems(const libbpf::bpf_map_type map_type,
 // RequiredResources.
 Value *CodegenLLVM::createFmtString(int print_id)
 {
-  auto fmt_str = bpftrace_.resources.bpf_print_fmts.at(print_id);
-  auto *res = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-      "__fmt_" + std::to_string(print_id),
-      ArrayType::get(b_.getInt8Ty(), fmt_str.length() + 1)));
+  auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
+  auto *res = llvm::dyn_cast<GlobalVariable>(
+      module_->getOrInsertGlobal("__fmt_" + std::to_string(print_id),
+                                 ArrayType::get(b_.getInt8Ty(), s.size() + 1)));
   res->setConstant(true);
   res->setInitializer(
-      ConstantDataArray::getString(module_->getContext(), fmt_str.c_str()));
+      ConstantDataArray::getString(module_->getContext(), s.c_str()));
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;

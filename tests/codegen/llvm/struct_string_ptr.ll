@@ -32,7 +32,7 @@ entry:
   %3 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %3
   %4 = getelementptr [1 x [1 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1024, ptr null)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1025, ptr null)
   %5 = load i64, ptr %"$foo", align 8
   %6 = inttoptr i64 %5 to ptr
   %7 = call ptr @llvm.preserve.static.offset(ptr %6)
@@ -41,7 +41,7 @@ entry:
   %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 8, ptr %8)
   %9 = load i64, ptr %"struct Foo.str", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.str")
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 1024, i64 %9)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 1025, i64 %9)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@mystr_key")
   store i64 0, ptr %"@mystr_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_mystr, ptr %"@mystr_key", ptr %4, i64 0)

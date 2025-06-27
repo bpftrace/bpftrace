@@ -2193,15 +2193,16 @@ TEST_F(SemanticAnalyserTest, printf_format_string)
   test("kprobe:f { printf(\"str: %s\", str(arg0)) }");
   test(R"(kprobe:f { @x = "hi"; printf("str: %s", @x) })");
   test(R"(kprobe:f { $x = "hi"; printf("str: %s", $x) })");
+
+  // Most types support automatic string conversion.
+  test("kprobe:f { printf(\"%s\", 1234) }");
+  test("kprobe:f { printf(\"%s\", arg0) }");
 }
 
 TEST_F(SemanticAnalyserTest, printf_bad_format_string)
 {
   test(R"(kprobe:f { printf("%d", "mystr") })", Error{});
   test("kprobe:f { printf(\"%d\", str(arg0)) }", Error{});
-
-  test("kprobe:f { printf(\"%s\", 1234) }", Error{});
-  test("kprobe:f { printf(\"%s\", arg0) }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, printf_format_buf)
@@ -2971,13 +2972,6 @@ TEST_F(SemanticAnalyserTest, enums)
   test("enum named { a = 1, b } kprobe:f { printf(\"%s\", a); }");
   test("enum named { a = 1, b } kprobe:f { $e = a; printf(\"%s\", $e); }");
   test("enum named { a = 1, b } kprobe:f { printf(\"%15s %-15s\", a, a); }");
-
-  // Cannot symbolize a non-enum
-  test("kprobe:f { $x = (uint8)1; printf(\"%s\", $x) }", Error{ R"(
-stdin:1:27-43: ERROR: printf: %s specifier expects a value of type string (int supplied)
-kprobe:f { $x = (uint8)1; printf("%s", $x) }
-                          ~~~~~~~~~~~~~~~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, enum_casts)
