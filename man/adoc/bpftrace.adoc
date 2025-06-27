@@ -428,6 +428,12 @@ To improve the readability of big literals an underscore `_` can be used as fiel
 Integer suffixes as found in the C language are parsed by bpftrace to ensure compatibility with C headers/definitions but they're not used as size specifiers.
 `123UL`, `123U` and `123LL` all result in the same integer type with a value of `123`.
 
+These duration suffixes are also supported: `ns`, `us`, `ms`, `s`, and `min`. All get turned into integer values in nanoseconds e.g.
+```
+$a = 1min;
+print($a); // prints 60000000000
+```
+
 Character literals are not supported at this time, and the corresponding ASCII code must be used instead:
 
 ----
@@ -1318,6 +1324,7 @@ hardware:cache-misses:1e6 { @[pid] = count(); }
 * `interval:us:count`
 * `interval:ms:count`
 * `interval:s:count`
+* `interval:count`
 * `interval:hz:rate`
 
 .short name
@@ -1325,6 +1332,7 @@ hardware:cache-misses:1e6 { @[pid] = count(); }
 
 The interval probe fires at a fixed interval as specified by its time spec.
 Interval fires on one CPU at a time, unlike <<probes-profile>> probes.
+If a unit of time is not specified in the second position, the number is interpreted as nanoseconds e.g. `interval:1s`, `interval:1000000000`, and `interval:s:1` are all equivalent.
 
 This prints the rate of syscalls per second.
 
@@ -1575,6 +1583,7 @@ kretprobe:d_lookup
 * `profile:us:count`
 * `profile:ms:count`
 * `profile:s:count`
+* `profile:count`
 * `profile:hz:rate`
 
 .short name
@@ -1582,6 +1591,7 @@ kretprobe:d_lookup
 
 Profile probes fire on each CPU on the specified interval.
 These operate using perf_events (a Linux kernel facility, which is also used by the perf command).
+If a unit of time is not specified in the second position, the number is interpreted as nanoseconds e.g. `interval:1s`, `interval:1000000000`, and `interval:s:1` are all equivalent.
 
 ----
 profile:hz:99 { @[tid] = count(); }
