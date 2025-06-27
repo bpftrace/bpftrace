@@ -112,6 +112,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- opensnoop.bt: support openat2 syscall
+  - [#4310](https://github.com/bpftrace/bpftrace/pull/4310)
 - killsnoop.bt: display signal name instead of value
   - [#4234](https://github.com/bpftrace/bpftrace/pull/4234)
 - killsnoop.bt: support tkill() and tgkill()
