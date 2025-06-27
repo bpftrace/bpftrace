@@ -16,6 +16,7 @@
 
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/clang_parser.h"
 #include "attached_probe.h"
 #include "bpfbytecode.h"
 #include "bpffeature.h"
@@ -26,7 +27,7 @@
 #include "dwarf_parser.h"
 #include "functions.h"
 #include "ksyms.h"
-#include "output.h"
+#include "output/output.h"
 #include "pcap_writer.h"
 #include "printf.h"
 #include "probe_matcher.h"
@@ -120,13 +121,13 @@ public:
                                      const ast::Probe &probe);
   int num_probes() const;
   int prerun() const;
-  int run(Output &out, BpfBytecode bytecode);
+  int run(output::Output &out,
+          const ast::CDefinitions &c_definitions,
+          BpfBytecode bytecode);
   virtual Result<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
-  int print_maps(Output &out);
-  int print_map(Output &out, const BpfMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
                         uint32_t nr_stack_frames,
                         int32_t pid,
@@ -151,7 +152,7 @@ public:
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(
-      Output &output,
+      const ast::CDefinitions &c_definitions,
       const std::vector<Field> &args,
       uint8_t *arg_data);
   void add_param(const std::string &param);
@@ -196,7 +197,7 @@ public:
 
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
-  std::unique_ptr<Output> out_;
+  std::unique_ptr<output::Output> out_;
   std::unique_ptr<BTF> btf_;
   std::unique_ptr<BPFfeature> feature_;
 
@@ -209,11 +210,6 @@ public:
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
   bool need_recursion_check_ = false;
-
-  static void sort_by_key(
-      const SizedType &key,
-      std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-          &values_by_key);
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
 
@@ -256,13 +252,9 @@ private:
                                               bool perf_mode,
                                               bool show_debug_info);
   void teardown_output();
-  void poll_output(Output &out, bool drain = false);
+  void poll_output(output::Output &out, bool drain = false);
   int poll_skboutput_events();
-  void poll_event_loss(Output &out);
-  int print_map_hist(Output &out,
-                     const BpfMap &map,
-                     uint32_t top,
-                     uint32_t div);
+  void poll_event_loss(output::Output &out);
   static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,

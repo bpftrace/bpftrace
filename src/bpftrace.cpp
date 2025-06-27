@@ -218,11 +218,11 @@ void BPFtrace::request_finalize()
 struct PerfEventContext {
   PerfEventContext(BPFtrace &b,
                    async_action::AsyncHandlers &handlers,
-                   Output &o)
+                   output::Output &o)
       : bpftrace(b), handlers(handlers), output(o) {};
   BPFtrace &bpftrace;
   async_action::AsyncHandlers &handlers;
-  Output &output;
+  output::Output &output;
 };
 
 void perf_event_printer(void *cb_cookie, void *data, int size)
@@ -309,7 +309,7 @@ int ringbuf_printer(void *cb_cookie, void *data, size_t size)
 }
 
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
-    Output &output,
+    const ast::CDefinitions &c_definitions,
     const std::vector<Field> &args,
     uint8_t *arg_data)
 {
@@ -368,8 +368,6 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
                   std::to_string(arg.type.GetSize()) + "provided");
           }
 
-          // bpftrace represents enums as unsigned integers
-          const auto &c_definitions = output.c_definitions();
           if (arg.type.IsEnumTy()) {
             auto enum_name = arg.type.GetName();
             if (c_definitions.enum_defs.contains(enum_name) &&
@@ -627,7 +625,9 @@ int BPFtrace::prerun() const
   return 0;
 }
 
-int BPFtrace::run(Output &out, BpfBytecode bytecode)
+int BPFtrace::run(output::Output &out,
+                  const ast::CDefinitions &c_definitions,
+                  BpfBytecode bytecode)
 {
   int err = prerun();
   if (err)
@@ -654,7 +654,7 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     return -1;
   }
 
-  async_action::AsyncHandlers handlers(*this, out);
+  async_action::AsyncHandlers handlers(*this, c_definitions, out);
   PerfEventContext ctx(*this, handlers, out);
   err = setup_output(&ctx);
   if (err)
@@ -904,7 +904,7 @@ void BPFtrace::teardown_output()
     open_perf_buffers_.clear();
 }
 
-void BPFtrace::poll_output(Output &out, bool drain)
+void BPFtrace::poll_output(output::Output &out, bool drain)
 {
   int ready;
   bool poll_skboutput = resources.using_skboutput;
@@ -993,7 +993,7 @@ int BPFtrace::poll_skboutput_events()
   return ready;
 }
 
-void BPFtrace::poll_event_loss(Output &out)
+void BPFtrace::poll_event_loss(output::Output &out)
 {
   auto current_value = bytecode_.get_event_loss_counter(*this);
   if (current_value > event_loss_count_) {
@@ -1003,134 +1003,6 @@ void BPFtrace::poll_event_loss(Output &out)
     LOG(ERROR) << "Invalid event loss count value: " << current_value
                << ", last seen: " << event_loss_count_;
   }
-}
-
-int BPFtrace::print_maps(Output &out)
-{
-  if (dry_run)
-    return 0;
-
-  for (const auto &map : bytecode_.maps()) {
-    if (!map.second.is_printable())
-      continue;
-
-    int err = print_map(out, map.second, 0, 0);
-    if (err)
-      return err;
-  }
-
-  return 0;
-}
-
-int BPFtrace::print_map(Output &out,
-                        const BpfMap &map,
-                        uint32_t top,
-                        uint32_t div)
-{
-  const auto &map_info = resources.maps_info.at(map.name());
-  const auto &value_type = map_info.value_type;
-  if (value_type.IsHistTy() || value_type.IsLhistTy())
-    return print_map_hist(out, map, top, div);
-
-  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  auto values_by_key = map.collect_elements(nvalues);
-
-  if (!values_by_key) {
-    LOG(ERROR) << "Failed to collect key-value pairs: "
-               << values_by_key.takeError();
-    return -1;
-  }
-
-  if (value_type.IsCountTy() || value_type.IsSumTy() || value_type.IsIntTy()) {
-    bool is_signed = value_type.IsSigned();
-    std::ranges::sort(*values_by_key,
-
-                      [&](auto &a, auto &b) {
-                        if (is_signed)
-                          return util::reduce_value<int64_t>(a.second,
-                                                             nvalues) <
-                                 util::reduce_value<int64_t>(b.second, nvalues);
-                        return util::reduce_value<uint64_t>(a.second, nvalues) <
-                               util::reduce_value<uint64_t>(b.second, nvalues);
-                      });
-  } else if (value_type.IsMinTy() || value_type.IsMaxTy()) {
-    std::ranges::sort(*values_by_key,
-
-                      [&](auto &a, auto &b) {
-                        return util::min_max_value<uint64_t>(
-                                   a.second, nvalues, value_type.IsMaxTy()) <
-                               util::min_max_value<uint64_t>(
-                                   b.second, nvalues, value_type.IsMaxTy());
-                      });
-  } else if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
-    if (value_type.IsSigned()) {
-      std::ranges::sort(*values_by_key,
-
-                        [&](auto &a, auto &b) {
-                          return util::avg_value<int64_t>(a.second, nvalues) <
-                                 util::avg_value<int64_t>(b.second, nvalues);
-                        });
-    } else {
-      std::ranges::sort(*values_by_key,
-
-                        [&](auto &a, auto &b) {
-                          return util::avg_value<uint64_t>(a.second, nvalues) <
-                                 util::avg_value<uint64_t>(b.second, nvalues);
-                        });
-    }
-  } else {
-    sort_by_key(map_info.key_type, *values_by_key);
-  };
-
-  if (div == 0)
-    div = 1;
-
-  if (value_type.IsAvgTy() || value_type.IsStatsTy()) {
-    out.map_stats(*this, map, top, div, *values_by_key);
-    return 0;
-  }
-
-  out.map(*this, map, top, div, *values_by_key);
-  return 0;
-}
-
-int BPFtrace::print_map_hist(Output &out,
-                             const BpfMap &map,
-                             uint32_t top,
-                             uint32_t div)
-{
-  // A hist-map adds an extra 8 bytes onto the end of its key for storing
-  // the bucket number.
-  // e.g. A map defined as: @x[1, 2] = @hist(3);
-  // would actually be stored with the key: [1, 2, 3]
-
-  uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  const auto &map_info = resources.maps_info.at(map.name());
-  auto values_by_key = map.collect_histogram_data(map_info, nvalues);
-
-  if (!values_by_key) {
-    LOG(ERROR) << "Failed to collect histogram data: "
-               << values_by_key.takeError();
-    return -1;
-  }
-
-  // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
-  for (auto &map_elem : *values_by_key) {
-    int64_t sum = 0;
-    for (unsigned long i : map_elem.second) {
-      sum += i;
-    }
-    total_counts_by_key.emplace_back(map_elem.first, sum);
-  }
-  std::ranges::sort(total_counts_by_key,
-
-                    [&](auto &a, auto &b) { return a.second < b.second; });
-
-  if (div == 0)
-    div = 1;
-  out.map_hist(*this, map, top, div, *values_by_key, total_counts_by_key);
-  return 0;
 }
 
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
@@ -1474,88 +1346,6 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
 {
   assert(probe_id < resources.probe_ids.size());
   return resources.probe_ids[probe_id];
-}
-
-void BPFtrace::sort_by_key(
-    const SizedType &key,
-    std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-        &values_by_key)
-{
-  if (key.IsTupleTy()) {
-    // Sort the key arguments in reverse order so the results are sorted by
-    // the first argument first, then the second, etc.
-    auto &fields = key.GetFields();
-    for (size_t i = key.GetFieldCount(); i-- > 0;) {
-      const auto &field = fields.at(i);
-      if (field.type.IsIntTy()) {
-        if (field.type.GetSize() == 8) {
-          std::ranges::stable_sort(values_by_key,
-
-                                   [&](auto &a, auto &b) {
-                                     auto va = util::read_data<uint64_t>(
-                                         a.first.data() + field.offset);
-                                     auto vb = util::read_data<uint64_t>(
-                                         b.first.data() + field.offset);
-                                     return va < vb;
-                                   });
-        } else if (field.type.GetSize() == 4) {
-          std::ranges::stable_sort(values_by_key,
-
-                                   [&](auto &a, auto &b) {
-                                     auto va = util::read_data<uint32_t>(
-                                         a.first.data() + field.offset);
-                                     auto vb = util::read_data<uint32_t>(
-                                         b.first.data() + field.offset);
-                                     return va < vb;
-                                   });
-        } else {
-          LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
-                   << field.type.GetSize() << " provided";
-        }
-      } else if (field.type.IsStringTy()) {
-        std::ranges::stable_sort(
-            values_by_key,
-
-            [&](auto &a, auto &b) {
-              return strncmp(reinterpret_cast<const char *>(a.first.data() +
-                                                            field.offset),
-                             reinterpret_cast<const char *>(b.first.data() +
-                                                            field.offset),
-                             field.type.GetSize()) < 0;
-            });
-      }
-    }
-  } else if (key.IsIntTy()) {
-    if (key.GetSize() == 8) {
-      std::ranges::stable_sort(
-          values_by_key,
-
-          [&](auto &a, auto &b) {
-            auto va = util::read_data<uint64_t>(a.first.data());
-            auto vb = util::read_data<uint64_t>(b.first.data());
-            return va < vb;
-          });
-    } else if (key.GetSize() == 4) {
-      std::ranges::stable_sort(
-          values_by_key,
-
-          [&](auto &a, auto &b) {
-            auto va = util::read_data<uint32_t>(a.first.data());
-            auto vb = util::read_data<uint32_t>(b.first.data());
-            return va < vb;
-          });
-    } else {
-      LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
-               << key.GetSize() << " provided";
-    }
-
-  } else if (key.IsStringTy()) {
-    std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
-      return strncmp(reinterpret_cast<const char *>(a.first.data()),
-                     reinterpret_cast<const char *>(b.first.data()),
-                     key.GetSize()) < 0;
-    });
-  }
 }
 
 const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const

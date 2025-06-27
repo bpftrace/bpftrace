@@ -1,7 +1,11 @@
 #include <csignal>
+#include <fstream>
 
 #include "log.h"
+#include "output/json.h"
+#include "output/text.h"
 #include "run_bpftrace.h"
+#include "types_format.h"
 
 using namespace bpftrace;
 
@@ -34,9 +38,43 @@ void check_is_root()
   }
 }
 
-int run_bpftrace(BPFtrace &bpftrace, Output &output, BpfBytecode &bytecode)
+int run_bpftrace(BPFtrace &bpftrace,
+                 const std::string &output_file,
+                 const std::string &output_format,
+                 const ast::CDefinitions &c_definitions,
+                 BpfBytecode &bytecode)
 {
   int err;
+
+  // Check for required features.
+  if (!bpftrace.feature_->has_map_ringbuf()) {
+    LOG(ERROR) << "Your kernel is too old and is missing the "
+                  "BPF_MAP_TYPE_RINGBUF, which bpftrace requires.";
+    return 1;
+  }
+
+  // Create our output.
+  std::ostream *os = &std::cout;
+  std::ofstream outputstream;
+  if (!output_file.empty()) {
+    outputstream.open(output_file);
+    if (outputstream.fail()) {
+      LOG(ERROR) << "Failed to open output file: \"" << output_file
+                 << "\": " << strerror(errno);
+      exit(1);
+    }
+    os = &outputstream;
+  }
+  std::unique_ptr<output::Output> output;
+  if (output_format == "" || output_format == "text") {
+    output = std::make_unique<output::TextOutput>(*os);
+  } else if (output_format == "json") {
+    output = std::make_unique<output::JsonOutput>(*os);
+  } else {
+    LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
+               << "Valid formats: 'text', 'json'";
+    return 1;
+  }
 
   // Signal handler that lets us know an exit signal was received.
   struct sigaction act = {};
@@ -48,20 +86,31 @@ int run_bpftrace(BPFtrace &bpftrace, Output &output, BpfBytecode &bytecode)
   act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
   sigaction(SIGUSR1, &act, nullptr);
 
-  err = bpftrace.run(output, std::move(bytecode));
+  err = bpftrace.run(*output.get(), c_definitions, std::move(bytecode));
   if (err)
     return err;
+
+  // Indicate that we are done the main loop.
+  output->end();
 
   // We are now post-processing. If we receive another SIGINT,
   // handle it normally (exit)
   act.sa_handler = SIG_DFL;
   sigaction(SIGINT, &act, nullptr);
 
-  std::cout << "\n\n";
-
   // Print maps if needed (true by default).
-  if (bpftrace.config_->print_maps_on_exit)
-    err = bpftrace.print_maps(output);
+  if (!dry_run && bpftrace.config_->print_maps_on_exit) {
+    for (const auto &[_, map] : bpftrace.bytecode_.maps()) {
+      if (!map.is_printable())
+        continue;
+      auto res = format(bpftrace, c_definitions, map);
+      if (!res) {
+        std::cerr << "Error printing map: " << res.takeError();
+        continue;
+      }
+      output->map(map.name(), *res);
+    }
+  }
 
   if (bpftrace.child_) {
     auto val = 0;
