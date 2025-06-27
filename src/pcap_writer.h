@@ -19,7 +19,7 @@ public:
   bool open(std::string file);
   void close();
 
-  bool write(uint64_t ns, void *pkt, unsigned int size);
+  bool write(uint64_t ns, const void *pkt, unsigned int size);
 
 private:
   pcap_t *pd_;
