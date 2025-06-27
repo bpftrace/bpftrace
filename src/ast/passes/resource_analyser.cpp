@@ -184,11 +184,7 @@ void ResourceAnalyser::visit(Call &call)
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
       call.func == "debugf") {
-    // Implicit first field is the 64bit printf ID.
-    //
-    // Put it in initially so that offset and alignment calculation is
-    // accurate. We'll take it out before saving into resources.
-    std::vector<SizedType> args = { CreateInt64() };
+    std::vector<SizedType> args;
 
     // NOTE: the same logic can be found in the semantic_analyser pass
     for (auto it = call.vargs.begin() + 1; it != call.vargs.end(); it++) {
@@ -210,18 +206,14 @@ void ResourceAnalyser::visit(Call &call)
     // creation to generate offsets for each argument in the args "tuple".
     auto tuple = Struct::CreateTuple(args);
 
-    // Remove implicit printf ID field. Downstream consumers do not
-    // expect it nor do they care about it.
-    tuple->fields.erase(tuple->fields.begin());
-
     // Keep track of max "tuple" size needed for fmt string args. Codegen
     // will use this information to create a percpu array map of large
     // enough size for all fmt string calls to use.
-    const auto tuple_size = static_cast<uint64_t>(tuple->size);
-    if (exceeds_stack_limit(tuple_size)) {
+    const auto args_size = sizeof(uint64_t) +
+                           static_cast<uint64_t>(tuple->size);
+    if (exceeds_stack_limit(args_size)) {
       resources_.max_fmtstring_args_size = std::max(
-          resources_.max_fmtstring_args_size,
-          static_cast<uint64_t>(tuple_size));
+          resources_.max_fmtstring_args_size, static_cast<uint64_t>(args_size));
     }
 
     auto fmtstr = call.vargs.at(0).as<String>()->value;

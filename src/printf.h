@@ -64,7 +64,7 @@ private:
 
 class PrintableBuffer : public virtual IPrintable {
 public:
-  PrintableBuffer(char* buffer, size_t size)
+  PrintableBuffer(const char* buffer, size_t size)
       : value_(std::vector<char>(buffer, buffer + size))
   {
   }
