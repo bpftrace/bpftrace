@@ -528,17 +528,37 @@ AttachPointParser::State AttachPointParser::tracepoint_parser()
   return OK;
 }
 
-AttachPointParser::State AttachPointParser::profile_parser()
+// Used for both profile and interval probes
+AttachPointParser::State AttachPointParser::frequency_parser()
 {
-  if (parts_.size() == 2 && util::has_wildcard(parts_[1])) {
-    // Wildcards are allowed for listing
-    ap_->target = parts_[1];
-    ap_->freq = 0;
+  if (parts_.size() == 2) {
+    if (util::has_wildcard(parts_[1])) {
+      // Wildcards are allowed for listing
+      ap_->target = parts_[1];
+      ap_->freq = 0;
+      return OK;
+    }
+
+    auto res = util::to_uint(parts_[1]);
+    if (!res) {
+      errs_ << "Invalid rate of " << ap_->provider
+            << " probe: " << res.takeError() << std::endl;
+      return INVALID;
+    }
+    if (*res < 1000) {
+      errs_ << "Invalid rate of " << ap_->provider
+            << " probe. Minimum is 1000 or 1us. Found: " << *res
+            << " nanoseconds" << std::endl;
+      return INVALID;
+    }
+    ap_->target = "us";
+    // res is in nanoseconds
+    ap_->freq = (*res / 1000);
     return OK;
   }
 
   if (parts_.size() != 3) {
-    return argument_count_error(2);
+    return argument_count_error(1, 2);
   }
 
   ap_->target = parts_[1];
@@ -553,29 +573,14 @@ AttachPointParser::State AttachPointParser::profile_parser()
   return OK;
 }
 
+AttachPointParser::State AttachPointParser::profile_parser()
+{
+  return frequency_parser();
+}
+
 AttachPointParser::State AttachPointParser::interval_parser()
 {
-  if (parts_.size() == 2 && util::has_wildcard(parts_[1])) {
-    // Wildcards are allowed for listing
-    ap_->target = parts_[1];
-    ap_->freq = 0;
-    return OK;
-  }
-
-  if (parts_.size() != 3) {
-    return argument_count_error(2);
-  }
-
-  ap_->target = parts_[1];
-  auto res = util::to_uint(parts_[2]);
-  if (!res) {
-    errs_ << "Invalid rate of " << ap_->provider
-          << " probe: " << res.takeError() << std::endl;
-    return INVALID;
-  }
-
-  ap_->freq = *res;
-  return OK;
+  return frequency_parser();
 }
 
 AttachPointParser::State AttachPointParser::software_parser()
