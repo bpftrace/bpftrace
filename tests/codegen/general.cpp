@@ -88,8 +88,10 @@ kprobe:f
   EXPECT_EQ(args[1].type.GetSize(), 8U);
   EXPECT_EQ(args[1].offset, 8);
 
+  // Note that the string type has size + 1 in order to signal well-formedness.
+  // See clang_parser.cpp for this logic.
   EXPECT_TRUE(args[2].type.IsStringTy());
-  EXPECT_EQ(args[2].type.GetSize(), 10U);
+  EXPECT_EQ(args[2].type.GetSize(), 10U + 1U);
   EXPECT_EQ(args[2].offset, 16);
 
   EXPECT_TRUE(args[3].type.IsIntTy());

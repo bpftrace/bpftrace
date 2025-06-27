@@ -10,12 +10,11 @@ EXPECT OK
 TIMEOUT 1
 
 NAME no literals
-PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1]), str(args.argv[2]))); exit(); }
+# Clamping is done to not blow verifier complexity limits
+PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1], 32), str(args.argv[2], 32))); exit(); }
 AFTER ./testprogs/true zztest test
 EXPECT true
 TIMEOUT 1
-# Clamping is done to not blow verifier complexity limits
-ENV BPFTRACE_MAX_STRLEN=64
 
 NAME string truncation does not affect matching
 PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1], 6), str(args.argv[2], 4))); exit(); }

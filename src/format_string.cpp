@@ -1,254 +1,348 @@
 #include <cstring>
-#include <unordered_map>
-#include <unordered_set>
+#include <iomanip>
 
 #include "format_string.h"
+#include "output/output.h"
 #include "struct.h"
 #include "util/exceptions.h"
 #include "util/strings.h"
 
 namespace bpftrace {
 
-const int FMT_BUF_SZ = 512;
-// bpf_trace_printk cannot use more than three arguments, see bpf-helpers(7).
-const int PRINTK_MAX_ARGS = 3;
+using namespace output;
 
-namespace {
+char FormatError::ID;
 
-const std::regex length_modifier_re("%-?[0-9.]*(hh|h|l|ll|j|z|t)?([cduoxXp])");
-const std::unordered_map<std::string, ArgumentType> length_modifier_type = {
-  { "hh", ArgumentType::CHAR },      { "h", ArgumentType::SHORT },
-  { "", ArgumentType::INT },         { "l", ArgumentType::LONG },
-  { "ll", ArgumentType::LONG_LONG }, { "j", ArgumentType::INTMAX_T },
-  { "z", ArgumentType::SIZE_T },     { "t", ArgumentType::PTRDIFF_T },
-};
-
-ArgumentType get_expected_argument_type(const std::string &fmt)
+void FormatError::log(llvm::raw_ostream& OS) const
 {
-  std::smatch match;
-
-  if (std::regex_search(fmt, match, length_modifier_re)) {
-    if (match[2] == "p")
-      return ArgumentType::POINTER;
-    else if (match[2] == "c")
-      return ArgumentType::CHAR;
-
-    auto it = length_modifier_type.find(match[1]);
-    if (it != length_modifier_type.end())
-      return it->second;
-  }
-
-  return ArgumentType::UNKNOWN;
+  OS << msg_;
 }
 
-// Returns a vector of (token, type) tuples given a format string
-std::vector<std::tuple<std::string, Type>> get_token_types(
-    const std::string &fmt,
-    const std::unordered_map<std::string, Type> &format_types)
+// N.B. the `r`, `rh` and `rx` specifiers are non-standard and also have
+// modifiers that *follow* the primary specifier. This means that they need
+// special cases, and the ordering matters to ensure that we capture the
+// modifiers if they are present (so `r` is the final match in the list).
+const std::regex FormatSpec::regex(
+    R"(%(-?)(\+?)( ?)(#?)(\*|\d+)?(?:\.(\*|\d+))?([hlLjzt]*)([diouxXeEfFgGaAcspn%]|rh|rx|r))");
+
+FormatSpec::FormatSpec(const std::smatch& match)
 {
-  std::vector<std::tuple<std::string, Type>> types;
-  auto tokens_begin = std::sregex_iterator(fmt.begin(),
-                                           fmt.end(),
-                                           format_specifier_re);
-  auto tokens_end = std::sregex_iterator();
-  for (auto iter = tokens_begin; iter != tokens_end; iter++) {
-    int offset = 1;
-    // skip over format widths during verification
-    if (iter->str()[offset] == '-')
-      offset++;
-    while ((iter->str()[offset] >= '0' && iter->str()[offset] <= '9') ||
-           iter->str()[offset] == '.')
-      offset++;
-
-    std::string token = iter->str().substr(offset);
-
-    auto token_type = Type::none;
-    if (format_types.contains(token))
-      token_type = format_types.at(token);
-
-    types.emplace_back(token, token_type);
+  left_align = !match[1].str().empty();
+  show_sign = !match[2].str().empty();
+  space_prefix = !match[3].str().empty();
+  alternate_form = !match[4].str().empty();
+  if (!match[5].str().empty() && match[5].str() != "*") {
+    width = std::stoi(match[5].str());
   }
-
-  return types;
+  if (!match[6].str().empty() && match[6].str() != "*") {
+    precision = std::stoi(match[6].str());
+  }
+  length_modifier = match[7].str();
+  specifier = match[8].str();
 }
 
-} // anonymous namespace
+FormatString::FormatString() = default;
 
-std::string validate_format_string(const std::string &fmt,
-                                   std::vector<Field> args,
-                                   const std::string call_func)
+FormatString::FormatString(const std::string& fmt) : fmt_(std::move(fmt))
 {
-  std::stringstream message;
-
-  const auto &format_types = call_func == "debugf"
-                                 ? bpf_trace_printk_format_types
-                                 : printf_format_types;
-  auto token_types = get_token_types(fmt, format_types);
-
-  int num_tokens = token_types.size();
-  int num_args = args.size();
-  if (num_args < num_tokens) {
-    message << call_func << ": Not enough arguments for format string ("
-            << num_args << " supplied, " << num_tokens << " expected)"
-            << std::endl;
-    return message.str();
-  }
-  if (num_args > num_tokens) {
-    message << call_func << ": Too many arguments for format string ("
-            << num_args << " supplied, " << num_tokens << " expected)"
-            << std::endl;
-    return message.str();
-  }
-  if (call_func == "debugf" && num_args > PRINTK_MAX_ARGS) {
-    message << call_func << ": Cannot use more than " << PRINTK_MAX_ARGS
-            << " conversion specifiers" << std::endl;
-    return message.str();
-  }
-
-  for (int i = 0; i < num_args; i++) {
-    std::unordered_set<Type> arg_types;
-    Type arg_type = args.at(i).type.GetTy();
-    if (arg_type == Type::ksym_t || arg_type == Type::usym_t ||
-        arg_type == Type::username || arg_type == Type::kstack_t ||
-        arg_type == Type::ustack_t || arg_type == Type::inet ||
-        arg_type == Type::timestamp || arg_type == Type::mac_address ||
-        arg_type == Type::cgroup_path_t || arg_type == Type::strerror_t) {
-      arg_types.insert(Type::string); // Symbols should be printed as
-                                      // strings
-    } else if (arg_type == Type::pointer) {
-      arg_types.insert(Type::integer); // Casts (pointers) can be
-                                       // printed as integers
-    } else if (args.at(i).type.IsEnumTy()) {
-      // Symbolizing enum
-      arg_types.insert(Type::string);
-      arg_types.insert(Type::integer);
-    } else if (arg_type == Type::boolean) {
-      arg_types.insert(Type::integer);
-    } else {
-      arg_types.insert(arg_type);
-    }
-
-    auto token = std::get<0>(token_types[i]);
-    auto token_type = std::get<1>(token_types[i]);
-    if (token_type == Type::none) {
-      message << call_func << ": Unknown format string token: %" << token
-              << std::endl;
-      return message.str();
-    }
-
-    if (!arg_types.contains(token_type)) {
-      std::vector<std::string> arg_types_vec;
-      for (const auto &ty : arg_types)
-        arg_types_vec.push_back(to_string(ty));
-
-      message << call_func << ": %" << token
-              << " specifier expects a value of type " << token_type << " ("
-              << util::str_join(arg_types_vec, ",") << " supplied)"
-              << std::endl;
-      return message.str();
-    }
-  }
-  return "";
+  parse();
 }
 
-void FormatString::split()
-{
-  auto tokens_begin = std::sregex_iterator(fmt_.begin(),
-                                           fmt_.end(),
-                                           format_specifier_re);
-  auto tokens_end = std::sregex_iterator();
+FormatString::~FormatString() = default;
 
-  size_t last_pos = 0;
-  for (std::regex_iterator i = tokens_begin; i != tokens_end; i++) {
-    int end = i->position() + i->length();
-    parts_.push_back(fmt_.substr(last_pos, end - last_pos));
-    last_pos = end;
+void FormatString::parse()
+{
+  fragments.clear();
+  specs.clear();
+
+  auto begin = std::sregex_iterator(fmt_.begin(),
+                                    fmt_.end(),
+                                    FormatSpec::regex);
+  auto end = std::sregex_iterator();
+
+  size_t last_match_end = 0;
+  std::stringstream last_fragment;
+  for (auto it = begin; it != end; ++it) {
+    last_fragment << fmt_.substr(last_match_end,
+                                 it->position() - last_match_end);
+    last_match_end = it->position() + it->length();
+    auto spec = FormatSpec(*it);
+    if (spec.specifier == "%") {
+      last_fragment << "%";
+      continue;
+    }
+    fragments.emplace_back(last_fragment.str());
+    last_fragment.str(""); // Reset the fragment.
+    specs.emplace_back(std::move(spec));
+  }
+  last_fragment << fmt_.substr(last_match_end);
+  fragments.emplace_back(last_fragment.str());
+}
+
+Result<> FormatString::check(const std::vector<SizedType>& args) const
+{
+  std::stringstream err;
+  if (args.size() < specs.size()) {
+    err << "not enough arguments for format string (" << args.size()
+        << " supplied, " << specs.size() << " expected)";
+    return make_error<FormatError>(err.str());
+  }
+  if (args.size() > specs.size()) {
+    err << "too many arguments for format string (" << args.size()
+        << " supplied, " << specs.size() << " expected)";
+    return make_error<FormatError>(err.str());
   }
 
-  if (last_pos != fmt_.length()) {
-    parts_.push_back(fmt_.substr(last_pos));
+  // Walk over the arguments and check the most basic type information.
+  static const std::vector<Type> any_integer = { Type::integer,
+                                                 Type::boolean,
+                                                 Type::pointer };
+  static const std::map<std::string, std::vector<Type>> required_type = {
+    { "d", any_integer },
+    { "i", any_integer },
+    { "u", any_integer },
+    { "o", any_integer },
+    { "x", any_integer },
+    { "X", any_integer },
+    { "c", any_integer },
+    { "r", { Type::buffer } },
+    { "rx", { Type::buffer } },
+    { "rh", { Type::buffer } },
+    { "s", {} },
+    { "p", any_integer },
+  };
+  for (size_t i = 0; i < specs.size(); i++) {
+    if (args[i].IsNoneTy()) {
+      err << "unable to print none type for specifier: " << specs[i].specifier;
+      return make_error<FormatError>(err.str());
+    }
+    auto it = required_type.find(specs[i].specifier);
+    if (it == required_type.end()) {
+      err << "unsupported format specifier: " << specs[i].specifier;
+      return make_error<FormatError>(err.str());
+    }
+    if (it->second.empty()) {
+      // Anything goes.
+      continue;
+    }
+    bool found = false;
+    for (const auto& allowed : it->second) {
+      if (args[i].GetTy() == allowed) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      err << "unsupported format specifier for type '" << typestr(args[i])
+          << "': " << specs[i].specifier;
+      return make_error<FormatError>(err.str());
+    }
+  }
+  return OK();
+}
+
+template <typename T, typename Cast = T>
+Result<> as_number(std::stringstream& ss, const Primitive& p)
+{
+  return std::visit(
+      [&](const auto& v) -> Result<> {
+        if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
+                                     output::Primitive::Symbolic>) {
+          return as_number<T, Cast>(ss, output::Primitive(v.numeric));
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
+                                            int64_t> ||
+                             std::is_same_v<std::decay_t<decltype(v)>,
+                                            uint64_t> ||
+                             std::is_same_v<std::decay_t<decltype(v)>,
+                                            double> ||
+                             std::is_same_v<std::decay_t<decltype(v)>, bool>) {
+          if constexpr (std::is_same_v<T, void*>) {
+            ss << reinterpret_cast<void*>(static_cast<unsigned long long>(v));
+          } else {
+            ss << static_cast<T>(static_cast<Cast>(v));
+          }
+          return OK();
+        } else {
+          std::stringstream msg;
+          msg << "invalid integer conversion: " << p;
+          return make_error<FormatError>(msg.str());
+        }
+      },
+      p.variant);
+}
+
+template <typename T = long long, typename Cast = int>
+Result<> as_signed_integer(std::stringstream& ss,
+                           const Primitive& p,
+                           const std::string& length_modifier)
+{
+  if (length_modifier == "hh") {
+    return as_number<T, char>(ss, p);
+  } else if (length_modifier == "h") {
+    return as_number<T, short>(ss, p);
+  } else if (length_modifier == "l") {
+    return as_number<T, long>(ss, p);
+  } else if (length_modifier == "ll") {
+    return as_number<T, long long>(ss, p);
+  } else if (length_modifier == "j") {
+    return as_number<T, intmax_t>(ss, p);
+  } else if (length_modifier == "z") {
+    return as_number<T, ssize_t>(ss, p);
+  } else if (length_modifier == "t") {
+    return as_number<T, ptrdiff_t>(ss, p);
+  } else {
+    return as_number<T, Cast>(ss, p);
   }
 }
 
-void FormatString::format(std::ostream &out,
-                          std::vector<std::unique_ptr<IPrintable>> &args)
+template <typename T = unsigned long, typename Cast = unsigned int>
+Result<> as_unsigned_integer(std::stringstream& ss,
+                             const Primitive& p,
+                             const std::string& length_modifier)
 {
-  if (parts_.empty()) {
-    split();
-
-    // figure out the argument type for each format specifier
-    expected_types_.resize(parts_.size());
-    for (size_t i = 0; i < parts_.size(); i++)
-      expected_types_[i] = get_expected_argument_type(parts_[i]);
-
-    // Note we're passing in the superset `printf_format_types` regardless
-    // of what the calling context was. This is ok b/c the format string
-    // was already validated for correctness during compilation.
-    tokens_ = get_token_types(fmt_, printf_format_types);
+  if (length_modifier == "hh") {
+    return as_number<T, unsigned char>(ss, p);
+  } else if (length_modifier == "h") {
+    return as_number<T, unsigned short>(ss, p);
+  } else if (length_modifier == "l") {
+    return as_number<T, unsigned long>(ss, p);
+  } else if (length_modifier == "ll") {
+    return as_number<T, unsigned long long>(ss, p);
+  } else if (length_modifier == "j") {
+    return as_number<T, uintmax_t>(ss, p);
+  } else if (length_modifier == "z") {
+    return as_number<T, size_t>(ss, p);
+  } else if (length_modifier == "t") {
+    return as_number<T, ptrdiff_t>(ss, p);
+  } else {
+    return as_number<T, Cast>(ss, p);
   }
-  auto buffer = std::vector<char>(FMT_BUF_SZ);
-  auto check_snprintf_ret = [](int r) {
-    if (r < 0) {
-      char *e = std::strerror(errno);
-      throw util::FatalUserException("format() error occurred: " +
-                                     std::string(e ? e : ""));
+}
+
+Result<> as_floating_point(std::stringstream& ss,
+                           const Primitive& p,
+                           const std::string& length_modifier)
+{
+  if (length_modifier == "L") {
+    return as_number<long double>(ss, p);
+  } else {
+    return as_number<double>(ss, p);
+  }
+}
+
+static Result<> as_string(std::stringstream& ss,
+                          const Primitive& p,
+                          [[maybe_unused]] const std::string& length_modifier)
+{
+  ss << p;
+  return OK();
+}
+
+template <bool keep_ascii = true, bool escape_hex = true>
+static Result<> as_buffer(std::stringstream& ss,
+                          const Primitive& p,
+                          const std::string& length_modifier)
+{
+  if (std::holds_alternative<Primitive::Buffer>(p.variant)) {
+    const auto& buf = std::get<Primitive::Buffer>(p.variant);
+    ss << util::hex_format_buffer(
+        buf.data.data(), buf.data.size(), keep_ascii, escape_hex);
+    return OK();
+  } else {
+    return as_string(ss, p, length_modifier);
+  }
+}
+
+Result<std::string> FormatSpec::apply(const Primitive& p) const
+{
+  std::stringstream ss;
+  if (left_align) {
+    ss << std::left;
+  } else {
+    ss << std::right;
+  }
+  if (width > 0) {
+    ss << std::setw(width);
+  }
+  if (precision >= 0 &&
+      (specifier == "f" || specifier == "F" || specifier == "e" ||
+       specifier == "E" || specifier == "g" || specifier == "G" ||
+       specifier == "a" || specifier == "A")) {
+    ss << std::setprecision(precision);
+    if (specifier == "f" || specifier == "F") {
+      ss << std::fixed;
+    } else if (specifier == "e" || specifier == "E") {
+      ss << std::scientific;
     }
+  }
+  if (specifier == "o") {
+    ss << std::oct;
+  } else if (specifier == "x") {
+    ss << std::hex << std::nouppercase;
+  } else if (specifier == "X") {
+    ss << std::hex << std::uppercase;
+  }
+  if (alternate_form) {
+    ss << std::showbase;
+  }
+  if (show_sign) {
+    ss << std::showpos;
+  }
+  using SpecifierHandler = Result<> (*)(std::stringstream&,
+                                        const Primitive&,
+                                        const std::string&);
+  static const std::map<std::string, SpecifierHandler> specifier_dispatch = {
+    { "d", as_signed_integer },
+    { "i", as_signed_integer },
+    { "u", as_unsigned_integer },
+    { "o", as_unsigned_integer },
+    { "x", as_unsigned_integer },
+    { "X", as_unsigned_integer },
+    { "f", as_floating_point },
+    { "F", as_floating_point },
+    { "e", as_floating_point },
+    { "E", as_floating_point },
+    { "g", as_floating_point },
+    { "G", as_floating_point },
+    { "a", as_floating_point },
+    { "A", as_floating_point },
+    { "c", as_signed_integer<char> },
+    { "r", as_buffer },
+    { "rx", as_buffer<false> },
+    { "rh", as_buffer<false, false> },
+    { "s", as_string },
+    { "p", as_unsigned_integer<void*> },
   };
 
-  size_t i = 0;
-  for (; i < args.size(); i++) {
-    for (int try_ = 0; try_ < 2; try_++) {
-      // find format specified in the string
-      auto last_percent_sign = parts_[i].find_last_of('%');
-      std::string fmt_string = last_percent_sign != std::string::npos
-                                   ? parts_[i].substr(last_percent_sign)
-                                   : "";
-      std::string printf_fmt;
-      if (fmt_string == "%r" || fmt_string == "%rx" || fmt_string == "%rh") {
-        if (fmt_string == "%rx" || fmt_string == "%rh") {
-          auto *printable_buffer = dynamic_cast<PrintableBuffer *>(
-              &*args.at(i));
-          // this is checked by semantic analyzer
-          assert(printable_buffer);
-          printable_buffer->keep_ascii(false);
-          if (fmt_string == "%rh")
-            printable_buffer->escape_hex(false);
-        }
-        // replace nonstandard format specifier with %s
-        printf_fmt = std::regex_replace(parts_[i],
-                                        std::regex("%r[x|h]?"),
-                                        "%s");
-      } else {
-        printf_fmt = parts_[i];
-      }
-      int r = args.at(i)->print(buffer.data(),
-                                buffer.capacity(),
-                                printf_fmt.c_str(),
-                                std::get<1>(tokens_[i]),
-                                expected_types_[i]);
-      check_snprintf_ret(r);
-      if (static_cast<size_t>(r) < buffer.capacity())
-        // string fits into buffer, we are done
-        break;
-      else
-        // the buffer is not big enough to hold the string, resize it
-        // and try again
-        buffer.resize(r + 1);
-    }
-
-    out << buffer.data();
+  auto* dispatcher = as_string; // Default.
+  auto it = specifier_dispatch.find(specifier);
+  if (it != specifier_dispatch.end()) {
+    dispatcher = it->second;
   }
-  if (i < parts_.size()) {
-    out << parts_[i];
+  auto ok = dispatcher(ss, p, length_modifier);
+  if (!ok) {
+    return ok.takeError();
   }
+  return ss.str();
 }
 
-std::string FormatString::format_str(
-    std::vector<std::unique_ptr<IPrintable>> &args)
+std::string FormatString::format(const std::vector<Primitive>& args) const
 {
-  std::stringstream buf;
-  format(buf, args);
-  return buf.str();
+  std::stringstream ss;
+  for (size_t i = 0; i < args.size(); i++) {
+    ss << fragments[i];
+    auto s = specs[i].apply(args[i]);
+    if (s) {
+      // Write the formatted string.
+      ss << *s;
+    } else {
+      // Nothing has been written, so just embed the error into the string here.
+      // This is what happens in `Go` when a value cannot be formatted properly.
+      ss << "!{" << s.takeError() << "}";
+    }
+  }
+  ss << fragments.back();
+  return ss.str();
 }
 
 } // namespace bpftrace

@@ -18,7 +18,7 @@
 #include "collect_nodes.h"
 #include "config.h"
 #include "log.h"
-#include "printf.h"
+#include "probe_matcher.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
@@ -1326,12 +1326,12 @@ void SemanticAnalyser::visit(Call &call)
     auto strlen = bpftrace_.config_->max_strlen;
     if (call.vargs.size() == 2) {
       if (auto *integer = call.vargs.at(1).as<Integer>()) {
-        if (integer->value > strlen) {
+        if (integer->value + 1 > strlen) {
           call.addWarning() << "length param (" << integer->value
                             << ") is too long and will be shortened to "
                             << strlen << " bytes (see BPFTRACE_MAX_STRLEN)";
         } else {
-          strlen = integer->value;
+          strlen = integer->value + 1; // Storage for NUL byte.
         }
       } else if (auto *integer = dynamic_cast<NegativeInteger *>(
                      call.vargs.at(1).as<NegativeInteger>())) {
@@ -1557,34 +1557,55 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "printf" || call.func == "system" ||
              call.func == "cat" || call.func == "debugf") {
     if (is_final_pass()) {
-      // NOTE: the same logic can be found in the resource_analyser pass
       const auto &fmt = call.vargs.at(0).as<String>()->value;
-      std::vector<Field> args;
-      for (auto iter = call.vargs.begin() + 1; iter != call.vargs.end();
-           iter++) {
-        // NOTE: modifying the type will break the resizing that happens
-        // in the codegen. We have to copy the type here to avoid modification
-        SizedType ty = iter->type();
-        // Promote to 64-bit if it's not an aggregate type
-        if (!ty.IsAggregate() && !ty.IsTimestampTy())
-          ty.SetSize(8);
-        args.push_back(Field{
-            .name = "",
-            .type = ty,
-            .offset = 0,
-            .bitfield = std::nullopt,
-        });
+      std::vector<SizedType> args;
+      for (size_t i = 1; i < call.vargs.size(); i++) {
+        args.push_back(call.vargs[i].type());
       }
-      std::string msg = validate_format_string(fmt, args, call.func);
-      if (!msg.empty()) {
-        call.addError() << msg;
+      FormatString fs(fmt);
+      auto ok = fs.check(args);
+      if (!ok) {
+        call.addError() << ok.takeError();
       }
-    }
-    if (call.func == "debugf" && is_final_pass()) {
-      call.addWarning()
-          << "The debugf() builtin is not recommended for production use. "
-             "For "
-             "more information see bpf_trace_printk in bpf-helpers(7).";
+      // The `debugf` call is a builtin, and is subject to more much rigorous
+      // checks. We've already validate the basic counts, etc. but we need to
+      // apply these additional constraints which includes a limited surface.
+      if (call.func == "debugf") {
+        call.addWarning()
+            << "The debugf() builtin is not recommended for production use. "
+               "For more information see bpf_trace_printk in bpf-helpers(7).";
+        // bpf_trace_printk cannot use more than three arguments, see
+        // bpf-helpers(7).
+        constexpr int PRINTK_MAX_ARGS = 3;
+        if (args.size() > PRINTK_MAX_ARGS) {
+          call.addError() << "cannot use more than " << PRINTK_MAX_ARGS
+                          << " conversion specifiers";
+        }
+        for (size_t i = 0; i < args.size(); i++) {
+          // bpf_trace_printk_format_types is a subset of printf_format_types
+          // that contains valid types for bpf_trace_printk() see iovisor/bcc
+          // BTypeVisitor::checkFormatSpecifiers.
+          static const std::unordered_map<std::string, Type>
+              bpf_trace_printk_format_types = { { "d", Type::integer },
+                                                { "u", Type::integer },
+                                                { "x", Type::integer },
+                                                { "p", Type::integer },
+                                                { "s", Type::string } };
+          auto it = bpf_trace_printk_format_types.find(fs.specs[i].specifier);
+          if (it == bpf_trace_printk_format_types.end()) {
+            call.vargs.at(0).node().addError()
+                << "Invalid format specifier for `debugf`: "
+                << fs.specs[i].specifier;
+            continue;
+          }
+          if (args[i].GetTy() != it->second) {
+            call.vargs.at(i + 1).node().addError()
+                << "Type does not match format specifier: "
+                << fs.specs[i].specifier;
+            continue;
+          }
+        }
+      }
     }
   } else if (call.func == "exit") {
     // Leave as `none`.
@@ -1779,9 +1800,14 @@ If you're seeing errors, try clamping the string sizes. For example:
       call.addError() << call.func
                       << "() does not support literal string arguments";
 
+    // N.B. When converting from BTF, we can treat string types as 7 bytes in
+    // order to signal to userspace that they are well-formed. However, we can
+    // convert from anything as long as there are at least 6 bytes to read.
     const auto &type = arg.type();
-    if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() != 6)
-      call.addError() << call.func << "() argument must be 6 bytes in size";
+    if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() < 6) {
+      call.addError() << call.func
+                      << "() argument must be at least 6 bytes in size";
+    }
 
     call.return_type = CreateMacAddress();
   } else if (call.func == "unwatch") {
@@ -2465,7 +2491,8 @@ void SemanticAnalyser::visit(Binop &binop)
   else if (addr_lhs != AddrSpace::none) {
     binop.result_type.SetAS(addr_lhs);
   } else {
-    // In case rhs is none, then this triggers warning in selectProbeReadHelper.
+    // In case rhs is none, then this triggers warning in
+    // selectProbeReadHelper.
     binop.result_type.SetAS(addr_rhs);
   }
 

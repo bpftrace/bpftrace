@@ -94,9 +94,9 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       // Add a trailer if string is truncated
       //
       // The heuristic we use is to check if the string exactly fits inside the
-      // buffer (NUL included). If it does, we assume it was truncated.  This
-      // is obviously not a perfect heuristic, but it solves the majority case
-      // well enough and is simple to implement.
+      // buffer (NUL included). If it does, we assume it was truncated. This is
+      // a valid mechanism, with the string being "well-formed" essentially the
+      // signal that it was not truncated.
       if (type.GetSize() == s.size()) {
         s += bpftrace.config_->str_trunc_trailer;
       }

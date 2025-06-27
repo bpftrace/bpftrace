@@ -281,7 +281,8 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
       auto elem_type = clang_getArrayElementType(clang_type);
       auto size = clang_getNumElements(clang_type);
       if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U) {
-        return CreateString(size);
+        // See btf.cpp; we need to signal well-formedness.
+        return CreateString(size + 1);
       }
 
       auto elem_stype = get_sized_type(elem_type, structs);

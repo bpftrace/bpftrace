@@ -250,8 +250,9 @@ TEST(clang_parser, string_array)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("str"));
 
+  // See clang_parser.cpp; the increase signal well-formedness.
   EXPECT_TRUE(foo->GetField("str").type.IsStringTy());
-  EXPECT_EQ(foo->GetField("str").type.GetSize(), 32U);
+  EXPECT_EQ(foo->GetField("str").type.GetSize(), 32U + 1U);
   EXPECT_EQ(foo->GetField("str").offset, 0);
 }
 
