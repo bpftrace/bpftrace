@@ -11,8 +11,10 @@
 #include "bpfmap.h"
 #include "bpfprogram.h"
 #include "config.h"
+#include "globalvars.h"
 #include "probe_types.h"
 #include "required_resources.h"
+#include "util/result.h"
 
 namespace bpftrace {
 
@@ -31,7 +33,8 @@ public:
   BpfBytecode(BpfBytecode &&) = default;
   BpfBytecode &operator=(BpfBytecode &&) = default;
 
-  void update_global_vars(BPFtrace &bpftrace);
+  void update_global_vars(BPFtrace &bpftrace,
+                          globalvars::GlobalVarMap &&global_var_vals);
   uint64_t get_event_loss_counter(BPFtrace &bpftrace);
   void load_progs(const RequiredResources &resources,
                   const BTF &btf,

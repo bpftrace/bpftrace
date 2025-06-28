@@ -34,9 +34,33 @@ void check_is_root()
   }
 }
 
-int run_bpftrace(BPFtrace &bpftrace, Output &output, BpfBytecode &bytecode)
+int run_bpftrace(BPFtrace &bpftrace,
+                 Output &output,
+                 BpfBytecode &bytecode,
+                 std::vector<std::string> &&named_params,
+                 const std::function<void()> &usage_and_exit)
 {
   int err;
+
+  auto named_param_vals = bpftrace.resources.global_vars.get_named_param_vals(
+      named_params);
+  if (!named_param_vals) {
+    auto ok = handleErrors(std::move(named_param_vals),
+                           [&](const globalvars::UnknownParamError &uo_err) {
+                             LOG(ERROR) << uo_err.err();
+                             auto hint = uo_err.hint();
+                             if (!hint.empty()) {
+                               LOG(HINT) << hint;
+                             }
+                             usage_and_exit();
+                           });
+    if (!ok) {
+      LOG(ERROR) << ok.takeError();
+    }
+    return 1;
+  }
+
+  bytecode.update_global_vars(bpftrace, std::move(*named_param_vals));
 
   // Signal handler that lets us know an exit signal was received.
   struct sigaction act = {};
