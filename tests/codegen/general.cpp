@@ -131,10 +131,6 @@ interval:s:1 {
                 .run();
 
   ASSERT_TRUE(ok && ast.diagnostics().ok());
-
-  // Optionally, validate that an IR object was produced or that the transformed AST has expected shape
-  // (e.g., check that `ast.root` contains a For loop with `delete(@m, kv[0])`)
-  // But basic semantic+compile pass + no diagnostics is already a strong signal
 }
 
 } // namespace bpftrace::test::codegen
