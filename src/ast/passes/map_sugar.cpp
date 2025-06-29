@@ -1,6 +1,5 @@
 #include <unordered_map>
 #include "ast/ast.h"
-#include "ast/fieldaccess.h"
 #include "ast/integer.h"
 #include "ast/map.h"
 #include "ast/mapaccess.h"
