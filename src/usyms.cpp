@@ -209,14 +209,36 @@ void Usyms::cache_blazesym(const std::string &elf_file)
   }
 
   if (cache_type == UserSymbolCacheType::per_pid) {
-    for (int pid : util::get_pids_for_program(elf_file)) {
-      blaze_cache_src_process cache = {
-        .type_size = sizeof(cache),
-        .pid = static_cast<uint32_t>(pid),
-        .cache_vmas = true,
-      };
+    if (has_targeted_pids_) {
+      // When using -p flag, only cache symbols for the targeted PIDs
+      for (int pid : targeted_pids_) {
+        // Verify this PID is actually running the target executable
+        // This check is important because the user might have specified
+        // PIDs that don't match the program being traced
+        std::string pid_exe = util::get_exe_path(pid);
+        if (pid_exe == elf_file || 
+            (pid_exe.find(elf_file) != std::string::npos)) {
+          blaze_cache_src_process cache = {
+            .type_size = sizeof(cache),
+            .pid = static_cast<uint32_t>(pid),
+            .cache_vmas = true,
+          };
 
-      blaze_symbolize_cache_process(symbolizer_, &cache);
+          blaze_symbolize_cache_process(symbolizer_, &cache);
+        }
+      }
+    } else {
+      // Original behavior: cache all PIDs running this program
+      // This is used when no specific PIDs are targeted
+      for (int pid : util::get_pids_for_program(elf_file)) {
+        blaze_cache_src_process cache = {
+          .type_size = sizeof(cache),
+          .pid = static_cast<uint32_t>(pid),
+          .cache_vmas = true,
+        };
+
+        blaze_symbolize_cache_process(symbolizer_, &cache);
+      }
     }
   }
 }
