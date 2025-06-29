@@ -312,7 +312,6 @@ public:
             auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, map->loc);
             auto *block = ast_.make_node<BlockStmt>(std::vector<Statement>{ delete_stmt }, map->loc);
             auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, map->loc);
-
             stmt.value = for_stmt;
           }
         }
@@ -342,7 +341,7 @@ Pass CreateMapSugarPass()
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
 
-    MapClearTransform clear(ast); // <-- insert here
+    MapClearTransform clear(ast);
     clear.visit(ast.root);
 
     MapAssignmentCheck check;
