@@ -319,7 +319,9 @@ public:
 
             auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, std::move(map->loc));
             auto *block = ast_.make_node<Block>(
-                ast_.make_stmt_list({ delete_stmt }), map->loc);
+                ast_.make_stmt_list({ delete_stmt }));
+            block->loc = map->loc;
+
             auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, std::move(map->loc));
             stmt.value = for_stmt;
           }
