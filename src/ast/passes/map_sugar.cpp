@@ -1,5 +1,13 @@
 #include <unordered_map>
-
+#include "ast/block_stmt.h"
+#include "ast/for.h"
+#include "ast/fieldaccess.h"
+#include "ast/integer.h"
+#include "ast/map.h"
+#include "ast/mapaccess.h"
+#include "ast/identifier.h"
+#include "ast/exprstatement.h"
+#include "ast/call.h"
 #include "ast/ast.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
@@ -302,16 +310,20 @@ public:
       if (auto *call = expr_stmt->expr.as<Call>()) {
         if (call->func == "clear" && call->vargs.size() == 1) {
           if (auto *map = call->vargs.at(0).as<Map>()) {
-            auto *kv_ident = ast_.make_node<Identifier>("kv");
-            auto *map_copy1 = ast_.make_node<Map>(map->ident, map->loc);
-            auto *map_copy2 = ast_.make_node<Map>(map->ident, map->loc);
-            auto *kv_field =
-                ast_.make_node<FieldAccess>(kv_ident, ast_.make_node<Integer>(0, map->loc), map->loc);
+            auto *kv_ident = ast_.make_node<Identifier>("kv", map->loc);
+            auto *map_copy1 = ast_.make_node<Map>(map->ident, std::move(map->loc));
+            auto *map_copy2 = ast_.make_node<Map>(map->ident, std::move(map->loc));
+            auto *kv_index = ast_.make_node<Integer>(0, map->loc);
+            auto *kv_field = ast_.make_node<MapAccess>(kv_ident, kv_index, map->loc);
             auto *delete_call = ast_.make_node<Call>(
-                "delete", std::vector<Expression>{ map_copy2, kv_field }, map->loc);
-            auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, map->loc);
-            auto *block = ast_.make_node<BlockStmt>(std::vector<Statement>{ delete_stmt }, map->loc);
-            auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, map->loc);
+    "delete",
+    std::vector<Expression>{ map_copy2, kv_field },
+    std::move(map->loc));
+
+            auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, std::move(map->loc));
+            auto *block = ast_.make_node<BlockStmt>(
+            std::vector<Statement>{ delete_stmt }, std::move(map->loc));
+            auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, std::move(map->loc));
             stmt.value = for_stmt;
           }
         }
