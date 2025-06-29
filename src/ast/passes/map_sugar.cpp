@@ -55,19 +55,6 @@ public:
   void visit(Call &call);
 };
 
-// New class for transforming clear() to synchronous deletion
-class MapClearToLoop : public Visitor<MapClearToLoop> {
-public:
-  explicit MapClearToLoop(ASTContext &ast) : ast_(ast) {};
-
-  using Visitor<MapClearToLoop>::visit;
-  void visit(Statement &stmt);
-
-private:
-  ASTContext &ast_;
-  bool checkAndTransformClear(Statement &stmt);
-};
-
 } // namespace
 
 // These are special functions which are part of the map API, and operate
@@ -77,9 +64,8 @@ private:
 // In the future, this could be generalized by extracting information about the
 // specific function being called, and potentially respecting annotations on
 // these arguments.
-// NOTE: "clear" has been removed as it's now handled by MapClearToLoop
 static std::unordered_set<std::string> RAW_MAP_ARG = {
-  "print", "zero", "len", "delete", "has_key",
+  "print", "clear", "zero", "len", "delete", "has_key",
 };
 
 void MapDefaultKey::visit(Map &map)
@@ -303,91 +289,70 @@ void MapAssignmentCheck::visit(Call &call)
   Visitor<MapAssignmentCheck>::visit(call);
 }
 
-// Implementation of MapClearToLoop
-bool MapClearToLoop::checkAndTransformClear(Statement &stmt)
-{
-  auto *expr_stmt = stmt.as<ExprStatement>();
-  if (!expr_stmt)
-    return false;
-    
-  auto *call = expr_stmt->expr.as<Call>();
-  if (!call || call->func != "clear" || call->vargs.size() != 1)
-    return false;
-    
-  // Get the map from the argument
-  Map *map = call->vargs[0].as<Map>();
-  if (!map)
-    return false;
-    
-  // Create the transformation: for ($__kv : @map) { delete(@map, $__kv.0); }
-  
-  // Generate a unique variable name to avoid conflicts
-  static int clear_counter = 0;
-  std::string var_name = "$__clear_kv_" + std::to_string(clear_counter++);
-  
-  // Create loop variable
-  auto *loop_var = ast_.make_node<Variable>(var_name, call->loc);
-  
-  // Create the map for iteration (need a fresh node)
-  auto *iter_map = ast_.make_node<Map>(map->ident, map->loc);
-  
-  // Create delete(@map, $__kv.0)
-  auto *delete_call = ast_.make_node<Call>("delete", call->loc);
-  
-  // Add map as first argument
-  auto *delete_map = ast_.make_node<Map>(map->ident, map->loc);
-  delete_call->vargs.emplace_back(delete_map);
-  
-  // Add $__kv.0 as second argument
-  auto *kv_access = ast_.make_node<Variable>(var_name, call->loc);
-  auto *zero = ast_.make_node<Integer>(0, call->loc);
-  auto *member = ast_.make_node<MemberAccess>(kv_access, zero, call->loc);
-  delete_call->vargs.emplace_back(member);
-  
-  // Create the delete statement
-  auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, call->loc);
-  
-  // Create the for loop
-  StatementList body;
-  body.emplace_back(delete_stmt);
-  
-  auto *for_loop = ast_.make_node<For>(loop_var, iter_map, std::move(body), call->loc);
-  
-  // Replace the statement
-  stmt.value = for_loop;
-  
-  return true;
-}
+class MapClearTransform : public Visitor<MapClearTransform> {
+public:
+  explicit MapClearTransform(ASTContext &ast) : ast_(ast) {}
 
-void MapClearToLoop::visit(Statement &stmt)
-{
-  // Try to transform clear() calls before visiting children
-  if (!checkAndTransformClear(stmt)) {
-    // If not a clear call, visit normally
-    Visitor<MapClearToLoop>::visit(stmt);
+  using Visitor<MapClearTransform>::visit;
+
+  void visit(Statement &stmt)
+  {
+    // Only interested in: clear(@map);
+    if (auto *expr_stmt = stmt.as<ExprStatement>()) {
+      if (auto *call = expr_stmt->expr.as<Call>()) {
+        if (call->func == "clear" && call->vargs.size() == 1) {
+          if (auto *map = call->vargs.at(0).as<Map>()) {
+            auto *kv_ident = ast_.make_node<Identifier>("kv");
+            auto *map_copy1 = ast_.make_node<Map>(map->ident, map->loc);
+            auto *map_copy2 = ast_.make_node<Map>(map->ident, map->loc);
+            auto *kv_field =
+                ast_.make_node<FieldAccess>(kv_ident, ast_.make_node<Integer>(0, map->loc), map->loc);
+            auto *delete_call = ast_.make_node<Call>(
+                "delete", std::vector<Expression>{ map_copy2, kv_field }, map->loc);
+            auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, map->loc);
+            auto *block = ast_.make_node<BlockStmt>(std::vector<Statement>{ delete_stmt }, map->loc);
+            auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, map->loc);
+
+            stmt.value = for_stmt;
+          }
+        }
+      }
+    }
+
+    Visitor<MapClearTransform>::visit(stmt);
   }
-}
+
+private:
+  ASTContext &ast_;
+};
+
 
 Pass CreateMapSugarPass()
 {
   auto fn = [](ASTContext &ast) -> MapMetadata {
-    // First transform clear() to loops - do this before other transformations
-    MapClearToLoop clear_transform(ast);
-    clear_transform.visit(ast.root);
-    
-    // Then do the existing transformations
     MapFunctionAliases aliases;
     aliases.visit(ast.root);
-    
+
     MapDefaultKey defaults(ast);
     defaults.visit(ast.root);
     if (!ast.diagnostics().ok()) {
-      // No consistent defaults.
       return std::move(defaults.metadata);
     }
-    
+
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
-    
+
+    MapClearTransform clear(ast); // <-- insert here
+    clear.visit(ast.root);
+
     MapAssignmentCheck check;
-    check.visit(
+    check.visit(ast.root);
+
+    return std::move(defaults.metadata);
+  };
+
+  return Pass::create("MapSugar", fn);
+}
+
+
+} // namespace bpftrace::ast
