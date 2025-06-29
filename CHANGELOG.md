@@ -80,6 +80,8 @@ and this project adheres to
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 - runqlat.bt: ignore idle task
     [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
+- Only cache symbols from targeted process
+    [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
 #### Deprecated
 #### Removed
 #### Fixed
