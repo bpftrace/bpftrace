@@ -149,8 +149,13 @@ void Usyms::cache_bcc(const std::string &elf_file)
     // this allows symbol resolution for processes that are running at probe
     // attach time, but not at symbol resolution time, even with ASLR
     // enabled, since BCC symcache records the offsets
-    for (int pid : util::get_pids_for_program(elf_file))
+    const auto &target_pids = config_.target_pids;  // <-- assume this is passed in or part of config
+
+    for (int pid : util::get_pids_for_program(elf_file)) {
+      if (!target_pids.empty() && !target_pids.count(pid))
+        continue;
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
+    }
 }
 
 #ifdef HAVE_BLAZESYM
