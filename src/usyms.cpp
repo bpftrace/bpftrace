@@ -115,6 +115,11 @@ Usyms::Usyms(const Config &config) : config_(config)
 {
 }
 
+Usyms::Usyms(const Config &config, const std::set<int> &targeted_pids)
+    : config_(config), targeted_pids_(targeted_pids), has_targeted_pids_(!targeted_pids.empty())
+{
+}
+
 Usyms::~Usyms()
 {
   for (const auto &pair : exe_sym_) {
