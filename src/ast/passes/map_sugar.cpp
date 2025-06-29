@@ -1,6 +1,5 @@
 #include <unordered_map>
 #include "ast/ast.h"
-#include "ast/for.h"
 #include "ast/fieldaccess.h"
 #include "ast/integer.h"
 #include "ast/map.h"
@@ -8,7 +7,6 @@
 #include "ast/identifier.h"
 #include "ast/exprstatement.h"
 #include "ast/call.h"
-#include "ast/ast.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
 
@@ -322,7 +320,7 @@ public:
 
             auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, std::move(map->loc));
             auto *block = ast_.make_node<Block>(
-                std::vector<Statement>{ delete_stmt }, map->loc);
+                ast_.make_stmt_list({ delete_stmt }), map->loc);
             auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, std::move(map->loc));
             stmt.value = for_stmt;
           }
