@@ -4,7 +4,6 @@
 #include <bcc/bcc_syms.h>
 #include <cstdint>
 #include <map>
-#include <set>
 #include <string>
 
 #include "util/symbols.h"
@@ -18,13 +17,12 @@ class Config;
 class Usyms {
 public:
   Usyms(const Config& config);
-Usyms(const Config& config, const std::set<int>& targeted_pids);
   ~Usyms();
 
   Usyms(Usyms&) = delete;
   Usyms& operator=(const Usyms&) = delete;
 
-  void cache(const std::string& elf_file);
+  void cache(const std::string& elf_file, std::optional<int> pid);
   std::vector<std::string> resolve(uint64_t addr,
                                    int32_t pid,
                                    const std::string& pid_exe,
@@ -34,15 +32,13 @@ Usyms(const Config& config, const std::set<int>& targeted_pids);
 
 private:
   const Config& config_;
-  std::set<int> targeted_pids_;
-  bool has_targeted_pids_ = false;
   // note: exe_sym_ is used when layout is same for all instances of program
   std::map<std::string, std::pair<int, void*>> exe_sym_; // exe -> (pid, cache)
   std::map<int, void*> pid_sym_;                         // pid -> cache
   std::map<std::string, std::map<uintptr_t, elf_symbol, std::greater<>>>
       symbol_table_cache_;
 
-  void cache_bcc(const std::string& elf_file);
+  void cache_bcc(const std::string& elf_file, std::optional<int> opt_pid);
   std::string resolve_bcc(uint64_t addr,
                           int32_t pid,
                           const std::string& pid_exe,
@@ -54,7 +50,7 @@ private:
   struct blaze_symbolizer* symbolizer_{ nullptr };
 
   struct blaze_symbolizer* create_symbolizer() const;
-  void cache_blazesym(const std::string& elf_file);
+  void cache_blazesym(const std::string& elf_file, std::optional<int> opt_pid);
   std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
                                                  int32_t pid,
                                                  const std::string& pid_exe,
