@@ -144,18 +144,31 @@ void Usyms::cache_bcc(const std::string &elf_file)
       !symbol_table_cache_.contains(elf_file))
     symbol_table_cache_[elf_file] = util::get_symbol_table_for_elf(elf_file);
 
- if (cache_type == UserSymbolCacheType::per_pid) {
+  if (cache_type == UserSymbolCacheType::per_pid) {
     // preload symbol tables from running processes
     // this allows symbol resolution for processes that are running at probe
     // attach time, but not at symbol resolution time, even with ASLR
     // enabled, since BCC symcache records the offsets
-    const auto &target_pids = config_.target_pids;  // <-- assume this is passed in or part of config
-
-    for (int pid : util::get_pids_for_program(elf_file)) {
-      if (!target_pids.empty() && !target_pids.count(pid))
-        continue;
-      pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
+    
+    if (has_targeted_pids_) {
+      // When using -p flag, only cache symbols for the targeted PIDs
+      for (int pid : targeted_pids_) {
+        // Verify this PID is actually running the target executable
+        // This check is important because the user might have specified
+        // PIDs that don't match the program being traced
+        std::string pid_exe = util::get_exe_path(pid);
+        if (pid_exe == elf_file || 
+            (pid_exe.find(elf_file) != std::string::npos)) {
+          pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
+        }
+      }
+    } else {
+      // Original behavior: cache all PIDs running this program
+      // This is used when no specific PIDs are targeted
+      for (int pid : util::get_pids_for_program(elf_file))
+        pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
     }
+  }
 }
 
 #ifdef HAVE_BLAZESYM
@@ -196,20 +209,16 @@ void Usyms::cache_blazesym(const std::string &elf_file)
   }
 
   if (cache_type == UserSymbolCacheType::per_pid) {
-  const auto &target_pids = config_.target_pids;
-
     for (int pid : util::get_pids_for_program(elf_file)) {
-      if (!target_pids.empty() && !target_pids.count(pid))
-        continue;
-  
       blaze_cache_src_process cache = {
         .type_size = sizeof(cache),
         .pid = static_cast<uint32_t>(pid),
         .cache_vmas = true,
       };
+
       blaze_symbolize_cache_process(symbolizer_, &cache);
     }
-}
+  }
 }
 #endif
 
