@@ -1,5 +1,5 @@
 #include <unordered_map>
-#include "ast/block_stmt.h"
+#include "ast/ast.h"
 #include "ast/for.h"
 #include "ast/fieldaccess.h"
 #include "ast/integer.h"
@@ -321,8 +321,8 @@ public:
     std::move(map->loc));
 
             auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, std::move(map->loc));
-            auto *block = ast_.make_node<BlockStmt>(
-            std::vector<Statement>{ delete_stmt }, std::move(map->loc));
+            auto *block = ast_.make_node<Block>(
+                std::vector<Statement>{ delete_stmt }, map->loc);
             auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, std::move(map->loc));
             stmt.value = for_stmt;
           }
