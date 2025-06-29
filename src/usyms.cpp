@@ -115,11 +115,6 @@ Usyms::Usyms(const Config &config) : config_(config)
 {
 }
 
-Usyms::Usyms(const Config &config, const std::set<int> &targeted_pids)
-    : config_(config), targeted_pids_(targeted_pids), has_targeted_pids_(!targeted_pids.empty())
-{
-}
-
 Usyms::~Usyms()
 {
   for (const auto &pair : exe_sym_) {
@@ -138,7 +133,7 @@ Usyms::~Usyms()
 #endif
 }
 
-void Usyms::cache_bcc(const std::string &elf_file)
+void Usyms::cache_bcc(const std::string &elf_file, std::optional<int> opt_pid)
 {
   const auto cache_type = config_.user_symbol_cache_type;
   // preload symbol table for executable to make it available even if the
@@ -152,27 +147,13 @@ void Usyms::cache_bcc(const std::string &elf_file)
   if (cache_type == UserSymbolCacheType::per_pid) {
     // preload symbol tables from running processes
     // this allows symbol resolution for processes that are running at probe
-    // attach time, but not at symbol resolution time, even with ASLR
-    // enabled, since BCC symcache records the offsets
-    
-    if (has_targeted_pids_) {
-      // When using -p flag, only cache symbols for the targeted PIDs
-      for (int pid : targeted_pids_) {
-        // Verify this PID is actually running the target executable
-        // This check is important because the user might have specified
-        // PIDs that don't match the program being traced
-        std::string pid_exe = util::get_exe_path(pid);
-        if (pid_exe == elf_file || 
-            (pid_exe.find(elf_file) != std::string::npos)) {
-          pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
-        }
-      }
-    } else {
-      // Original behavior: cache all PIDs running this program
-      // This is used when no specific PIDs are targeted
-      for (int pid : util::get_pids_for_program(elf_file))
-        pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
-    }
+    // attach time (either a specific PID or all matching processes), but not at
+    // symbol resolution time, even with ASLR enabled, since BCC symcache
+    // records the offsets
+    auto pids = opt_pid.has_value() ? std::vector<int>{ *opt_pid }
+                                    : util::get_pids_for_program(elf_file);
+    for (int pid : pids)
+      pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
   }
 }
 
@@ -188,7 +169,8 @@ struct blaze_symbolizer *Usyms::create_symbolizer() const
   return blaze_symbolizer_new_opts(&opts);
 }
 
-void Usyms::cache_blazesym(const std::string &elf_file)
+void Usyms::cache_blazesym(const std::string &elf_file,
+                           std::optional<int> opt_pid)
 {
   auto cache_type = config_.user_symbol_cache_type;
   if (cache_type == UserSymbolCacheType::none)
@@ -214,50 +196,30 @@ void Usyms::cache_blazesym(const std::string &elf_file)
   }
 
   if (cache_type == UserSymbolCacheType::per_pid) {
-    if (has_targeted_pids_) {
-      // When using -p flag, only cache symbols for the targeted PIDs
-      for (int pid : targeted_pids_) {
-        // Verify this PID is actually running the target executable
-        // This check is important because the user might have specified
-        // PIDs that don't match the program being traced
-        std::string pid_exe = util::get_exe_path(pid);
-        if (pid_exe == elf_file || 
-            (pid_exe.find(elf_file) != std::string::npos)) {
-          blaze_cache_src_process cache = {
-            .type_size = sizeof(cache),
-            .pid = static_cast<uint32_t>(pid),
-            .cache_vmas = true,
-          };
+    auto pids = opt_pid.has_value() ? std::vector<int>{ *opt_pid }
+                                    : util::get_pids_for_program(elf_file);
+    for (int pid : pids) {
+      blaze_cache_src_process cache = {
+        .type_size = sizeof(cache),
+        .pid = static_cast<uint32_t>(pid),
+        .cache_vmas = true,
+      };
 
-          blaze_symbolize_cache_process(symbolizer_, &cache);
-        }
-      }
-    } else {
-      // Original behavior: cache all PIDs running this program
-      // This is used when no specific PIDs are targeted
-      for (int pid : util::get_pids_for_program(elf_file)) {
-        blaze_cache_src_process cache = {
-          .type_size = sizeof(cache),
-          .pid = static_cast<uint32_t>(pid),
-          .cache_vmas = true,
-        };
-
-        blaze_symbolize_cache_process(symbolizer_, &cache);
-      }
+      blaze_symbolize_cache_process(symbolizer_, &cache);
     }
   }
 }
 #endif
 
-void Usyms::cache(const std::string &elf_file)
+void Usyms::cache(const std::string &elf_file, std::optional<int> pid)
 {
 #ifdef HAVE_BLAZESYM
   if (config_.use_blazesym) {
-    cache_blazesym(elf_file);
+    cache_blazesym(elf_file, pid);
     return;
   }
 #endif
-  cache_bcc(elf_file);
+  cache_bcc(elf_file, pid);
 }
 
 std::string Usyms::resolve_bcc(uint64_t addr,
