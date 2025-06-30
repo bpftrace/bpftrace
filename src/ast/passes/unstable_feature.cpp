@@ -34,6 +34,7 @@ public:
   void visit(MapDeclStatement &decl);
   void visit(Import &imp);
   void visit(Macro &macro);
+  void visit(Call &call);
 
 private:
   BPFtrace &bpftrace_;
@@ -80,6 +81,23 @@ void UnstableFeature::visit(Macro &macro)
       !warned_features.contains(UNSTABLE_MACRO)) {
     macro.addWarning() << get_warning(UNSTABLE_MACRO);
     warned_features.insert(UNSTABLE_MACRO);
+  }
+}
+
+void UnstableFeature::visit(Call &call)
+{
+  if (call.func != "tseries") {
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::error) {
+    call.addError() << get_error(UNSTABLE_TSERIES);
+    return;
+  }
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_TSERIES)) {
+    call.addWarning() << get_warning(UNSTABLE_TSERIES);
+    warned_features.insert(UNSTABLE_TSERIES);
   }
 }
 

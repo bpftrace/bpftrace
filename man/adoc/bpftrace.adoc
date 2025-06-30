@@ -3433,6 +3433,10 @@ See <<Advanced Topics>> for more information on <<Map Printing>>.
 | Set all values for all keys to zero.
 | Async
 
+| <<map-functions-tseries, `tseries`>>
+| Create a time series that tracks either the last integer value in each interval or the per-interval average, minimum, maximum, or sum.
+| Sync
+
 |===
 
 [#map-functions-avg]
@@ -3794,6 +3798,171 @@ interval:s:10 {
 
 Set all values for all keys to zero.
 
+[#map-functions-tseries]
+=== tseries
+
+.variants
+* `tseries_t tseries(int64 v, const string interval, int64 buckets)`
+* `tseries_t tseries(int64 v, const string interval, int64 buckets, const string agg)`
+
+Create a time series that tracks an integer value. `tseries` records up to
+`buckets` intervals where each bucket represents an amount of time specified by
+`interval`.
+
+==== Duration Strings
+
+`interval` specifies the interval duration. It must be an unsigned integer
+followed by a time unit suffix (`ns` (nanoseconds), `us` (microseconds), `ms` (
+milliseconds), `s` (seconds).
+
+----
+@a = tseries(1, "100ns", 5); // 100 nanoseconds
+@b = tseries(1, "100us", 5); // 100 microseconds
+@c = tseries(1, "100ms", 5); // 100 milliseconds
+@d = tseries(1, "1s", 5); // 1 second
+----
+
+==== Aggregation Functions
+
+By default, each bucket in `tseries` contains the last value recorded for that
+interval. The optional `agg` parameter specifies how values in the same
+interval are aggregated.
+
+|===
+| Aggregation Function | Example | Description
+
+| `avg`
+| `@ = tseries(@v, "1s", 5, "avg")`
+| Calculate the running average of all the values in each interval.
+
+| `max`
+| `@ = tseries(@v, "1s", 5, "max")`
+| Calculate the maximum of all values in each interval.
+
+| `min`
+| `@ = tseries(@v, "1s", 5, "min")`
+| Calculate the minimum of all values in each interval.
+
+| `sum`
+| `@ = tseries(@v, "1s", 5, "sum")`
+| Calculate the sum of all values in each interval.
+
+|===
+
+==== Examples
+
+Example one:
+
+----
+BEGIN {
+  @i = 0;
+}
+
+// Record the minimum of ten random values generated during each 100ms interval.
+i:ms:10 {
+  @ = tseries(rand % 10, "100ms", 20, "min");
+  @i++;
+
+  if (@i == 200) {
+    clear(@i);
+    exit();
+  }
+}
+----
+
+----
+Attaching 2 probes...
+
+
+@:
+hh:mm:ss.mmm  ___________________________________________________
+15:11:02.501 |                o                                  | 1
+15:11:02.601 o                                                   | 0
+15:11:02.701 |                o                                  | 1
+15:11:02.801 |                o                                  | 1
+15:11:02.901 |                o                                  | 1
+15:11:03.001 o                                                   | 0
+15:11:03.101 |                o                                  | 1
+15:11:03.201 |                                                   o 3
+15:11:03.301 |                                 o                 | 2
+15:11:03.401 o                                                   | 0
+15:11:03.501 o                                                   | 0
+15:11:03.601 o                                                   | 0
+15:11:03.701 o                                                   | 0
+15:11:03.801 o                                                   | 0
+15:11:03.901 o                                                   | 0
+15:11:04.001 o                                                   | 0
+15:11:04.101 o                                                   | 0
+15:11:04.201 o                                                   | 0
+15:11:04.301 o                                                   | 0
+15:11:04.401 o                                                   | 0
+             v___________________________________________________v
+             0                                                   3
+----
+
+Example two:
+
+----
+// Create a zigzag pattern
+BEGIN {
+  @dir = 1;
+  @c = -5;
+  @i = 0;
+}
+
+i:ms:100 {
+  @ = tseries(@c, "100ms", 30);
+  @c += @dir;
+  @i++;
+
+  if (@i == 30) {
+    clear(@dir);
+    clear(@c);
+    clear(@i);
+    exit();
+  }
+
+  if (@c > 5) {
+    @dir = -1;
+    @c = 4
+  } else if (@c < -5) {
+    @dir = 1;
+    @c = -4;
+  }
+}
+
+----
+
+----
+Attaching 2 probes...
+
+
+@:
+hh:mm:ss.mmm  ___________________________________________________
+15:14:30.801 o                         .                         | -5
+15:14:30.901 |    o                    .                         | -4
+15:14:31.001 |         o               .                         | -3
+15:14:31.101 |              o          .                         | -2
+15:14:31.201 |                   o     .                         | -1
+15:14:31.301 |                         o                         | 0
+15:14:31.401 |                         .    o                    | 1
+15:14:31.501 |                         .         o               | 2
+15:14:31.601 |                         .              o          | 3
+15:14:31.701 |                         .                   o     | 4
+15:14:31.801 |                         .                         o 5
+15:14:31.901 |                         .                   o     | 4
+15:14:32.001 |                         .              o          | 3
+15:14:32.101 |                         .         o               | 2
+15:14:32.201 |                         .    o                    | 1
+15:14:32.301 |                         o                         | 0
+15:14:32.401 |                   o     .                         | -1
+15:14:32.501 |              o          .                         | -2
+15:14:32.601 |         o               .                         | -3
+15:14:32.701 |    o                    .                         | -4
+15:14:32.801 o                         .                         | -5
+...
+----
+
 == Configuration
 
 - <<Config Variables>>
@@ -3955,6 +4124,17 @@ The possible options are:
 Default: warn
 
 Feature flag for map declarations.
+
+The possible options are:
+- `error` - fail if this feature is used
+- `warn` - enable feature but print a warning
+- `enable` - enable feature
+
+==== unstable_tseries
+
+Default: warn
+
+Feature flag for `tseries`.
 
 The possible options are:
 - `error` - fail if this feature is used

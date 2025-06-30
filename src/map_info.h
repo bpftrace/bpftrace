@@ -56,10 +56,35 @@ private:
   }
 };
 
+struct TSeriesArgs {
+  long interval_ns = -1;
+  long buckets = -1;
+  SizedType agg;
+
+  bool operator==(const TSeriesArgs &other)
+  {
+    return interval_ns == other.interval_ns && buckets == other.buckets &&
+           agg == other.agg;
+  }
+  bool operator!=(const TSeriesArgs &other)
+  {
+    return !(*this == other);
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(interval_ns, buckets, agg);
+  }
+};
+
 struct MapInfo {
   SizedType key_type;
   SizedType value_type;
-  std::variant<std::monostate, HistogramArgs, LinearHistogramArgs> detail;
+  std::variant<std::monostate, HistogramArgs, LinearHistogramArgs, TSeriesArgs>
+      detail;
   int id = -1;
   int max_entries = -1;
   libbpf::bpf_map_type bpf_type = libbpf::BPF_MAP_TYPE_HASH;

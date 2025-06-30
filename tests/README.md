@@ -109,6 +109,42 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
          END { printf("world!\n") }
     EXPECT hello world!
     ```
+* `TIMESTAMPS`: Expect there to be a timestamp string wherever "$timestamp"
+  appears in the expected output. TIMESTAMPS must contain a time format
+  string followed by a duration. The time format string may contain the
+  following format codes:
+
+  %Y - Year with century as a decimal number.
+  %m - Month as a zero-padded decimal number.
+  %d - Day of the month as a zero-padded decimal number.
+  %H - Hour (24-hour clock) as a zero-padded decimal number.
+  %M - Minute as a zero-padded decimal number.
+  %S - Second as a zero-padded decimal number.
+  %l - Millisecond as a decimal number, zero-padded to 3 digits.
+  %f - Microsecond as a decimal number, zero-padded to 6 digits.
+  %k - Nanosecond as a decimal number, zero-padded to 9 digits.
+
+  Only one of %l, %f, or %k may be used in the same format string.
+
+  The duration string can be in units of seconds (s), milliseconds (ms), or
+  microseconds (us), but not a combination of the three.
+
+  ```
+  ...
+  EXPECT $timestamp one $timestamp two
+  TIMESTAMPS %H:%M:%S 1s
+  ...
+
+  ...
+  EXPECT $timestamp one $timestamp two
+  TIMESTAMPS %H:%M:%S.$l 10ms
+  ...
+
+  ...
+  EXPECT $timestamp one $timestamp two
+  TIMESTAMPS %Y-%m-%dT%H:%M:%S.%kZ 10us
+  ...
+  ```
 * `REQUIRES`: Run a command in a shell. If it succeeds, run the testcase.
   Else, skip the testcase.
 * `REQUIRES_FEATURE`: Only run testcase if the following bpftrace feature is
