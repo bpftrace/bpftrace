@@ -67,6 +67,8 @@ and this project adheres to
   - [#4258](https://github.com/bpftrace/bpftrace/pull/4258)
 - Add `socket_cookie` function to get the cookie of a socket
   - [#4345](https://github.com/bpftrace/bpftrace/pull/4345)
+- Introduce `tseries` for capturing time series data
+  - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
