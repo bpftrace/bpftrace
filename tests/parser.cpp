@@ -1446,16 +1446,26 @@ TEST(Parser, profile_probe)
        " profile:ms:997\n"
        "  int: 1\n");
 
+  test("profile:1us { 1 }",
+       "Program\n"
+       " profile:us:1\n"
+       "  int: 1\n");
+
+  test("profile:5min { 1 }",
+       "Program\n"
+       " profile:us:300000000\n"
+       "  int: 1\n");
+
   test_parse_failure("profile:ms:nan { 1 }", R"(
 stdin:1:1-15: ERROR: Invalid rate of profile probe: invalid integer: nan
 profile:ms:nan { 1 }
 ~~~~~~~~~~~~~~
 )");
 
-  test_parse_failure("profile:f { 1 }", R"(
-stdin:1:1-10: ERROR: profile probe type requires 2 arguments, found 1
-profile:f { 1 }
-~~~~~~~~~
+  test_parse_failure("profile:10 { 1 }", R"(
+stdin:1:1-11: ERROR: Invalid rate of profile probe. Minimum is 1us. Found: 10 nanoseconds
+profile:10 { 1 }
+~~~~~~~~~~
 )");
 
   test_parse_failure("profile { 1 }", R"(
@@ -1488,10 +1498,26 @@ TEST(Parser, interval_probe)
        " interval:s:1000\n"
        "  int: 1\n");
 
+  test("interval:1us { 1 }",
+       "Program\n"
+       " interval:us:1\n"
+       "  int: 1\n");
+
+  test("interval:5min { 1 }",
+       "Program\n"
+       " interval:us:300000000\n"
+       "  int: 1\n");
+
   test_parse_failure("interval:s:1b { 1 }", R"(
 stdin:1:1-14: ERROR: Invalid rate of interval probe: invalid trailing bytes: 1b
 interval:s:1b { 1 }
 ~~~~~~~~~~~~~
+)");
+
+  test_parse_failure("interval:100 { 1 }", R"(
+stdin:1:1-13: ERROR: Invalid rate of interval probe. Minimum is 1us. Found: 100 nanoseconds
+interval:100 { 1 }
+~~~~~~~~~~~~
 )");
 }
 
@@ -2478,6 +2504,16 @@ TEST(Parser, int_notation)
   test("k:f { print(1_000ll); }",
        "Program\n kprobe:f\n  call: print\n   int: 1000\n");
 
+  test("k:f { print(1ns); }", "Program\n kprobe:f\n  call: print\n   int: 1\n");
+  test("k:f { print(1us); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+  test("k:f { print(1ms); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000000\n");
+  test("k:f { print(1s); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000000000\n");
+  test("k:f { print(1min); }",
+       "Program\n kprobe:f\n  call: print\n   int: 60000000000\n");
+
   test_parse_failure("k:f { print(5e-9); }", R"(
 stdin:1:7-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(5e-9); }
@@ -2488,6 +2524,12 @@ k:f { print(5e-9); }
 stdin:1:7-17: ERROR: overflow error, maximum value is 18446744073709551615: 1e21
 k:f { print(1e21); }
       ~~~~~~~~~~
+)");
+
+  test_parse_failure("k:f { print(10000000000min); }", R"(
+stdin:1:7-27: ERROR: overflow error, maximum value is 18446744073709551615: 10000000000min
+k:f { print(10000000000min); }
+      ~~~~~~~~~~~~~~~~~~~~
 )");
 
   test_parse_failure("k:f { print(12e4); }", R"(
