@@ -1,6 +1,11 @@
 #include <unordered_map>
-
 #include "ast/ast.h"
+#include "ast/integer.h"
+#include "ast/map.h"
+#include "ast/mapaccess.h"
+#include "ast/identifier.h"
+#include "ast/exprstatement.h"
+#include "ast/call.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
 
@@ -289,25 +294,75 @@ void MapAssignmentCheck::visit(Call &call)
   Visitor<MapAssignmentCheck>::visit(call);
 }
 
+class MapClearTransform : public Visitor<MapClearTransform> {
+public:
+  explicit MapClearTransform(ASTContext &ast) : ast_(ast) {}
+
+  using Visitor<MapClearTransform>::visit;
+
+  void visit(Statement &stmt)
+  {
+    // Only interested in: clear(@map);
+    if (auto *expr_stmt = stmt.as<ExprStatement>()) {
+      if (auto *call = expr_stmt->expr.as<Call>()) {
+        if (call->func == "clear" && call->vargs.size() == 1) {
+          if (auto *map = call->vargs.at(0).as<Map>()) {
+            auto *kv_ident = ast_.make_node<Identifier>("kv", map->loc);
+            auto *map_copy1 = ast_.make_node<Map>(map->ident, std::move(map->loc));
+            auto *map_copy2 = ast_.make_node<Map>(map->ident, std::move(map->loc));
+            auto *kv_index = ast_.make_node<Integer>(0, map->loc);
+            auto *kv_field = ast_.make_node<MapAccess>(kv_ident, kv_index, map->loc);
+            auto *delete_call = ast_.make_node<Call>(
+    "delete",
+    std::vector<Expression>{ map_copy2, kv_field },
+    std::move(map->loc));
+
+            auto *delete_stmt = ast_.make_node<ExprStatement>(delete_call, std::move(map->loc));
+            auto *block = ast_.make_node<Block>(
+                ast_.make_stmt_list({ delete_stmt }));
+            block->loc = map->loc;
+
+            auto *for_stmt = ast_.make_node<For>(kv_ident, map_copy1, block, std::move(map->loc));
+            stmt.value = for_stmt;
+          }
+        }
+      }
+    }
+
+    Visitor<MapClearTransform>::visit(stmt);
+  }
+
+private:
+  ASTContext &ast_;
+};
+
+
 Pass CreateMapSugarPass()
 {
   auto fn = [](ASTContext &ast) -> MapMetadata {
     MapFunctionAliases aliases;
     aliases.visit(ast.root);
+
     MapDefaultKey defaults(ast);
     defaults.visit(ast.root);
     if (!ast.diagnostics().ok()) {
-      // No consistent defaults.
       return std::move(defaults.metadata);
     }
+
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
+
+    MapClearTransform clear(ast);
+    clear.visit(ast.root);
+
     MapAssignmentCheck check;
     check.visit(ast.root);
+
     return std::move(defaults.metadata);
   };
 
   return Pass::create("MapSugar", fn);
 }
+
 
 } // namespace bpftrace::ast
