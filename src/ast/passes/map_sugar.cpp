@@ -249,33 +249,33 @@ void MapFunctionAliases::visit(Call &call)
     if (auto *map = call.vargs.at(0).as<Map>()) {
 
       // Variable $kv
-      auto *kv_var = ast.make_node<Variable>("$kv", Location(call.loc));
+      auto *kv_var = ast_.make_node<Variable>("$kv", Location(call.loc));
 
       // $kv.0 (tuple access)
-      auto *tuple_access = ast.make_node<TupleAccess>(kv_var,
+      auto *tuple_access = ast_.make_node<TupleAccess>(kv_var,
                                                       0,
                                                       Location(call.loc));
    
       ExpressionList delete_args = { Expression(map),
                                      Expression(tuple_access) };
-      auto *delete_call = ast.make_node<Call>("delete",
+      auto *delete_call = ast_.make_node<Call>("delete",
                                               std::move(delete_args),
                                               Location(call.loc));
       delete_call->injected_args = 1;
 
       // for ($kv : @map) { delete(...) }
       StatementList stmts;
-      stmts.push_back(ast.make_node<ExprStatement>(Expression(delete_call),
+      stmts.push_back(ast_.make_node<ExprStatement>(Expression(delete_call),
                                                    Location(call.loc)));
-      auto *for_stmt = ast.make_node<For>(
+      auto *for_stmt = ast_.make_node<For>(
           kv_var, map, std::move(stmts), Location(call.loc));
 
       // Replace this call expression with a block expression: ({ for(...) })
       StatementList outer;
       outer.push_back(Statement(for_stmt));
-      auto *block_expr = ast.make_node<BlockExpr>(
+      auto *block_expr = ast_.make_node<BlockExpr>(
           std::move(outer),
-          Expression(ast.make_node<Integer>(0, Location(call.loc))),
+          Expression(ast_.make_node<Integer>(0, Location(call.loc))),
           Location(call.loc));
 
       // Replace the call node with the block expression
