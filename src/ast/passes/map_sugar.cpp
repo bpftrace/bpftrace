@@ -10,7 +10,9 @@ namespace {
 
 class MapDefaultKey : public Visitor<MapDefaultKey> {
 public:
-  explicit MapDefaultKey(ASTContext &ast) : ast_(ast) {}
+  explicit MapDefaultKey(ASTContext &ast) : ast_(ast)
+  {
+  }
 
   using Visitor<MapDefaultKey>::visit;
   void visit(Call &call);
@@ -44,10 +46,11 @@ private:
   ASTContext &ast_;
 };
 
-
 class MapAssignmentCall : public Visitor<MapAssignmentCall> {
 public:
-  explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {}
+  explicit MapAssignmentCall(ASTContext &ast) : ast_(ast)
+  {
+  }
 
   using Visitor<MapAssignmentCall>::visit;
   void visit(Statement &stmt);
@@ -247,26 +250,25 @@ void MapFunctionAliases::visit(Call &call)
   // Rewrite clear(@map) → for ($kv : @map) { delete(@map[$kv.0]); }
   if (call.func == "clear" && call.vargs.size() == 1) {
     if (auto *map = call.vargs.at(0).as<Map>()) {
-
       // Variable $kv
       auto *kv_var = ast_.make_node<Variable>("$kv", Location(call.loc));
 
       // $kv.0 (tuple access)
       auto *tuple_access = ast_.make_node<TupleAccess>(kv_var,
-                                                      0,
-                                                      Location(call.loc));
-   
+                                                       0,
+                                                       Location(call.loc));
+
       ExpressionList delete_args = { Expression(map),
                                      Expression(tuple_access) };
       auto *delete_call = ast_.make_node<Call>("delete",
-                                              std::move(delete_args),
-                                              Location(call.loc));
+                                               std::move(delete_args),
+                                               Location(call.loc));
       delete_call->injected_args = 1;
 
       // for ($kv : @map) { delete(...) }
       StatementList stmts;
       stmts.push_back(ast_.make_node<ExprStatement>(Expression(delete_call),
-                                                   Location(call.loc)));
+                                                    Location(call.loc)));
       auto *for_stmt = ast_.make_node<For>(
           kv_var, map, std::move(stmts), Location(call.loc));
 
