@@ -29,7 +29,7 @@ static int read_from_source(char* buf, size_t max_size);
 %}
 
 /* https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal */
-int_size (([uU])|([uU]?[lL]?[lL]))
+int_size (([uU])|([uU]?[lL]?[lL])|(ns)|(us)|(ms)|(s)|(m)|(h)|(d))
 
 /* Number with underscores in it, e.g. 1_000_000 */
 int      [0-9]([0-9_]*[0-9])?{int_size}?

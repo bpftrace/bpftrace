@@ -48,6 +48,8 @@ private:
   State iter_parser();
   State raw_tracepoint_parser();
 
+  State frequency_parser();
+
   State argument_count_error(int expected,
                              std::optional<int> expected2 = std::nullopt);
   std::optional<uint64_t> stoull(const std::string &str);

@@ -97,24 +97,33 @@ Result<uint64_t> to_uint(const std::string &num, int base)
   // treat no suffix as a 64-bit integer type.
   // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
   std::string suffix(endptr);
-  static std::map<std::string, uint64_t> max = {
-    { "", std::numeric_limits<uint64_t>::max() },
-    { "u", std::numeric_limits<unsigned>::max() },
-    { "ul", std::numeric_limits<unsigned long>::max() },
-    { "ull", std::numeric_limits<unsigned long long>::max() },
-    { "l", std::numeric_limits<long>::max() },
-    { "ll", std::numeric_limits<long long>::max() },
+  // The pair is the maximum value for the type, and the multiplier
+  static std::map<std::string, std::pair<uint64_t, uint64_t>> int_config = {
+    { "", { std::numeric_limits<uint64_t>::max(), 1 } },
+    { "u", { std::numeric_limits<unsigned>::max(), 1 } },
+    { "ul", { std::numeric_limits<unsigned long>::max(), 1 } },
+    { "ull", { std::numeric_limits<unsigned long long>::max(), 1 } },
+    { "l", { std::numeric_limits<long>::max(), 1 } },
+    { "ll", { std::numeric_limits<long long>::max(), 1 } },
+    { "ns", { std::numeric_limits<uint64_t>::max(), 1 } },
+    { "us", { std::numeric_limits<uint64_t>::max(), 1000 } },
+    { "ms", { std::numeric_limits<uint64_t>::max(), 1'000'000 } },
+    { "s", { std::numeric_limits<uint64_t>::max(), 1'000'000'000 } },
+    { "m", { std::numeric_limits<uint64_t>::max(), 60'000'000'000 } },
+    { "h", { std::numeric_limits<uint64_t>::max(), 3'600'000'000'000 } },
+    { "d", { std::numeric_limits<uint64_t>::max(), 86'400'000'000'000 } },
   };
-  auto typespec = max.find(suffix);
-  if (typespec == max.end()) {
+  auto typespec = int_config.find(suffix);
+  if (typespec == int_config.end()) {
     // Not a valid suffix.
     return make_error<NumberFormatError>("invalid trailing bytes", num);
   }
+
   // Is it out of the range? We consider this as an overflow.
-  if (ret > typespec->second) {
-    return make_error<OverflowError>(num, typespec->second);
+  if (ret > (typespec->second.first / typespec->second.second)) {
+    return make_error<OverflowError>(num, typespec->second.first);
   }
-  return ret;
+  return ret * typespec->second.second;
 }
 
 } // namespace bpftrace::util
