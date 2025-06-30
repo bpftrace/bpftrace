@@ -10,7 +10,7 @@ namespace {
 
 class MapDefaultKey : public Visitor<MapDefaultKey> {
 public:
-  explicit MapDefaultKey(ASTContext &ast) : ast_(ast) {};
+  explicit MapDefaultKey(ASTContext &ast) : ast_(ast) {}
 
   using Visitor<MapDefaultKey>::visit;
   void visit(Call &call);
@@ -34,13 +34,20 @@ private:
 
 class MapFunctionAliases : public Visitor<MapFunctionAliases> {
 public:
+  explicit MapFunctionAliases(ASTContext &ast) : ast_(ast)
+  {
+  }
   using Visitor<MapFunctionAliases>::visit;
   void visit(Call &call);
+
+private:
+  ASTContext &ast_;
 };
+
 
 class MapAssignmentCall : public Visitor<MapAssignmentCall> {
 public:
-  explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {};
+  explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {}
 
   using Visitor<MapAssignmentCall>::visit;
   void visit(Statement &stmt);
@@ -240,7 +247,6 @@ void MapFunctionAliases::visit(Call &call)
   // Rewrite clear(@map) → for ($kv : @map) { delete(@map[$kv.0]); }
   if (call.func == "clear" && call.vargs.size() == 1) {
     if (auto *map = call.vargs.at(0).as<Map>()) {
-      ASTContext &ast = map->loc.state->ast();
 
       // Variable $kv
       auto *kv_var = ast.make_node<Variable>("$kv", Location(call.loc));
@@ -249,11 +255,7 @@ void MapFunctionAliases::visit(Call &call)
       auto *tuple_access = ast.make_node<TupleAccess>(kv_var,
                                                       0,
                                                       Location(call.loc));
-
-      // delete(@map[$kv.0])
-      auto *map_access = ast.make_node<MapAccess>(map,
-                                                  tuple_access,
-                                                  Location(call.loc));
+   
       ExpressionList delete_args = { Expression(map),
                                      Expression(tuple_access) };
       auto *delete_call = ast.make_node<Call>("delete",
@@ -277,7 +279,6 @@ void MapFunctionAliases::visit(Call &call)
           Location(call.loc));
 
       // Replace the call node with the block expression
-      call = Call(ast, "noop", Location(call.loc)); // dummy replacement
       call.ret_val_discarded = true;
 
       // Hack: insert the block_expr into the tree
@@ -345,7 +346,7 @@ void MapAssignmentCheck::visit(Call &call)
 Pass CreateMapSugarPass()
 {
   auto fn = [](ASTContext &ast) -> MapMetadata {
-    MapFunctionAliases aliases;
+    MapFunctionAliases aliases(ast);
     aliases.visit(ast.root);
     MapDefaultKey defaults(ast);
     defaults.visit(ast.root);
