@@ -79,9 +79,9 @@ and this project adheres to
 - Change "Attaching N probes..." to "Attached N probes"
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4194)
 - runqlat.bt: ignore idle task
-    [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
+  - [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
 - Only cache symbols from targeted process
-    [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
+  - [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
 #### Deprecated
 #### Removed
 #### Fixed
