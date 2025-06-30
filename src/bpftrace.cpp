@@ -1449,7 +1449,11 @@ std::vector<std::string> BPFtrace::resolve_usym_stack(uint64_t addr,
                                                       bool perf_mode,
                                                       bool show_debug_info)
 {
-  std::string pid_exe = util::get_pid_exe(pid);
+  std::string pid_exe;
+  auto res = util::get_pid_exe(pid);
+  if (res) {
+    pid_exe = *res;
+  }
   if (pid_exe.empty() && probe_id != -1) {
     // sometimes program cannot be determined from PID, typically when the
     // process does not exist anymore; in that case, try to get program name
