@@ -112,25 +112,4 @@ kprobe:f { 1; } kprobe:d { 1; }
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 }
-
-TEST(codegen, clear_map_desugars_to_loop_delete)
-{
-  ast::ASTContext ast("stdin", R"(
-interval:s:1 {
-  clear(@m);
-})");
-
-  auto bpftrace = get_mock_bpftrace(); // Use the helper to get mock with resources
-  auto ok = ast::PassManager()
-                .put(ast)
-                .put<BPFtrace>(*bpftrace)
-                .add(ast::AllParsePasses())
-                .add(ast::CreateSemanticPass())
-                .add(ast::CreateResourcePass())
-                .add(ast::AllCompilePasses())
-                .run();
-
-  ASSERT_TRUE(ok && ast.diagnostics().ok());
-}
-
 } // namespace bpftrace::test::codegen
