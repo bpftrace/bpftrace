@@ -371,7 +371,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       parts_.insert(parts_.begin() + 1, "");
 
     auto target = util::get_pid_exe(*pid);
-    parts_[1] = util::path_for_pid_mountns(*pid, target);
+    parts_[1] = target ? util::path_for_pid_mountns(*pid, *target) : "";
   }
 
   if (parts_.size() != 3 && parts_.size() != 4) {

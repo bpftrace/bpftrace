@@ -13,7 +13,14 @@
 
 namespace bpftrace::util {
 
-std::string get_pid_exe(const std::string &pid)
+char GetPidError::ID;
+
+void GetPidError::log(llvm::raw_ostream &OS) const
+{
+  OS << "Error code: " << err_;
+}
+
+Result<std::string> get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
   std::filesystem::path proc_path{ "/proc" };
@@ -23,15 +30,13 @@ std::string get_pid_exe(const std::string &pid)
   try {
     return std::filesystem::read_symlink(proc_path).string();
   } catch (const std::filesystem::filesystem_error &e) {
-    auto err = e.code().value();
-    if (err == ENOENT || err == EINVAL)
-      return {};
-    else
-      throw e;
+    int err = e.code().value();
+    LOG(V1) << "Error reading " << proc_path << ". EC: " << err;
+    return make_error<GetPidError>(err);
   }
 }
 
-std::string get_pid_exe(pid_t pid)
+Result<std::string> get_pid_exe(pid_t pid)
 {
   return get_pid_exe(std::to_string(pid));
 }
@@ -121,9 +126,9 @@ std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
   std::vector<std::string> paths;
 
   // start with the exe
-  std::string pid_exe = get_pid_exe(pid);
-  if (!pid_exe.empty() && pid_exe.find("(deleted)") == std::string::npos)
-    paths.push_back(get_pid_exe(pid));
+  auto pid_exe = get_pid_exe(pid);
+  if (pid_exe && pid_exe->find("(deleted)") == std::string::npos)
+    paths.push_back(*pid_exe);
 
   // get all the mapped libraries
   std::string maps_path = get_proc_maps(pid);

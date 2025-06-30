@@ -57,10 +57,14 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
 {
   disassembler_ftype disassemble;
   struct disassemble_info info;
-  std::string tpath = util::get_pid_exe("self");
+  auto tpath = util::get_pid_exe("self");
+  if (!tpath) {
+    return AlignState::Fail;
+  }
+
   bfd *bfdf;
 
-  bfdf = bfd_openr(tpath.c_str(), nullptr);
+  bfdf = bfd_openr(tpath->c_str(), nullptr);
   if (bfdf == nullptr)
     return AlignState::Fail;
 
