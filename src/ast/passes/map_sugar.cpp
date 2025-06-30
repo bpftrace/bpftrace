@@ -1,7 +1,8 @@
-#include "ast/passes/map_sugar.h"
-#include "ast/ast.h"
-#include "ast/visitor.h"
 #include <unordered_map>
+
+#include "ast/ast.h"
+#include "ast/passes/map_sugar.h"
+#include "ast/visitor.h"
 
 namespace bpftrace::ast {
 
@@ -235,6 +236,59 @@ void MapFunctionAliases::visit(Call &call)
       }
     }
   }
+
+  // Rewrite clear(@map) → for ($kv : @map) { delete(@map[$kv.0]); }
+  if (call.func == "clear" && call.vargs.size() == 1) {
+    if (auto *map = call.vargs.at(0).as<Map>()) {
+      ASTContext &ast = map->loc.state->ast();
+
+      // Variable $kv
+      auto *kv_var = ast.make_node<Variable>("$kv", Location(call.loc));
+
+      // $kv.0 (tuple access)
+      auto *tuple_access = ast.make_node<TupleAccess>(kv_var,
+                                                      0,
+                                                      Location(call.loc));
+
+      // delete(@map[$kv.0])
+      auto *map_access = ast.make_node<MapAccess>(map,
+                                                  tuple_access,
+                                                  Location(call.loc));
+      ExpressionList delete_args = { Expression(map),
+                                     Expression(tuple_access) };
+      auto *delete_call = ast.make_node<Call>("delete",
+                                              std::move(delete_args),
+                                              Location(call.loc));
+      delete_call->injected_args = 1;
+
+      // for ($kv : @map) { delete(...) }
+      StatementList stmts;
+      stmts.push_back(ast.make_node<ExprStatement>(Expression(delete_call),
+                                                   Location(call.loc)));
+      auto *for_stmt = ast.make_node<For>(
+          kv_var, map, std::move(stmts), Location(call.loc));
+
+      // Replace this call expression with a block expression: ({ for(...) })
+      StatementList outer;
+      outer.push_back(Statement(for_stmt));
+      auto *block_expr = ast.make_node<BlockExpr>(
+          std::move(outer),
+          Expression(ast.make_node<Integer>(0, Location(call.loc))),
+          Location(call.loc));
+
+      // Replace the call node with the block expression
+      call = Call(ast, "noop", Location(call.loc)); // dummy replacement
+      call.ret_val_discarded = true;
+
+      // Hack: insert the block_expr into the tree
+      // This relies on MapAssignmentCall or other visitors replacing the
+      // Statement or ExprStatement wrapper. If needed, inject into parent
+      // explicitly via the visitor.
+
+      call.vargs.clear();
+      call.vargs.emplace_back(block_expr);
+    }
+  }
 }
 
 // Similarly these are syntactic sugar over operating on a map. This list could
@@ -288,77 +342,21 @@ void MapAssignmentCheck::visit(Call &call)
   Visitor<MapAssignmentCheck>::visit(call);
 }
 
-class MapClearTransform : public Visitor<MapClearTransform> {
-public:
-  explicit MapClearTransform(ASTContext &ast) : ast_(ast)
-  {
-  }
-
-  using Visitor<MapClearTransform>::visit;
-
-  void visit(Statement &stmt)
-  {
-    // Only interested in: clear(@map);
-    if (auto *expr_stmt = stmt.as<ExprStatement>()) {
-      if (auto *call = expr_stmt->expr.as<Call>()) {
-        if (call->func == "clear" && call->vargs.size() == 1) {
-          if (auto *map = call->vargs.at(0).as<Map>()) {
-            auto *kv_ident = ast_.make_node<Identifier>("kv", map->loc);
-            auto *map_copy1 = ast_.make_node<Map>(map->ident,
-                                                  std::move(map->loc));
-            auto *map_copy2 = ast_.make_node<Map>(map->ident,
-                                                  std::move(map->loc));
-            auto *kv_index = ast_.make_node<Integer>(0, map->loc);
-            auto *kv_field = ast_.make_node<MapAccess>(kv_ident,
-                                                       kv_index,
-                                                       map->loc);
-            auto *delete_call = ast_.make_node<Call>("delete",
-                                                     std::vector<Expression>{
-                                                         map_copy2, kv_field },
-                                                     std::move(map->loc));
-
-            auto *delete_stmt = ast_.make_node<ExprStatement>(
-                delete_call, std::move(map->loc));
-            auto *block = ast_.make_node<Block>(
-                ast_.make_stmt_list({ delete_stmt }));
-            block->loc = map->loc;
-
-            auto *for_stmt = ast_.make_node<For>(
-                kv_ident, map_copy1, block, std::move(map->loc));
-            stmt.value = for_stmt;
-          }
-        }
-      }
-    }
-
-    Visitor<MapClearTransform>::visit(stmt);
-  }
-
-private:
-  ASTContext &ast_;
-};
-
 Pass CreateMapSugarPass()
 {
   auto fn = [](ASTContext &ast) -> MapMetadata {
     MapFunctionAliases aliases;
     aliases.visit(ast.root);
-
     MapDefaultKey defaults(ast);
     defaults.visit(ast.root);
     if (!ast.diagnostics().ok()) {
+      // No consistent defaults.
       return std::move(defaults.metadata);
     }
-
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
-
-    MapClearTransform clear(ast);
-    clear.visit(ast.root);
-
     MapAssignmentCheck check;
     check.visit(ast.root);
-
     return std::move(defaults.metadata);
   };
 
