@@ -1,11 +1,5 @@
 #include <unordered_map>
 #include "ast/ast.h"
-#include "ast/integer.h"
-#include "ast/map.h"
-#include "ast/mapaccess.h"
-#include "ast/identifier.h"
-#include "ast/exprstatement.h"
-#include "ast/call.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
 
