@@ -71,11 +71,10 @@ void AsyncHandlers::print_non_map(const void *data)
   const SizedType &ty = bpftrace.resources.non_map_print_args.at(
       print->print_id);
 
-  std::vector<uint8_t> bytes;
-  for (size_t i = 0; i < ty.GetSize(); ++i)
-    bytes.emplace_back(print->content[i]);
-
-  auto v = format(bpftrace, c_definitions, ty, bytes);
+  auto v = format(bpftrace,
+                  c_definitions,
+                  ty,
+                  OpaqueValue::from(print->content, ty.GetSize()));
   if (!v) {
     LOG(BUG) << "error printing non-map value: " << v.takeError();
   }

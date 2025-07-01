@@ -1,12 +1,12 @@
 #pragma once
 
+#include <bpf/libbpf.h>
 #include <optional>
 #include <string>
 #include <string_view>
 
-#include <bpf/libbpf.h>
-
 #include "map_info.h"
+#include "util/opaque.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -33,13 +33,11 @@ public:
   }
 };
 
-using KeyType = std::vector<uint8_t>;
-using KeyVec = std::vector<KeyType>;
-using ValueType = std::vector<uint8_t>;
-using MapElements = std::vector<std::pair<KeyType, ValueType>>;
+using util::OpaqueValue;
+using MapElements = std::vector<std::pair<OpaqueValue, OpaqueValue>>;
 using BucketUnit = uint64_t;
-using BucketType = std::vector<BucketUnit>;
-using HistogramMap = std::map<KeyType, BucketType>;
+using BucketType = std::vector<uint64_t>;
+using HistogramMap = std::map<OpaqueValue, BucketType>;
 
 class BpfMap {
 public:
@@ -78,7 +76,7 @@ public:
   bool is_per_cpu_type() const;
   bool is_printable() const;
 
-  KeyVec collect_keys() const;
+  std::vector<OpaqueValue> collect_keys() const;
   virtual Result<MapElements> collect_elements(int nvalues) const;
   virtual Result<HistogramMap> collect_histogram_data(const MapInfo &map_info,
                                                       int nvalues) const;
