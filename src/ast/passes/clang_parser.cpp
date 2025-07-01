@@ -796,7 +796,9 @@ void ClangParser::resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace)
 
 CXUnsavedFile ClangParser::get_btf_generated_header(BPFtrace &bpftrace)
 {
-  btf_cdef = bpftrace.btf_->c_def(bpftrace.btf_set_);
+  if (!bpftrace.btf_set_.empty()) {
+    btf_cdef = bpftrace.btf_->c_def(bpftrace.btf_set_);
+  }
   return CXUnsavedFile{
     .Filename = "/bpftrace/include/__btf_generated_header.h",
     .Contents = btf_cdef.c_str(),

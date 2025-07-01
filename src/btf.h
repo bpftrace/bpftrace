@@ -84,7 +84,7 @@ public:
     return btf_objects.size();
   }
   void load_module_btfs(const std::set<std::string>& modules);
-  std::string c_def(const std::unordered_set<std::string>& set);
+  std::string c_def(const std::unordered_set<std::string>& set = {});
   std::string type_of(std::string_view name, std::string_view field);
   std::string type_of(const BTFId& type_id, std::string_view field);
   SizedType get_stype(std::string_view type_name);
