@@ -21,7 +21,6 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
-#include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -31,7 +30,6 @@
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_analyser.h"
 #include "ast/passes/recursion_check.h"
-#include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -876,7 +874,7 @@ int main(int argc, char* argv[])
 
   if (args.listing) {
     ast::CDefinitions no_c_defs; // See above.
-    pm.add(CreateParsePass())
+    pm.add(CreateParsePass(bpftrace.max_ast_nodes_))
         .put(no_c_defs)
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())

@@ -1,9 +1,7 @@
 #pragma once
 
-#include "log.h"
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

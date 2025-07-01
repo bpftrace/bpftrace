@@ -53,9 +53,9 @@ void Driver::error(const location &l, const std::string &m)
   ctx.state_->diagnostics_->addError(ctx.wrap(l)) << m;
 }
 
-ast::Pass CreateParsePass(bool debug)
+ast::Pass CreateParsePass(uint32_t max_ast_nodes, bool debug)
 {
-  return ast::Pass::create("parse", [debug](ast::ASTContext &ast, BPFtrace &b) {
+  return ast::Pass::create("parse", [=](ast::ASTContext &ast) {
     Driver driver(ast, debug);
     ast.root = driver.parse_program();
 
@@ -68,10 +68,9 @@ ast::Pass CreateParsePass(bool debug)
     if (ast.diagnostics().ok()) {
       assert(ast.root != nullptr);
       auto node_count = ast.node_count();
-      if (node_count > b.max_ast_nodes_) {
-        ast.root->addError()
-            << "node count (" << node_count << ") exceeds the limit ("
-            << b.max_ast_nodes_ << ")";
+      if (max_ast_nodes > 0 && node_count > max_ast_nodes) {
+        ast.root->addError() << "node count (" << node_count
+                             << ") exceeds the limit (" << max_ast_nodes << ")";
       }
     }
   });

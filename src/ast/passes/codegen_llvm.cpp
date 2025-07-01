@@ -47,7 +47,6 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/link.h"
-#include "ast/passes/resolve_imports.h"
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "async_action.h"
