@@ -150,10 +150,6 @@ public:
   std::string resolve_cgroup_path(uint64_t cgroup_path_id,
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;
-  std::vector<std::unique_ptr<IPrintable>> get_arg_values(
-      const ast::CDefinitions &c_definitions,
-      const std::vector<Field> &args,
-      const char *arg_data);
   void add_param(const std::string &param);
   std::string get_param(size_t index) const;
   size_t num_params() const;
