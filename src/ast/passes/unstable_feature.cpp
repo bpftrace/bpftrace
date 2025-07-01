@@ -11,19 +11,24 @@ namespace bpftrace::ast {
 
 namespace {
 
-std::string get_warning(const std::string &feature)
+const auto MAP_DECL = "map declarations";
+const auto IMPORTS = "imports";
+const auto MACROS = "macros";
+
+std::string get_warning(const std::string &feature, const std::string &config)
 {
-  return std::string("Script is using an unstable feature. To prevent this "
-                     "warning you must explicitly enable the unstable "
-                     "feature in the config e.g. ") +
-         feature + std::string("=enable");
+  return std::string("Script is using an unstable feature: " + feature +
+                     ". To prevent this warning you must explicitly enable it "
+                     "in the config e.g. ") +
+         config + std::string("=enable");
 }
 
-std::string get_error(std::string &&feature)
+std::string get_error(const std::string &feature, const std::string &config)
 {
-  return std::string("Feature not enabled by default. To enable "
+  return std::string(feature +
+                     " feature is not enabled by default. To enable "
                      "this unstable feature, set the config flag to enable. ") +
-         feature + std::string("=enable");
+         config + std::string("=enable");
 }
 
 class UnstableFeature : public Visitor<UnstableFeature> {
@@ -43,15 +48,20 @@ private:
 
 } // namespace
 
+// Note: for logged warnings we don't want to use the AST node's `addWarning()`
+// as this also prints the code location which is overly noisy. We just
+// want to notify users they're using an unstable feature. For errors it's ok to
+// print the location because the script is going to fail anyway.
+
 void UnstableFeature::visit(MapDeclStatement &decl)
 {
   if (bpftrace_.config_->unstable_map_decl == ConfigUnstable::error) {
-    decl.addError() << get_error(UNSTABLE_MAP_DECL);
+    decl.addError() << get_error(MAP_DECL, UNSTABLE_MAP_DECL);
     return;
   }
   if (bpftrace_.config_->unstable_map_decl == ConfigUnstable::warn &&
       !warned_features.contains(UNSTABLE_MAP_DECL)) {
-    decl.addWarning() << get_warning(UNSTABLE_MAP_DECL);
+    LOG(WARNING) << get_warning(MAP_DECL, UNSTABLE_MAP_DECL);
     warned_features.insert(UNSTABLE_MAP_DECL);
   }
 }
@@ -59,13 +69,13 @@ void UnstableFeature::visit(MapDeclStatement &decl)
 void UnstableFeature::visit(Import &imp)
 {
   if (bpftrace_.config_->unstable_import == ConfigUnstable::error) {
-    imp.addError() << get_error(UNSTABLE_IMPORT);
+    imp.addError() << get_error(IMPORTS, UNSTABLE_IMPORT);
     return;
   }
 
   if (bpftrace_.config_->unstable_import == ConfigUnstable::warn &&
       !warned_features.contains(UNSTABLE_IMPORT)) {
-    imp.addWarning() << get_warning(UNSTABLE_IMPORT);
+    LOG(WARNING) << get_warning(IMPORTS, UNSTABLE_IMPORT);
     warned_features.insert(UNSTABLE_IMPORT);
   }
 }
@@ -73,12 +83,12 @@ void UnstableFeature::visit(Import &imp)
 void UnstableFeature::visit(Macro &macro)
 {
   if (bpftrace_.config_->unstable_macro == ConfigUnstable::error) {
-    macro.addError() << get_error(UNSTABLE_MACRO);
+    macro.addError() << get_error(MACROS, UNSTABLE_MACRO);
     return;
   }
   if (bpftrace_.config_->unstable_macro == ConfigUnstable::warn &&
       !warned_features.contains(UNSTABLE_MACRO)) {
-    macro.addWarning() << get_warning(UNSTABLE_MACRO);
+    LOG(WARNING) << get_warning(MACROS, UNSTABLE_MACRO);
     warned_features.insert(UNSTABLE_MACRO);
   }
 }
