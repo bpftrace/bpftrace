@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <map>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -58,8 +59,32 @@ public:
   std::map<std::string, LoadedObject> c_headers;
   std::map<std::string, ExternalObject> objects;
   std::map<std::string, ASTContext> scripts;
+
+  // Public import call.
+  Result<OK> import_any(Node &node,
+                        const std::string &name,
+                        const std::vector<std::filesystem::path> &paths = {});
+
+private:
+  Result<OK> import_any(Node &node,
+                        const std::string &name,
+                        const std::filesystem::path &path,
+                        const std::vector<std::filesystem::path> &paths,
+                        bool ignore_unknown,
+                        bool allow_directories);
+
+  Result<OK> import_any(Node &node,
+                        const std::string &name,
+                        const std::string_view &data,
+                        const std::vector<std::filesystem::path> &paths,
+                        bool ignore_unknown);
+
+  // Record full packages/directories that have been imported separately from
+  // the specific modules, in order to avoid re-importing these paths.
+  std::unordered_set<std::string> packages_;
 };
 
+// This pass resolves imports from the AST itself.
 Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths);
 
 } // namespace bpftrace::ast

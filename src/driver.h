@@ -1,12 +1,10 @@
 #pragma once
 
 #include <optional>
-#include <utility>
 
 #include "ast/ast.h"
 #include "ast/context.h"
 #include "ast/pass_manager.h"
-#include "bpftrace.h"
 #include "parser.tab.hh"
 
 using yyscan_t = void *;
@@ -45,6 +43,6 @@ private:
   void parse(Parser::symbol_type first_token);
 };
 
-ast::Pass CreateParsePass(bool debug = false);
+ast::Pass CreateParsePass(uint32_t max_ast_nodes = 0, bool debug = false);
 
 } // namespace bpftrace

@@ -6,6 +6,7 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "config.h"
+#include "log.h"
 
 namespace bpftrace::ast {
 

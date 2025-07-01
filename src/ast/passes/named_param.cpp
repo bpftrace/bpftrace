@@ -1,12 +1,8 @@
-#include <algorithm>
-
+#include "ast/passes/named_param.h"
 #include "ast/ast.h"
 #include "ast/context.h"
-#include "ast/passes/named_param.h"
 #include "ast/visitor.h"
-#include "clang_parser.h"
-#include "driver.h"
-#include "util/strings.h"
+#include "bpftrace.h"
 
 namespace bpftrace::ast {
 
