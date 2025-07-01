@@ -1,7 +1,8 @@
 #pragma once
+
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
-#include "output.h"
+#include "output/output.h"
 
 namespace bpftrace::async_action {
 
@@ -32,8 +33,10 @@ class AsyncHandlers {
 public:
   const static size_t MAX_TIME_STR_LEN = 64;
 
-  AsyncHandlers(BPFtrace &bpftrace, Output &output)
-      : bpftrace(bpftrace), out(output) {};
+  AsyncHandlers(BPFtrace &bpftrace,
+                const ast::CDefinitions &c_definitions,
+                output::Output &output)
+      : bpftrace(bpftrace), c_definitions(c_definitions), out(output) {};
 
   void exit(const void *data);
   void join(const void *data);
@@ -52,7 +55,8 @@ public:
 
 private:
   BPFtrace &bpftrace;
-  Output &out;
+  const ast::CDefinitions &c_definitions;
+  output::Output &out;
 };
 
 } // namespace bpftrace::async_action

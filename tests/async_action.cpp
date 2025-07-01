@@ -4,6 +4,7 @@
 #include "bpftrace.h"
 #include "location.hh"
 #include "mocks.h"
+#include "output/text.h"
 #include "types.h"
 #include "util/exceptions.h"
 #include "gmock/gmock.h"
@@ -13,17 +14,19 @@ namespace bpftrace::test::async_action {
 
 using namespace bpftrace::async_action;
 
+// Used for resolving all C definitions.
+static ast::CDefinitions no_c_defs;
+
 class AsyncActionTest : public testing::Test {
 public:
   AsyncActionTest()
       : bpftrace(get_mock_bpftrace()),
-        output(no_c_defs, out),
-        handlers(*bpftrace, output) {};
+        output(out),
+        handlers(*bpftrace, no_c_defs, output) {};
 
   std::unique_ptr<MockBPFtrace> bpftrace;
-  ast::CDefinitions no_c_defs;
   std::stringstream out;
-  TextOutput output;
+  output::TextOutput output;
   AsyncHandlers handlers;
 };
 
@@ -437,8 +440,7 @@ TEST_F(AsyncActionTest, print_non_map)
 
     handlers.print_non_map(print_event);
 
-    EXPECT_EQ(tc.expected_output, out.str())
-        << "print_non_map_handler failed for type: " << tc.type.GetName();
+    EXPECT_EQ(tc.expected_output, out.str());
     out.str("");
   }
 }

@@ -66,6 +66,8 @@ public:
   {
   }
 
+  virtual ~BpfMap() = default;
+
   int fd() const;
   libbpf::bpf_map_type type() const;
   const std::string &bpf_name() const;
