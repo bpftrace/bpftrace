@@ -1,7 +1,6 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <unordered_set>
 
 #include "ast/passes/resolve_imports.h"
 #include "ast/visitor.h"
@@ -19,22 +18,15 @@ using bpftrace::stdlib::Stdlib;
 class ResolveImports : public Visitor<ResolveImports> {
 public:
   ResolveImports(BPFtrace &bpftrace,
-                 const std::vector<std::filesystem::path> &paths)
-      : bpftrace_(bpftrace), paths_(paths) {};
+                 Imports &imports,
+                 const std::vector<std::filesystem::path> &paths = {})
+      : bpftrace_(bpftrace), imports_(imports), paths_(paths) {};
 
   using Visitor<ResolveImports>::visit;
   void visit(Import &imp);
 
   // Public import call, see `allow_paths` below.
   Result<OK> importAny(Node &node, const std::string &name);
-
-  // The import result, to be consumed by the pass.
-  Imports imports;
-
-  // Controls whether or not we are allowed to import from the filesystem. Note
-  // that this starts as true, for all explicitly processed imports. We switch
-  // this off in order to process implicit imports.
-  bool allow_paths = true;
 
 private:
   bool checkPerms(const std::filesystem::path &path);
@@ -47,7 +39,8 @@ private:
   Result<OK> importAny(Node &node,
                        const std::string &name,
                        const std::filesystem::path &path,
-                       bool ignore_unknown);
+                       bool ignore_unknown,
+                       bool allow_directories);
   Result<OK> importAny(Node &node,
                        const std::string &name,
                        const std::string_view &data,
@@ -71,11 +64,8 @@ private:
                             std::map<std::string, LoadedObject> &where);
 
   BPFtrace &bpftrace_;
+  Imports &imports_;
   const std::vector<std::filesystem::path> &paths_;
-
-  // Record full packages/directories that have been imported separately from
-  // the specific modules, in order to avoid re-importing these paths.
-  std::unordered_set<std::string> packages_;
 };
 
 bool ResolveImports::checkPerms(const std::filesystem::path &path)
@@ -100,7 +90,7 @@ Result<OK> ResolveImports::importScript(Node &node,
                                         const std::string &name,
                                         const std::filesystem::path &path)
 {
-  if (imports.scripts.contains(name)) {
+  if (imports_.scripts.contains(name)) {
     return OK(); // Already added.
   }
 
@@ -120,12 +110,12 @@ Result<OK> ResolveImports::importScript([[maybe_unused]] Node &node,
                                         const std::string &name,
                                         const std::string &&contents)
 {
-  if (imports.scripts.contains(name)) {
+  if (imports_.scripts.contains(name)) {
     return OK(); // Already added.
   }
 
   // Construct our context.
-  auto [it, added] = imports.scripts.emplace(name, ASTContext(name, contents));
+  auto [it, added] = imports_.scripts.emplace(name, ASTContext(name, contents));
   assert(added);
   auto &ast = it->second;
 
@@ -158,11 +148,12 @@ Result<OK> ResolveImports::importObject(Node &node,
                                         const std::string &name,
                                         const std::filesystem::path &path)
 {
-  if (imports.objects.contains(name)) {
+  if (imports_.objects.contains(name)) {
     return OK(); // Already added.
   }
 
-  auto added = imports.objects.emplace(name, ExternalObject(node, path)).second;
+  auto added =
+      imports_.objects.emplace(name, ExternalObject(node, path)).second;
   assert(added);
   return OK();
 }
@@ -207,7 +198,8 @@ Result<OK> ResolveImports::importC(Node &node,
 Result<OK> ResolveImports::importAny(Node &node,
                                      const std::string &name,
                                      const std::filesystem::path &path,
-                                     bool ignore_unknown)
+                                     bool ignore_unknown,
+                                     bool allow_directories)
 {
   if (!checkPerms(path)) {
     node.addError() << "cowardly refusing to import from a directory with "
@@ -216,13 +208,18 @@ Result<OK> ResolveImports::importAny(Node &node,
     return OK();
   }
   if (std::filesystem::is_directory(path)) {
+    // If `recurse` is not set, just ignore this directory.
+    if (!allow_directories) {
+      return OK();
+    }
     // Recursively import all entries in the directory. Note that the directory
     // iterator will never include '.' or '..' entries.
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
       auto ok = importAny(node,
                           name + "/" + entry.path().filename().string(),
                           entry.path(),
-                          true);
+                          true,
+                          false);
       if (!ok) {
         return ok.takeError();
       }
@@ -233,9 +230,9 @@ Result<OK> ResolveImports::importAny(Node &node,
     if (path.extension() == ".bt") {
       return importScript(node, name, path);
     } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
-      return importC(node, name, path, imports.c_sources);
+      return importC(node, name, path, imports_.c_sources);
     } else if (path.extension() == ".h") {
-      return importC(node, name, path, imports.c_headers);
+      return importC(node, name, path, imports_.c_headers);
     } else if (path.extension() == ".o" && path.stem().extension() == ".bpf") {
       return importObject(node, name, path);
     } else if (!ignore_unknown) {
@@ -255,9 +252,9 @@ Result<OK> ResolveImports::importAny(Node &node,
   if (path.extension() == ".bt") {
     return importScript(node, name, std::string(data));
   } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
-    return importC(node, name, data, imports.c_sources);
+    return importC(node, name, data, imports_.c_sources);
   } else if (path.extension() == ".h") {
-    return importC(node, name, data, imports.c_headers);
+    return importC(node, name, data, imports_.c_headers);
   } else if (!ignore_unknown) {
     node.addError() << "unknown import type: " << path;
   }
@@ -269,35 +266,32 @@ Result<OK> ResolveImports::importAny(Node &node, const std::string &name)
   // Prevent direct re-importation of the same top-level name. This is used
   // because the name may match against directories or internal packages which
   // contain different files.
-  if (packages_.contains(name)) {
+  if (imports_.packages.contains(name)) {
     return OK();
   }
-  packages_.emplace(name);
+  imports_.packages.emplace(name);
 
   std::vector<std::string> checked;
-  if (allow_paths) {
-    for (const auto &import_path : paths_) {
-      // Check to see if this specific file exists.
-      auto path = import_path / name;
-      checked.emplace_back(path.string());
-      std::error_code ec;
-      if (!std::filesystem::exists(path, ec)) {
-        continue; // No file found.
-      }
-
-      // For loading anything from the filesystem, ensure that the name import
-      // is not inside a globally writable directory. Note that we log this as
-      // a warning for a search, which is different than the case where the
-      // path is imported explicitly.
-      if (!checkPerms(path)) {
-        node.addWarning() << "skipping due to global write permissions: "
-                          << path;
-        continue;
-      }
-
-      // Attempt the import.
-      return importAny(node, name, path, false);
+  for (const auto &import_path : paths_) {
+    // Check to see if this specific file exists.
+    auto path = import_path / name;
+    checked.emplace_back(path.string());
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec)) {
+      continue; // No file found.
     }
+
+    // For loading anything from the filesystem, ensure that the name import
+    // is not inside a globally writable directory. Note that we log this as
+    // a warning for a search, which is different than the case where the
+    // path is imported explicitly.
+    if (!checkPerms(path)) {
+      node.addWarning() << "skipping due to global write permissions: " << path;
+      continue;
+    }
+
+    // Attempt the import.
+    return importAny(node, name, path, false, true);
   }
 
   // See if this matches a set of builtins. Note that we do the "directory"
@@ -354,11 +348,22 @@ void ResolveImports::visit(Import &imp)
   }
 }
 
+Result<> ensure_import(ASTContext &ast,
+                       BPFtrace &b,
+                       Imports &imports,
+                       const std::string &name)
+{
+  ResolveImports analyser(b, imports);
+  return analyser.importAny(*ast.root, name);
+}
+
 Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
 {
   return Pass::create("ResolveImports",
                       [import_paths](ASTContext &ast,
                                      BPFtrace &b) -> Result<Imports> {
+                        Imports imports;
+
                         // Add the source location as a primary path.
                         const auto &filename = ast.source()->filename;
                         std::vector<std::filesystem::path> updated_paths;
@@ -371,21 +376,20 @@ Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
                         }
 
                         // Resolve all imports.
-                        ResolveImports analyser(b, updated_paths);
+                        ResolveImports analyser(b, imports, updated_paths);
                         analyser.visit(ast.root);
 
                         // Ensure that the standard library is imported. The
                         // implicit import is only permitted from the embedded
                         // standard library.  Overriding this is possible, but
                         // it must be explicitly imported.
-                        analyser.allow_paths = false;
-                        auto ok = analyser.importAny(*ast.root, "stdlib");
+                        auto ok = ensure_import(ast, b, imports, "stdlib");
                         if (!ok) {
                           return ok.takeError();
                         }
 
                         // Return all calculated imports.
-                        return std::move(analyser.imports);
+                        return imports;
                       });
 }
 
