@@ -8,6 +8,7 @@
 #include <linux/limits.h>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -181,21 +182,21 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
 
 static void dump_printf(void *ctx, const char *fmt, va_list args)
 {
-  auto *ret = static_cast<std::string *>(ctx);
+  auto *ret = static_cast<std::stringstream *>(ctx);
   char *str;
 
   if (vasprintf(&str, fmt, args) < 0)
     return;
 
-  *ret += str;
+  *ret << str;
   free(str);
 }
 
 static struct btf_dump *dump_new(const struct btf *btf,
                                  btf_dump_printf_fn_t dump_printf,
-                                 void *ctx)
+                                 std::stringstream *ctx)
 {
-  return btf_dump__new(btf, dump_printf, ctx, nullptr);
+  return btf_dump__new(btf, dump_printf, static_cast<void *>(ctx), nullptr);
 }
 
 static const char *btf_str(const struct btf *btf, __u32 off)
@@ -239,7 +240,7 @@ std::string BTF::dump_defs_from_btf(
     const struct btf *btf,
     std::unordered_set<std::string> &types) const
 {
-  std::string ret;
+  std::stringstream ret;
   auto *dump = dump_new(btf, dump_printf, &ret);
   if (auto err = libbpf_get_error(dump)) {
     char err_buf[256] = {};
@@ -254,7 +255,9 @@ std::string BTF::dump_defs_from_btf(
 
   // note that we're always iterating from 1 here as we need to go through the
   // vmlinux BTF entries, too (even for kernel module BTFs)
-  for (__u32 id = 1, max = type_cnt(btf); id <= max && !types.empty(); id++) {
+  bool all = types.empty();
+  __u32 max = type_cnt(btf);
+  for (__u32 id = 1; id <= max && (all || !types.empty()); id++) {
     const auto *t = btf__type_by_id(btf, id);
     if (!t)
       continue;
@@ -263,19 +266,19 @@ std::string BTF::dump_defs_from_btf(
     if (btf_is_enum(t)) {
       const auto *p = btf_enum(t);
       for (__u16 e = 0, vlen = btf_vlen(t); e < vlen; ++e, ++p) {
-        if (types.erase(btf_str(btf, p->name_off))) {
+        if (all || types.erase(btf_str(btf, p->name_off))) {
           btf_dump__dump_type(dump, id);
           break;
         }
       }
     }
 
-    if (types.erase(full_type_str(btf, t))) {
+    if (all || types.erase(full_type_str(btf, t))) {
       btf_dump__dump_type(dump, id);
     }
   }
 
-  return ret;
+  return ret.str();
 }
 
 std::string BTF::c_def(const std::unordered_set<std::string> &set)
@@ -655,7 +658,7 @@ FuncParamLists BTF::get_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &funcs) const
 {
-  std::string type;
+  std::stringstream type;
   auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
   if (auto err = libbpf_get_error(dump)) {
     char err_buf[256] = {};
@@ -696,26 +699,26 @@ FuncParamLists BTF::get_params_from_btf(
       const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
 
       // set by dump_printf callback
-      type.clear();
+      type.str("");
       if (btf_dump__emit_type_decl(dump, p->type, &decl_opts)) {
         LOG(ERROR) << "failed to dump argument: " << arg_name;
         break;
       }
 
-      params[func_name].push_back(type + " " + arg_name);
+      params[func_name].push_back(type.str() + " " + arg_name);
     }
 
     if (!t->type)
       continue;
 
     // set by dump_printf callback
-    type.clear();
+    type.str("");
     if (btf_dump__emit_type_decl(dump, t->type, &decl_opts)) {
       LOG(ERROR) << "failed to dump return type for: " << func_name;
       break;
     }
 
-    params[func_name].push_back(type + " retval");
+    params[func_name].push_back(type.str() + " retval");
   }
 
   if (id != (max + 1))
@@ -728,7 +731,7 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &rawtracepoints) const
 {
-  std::string type;
+  std::stringstream type;
   auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
   if (auto err = libbpf_get_error(dump)) {
     char err_buf[256] = {};
@@ -782,13 +785,13 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
       const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
 
       // set by dump_printf callback
-      type.clear();
+      type.str("");
       if (btf_dump__emit_type_decl(dump, p->type, &decl_opts)) {
         LOG(ERROR) << "failed to dump argument: " << arg_name;
         break;
       }
 
-      params[mod_tp_name].push_back(type + " " + arg_name);
+      params[mod_tp_name].push_back(type.str() + " " + arg_name);
     }
   }
 
@@ -842,7 +845,7 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
 {
   std::set<std::string> struct_set;
 
-  std::string types;
+  std::stringstream types;
   auto *dump = dump_new(btf, dump_printf, &types);
   if (auto err = libbpf_get_error(dump)) {
     char err_buf[256] = { 0 };
@@ -878,7 +881,7 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
   if (bt_verbose) {
     // BTF dump contains definitions of all types in a single string, here we
     // split it
-    std::istringstream type_stream(types);
+    std::istringstream type_stream(types.str());
     std::string line, type;
     bool in_def = false;
     while (std::getline(type_stream, line)) {
