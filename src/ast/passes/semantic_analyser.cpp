@@ -1074,7 +1074,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
     builtin.builtin_type = CreateString(str_size + 1);
-    probe->need_expansion = true;
   } else if (builtin.ident == "username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "usermode") {
@@ -1096,7 +1095,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
-        attach_point->expansion = ExpansionType::FULL;
         builtin_args_tracepoint(attach_point, builtin);
       }
     }

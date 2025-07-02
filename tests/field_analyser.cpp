@@ -1,5 +1,6 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/attachpoint_parser.h"
+#include "ast/passes/probe_expansion.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -24,6 +25,7 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
                     .put(bpftrace)
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
+                    .add(ast::CreateProbeExpansionPass())
                     .add(ast::CreateFieldAnalyserPass())
                     .run();
   ASSERT_TRUE(bool(result)) << msg.str();

@@ -5,6 +5,7 @@
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/probe_expansion.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 
@@ -23,6 +24,7 @@ void test_parse_failure(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));
 
@@ -86,6 +88,7 @@ void test(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));
 
