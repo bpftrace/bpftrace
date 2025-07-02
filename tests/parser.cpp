@@ -18,10 +18,14 @@ void test_parse_failure(BPFtrace &bpftrace,
 {
   std::stringstream out;
   ast::ASTContext ast("stdin", input);
-  Driver driver(ast);
-  ast.root = driver.parse_program();
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .run();
+  ASSERT_TRUE(bool(ok));
+
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
 
@@ -75,13 +79,16 @@ void test(BPFtrace &bpftrace,
           const std::string &input,
           std::string_view expected)
 {
-  ast::ASTContext ast("stdin", input);
-  Driver driver(ast);
-
-  ast.root = driver.parse_program();
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
-  ap_parser.parse();
   std::ostringstream out;
+  ast::ASTContext ast("stdin", input);
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .run();
+  ASSERT_TRUE(bool(ok));
+
   ast.diagnostics().emit(out);
   ASSERT_TRUE(ast.diagnostics().ok()) << out.str();
 
