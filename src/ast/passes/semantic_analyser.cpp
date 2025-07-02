@@ -14,6 +14,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
+#include "btf/compat.h"
 #include "collect_nodes.h"
 #include "config.h"
 #include "log.h"
@@ -115,12 +116,14 @@ public:
                             BPFtrace &bpftrace,
                             CDefinitions &c_definitions,
                             MapMetadata &map_metadata,
+                            TypeMetadata &type_metadata,
                             bool has_child = true,
                             bool listing = false)
       : ctx_(ctx),
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
         map_metadata_(map_metadata),
+        type_metadata_(type_metadata),
         listing_(listing),
         has_child_(has_child)
   {
@@ -170,6 +173,7 @@ private:
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
   MapMetadata &map_metadata_;
+  TypeMetadata &type_metadata_;
   bool listing_;
 
   bool is_final_pass() const;
@@ -1749,7 +1753,74 @@ If you're seeing errors, try clamping the string sizes. For example:
       }
     }
   } else {
-    call.addError() << "Unknown function: '" << call.func << "'";
+    // Check here if this corresponds to an external functions. We convert the
+    // external type metadata into the internal `SizedType` representation and
+    // check that they are exactly equal.
+    bool found = false;
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      for (const btf::Function &func :
+           type_metadata_.types[probe] | btf::filter<btf::Function>()) {
+        if (func.name() != call.func ||
+            (func.linkage() != btf::Function::Linkage::Global &&
+             func.linkage() != btf::Function::Linkage::Extern)) {
+          break;
+        }
+        auto proto = func.type();
+        if (!proto) {
+          call.addError() << "Unable to find function proto: "
+                          << proto.takeError();
+          continue;
+        }
+        auto return_type = proto->return_type();
+        if (!return_type) {
+          call.addError() << "Unable to read return type: "
+                          << return_type.takeError();
+          continue;
+        }
+        auto argument_types = proto->argument_types();
+        if (!argument_types) {
+          call.addError() << "Unable to read argument types: "
+                          << argument_types.takeError();
+          continue;
+        }
+        if (argument_types->size() != call.vargs.size()) {
+          call.addError() << "Expected " << argument_types->size()
+                          << " arguments, got only " << call.vargs.size();
+          continue;
+        }
+        auto compat_return_type = getCompatType(*return_type);
+        if (!compat_return_type) {
+          call.addError() << "Unable to convert return type: "
+                          << compat_return_type.takeError();
+          continue;
+        }
+        std::vector<SizedType> args;
+        for (size_t i = 0; i < argument_types->size(); i++) {
+          const auto &[name, type] = argument_types->at(i);
+          auto compat_arg_type = getCompatType(type);
+          if (!compat_arg_type) {
+            call.addError() << "Unable to convert argument type: "
+                            << compat_arg_type.takeError();
+            continue;
+          }
+          if (*compat_arg_type != call.vargs[i].type()) {
+            call.addError() << "Expected " << typestr(*compat_arg_type)
+                            << ", got " << typestr(call.vargs[i].type());
+            continue;
+          }
+          args.emplace_back(std::move(*compat_arg_type));
+        }
+        if (args.size() != argument_types->size()) {
+          continue;
+        }
+        // Set the return value and proceed.
+        call.return_type = *compat_return_type;
+        found = true;
+      }
+    }
+    if (!found) {
+      call.addError() << "Unknown function: '" << call.func << "'";
+    }
   }
 }
 
@@ -4214,11 +4285,12 @@ Pass CreateSemanticPass(bool listing)
                       BPFtrace &b,
                       CDefinitions &c_definitions,
                       MapMetadata &mm,
-                      [[maybe_unused]] TypeMetadata &types) {
+                      TypeMetadata &types) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
+                               types,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);
     semantics.analyse();

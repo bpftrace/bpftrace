@@ -1,0 +1,3 @@
+NAME interop return types
+PROG config = { unstable_import=true; } import "stdlib/test"; BEGIN { print(__always_true()); exit(); }
+EXPECT 1
