@@ -14,6 +14,7 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
+#include "btf/compat.h"
 #include "collect_nodes.h"
 #include "config.h"
 #include "log.h"
@@ -115,12 +116,14 @@ public:
                             BPFtrace &bpftrace,
                             CDefinitions &c_definitions,
                             MapMetadata &map_metadata,
+                            TypeMetadata &type_metadata,
                             bool has_child = true,
                             bool listing = false)
       : ctx_(ctx),
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
         map_metadata_(map_metadata),
+        type_metadata_(type_metadata),
         listing_(listing),
         has_child_(has_child)
   {
@@ -170,6 +173,7 @@ private:
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
   MapMetadata &map_metadata_;
+  TypeMetadata &type_metadata_;
   bool listing_;
 
   bool is_final_pass() const;
@@ -1853,7 +1857,101 @@ If you're seeing errors, try clamping the string sizes. For example:
     }
     call.return_type = CreateUInt64();
   } else {
-    call.addError() << "Unknown function: '" << call.func << "'";
+    // Check here if this corresponds to an external function. We convert the
+    // external type metadata into the internal `SizedType` representation and
+    // check that they are exactly equal.
+    bool found = false;
+    for (const btf::Function &func :
+         type_metadata_.global | btf::filter<btf::Function>()) {
+      if (func.name() != call.func ||
+          (func.linkage() != btf::Function::Linkage::Global &&
+           func.linkage() != btf::Function::Linkage::Extern)) {
+        break;
+      }
+      found = true;
+      auto proto = func.type();
+      if (!proto) {
+        call.addError() << "Unable to find function proto: "
+                        << proto.takeError();
+        continue;
+      }
+      // Extract our return type.
+      auto return_type = proto->return_type();
+      if (!return_type) {
+        call.addError() << "Unable to read return type: "
+                        << return_type.takeError();
+        continue;
+      }
+      auto compat_return_type = getCompatType(*return_type);
+      if (!compat_return_type) {
+        call.addError() << "Unable to convert return type: "
+                        << compat_return_type.takeError();
+        continue;
+      }
+      call.return_type = *compat_return_type;
+      // Convert all arguments.
+      auto argument_types = proto->argument_types();
+      if (!argument_types) {
+        call.addError() << "Unable to read argument types: "
+                        << argument_types.takeError();
+        continue;
+      }
+      std::vector<std::pair<std::string, SizedType>> args;
+      for (const auto &[name, type] : *argument_types) {
+        auto compat_arg_type = getCompatType(type);
+        if (!compat_arg_type) {
+          call.addError() << "Unable to convert argument type: "
+                          << compat_arg_type.takeError();
+          continue;
+        }
+        args.emplace_back(name, std::move(*compat_arg_type));
+      }
+      // Build our full proto as an error message.
+      std::stringstream fullmsg;
+      fullmsg << "Function `" << call.func << "` requires arguments (";
+      bool first = true;
+      for (const auto &[name, type] : args) {
+        if (!first) {
+          fullmsg << ", ";
+        }
+        fullmsg << typestr(type);
+        first = false;
+      }
+      fullmsg << ")";
+      // Check the argument count.
+      if (args.size() != call.vargs.size()) {
+        auto &err = call.addError();
+        err << "Function `" << call.func << "` requires "
+            << argument_types->size() << " arguments, got only "
+            << call.vargs.size();
+        err.addHint() << fullmsg.str();
+        continue;
+      }
+      // Check all the individual arguments.
+      bool ok = true;
+      for (size_t i = 0; i < args.size(); i++) {
+        const auto &[name, type] = args[i];
+        if (type != call.vargs[i].type()) {
+          if (!name.empty()) {
+            call.vargs[i].node().addError()
+                << "Expected " << typestr(type) << " for argument `" << name
+                << "` got " << typestr(call.vargs[i].type());
+          } else {
+            call.vargs[i].node().addError()
+                << "Expected " << typestr(type) << " got "
+                << typestr(call.vargs[i].type());
+          }
+          ok = false;
+        }
+      }
+      if (!ok) {
+        call.addError() << fullmsg.str();
+        continue;
+      }
+    }
+    if (!found) {
+      call.addError() << "Unknown function: '" << call.func << "'";
+    }
   }
 }
 
@@ -4327,11 +4425,12 @@ Pass CreateSemanticPass(bool listing)
                       BPFtrace &b,
                       CDefinitions &c_definitions,
                       MapMetadata &mm,
-                      [[maybe_unused]] TypeMetadata &types) {
+                      TypeMetadata &types) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
+                               types,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);
     semantics.analyse();

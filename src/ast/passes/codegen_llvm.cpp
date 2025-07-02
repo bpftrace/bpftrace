@@ -443,6 +443,7 @@ private:
   }
 
   Value *ctx_;
+  llvm::DILocalScope *scope_ = nullptr;
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
   std::string tracepoint_struct_;
@@ -2097,7 +2098,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       arg_values.push_back(args.back().value());
     }
 
-    return ScopedExpr(b_.CreateCall(func, arg_values, call.func));
+    auto *inst = b_.CreateCall(func, arg_values, call.func);
+    return ScopedExpr(inst, [this, inst, &call] {
+      // We set the debug location on the call instructions only after the
+      // scoped expression is not longer used. Otherwise the instruction emitter
+      // seems to use this location for everything, which results in problems.
+      inst->setDebugLoc(
+          debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
+    });
   }
 }
 
@@ -3369,7 +3377,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(util::get_section_name(func_name));
   func->addFnAttr(Attribute::NoUnwind);
-  debug_.createProbeDebugInfo(*func);
+  scope_ = debug_.createProbeDebugInfo(*func);
 
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
