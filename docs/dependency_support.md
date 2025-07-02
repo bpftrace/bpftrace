@@ -6,17 +6,18 @@ usually at distro/user request.
 
 ## Linux kernel
 
-The linux kernel is bpftrace's biggest runtime dependency. Our stance on kernel
-support is that for **cross cutting** implementation details (ie. something
-every reasonably sophisticated user is expected to depend on), we'll support up
-to and including the oldest LTS kernel still in service.
+**Minimum kernel version: 5.15**
+
+The linux kernel is bpftrace's biggest runtime dependency.
+While we would like to support the oldest LTS kernel version, we also want to make
+sure bpftrace is keeping up with the latest features. As a compromise bpftrace
+supports stable kernels and the 4 most recent LTS kernels. Users that require support on older kernels can often simply use [older versions of bpftrace](https://github.com/bpftrace/bpftrace/releases).
+
+The source of truth on EOL dates and LTS kernels is https://www.kernel.org/.
 
 For features that have clear boundaries (eg. new builtins or helpers), bpftrace
 is free to opportunistically depend on newer kernels as long as there is a
-reasonable runtime fallback strategy. An error message is a reasonable fallback
-strategy in this case.
-
-The source of truth on EOL dates and LTS kernels is https://www.kernel.org/.
+reasonable runtime fallback strategy or detailed error message.
 
 ## LLVM (dynamically linked)
 
