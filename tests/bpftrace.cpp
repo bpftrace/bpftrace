@@ -7,6 +7,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_analyser.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "driver.h"
@@ -115,6 +116,7 @@ static auto parse_probe(const std::string &str,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
