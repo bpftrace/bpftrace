@@ -473,6 +473,8 @@ private:
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
   std::unordered_map<std::string, llvm::Function *> extern_funcs_;
+
+  llvm::Value *createGetNsSwTAI(const Location &loc);
 };
 
 } // namespace
@@ -1806,12 +1808,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(ret);
   } else if (call.func == "nsecs") {
     if (call.return_type.ts_mode == TimestampMode::sw_tai) {
-      if (!bpftrace_.delta_taitime_.has_value())
-        LOG(BUG) << "Should have been checked in semantic analysis";
-      uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
-                       bpftrace_.delta_taitime_->tv_nsec;
-      Value *ns = b_.CreateGetNs(TimestampMode::boot, call.loc);
-      return ScopedExpr(b_.CreateAdd(ns, b_.getInt64(delta)));
+      return ScopedExpr(createGetNsSwTAI(call.loc));
     } else {
       return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
     }
@@ -1866,6 +1863,16 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateCall(func, arg_values, call.func));
   }
+}
+
+llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
+{
+  if (!bpftrace_.delta_taitime_.has_value())
+    LOG(BUG) << "delta_taitime_ should have been checked in semantic analysis";
+  uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
+                   bpftrace_.delta_taitime_->tv_nsec;
+  Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
+  return b_.CreateAdd(ns, b_.getInt64(delta));
 }
 
 ScopedExpr CodegenLLVM::visit(Sizeof &szof)
