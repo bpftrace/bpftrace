@@ -13,30 +13,23 @@
 
 namespace bpftrace::util {
 
-char GetPidError::ID;
-
-void GetPidError::log(llvm::raw_ostream &OS) const
-{
-  OS << "Error code: " << err_;
-}
-
-Result<std::string> get_pid_exe(const std::string &pid)
+std::optional<std::string> get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
   std::filesystem::path proc_path{ "/proc" };
   proc_path /= pid;
   proc_path /= "exe";
+  auto res = std::filesystem::read_symlink(proc_path, ec);
 
-  try {
-    return std::filesystem::read_symlink(proc_path).string();
-  } catch (const std::filesystem::filesystem_error &e) {
-    int err = e.code().value();
-    LOG(V1) << "Error reading " << proc_path << ". EC: " << err;
-    return make_error<GetPidError>(err);
+  if (ec) {
+    LOG(V1) << "Error reading " << proc_path << " - " << ec.message();
+    return std::nullopt;
   }
+
+  return res.string();
 }
 
-Result<std::string> get_pid_exe(pid_t pid)
+std::optional<std::string> get_pid_exe(pid_t pid)
 {
   return get_pid_exe(std::to_string(pid));
 }

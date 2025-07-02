@@ -1,24 +1,13 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "util/result.h"
-
 namespace bpftrace::util {
 
-class GetPidError : public ErrorInfo<GetPidError> {
-public:
-  GetPidError(int err) : err_(err) {};
-  static char ID;
-  void log(llvm::raw_ostream &OS) const override;
-
-private:
-  int err_;
-};
-
-Result<std::string> get_pid_exe(pid_t pid);
-Result<std::string> get_pid_exe(const std::string &pid);
+std::optional<std::string> get_pid_exe(pid_t pid);
+std::optional<std::string> get_pid_exe(const std::string &pid);
 std::string get_proc_maps(const std::string &pid);
 std::string get_proc_maps(pid_t pid);
 
