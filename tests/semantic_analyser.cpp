@@ -349,6 +349,16 @@ stdin:1:48-55: ERROR: Undefined map: @mymap2
 kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }
                                                ~~~~~~~
 )");
+  test_error("kprobe:f { print(@x); }", R"(
+stdin:1:12-20: ERROR: Undefined map: @x
+kprobe:f { print(@x); }
+           ~~~~~~~~
+)");
+  test_error("kprobe:f { zero(@x); }", R"(
+stdin:1:12-19: ERROR: Undefined map: @x
+kprobe:f { zero(@x); }
+           ~~~~~~~
+)");
 }
 
 TEST(semantic_analyser, consistent_map_values)
@@ -894,9 +904,9 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[((int8)3, 4, 5)] = 5; delete(@y, (1, 2, 3)); }");
   test("kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, ((int8)1, 2, 3)); }");
-  test("kprobe:f { @y = delete(@x); }");
-  test("kprobe:f { $y = delete(@x); }");
-  test("kprobe:f { @[delete(@x)] = 1; }");
+  test("kprobe:f { @x = 1; @y = delete(@x); }");
+  test("kprobe:f { @x = 1; $y = delete(@x); }");
+  test("kprobe:f { @x = 1; @[delete(@x)] = 1; }");
   test("kprobe:f { @x = 1; if(delete(@x)) { 123 } }");
   test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }");
   // The second arg gets treated like a map key, in terms of int type adjustment
