@@ -1517,17 +1517,23 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "print") {
     if (auto *map = call.vargs.at(0).as<Map>()) {
       if (is_final_pass()) {
-        if (in_loop()) {
-          call.addWarning() << "Due to it's asynchronous nature using "
-                               "'print()' in a loop can "
-                               "lead to unexpected behavior. The map will "
-                               "likely be updated "
-                               "before the runtime can 'print' it.";
-        }
-        if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
-          call.addWarning()
-              << "print()'s top and div arguments are ignored when used on "
-                 "stats() maps.";
+        // N.B. that print is parameteric in the type, so this is not checked
+        // by `check_arg` as there is no spec for the first argument.
+        if (map->type().IsNoneTy()) {
+          map->addError() << "Undefined map: " + map->ident;
+        } else {
+          if (in_loop()) {
+            call.addWarning() << "Due to it's asynchronous nature using "
+                                 "'print()' in a loop can "
+                                 "lead to unexpected behavior. The map will "
+                                 "likely be updated "
+                                 "before the runtime can 'print' it.";
+          }
+          if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
+            call.addWarning()
+                << "print()'s top and div arguments are ignored when used on "
+                   "stats() maps.";
+          }
         }
       }
     }
@@ -3742,12 +3748,15 @@ bool SemanticAnalyser::check_arg(const Call &call,
 
 bool SemanticAnalyser::check_arg(const Call &call,
                                  size_t index,
-                                 [[maybe_unused]] const map_type_spec &spec)
+                                 const map_type_spec &spec)
 {
   if (auto *map = call.vargs.at(index).as<Map>()) {
     if (spec.type) {
       SizedType type = spec.type(call);
       assign_map_type(*map, type, &call);
+    }
+    if (is_final_pass() && map->type().IsNoneTy()) {
+      map->addError() << "Undefined map: " + map->ident;
     }
     return true;
   }
