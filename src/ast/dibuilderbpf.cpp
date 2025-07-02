@@ -17,10 +17,10 @@ DIBuilderBPF::DIBuilderBPF(Module &module) : DIBuilder(module)
   file = createFile("bpftrace.bpf.o", ".");
 }
 
-void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
-                                           const SizedType &ret_type,
-                                           const Struct &args,
-                                           bool is_declaration)
+DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
+                                                    const SizedType &ret_type,
+                                                    const Struct &args,
+                                                    bool is_declaration)
 {
   // Return type should be at index 0
   SmallVector<Metadata *> types;
@@ -84,16 +84,17 @@ void DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
   }
 
   func.setSubprogram(subprog);
+  return subprog;
 }
 
-void DIBuilderBPF::createProbeDebugInfo(llvm::Function &probe_func)
+DILocalScope *DIBuilderBPF::createProbeDebugInfo(llvm::Function &probe_func)
 {
   // BPF probe function has:
   // - int return type
   // - single parameter (ctx) of a pointer type
   Struct args;
   args.AddField("ctx", CreatePointer(CreateInt8()));
-  createFunctionDebugInfo(probe_func, CreateInt64(), args);
+  return createFunctionDebugInfo(probe_func, CreateInt64(), args);
 }
 
 DIType *DIBuilderBPF::getInt8Ty()
@@ -445,6 +446,13 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalVariable(
 {
   return createGlobalVariableExpression(
       file, name, "global", file, 0, GetType(stype, false), false);
+}
+
+DILocation *DIBuilderBPF::createDebugLocation(llvm::LLVMContext &ctx,
+                                              DILocalScope *scope,
+                                              const ast::Location &loc)
+{
+  return llvm::DILocation::get(ctx, loc->line(), loc->column(), scope);
 }
 
 } // namespace bpftrace::ast

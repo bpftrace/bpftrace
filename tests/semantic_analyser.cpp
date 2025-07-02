@@ -5420,4 +5420,57 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_return_value)
                 "It should be used" });
 }
 
+TEST_F(SemanticAnalyserTest, external_function)
+{
+  ast::TypeMetadata types;
+
+  // Build some basic types.
+  auto int32 = types.global.add<btf::Integer>("int32", 4, 1);
+  ASSERT_TRUE(bool(int32));
+  auto int64 = types.global.add<btf::Integer>("int64", 8, 1);
+  ASSERT_TRUE(bool(int64));
+
+  // Add a function `foo` that is of the form: `int32 foo(int32, int64)`.
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "a", btf::ValueType(*int32) }, { "b", btf::ValueType(*int64) }
+  };
+  auto add_proto = types.global.add<btf::FunctionProto>(btf::ValueType(*int32),
+                                                        args);
+  ASSERT_TRUE(bool(add_proto));
+  auto add_func = types.global.add<btf::Function>(
+      "foo", btf::Function::Linkage::Global, *add_proto);
+  ASSERT_TRUE(bool(add_func));
+
+  // Test that calling this function works.
+  test("kprobe:f { foo((int32)1, (int64)2); }", Types{ types });
+  test("kprobe:f { print(foo((int32)1, (int64)2)); }", Types{ types });
+
+  // Test that calling with the wrong number of arguments fails.
+  test("kprobe:f { foo((int32)1); }", Types{ types }, Error{ R"(
+stdin:1:12-25: ERROR: Function `foo` requires 2 arguments, got only 1
+kprobe:f { foo((int32)1); }
+           ~~~~~~~~~~~~~
+HINT: Function `foo` requires arguments (int32, int64)
+)" });
+
+  // Test that calling with the wrong types fails.
+  test("kprobe:f { foo((int64)1, (int64)2); }", Types{ types }, Error{ R"(
+stdin:1:12-23: ERROR: Expected int32 for argument `a` got int64
+kprobe:f { foo((int64)1, (int64)2); }
+           ~~~~~~~~~~~
+stdin:1:12-35: ERROR: Function `foo` requires arguments (int32, int64)
+kprobe:f { foo((int64)1, (int64)2); }
+           ~~~~~~~~~~~~~~~~~~~~~~~
+)" });
+
+  // Test that the return type is well-understood.
+  test("kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }",
+       Types{ types },
+       Error{ R"(
+stdin:1:28-56: ERROR: Type mismatch for $x: trying to assign value of type 'int32' when variable already contains a value of type 'int32 *'
+kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)" });
+}
+
 } // namespace bpftrace::test::semantic_analyser
