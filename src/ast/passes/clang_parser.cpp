@@ -796,7 +796,12 @@ void ClangParser::resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace)
 
 CXUnsavedFile ClangParser::get_btf_generated_header(BPFtrace &bpftrace)
 {
-  btf_cdef = bpftrace.btf_->c_def(bpftrace.btf_set_);
+  // Note that `c_def` will provide the full set of types if an empty set is
+  // used here. We only want the types in `btf_set_` or nothing at all, so
+  // don't generate anything if this set is empty.
+  if (!bpftrace.btf_set_.empty()) {
+    btf_cdef = bpftrace.btf_->c_def(bpftrace.btf_set_);
+  }
   return CXUnsavedFile{
     .Filename = "/bpftrace/include/__btf_generated_header.h",
     .Contents = btf_cdef.c_str(),

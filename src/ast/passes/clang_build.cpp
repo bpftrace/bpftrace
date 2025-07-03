@@ -22,6 +22,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/resolve_imports.h"
+#include "bpftrace.h"
 #include "stdlib/stdlib.h"
 #include "util/result.h"
 
@@ -113,6 +114,7 @@ Result<PipeFds> create_pipe()
 static Result<> build(CompileContext &ctx,
                       const std::string &name,
                       LoadedObject &obj,
+                      const llvm::MemoryBufferRef &vmlinux_h,
                       Imports &imports,
                       BitcodeModules &result)
 {
@@ -129,6 +131,7 @@ static Result<> build(CompileContext &ctx,
                  0,
                  llvm::MemoryBuffer::getMemBufferCopy(other.data(), name));
   }
+  vfs->addFileNoOwn("include/vmlinux.h", 0, vmlinux_h);
 
   // Create the diagnostic options and client. We emit the error to
   // a string, which we can then capture and associate with the import.
@@ -217,22 +220,39 @@ static Result<> build(CompileContext &ctx,
 
 ast::Pass CreateClangBuildPass()
 {
-  return ast::Pass::create("ClangBuilder",
-                           [](CompileContext &ctx,
-                              ast::Imports &imports) -> Result<BitcodeModules> {
-                             BitcodeModules result;
+  return ast::Pass::create(
+      "ClangBuilder",
+      [](BPFtrace &bpftrace,
+         CompileContext &ctx,
+         ast::Imports &imports) -> Result<BitcodeModules> {
+        BitcodeModules result;
 
-                             // For each of the source files in the imports, we
-                             // build it and turn it into a bitcode file.
-                             for (auto &[name, obj] : imports.c_sources) {
-                               auto ok = build(ctx, name, obj, imports, result);
-                               if (!ok) {
-                                 return ok.takeError();
-                               }
-                             }
+        // Nothing to do? Return directly.
+        if (imports.c_sources.empty()) {
+          return result;
+        }
 
-                             return result;
-                           });
+        // Construct our kernel headers. This is a rather expensive operation,
+        // so we ensure that we do this only once for all files.
+        std::string vmlinux_h = bpftrace.btf_->c_def();
+
+        // For each of the source files in the imports, we
+        // build it and turn it into a bitcode file.
+        for (auto &[name, obj] : imports.c_sources) {
+          auto ok = build(ctx,
+                          name,
+                          obj,
+                          llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
+                                                "vmlinux.h"),
+                          imports,
+                          result);
+          if (!ok) {
+            return ok.takeError();
+          }
+        }
+
+        return result;
+      });
 }
 
 } // namespace bpftrace::ast
