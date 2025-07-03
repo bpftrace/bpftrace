@@ -20,10 +20,13 @@ kprobe:f {
   @z = ustack(6)
 })");
   auto bpftrace = get_mock_bpftrace();
+
   auto ok = ast::PassManager()
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
@@ -55,6 +58,8 @@ kprobe:f {
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
