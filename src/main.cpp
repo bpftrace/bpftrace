@@ -29,7 +29,6 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"
-#include "ast/passes/probe_analyser.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
@@ -335,7 +334,6 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
-  add(ast::CreateProbePass());
 }
 
 void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
@@ -347,7 +345,6 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
-  add(ast::CreateProbePass());
 }
 
 ast::Pass printPass(const std::string& name)

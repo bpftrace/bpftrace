@@ -32,7 +32,6 @@ add_library(ast STATIC
   passes/macro_expansion.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
-  passes/probe_analyser.cpp
   passes/probe_expansion.cpp
   passes/resource_analyser.cpp
   passes/semantic_analyser.cpp
