@@ -7,7 +7,6 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
-#include "ast/passes/probe_analyser.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpfmap.h"
@@ -125,7 +124,6 @@ static auto parse_probe(const std::string &str,
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
-                .add(ast::CreateProbePass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateCompilePass(std::ref(*usdt)))
                 .run();
