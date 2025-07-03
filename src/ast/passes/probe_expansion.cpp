@@ -126,7 +126,8 @@ void ExpansionAnalyser::visit(Builtin &builtin)
       }
     }
   } else if (builtin.ident == "probe") {
-    probe_->need_expansion = true;
+    for (auto *ap : probe_->attach_points)
+      ap->expansion = ExpansionType::FULL;
   }
 }
 

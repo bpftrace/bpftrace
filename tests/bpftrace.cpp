@@ -347,6 +347,25 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_probe_builtin)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  parse_probe("kprobe:sys_read,kprobe:my_*,kprobe:sys_write { probe }",
+              *bpftrace);
+
+  // Even though kprobe_multi is enabled, we should get full expansion due to
+  // using the "probe" builtin.
+  ASSERT_EQ(4U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(3), "sys_write", probe_orig_name);
+}
+
 TEST(bpftrace, add_probes_wildcard_no_matches)
 {
   auto bpftrace = get_strict_mock_bpftrace();

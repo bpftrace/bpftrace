@@ -114,7 +114,6 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.orig_name = p.name();
   probe.ns = ap.ns;
   probe.name = ap.name();
-  probe.need_expansion = p.need_expansion;
   probe.freq = ap.freq;
   probe.address = ap.address;
   probe.func_offset = ap.func_offset;

@@ -3399,8 +3399,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
   for (auto *attach_point : probe.attach_points) {
     reset_ids();
     current_attach_point_ = attach_point;
-    if (probe.need_expansion ||
-        attach_point->expansion == ExpansionType::FULL) {
+    if (attach_point->expansion == ExpansionType::FULL) {
       // Do expansion - generate a separate LLVM function for each match
       auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
           *attach_point);
