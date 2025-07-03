@@ -9,7 +9,8 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !30
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !42
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.event_loss_counter", !dbg !42
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !49
 @"tracepoint:sched:sched_one" = global [27 x i8] c"tracepoint:sched:sched_one\00"
 @"tracepoint:sched:sched_two" = global [27 x i8] c"tracepoint:sched:sched_two\00"
 
@@ -17,7 +18,7 @@ target triple = "bpf"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_one_1(ptr %0) #0 section "s_tracepoint_sched_sched_one_1" !dbg !48 {
+define i64 @tracepoint_sched_sched_one_1(ptr %0) #0 section "s_tracepoint_sched_sched_one_1" !dbg !55 {
 entry:
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -53,7 +54,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_two_2(ptr %0) #0 section "s_tracepoint_sched_sched_two_2" !dbg !54 {
+define i64 @tracepoint_sched_sched_two_2(ptr %0) #0 section "s_tracepoint_sched_sched_two_2" !dbg !61 {
 entry:
   %"@x_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -85,8 +86,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!44}
-!llvm.module.flags = !{!46, !47}
+!llvm.dbg.cu = !{!51}
+!llvm.module.flags = !{!53, !54}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -131,17 +132,24 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !40 = !{!41}
 !41 = !DISubrange(count: 262144, lowerBound: 0)
 !42 = !DIGlobalVariableExpression(var: !43, expr: !DIExpression())
-!43 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
-!44 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !45)
-!45 = !{!0, !7, !30, !42}
-!46 = !{i32 2, !"Debug Info Version", i32 3}
-!47 = !{i32 7, !"uwtable", i32 0}
-!48 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !52)
-!49 = !DISubroutineType(types: !50)
-!50 = !{!29, !51}
-!51 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!52 = !{!53}
-!53 = !DILocalVariable(name: "ctx", arg: 1, scope: !48, file: !2, type: !51)
-!54 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !49, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !44, retainedNodes: !55)
-!55 = !{!56}
-!56 = !DILocalVariable(name: "ctx", arg: 1, scope: !54, file: !2, type: !51)
+!43 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !44, isLocal: false, isDefinition: true)
+!44 = !DICompositeType(tag: DW_TAG_array_type, baseType: !45, size: 64, elements: !15)
+!45 = !DICompositeType(tag: DW_TAG_array_type, baseType: !46, size: 64, elements: !15)
+!46 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !47)
+!47 = !{!48}
+!48 = !DISubrange(count: 8, lowerBound: 0)
+!49 = !DIGlobalVariableExpression(var: !50, expr: !DIExpression())
+!50 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
+!51 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !52)
+!52 = !{!0, !7, !30, !42, !49}
+!53 = !{i32 2, !"Debug Info Version", i32 3}
+!54 = !{i32 7, !"uwtable", i32 0}
+!55 = distinct !DISubprogram(name: "tracepoint_sched_sched_one_1", linkageName: "tracepoint_sched_sched_one_1", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !59)
+!56 = !DISubroutineType(types: !57)
+!57 = !{!29, !58}
+!58 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!59 = !{!60}
+!60 = !DILocalVariable(name: "ctx", arg: 1, scope: !55, file: !2, type: !58)
+!61 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !56, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !51, retainedNodes: !62)
+!62 = !{!63}
+!63 = !DILocalVariable(name: "ctx", arg: 1, scope: !61, file: !2, type: !58)

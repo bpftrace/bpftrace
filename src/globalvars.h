@@ -183,7 +183,7 @@ public:
 
   std::unordered_set<std::string> get_global_vars_for_section(
       std::string_view target_section);
-  uint64_t get_global_var(
+  uint64_t *get_global_var(
       const struct bpf_object *bpf_object,
       std::string_view target_section,
       const std::unordered_map<std::string, struct bpf_map *>

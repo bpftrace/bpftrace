@@ -9,14 +9,15 @@ target triple = "bpf"
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_a = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
 @ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !36
-@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !38
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !36
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.event_loss_counter", !dbg !38
+@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !47
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !44 {
+define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !53 {
 entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -56,8 +57,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!40}
-!llvm.module.flags = !{!42, !43}
+!llvm.dbg.cu = !{!49}
+!llvm.module.flags = !{!51, !52}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -96,16 +97,25 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !34 = !{!35}
 !35 = !DISubrange(count: 262144, lowerBound: 0)
 !36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
-!37 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!37 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
 !38 = !DIGlobalVariableExpression(var: !39, expr: !DIExpression())
-!39 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
-!40 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !41)
-!41 = !{!0, !7, !22, !36, !38}
-!42 = !{i32 2, !"Debug Info Version", i32 3}
-!43 = !{i32 7, !"uwtable", i32 0}
-!44 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !45, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !40, retainedNodes: !48)
-!45 = !DISubroutineType(types: !46)
-!46 = !{!20, !47}
-!47 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!48 = !{!49}
-!49 = !DILocalVariable(name: "ctx", arg: 1, scope: !44, file: !2, type: !47)
+!39 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !40, isLocal: false, isDefinition: true)
+!40 = !DICompositeType(tag: DW_TAG_array_type, baseType: !41, size: 64, elements: !45)
+!41 = !DICompositeType(tag: DW_TAG_array_type, baseType: !42, size: 64, elements: !45)
+!42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !43)
+!43 = !{!44}
+!44 = !DISubrange(count: 8, lowerBound: 0)
+!45 = !{!46}
+!46 = !DISubrange(count: 1, lowerBound: 0)
+!47 = !DIGlobalVariableExpression(var: !48, expr: !DIExpression())
+!48 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !20, isLocal: false, isDefinition: true)
+!49 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !50)
+!50 = !{!0, !7, !22, !36, !38, !47}
+!51 = !{i32 2, !"Debug Info Version", i32 3}
+!52 = !{i32 7, !"uwtable", i32 0}
+!53 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !54, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !49, retainedNodes: !57)
+!54 = !DISubroutineType(types: !55)
+!55 = !{!20, !56}
+!56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!57 = !{!58}
+!58 = !DILocalVariable(name: "ctx", arg: 1, scope: !53, file: !2, type: !56)
