@@ -1,4 +1,5 @@
 #include "ast/passes/resource_analyser.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "mocks.h"
@@ -22,6 +23,7 @@ void test(BPFtrace &bpftrace,
                 .put(ast)
                 .put(bpftrace)
                 .add(ast::AllParsePasses())
+                .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
                 .run();

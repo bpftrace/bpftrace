@@ -513,10 +513,18 @@ using MapDeclList = std::vector<MapDeclStatement *>;
 class Map : public Node {
 public:
   explicit Map(ASTContext &ctx, std::string ident, Location &&loc)
-      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
+      : Node(ctx, std::move(loc)), ident(std::move(ident)), read_only(false) {};
+  explicit Map(ASTContext &ctx,
+               std::string ident,
+               bool read_only,
+               Location &&loc)
+      : Node(ctx, std::move(loc)),
+        ident(std::move(ident)),
+        read_only(read_only) {};
   explicit Map(ASTContext &ctx, const Map &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
+        read_only(other.read_only),
         key_type(other.key_type),
         value_type(other.value_type) {};
 
@@ -526,6 +534,7 @@ public:
   }
 
   std::string ident;
+  bool read_only;
   SizedType key_type;
   SizedType value_type;
 };

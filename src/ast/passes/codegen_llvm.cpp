@@ -2559,6 +2559,28 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
 
 ScopedExpr CodegenLLVM::visit(MapAccess &acc)
 {
+  if (acc.map->read_only) {
+    if (acc.map->value_type.IsStringTy()) {
+      const auto max_strlen = bpftrace_.config_->max_strlen;
+      Value *np_alloc = b_.CreateGetStrAllocation(acc.map->ident, acc.loc);
+      b_.CreateMemsetBPF(np_alloc, b_.getInt8(0), max_strlen);
+      auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
+          acc.map->ident, bpftrace_.resources, *bpftrace_.config_);
+      b_.CreateMemcpyBPF(np_alloc,
+                         module_->getGlobalVariable(acc.map->ident),
+                         sized_type.GetSize());
+
+      return ScopedExpr(np_alloc,
+                        [this, np_alloc]() { b_.CreateLifetimeEnd(np_alloc); });
+    }
+
+    return ScopedExpr(b_.CreateLoad(acc.map->value_type.IsBoolTy()
+                                        ? b_.getInt8Ty()
+                                        : b_.getInt64Ty(),
+                                    module_->getGlobalVariable(acc.map->ident),
+                                    acc.map->ident));
+  }
+
   auto scoped_key = getMapKey(*acc.map, acc.key);
 
   auto map_info = bpftrace_.resources.maps_info.find(acc.map->ident);

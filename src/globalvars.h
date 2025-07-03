@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "types.h"
+#include "util/result.h"
 
 namespace bpftrace {
 
@@ -17,6 +18,72 @@ class Config;
 class RequiredResources;
 
 namespace globalvars {
+
+class NamedParamError : public ErrorInfo<NamedParamError> {
+public:
+  NamedParamError(std::string param, std::string value, std::string &&err)
+      : param_(std::move(param)),
+        value_(std::move(value)),
+        err_(std::move(err)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+  const std::string &err() const
+  {
+    return err_;
+  }
+
+private:
+  std::string param_;
+  std::string value_;
+  std::string err_;
+};
+
+class UnknownParamError : public ErrorInfo<UnknownParamError> {
+public:
+  UnknownParamError(std::vector<std::string> &&unexpected,
+                    std::vector<std::string> &&expected)
+      : unexpected_(std::move(unexpected)), expected_(std::move(expected)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+  std::string err() const
+  {
+    std::string err = "unexpected program command line options: ";
+    size_t i;
+    for (i = 0; i < unexpected_.size(); ++i) {
+      err += "--";
+      err += unexpected_[i];
+      if (i != unexpected_.size() - 1) {
+        err += ", ";
+      }
+    }
+    return err;
+  }
+
+  std::string hint() const
+  {
+    std::string hint = "expected program options: ";
+
+    size_t j;
+    for (j = 0; j < expected_.size(); ++j) {
+      hint += "--";
+      hint += expected_[j];
+      if (j != expected_.size() - 1) {
+        hint += ", ";
+      }
+    }
+    return hint;
+  }
+
+private:
+  std::vector<std::string> unexpected_;
+  std::vector<std::string> expected_;
+};
+
+using GlobalVarValue = std::variant<std::string, int64_t, bool>;
+
+using GlobalVarMap = std::unordered_map<std::string, GlobalVarValue>;
 
 // Known global variables
 constexpr std::string_view NUM_CPUS = "__bt__num_cpus";
@@ -45,11 +112,9 @@ constexpr std::string_view MAP_KEY_BUFFER_SECTION_NAME = ".data.map_key_buf";
 constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
     ".data.event_loss_counter";
 
-enum class GlobalVarType : uint8_t { none, integer };
-
 struct GlobalVarConfig {
   std::string section;
-  GlobalVarType type = GlobalVarType::none;
+  Type type = Type::none;
 
 private:
   friend class cereal::access;
@@ -63,14 +128,12 @@ private:
 const std::unordered_map<std::string_view, GlobalVarConfig>
     GLOBAL_VAR_CONFIGS = {
       { NUM_CPUS,
-        { .section = std::string(RO_SECTION_NAME),
-          .type = GlobalVarType::integer } },
+        { .section = std::string(RO_SECTION_NAME), .type = Type::integer } },
       { MAX_CPU_ID,
-        { .section = std::string(RO_SECTION_NAME),
-          .type = GlobalVarType::integer } },
+        { .section = std::string(RO_SECTION_NAME), .type = Type::integer } },
       { EVENT_LOSS_COUNTER,
         { .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
-          .type = GlobalVarType::integer } },
+          .type = Type::integer } },
       { FMT_STRINGS_BUFFER,
         { .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME) } },
       { TUPLE_BUFFER, { .section = std::string(TUPLE_BUFFER_SECTION_NAME) } },
@@ -89,12 +152,18 @@ const std::unordered_map<std::string_view, GlobalVarConfig>
 class GlobalVars {
 public:
   GlobalVars() = default;
-  GlobalVars(std::unordered_map<std::string, GlobalVarConfig> global_var_map)
-      : global_var_map_(std::move(global_var_map))
+  GlobalVars(std::unordered_map<std::string, GlobalVarConfig> global_var_map,
+             std::unordered_map<std::string, GlobalVarValue> default_values)
+      : added_global_vars_(std::move(global_var_map)),
+        named_param_defaults_(std::move(default_values))
   {
   }
 
-  void add_known_global_var(const std::string_view &name);
+  void add_known(const std::string_view &name);
+  void add_named_param(const std::string &name,
+                       const GlobalVarValue &default_value);
+  Result<GlobalVarMap> get_named_param_vals(
+      std::vector<std::string> raw_named_params) const;
   const GlobalVarConfig &get_config(const std::string &name) const;
   SizedType get_sized_type(const std::string &global_var_name,
                            const RequiredResources &resources,
@@ -102,13 +171,14 @@ public:
 
   const std::unordered_map<std::string, GlobalVarConfig> &global_var_map() const
   {
-    return global_var_map_;
+    return added_global_vars_;
   }
 
   void update_global_vars(
       const struct bpf_object *bpf_object,
       const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
-      const std::unordered_map<std::string, int> &known_global_var_values,
+      GlobalVarMap &&global_var_vals,
+      int ncpus,
       int max_cpu_id);
 
   std::unordered_set<std::string> get_global_vars_for_section(
@@ -120,14 +190,15 @@ public:
           &section_name_to_global_vars_map);
 
 protected:
-  std::unordered_map<std::string, GlobalVarConfig> global_var_map_;
+  std::unordered_map<std::string, GlobalVarConfig> added_global_vars_;
+  std::unordered_map<std::string, GlobalVarValue> named_param_defaults_;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(global_var_map_);
+    archive(added_global_vars_, named_param_defaults_);
   }
 
   void verify_maps_found(const std::unordered_map<std::string, struct bpf_map *>

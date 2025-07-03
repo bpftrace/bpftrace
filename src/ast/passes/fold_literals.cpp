@@ -463,18 +463,12 @@ std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
                                    Location(param.loc));
   }
   if (val[0] == '-') {
-    auto v = util::to_uint(val.substr(1, val.size() - 1));
+    auto v = util::to_int(val);
     if (!v) {
       // Not parsed, treat it as a string.
       return ast_.make_node<String>(val, Location(param.loc));
     }
-    // Converting without overflow.
-    auto neg = -static_cast<int64_t>(*v - 1) - 1;
-    if (neg > 0) {
-      // Overflow/underflow, treat ias a string.
-      return ast_.make_node<String>(val, Location(param.loc));
-    }
-    return ast_.make_node<NegativeInteger>(neg, Location(param.loc));
+    return ast_.make_node<NegativeInteger>(*v, Location(param.loc));
   } else {
     auto v = util::to_uint(val);
     if (!v) {
