@@ -157,6 +157,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
   switch (probetype(ap.provider)) {
     case ProbeType::special:
       return special_parser();
+    case ProbeType::benchmark:
+      return benchmark_parser();
     case ProbeType::kprobe:
       return kprobe_parser();
     case ProbeType::kretprobe:
@@ -283,6 +285,22 @@ AttachPointParser::State AttachPointParser::special_parser()
     }
     ap_->target = parts_[1];
     ap_->func = parts_[2];
+  }
+
+  return OK;
+}
+
+AttachPointParser::State AttachPointParser::benchmark_parser()
+{
+  // Can only have reached here if provider is `BENCHMARK`
+  assert(ap_->provider == "BENCHMARK");
+
+  if (ap_->provider == "BENCHMARK") {
+    if (parts_.size() != 2) {
+      return argument_count_error(1);
+    }
+
+    ap_->target = parts_[1];
   }
 
   return OK;

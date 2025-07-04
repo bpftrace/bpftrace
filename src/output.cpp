@@ -361,7 +361,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
               return std::to_string(
                   util::reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
             return std::to_string(util::reduce_value<uint8_t>(value, nvalues) / div);
-            // clang-format on
+          // clang-format on
         default:
           LOG(BUG) << "value_to_str: Invalid int bitwidth: "
                    << type.GetIntBitWidth() << "provided";
@@ -851,6 +851,44 @@ void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
       << ", retcode: " << retcode;
 }
 
+void TextOutput::benchmark_results(
+    const std::map<std::string, uint32_t> &results) const
+{
+  if (results.size() == 0) {
+    return;
+  }
+
+  std::string BENCHMARK = "BENCHMARK";
+  std::string NANOSECONDS = "NANOSECONDS";
+  size_t longest_name = BENCHMARK.size();
+
+  for (const auto &benchmark : results) {
+    longest_name = std::max(longest_name, benchmark.first.size());
+  }
+
+  out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
+       << "+" << std::setw(NANOSECONDS.size() + 2) << std::setfill('-') << ""
+       << "+" << std::endl;
+  out_ << "| " << std::left << std::setw(longest_name) << std::setfill(' ')
+       << BENCHMARK << " | " << NANOSECONDS << " |" << std::endl;
+  out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
+       << "+" << std::setw(NANOSECONDS.size() + 2) << std::setfill('-') << ""
+       << "+" << std::endl;
+
+  for (const auto &benchmark : results) {
+    out_ << "| " << std::left << std::setw(longest_name) << std::setfill(' ')
+         << benchmark.first << " | " << std::left
+         << std::setw(NANOSECONDS.size()) << std::setfill(' ')
+         << benchmark.second << " |" << std::endl;
+  }
+
+  out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
+       << "+" << std::setw(NANOSECONDS.size() + 2) << std::setfill('-') << ""
+       << "+" << std::endl;
+
+  out_ << std::endl;
+}
+
 std::string TextOutput::field_to_str(const std::string &name,
                                      const std::string &value) const
 {
@@ -1148,6 +1186,11 @@ void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
        << info.func_id << R"(", "retcode": )" << retcode << R"(, "filename": ")"
        << info.filename << R"(", "line": )" << info.line << R"(, "col": )"
        << info.column << "}" << std::endl;
+}
+
+void JsonOutput::benchmark_results(
+    const std::map<std::string, uint32_t> &results [[maybe_unused]]) const
+{
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

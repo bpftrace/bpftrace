@@ -14,6 +14,7 @@ namespace bpftrace {
 enum class ProbeType {
   invalid,
   special,
+  benchmark,
   kprobe,
   kretprobe,
   uprobe,
@@ -62,6 +63,9 @@ const std::vector<ProbeItem> PROBE_LIST = {
   { .name = "BEGIN", .aliases = { "BEGIN" }, .type = ProbeType::special },
   { .name = "END", .aliases = { "END" }, .type = ProbeType::special },
   { .name = "self", .aliases = { "self" }, .type = ProbeType::special },
+  { .name = "BENCHMARK",
+    .aliases = { "BENCHMARK" },
+    .type = ProbeType::benchmark },
   { .name = "tracepoint",
     .aliases = { "t" },
     .type = ProbeType::tracepoint,

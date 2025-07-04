@@ -143,6 +143,8 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
+  } else if (ap.provider == "BENCHMARK") {
+    resources.benchmark_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {
       resources.signal_probes.emplace_back(std::move(probe));
@@ -203,7 +205,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
 int BPFtrace::num_probes() const
 {
   return resources.special_probes.size() + resources.probes.size() +
-         resources.signal_probes.size();
+         resources.signal_probes.size() + resources.benchmark_probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -532,6 +534,7 @@ bool attach_reverse(const Probe &p)
 {
   switch (p.type) {
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -684,6 +687,32 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
   }
 
   int num_special_attached = 0;
+
+  for (auto &probe : resources.benchmark_probes) {
+    auto &benchmark_prog = bytecode_.getProgramForProbe(probe);
+    struct ::bpf_test_run_opts opts = {
+      .sz = sizeof(struct ::bpf_test_run_opts),
+      .data_in = nullptr,
+      .data_out = nullptr,
+      .data_size_in = 0,
+      .data_size_out = 0,
+      .ctx_in = nullptr,
+      .ctx_out = nullptr,
+      .ctx_size_in = 0,
+      .ctx_size_out = 0,
+      .retval = 0,
+      .repeat = 1000000,
+      .duration = 0,
+      .flags = 0,
+      .cpu = 0,
+      .batch_size = 0,
+    };
+    if (::bpf_prog_test_run_opts(benchmark_prog.fd(), &opts))
+      return -1;
+
+    benchmark_results[probe.path] = opts.duration;
+    ++num_special_attached;
+  }
 
   auto begin_probe = resources.special_probes.find("BEGIN");
   if (begin_probe != resources.special_probes.end()) {
@@ -1130,6 +1159,11 @@ int BPFtrace::print_map_hist(Output &out,
     div = 1;
   out.map_hist(*this, map, top, div, *values_by_key, total_counts_by_key);
   return 0;
+}
+
+void BPFtrace::print_benchmark_results(Output &out)
+{
+  out.benchmark_results(benchmark_results);
 }
 
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
