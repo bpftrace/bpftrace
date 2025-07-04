@@ -129,6 +129,7 @@ public:
   int run_iter();
   int print_maps(Output &out);
   int print_map(Output &out, const BpfMap &map, uint32_t top, uint32_t div);
+  void print_benchmark_results(Output &out);
   std::string get_stack(int64_t stackid,
                         uint32_t nr_stack_frames,
                         int32_t pid,
@@ -240,6 +241,7 @@ public:
   int online_cpus_;
   int max_cpu_id_;
   std::unique_ptr<Config> config_;
+  bool run_benchmarks_ = false;
 
 private:
   Ksyms ksyms_;
@@ -289,6 +291,7 @@ private:
   mutable util::FuncsModulesMap traceable_funcs_;
   mutable util::FuncsModulesMap raw_tracepoints_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+  std::map<std::string, uint32_t> benchmark_results;
 };
 
 } // namespace bpftrace

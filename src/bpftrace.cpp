@@ -147,6 +147,8 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
+  } else if (ap.provider == "BENCH") {
+    resources.benchmark_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {
       resources.signal_probes.emplace_back(std::move(probe));
@@ -207,7 +209,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
 int BPFtrace::num_probes() const
 {
   return resources.special_probes.size() + resources.probes.size() +
-         resources.signal_probes.size();
+         resources.signal_probes.size() + resources.benchmark_probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -536,6 +538,7 @@ bool attach_reverse(const Probe &p)
 {
   switch (p.type) {
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -704,76 +707,102 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     ++num_begin_end_attached;
   }
 
-  for (auto &probe : resources.signal_probes) {
-    auto &sig_prog = bytecode_.getProgramForProbe(probe);
-    sigusr1_prog_fds_.emplace_back(sig_prog.fd());
-    ++num_signal_attached;
-  }
+  if (run_benchmarks_) {
+    for (auto &probe : resources.benchmark_probes) {
+      auto &benchmark_prog = bytecode_.getProgramForProbe(probe);
+      // Note: on newer kernels you must provide a data_in buffer at least
+      // ETH_HLEN bytes long to make sure input validation works for
+      // opts. Otherwise, bpf_prog_test_run_opts will return -EINVAL for
+      // BPF_PROG_TYPE_XDP.
+      //
+      // https://github.com/torvalds/linux/commit/6b3d638ca897e099fa99bd6d02189d3176f80a47
+      constexpr size_t ETH_HLEN = 14;
+      char data_in[ETH_HLEN];
+      struct ::bpf_test_run_opts opts = {};
+      opts.sz = sizeof(struct ::bpf_test_run_opts);
+      opts.data_in = data_in;
+      opts.data_size_in = ETH_HLEN;
+      opts.repeat = 1'000'000;
 
-  if (child_ && has_usdt_) {
-    try {
-      child_->run(true);
-    } catch (const std::exception &e) {
-      LOG(ERROR) << "Failed to setup child: " << e.what();
-      return -1;
-    }
-  }
+      if (auto ret = ::bpf_prog_test_run_opts(benchmark_prog.fd(), &opts)) {
+        LOG(ERROR) << "bpf_prog_test_run_opts failed: " << ret;
+        return -1;
+      }
 
-  // The kernel appears to fire some probes in the order that they were
-  // attached and others in reverse order. In order to make sure that blocks
-  // are executed in the same order they were declared, iterate over the probes
-  // twice: in the first pass iterate forward and attach the probes that will
-  // be fired in the same order they were attached, and in the second pass
-  // iterate in reverse and attach the rest.
-  for (auto &probe : resources.probes) {
-    if (BPFtrace::exitsig_recv) {
-      request_finalize();
-      return -1;
+      benchmark_results[probe.path] = opts.duration;
     }
-    if (!attach_reverse(probe)) {
-      auto ap = attach_probe(probe, bytecode_);
-      if (!ap) {
-        if (config_->missing_probes == ConfigMissingProbes::error) {
-          return -1;
-        }
-      } else {
-        attached_probes_.push_back(std::move(*ap));
+  } else {
+    for (auto &probe : resources.signal_probes) {
+      auto &sig_prog = bytecode_.getProgramForProbe(probe);
+      sigusr1_prog_fds_.emplace_back(sig_prog.fd());
+      ++num_signal_attached;
+    }
+
+    if (child_ && has_usdt_) {
+      try {
+        child_->run(true);
+      } catch (const std::exception &e) {
+        LOG(ERROR) << "Failed to setup child: " << e.what();
+        return -1;
       }
     }
-  }
 
-  for (auto &probe : std::ranges::reverse_view(resources.probes)) {
-    if (BPFtrace::exitsig_recv) {
-      request_finalize();
-      return -1;
-    }
-    if (attach_reverse(probe)) {
-      auto ap = attach_probe(probe, bytecode_);
-      if (!ap) {
-        if (config_->missing_probes == ConfigMissingProbes::error) {
-          return -1;
+    // The kernel appears to fire some probes in the order that they were
+    // attached and others in reverse order. In order to make sure that blocks
+    // are executed in the same order they were declared, iterate over the
+    // probes twice: in the first pass iterate forward and attach the probes
+    // that will be fired in the same order they were attached, and in the
+    // second pass iterate in reverse and attach the rest.
+    for (auto &probe : resources.probes) {
+      if (BPFtrace::exitsig_recv) {
+        request_finalize();
+        return -1;
+      }
+      if (!attach_reverse(probe)) {
+        auto ap = attach_probe(probe, bytecode_);
+        if (!ap) {
+          if (config_->missing_probes == ConfigMissingProbes::error) {
+            return -1;
+          }
+        } else {
+          attached_probes_.push_back(std::move(*ap));
         }
-      } else {
-        attached_probes_.push_back(std::move(*ap));
       }
     }
-  }
 
-  if (dry_run) {
-    request_finalize();
-    return 0;
-  }
+    for (auto &probe : std::ranges::reverse_view(resources.probes)) {
+      if (BPFtrace::exitsig_recv) {
+        request_finalize();
+        return -1;
+      }
+      if (attach_reverse(probe)) {
+        auto ap = attach_probe(probe, bytecode_);
+        if (!ap) {
+          if (config_->missing_probes == ConfigMissingProbes::error) {
+            return -1;
+          }
+        } else {
+          attached_probes_.push_back(std::move(*ap));
+        }
+      }
+    }
 
-  // Kick the child to execute the command.
-  if (child_) {
-    try {
-      if (has_usdt_)
-        child_->resume();
-      else
-        child_->run();
-    } catch (const std::exception &e) {
-      LOG(ERROR) << "Failed to run child: " << e.what();
-      return -1;
+    if (dry_run) {
+      request_finalize();
+      return 0;
+    }
+
+    // Kick the child to execute the command.
+    if (child_) {
+      try {
+        if (has_usdt_)
+          child_->resume();
+        else
+          child_->run();
+      } catch (const std::exception &e) {
+        LOG(ERROR) << "Failed to run child: " << e.what();
+        return -1;
+      }
     }
   }
 
@@ -784,7 +813,7 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
   }
 
   auto total_attached = num_attached + num_begin_end_attached +
-                        num_signal_attached;
+                        num_signal_attached + benchmark_results.size();
 
   if (total_attached == 0) {
     LOG(ERROR) << "Attachment failed for all probes.";
@@ -810,7 +839,7 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     if (err)
       return err;
   } else {
-    bool should_drain = num_begin_end_attached > 0 &&
+    bool should_drain = (num_begin_end_attached > 0 || run_benchmarks_) &&
                         num_signal_attached == 0 && num_attached == 0;
     poll_output(out, should_drain);
   }
@@ -1180,6 +1209,11 @@ int BPFtrace::print_map_tseries(Output &out, const BpfMap &map)
   out.map_tseries(*this, map, *values_by_key, latest_epoch_by_key);
 
   return 0;
+}
+
+void BPFtrace::print_benchmark_results(Output &out)
+{
+  out.benchmark_results(benchmark_results);
 }
 
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const

@@ -66,7 +66,8 @@ enum class OutputBufferConfig {
 enum class TestMode {
   NONE = 0,
   CODEGEN,
-  BENCHMARK,
+  COMPILER_BENCHMARK,
+  BPF_BENCHMARK,
 };
 
 enum class BuildMode {
@@ -79,7 +80,7 @@ enum class BuildMode {
 enum Options {
   INFO = 2000,
   NO_WARNING,
-  TEST,
+  TEST_MODE,
   AOT,
   HELP,
   VERSION,
@@ -426,10 +427,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::NO_WARNING },
-    option{ .name = "test",
+    option{ .name = "test-mode",
             .has_arg = required_argument,
             .flag = nullptr,
-            .val = Options::TEST },
+            .val = Options::TEST_MODE },
     option{ .name = "aot",
             .has_arg = required_argument,
             .flag = nullptr,
@@ -472,13 +473,16 @@ Args parse_args(int argc, char* argv[])
         args.no_warnings = true;
         args.helper_check_level = 0;
         break;
-      case Options::TEST: // --test
+      case Options::TEST_MODE: // --test-mode
         if (std::strcmp(optarg, "codegen") == 0) {
           args.test_mode = TestMode::CODEGEN;
-        } else if (std::strcmp(optarg, "benchmark") == 0)
-          args.test_mode = TestMode::BENCHMARK;
-        else {
-          LOG(ERROR) << "USAGE: --test can only be 'codegen'.";
+        } else if (std::strcmp(optarg, "compiler-bench") == 0) {
+          args.test_mode = TestMode::COMPILER_BENCHMARK;
+        } else if (std::strcmp(optarg, "bench") == 0) {
+          args.test_mode = TestMode::BPF_BENCHMARK;
+        } else {
+          LOG(ERROR) << "USAGE: --test can only be 'codegen', "
+                        "'compiler-bench', or 'bench'.";
           exit(1);
         }
         break;
@@ -727,6 +731,7 @@ int main(int argc, char* argv[])
   bpftrace.helper_check_level_ = args.helper_check_level;
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
+  bpftrace.run_benchmarks_ = args.test_mode == TestMode::BPF_BENCHMARK;
 
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);
@@ -978,7 +983,7 @@ int main(int argc, char* argv[])
   pm.add(ast::CreateExternObjectPass());
   pm.add(ast::CreateLinkPass());
 
-  if (args.test_mode == TestMode::BENCHMARK) {
+  if (args.test_mode == TestMode::COMPILER_BENCHMARK) {
     info(args.no_feature);
     auto ok = benchmark(std::cout, pm);
     if (!ok) {

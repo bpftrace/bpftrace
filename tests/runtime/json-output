@@ -190,3 +190,14 @@ NAME print bool type
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print((true, false));  }'
 EXPECT {"type": "value", "data": [true,false]}
 TIMEOUT 1
+
+NAME BENCH
+RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'BENCH:a { @ = count(); }'
+EXPECT_REGEX {"type": "benchmark_results", "data": {"a":\d+}}
+TIMEOUT 2
+
+NAME BENCH multiple
+RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'BENCH:a { @a++; } BENCH:b { @b++; } BENCH:c { @c++; }'
+EXPECT_REGEX {"type": "benchmark_results", "data": {"a":\d+,"b":\d+,"c":\d+}}
+TIMEOUT 5
+
