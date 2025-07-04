@@ -186,6 +186,10 @@ RUN {{BPFTRACE}} -e 'BEGIN { @ = buf("hello", $1); exit(); }' 5
 EXPECT @: hello
 TIMEOUT 1
 
+NAME positional tseries
+RUN {{BPFTRACE}} -e 'BEGIN { @ = tseries($1, 1ms, 1); exit()}' 0
+EXPECT_REGEX @:.*
+
 NAME positional kstack
 RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", kstack(), kstack($1)); exit(); }' 1
 EXPECT SUCCESS
@@ -217,6 +221,11 @@ TIMEOUT 1
 NAME avg can be cleared
 PROG BEGIN{ @[1] = avg(1); clear(@); exit() }
 EXPECT_REGEX .*
+TIMEOUT 1
+
+NAME tseries can be cleared
+PROG BEGIN{ @[1] = tseries(1, 1ms, 5); clear(@); exit() }
+EXPECT_REGEX_NONE @
 TIMEOUT 1
 
 NAME sigint under heavy load

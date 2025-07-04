@@ -7,6 +7,7 @@
 #include <bpf/libbpf.h>
 #include <cassert>
 #include <cerrno>
+#include <chrono>
 #include <cinttypes>
 #include <csignal>
 #include <cstdio>
@@ -53,6 +54,8 @@
 #include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
+
+using namespace std::chrono_literals;
 
 namespace bpftrace {
 
@@ -1030,6 +1033,8 @@ int BPFtrace::print_map(Output &out,
   const auto &value_type = map_info.value_type;
   if (value_type.IsHistTy() || value_type.IsLhistTy())
     return print_map_hist(out, map, top, div);
+  else if (value_type.IsTSeriesTy())
+    return print_map_tseries(out, map);
 
   uint64_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   auto values_by_key = map.collect_elements(nvalues);
@@ -1129,6 +1134,35 @@ int BPFtrace::print_map_hist(Output &out,
   if (div == 0)
     div = 1;
   out.map_hist(*this, map, top, div, *values_by_key, total_counts_by_key);
+  return 0;
+}
+
+int BPFtrace::print_map_tseries(Output &out, const BpfMap &map)
+{
+  const auto &map_info = resources.maps_info.at(map.name());
+  auto values_by_key = map.collect_tseries_data(map_info, ncpus_);
+  if (!values_by_key) {
+    LOG(ERROR) << "Failed to collect time series data: "
+               << values_by_key.takeError();
+    return -1;
+  }
+
+  // Sort from least to most recently updated.
+  std::vector<std::pair<KeyType, EpochType>> latest_epoch_by_key;
+  for (auto &tseries : *values_by_key) {
+    uint64_t latest_epoch = 0;
+
+    for (const auto &bucket : tseries.second) {
+      latest_epoch = std::max(latest_epoch, bucket.first);
+    }
+
+    latest_epoch_by_key.emplace_back(tseries.first, latest_epoch);
+  }
+  std::ranges::sort(latest_epoch_by_key,
+                    [&](auto &a, auto &b) { return a.second < b.second; });
+
+  out.map_tseries(*this, map, *values_by_key, latest_epoch_by_key);
+
   return 0;
 }
 
@@ -1249,36 +1283,58 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
                                         uint32_t strftime_id,
                                         uint64_t nsecs)
 {
-  static const auto usec_regex = std::regex("%f");
-  static constexpr auto ns_in_sec = 1'000'000'000;
-  auto ts_mode = static_cast<TimestampMode>(mode);
-  struct timespec zero = {};
-  struct timespec *basetime = &zero;
+  return resolve_timestamp(
+      mode, nsecs, resources.strftime_args[strftime_id], false);
+}
 
-  if (ts_mode == TimestampMode::boot) {
-    if (!boottime_) {
-      LOG(ERROR)
-          << "Cannot resolve timestamp due to failed boot time calculation";
-      return "(?)";
-    } else {
-      basetime = &boottime_.value();
-    }
+std::string BPFtrace::resolve_timestamp(uint32_t mode,
+                                        uint64_t nsecs,
+                                        const std::string &raw_fmt,
+                                        bool utc)
+{
+  static const auto nsec_regex = std::regex("%k");
+  static const auto usec_regex = std::regex("%f");
+  static const auto msec_regex = std::regex("%l");
+  uint64_t ns = 0;
+  time_t time = time_since_epoch(mode, nsecs, &ns);
+
+  if (!time) {
+    return "(?)";
   }
 
   // Calculate and localize timestamp
   struct tm tmp;
-  time_t time = basetime->tv_sec + ((basetime->tv_nsec + nsecs) / ns_in_sec);
-  if (!localtime_r(&time, &tmp)) {
-    LOG(ERROR) << "localtime_r: " << strerror(errno);
-    return "(?)";
+  if (utc) {
+    if (!gmtime_r(&time, &tmp)) {
+      LOG(ERROR) << "gmtime_r: " << strerror(errno);
+      return "(?)";
+    }
+  } else {
+    if (!localtime_r(&time, &tmp)) {
+      LOG(ERROR) << "localtime_r: " << strerror(errno);
+      return "(?)";
+    }
   }
 
   // Process strftime() format string extensions
-  const auto &raw_fmt = resources.strftime_args[strftime_id];
-  uint64_t us = ((basetime->tv_nsec + nsecs) % ns_in_sec) / 1000;
+  std::chrono::nanoseconds ns_rem(ns);
+  char nsecs_buf[10];
+  snprintf(nsecs_buf, sizeof(nsecs_buf), "%09" PRIu64, ns_rem.count());
   char usecs_buf[7];
-  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
+  snprintf(
+      usecs_buf,
+      sizeof(usecs_buf),
+      "%06" PRIu64,
+      std::chrono::duration_cast<std::chrono::microseconds>(ns_rem).count());
+  char msecs_buf[4];
+  snprintf(
+      msecs_buf,
+      sizeof(msecs_buf),
+      "%03" PRIu64,
+      std::chrono::duration_cast<std::chrono::milliseconds>(ns_rem).count());
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
+  fmt = std::regex_replace(fmt, nsec_regex, nsecs_buf);
+  fmt = std::regex_replace(fmt, msec_regex, msecs_buf);
 
   const auto timestr_size = config_->max_strlen;
   std::string timestr(timestr_size, '\0');
@@ -1292,6 +1348,33 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   // Fit return value to formatted length
   timestr.resize(timestr_len);
   return timestr;
+}
+
+time_t BPFtrace::time_since_epoch(uint32_t mode,
+                                  uint64_t timestamp_ns,
+                                  uint64_t *nsecs)
+{
+  auto ts_mode = static_cast<TimestampMode>(mode);
+  struct timespec zero = {};
+  struct timespec *basetime = &zero;
+
+  if (ts_mode == TimestampMode::boot) {
+    if (!boottime_) {
+      LOG(ERROR)
+          << "Cannot resolve timestamp due to failed boot time calculation";
+      return 0;
+    } else {
+      basetime = &boottime_.value();
+    }
+  }
+
+  if (nsecs != nullptr) {
+    *nsecs = ((basetime->tv_nsec + timestamp_ns) %
+              std::chrono::nanoseconds(1s).count());
+  }
+
+  return basetime->tv_sec + ((basetime->tv_nsec + timestamp_ns) /
+                             std::chrono::nanoseconds(1s).count());
 }
 
 std::string BPFtrace::resolve_buf(const char *buf, size_t size)

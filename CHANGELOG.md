@@ -65,6 +65,8 @@ and this project adheres to
   - [#4317](https://github.com/bpftrace/bpftrace/pull/4317)
 - Add `getopt` function to handle named command line program arguments
   - [#4258](https://github.com/bpftrace/bpftrace/pull/4258)
+- Introduce `tseries` for capturing time series data
+  - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

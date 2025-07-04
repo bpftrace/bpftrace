@@ -29,6 +29,7 @@ enum class Type : uint8_t {
   record, // struct/union, as struct is a protected keyword
   hist_t,
   lhist_t,
+  tseries_t,
   count_t,
   sum_t,
   min_t,
@@ -384,6 +385,10 @@ public:
   {
     return type_ == Type::lhist_t;
   };
+  bool IsTSeriesTy() const
+  {
+    return type_ == Type::tseries_t;
+  };
   bool IsCountTy() const
   {
     return type_ == Type::count_t;
@@ -496,7 +501,8 @@ public:
   // logical value (from the user perspective).
   bool IsMultiKeyMapTy() const
   {
-    return type_ == Type::hist_t || type_ == Type::lhist_t;
+    return type_ == Type::hist_t || type_ == Type::lhist_t ||
+           type_ == Type::tseries_t;
   }
 
   bool NeedsPercpuMap() const;
@@ -558,6 +564,7 @@ SizedType CreateStats(bool is_signed);
 SizedType CreateUsername();
 SizedType CreateInet(size_t size);
 SizedType CreateLhist();
+SizedType CreateTSeries();
 SizedType CreateHist();
 SizedType CreateUSym();
 SizedType CreateKSym();
@@ -572,6 +579,10 @@ std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string typestr(const SizedType &type, bool debug = false);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
+
+enum class TSeriesAggFunc { none, avg, max, min, sum };
+
+std::ostream &operator<<(std::ostream &os, TSeriesAggFunc agg);
 
 } // namespace bpftrace
 

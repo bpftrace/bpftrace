@@ -67,6 +67,12 @@ TEST(unstable_feature, check_error)
 
   test("config = { unstable_macro=warn } macro add_one($x) { $x } BEGIN { "
        "@a[0] = 0; }");
+
+  test("config = { unstable_tseries=warn } BEGIN { @ = tseries(4, 1s, 10); }");
+  test_error(
+      "config = { unstable_tseries=error } BEGIN { @ = tseries(4, 1s, 10); }",
+      "tseries feature is not enabled by default. To enable this unstable "
+      "feature, set the config flag to enable. unstable_tseries=enable");
 }
 
 } // namespace bpftrace::test::unstable_feature
