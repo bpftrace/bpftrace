@@ -15,6 +15,7 @@ const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
 const auto MACROS = "macros";
 const auto TSERIES = "tseries";
+const auto TESTING = "testing";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -41,6 +42,7 @@ public:
   void visit(Import &imp);
   void visit(Macro &macro);
   void visit(Call &call);
+  void visit(AttachPoint &ap);
 
 private:
   BPFtrace &bpftrace_;
@@ -109,6 +111,23 @@ void UnstableFeature::visit(Call &call)
       !warned_features.contains(UNSTABLE_TSERIES)) {
     LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
     warned_features.insert(UNSTABLE_TSERIES);
+  }
+}
+
+void UnstableFeature::visit(AttachPoint &ap)
+{
+  if (!ap.raw_input.starts_with("BENCH")) {
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_testing == ConfigUnstable::error) {
+    ap.addError() << get_error(TESTING, UNSTABLE_TESTING);
+    return;
+  }
+  if (bpftrace_.config_->unstable_testing == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_TESTING)) {
+    LOG(WARNING) << get_warning(TESTING, UNSTABLE_TESTING);
+    warned_features.insert(UNSTABLE_TESTING);
   }
 }
 

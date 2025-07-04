@@ -69,6 +69,8 @@ and this project adheres to
   - [#4345](https://github.com/bpftrace/bpftrace/pull/4345)
 - Introduce `tseries` for capturing time series data
   - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
+- Add `BENCH` for creating microbenchmarks
+  - [#4343](https://github.com/bpftrace/bpftrace/pull/4343)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

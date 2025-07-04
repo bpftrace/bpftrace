@@ -146,6 +146,8 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
+  } else if (ap.provider == "BENCH") {
+    resources.benchmark_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {
       resources.signal_probes.emplace_back(std::move(probe));
@@ -206,7 +208,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
 int BPFtrace::num_probes() const
 {
   return resources.special_probes.size() + resources.probes.size() +
-         resources.signal_probes.size();
+         resources.signal_probes.size() + resources.benchmark_probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -535,6 +537,7 @@ bool attach_reverse(const Probe &p)
 {
   switch (p.type) {
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -687,6 +690,43 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
   }
 
   int num_special_attached = 0;
+
+  for (auto &probe : resources.benchmark_probes) {
+    auto &benchmark_prog = bytecode_.getProgramForProbe(probe);
+    const int trials = 1'000'000;
+    // Note: on newer kernels you must provide a data_in buffer at least
+    // ETH_HLEN bytes long to make sure input validation works for
+    // opts. Otherwise, bpf_prog_test_run_opts will return -EINVAL for
+    // BPF_PROG_TYPE_XDP.
+    //
+    // https://github.com/torvalds/linux/commit/6b3d638ca897e099fa99bd6d02189d3176f80a47
+    constexpr size_t ETH_HLEN = 14;
+    char data_in[ETH_HLEN];
+    struct ::bpf_test_run_opts opts = {
+      .sz = sizeof(struct ::bpf_test_run_opts),
+      .data_in = data_in,
+      .data_out = nullptr,
+      .data_size_in = ETH_HLEN,
+      .data_size_out = 0,
+      .ctx_in = nullptr,
+      .ctx_out = nullptr,
+      .ctx_size_in = 0,
+      .ctx_size_out = 0,
+      .retval = 0,
+      .repeat = trials,
+      .duration = 0,
+      .flags = 0,
+      .cpu = 0,
+      .batch_size = 0,
+    };
+    if (auto ret = ::bpf_prog_test_run_opts(benchmark_prog.fd(), &opts)) {
+      LOG(ERROR) << "bpf_prog_test_run_opts failed: " << ret;
+      return -1;
+    }
+
+    benchmark_results[probe.path] = opts.duration;
+    ++num_special_attached;
+  }
 
   auto begin_probe = resources.special_probes.find("BEGIN");
   if (begin_probe != resources.special_probes.end()) {
@@ -1164,6 +1204,11 @@ int BPFtrace::print_map_tseries(Output &out, const BpfMap &map)
   out.map_tseries(*this, map, *values_by_key, latest_epoch_by_key);
 
   return 0;
+}
+
+void BPFtrace::print_benchmark_results(Output &out)
+{
+  out.benchmark_results(benchmark_results);
 }
 
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
