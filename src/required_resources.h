@@ -133,6 +133,7 @@ public:
   // be collecting this, but it's complex to move the logic.
   std::vector<Probe> probes;
   std::unordered_map<std::string, Probe> special_probes;
+  std::vector<Probe> benchmark_probes;
   std::vector<Probe> signal_probes;
   std::vector<Probe> watchpoint_probes;
 
@@ -160,7 +161,8 @@ private:
             using_skboutput,
             probes,
             signal_probes,
-            special_probes);
+            special_probes,
+            benchmark_probes);
   }
 };
 
