@@ -14,7 +14,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
-#include "ast/passes/probe_analyser.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -63,6 +63,7 @@ static void test(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateCMacroExpansionPass())
@@ -74,7 +75,6 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateRecursionCheckPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())
-                .add(ast::CreateProbePass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateCompilePass())
                 .add(ast::CreateDumpIRPass(out))

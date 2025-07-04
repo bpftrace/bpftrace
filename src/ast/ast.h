@@ -1207,7 +1207,6 @@ public:
         attach_points(clone(ctx, other.attach_points, loc)),
         pred(clone(ctx, other.pred, loc)),
         block(clone(ctx, other.block, loc)),
-        need_expansion(other.need_expansion),
         index_(other.index_) {};
 
   AttachPointList attach_points;
@@ -1216,7 +1215,6 @@ public:
 
   std::string name() const;
   std::string args_typename() const;
-  bool need_expansion = false; // must build a BPF program per wildcard match
 
   int index() const;
   void set_index(int index);

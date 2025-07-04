@@ -4,6 +4,6 @@
 
 namespace bpftrace::ast {
 
-Pass CreateProbePass();
+Pass CreateProbeExpansionPass(bool listing = false);
 
 } // namespace bpftrace::ast

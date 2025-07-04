@@ -6,7 +6,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
-#include "ast/passes/probe_analyser.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
 #include "driver.h"
@@ -115,11 +115,11 @@ static auto parse_probe(const std::string &str,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateSemanticPass())
-                .add(ast::CreateProbePass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateCompilePass(std::ref(*usdt)))
                 .run();
@@ -343,6 +343,25 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
                      probe_orig_name,
                      "kprobe:my_*");
   check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
+}
+
+TEST(bpftrace, add_probes_probe_builtin)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  parse_probe("kprobe:sys_read,kprobe:my_*,kprobe:sys_write { probe }",
+              *bpftrace);
+
+  // Even though kprobe_multi is enabled, we should get full expansion due to
+  // using the "probe" builtin.
+  ASSERT_EQ(4U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(3), "sys_write", probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_wildcard_no_matches)

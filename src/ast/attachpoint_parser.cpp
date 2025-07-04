@@ -339,18 +339,6 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
     ap_->func = parts_[func_idx];
   }
 
-  // kprobe_multi does not support the "module:function" syntax so in case
-  // a module is specified, always use full expansion
-  if (util::has_wildcard(ap_->target))
-    ap_->expansion = ExpansionType::FULL;
-  else if (util::has_wildcard(ap_->func)) {
-    if (ap_->target.empty() && bpftrace_.feature_->has_kprobe_multi()) {
-      ap_->expansion = ExpansionType::MULTI;
-    } else {
-      ap_->expansion = ExpansionType::FULL;
-    }
-  }
-
   return OK;
 }
 
@@ -449,18 +437,6 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       ap_->func = func;
   }
 
-  // As the C++ language supports function overload, a given function name
-  // (without parameters) could have multiple matches even when no
-  // wildcards are used.
-  if (util::has_wildcard(ap_->func) || util::has_wildcard(ap_->target) ||
-      ap_->lang == "cpp") {
-    if (bpftrace_.feature_->has_uprobe_multi()) {
-      ap_->expansion = ExpansionType::MULTI;
-    } else {
-      ap_->expansion = ExpansionType::FULL;
-    }
-  }
-
   return OK;
 }
 
@@ -494,12 +470,6 @@ AttachPointParser::State AttachPointParser::usdt_parser()
     ap_->func = parts_[3];
   }
 
-  // Always fully expand USDT probes as they may access args
-  if (util::has_wildcard(ap_->target) || util::has_wildcard(ap_->ns) ||
-      ap_->ns.empty() || util::has_wildcard(ap_->func) ||
-      bpftrace_.pid().has_value())
-    ap_->expansion = ExpansionType::FULL;
-
   return OK;
 }
 
@@ -520,10 +490,6 @@ AttachPointParser::State AttachPointParser::tracepoint_parser()
 
   ap_->target = parts_[1];
   ap_->func = parts_[2];
-
-  if (ap_->target.find('*') != std::string::npos ||
-      ap_->func.find('*') != std::string::npos)
-    ap_->expansion = ExpansionType::FULL;
 
   return OK;
 }
@@ -653,8 +619,6 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
     }
 
     ap_->func = func_arg_parts[0];
-    if (ap_->func.find('*') != std::string::npos)
-      ap_->expansion = ExpansionType::FULL;
 
     if (func_arg_parts[1].size() <= 3 ||
         !func_arg_parts[1].starts_with("arg")) {
@@ -723,10 +687,6 @@ AttachPointParser::State AttachPointParser::fentry_parser()
       ap_->target = "*";
   }
 
-  if (ap_->func.find('*') != std::string::npos ||
-      ap_->target.find('*') != std::string::npos)
-    ap_->expansion = ExpansionType::FULL;
-
   return OK;
 }
 
@@ -739,19 +699,6 @@ AttachPointParser::State AttachPointParser::iter_parser()
     errs_ << ap_->provider << " probe type takes 2 arguments (1 optional)"
           << std::endl;
     return INVALID;
-  }
-
-  if (parts_[1].find('*') != std::string::npos) {
-    if (listing_) {
-      ap_->expansion = ExpansionType::FULL;
-    } else {
-      if (ap_->ignore_invalid)
-        return SKIP;
-
-      errs_ << ap_->provider << " probe type does not support wildcards"
-            << std::endl;
-      return INVALID;
-    }
   }
 
   ap_->func = parts_[1];
@@ -779,9 +726,6 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
     ap_->target = "*";
     ap_->func = parts_[1];
   }
-
-  if (util::has_wildcard(ap_->func) || util::has_wildcard(ap_->target))
-    ap_->expansion = ExpansionType::FULL;
 
   return OK;
 }
