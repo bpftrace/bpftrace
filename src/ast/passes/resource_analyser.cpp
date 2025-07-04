@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <variant>
 
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
@@ -9,8 +10,10 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
+#include "map_info.h"
 #include "required_resources.h"
 #include "struct.h"
+#include "types.h"
 
 namespace libbpf {
 #include "libbpf/bpf.h"
@@ -572,7 +575,8 @@ void ResourceAnalyser::update_map_info(Map &map)
     // hist() and lhist() transparently create additional elements in whatever
     // map they are assigned to. So even if the map looks like it has no keys,
     // multiple keys are necessary.
-    if (!map.type().IsMultiKeyMapTy() && map_info.is_scalar) {
+    if (map_info.is_scalar && !map.type().IsHistTy() &&
+        !map.type().IsLhistTy()) {
       map_info.max_entries = 1;
     } else {
       map_info.max_entries = bpftrace_.config_->max_map_keys;
