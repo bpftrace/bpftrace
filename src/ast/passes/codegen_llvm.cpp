@@ -2823,8 +2823,40 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
     }
     b_.CreateStore(expr, value);
   }
+
+  CallInst *lookup = b_.CreateMapLookup(*assignment.map, scoped_key.value());
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
+                                                      "lookup_merge",
+                                                      parent);
+  Value *lookup_condition = b_.CreateICmpNE(
+      b_.CreateIntCast(lookup, b_.getPtrTy(), true),
+      b_.GetNull(),
+      "lookup_cond");
+
+  b_.CreateCondBr(lookup_condition, lookup_success_block, lookup_failure_block);
+
+  b_.SetInsertPoint(lookup_success_block);
+
+  b_.CreateMemcpyBPF(lookup, value, expr_type.GetSize());
+
+  b_.CreateBr(lookup_merge_block);
+
+  b_.SetInsertPoint(lookup_failure_block);
+
   b_.CreateMapUpdateElem(
       assignment.map->ident, scoped_key.value(), value, assignment.loc);
+
+  b_.CreateBr(lookup_merge_block);
+
+  b_.SetInsertPoint(lookup_merge_block);
+
   if (self_alloca && dyn_cast<AllocaInst>(value))
     b_.CreateLifetimeEnd(value);
   return ScopedExpr();
@@ -3359,6 +3391,7 @@ int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
       // programs bad citizens. Return 1 instead.
       return 1;
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     case ProbeType::uprobe:

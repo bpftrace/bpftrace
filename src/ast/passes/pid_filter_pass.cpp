@@ -51,6 +51,7 @@ bool probe_needs_pid_filter(AttachPoint *ap)
     case ProbeType::hardware:
     // We don't filter by pid for BEGIN/END probes
     case ProbeType::special:
+    case ProbeType::benchmark:
       return false;
   }
 
