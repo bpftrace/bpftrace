@@ -4204,6 +4204,24 @@ kprobe:f { percpu_kaddr("nonsense"); }
              false);
 }
 
+TEST_F(semantic_analyser_btf, call_socket_cookie)
+{
+  test("fentry:func_1 { $ret = socket_cookie(args.foo1); }");
+  test("fexit:func_1 { $ret = socket_cookie(args.foo1); }");
+
+  test_error("fentry:func_1 { $ret = socket_cookie(); }", R"(
+stdin:1:24-39: ERROR: socket_cookie() requires one argument (0 provided)
+fentry:func_1 { $ret = socket_cookie(); }
+                       ~~~~~~~~~~~~~~~
+)");
+
+  test_error("kprobe:func_1 { $ret = socket_cookie(arg0); }", R"(
+stdin:1:24-43: ERROR: socket_cookie can not be used with "kprobe" probes
+kprobe:func_1 { $ret = socket_cookie(arg0); }
+                       ~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }");

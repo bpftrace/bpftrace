@@ -595,6 +595,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1,
       .discard_ret_warn = true },
   },
+  { "socket_cookie",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        arg_type_spec{ .type=Type::pointer } } } },
 };
 // clang-format on
 
@@ -1747,6 +1752,8 @@ If you're seeing errors, try clamping the string sizes. For example:
                         << arg.type().GetTy() << " provided)";
       }
     }
+  } else if (call.func == "socket_cookie") {
+    call.return_type = CreateUInt64();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
   }

@@ -731,3 +731,16 @@ AFTER ./testprogs/syscall nanosleep  1e8
 NAME block expression with map assignment
 PROG BEGIN { @ = { let $a = 100; avg($a) }; exit(); }
 EXPECT @: 100
+
+NAME socket_cookie
+RUN {{BPFTRACE}} -e 'fentry:tcp_rcv_established { $ret = socket_cookie(args.sk); printf("ret: %llu\n", $ret); exit(); }'
+SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
+AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
+CLEANUP ip netns delete bpftrace-test
+EXPECT_REGEX ret: [0-9]+
+REQUIRES_FEATURE fentry
+
+# Just test that the verifier doesn't reject this
+NAME socket_cookie rawtracepoint
+RUN {{BPFTRACE}} -e 'rawtracepoint:tcp_probe { $ret = socket_cookie(args->sk); printf("ret: %llu\n", $ret); exit(); }'
+EXPECT Attached 1 probe

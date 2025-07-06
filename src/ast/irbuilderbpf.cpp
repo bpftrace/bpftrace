@@ -2188,6 +2188,21 @@ void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf,
   CreateHelperErrorCond(call, libbpf::BPF_FUNC_get_current_comm, loc);
 }
 
+CallInst *IRBuilderBPF::CreateGetSocketCookie(Value *var, const Location &loc)
+{
+  // u64 bpf_get_socket_cookie(struct sock *sk)
+  // Return:
+  //    A 8-byte long unique number or 0 if *sk* is NULL.
+  FunctionType *getsocketcookie_func_type = FunctionType::get(
+      getInt64Ty(), { var->getType() }, false);
+  return CreateHelperCall(libbpf::BPF_FUNC_get_socket_cookie,
+                          getsocketcookie_func_type,
+                          { var },
+                          true,
+                          "get_socket_cookie",
+                          loc);
+}
+
 void IRBuilderBPF::CreateOutput(Value *data, size_t size, const Location &loc)
 {
   assert(data && data->getType()->isPointerTy());
