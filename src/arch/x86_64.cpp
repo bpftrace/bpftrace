@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::X86_64>::asm_arch()
+{
+  return "x86";
+}
+
+template <>
 size_t Arch<Machine::X86_64>::kernel_ptr_width()
 {
   return 64;

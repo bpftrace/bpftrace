@@ -39,6 +39,7 @@ TYPED_TEST_SUITE(ArchTest, MachineTypes, ArchTestNameGenerator);
 TYPED_TEST(ArchTest, Sanity)
 {
   EXPECT_GT(TypeParam::kernel_ptr_width(), 0);
+  EXPECT_TRUE(!TypeParam::asm_arch().empty());
 }
 
 TYPED_TEST(ArchTest, CDefs)

@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::MIPS64>::asm_arch()
+{
+  return "mips";
+}
+
+template <>
 size_t Arch<Machine::MIPS64>::kernel_ptr_width()
 {
   return 64;

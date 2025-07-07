@@ -123,8 +123,23 @@ static Result<> build(CompileContext &ctx,
   vfs->addFile(name,
                0,
                llvm::MemoryBuffer::getMemBufferCopy(obj.data(), "main"));
+
+  const std::string asm_dir = "include/asm/" + arch::Host::asm_arch() + "/";
   for (const auto &[name, other] : stdlib::Stdlib::files) {
-    vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBufferCopy(other, name));
+    // If this include file is an arch-specific assembly file, then we
+    // skip if it does not match the current architecture. If it *does*
+    // match the current architecture, then we remap it as the `asm`
+    // directory (without the arch prefix).
+    if (name.starts_with("include/asm/")) {
+      if (!name.starts_with(asm_dir)) {
+        continue; // Not our architecture.
+      }
+      // Replace the arch-specific path with just the asm path.
+      std::string nn = "include/asm/" + name.substr(asm_dir.size());
+      vfs->addFile(nn, 0, llvm::MemoryBuffer::getMemBufferCopy(other, nn));
+    } else {
+      vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBufferCopy(other, name));
+    }
   }
   for (auto &[name, other] : imports.c_headers) {
     vfs->addFile(name,

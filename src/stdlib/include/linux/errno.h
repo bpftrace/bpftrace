@@ -1,1 +1,1 @@
-#include <asm-generic/errno.h>
+#include <asm/errno.h>
