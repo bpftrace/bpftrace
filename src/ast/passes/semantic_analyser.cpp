@@ -840,6 +840,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     // if addrspace cannot be detected.
     case ProbeType::invalid:
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::software:
@@ -3630,6 +3631,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       return;
     }
     ap.addError() << ap.target << " is not a supported trigger";
+  } else if (ap.provider == "BENCHMARK") {
+    if (!ap.func.empty())
+      ap.addError() << "BENCHMARK probes should not have a target";
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       ap.addError() << "fentry/fexit not available for your kernel version.";

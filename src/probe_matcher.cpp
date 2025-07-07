@@ -185,6 +185,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::special:
+    case ProbeType::benchmark:
       return { target + ":" };
     default:
       return {};
@@ -539,6 +540,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       break;
     }
     case ProbeType::special:
+    case ProbeType::benchmark:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::watchpoint:

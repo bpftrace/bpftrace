@@ -212,12 +212,12 @@ std::string to_string(MapType t)
 
 libbpf::bpf_map_type get_bpf_map_type(const SizedType &val_type, bool scalar)
 {
-  if (val_type.IsCountTy() && scalar) {
-    return libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
-  } else if (val_type.NeedsPercpuMap()) {
-    return libbpf::BPF_MAP_TYPE_PERCPU_HASH;
+  if (scalar && !val_type.IsHistTy()) {
+    return val_type.NeedsPercpuMap() ? libbpf::BPF_MAP_TYPE_PERCPU_ARRAY
+                                     : libbpf::BPF_MAP_TYPE_ARRAY;
   } else {
-    return libbpf::BPF_MAP_TYPE_HASH;
+    return val_type.NeedsPercpuMap() ? libbpf::BPF_MAP_TYPE_PERCPU_HASH
+                                     : libbpf::BPF_MAP_TYPE_HASH;
   }
 }
 
