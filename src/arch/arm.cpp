@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::ARM>::asm_arch()
+{
+  return "arm";
+}
+
+template <>
 size_t Arch<Machine::ARM>::kernel_ptr_width()
 {
   return 32;
@@ -156,6 +162,12 @@ const std::unordered_set<std::string>& Arch<Machine::ARM>::watchpoint_modes()
     "rw",
   };
   return valid_modes;
+}
+
+template <>
+std::string Arch<Machine::ARM64>::asm_arch()
+{
+  return "arm64";
 }
 
 template <>

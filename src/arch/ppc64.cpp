@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::PPC64>::asm_arch()
+{
+  return "powerpc";
+}
+
+template <>
 size_t Arch<Machine::PPC64>::kernel_ptr_width()
 {
   return 64;

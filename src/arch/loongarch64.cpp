@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::LOONGARCH64>::asm_arch()
+{
+  return "loongarch";
+}
+
+template <>
 size_t Arch<Machine::LOONGARCH64>::kernel_ptr_width()
 {
   return 64;

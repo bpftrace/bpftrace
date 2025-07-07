@@ -5,6 +5,12 @@
 namespace bpftrace::arch {
 
 template <>
+std::string Arch<Machine::S390X>::asm_arch()
+{
+  return "s390";
+}
+
+template <>
 size_t Arch<Machine::S390X>::kernel_ptr_width()
 {
   return 64;

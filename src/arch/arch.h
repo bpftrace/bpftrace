@@ -31,6 +31,9 @@ class Arch {
 public:
   constexpr static auto Machine = M;
 
+  // Returns the assembly name for the architecture.
+  static std::string asm_arch();
+
   // Returns the width of bits in kernel pointers.
   static size_t kernel_ptr_width();
 
