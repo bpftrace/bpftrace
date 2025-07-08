@@ -4226,6 +4226,11 @@ stdin:1:1-10: ERROR: Only single iter attach point is allowed.
 iter:task,f:func_1 { 1 }
 ~~~~~~~~~
 )");
+  test_error("iter:task* { }", R"(
+stdin:1:1-11: ERROR: iter probe type does not support wildcards
+iter:task* { }
+~~~~~~~~~~
+)");
 }
 
 TEST_F(semantic_analyser_btf, rawtracepoint)

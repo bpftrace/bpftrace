@@ -10,8 +10,7 @@ using ast::ExpansionType;
 
 class ExpansionAnalyser : public Visitor<ExpansionAnalyser> {
 public:
-  ExpansionAnalyser(BPFtrace &bpftrace, bool listing)
-      : bpftrace_(bpftrace), listing_(listing)
+  ExpansionAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
   {
   }
   void analyse(Program &program);
@@ -25,7 +24,6 @@ private:
   Probe *probe_ = nullptr;
 
   BPFtrace &bpftrace_;
-  bool listing_;
 };
 
 void ExpansionAnalyser::analyse(Program &program)
@@ -98,12 +96,8 @@ void ExpansionAnalyser::visit(AttachPoint &ap)
       break;
 
     case ProbeType::iter:
-      if (util::has_wildcard(ap.func)) {
-        if (listing_)
-          expansion = ExpansionType::FULL;
-        else
-          ap.addError() << "iter probe type does not support wildcards";
-      }
+      if (util::has_wildcard(ap.func))
+        expansion = ExpansionType::FULL;
 
     default:
       // No expansion support for the rest of the probe types
@@ -192,10 +186,10 @@ void SessionAnalyser::visit(Probe &probe)
   }
 }
 
-Pass CreateProbeExpansionPass(bool listing)
+Pass CreateProbeExpansionPass()
 {
-  auto fn = [listing](ASTContext &ast, BPFtrace &bpftrace) {
-    ExpansionAnalyser analyser(bpftrace, listing);
+  auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
+    ExpansionAnalyser analyser(bpftrace);
     analyser.analyse(*ast.root);
     SessionAnalyser sessions(ast, bpftrace);
     sessions.analyse();
