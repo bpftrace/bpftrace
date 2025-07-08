@@ -143,6 +143,14 @@ long __probestub_event_rt(void *__data, long first_real_arg)
   return first_real_arg;
 }
 
+struct sock {
+  int cookie;
+};
+
+void tcp_shutdown(struct sock *sk, int how)
+{
+}
+
 // kernel percpu variables
 __attribute__((section(".data..percpu"))) unsigned long process_counts;
 
@@ -154,6 +162,7 @@ int main(void)
   struct bpf_iter__task_file iter_task_file;
   struct bpf_iter__task_vma iter_task_vma;
   struct bpf_map bpf_map;
+  struct sock sk;
 
   func_1(0, 0, 0, 0, 0);
 
@@ -162,5 +171,6 @@ int main(void)
   bpf_iter_task_vma();
   bpf_map_sum_elem_count(&bpf_map);
   __probestub_event_rt((void *)&bpf_map, 1);
+  tcp_shutdown(&sk, 0);
   return 0;
 }

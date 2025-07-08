@@ -4214,6 +4214,34 @@ kprobe:f { percpu_kaddr("nonsense"); }
              false);
 }
 
+TEST_F(semantic_analyser_btf, call_socket_cookie)
+{
+  test("fentry:tcp_shutdown { $ret = socket_cookie(args.sk); }");
+  test("fexit:tcp_shutdown { $ret = socket_cookie(args.sk); }");
+
+  test_error("fentry:tcp_shutdown { $ret = socket_cookie(); }", R"(
+stdin:1:30-45: ERROR: socket_cookie() requires one argument (0 provided)
+fentry:tcp_shutdown { $ret = socket_cookie(); }
+                             ~~~~~~~~~~~~~~~
+)");
+  test_error("fentry:tcp_shutdown { $ret = socket_cookie(args.how); }", R"(
+stdin:1:30-53: ERROR: socket_cookie() only supports 'struct sock *' as the argument (int provided)
+fentry:tcp_shutdown { $ret = socket_cookie(args.how); }
+                             ~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("fentry:func_1 { $ret = socket_cookie(args.foo1); }", R"(
+stdin:1:24-48: ERROR: socket_cookie() only supports 'struct sock *' as the argument ('struct Foo1 *' provided)
+fentry:func_1 { $ret = socket_cookie(args.foo1); }
+                       ~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error(
+      "kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }", R"(
+stdin:1:30-65: ERROR: socket_cookie can not be used with "kprobe" probes
+kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }
+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
 TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }");

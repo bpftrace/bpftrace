@@ -641,6 +641,19 @@ EXPECT Attached 1 probe
 REQUIRES_FEATURE skboutput
 MIN_KERNEL 5.5
 
+NAME socket_cookie
+RUN {{BPFTRACE}} -e 'fentry:tcp_v4_connect { $ret = socket_cookie(args.sk); printf("ret: %llu\n", $ret); exit(); }'
+SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
+AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
+CLEANUP ip netns delete bpftrace-test
+EXPECT_REGEX ret: [0-9]+
+REQUIRES_FEATURE fentry
+
+# Just test that the verifier doesn't reject this
+NAME socket_cookie rawtracepoint
+RUN {{BPFTRACE}} -e 'rawtracepoint:tcp_probe { $ret = socket_cookie(args->sk); printf("ret: %llu\n", $ret); exit(); }'
+EXPECT Attached 1 probe
+
 NAME debugf
 RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf"); exit();}'; cat /sys/kernel/debug/tracing/trace
 EXPECT_REGEX bpf_trace_printk: debugf

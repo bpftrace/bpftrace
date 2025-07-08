@@ -295,7 +295,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::iter:
         return false;
     }
-  } else if (identifier == "skboutput") {
+  } else if (identifier == "skboutput" || identifier == "socket_cookie") {
     return bpftrace::progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
   }
 
