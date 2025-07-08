@@ -142,6 +142,13 @@ public:
   std::string resolve_timestamp(uint32_t mode,
                                 uint32_t strftime_id,
                                 uint64_t nsecs);
+  std::string resolve_timestamp(uint32_t mode,
+                                uint64_t nsecs,
+                                const std::string &raw_fmt,
+                                bool utc);
+  time_t time_since_epoch(uint32_t mode,
+                          uint64_t timestamp_ns,
+                          uint64_t *nsecs);
   uint64_t resolve_kname(const std::string &name) const;
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
@@ -263,6 +270,7 @@ private:
                      const BpfMap &map,
                      uint32_t top,
                      uint32_t div);
+  int print_map_tseries(Output &out, const BpfMap &map);
   static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,

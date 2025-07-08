@@ -58,6 +58,7 @@
 #include "globalvars.h"
 #include "kfuncs.h"
 #include "log.h"
+#include "map_info.h"
 #include "required_resources.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -473,6 +474,8 @@ private:
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
   std::unordered_map<std::string, bool> probe_names_;
   std::unordered_map<std::string, llvm::Function *> extern_funcs_;
+
+  llvm::Value *createGetNsSwTAI(const Location &loc);
 };
 
 } // namespace
@@ -939,52 +942,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(lookup_success_block);
 
-    Value *mm_val = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }));
-
-    Value *is_set_val = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }));
-
-    BasicBlock *is_set_block = BasicBlock::Create(module_->getContext(),
-                                                  "is_set",
-                                                  parent);
-    BasicBlock *min_max_block = BasicBlock::Create(module_->getContext(),
-                                                   "min_max",
-                                                   parent);
-
-    Value *is_set_condition = b_.CreateICmpEQ(is_set_val,
-                                              b_.getInt64(1),
-                                              "is_set_cond");
-
-    // If the value has not been set jump past the min_max_condition
-    b_.CreateCondBr(is_set_condition, is_set_block, min_max_block);
-
-    b_.SetInsertPoint(is_set_block);
-
-    Value *min_max_condition;
-
-    if (is_max) {
-      min_max_condition = map.value_type.IsSigned()
-                              ? b_.CreateICmpSGE(expr, mm_val)
-                              : b_.CreateICmpUGE(expr, mm_val);
-    } else {
-      min_max_condition = map.value_type.IsSigned()
-                              ? b_.CreateICmpSGE(mm_val, expr)
-                              : b_.CreateICmpUGE(mm_val, expr);
-    }
-
-    b_.CreateCondBr(min_max_condition, min_max_block, lookup_merge_block);
-
-    b_.SetInsertPoint(min_max_block);
-
-    b_.CreateStore(
+    b_.CreateMinMax(
         expr,
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }));
-    b_.CreateStore(
-        b_.getInt64(1),
-        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }));
+        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(0) }),
+        b_.CreateGEP(mm_struct_ty, lookup, { b_.getInt64(0), b_.getInt32(1) }),
+        is_max,
+        map.value_type.IsSigned());
 
     b_.CreateBr(lookup_merge_block);
 
@@ -1155,7 +1118,243 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         map, scoped_key.value(), b_.getInt64(1), call.loc);
 
     return ScopedExpr();
+  } else if (call.func == "tseries") {
+    // tseries decides what the current bucket is based on the timestamp then
+    // updates the bucket's value.
+    //
+    // void tseries(uint64_t n, uint64_t interval_ns, uint64_t num_intervals) {
+    //   uint64_t now = bpf_ktime_get_boot_ns();
+    //   struct ts_struct ts_struct_alloc = {};
+    //   uint64_t epoch = now / interval_ns;
+    //   uint64_t bucket = epoch % num_intervals;
+    //   struct ts_struct *bucket_value;
+    //   bool key_exists;
+    //
+    //   bucket_value = bpf_map_lookup_elem(&tseries_map, &bucket);
+    //   if (!bucket_value) {
+    //     key_exists = false;
+    //     bucket_value = &ts_struct_alloc;
+    //   } else {
+    //     key_exists = true;
+    //   }
+    //
+    // #if defined(SUM) || defined(MIN) || defined(MAX) || defined(AVG)
+    //   if (epoch != bucket_value->epoch) {
+    //     bucket_value->value = 0;
+    //     bucket_value->meta = 0;
+    //   }
+    // #endif
+    //
+    // #if defined(SUM)
+    //   bucket_value->value += n;
+    // #elif defined(MIN) || defined(MAX)
+    //   if (!bucket_value->meta) {
+    //     bucket_value->value = n;
+    //   } else {
+    // #if defined(MIN)
+    //     bucket_value->value = min(bucket_value->value, n);
+    // #else
+    //     bucket_value->value = max(bucket_value->value, n);
+    // #endif
+    //   }
+    //   bucket_value->meta = 1;
+    // #elif defined(AVG)
+    //   bucket_value->value += n;
+    //   bucket_value->meta++;
+    // #else
+    //   bucket_value->value = n;
+    //   bucket_value->meta = now;
+    // #endif
+    //
+    //   if (!key_exists) {
+    //     bpf_map_update_elem(&tseries_map, &bucket, bucket_value);
+    //   }
+    // }
 
+    Map &map = *call.vargs.at(0).as<Map>();
+    llvm::Function *parent = b_.GetInsertBlock()->getParent();
+    llvm::Type *ts_struct_ty = b_.GetMapValueType(map.type());
+    AllocaInst *ts_struct_ptr = b_.CreateAllocaBPF(
+        PointerType::get(ts_struct_ty, 0), "ts_struct_ptr");
+
+    // Step 1) Figure out which bucket we're using.
+    auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+    if (map_info == bpftrace_.resources.maps_info.end()) {
+      LOG(BUG) << "map name: \"" << map.ident << "\" not found";
+    }
+    auto &tseries_args = std::get<TSeriesArgs>(map_info->second.detail);
+    Value *interval_ns = b_.getInt64(tseries_args.interval_ns);
+    Value *num_intervals = b_.getInt64(tseries_args.num_intervals);
+    Value *now = createGetNsSwTAI(call.loc);
+    Value *epoch = b_.CreateUDiv(now, interval_ns);
+    Value *bucket = b_.CreateURem(epoch, num_intervals);
+    auto scoped_key = getMultiMapKey(
+        map, call.vargs.at(1), { bucket }, call.loc);
+    AllocaInst *key_exists = b_.CreateAllocaBPF(b_.getInt8Ty(), "key_exists");
+
+    // Step 2) If the bucket already exists in the map, assign ts_struct_ptr to
+    //         the result of the map lookup. Otherwise, assign ts_struct_ptr to
+    //         a local AllocaInst.
+    CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
+
+    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_success",
+                                                          parent);
+    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_failure",
+                                                          parent);
+    BasicBlock *maybe_clear_block = BasicBlock::Create(module_->getContext(),
+                                                       "maybe_clear",
+                                                       parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "merge",
+                                                 parent);
+    BasicBlock *update_block = BasicBlock::Create(module_->getContext(),
+                                                  "update",
+                                                  parent);
+    BasicBlock *exit_block = BasicBlock::Create(module_->getContext(),
+                                                "exit",
+                                                parent);
+    Value *lookup_condition = b_.CreateICmpNE(
+        b_.CreateIntCast(lookup, b_.getPtrTy(), true),
+        b_.GetNull(),
+        "map_lookup_cond");
+    b_.CreateCondBr(lookup_condition,
+                    lookup_success_block,
+                    lookup_failure_block);
+
+    b_.SetInsertPoint(lookup_success_block);
+
+    // Success: ts_struct_ptr just points to what's in the map.
+    b_.CreateStore(
+        b_.CreatePointerCast(lookup, PointerType::get(ts_struct_ty, 0), "cast"),
+        ts_struct_ptr);
+
+    b_.CreateStore(b_.getInt8(1), key_exists);
+
+    b_.CreateBr(maybe_clear_block);
+
+    b_.SetInsertPoint(lookup_failure_block);
+
+    // Failure: ts_struct_ptr points to a zero-initialized ts_struct_ty.
+    AllocaInst *ts_struct = b_.CreateAllocaBPF(ts_struct_ty, "ts_struct");
+
+    b_.CreateStore(b_.getInt64(0),
+                   b_.CreateGEP(ts_struct_ty,
+                                ts_struct,
+                                { b_.getInt64(0), b_.getInt32(0) }));
+
+    b_.CreateStore(b_.getInt64(0),
+                   b_.CreateGEP(ts_struct_ty,
+                                ts_struct,
+                                { b_.getInt64(0), b_.getInt32(1) }));
+
+    b_.CreateStore(epoch,
+                   b_.CreateGEP(ts_struct_ty,
+                                ts_struct,
+                                { b_.getInt64(0), b_.getInt32(2) }));
+
+    b_.CreateStore(ts_struct, ts_struct_ptr);
+
+    b_.CreateStore(b_.getInt8(0), key_exists);
+
+    b_.CreateBr(maybe_clear_block);
+
+    // Step 3) If we do aggregation, check if we need to reset the bucket before
+    //         updating it.
+    b_.SetInsertPoint(maybe_clear_block);
+
+    Value *ptr = b_.CreateLoad(PointerType::get(ts_struct_ty, 0),
+                               ts_struct_ptr);
+
+    Value *value_ptr = b_.CreateGEP(ts_struct_ty,
+                                    ptr,
+                                    { b_.getInt64(0), b_.getInt32(0) });
+    Value *meta_ptr = b_.CreateGEP(ts_struct_ty,
+                                   ptr,
+                                   { b_.getInt64(0), b_.getInt32(1) });
+    Value *epoch_ptr = b_.CreateGEP(ts_struct_ty,
+                                    ptr,
+                                    { b_.getInt64(0), b_.getInt32(2) });
+
+    if (tseries_args.agg != TSeriesAggFunc::none) {
+      Value *old_epoch = b_.CreateLoad(b_.getInt64Ty(), epoch_ptr);
+      BasicBlock *clear_block = BasicBlock::Create(module_->getContext(),
+                                                   "clear",
+                                                   parent);
+
+      b_.CreateCondBr(b_.CreateICmpNE(old_epoch, epoch, "new_epoch"),
+                      clear_block,
+                      merge_block);
+
+      b_.SetInsertPoint(clear_block);
+
+      // Clear the current bucket's value and metadata if it's a new epoch.
+      b_.CreateStore(b_.getInt64(0), value_ptr);
+      b_.CreateStore(b_.getInt64(0), meta_ptr);
+    }
+
+    // Step 4) Update the current bucket
+    b_.CreateBr(merge_block);
+
+    b_.SetInsertPoint(merge_block);
+
+    auto &value_arg = call.vargs.at(2);
+    ScopedExpr scoped_expr = visit(value_arg);
+    // promote int to 64-bit
+    Value *cast = b_.CreateIntCast(scoped_expr.value(),
+                                   b_.getInt64Ty(),
+                                   value_arg.type().IsSigned());
+
+    // Update the value and metadata.
+    switch (tseries_args.agg) {
+      case TSeriesAggFunc::avg:
+        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), meta_ptr),
+                                    b_.getInt64(1)),
+                       meta_ptr);
+        [[fallthrough]];
+      case TSeriesAggFunc::sum:
+        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), value_ptr),
+                                    cast),
+                       value_ptr);
+        break;
+      case TSeriesAggFunc::max:
+      case TSeriesAggFunc::min:
+        b_.CreateMinMax(cast,
+                        value_ptr,
+                        meta_ptr,
+                        tseries_args.agg == TSeriesAggFunc::max,
+                        value_arg.type().IsSigned());
+        break;
+      case TSeriesAggFunc::none:
+        b_.CreateStore(cast, value_ptr);
+        b_.CreateStore(now, meta_ptr);
+        break;
+      default:
+        LOG(BUG) << "disallowed type \"" << tseries_args.agg << "\"";
+    }
+
+    b_.CreateStore(epoch, epoch_ptr);
+
+    b_.CreateCondBr(b_.CreateICmpNE(b_.CreateLoad(b_.getInt8Ty(), key_exists),
+                                    b_.getInt8(1),
+                                    "needs_update"),
+                    update_block,
+                    exit_block);
+
+    b_.SetInsertPoint(update_block);
+
+    b_.CreateMapUpdateElem(map.ident, scoped_key.value(), ptr, call.loc);
+
+    b_.CreateBr(exit_block);
+
+    b_.SetInsertPoint(exit_block);
+
+    b_.CreateLifetimeEnd(ts_struct);
+    b_.CreateLifetimeEnd(ts_struct_ptr);
+    b_.CreateLifetimeEnd(key_exists);
+
+    return ScopedExpr();
   } else if (call.func == "delete") {
     auto &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
@@ -1846,12 +2045,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(ret);
   } else if (call.func == "nsecs") {
     if (call.return_type.ts_mode == TimestampMode::sw_tai) {
-      if (!bpftrace_.delta_taitime_.has_value())
-        LOG(BUG) << "Should have been checked in semantic analysis";
-      uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
-                       bpftrace_.delta_taitime_->tv_nsec;
-      Value *ns = b_.CreateGetNs(TimestampMode::boot, call.loc);
-      return ScopedExpr(b_.CreateAdd(ns, b_.getInt64(delta)));
+      return ScopedExpr(createGetNsSwTAI(call.loc));
     } else {
       return ScopedExpr(b_.CreateGetNs(call.return_type.ts_mode, call.loc));
     }
@@ -1906,6 +2100,16 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateCall(func, arg_values, call.func));
   }
+}
+
+llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
+{
+  if (!bpftrace_.delta_taitime_.has_value())
+    LOG(BUG) << "delta_taitime_ should have been checked in semantic analysis";
+  uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
+                   bpftrace_.delta_taitime_->tv_nsec;
+  Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
+  return b_.CreateAdd(ns, b_.getInt64(delta));
 }
 
 ScopedExpr CodegenLLVM::visit(Sizeof &szof)

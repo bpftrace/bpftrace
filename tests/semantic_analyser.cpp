@@ -294,6 +294,7 @@ TEST(semantic_analyser, builtin_functions)
   // Each function should also get its own test case for more thorough testing
   test("kprobe:f { @x = hist(123) }");
   test("kprobe:f { @x = lhist(123, 0, 123, 1) }");
+  test("kprobe:f { @x = tseries(3, 1s, 1) }");
   test("kprobe:f { @x = count() }");
   test("kprobe:f { @x = sum(pid) }");
   test("kprobe:f { @x = min(pid) }");
@@ -820,6 +821,108 @@ TEST(semantic_analyser, call_lhist_posparam)
   bpftrace.add_param("hello");
   test(bpftrace, "kprobe:f { @ = lhist(5, $1, $2, $3); }");
   test(bpftrace, "kprobe:f { @ = lhist(5, $1, $2, $4); }", 3);
+}
+
+TEST(semantic_analyser, call_tseries)
+{
+  test("kprobe:f { @ = tseries(5, 10s, 1); }");
+  test("kprobe:f { @ = tseries(-5, 10s, 1); }");
+  test_error("kprobe:f { @ = tseries(5, 10s); }", R"(
+stdin:1:16-31: ERROR: tseries() requires at least 3 arguments (2 provided)
+kprobe:f { @ = tseries(5, 10s); }
+               ~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(5); }", R"(
+stdin:1:16-26: ERROR: tseries() requires at least 3 arguments (1 provided)
+kprobe:f { @ = tseries(5); }
+               ~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(); }", R"(
+stdin:1:16-25: ERROR: tseries() requires at least 3 arguments (0 provided)
+kprobe:f { @ = tseries(); }
+               ~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(5, 10s, 1, 10, 10); }", R"(
+stdin:1:16-42: ERROR: tseries() takes up to 4 arguments (5 provided)
+kprobe:f { @ = tseries(5, 10s, 1, 10, 10); }
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { tseries(5, 10s, 1); }", R"(
+stdin:1:12-30: ERROR: tseries() must be assigned directly to a map
+kprobe:f { tseries(5, 10s, 1); }
+           ~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { $x = tseries(); }", R"(
+stdin:1:17-26: ERROR: tseries() must be assigned directly to a map
+kprobe:f { $x = tseries(); }
+                ~~~~~~~~~
+)");
+  test_error("kprobe:f { @[tseries()] = 1; }", R"(
+stdin:1:12-23: ERROR: tseries() must be assigned directly to a map
+kprobe:f { @[tseries()] = 1; }
+           ~~~~~~~~~~~
+)");
+  test_error("kprobe:f { if(tseries()) { 123 } }", R"(
+stdin:1:12-24: ERROR: tseries() must be assigned directly to a map
+kprobe:f { if(tseries()) { 123 } }
+           ~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { tseries() ? 0 : 1; }", R"(
+stdin:1:12-21: ERROR: tseries() must be assigned directly to a map
+kprobe:f { tseries() ? 0 : 1; }
+           ~~~~~~~~~
+)");
+  test("kprobe:f { @ = tseries(-1, 10s, 5); }");
+  test_error("kprobe:f { @ = tseries(1, 10s, 0); }", R"(
+stdin:1:16-34: ERROR: tseries() num_intervals must be >= 1 (0 provided)
+kprobe:f { @ = tseries(1, 10s, 0); }
+               ~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(1, 10s, -1); }", R"(
+stdin:1:16-35: ERROR: tseries: invalid num_intervals value (must be non-negative literal)
+kprobe:f { @ = tseries(1, 10s, -1); }
+               ~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(1, 10s, 1000001); }", R"(
+stdin:1:16-40: ERROR: tseries() num_intervals must be < 1000000 (1000001 provided)
+kprobe:f { @ = tseries(1, 10s, 1000001); }
+               ~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(1, 0, 10); }", R"(
+stdin:1:16-33: ERROR: tseries() interval_ns must be >= 1 (0 provided)
+kprobe:f { @ = tseries(1, 0, 10); }
+               ~~~~~~~~~~~~~~~~~
+)");
+  test_error("kprobe:f { @ = tseries(1, -1, 10); }", R"(
+stdin:1:16-34: ERROR: tseries: invalid interval_ns value (must be non-negative literal)
+kprobe:f { @ = tseries(1, -1, 10); }
+               ~~~~~~~~~~~~~~~~~~
+)");
+  // Good duration strings.
+  test("kprobe:f { @ = tseries(1, 10ns, 5); }");
+  test("kprobe:f { @ = tseries(1, 10us, 5); }");
+  test("kprobe:f { @ = tseries(1, 10ms, 5); }");
+  test("kprobe:f { @ = tseries(1, 10s, 5); }");
+  // All aggregator functions.
+  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "avg"); })");
+  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "max"); })");
+  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "min"); })");
+  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "sum"); })");
+  // Invalid aggregator function.
+  test_error(R"(kprobe:f { @ = tseries(1, 10s, 5, "stats"); })", R"(
+stdin:1:16-43: ERROR: tseries() expects one of the following aggregation functions: avg, max, min, sum ("stats" provided)
+kprobe:f { @ = tseries(1, 10s, 5, "stats"); }
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, call_tseries_posparam)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("10s");
+  bpftrace.add_param("5");
+  bpftrace.add_param("20");
+  test(bpftrace, "kprobe:f { @ = tseries(5, $1, $2); }");
 }
 
 TEST(semantic_analyser, call_count)
@@ -2735,6 +2838,12 @@ BEGIN { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }
                                   ~~~~~
 )");
 
+  test_error("BEGIN { @x = tseries(10, 1s, 10); @y[@x] = 1; }", R"(
+stdin:1:35-40: ERROR: tseries_t cannot be used as a map key
+BEGIN { @x = tseries(10, 1s, 10); @y[@x] = 1; }
+                                  ~~~~~
+)");
+
   test_error("BEGIN { @x = stats(10); @y[@x] = 1; }", R"(
 stdin:1:25-30: ERROR: stats_t cannot be used as a map key
 BEGIN { @x = stats(10); @y[@x] = 1; }
@@ -4421,6 +4530,12 @@ stdin:1:51-56: ERROR: Loop expression does not support type: lhist_t
 BEGIN { @map[0] = lhist(10, 0, 10, 1); for ($kv : @map) { } }
                                                   ~~~~~
 )");
+  test_error("BEGIN { @map[0] = tseries(10, 10s, 10); for ($kv : @map) { } }",
+             R"(
+stdin:1:52-57: ERROR: Loop expression does not support type: tseries_t
+BEGIN { @map[0] = tseries(10, 10s, 10); for ($kv : @map) { } }
+                                                   ~~~~~
+)");
   test_error("BEGIN { @map[0] = stats(10); for ($kv : @map) { } }", R"(
 stdin:1:41-46: ERROR: Loop expression does not support type: stats_t
 BEGIN { @map[0] = stats(10); for ($kv : @map) { } }
@@ -5083,6 +5198,15 @@ BEGIN { @a = lhist(123, 0, 123, 1); let $b = @a; }
                                     ~~~~~~
 )");
 
+  test_error("BEGIN { @a = tseries(10, 10s, 1); let $b = @a; }", R"(
+stdin:1:35-46: ERROR: Value 'tseries_t' cannot be assigned to a scratch variable.
+BEGIN { @a = tseries(10, 10s, 1); let $b = @a; }
+                                  ~~~~~~~~~~~
+stdin:1:35-41: WARNING: Variable $b never assigned to.
+BEGIN { @a = tseries(10, 10s, 1); let $b = @a; }
+                                  ~~~~~~
+)");
+
   test_error("BEGIN { @a = stats(10); let $b = @a; }", R"(
 stdin:1:25-36: ERROR: Value 'stats_t' cannot be assigned to a scratch variable.
 BEGIN { @a = stats(10); let $b = @a; }
@@ -5102,6 +5226,12 @@ BEGIN { @a = hist(10); @b = @a; }
 stdin:1:37-44: ERROR: Map value 'lhist_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = lhist(rand %10, 0, 10, 1);`.
 BEGIN { @a = lhist(123, 0, 123, 1); @b = @a; }
                                     ~~~~~~~
+)");
+
+  test_error("BEGIN { @a = tseries(10, 10s, 1); @b = @a; }", R"(
+stdin:1:35-42: ERROR: Map value 'tseries_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = tseries(rand %10, 10s, 1);`.
+BEGIN { @a = tseries(10, 10s, 1); @b = @a; }
+                                  ~~~~~~~
 )");
 
   test_error("BEGIN { @a = stats(10); @b = @a; }", R"(

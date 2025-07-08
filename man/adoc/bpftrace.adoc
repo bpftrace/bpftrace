@@ -3533,6 +3533,10 @@ See <<Advanced Topics>> for more information on <<Map Printing>>.
 | Set all values for all keys to zero.
 | Async
 
+| <<map-functions-tseries, `tseries`>>
+| Create a time series that tracks either the last integer value in each interval or the per-interval average, minimum, maximum, or sum.
+| Sync
+
 |===
 
 [#map-functions-avg]
@@ -3894,6 +3898,151 @@ interval:s:10 {
 
 Set all values for all keys to zero.
 
+[#map-functions-tseries]
+=== tseries
+
+.variants
+* `tseries_t tseries(int64 n, int64 interval_ns, int64 num_intervals)`
+* `tseries_t tseries(int64 n, int64 interval_ns, int64 num_intervals, const string agg)`
+
+Create a time series that tracks an integer value. `tseries` records up to
+`num_intervals` intervals representing `interval_ns` nanoseconds.
+
+==== Durations
+
+`interval_ns` is an unsigned integer that specifies the interval duration. You
+may use numbers with duration suffixes to improve readability:
+
+----
+@a = tseries(1, 100ns, 5); // 100 nanoseconds
+@b = tseries(1, 100us, 5); // 100 microseconds
+@c = tseries(1, 100ms, 5); // 100 milliseconds
+@d = tseries(1, 1s, 5);    // 1 second
+----
+
+==== Aggregation Functions
+
+By default, each interval in `tseries` contains the last value recorded in that
+interval. The optional `agg` parameter specifies how values in the same interval
+are aggregated.
+
+|===
+| Aggregation Function | Example | Description
+
+| `avg`
+| `@ = tseries(@v, 1s, 5, "avg")`
+| Calculate the running average of all the values in each interval.
+
+| `max`
+| `@ = tseries(@v, 1s, 5, "max")`
+| Calculate the maximum of all values in each interval.
+
+| `min`
+| `@ = tseries(@v, 1s, 5, "min")`
+| Calculate the minimum of all values in each interval.
+
+| `sum`
+| `@ = tseries(@v, 1s, 5, "sum")`
+| Calculate the sum of all values in each interval.
+
+|===
+
+==== Examples
+
+Example one:
+
+----
+// Record the minimum of ten random values generated during each 100ms interval.
+i:ms:10 {
+  @ = tseries(rand % 10, 100ms, 20, "min");
+}
+----
+
+----
+Attached 2 probes
+
+
+@:
+             0                                                   2
+hh:mm:ss.ms  |___________________________________________________|
+10:41:46.700 *                                                   | 0
+10:41:46.800 *                                                   | 0
+10:41:46.900 |                         *                         | 1
+10:41:47.000 |                                                   * 2
+10:41:47.100 |                         *                         | 1
+10:41:47.200 *                                                   | 0
+10:41:47.300 |                         *                         | 1
+10:41:47.400 *                                                   | 0
+10:41:47.500 |                         *                         | 1
+10:41:47.600 *                                                   | 0
+10:41:47.700 |                                                   * 2
+10:41:47.800 *                                                   | 0
+10:41:47.900 *                                                   | 0
+10:41:48.000 |                         *                         | 1
+10:41:48.100 |                         *                         | 1
+10:41:48.200 |                         *                         | 1
+10:41:48.300 *                                                   | 0
+10:41:48.400 |                                                   * 2
+10:41:48.500 |                         *                         | 1
+10:41:48.600 |                         *                         | 1
+             v___________________________________________________v
+             0                                                   2
+----
+
+Example two:
+
+----
+// Create a zigzag pattern
+BEGIN {
+  @dir = 1;
+  @c = -5;
+}
+
+i:ms:100 {
+  @ = tseries(@c, 100ms, 20);
+  @c += @dir;
+
+  if (@c > 5) {
+    @dir = -1;
+    @c = 4
+  } else if (@c < -5) {
+    @dir = 1;
+    @c = -4;
+  }
+}
+----
+
+----
+Attached 2 probes
+
+
+@:
+             -5                                                  5
+hh:mm:ss.ms  |___________________________________________________|
+10:39:49.300 *                         .                         | -5
+10:39:49.400 |    *                    .                         | -4
+10:39:49.500 |         *               .                         | -3
+10:39:49.600 |              *          .                         | -2
+10:39:49.700 |                   *     .                         | -1
+10:39:49.800 |                         *                         | 0
+10:39:49.900 |                         .    *                    | 1
+10:39:50.000 |                         .         *               | 2
+10:39:50.100 |                         .              *          | 3
+10:39:50.200 |                         .                   *     | 4
+10:39:50.300 |                         .                         * 5
+10:39:50.400 |                         .                   *     | 4
+10:39:50.500 |                         .              *          | 3
+10:39:50.600 |                         .         *               | 2
+10:39:50.700 |                         .    *                    | 1
+10:39:50.800 |                         *                         | 0
+10:39:50.900 |                   *     .                         | -1
+10:39:51.000 |              *          .                         | -2
+10:39:51.100 |         *               .                         | -3
+10:39:51.200 |    *                    .                         | -4
+             v___________________________________________________v
+             -5                                                  5
+----
+
 == Configuration
 
 - <<Config Variables>>
@@ -4055,6 +4204,17 @@ The possible options are:
 Default: warn
 
 Feature flag for map declarations.
+
+The possible options are:
+- `error` - fail if this feature is used
+- `warn` - enable feature but print a warning
+- `enable` - enable feature
+
+==== unstable_tseries
+
+Default: warn
+
+Feature flag for `tseries`.
 
 The possible options are:
 - `error` - fail if this feature is used

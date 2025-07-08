@@ -256,6 +256,12 @@ public:
   // Returns the integer type used to represent pointers in traced code.
   llvm::Type *getPointerStorageTy(AddrSpace as);
 
+  void CreateMinMax(Value *val,
+                    Value *val_ptr,
+                    Value *is_set_ptr,
+                    bool max,
+                    bool is_signed);
+
 private:
   Module &module_;
   BPFtrace &bpftrace_;

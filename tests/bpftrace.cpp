@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 
@@ -8,14 +9,18 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "bpfmap.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "tracefs/tracefs.h"
+#include "types.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-nice-strict.h"
 #include "gtest/gtest.h"
+
+using namespace std::chrono_literals;
 
 namespace bpftrace::test::bpftrace {
 
@@ -1905,6 +1910,100 @@ hist_map_3:
     bpftrace->print_map(output, *mock_map, tc.top, tc.div);
 
     EXPECT_EQ(out.str(), tc.expected_output);
+  }
+}
+
+TEST(bpftrace, print_tseries_map)
+{
+  struct TestCase {
+    std::string name;
+    std::string expected_output;
+  };
+
+  constexpr uint64_t base_time_ns = 173482610888837;
+  constexpr int ns_in_ms = std::chrono::nanoseconds(1ms).count();
+  constexpr int interval = ns_in_ms;
+  constexpr uint64_t first_epoch = base_time_ns / interval;
+
+  std::vector<std::pair<EpochType, ValueType>> v1 = {
+    { (first_epoch + 1), { 1, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 2), { 2, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 3), { 3, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 4), { 4, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 5), { 5, 0, 0, 0, 0, 0, 0, 0 } },
+  };
+
+  std::vector<std::pair<EpochType, ValueType>> v2 = {
+    { (first_epoch + 2), { 1, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 3), { 2, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 4), { 3, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 5), { 4, 0, 0, 0, 0, 0, 0, 0 } },
+    { (first_epoch + 6), { 5, 0, 0, 0, 0, 0, 0, 0 } },
+  };
+
+  TSeriesMap values_by_key;
+  values_by_key[{ 0, 0, 0, 0, 0, 0, 0, 0 }] = TSeries(v1.begin(), v1.end());
+  values_by_key[{ 1, 0, 0, 0, 0, 0, 0, 0 }] = TSeries(v2.begin(), v2.end());
+
+  auto map_info = MapInfo{ .key_type = CreateInt64(),
+                           .value_type = CreateTSeries(),
+                           .detail = TSeriesArgs{ .interval_ns = ns_in_ms,
+                                                  .num_intervals = 5,
+                                                  .value_type = CreateInt64(),
+                                                  .agg = TSeriesAggFunc::none },
+                           .id = {},
+                           .is_scalar = true };
+
+  std::vector<TestCase> test_cases = {
+    { .name = "tseries_map_1", .expected_output = R"(tseries_map_1:
+             2                                                   5
+hh:mm:ss.ms  |___________________________________________________|
+%H:%M:22.612 *                                                   | 2
+%H:%M:22.613 |                *                                  | 3
+%H:%M:22.614 |                                 *                 | 4
+%H:%M:22.615 |                                                   * 5
+%H:%M:22.616 |                                                   | -
+             v___________________________________________________v
+             2                                                   5
+
+tseries_map_1:
+             1                                                   5
+hh:mm:ss.ms  |___________________________________________________|
+%H:%M:22.612 *                                                   | 1
+%H:%M:22.613 |            *                                      | 2
+%H:%M:22.614 |                         *                         | 3
+%H:%M:22.615 |                                      *            | 4
+%H:%M:22.616 |                                                   * 5
+             v___________________________________________________v
+             1                                                   5
+
+)" },
+  };
+
+  for (const auto &tc : test_cases) {
+    ast::CDefinitions no_c_defs;
+    std::stringstream out;
+    TextOutput output(no_c_defs, out);
+    auto bpftrace = get_mock_bpftrace();
+
+    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                                 tc.name);
+    EXPECT_CALL(*mock_map, collect_tseries_data(testing::_, testing::_))
+        .WillOnce(testing::Return(values_by_key));
+
+    bpftrace->resources.maps_info[tc.name] = map_info;
+    bpftrace->print_map(output, *mock_map, 0, 0);
+
+    // Make sure strftime doesn't return 0, because the format string is too
+    // long.
+    bpftrace->config_->max_strlen = tc.expected_output.length() + 1;
+
+    EXPECT_EQ(out.str(),
+              bpftrace->resolve_timestamp(static_cast<uint32_t>(
+                                              TimestampMode::tai),
+                                          base_time_ns,
+                                          tc.expected_output,
+                                          false));
   }
 }
 
