@@ -670,12 +670,22 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
                                          const Location &loc,
                                          size_t key)
 {
+  // These specific global variables are nested arrays
+  // (see get_sized_type in globalvars.cpp).
+  // The top level array is for each CPU where the length is
+  // MAX_CPU_ID + 1. This is so there is no contention between CPUs
+  // when accessing this global value.
+
+  // The second level array is for each key where the length is
+  // the number of elements for this specific global, e.g. if
+  // there are multiple strings that can't fit on the BPF stack
+  // then there will be one element per string.
+
+  // The last level is either an array of bytes (e.g. for strings)
+  // or a single value (e.g. for ints like the EVENT_LOSS_COUNTER)
   const auto global_name = std::string(global_var_name);
-  // ValueType var[MAX_CPU_ID + 1][num_elements]
   auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
       global_name, bpftrace_.resources, *bpftrace_.config_);
-
-  // Get CPU ID
   auto *cpu_id = CreateGetCpuId(loc);
   auto *max = CreateLoad(getInt64Ty(),
                          module_.getGlobalVariable(
@@ -687,9 +697,7 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
 
   // Note the 1st index is 0 because we're pointing to
   // ValueType var[MAX_CPU_ID + 1][num_elements]
-  // 2nd/3rd/4th indexes actually index into the array
-  // See https://llvm.org/docs/LangRef.html#id236
-  // The last element might be an array or just a single value
+  // More details on using GEP: https://llvm.org/docs/LangRef.html#id236
   if (sized_type.GetElementTy()->GetElementTy()->IsArrayTy()) {
     return CreateGEP(
         GetType(sized_type),
