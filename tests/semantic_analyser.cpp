@@ -1415,7 +1415,7 @@ TEST(semantic_analyser, call_uaddr)
 
   auto ast = test(prog);
 
-  std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
+  std::vector<int> sizes = { 1, 2, 4, 8, 8, 8 };
 
   for (size_t i = 0; i < sizes.size(); i++) {
     auto *v = ast.root->probes.at(0)
@@ -1424,7 +1424,7 @@ TEST(semantic_analyser, call_uaddr)
     EXPECT_TRUE(v->var()->var_type.IsPtrTy());
     EXPECT_TRUE(v->var()->var_type.GetPointeeTy()->IsIntTy());
     EXPECT_EQ((unsigned long int)sizes.at(i),
-              v->var()->var_type.GetPointeeTy()->GetIntBitWidth());
+              v->var()->var_type.GetPointeeTy()->GetIntByteWidth());
   }
 }
 

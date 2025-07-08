@@ -390,7 +390,7 @@ SizedType ident_to_sized_type(const std::string &ident)
     // int and cause an ERROR: Integer size mismatch.
     // This could potentially be revisited or the cast relaxed
     // if we check the variant values during semantic analysis.
-    return CreateEnum(64, enum_name);
+    return CreateEnum(8, enum_name);
   }
   return ident_to_record(ident);
 }

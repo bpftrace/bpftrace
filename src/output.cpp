@@ -340,31 +340,31 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     }
     case Type::integer: {
       auto sign = type.IsSigned();
-      switch (type.GetIntBitWidth()) {
+      switch (type.GetIntByteWidth()) {
           // clang-format off
-          case 64:
+          case 8:
             if (sign)
               return std::to_string(util::reduce_value<int64_t>(value, nvalues) / static_cast<int64_t>(div));
             return std::to_string(util::reduce_value<uint64_t>(value, nvalues) / div);
-          case 32:
+          case 4:
             if (sign)
               return std::to_string(
                   util::reduce_value<int32_t>(value, nvalues) / static_cast<int32_t>(div));
             return std::to_string(util::reduce_value<uint32_t>(value, nvalues) / div);
-          case 16:
+          case 2:
             if (sign)
               return std::to_string(
                   util::reduce_value<int16_t>(value, nvalues) / static_cast<int16_t>(div));
             return std::to_string(util::reduce_value<uint16_t>(value, nvalues) / div);
-          case 8:
+          case 1:
             if (sign)
               return std::to_string(
                   util::reduce_value<int8_t>(value, nvalues) / static_cast<int8_t>(div));
             return std::to_string(util::reduce_value<uint8_t>(value, nvalues) / div);
-            // clang-format on
+          // clang-format on
         default:
-          LOG(BUG) << "value_to_str: Invalid int bitwidth: "
-                   << type.GetIntBitWidth() << "provided";
+          LOG(BUG) << "value_to_str: Invalid int byte width: "
+                   << type.GetIntByteWidth() << "provided";
           return {};
       }
     }
@@ -781,22 +781,22 @@ std::string TextOutput::value_to_str(BPFtrace &bpftrace,
         const auto *data = value.data();
         const auto &enum_name = type.GetName();
         uint64_t enum_val;
-        switch (type.GetIntBitWidth()) {
-          case 64:
+        switch (type.GetIntByteWidth()) {
+          case 8:
             enum_val = util::read_data<uint64_t>(data);
             break;
-          case 32:
+          case 4:
             enum_val = util::read_data<uint32_t>(data);
             break;
-          case 16:
+          case 2:
             enum_val = util::read_data<uint16_t>(data);
             break;
-          case 8:
+          case 1:
             enum_val = util::read_data<uint8_t>(data);
             break;
           default:
             LOG(BUG) << "value_to_str: Invalid int bitwidth: "
-                     << type.GetIntBitWidth() << "provided";
+                     << type.GetIntByteWidth() << "provided";
             return {};
         }
 
