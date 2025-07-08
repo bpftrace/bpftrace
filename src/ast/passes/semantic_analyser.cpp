@@ -599,7 +599,8 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
       .arg_types={
-        arg_type_spec{ .type=Type::pointer } } } },
+        arg_type_spec{ .type=Type::pointer }, // struct sock *
+      } } },
 };
 // clang-format on
 
@@ -1753,6 +1754,20 @@ If you're seeing errors, try clamping the string sizes. For example:
       }
     }
   } else if (call.func == "socket_cookie") {
+    const auto &type = call.vargs.at(0).type();
+    if (!type.IsPtrTy() || !type.GetPointeeTy() ||
+        !type.GetPointeeTy()->IsRecordTy()) {
+      call.addError() << call.func
+                      << "() only supports 'struct sock *' as the argument ("
+                      << type.GetTy() << " provided)";
+      return;
+    }
+    if (!type.GetPointeeTy()->IsSameType(CreateRecord("struct sock"))) {
+      call.addError() << call.func
+                      << "() only supports 'struct sock *' as the argument ('"
+                      << type.GetPointeeTy()->GetName() << " *' provided)";
+      return;
+    }
     call.return_type = CreateUInt64();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
