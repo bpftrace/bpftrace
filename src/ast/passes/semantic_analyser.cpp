@@ -1169,6 +1169,26 @@ void SemanticAnalyser::visit(Call &call)
     return;
   }
 
+  auto CheckArgIsRecordPtr =
+      [](Call &call, size_t index, const std::string &name) {
+        assert(index < call.vargs.size());
+        const auto &type = call.vargs.at(index).type();
+        if (!type.IsPtrTy() || !type.GetPointeeTy() ||
+            !type.GetPointeeTy()->IsRecordTy()) {
+          call.addError() << call.func << "() only supports '" << name
+                          << " *' as the argument (" << type.GetTy()
+                          << " provided)";
+          return false;
+        }
+        if (!type.GetPointeeTy()->IsSameType(CreateRecord(name))) {
+          call.addError() << call.func << "() only supports '" << name
+                          << " *' as the argument ('"
+                          << type.GetPointeeTy()->GetName() << " *' provided)";
+          return false;
+        }
+        return true;
+      };
+
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
       call.vargs.emplace_back(
@@ -1754,20 +1774,8 @@ If you're seeing errors, try clamping the string sizes. For example:
       }
     }
   } else if (call.func == "socket_cookie") {
-    const auto &type = call.vargs.at(0).type();
-    if (!type.IsPtrTy() || !type.GetPointeeTy() ||
-        !type.GetPointeeTy()->IsRecordTy()) {
-      call.addError() << call.func
-                      << "() only supports 'struct sock *' as the argument ("
-                      << type.GetTy() << " provided)";
+    if (!CheckArgIsRecordPtr(call, 0, "struct sock"))
       return;
-    }
-    if (!type.GetPointeeTy()->IsSameType(CreateRecord("struct sock"))) {
-      call.addError() << call.func
-                      << "() only supports 'struct sock *' as the argument ('"
-                      << type.GetPointeeTy()->GetName() << " *' provided)";
-      return;
-    }
     call.return_type = CreateUInt64();
   } else {
     call.addError() << "Unknown function: '" << call.func << "'";
@@ -2277,7 +2285,8 @@ void SemanticAnalyser::visit(Binop &binop)
   else if (addr_lhs != AddrSpace::none) {
     binop.result_type.SetAS(addr_lhs);
   } else {
-    // In case rhs is none, then this triggers warning in selectProbeReadHelper.
+    // In case rhs is none, then this triggers warning in
+    // selectProbeReadHelper.
     binop.result_type.SetAS(addr_rhs);
   }
 
