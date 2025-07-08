@@ -3737,9 +3737,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (!listing_ && !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
-      ap.addError() << "iter " << ap.func
-                    << " not available for your kernel version.";
+    if (!listing_) {
+      if (util::has_wildcard(ap.func)) {
+        ap.addError() << "iter probe type does not support wildcards";
+      } else if (!bpftrace_.btf_->get_all_iters().contains(ap.func)) {
+        ap.addError() << "iter " << ap.func
+                      << " not available for your kernel version.";
+      }
     }
 
     if (ap.func.empty())
