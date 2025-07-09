@@ -3,12 +3,11 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 
 #include "ast/ast.h"
 #include "ast/context.h"
-#include "ast/passes/printer.h"
 #include "benchmark.h"
+#include "util/time.h"
 
 namespace bpftrace {
 
@@ -57,20 +56,11 @@ Result<> benchmark(std::ostream &out, ast::PassManager &mgr)
     auto stddev = std::sqrt(variance);
     auto err = static_cast<int64_t>(1.96 * stddev /
                                     std::sqrt(static_cast<double>(count)));
-    std::string unit = "ns";
-    if (mean > 10000000) {
-      unit = "ms";
-      mean /= 1000000;
-      err /= 1000000;
-    } else if (mean > 10000) {
-      unit = "μs";
-      mean /= 1000;
-      err /= 1000;
-    }
+    auto [unit, scale] = util::duration_str(std::chrono::nanoseconds(mean));
     out << std::left << std::setw(30) << name;
     out << std::left << std::setw(8) << count;
     out << std::left << std::setw(14) << total;
-    out << mean << " ± " << err << " " << unit << std::endl;
+    out << mean / scale << " ± " << err / scale << " " << unit << std::endl;
   };
 
   auto ok = mgr.foreach([&](auto &pass) -> Result<> {

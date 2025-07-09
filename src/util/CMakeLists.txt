@@ -15,6 +15,7 @@ add_library(util STATIC
   symbols.cpp
   system.cpp
   temp.cpp
+  time.cpp
   tseries.cpp
   wildcard.cpp
   )
