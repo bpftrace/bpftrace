@@ -738,7 +738,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh",
                "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp:cpp_mangled(int)",
+               "uprobe:/bin/sh:cpp:\"cpp_mangled(int)\"",
                "uprobe:/bin/sh:cpp:_Z11cpp_mangledi");
 }
 
@@ -973,7 +973,7 @@ TEST(bpftrace, add_probes_interval)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "interval:s:1";
+  std::string probe_orig_name = "i:s:1";
   check_interval(bpftrace->get_probes().at(0), "s", 1, probe_orig_name);
 }
 
@@ -1347,11 +1347,10 @@ TEST_F(bpftrace_btf, add_probes_rawtracepoint)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-  std::string probe_orig_name = "rawtracepoint:*:event_rt";
   auto probe = bpftrace->get_probes().at(0);
   EXPECT_EQ(ProbeType::rawtracepoint, probe.type);
   EXPECT_EQ("event_rt", probe.attach_point);
-  EXPECT_EQ("rawtracepoint:*:event_rt", probe.orig_name);
+  EXPECT_EQ("rawtracepoint:event_rt", probe.orig_name);
   EXPECT_EQ("rawtracepoint:vmlinux:event_rt", probe.name);
 }
 
