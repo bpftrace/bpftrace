@@ -123,6 +123,8 @@ and this project adheres to
   - [#4238](https://github.com/bpftrace/bpftrace/pull/4238)
 - Fix kstack/ustack on big-endian systems
   - [#4244](https://github.com/bpftrace/bpftrace/pull/4244)
+- Report expanded probe name when trying to attach
+  - [#4353](https://github.com/bpftrace/bpftrace/pull/4353)
 #### Security
 #### Docs
 #### Tools
