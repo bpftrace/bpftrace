@@ -890,13 +890,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << progtypeName(bt) << " and " << progtypeName(bt2);
     }
     switch (bt) {
-      case libbpf::BPF_PROG_TYPE_KPROBE:
-        builtin.builtin_type = CreatePointer(
-            CreateRecord("struct pt_regs",
-                         bpftrace_.structs.Lookup("struct pt_regs")),
-            AddrSpace::kernel);
-        builtin.builtin_type.MarkCtxAccess();
+      case libbpf::BPF_PROG_TYPE_KPROBE: {
+        auto record = bpftrace_.structs.Lookup("struct pt_regs");
+        if (!record.expired()) {
+          builtin.builtin_type = CreatePointer(
+              CreateRecord("struct pt_regs", record), AddrSpace::kernel);
+          builtin.builtin_type.MarkCtxAccess();
+        }
         break;
+      }
       case libbpf::BPF_PROG_TYPE_TRACEPOINT:
         builtin.addError() << "Use args instead of ctx in tracepoint";
         break;
