@@ -2301,6 +2301,16 @@ TEST(semantic_analyser, begin_end_probes)
   test("END { 1 } END { 2 }", 2);
 }
 
+TEST(semantic_analyser, bench_probes)
+{
+  test("BENCH:a { 1 } BENCH:b { 2 }");
+  test_error("BENCH: { 1 }", R"(
+stdin:1:1-7: ERROR: BENCH probes must have a name
+BENCH: { 1 }
+~~~~~~
+)");
+}
+
 TEST(semantic_analyser, self_probe)
 {
   test("self:signal:SIGUSR1 { 1 }");

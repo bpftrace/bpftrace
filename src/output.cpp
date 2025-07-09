@@ -1041,6 +1041,43 @@ void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
       << ", retcode: " << retcode;
 }
 
+void TextOutput::benchmark_results(
+    const std::map<std::string, uint32_t> &results) const
+{
+  if (results.empty()) {
+    return;
+  }
+
+  const std::string BENCHMARK = "BENCHMARK";
+  const std::string NANOSECONDS = "NANOSECONDS";
+  size_t longest_name = BENCHMARK.size();
+
+  for (const auto &benchmark : results) {
+    longest_name = std::max(longest_name, benchmark.first.size());
+  }
+
+  auto sep = [&]() {
+    out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
+         << "+" << std::setw(NANOSECONDS.size() + 2) << std::setfill('-') << ""
+         << "+" << std::endl;
+  };
+
+  sep();
+  out_ << "| " << std::left << std::setw(longest_name) << std::setfill(' ')
+       << BENCHMARK << " | " << NANOSECONDS << " |" << std::endl;
+  sep();
+
+  for (const auto &benchmark : results) {
+    out_ << "| " << std::left << std::setw(longest_name) << std::setfill(' ')
+         << benchmark.first << " | " << std::left
+         << std::setw(NANOSECONDS.size()) << std::setfill(' ')
+         << benchmark.second << " |" << std::endl;
+  }
+
+  sep();
+  out_ << std::endl;
+}
+
 std::string TextOutput::field_to_str(const std::string &name,
                                      const std::string &value) const
 {
@@ -1422,6 +1459,26 @@ void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
        << info.func_id << R"(", "retcode": )" << retcode << R"(, "filename": ")"
        << info.filename << R"(", "line": )" << info.line << R"(, "col": )"
        << info.column << "}" << std::endl;
+}
+
+void JsonOutput::benchmark_results(
+    const std::map<std::string, uint32_t> &results) const
+{
+  if (results.empty()) {
+    return;
+  }
+
+  out_ << R"({"type": ")" << "benchmark_results" << R"(", "data": {)";
+  bool first = true;
+  for (const auto &benchmark : results) {
+    if (!first) {
+      out_ << ",";
+    } else {
+      first = false;
+    }
+    out_ << "\"" << benchmark.first << "\":" << benchmark.second;
+  }
+  out_ << "}}" << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

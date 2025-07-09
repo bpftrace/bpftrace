@@ -53,6 +53,7 @@ std::string probetypeName(ProbeType t)
   {
     case ProbeType::invalid:     return "invalid";     break;
     case ProbeType::special:     return "special";     break;
+    case ProbeType::benchmark:   return "benchmark";     break;
     case ProbeType::kprobe:      return "kprobe";      break;
     case ProbeType::kretprobe:   return "kretprobe";   break;
     case ProbeType::uprobe:      return "uprobe";      break;

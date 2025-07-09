@@ -81,6 +81,8 @@ int run_bpftrace(BPFtrace &bpftrace,
 
   std::cout << "\n\n";
 
+  bpftrace.print_benchmark_results(output);
+
   // Print maps if needed (true by default).
   if (bpftrace.config_->print_maps_on_exit)
     err = bpftrace.print_maps(output);

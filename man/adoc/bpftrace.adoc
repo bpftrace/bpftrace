@@ -1202,6 +1202,11 @@ Most providers also support a short name which can be used instead of the full n
 | Built-in events
 | Kernel/User
 
+| <<probes-bench, `BENCH`>>
+| -
+| Microbenchmarks
+| Kernel/User
+
 | <<probes-self, `self`>>
 | -
 | Built-in events
@@ -1283,6 +1288,37 @@ END {
     clear(@map1);
     clear(@map2);
 }
+----
+
+[#probes-bench]
+=== BENCH
+
+`BENCH` is a special built-in probe type for creating microbenchmarks.
+bpftrace executes each `BENCH` probe repeatedly to measure the average
+execution time of the contained code. If multiple `BENCH` probes exist
+in a script, bpftrace executes them sequentially in the order they are
+specified. `BENCH` probes execute before `BEGIN`.
+
+----
+BENCH:lhist {
+    @a = lhist(rand % 10, 1, 10, 1);
+}
+
+BENCH:count {
+    @b = count();
+}
+----
+
+----
+Attached 3 probes
+
+
++-----------+-------------+
+| BENCHMARK | NANOSECONDS |
++-----------+-------------+
+| count     | 54          |
+| lhist     | 125         |
++-----------+-------------+
 ----
 
 [#probes-self]
@@ -4215,6 +4251,17 @@ The possible options are:
 Default: warn
 
 Feature flag for `tseries`.
+
+The possible options are:
+- `error` - fail if this feature is used
+- `warn` - enable feature but print a warning
+- `enable` - enable feature
+
+==== unstable_testing
+
+Default: warn
+
+Feature flag for `BENCH`.
 
 The possible options are:
 - `error` - fail if this feature is used

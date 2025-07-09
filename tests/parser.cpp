@@ -1403,6 +1403,26 @@ END:path:f { 1 }
 )");
 }
 
+TEST(Parser, bench_probe)
+{
+  test("BENCH:a { 1 }",
+       "Program\n"
+       " BENCH:a\n"
+       "  int: 1\n");
+
+  test_parse_failure("BENCH{ 1 }", R"(
+stdin:1:1-6: ERROR: BENCH probe type requires 1 arguments, found 0
+BENCH{ 1 }
+~~~~~
+)");
+
+  test_parse_failure("BENCH:a:f { 1 }", R"(
+stdin:1:1-10: ERROR: BENCH probe type requires 1 arguments, found 2
+BENCH:a:f { 1 }
+~~~~~~~~~
+)");
+}
+
 TEST(Parser, tracepoint_probe)
 {
   test("tracepoint:sched:sched_switch { 1 }",

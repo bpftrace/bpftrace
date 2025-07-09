@@ -73,6 +73,12 @@ TEST(unstable_feature, check_error)
       "config = { unstable_tseries=error } BEGIN { @ = tseries(4, 1s, 10); }",
       "tseries feature is not enabled by default. To enable this unstable "
       "feature, set the config flag to enable. unstable_tseries=enable");
+
+  test("config = { unstable_testing=warn } BENCH { 1 }");
+  test_error(
+      "config = { unstable_testing=error } BENCH { 1 }",
+      "testing feature is not enabled by default. To enable this unstable "
+      "feature, set the config flag to enable. unstable_testing=enable");
 }
 
 } // namespace bpftrace::test::unstable_feature

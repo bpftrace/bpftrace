@@ -105,6 +105,8 @@ public:
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
   virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
+  virtual void benchmark_results(
+      const std::map<std::string, uint32_t> &results) const = 0;
 
 protected:
   ast::CDefinitions &c_definitions_;
@@ -272,6 +274,8 @@ public:
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void benchmark_results(
+      const std::map<std::string, uint32_t> &results) const override;
 
 protected:
   std::string value_to_str(BPFtrace &bpftrace,
@@ -360,6 +364,8 @@ public:
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void benchmark_results(
+      const std::map<std::string, uint32_t> &results) const override;
 
 private:
   std::string json_escape(const std::string &str) const;
