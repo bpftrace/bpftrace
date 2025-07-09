@@ -74,7 +74,15 @@ void ExpansionAnalyser::visit(AttachPoint &ap)
       break;
 
     case ProbeType::fentry:
-    case ProbeType::fexit:
+    case ProbeType::fexit: {
+      if (ap.target == "bpf") {
+        if (!ap.bpf_prog_id || util::has_wildcard(ap.func)) {
+          expansion = ExpansionType::FULL;
+        }
+        break;
+      }
+      [[fallthrough]];
+    }
     case ProbeType::tracepoint:
     case ProbeType::rawtracepoint:
       if (util::has_wildcard(ap.target) || util::has_wildcard(ap.func))

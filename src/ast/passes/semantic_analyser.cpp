@@ -1115,6 +1115,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
              "\"probe1,probe2 {args}\" is not.";
     } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
                type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
+      for (auto *attach_point : probe->attach_points) {
+        if (attach_point->target == "bpf") {
+          builtin.addError() << "The args builtin cannot be used for "
+                                "'fentry/fexit:bpf' probes";
+          return;
+        }
+      }
       auto type_name = probe->args_typename();
       builtin.builtin_type = CreateRecord(type_name,
                                           bpftrace_.structs.Lookup(type_name));

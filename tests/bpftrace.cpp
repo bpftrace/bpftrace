@@ -1259,6 +1259,54 @@ TEST_F(bpftrace_btf, add_probes_fentry)
               "fexit:mock_vmlinux:func_1");
 }
 
+TEST_F(bpftrace_btf, add_probes_fentry_bpf_func)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  parse_probe("fentry:bpf:func_1 {}", *bpftrace);
+
+  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  check_probe(bpftrace->get_probes().at(0),
+              ProbeType::fentry,
+              "fentry:bpf:123:func_1");
+  check_probe(bpftrace->get_probes().at(1),
+              ProbeType::fentry,
+              "fentry:bpf:456:func_1");
+}
+
+TEST_F(bpftrace_btf, add_probes_fentry_bpf_id)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  parse_probe("fentry:bpf:123:func_* {}", *bpftrace);
+
+  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  check_probe(bpftrace->get_probes().at(0),
+              ProbeType::fentry,
+              "fentry:bpf:123:func_1");
+  check_probe(bpftrace->get_probes().at(1),
+              ProbeType::fentry,
+              "fentry:bpf:123:func_2");
+}
+
+TEST_F(bpftrace_btf, add_probes_fentry_bpf_exact)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  parse_probe("fentry:bpf:456:func_1 {}", *bpftrace);
+
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  check_probe(bpftrace->get_probes().at(0),
+              ProbeType::fentry,
+              "fentry:bpf:456:func_1");
+}
+
 TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();

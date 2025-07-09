@@ -97,6 +97,13 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
             return std::unique_ptr<std::istream>(
                 new std::istringstream(sh_usdts + bash_usdts));
           });
+
+  ON_CALL(matcher, get_running_bpf_programs()).WillByDefault([]() {
+    std::string bpf_progs = "bpf:123:func_1\n"
+                            "bpf:123:func_2\n"
+                            "bpf:456:func_1\n";
+    return std::unique_ptr<std::istream>(new std::istringstream(bpf_progs));
+  });
 }
 
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)

@@ -43,8 +43,7 @@ public:
 
   operator int() const noexcept
   {
-    assert(fd_ >= 0);
-    return fd_;
+    return get();
   }
 
 private:

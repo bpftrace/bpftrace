@@ -1175,6 +1175,7 @@ public:
 
   uint64_t address = 0;
   uint64_t func_offset = 0;
+  uint64_t bpf_prog_id = 0;
   bool ignore_invalid = false;
 
   std::string name() const;

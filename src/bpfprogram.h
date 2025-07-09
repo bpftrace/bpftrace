@@ -6,6 +6,7 @@
 #include "btf.h"
 #include "config.h"
 #include "probe_types.h"
+#include "util/fd.h"
 
 namespace bpftrace {
 
@@ -35,6 +36,7 @@ public:
 
 private:
   struct bpf_program *bpf_prog_;
+  std::optional<util::FD> bpf_prog_fd_ = std::nullopt;
 };
 
 } // namespace bpftrace

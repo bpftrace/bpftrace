@@ -36,6 +36,8 @@ public:
 
   MOCK_CONST_METHOD0(get_fentry_symbols, std::unique_ptr<std::istream>());
 
+  MOCK_CONST_METHOD0(get_running_bpf_programs, std::unique_ptr<std::istream>());
+
 #pragma GCC diagnostic pop
 };
 
