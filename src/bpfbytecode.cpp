@@ -99,8 +99,8 @@ const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
   if (prog == programs_.end()) {
     std::stringstream msg;
     if (probe.name != probe.orig_name)
-      msg << "Code not generated for probe: " << probe.name
-          << " from: " << probe.orig_name;
+      msg << "Code not generated for probe " << probe.name << " (expanded from "
+          << probe.orig_name << ")";
     else
       msg << "Code not generated for probe: " << probe.name;
     throw std::runtime_error(msg.str());

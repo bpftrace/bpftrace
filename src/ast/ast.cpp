@@ -340,19 +340,9 @@ void AttachPoint::set_index(int index)
   index_ = index;
 }
 
-std::string Probe::name() const
-{
-  std::vector<std::string> ap_names;
-  std::ranges::transform(attach_points,
-
-                         std::back_inserter(ap_names),
-                         [](const AttachPoint *ap) { return ap->name(); });
-  return util::str_join(ap_names, ",");
-}
-
 std::string Probe::args_typename() const
 {
-  return "struct " + name() + "_args";
+  return "struct " + orig_name + "_args";
 }
 
 int Probe::index() const
