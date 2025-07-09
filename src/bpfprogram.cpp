@@ -6,7 +6,10 @@
 #include "attached_probe.h"
 #include "bpfprogram.h"
 #include "log.h"
+#include "util/bpf_progs.h"
 #include "util/exceptions.h"
+#include "util/int_parser.h"
+#include "util/strings.h"
 
 namespace bpftrace {
 
@@ -67,7 +70,7 @@ void BpfProgram::set_attach_target(const Probe &probe,
 
   const std::string &mod = probe.path;
   const std::string &fun = probe.attach_point;
-  const std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
+  std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
 
   std::string btf_fun;
   __u32 btf_kind = BTF_KIND_FUNC;
@@ -81,17 +84,42 @@ void BpfProgram::set_attach_target(const Probe &probe,
     btf_fun = fun;
   }
 
-  if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
-    const std::string msg = "No BTF found for " + attach_target + ".";
+  std::string err_msg;
+
+  if ((probe.type == ProbeType::fentry || probe.type == ProbeType::fexit) &&
+      mod == "bpf") {
+    auto pair = util::split_string(fun, ':');
+    if (pair.size() != 2) {
+      LOG(BUG) << "BPF function should contain a colon: " << fun;
+    }
+    attach_target = pair[0];
+    auto prog_id = util::to_uint(pair[1]);
+    if (!prog_id) {
+      err_msg = "Invalid BPF program id: " + pair[1];
+    } else {
+      attach_fd_ = util::get_fd_for_bpf_prog(pair[0],
+                                             static_cast<__u32>(*prog_id));
+      if (!attach_fd_.has_value()) {
+        err_msg = "No valid BPF program found with name: " + attach_target +
+                  " and id: " + pair[1] + ".";
+      }
+    }
+  } else if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
+    err_msg = "No BTF found for " + attach_target + ".";
+  }
+
+  if (!err_msg.empty()) {
     if (config.missing_probes == ConfigMissingProbes::error) {
-      LOG(ERROR) << msg;
+      LOG(ERROR) << err_msg;
     } else if (config.missing_probes == ConfigMissingProbes::warn) {
-      LOG(WARNING) << msg;
+      LOG(WARNING) << err_msg;
     }
     bpf_program__set_autoload(bpf_prog_, false);
   }
 
-  bpf_program__set_attach_target(bpf_prog_, 0, attach_target.c_str());
+  bpf_program__set_attach_target(bpf_prog_,
+                                 attach_fd_ ? *attach_fd_ : 0,
+                                 attach_target.c_str());
 }
 
 void BpfProgram::set_no_autoattach()

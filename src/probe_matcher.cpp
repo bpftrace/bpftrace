@@ -13,6 +13,7 @@
 #include "probe_matcher.h"
 #include "scopeguard.h"
 #include "tracefs/tracefs.h"
+#include "util/bpf_progs.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
@@ -143,6 +144,10 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::fentry:
     case ProbeType::fexit: {
+      if (target == "bpf") {
+        symbol_stream = get_running_bpf_program_symbols();
+        break;
+      }
       symbol_stream = get_fentry_symbols();
       break;
     }
@@ -248,6 +253,17 @@ std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
   else {
     return get_symbols_from_traceable_funcs(true);
   }
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::get_running_bpf_program_symbols()
+    const
+{
+  std::string funcs;
+  auto symbols = util::get_bpf_program_symbols();
+  for (const auto& symbol : symbols) {
+    funcs += "bpf:" + symbol + "\n";
+  }
+  return std::make_unique<std::istringstream>(funcs);
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const

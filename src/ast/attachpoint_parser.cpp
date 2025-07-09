@@ -655,11 +655,45 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
 AttachPointParser::State AttachPointParser::fentry_parser()
 {
   // fentry[:module]:function
-  if (parts_.size() != 2 && parts_.size() != 3) {
+  // fentry:bpf:bpf_prog_name:bpf_prog_id
+  // fentry:bpf:bpf_prog_name/bpf_prog_id
+  if (parts_.size() != 2 && parts_.size() != 3 && parts_.size() != 4) {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    return argument_count_error(1, 2);
+    return argument_count_error(1, 3);
+  }
+
+  if (parts_[1] == "bpf") {
+    ap_->target = "bpf";
+    if (parts_.size() == 2) {
+      if (listing_) {
+        ap_->func = "*";
+        return OK;
+      } else {
+        errs_ << "the 'bpf' variant of this probe requires a bpf program name, "
+                 "a bpf program id, or both ";
+        return INVALID;
+      }
+    } else if (parts_.size() == 3) {
+      if (util::to_uint(parts_[2])) {
+        ap_->func = "*:" + parts_[2];
+      } else {
+        ap_->func = parts_[2] + ":*";
+      }
+    } else {
+      if (!util::to_uint(parts_[3])) {
+        errs_ << "bpf program id must be a number";
+        return INVALID;
+      }
+      ap_->func = parts_[2] + ":" + parts_[3];
+    }
+    return OK;
+  }
+
+  if (parts_.size() == 4) {
+    errs_ << "Only the 'bpf' variant of this probe supports 4 arguments";
+    return INVALID;
   }
 
   if (parts_.size() == 3) {
