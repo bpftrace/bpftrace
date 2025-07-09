@@ -108,44 +108,39 @@ RequiredResources ResourceAnalyser::resources()
 {
   if (resources_.max_fmtstring_args_size > 0) {
     resources_.global_vars.add_known(bpftrace::globalvars::FMT_STRINGS_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_tuple_size > 0) {
     assert(resources_.tuple_buffers > 0);
     resources_.global_vars.add_known(bpftrace::globalvars::TUPLE_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.str_buffers > 0) {
     resources_.global_vars.add_known(bpftrace::globalvars::GET_STR_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_read_map_value_size > 0) {
     assert(resources_.read_map_value_buffers > 0);
     resources_.global_vars.add_known(
         bpftrace::globalvars::READ_MAP_VALUE_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_write_map_value_size > 0) {
     resources_.global_vars.add_known(
         bpftrace::globalvars::WRITE_MAP_VALUE_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_variable_size > 0) {
     assert(resources_.variable_buffers > 0);
     resources_.global_vars.add_known(bpftrace::globalvars::VARIABLE_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
 
   if (resources_.max_map_key_size > 0) {
     assert(resources_.map_key_buffers > 0);
     resources_.global_vars.add_known(bpftrace::globalvars::MAP_KEY_BUFFER);
-    resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   }
+
+  resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   resources_.global_vars.add_known(bpftrace::globalvars::EVENT_LOSS_COUNTER);
 
   return std::move(resources_);

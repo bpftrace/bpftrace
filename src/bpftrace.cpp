@@ -997,7 +997,8 @@ int BPFtrace::poll_skboutput_events()
 
 void BPFtrace::poll_event_loss(Output &out)
 {
-  auto current_value = bytecode_.get_event_loss_counter(*this);
+  uint64_t current_value = bytecode_.get_event_loss_counter(*this, max_cpu_id_);
+
   if (current_value > event_loss_count_) {
     out.lost_events(current_value - event_loss_count_);
     event_loss_count_ = current_value;

@@ -15,14 +15,15 @@ target triple = "bpf"
 @stack_raw_127 = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !30
 @stack_scratch = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !49
 @ringbuf = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !66
-@__bt__event_loss_counter = dso_local externally_initialized global i64 0, section ".data.event_loss_counter", !dbg !80
-@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !82
+@__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !80
+@__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !82
+@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !86
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !88 {
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !92 {
 entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -175,7 +176,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
 ; Function Attrs: nounwind
-define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !94 {
+define internal i64 @map_for_each_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !98 {
 for_body:
   %"$res" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
@@ -258,8 +259,8 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 
-!llvm.dbg.cu = !{!84}
-!llvm.module.flags = !{!86, !87}
+!llvm.dbg.cu = !{!88}
+!llvm.module.flags = !{!90, !91}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -342,24 +343,28 @@ attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !78 = !{!79}
 !79 = !DISubrange(count: 262144, lowerBound: 0)
 !80 = !DIGlobalVariableExpression(var: !81, expr: !DIExpression())
-!81 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
+!81 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
 !82 = !DIGlobalVariableExpression(var: !83, expr: !DIExpression())
-!83 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
-!84 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !85)
-!85 = !{!0, !7, !30, !49, !66, !80, !82}
-!86 = !{i32 2, !"Debug Info Version", i32 3}
-!87 = !{i32 7, !"uwtable", i32 0}
-!88 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !89, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !84, retainedNodes: !92)
-!89 = !DISubroutineType(types: !90)
-!90 = !{!29, !91}
-!91 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!92 = !{!93}
-!93 = !DILocalVariable(name: "ctx", arg: 1, scope: !88, file: !2, type: !91)
-!94 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !95, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !84, retainedNodes: !97)
-!95 = !DISubroutineType(types: !96)
-!96 = !{!29, !91, !91, !91, !91}
-!97 = !{!98, !99, !100, !101}
-!98 = !DILocalVariable(name: "map", arg: 1, scope: !94, file: !2, type: !91)
-!99 = !DILocalVariable(name: "key", arg: 2, scope: !94, file: !2, type: !91)
-!100 = !DILocalVariable(name: "value", arg: 3, scope: !94, file: !2, type: !91)
-!101 = !DILocalVariable(name: "ctx", arg: 4, scope: !94, file: !2, type: !91)
+!83 = distinct !DIGlobalVariable(name: "__bt__event_loss_counter", linkageName: "global", scope: !2, file: !2, type: !84, isLocal: false, isDefinition: true)
+!84 = !DICompositeType(tag: DW_TAG_array_type, baseType: !85, size: 64, elements: !61)
+!85 = !DICompositeType(tag: DW_TAG_array_type, baseType: !29, size: 64, elements: !61)
+!86 = !DIGlobalVariableExpression(var: !87, expr: !DIExpression())
+!87 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !29, isLocal: false, isDefinition: true)
+!88 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !89)
+!89 = !{!0, !7, !30, !49, !66, !80, !82, !86}
+!90 = !{i32 2, !"Debug Info Version", i32 3}
+!91 = !{i32 7, !"uwtable", i32 0}
+!92 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !93, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !88, retainedNodes: !96)
+!93 = !DISubroutineType(types: !94)
+!94 = !{!29, !95}
+!95 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!96 = !{!97}
+!97 = !DILocalVariable(name: "ctx", arg: 1, scope: !92, file: !2, type: !95)
+!98 = distinct !DISubprogram(name: "map_for_each_cb", linkageName: "map_for_each_cb", scope: !2, file: !2, type: !99, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !88, retainedNodes: !101)
+!99 = !DISubroutineType(types: !100)
+!100 = !{!29, !95, !95, !95, !95}
+!101 = !{!102, !103, !104, !105}
+!102 = !DILocalVariable(name: "map", arg: 1, scope: !98, file: !2, type: !95)
+!103 = !DILocalVariable(name: "key", arg: 2, scope: !98, file: !2, type: !95)
+!104 = !DILocalVariable(name: "value", arg: 3, scope: !98, file: !2, type: !95)
+!105 = !DILocalVariable(name: "ctx", arg: 4, scope: !98, file: !2, type: !95)

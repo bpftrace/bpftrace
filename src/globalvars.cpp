@@ -255,6 +255,10 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
                         CreateArray(resources.max_map_key_size, CreateInt8()));
   }
 
+  if (global_var_name == EVENT_LOSS_COUNTER) {
+    return make_rw_type(1, CreateUInt64());
+  }
+
   if (config.type == Type::integer) {
     return CreateInt64();
   }
@@ -464,7 +468,7 @@ void GlobalVars::update_global_vars(
                                 added_global_vars_,
                                 vars_and_offsets,
                                 global_var_vals);
-    } else if (section_name != EVENT_LOSS_COUNTER_SECTION_NAME) {
+    } else {
       update_global_vars_custom_rw_section(section_name,
                                            global_vars_map,
                                            vars_and_offsets,
@@ -474,7 +478,7 @@ void GlobalVars::update_global_vars(
   }
 }
 
-uint64_t GlobalVars::get_global_var(
+uint64_t *GlobalVars::get_global_var(
     const struct bpf_object *bpf_object,
     std::string_view target_section,
     const std::unordered_map<std::string, struct bpf_map *>
@@ -521,7 +525,7 @@ uint64_t GlobalVars::get_global_var(
     LOG(BUG) << "Failed to get array buf for global variable map";
   }
 
-  return *target_var;
+  return target_var;
 }
 
 } // namespace bpftrace::globalvars
