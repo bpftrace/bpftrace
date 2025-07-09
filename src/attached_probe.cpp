@@ -1580,7 +1580,7 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
     BPFtrace &bpftrace,
     bool safe_mode)
 {
-  LOG(V1) << "Trying to attach probe: " << probe.orig_name;
+  LOG(V1) << "Trying to attach probe: " << probe.name;
   switch (probe.type) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe: {
