@@ -61,7 +61,7 @@ void process_arg(std::vector<Field> &fields,
   size_t arg_size = sizeof(T);
 
   fields.push_back(Field{ .name = "arg",
-                          .type = CreateInt(arg_size * 8),
+                          .type = CreateInt(arg_size),
                           .offset = offset,
                           .bitfield = std::nullopt });
 

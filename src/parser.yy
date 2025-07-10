@@ -293,14 +293,14 @@ int_type:
                 INT_TYPE {
                     static std::unordered_map<std::string, SizedType> type_map = {
                         {"bool", CreateBool()},
-                        {"uint8", CreateUInt(8)},
-                        {"uint16", CreateUInt(16)},
-                        {"uint32", CreateUInt(32)},
-                        {"uint64", CreateUInt(64)},
-                        {"int8", CreateInt(8)},
-                        {"int16", CreateInt(16)},
-                        {"int32", CreateInt(32)},
-                        {"int64", CreateInt(64)},
+                        {"uint8", CreateUInt(1)},
+                        {"uint16", CreateUInt(2)},
+                        {"uint32", CreateUInt(4)},
+                        {"uint64", CreateUInt(8)},
+                        {"int8", CreateInt(1)},
+                        {"int16", CreateInt(2)},
+                        {"int32", CreateInt(4)},
+                        {"int64", CreateInt(8)},
                     };
                     $$ = type_map[$1];
                 }

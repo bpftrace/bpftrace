@@ -212,8 +212,8 @@ TEST(clang_parser, integer_ptr)
   ASSERT_TRUE(foo->HasField("x"));
 
   EXPECT_TRUE(foo->GetField("x").type.IsPtrTy());
-  EXPECT_EQ(foo->GetField("x").type.GetPointeeTy()->GetIntBitWidth(),
-            8 * sizeof(int));
+  EXPECT_EQ(foo->GetField("x").type.GetPointeeTy()->GetIntByteWidth(),
+            sizeof(int));
   EXPECT_EQ(foo->GetField("x").offset, 0);
 }
 
@@ -232,7 +232,7 @@ TEST(clang_parser, string_ptr)
   const auto &ty = foo->GetField("str").type;
   const auto *pointee = ty.GetPointeeTy();
   EXPECT_TRUE(pointee->IsIntTy());
-  EXPECT_EQ(pointee->GetIntBitWidth(), 8 * sizeof(char));
+  EXPECT_EQ(pointee->GetIntByteWidth(), sizeof(char));
   EXPECT_EQ(foo->GetField("str").offset, 0);
 }
 

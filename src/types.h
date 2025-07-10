@@ -291,29 +291,34 @@ public:
   void SetSize(size_t byte_size)
   {
     if (IsIntTy())
-      SetIntBitWidth(byte_size * 8);
+      SetIntByteWidth(byte_size);
     else
       size_bits_ = byte_size * 8;
   }
 
-  void SetIntBitWidth(size_t bits)
+  void SetIntByteWidth(size_t bytes)
   {
     assert(IsIntTy());
     // Truncate integers too large to fit in BPF registers (64-bits).
-    bits = std::min<size_t>(bits, 64);
+    bytes = std::min<size_t>(bytes, 8);
     // Zero sized integers are not usually valid. However, during semantic
     // analysis when we're inferring types, the first pass may not have
     // enough information to figure out the exact size of the integer. Later
     // passes infer the exact size.
-    assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
-           bits == 64);
-    size_bits_ = bits;
+    assert(bytes == 0 || bytes == 1 || bytes == 2 || bytes == 4 || bytes == 8);
+    size_bits_ = bytes * 8;
   }
 
   size_t GetIntBitWidth() const
   {
     assert(IsIntTy());
     return size_bits_;
+  };
+
+  size_t GetIntByteWidth() const
+  {
+    assert(IsIntTy());
+    return size_bits_ / 8;
   };
 
   size_t GetNumElements() const
@@ -511,7 +516,7 @@ public:
 
   // Factories
 
-  friend SizedType CreateEnum(size_t bits, const std::string &name);
+  friend SizedType CreateEnum(size_t bytes, const std::string &name);
   friend SizedType CreateArray(size_t num_elements,
                                const SizedType &element_type);
 
@@ -520,7 +525,7 @@ public:
   friend SizedType CreateRecord(std::shared_ptr<Struct> &&record);
   friend SizedType CreateRecord(const std::string &name,
                                 std::weak_ptr<Struct> record);
-  friend SizedType CreateInteger(size_t bits, bool is_signed);
+  friend SizedType CreateInteger(size_t bytes, bool is_signed);
   friend SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 };
 
@@ -528,9 +533,9 @@ public:
 SizedType CreateNone();
 SizedType CreateVoid();
 SizedType CreateBool();
-SizedType CreateInteger(size_t bits, bool is_signed);
-SizedType CreateInt(size_t bits);
-SizedType CreateUInt(size_t bits);
+SizedType CreateInteger(size_t bytes, bool is_signed);
+SizedType CreateInt(size_t bytes);
+SizedType CreateUInt(size_t bytes);
 SizedType CreateInt8();
 SizedType CreateInt16();
 SizedType CreateInt32();
@@ -539,7 +544,7 @@ SizedType CreateUInt8();
 SizedType CreateUInt16();
 SizedType CreateUInt32();
 SizedType CreateUInt64();
-SizedType CreateEnum(size_t bits, const std::string &name);
+SizedType CreateEnum(size_t bytes, const std::string &name);
 
 // Create a string of `size` bytes, inclusive of NUL terminator.
 SizedType CreateString(size_t size);

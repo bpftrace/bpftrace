@@ -143,9 +143,9 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
   dwarf_peel_type(&type_die, &type);
 
   auto tag = dwarf_tag(&type);
-  auto bit_size = dwarf_hasattr(&type, DW_AT_bit_size)
-                      ? dwarf_bitsize(&type)
-                      : dwarf_bytesize(&type) * 8;
+  auto byte_size = dwarf_hasattr(&type, DW_AT_bit_size)
+                       ? dwarf_bitsize(&type) / 8
+                       : dwarf_bytesize(&type);
   switch (tag) {
     case DW_TAG_base_type: {
       Dwarf_Word encoding = get_type_encoding(type);
@@ -153,16 +153,16 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
         case DW_ATE_boolean:
         case DW_ATE_unsigned:
         case DW_ATE_unsigned_char:
-          return CreateUInt(bit_size);
+          return CreateUInt(byte_size);
         case DW_ATE_signed:
         case DW_ATE_signed_char:
-          return CreateInt(bit_size);
+          return CreateInt(byte_size);
         default:
           return CreateNone();
       }
     }
     case DW_TAG_enumeration_type:
-      return CreateUInt(bit_size);
+      return CreateUInt(byte_size);
     case DW_TAG_pointer_type: {
       if (dwarf_hasattr(&type, DW_AT_type)) {
         Dwarf_Die inner_type = type_of(type);
@@ -176,7 +176,7 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
       std::string name = dwarf_diename(&type_die);
       name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
       auto result = CreateRecord(
-          name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
+          name, bpftrace_->structs.LookupOrAdd(name, byte_size));
       if (resolve_structs)
         resolve_fields(result);
       return result;

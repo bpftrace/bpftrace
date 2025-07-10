@@ -241,7 +241,7 @@ static std::string get_unqualified_type_name(CXType clang_type)
 
 static SizedType get_sized_type(CXType clang_type, StructManager &structs)
 {
-  auto size = 8 * clang_Type_getSizeOf(clang_type);
+  auto byte_size = clang_Type_getSizeOf(clang_type);
   auto typestr = get_unqualified_type_name(clang_type);
 
   switch (clang_type.kind) {
@@ -252,11 +252,11 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_UInt:
     case CXType_ULong:
     case CXType_ULongLong:
-      return CreateUInt(size);
+      return CreateUInt(byte_size);
     case CXType_Record: {
       // Struct map entry may not exist for forward declared types so we
       // create it now and fill it later
-      auto s = structs.LookupOrAdd(typestr, size / 8);
+      auto s = structs.LookupOrAdd(typestr, byte_size);
       return CreateRecord(typestr, s);
     }
     case CXType_Char_S:
@@ -265,13 +265,13 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_Long:
     case CXType_LongLong:
     case CXType_Int:
-      return CreateInt(size);
+      return CreateInt(byte_size);
     case CXType_Enum: {
       // The pretty printed type name contains `enum` prefix. That's not
       // helpful for us, so remove it. We have our own metadata.
       static std::regex re("enum ");
       auto enum_name = std::regex_replace(typestr, re, "");
-      return CreateEnum(size, enum_name);
+      return CreateEnum(byte_size, enum_name);
     }
     case CXType_Pointer: {
       auto pointee_type = clang_getPointeeType(clang_type);

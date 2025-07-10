@@ -237,10 +237,10 @@ std::string typestr(Type t)
 }
 
 // Type wrappers
-SizedType CreateInteger(size_t bits, bool is_signed)
+SizedType CreateInteger(size_t bytes, bool is_signed)
 {
   auto t = SizedType(Type::integer, 0, is_signed);
-  t.SetIntBitWidth(bits);
+  t.SetIntByteWidth(bytes);
   return t;
 }
 
@@ -249,59 +249,59 @@ SizedType CreateBool()
   return { Type::boolean, 1 };
 }
 
-SizedType CreateInt(size_t bits)
+SizedType CreateInt(size_t bytes)
 {
-  return CreateInteger(bits, true);
+  return CreateInteger(bytes, true);
 };
 
-SizedType CreateUInt(size_t bits)
+SizedType CreateUInt(size_t bytes)
 {
-  return CreateInteger(bits, false);
+  return CreateInteger(bytes, false);
 }
 
 SizedType CreateInt8()
 {
-  return CreateInt(8);
+  return CreateInt(1);
 }
 
 SizedType CreateInt16()
 {
-  return CreateInt(16);
+  return CreateInt(2);
 }
 
 SizedType CreateInt32()
 {
-  return CreateInt(32);
+  return CreateInt(4);
 }
 
 SizedType CreateInt64()
 {
-  return CreateInt(64);
+  return CreateInt(8);
 }
 
 SizedType CreateUInt8()
 {
-  return CreateUInt(8);
+  return CreateUInt(1);
 }
 
 SizedType CreateUInt16()
 {
-  return CreateUInt(16);
+  return CreateUInt(2);
 }
 
 SizedType CreateUInt32()
 {
-  return CreateUInt(32);
+  return CreateUInt(4);
 }
 
 SizedType CreateUInt64()
 {
-  return CreateUInt(64);
+  return CreateUInt(8);
 }
 
-SizedType CreateEnum(size_t bits, const std::string &name)
+SizedType CreateEnum(size_t bytes, const std::string &name)
 {
-  auto ty = CreateUInt(bits);
+  auto ty = CreateUInt(bytes);
   ty.name_ = name;
   return ty;
 }

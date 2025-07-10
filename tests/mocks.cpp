@@ -130,7 +130,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   bpftrace.structs.Lookup("struct _tracepoint_tcp_some_tcp_tp")
       .lock()
       ->AddField(
-          "saddr_v6", CreateArray(16, CreateUInt(8)), 8, std::nullopt, false);
+          "saddr_v6", CreateArray(16, CreateUInt(1)), 8, std::nullopt, false);
 
   auto ptr_type = CreatePointer(CreateInt8());
   bpftrace.structs.Add("struct _tracepoint_file_filename", 8);
