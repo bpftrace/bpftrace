@@ -499,7 +499,7 @@ PROG config = { on_stack_limit = 0 } software:cpu:100000 { print(probe); exit();
 EXPECT software:cpu:100000
 
 NAME BEGIN
-PROG BEGIN { printf("Hello\n"); exit();}
+PROG BEGIN { printf("Hello\n"); }
 EXPECT Hello
 TIMEOUT 2
 

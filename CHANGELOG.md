@@ -90,6 +90,8 @@ and this project adheres to
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
 - Only cache symbols from targeted process
   - [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
+- Automatically exit if only BEGIN/END probes are specified
+  - [#4358](https://github.com/bpftrace/bpftrace/pull/4358)
 #### Deprecated
 #### Removed
 #### Fixed

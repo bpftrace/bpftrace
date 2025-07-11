@@ -1,1 +1,1 @@
-BEGIN { print(getopt("aa", 10)); exit(); }
+BEGIN { print(getopt("aa", 10));  }
