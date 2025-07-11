@@ -136,10 +136,9 @@ public:
                         bool ustack,
                         StackType stack_type,
                         int indent = 0);
-  std::string resolve_buf(const char *buf, size_t size);
   std::string resolve_ksym(uint64_t addr);
   std::string resolve_usym(uint64_t addr, int32_t pid, int32_t probe_id);
-  std::string resolve_inet(int af, const uint8_t *inet) const;
+  std::string resolve_inet(int af, const char *inet) const;
   std::string resolve_uid(uint64_t addr) const;
   std::chrono::time_point<std::chrono::system_clock> resolve_timestamp(
       uint32_t mode,
@@ -158,7 +157,7 @@ public:
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
                             const std::string &path) const;
-  std::string resolve_mac_address(const uint8_t *mac_addr) const;
+  std::string resolve_mac_address(const char *mac_addr) const;
   std::string resolve_cgroup_path(uint64_t cgroup_path_id,
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;

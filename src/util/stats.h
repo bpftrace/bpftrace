@@ -4,37 +4,28 @@
 #include <cstring>
 #include <vector>
 
+#include "util/opaque.h"
+
 namespace bpftrace::util {
 
-namespace {
 template <typename T>
-T read_data(const void *src)
-{
-  T v;
-  std::memcpy(&v, src, sizeof(v));
-  return v;
-}
-} // namespace
-
-template <typename T>
-T reduce_value(const std::vector<uint8_t> &value, int nvalues)
+T reduce_value(const OpaqueValue &value)
 {
   T sum = 0;
-  for (int i = 0; i < nvalues; i++) {
-    sum += read_data<T>(value.data() + (i * sizeof(T)));
+  for (size_t i = 0; i < value.count<T>(); i++) {
+    sum += value.bitcast<T>(i);
   }
   return sum;
 }
 
 template <typename T>
-T min_max_value(const std::vector<uint8_t> &value, int nvalues, bool is_max)
+T min_max_value(const OpaqueValue &value, bool is_max)
 {
   T mm_val = 0;
   bool mm_set = false;
-  for (int i = 0; i < nvalues; i++) {
-    T val = read_data<T>(value.data() + (i * (sizeof(T) * 2)));
-    auto is_set = read_data<uint32_t>(value.data() + sizeof(T) +
-                                      (i * (sizeof(T) * 2)));
+  for (size_t i = 0; i < value.count<T>() / 2; i++) {
+    T val = value.bitcast<T>(i * 2);
+    auto is_set = value.bitcast<T>((i * 2) + 1);
     if (!is_set) {
       continue;
     }
@@ -58,13 +49,12 @@ struct stats {
 };
 
 template <typename T>
-stats<T> stats_value(const std::vector<uint8_t> &value, int nvalues)
+stats<T> stats_value(const OpaqueValue &value)
 {
   stats<T> ret = { 0, 0, 0 };
-  for (int i = 0; i < nvalues; i++) {
-    T val = read_data<T>(value.data() + (i * (sizeof(T) * 2)));
-    T cpu_count = read_data<T>(value.data() + sizeof(T) +
-                               (i * (sizeof(T) * 2)));
+  for (size_t i = 0; i < value.count<T>() / 2; i++) {
+    T val = value.bitcast<T>(i * 2);
+    T cpu_count = value.bitcast<T>((i * 2) + 1);
     ret.count += cpu_count;
     ret.total += val;
   }
@@ -75,9 +65,9 @@ stats<T> stats_value(const std::vector<uint8_t> &value, int nvalues)
 }
 
 template <typename T>
-T avg_value(const std::vector<uint8_t> &value, int nvalues)
+T avg_value(const OpaqueValue &value)
 {
-  return stats_value<T>(value, nvalues).avg;
+  return stats_value<T>(value).avg;
 }
 
 } // namespace bpftrace::util
