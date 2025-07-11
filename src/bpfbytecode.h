@@ -40,6 +40,7 @@ public:
                   const BTF &btf,
                   BPFfeature &feature,
                   const Config &config);
+  void attach_external();
 
   const BpfProgram &getProgramForProbe(const Probe &probe) const;
   BpfProgram &getProgramForProbe(const Probe &probe);
@@ -59,6 +60,7 @@ private:
                      const BTF &btf,
                      BPFfeature &feature,
                      const Config &config);
+
   bool all_progs_loaded();
 
   // We need a custom deleter for bpf_object which will call bpf_object__close.
