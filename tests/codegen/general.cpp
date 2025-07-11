@@ -81,19 +81,19 @@ kprobe:f
   // a perf event buffer
   EXPECT_TRUE(args[0].type.IsIntTy());
   EXPECT_EQ(args[0].type.GetSize(), 8U);
-  EXPECT_EQ(args[0].offset, 8);
+  EXPECT_EQ(args[0].offset, 0);
 
   EXPECT_TRUE(args[1].type.IsIntTy());
   EXPECT_EQ(args[1].type.GetSize(), 8U);
-  EXPECT_EQ(args[1].offset, 16);
+  EXPECT_EQ(args[1].offset, 8);
 
   EXPECT_TRUE(args[2].type.IsStringTy());
   EXPECT_EQ(args[2].type.GetSize(), 10U);
-  EXPECT_EQ(args[2].offset, 24);
+  EXPECT_EQ(args[2].offset, 16);
 
   EXPECT_TRUE(args[3].type.IsIntTy());
   EXPECT_EQ(args[3].type.GetSize(), 8U);
-  EXPECT_EQ(args[3].offset, 40);
+  EXPECT_EQ(args[3].offset, 32);
 }
 
 TEST(codegen, probe_count)

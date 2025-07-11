@@ -38,20 +38,20 @@ public:
                 output::Output &output)
       : bpftrace(bpftrace), c_definitions(c_definitions), out(output) {};
 
-  void exit(const void *data);
-  void join(const void *data);
-  void time(const void *data);
-  void helper_error(const void *data);
-  void print_non_map(const void *data);
-  void print_map(const void *data);
-  void zero_map(const void *data);
-  void clear_map(const void *data);
-  void watchpoint_attach(const void *data);
-  void watchpoint_detach(const void *data);
-  void skboutput(void *data, int size);
-  void syscall(AsyncAction printf_id, uint8_t *arg_data);
-  void cat(AsyncAction printf_id, uint8_t *arg_data);
-  void printf(AsyncAction printf_id, uint8_t *arg_data);
+  void exit(const OpaqueValue &data);
+  void join(const OpaqueValue &data);
+  void time(const OpaqueValue &data);
+  void helper_error(const OpaqueValue &data);
+  void print_non_map(const OpaqueValue &data);
+  void print_map(const OpaqueValue &data);
+  void zero_map(const OpaqueValue &data);
+  void clear_map(const OpaqueValue &data);
+  void watchpoint_attach(const OpaqueValue &data);
+  void watchpoint_detach(const OpaqueValue &data);
+  void skboutput(const OpaqueValue &data);
+  void syscall(const OpaqueValue &data);
+  void cat(const OpaqueValue &data);
+  void printf(const OpaqueValue &data);
 
 private:
   BPFtrace &bpftrace;
