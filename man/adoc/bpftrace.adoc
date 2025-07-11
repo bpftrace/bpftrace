@@ -1190,82 +1190,67 @@ By default, bpftrace requires all probes to attach successfully or else an error
 
 Most providers also support a short name which can be used instead of the full name, e.g. `kprobe:f` and `k:f` are identical.
 
-[cols="~,~,~,~"]
+[cols="~,~,~"]
 |===
 |*Probe Name*
 |*Short Name*
 |*Description*
-|*Kernel/User Level*
 
 | <<probes-begin-end, `BEGIN/END`>>
 | -
 | Built-in events
-| Kernel/User
 
 | <<probes-self, `self`>>
 | -
 | Built-in events
-| Kernel/User
 
 | <<probes-hardware, `hardware`>>
 | `h`
 | Processor-level events
-| Kernel
 
 | <<probes-interval, `interval`>>
 | `i`
 | Timed output
-| Kernel/User
 
 | <<probes-iterator, `iter`>>
 | `it`
 | Iterators tracing
-| Kernel
 
 | <<probes-fentry, `fentry/fexit`>>
 | `f`/`fr`
 | Kernel functions tracing with BTF support
-| Kernel
 
 | <<probes-kprobe, `kprobe/kretprobe`>>
 | `k`/`kr`
 | Kernel function start/return
-| Kernel
 
 | <<probes-profile, `profile`>>
 | `p`
 | Timed sampling
-| Kernel/User
 
 | <<probes-rawtracepoint, `rawtracepoint`>>
 | `rt`
 | Kernel static tracepoints with raw arguments
-| Kernel
 
 | <<probes-software, `software`>>
 | `s`
 | Kernel software events
-| Kernel
 
 | <<probes-tracepoint, `tracepoint`>>
 | `t`
 | Kernel static tracepoints
-| Kernel
 
 | <<probes-uprobe, `uprobe/uretprobe`>>
 | `u`/`ur`
 | User-level function start/return
-| User
 
 | <<probes-usdt, `usdt`>>
 | `U`
 | User-level static tracepoints
-| User
 
 | <<probes-watchpoint, `watchpoint/asyncwatchpoint`>>
 | `w`/`aw`
 | Memory watchpoints
-| Kernel
 |===
 
 [#probes-begin-end]
