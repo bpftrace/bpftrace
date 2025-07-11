@@ -15,8 +15,10 @@
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
+#include "output/text.h"
 #include "tracefs/tracefs.h"
 #include "types.h"
+#include "types_format.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-nice-strict.h"
 #include "gtest/gtest.h"
@@ -32,6 +34,8 @@ using ::testing::StrictMock;
 static const int STRING_SIZE = 64;
 
 static const std::optional<int> no_pid = std::nullopt;
+
+static ast::CDefinitions no_c_defs; // Not used for tests.
 
 template <typename K, typename V>
 MapElements generate_kv_pairs(const std::vector<K> &keys,
@@ -1106,7 +1110,7 @@ TEST(bpftrace, sort_by_key_int)
         key_value_pair_int({ 3 }, 11),
         key_value_pair_int({ 1 }, 10),
       };
-  StrictMock<MockBPFtrace>::sort_by_key(key_arg, values_by_key);
+  sort_by_key(key_arg, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1131,7 +1135,7 @@ TEST(bpftrace, sort_by_key_int_int)
         key_value_pair_int({ 5, 1, 1 }, 3), key_value_pair_int({ 2, 2, 2 }, 4),
         key_value_pair_int({ 2, 3, 2 }, 5), key_value_pair_int({ 2, 1, 2 }, 6),
       };
-  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
+  sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1155,7 +1159,7 @@ TEST(bpftrace, sort_by_key_str)
         key_value_pair_str({ "x" }, 3),
         key_value_pair_str({ "d" }, 4),
       };
-  StrictMock<MockBPFtrace>::sort_by_key(key_arg, values_by_key);
+  sort_by_key(key_arg, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1186,7 +1190,7 @@ TEST(bpftrace, sort_by_key_str_str)
         key_value_pair_str({ "z", "b", "p" }, 5),
         key_value_pair_str({ "a", "b", "q" }, 6),
       };
-  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
+  sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1214,7 +1218,7 @@ TEST(bpftrace, sort_by_key_int_str)
         key_value_pair_int_str(3, "b", 3), key_value_pair_int_str(1, "a", 4),
         key_value_pair_int_str(2, "a", 5), key_value_pair_int_str(3, "a", 6),
       };
-  StrictMock<MockBPFtrace>::sort_by_key(key, values_by_key);
+  sort_by_key(key, values_by_key);
 
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       expected_values = {
@@ -1381,7 +1385,9 @@ TEST(bpftrace, resolve_timestamp)
   // Basic sanity check
   bpftrace->boottime_ = { .tv_sec = 3, .tv_nsec = 0 };
   bpftrace->resources.strftime_args.emplace_back("%s.%f");
-  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 0, 1000), "3.000001");
+  EXPECT_EQ(bpftrace->format_timestamp(
+                bpftrace->resolve_timestamp(bootmode, 1000), 0),
+            "3.000001");
 
   // Check that boottime nsecs close to 1s doesn't trigger floating-point error.
   //
@@ -1389,11 +1395,15 @@ TEST(bpftrace, resolve_timestamp)
   // trigger the bug here. These values were discovered in the wild.
   bpftrace->boottime_ = { .tv_sec = 1736725826, .tv_nsec = 999999985 };
   bpftrace->resources.strftime_args.emplace_back("%s");
-  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 1, 0), "1736725826");
+  EXPECT_EQ(bpftrace->format_timestamp(bpftrace->resolve_timestamp(bootmode, 0),
+                                       1),
+            "1736725826");
 
   // Now check that we handle rollover to a new second correctly
   bpftrace->resources.strftime_args.emplace_back("%s.%f");
-  EXPECT_EQ(bpftrace->resolve_timestamp(bootmode, 2, 15), "1736725827.000000");
+  EXPECT_EQ(
+      bpftrace->format_timestamp(bpftrace->resolve_timestamp(bootmode, 15), 2),
+      "1736725827.000000");
 }
 
 static std::set<std::string> list_modules(std::string_view ap)
@@ -1513,9 +1523,8 @@ basic_map_4[7]: 5
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
@@ -1525,7 +1534,10 @@ basic_map_4[7]: 5
             testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto val = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(val));
+    output.map(mock_map->name(), *val);
+
     EXPECT_EQ(out.str(), tc.expected_output);
   }
 }
@@ -1580,9 +1592,8 @@ max_map_4[3]: 10
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
@@ -1594,7 +1605,10 @@ max_map_4[3]: 10
             testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(res));
+    output.map(mock_map->name(), *res);
+
     EXPECT_EQ(out.str(), tc.expected_output);
   }
 }
@@ -1626,14 +1640,12 @@ TEST(bpftrace, print_avg_map)
       .expected_output = R"(avg_map_1[1]: 5
 avg_map_1[2]: 14
 avg_map_1[3]: 200
-
 )" },
     { .name = "avg_map_2",
       .top = 2,
       .div = 0,
       .expected_output = R"(avg_map_2[2]: 14
 avg_map_2[3]: 200
-
 )" },
     { .name = "avg_map_3",
       .top = 0,
@@ -1641,21 +1653,18 @@ avg_map_2[3]: 200
       .expected_output = R"(avg_map_3[1]: 2
 avg_map_3[2]: 7
 avg_map_3[3]: 100
-
 )" },
     { .name = "avg_map_4",
       .top = 2,
       .div = 2,
       .expected_output = R"(avg_map_4[2]: 7
 avg_map_4[3]: 100
-
 )" },
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
@@ -1667,7 +1676,9 @@ avg_map_4[3]: 100
             testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(res));
+    output.map(mock_map->name(), *res);
 
     EXPECT_EQ(out.str(), tc.expected_output);
   }
@@ -1719,9 +1730,8 @@ string_map_4[3]: hello
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1732,7 +1742,9 @@ string_map_4[3]: hello
             testing::ByMove(Result<MapElements>(returned_kvs))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(res));
+    output.map(mock_map->name(), *res);
 
     EXPECT_EQ(out.str(), tc.expected_output);
   }
@@ -1752,7 +1764,6 @@ TEST(bpftrace, print_lhist_map)
     .value_type = CreateLhist(),
     .detail = LinearHistogramArgs{ .min = 0, .max = 5 * 1024, .step = 1024 },
     .id = {},
-    .is_scalar = true
   };
 
   std::vector<TestCase> test_cases = {
@@ -1760,14 +1771,14 @@ TEST(bpftrace, print_lhist_map)
     { .name = "lhist_map_1",
       .top = 0,
       .div = 0,
-      .expected_output = R"(lhist_map_1:
+      .expected_output = R"(lhist_map_1[1]:
 [0, 1K)                2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [1K, 2K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [2K, 3K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [3K, 4K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [4K, 5K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
-lhist_map_1:
+lhist_map_1[0]:
 [0, 1K)               10 |@@@@@@@@@@                                          |
 [1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
 [2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1779,7 +1790,7 @@ lhist_map_1:
     { .name = "lhist_map_2",
       .top = 1,
       .div = 0,
-      .expected_output = R"(lhist_map_2:
+      .expected_output = R"(lhist_map_2[0]:
 [0, 1K)               10 |@@@@@@@@@@                                          |
 [1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
 [2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1793,14 +1804,14 @@ lhist_map_1:
     { .name = "lhist_map_3",
       .top = 0,
       .div = 2,
-      .expected_output = R"(lhist_map_3:
+      .expected_output = R"(lhist_map_3[1]:
 [0, 1K)                2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [1K, 2K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [2K, 3K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [3K, 4K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [4K, 5K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
-lhist_map_3:
+lhist_map_3[0]:
 [0, 1K)               10 |@@@@@@@@@@                                          |
 [1K, 2K)              20 |@@@@@@@@@@@@@@@@@@@@                                |
 [2K, 3K)              30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1811,9 +1822,8 @@ lhist_map_3:
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1827,7 +1837,9 @@ lhist_map_3:
             testing::ByMove(Result<HistogramMap>(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(res));
+    output.map(mock_map->name(), *res);
 
     EXPECT_EQ(out.str(), tc.expected_output);
   }
@@ -1845,22 +1857,21 @@ TEST(bpftrace, print_hist_map)
   auto map_info = MapInfo{ .key_type = CreateInt64(),
                            .value_type = CreateHist(),
                            .detail = HistogramArgs{ .bits = 10 },
-                           .id = {},
-                           .is_scalar = true };
+                           .id = {} };
 
   std::vector<TestCase> test_cases = {
     // Test case 1: print all buckets
     { .name = "hist_map_1",
       .top = 0,
       .div = 0,
-      .expected_output = R"(hist_map_1:
+      .expected_output = R"(hist_map_1[1]:
 [0]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [1]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [2]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [3]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [4]                    2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
-hist_map_1:
+hist_map_1[0]:
 [0]                   10 |@@@@@@@@@@                                          |
 [1]                   20 |@@@@@@@@@@@@@@@@@@@@                                |
 [2]                   30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1872,7 +1883,7 @@ hist_map_1:
     { .name = "hist_map_2",
       .top = 1,
       .div = 0,
-      .expected_output = R"(hist_map_2:
+      .expected_output = R"(hist_map_2[0]:
 [0]                   10 |@@@@@@@@@@                                          |
 [1]                   20 |@@@@@@@@@@@@@@@@@@@@                                |
 [2]                   30 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1884,14 +1895,14 @@ hist_map_1:
     { .name = "hist_map_3",
       .top = 0,
       .div = 2,
-      .expected_output = R"(hist_map_3:
+      .expected_output = R"(hist_map_3[1]:
 [0]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [1]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [2]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [3]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 [4]                    1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
-hist_map_3:
+hist_map_3[0]:
 [0]                    5 |@@@@@@@@@@                                          |
 [1]                   10 |@@@@@@@@@@@@@@@@@@@@                                |
 [2]                   15 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1903,7 +1914,7 @@ hist_map_3:
     { .name = "hist_map_4",
       .top = 1,
       .div = 2,
-      .expected_output = R"(hist_map_4:
+      .expected_output = R"(hist_map_4[0]:
 [0]                    5 |@@@@@@@@@@                                          |
 [1]                   10 |@@@@@@@@@@@@@@@@@@@@                                |
 [2]                   15 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
@@ -1914,9 +1925,8 @@ hist_map_3:
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1930,7 +1940,9 @@ hist_map_3:
             testing::ByMove(Result<HistogramMap>(values_by_key))));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, tc.top, tc.div);
+    auto res = format(*bpftrace, no_c_defs, *mock_map, tc.top, tc.div);
+    EXPECT_TRUE(bool(res));
+    output.map(mock_map->name(), *res);
 
     EXPECT_EQ(out.str(), tc.expected_output);
   }
@@ -1975,10 +1987,10 @@ TEST(bpftrace, print_tseries_map)
                                                   .value_type = CreateInt64(),
                                                   .agg = TSeriesAggFunc::none },
                            .id = {},
-                           .is_scalar = true };
+                           .is_scalar = false };
 
   std::vector<TestCase> test_cases = {
-    { .name = "tseries_map_1", .expected_output = R"(tseries_map_1:
+    { .name = "tseries_map_1", .expected_output = R"(tseries_map_1[0]:
              2                                                   5
 hh:mm:ss.ms  |___________________________________________________|
 %H:%M:22.612 *                                                   | 2
@@ -1989,7 +2001,7 @@ hh:mm:ss.ms  |___________________________________________________|
              v___________________________________________________v
              2                                                   5
 
-tseries_map_1:
+tseries_map_1[1]:
              1                                                   5
 hh:mm:ss.ms  |___________________________________________________|
 %H:%M:22.612 *                                                   | 1
@@ -2004,9 +2016,8 @@ hh:mm:ss.ms  |___________________________________________________|
   };
 
   for (const auto &tc : test_cases) {
-    ast::CDefinitions no_c_defs;
     std::stringstream out;
-    TextOutput output(no_c_defs, out);
+    output::TextOutput output(out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -2015,18 +2026,20 @@ hh:mm:ss.ms  |___________________________________________________|
         .WillOnce(testing::Return(values_by_key));
 
     bpftrace->resources.maps_info[tc.name] = map_info;
-    bpftrace->print_map(output, *mock_map, 0, 0);
+    auto val = format(*bpftrace, no_c_defs, *mock_map);
+    EXPECT_TRUE(bool(val));
+    output.map(mock_map->name(), *val);
 
     // Make sure strftime doesn't return 0, because the format string is too
     // long.
     bpftrace->config_->max_strlen = tc.expected_output.length() + 1;
 
     EXPECT_EQ(out.str(),
-              bpftrace->resolve_timestamp(static_cast<uint32_t>(
-                                              TimestampMode::tai),
-                                          base_time_ns,
-                                          tc.expected_output,
-                                          false));
+              bpftrace->format_timestamp(
+                  bpftrace->resolve_timestamp(
+                      static_cast<uint32_t>(TimestampMode::tai), base_time_ns),
+                  tc.expected_output,
+                  false));
   }
 }
 

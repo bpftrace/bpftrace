@@ -5,6 +5,7 @@
 #include "async_action.h"
 #include "bpftrace.h"
 #include "log.h"
+#include "types_format.h"
 #include "util/exceptions.h"
 #include "util/io.h"
 #include "util/system.h"
@@ -32,7 +33,7 @@ void AsyncHandlers::join(const void *data)
       joined << delim;
     joined << arg;
   }
-  out.message(MessageType::join, joined.str());
+  out.join(joined.str());
 }
 
 void AsyncHandlers::time(const void *data)
@@ -52,7 +53,7 @@ void AsyncHandlers::time(const void *data)
     LOG(WARNING) << "strftime returned 0";
     return;
   }
-  out.message(MessageType::time, timestr, false);
+  out.time(timestr);
 }
 
 void AsyncHandlers::helper_error(const void *data)
@@ -74,7 +75,11 @@ void AsyncHandlers::print_non_map(const void *data)
   for (size_t i = 0; i < ty.GetSize(); ++i)
     bytes.emplace_back(print->content[i]);
 
-  out.value(bpftrace, ty, bytes);
+  auto v = format(bpftrace, c_definitions, ty, bytes);
+  if (!v) {
+    LOG(BUG) << "error printing non-map value: " << v.takeError();
+  }
+  out.value(*v);
 }
 
 void AsyncHandlers::print_map(const void *data)
@@ -82,11 +87,13 @@ void AsyncHandlers::print_map(const void *data)
   const auto *print = static_cast<const AsyncEvent::Print *>(data);
   const auto &map = bpftrace.bytecode_.getMap(print->mapid);
 
-  auto err = bpftrace.print_map(out, map, print->top, print->div);
-
-  if (err)
+  auto res = format(bpftrace, c_definitions, map, print->top, print->div);
+  if (!res) {
     LOG(BUG) << "Could not print map with ident \"" << map.name()
-             << "\", err=" << std::to_string(err);
+             << "\": " << res.takeError();
+  }
+
+  out.map(map.name(), *res);
 }
 
 void AsyncHandlers::zero_map(const void *data)
@@ -210,11 +217,9 @@ void AsyncHandlers::syscall(AsyncAction printf_id, uint8_t *arg_data)
             static_cast<uint64_t>(AsyncAction::syscall);
   auto &fmt = std::get<0>(bpftrace.resources.system_args[id]);
   auto &args = std::get<1>(bpftrace.resources.system_args[id]);
-  auto arg_values = bpftrace.get_arg_values(out, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
 
-  out.message(MessageType::syscall,
-              util::exec_system(fmt.format_str(arg_values).c_str()),
-              false);
+  out.syscall(util::exec_system(fmt.format_str(arg_values).c_str()));
 }
 
 void AsyncHandlers::cat(AsyncAction printf_id, uint8_t *arg_data)
@@ -223,13 +228,13 @@ void AsyncHandlers::cat(AsyncAction printf_id, uint8_t *arg_data)
             static_cast<size_t>(AsyncAction::cat);
   auto &fmt = std::get<0>(bpftrace.resources.cat_args[id]);
   auto &args = std::get<1>(bpftrace.resources.cat_args[id]);
-  auto arg_values = bpftrace.get_arg_values(out, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
 
   std::stringstream buf;
   util::cat_file(fmt.format_str(arg_values).c_str(),
                  bpftrace.config_->max_cat_bytes,
                  buf);
-  out.message(MessageType::cat, buf.str(), false);
+  out.cat(buf.str());
 }
 
 void AsyncHandlers::printf(AsyncAction printf_id, uint8_t *arg_data)
@@ -238,9 +243,9 @@ void AsyncHandlers::printf(AsyncAction printf_id, uint8_t *arg_data)
             static_cast<size_t>(AsyncAction::printf);
   auto &fmt = std::get<0>(bpftrace.resources.printf_args[id]);
   auto &args = std::get<1>(bpftrace.resources.printf_args[id]);
-  auto arg_values = bpftrace.get_arg_values(out, args, arg_data);
+  auto arg_values = bpftrace.get_arg_values(c_definitions, args, arg_data);
 
-  out.message(MessageType::printf, fmt.format_str(arg_values), false);
+  out.printf(fmt.format_str(arg_values));
 }
 
 } // namespace bpftrace::async_action
