@@ -3483,11 +3483,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 {
   scope_stack_.push_back(&subprog);
   std::vector<llvm::Type *> arg_types;
-  // First argument is for passing ctx pointer for output, rest are proper
-  // arguments to the function
-  arg_types.push_back(b_.getPtrTy());
   std::ranges::transform(subprog.args,
-
                          std::back_inserter(arg_types),
                          [this](SubprogArg *arg) {
                            return b_.GetType(arg->type);
@@ -3497,7 +3493,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
                                               false);
 
   auto *func = llvm::Function::Create(
-      func_type, llvm::Function::InternalLinkage, subprog.name, module_.get());
+      func_type, llvm::Function::ExternalLinkage, subprog.name, module_.get());
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3508,7 +3504,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
   int arg_index = 0;
   for (SubprogArg *arg : subprog.args) {
     auto *alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name);
-    b_.CreateStore(func->getArg(arg_index + 1), alloca);
+    b_.CreateStore(func->getArg(arg_index), alloca);
     variables_[scope_stack_.back()][arg->name] = VariableLLVM{
       .value = alloca, .type = alloca->getAllocatedType()
     };
