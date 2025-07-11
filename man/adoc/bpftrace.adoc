@@ -1441,6 +1441,8 @@ iter:task_file:/sys/fs/bpf/files {
 .variants
 * `fentry[:module]:fn`
 * `fexit[:module]:fn`
+* `fentry:bpf[:prog_name]:prog_id`
+* `fexit:bpf[:prog_name]:prog_id`
 
 .short names
 * `f` (`fentry`)
@@ -1460,6 +1462,11 @@ The original names are still supported for backwards compatibility.
 This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
 The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see <<Listing Probes>>).
 These arguments are also available in the return probe (`fexit`), unlike `kretprobe`.
+
+The bpf variants (e.g. `fentry:bpf[:prog_name]:prog_id`) allow attaching to running BPF programs and sub programs.
+You can specify just the program name and in this case bpftrace will attach to all running programs with that name (differentiate between them using the `probe` builtin).
+You can also specify the program id (e.g. `fentry:bpf:*:123` or just `fentry:bpf:123`) to attach to a specific running BPF program.
+You can see a list of running, valid BPF programs and sub programs with `bpftrace -l 'fentry:bpf:*'`. Note: only BPF programs with a BTF Id can be attached to.
 
 ----
 # bpftrace -lv 'fentry:tcp_reset'

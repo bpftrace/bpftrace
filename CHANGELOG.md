@@ -69,6 +69,8 @@ and this project adheres to
   - [#4345](https://github.com/bpftrace/bpftrace/pull/4345)
 - Introduce `tseries` for capturing time series data
   - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
+- Add ability to attach to running BPF programs and sub programs via `fentry:bpf:prog_name` or `fentry:bpf:prog_id`
+  - [#4354](https://github.com/bpftrace/bpftrace/pull/4354)
 #### Changed
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)

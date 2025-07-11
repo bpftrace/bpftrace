@@ -6,6 +6,7 @@
 #include "btf.h"
 #include "config.h"
 #include "probe_types.h"
+#include "util/fd.h"
 
 namespace bpftrace {
 
@@ -35,6 +36,8 @@ public:
 
 private:
   struct bpf_program *bpf_prog_;
+  // This fd is specifically for attaching to other running BPF programs.
+  std::optional<util::FD> attach_fd_ = std::nullopt;
 };
 
 } // namespace bpftrace
