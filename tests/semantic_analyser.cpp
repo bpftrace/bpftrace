@@ -4707,13 +4707,7 @@ TEST_F(SemanticAnalyserTest, for_loop_control_flow)
 {
   test("BEGIN { @map[0] = 1; for ($kv : @map) { break; } }");
   test("BEGIN { @map[0] = 1; for ($kv : @map) { continue; } }");
-
-  // Error location is incorrect: #3063
-  test("BEGIN { @map[0] = 1; for ($kv : @map) { return; } }", Error{ R"(
-stdin:1:42-48: ERROR: 'return' statement is not allowed in a for-loop
-BEGIN { @map[0] = 1; for ($kv : @map) { return; } }
-                                         ~~~~~~
-)" });
+  test("BEGIN { @map[0] = 1; for ($kv : @map) { return; } }");
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_missing_feature)
@@ -4808,12 +4802,7 @@ TEST_F(SemanticAnalyserTest, for_range_control_flow)
 {
   test("BEGIN { for ($i : 0..5) { break; } }");
   test("BEGIN { for ($i : 0..5) { continue; } }");
-
-  test("BEGIN { for ($i : 0..5) { return; } }", Error{ R"(
-stdin:1:28-34: ERROR: 'return' statement is not allowed in a for-loop
-BEGIN { for ($i : 0..5) { return; } }
-                           ~~~~~~
-)" });
+  test("BEGIN { for ($i : 0..5) { return; } }");
 }
 
 TEST_F(SemanticAnalyserTest, for_range_out_of_scope)

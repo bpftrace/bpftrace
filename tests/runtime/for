@@ -92,6 +92,10 @@ NAME map with continue
 PROG BEGIN { @map["foo"] = 1; @map["bar"] = 2; print("start"); for ($i : @map) { if ($i.0 == "bar") { continue; } print($i.0); } exit(); }
 EXPECT_REGEX .*start\nfoo\n\n
 
+NAME map with return
+PROG BEGIN { exit(); } END { @map["foo"] = 1; @map["bar"] = 2; for ($i : @map) { if ($i.0 == "bar") { print($i.0); return; } } print("end"); }
+EXPECT_REGEX .*bar\n\n
+
 NAME range basic
 PROG BEGIN { for ($i : 0..5) { print($i); } exit(); }
 EXPECT_REGEX .*\n0\n1\n2\n3\n4\n\n
@@ -135,3 +139,7 @@ EXPECT_REGEX .*\n1\n5\n\n
 NAME range with continue
 PROG BEGIN { for ($i : 1..4) { if ($i == 2) { continue; } print($i); } exit(); }
 EXPECT_REGEX .*\n1\n3\n\n
+
+NAME range with return
+PROG BEGIN { exit(); } END { for ($i : 1..4) { if ($i == 3) { return; } print($i); } print("5"); }
+EXPECT_REGEX .*\n1\n2\n\n
