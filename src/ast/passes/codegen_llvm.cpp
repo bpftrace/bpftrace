@@ -1680,12 +1680,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       // pick the current format string
       auto print_id = async_ids_.bpf_print();
       auto *fmt = createFmtString(print_id);
-      auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
+      const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
 
       // and finally the seq_printf call
       b_.CreateSeqPrintf(ctx_,
                          b_.CreateIntToPtr(fmt, b_.getPtrTy()),
-                         b_.getInt32(size),
+                         b_.getInt32(s.size() + 1),
                          data,
                          b_.getInt32(data_size),
                          call.loc);
@@ -1702,7 +1702,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "debugf") {
     auto print_id = async_ids_.bpf_print();
     auto *fmt = createFmtString(print_id);
-    auto size = bpftrace_.resources.bpf_print_fmts.at(print_id).size() + 1;
+    const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
 
     std::vector<Value *> values;
     std::vector<ScopedExpr> exprs;
@@ -1714,7 +1714,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
 
     b_.CreateTracePrintk(b_.CreateIntToPtr(fmt, b_.getPtrTy()),
-                         b_.getInt32(size),
+                         b_.getInt32(s.size() + 1),
                          values,
                          call.loc);
     return ScopedExpr();
@@ -5211,13 +5211,13 @@ bool CodegenLLVM::canAggPerCpuMapElems(const libbpf::bpf_map_type map_type,
 // RequiredResources.
 Value *CodegenLLVM::createFmtString(int print_id)
 {
-  auto fmt_str = bpftrace_.resources.bpf_print_fmts.at(print_id);
-  auto *res = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-      "__fmt_" + std::to_string(print_id),
-      ArrayType::get(b_.getInt8Ty(), fmt_str.length() + 1)));
+  auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
+  auto *res = llvm::dyn_cast<GlobalVariable>(
+      module_->getOrInsertGlobal("__fmt_" + std::to_string(print_id),
+                                 ArrayType::get(b_.getInt8Ty(), s.size() + 1)));
   res->setConstant(true);
   res->setInitializer(
-      ConstantDataArray::getString(module_->getContext(), fmt_str.c_str()));
+      ConstantDataArray::getString(module_->getContext(), s.c_str()));
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
