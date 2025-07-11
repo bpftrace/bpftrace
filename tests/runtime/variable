@@ -27,11 +27,11 @@ PROG i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d
 EXPECT equal=1, unequal=1
 
 NAME global_associative_arrays
-PROG BEGIN { @map[123] = 456; } END { printf("val: %d\n", @map[123]); exit(); }
+PROG BEGIN { @map[123] = 456; } END { printf("val: %d\n", @map[123]);  }
 EXPECT val: 456
 
 NAME scratch
-PROG BEGIN { @map[123] = 456; } END { $val = @map[123]; printf("val: %d\n", $val); exit(); }
+PROG BEGIN { @map[123] = 456; } END { $val = @map[123]; printf("val: %d\n", $val);  }
 EXPECT val: 456
 
 NAME 32-bit tracepoint arg
@@ -44,82 +44,82 @@ RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_wait4 /args.ru/ { @ru[tid] = 
 EXPECT_REGEX @: [1-9][0-9]*
 
 NAME variable string type resize
-PROG BEGIN { $x = "hello"; $x = "hi"; printf("%s\n", $x); exit(); }
+PROG BEGIN { $x = "hello"; $x = "hi"; printf("%s\n", $x);  }
 EXPECT hi
 TIMEOUT 2
 
 NAME map string type resize
-PROG BEGIN { @ = "hello"; } i:ms:1 { @ = "hi"; exit(); }
+PROG BEGIN { @ = "hello"; } i:ms:1 { @ = "hi";  }
 EXPECT @: hi
 TIMEOUT 2
 
 NAME map key string type resize
-PROG BEGIN { @["hello"] = 0; } i:ms:1 { @["hi"] = 1; exit(); }
+PROG BEGIN { @["hello"] = 0; } i:ms:1 { @["hi"] = 1;  }
 EXPECT @[hi]: 1
 TIMEOUT 2
 
 NAME map multi-key string type resize
-PROG BEGIN { @["hello", 0] = 0; } i:ms:1 { @["hi", 1] = 1; exit(); }
+PROG BEGIN { @["hello", 0] = 0; } i:ms:1 { @["hi", 1] = 1;  }
 EXPECT @[hi, 1]: 1
 TIMEOUT 2
 
 NAME map tuple string resize
-PROG BEGIN { @[1] = ("hi", 1); @[1] = ("hellolongstr", 2); @[1] = ("by", 3); exit(); }
+PROG BEGIN { @[1] = ("hi", 1); @[1] = ("hellolongstr", 2); @[1] = ("by", 3);  }
 EXPECT @[1]: (by, 3)
 TIMEOUT 2
 
 NAME map key tuple string resize
-PROG BEGIN { @["hi", 1] = 1; @["hellolongstr", 2] = 2; @["by", 3] = 3; exit(); }
+PROG BEGIN { @["hi", 1] = 1; @["hellolongstr", 2] = 2; @["by", 3] = 3;  }
 EXPECT @[hi, 1]: 1
 EXPECT @[hellolongstr, 2]: 2
 EXPECT @[by, 3]: 3
 TIMEOUT 2
 
 NAME variable tuple string resize
-PROG BEGIN { $a = ("hi", 1); print(($a)); $a = ("hellolongstr", 2); print(($a)); $a = ("by", 3); print(($a)); exit(); }
+PROG BEGIN { $a = ("hi", 1); print(($a)); $a = ("hellolongstr", 2); print(($a)); $a = ("by", 3); print(($a));  }
 EXPECT (hi, 1)
 EXPECT (hellolongstr, 2)
 EXPECT (by, 3)
 TIMEOUT 2
 
 NAME variable nested tuple string resize
-PROG BEGIN { $a = ("hi", ("hellolongstr", 2)); print(($a)); $a = ("hellolongstr", ("hi", 5)); print(($a)); exit(); }
+PROG BEGIN { $a = ("hi", ("hellolongstr", 2)); print(($a)); $a = ("hellolongstr", ("hi", 5)); print(($a));  }
 EXPECT (hi, (hellolongstr, 2))
 EXPECT (hellolongstr, (hi, 5))
 TIMEOUT 2
 
 NAME map nested tuple string resize
-PROG BEGIN { @[1] = ("hi", ("hellolongstr", 2)); @[1] = ("hellolongstr", ("hi", 5)); exit(); }
+PROG BEGIN { @[1] = ("hi", ("hellolongstr", 2)); @[1] = ("hellolongstr", ("hi", 5));  }
 EXPECT @[1]: (hellolongstr, (hi, 5))
 TIMEOUT 2
 
 NAME map key nested tuple string resize
-PROG BEGIN { @["hi", ("hellolongstr", 2)] = 1; @["hellolongstr", ("hi", 5)] = 2; exit(); }
+PROG BEGIN { @["hi", ("hellolongstr", 2)] = 1; @["hellolongstr", ("hi", 5)] = 2;  }
 EXPECT @[hi, (hellolongstr, 2)]: 1
 EXPECT @[hellolongstr, (hi, 5)]: 2
 TIMEOUT 2
 
 NAME map key tuple with casted ints
-PROG BEGIN { @a[(int16)-1, ((int32)-2, 3)] = 10; @a[5, (6, 7)] = 11; $c = ((int8)-4, ((int16)-5, -6)); @a[$c] = 12; exit(); }
+PROG BEGIN { @a[(int16)-1, ((int32)-2, 3)] = 10; @a[5, (6, 7)] = 11; $c = ((int8)-4, ((int16)-5, -6)); @a[$c] = 12;  }
 EXPECT @a[-4, (-5, -6)]: 12
 EXPECT @a[-1, (-2, 3)]: 10
 EXPECT @a[5, (6, 7)]: 11
 TIMEOUT 2
 
 NAME variable declaration
-PROG BEGIN { let $a; $a = 10; printf("a=%d\n", $a); exit();}
+PROG BEGIN { let $a; $a = 10; printf("a=%d\n", $a); }
 EXPECT a=10
 
 NAME variable declaration with builtin
-PROG BEGIN { let $f: struct task_struct *; $f = curtask; print($f->pid); exit();}
+PROG BEGIN { let $f: struct task_struct *; $f = curtask; print($f->pid); }
 EXPECT_REGEX [0-9]+
 
 NAME variable declaration with unresolved type
-PROG BEGIN { let $x: struct Foo[1]; exit(); }
+PROG BEGIN { let $x: struct Foo[1];  }
 EXPECT Attached 1 probe
 
 NAME variable declaration not initialized
-PROG BEGIN { let $a; if (false) { $a = 1; } @b = $a; exit();}
+PROG BEGIN { let $a; if (false) { $a = 1; } @b = $a; }
 EXPECT @b: 0
 
 NAME variable doesn't escape scope

@@ -1,21 +1,21 @@
 NAME bool values
-PROG BEGIN { print((true, false)); exit(); }
+PROG BEGIN { print((true, false));  }
 EXPECT (true, false)
 TIMEOUT 1
 
 NAME bool in conditional
-PROG BEGIN { if (true) { print(1); } if (false) { print(2); } exit(); }
+PROG BEGIN { if (true) { print(1); } if (false) { print(2); }  }
 EXPECT 1
 EXPECT_NONE 2
 TIMEOUT 1
 
 NAME bool as map keys and values
-PROG BEGIN { @a[true] = false; exit(); }
+PROG BEGIN { @a[true] = false;  }
 EXPECT @a[true]: false
 TIMEOUT 1
 
 NAME bool as a variable
-PROG BEGIN { $b = true; $c = false; print(($b, $c)); exit(); }
+PROG BEGIN { $b = true; $c = false; print(($b, $c));  }
 EXPECT (true, false)
 
 NAME cast int to bool
@@ -29,7 +29,7 @@ EXPECT (true, false)
 TIMEOUT 1
 
 NAME cast ptr to bool
-PROG BEGIN { $a = (int64*)0; $b = (int64*)1; print(((bool)$b, (bool)$a)); exit(); }
+PROG BEGIN { $a = (int64*)0; $b = (int64*)1; print(((bool)$b, (bool)$a));  }
 EXPECT (true, false)
 TIMEOUT 1
 
@@ -44,7 +44,7 @@ EXPECT (1, 0)
 TIMEOUT 1
 
 NAME bool array
-PROG BEGIN { @a = (bool[2])(uint16)1; exit(); }
+PROG BEGIN { @a = (bool[2])(uint16)1;  }
 EXPECT @a: [true,false]
 TIMEOUT 1
 
@@ -54,7 +54,7 @@ EXPECT (true, false)
 TIMEOUT 1
 
 NAME bool in resized tuples
-PROG BEGIN { @a[false, 1, true] = 1; @a[true, (int32)2, false] = 2; exit(); }
+PROG BEGIN { @a[false, 1, true] = 1; @a[true, (int32)2, false] = 2;  }
 EXPECT @a[false, 1, true]: 1
 EXPECT @a[true, 2, false]: 2
 TIMEOUT 1

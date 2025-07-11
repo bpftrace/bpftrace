@@ -1,65 +1,65 @@
 NAME map indexed
-PROG BEGIN { @a[0] = 0; @a[1] = 1; exit(); }
+PROG BEGIN { @a[0] = 0; @a[1] = 1;  }
 EXPECT @a[0]: 0
 EXPECT @a[1]: 1
 
 NAME map indexed, scalar-like
-PROG BEGIN { @a[0] = 0; exit(); }
+PROG BEGIN { @a[0] = 0;  }
 EXPECT @a[0]: 0
 
 NAME map non-zero index
-PROG BEGIN { @a[1] = 0; exit(); }
+PROG BEGIN { @a[1] = 0;  }
 EXPECT @a[1]: 0
 
 NAME map scalar
-PROG BEGIN { @a = 0; exit(); }
+PROG BEGIN { @a = 0;  }
 EXPECT @a: 0
 
 NAME map indexed, scalar-like, with decl
-PROG let @a = hash(1); BEGIN { @a[0] = 0; exit(); }
+PROG let @a = hash(1); BEGIN { @a[0] = 0;  }
 EXPECT @a[0]: 0
 
 NAME uint64 key
-PROG BEGIN { @a[18446744073709551615] = 0; exit(); }
+PROG BEGIN { @a[18446744073709551615] = 0;  }
 EXPECT @a[18446744073709551615]: 0
 
 # Unfortunately there are some issues when evicting lruhash entries. We can't
 # know exactly which elements will be present. See #3992 for more information.
 NAME map declaration lruhash
-PROG let @a = lruhash(2); BEGIN { @a[0] = 0; @a[1] = 1; @a[2] = 2; exit(); }
+PROG let @a = lruhash(2); BEGIN { @a[0] = 0; @a[1] = 1; @a[2] = 2;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT_REGEX @a\[.\]: .
 
 NAME map declaration lruhash
-PROG let @a = lruhash(1); BEGIN { @a[1] = 1; exit(); }
+PROG let @a = lruhash(1); BEGIN { @a[1] = 1;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
 
 NAME map declaration lruhash, scalar-like
-PROG let @a = lruhash(1); BEGIN { @a[0] = 1; exit(); }
+PROG let @a = lruhash(1); BEGIN { @a[0] = 1;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT @a[0]: 1
 
 NAME map declaration hash
-PROG let @a = hash(1); BEGIN { @a[1] = 1; @a[2] = 2; exit(); }
+PROG let @a = hash(1); BEGIN { @a[1] = 1; @a[2] = 2;  }
 EXPECT_REGEX .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
 
 NAME map declaration hash, scalar-like
-PROG let @a = hash(1); BEGIN { @a[0] = 0; @a[0] = 1; exit(); }
+PROG let @a = hash(1); BEGIN { @a[0] = 0; @a[0] = 1;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT @a[0]: 1
 
 NAME map declaration percpuhash
-PROG let @a = percpuhash(1); BEGIN { @a[1] = count(); @a[2] = count(); exit(); }
+PROG let @a = percpuhash(1); BEGIN { @a[1] = count(); @a[2] = count();  }
 EXPECT_REGEX .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
 
 NAME map declaration percpulruhash
-PROG let @a = percpulruhash(1); BEGIN { @a[1] = count(); @a[2] = count(); exit(); }
+PROG let @a = percpulruhash(1); BEGIN { @a[1] = count(); @a[2] = count();  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*
 EXPECT @a[2]: 1
 
 NAME map declaration unused
-PROG let @a = percpuhash(1); BEGIN { exit(); }
+PROG let @a = percpuhash(1); BEGIN {  }
 EXPECT_REGEX .*WARNING: Unused map: @a.*

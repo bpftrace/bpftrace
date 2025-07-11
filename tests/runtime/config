@@ -25,17 +25,17 @@ EXPECT stdin:1:12-26: ERROR: debug_output: can only be set as an environment var
 WILL_FAIL
 
 NAME maps are printed by default
-PROG BEGIN { @["test"] = count(); exit(); }
+PROG BEGIN { @["test"] = count();  }
 EXPECT @[test]: 1
 
 NAME maps can be disabled
-PROG config = { print_maps_on_exit=0 } BEGIN { @["test"] = count(); exit(); }
+PROG config = { print_maps_on_exit=0 } BEGIN { @["test"] = count();  }
 EXPECT_NONE @[test]: 1
 
 NAME scalar maps are printed by default
-PROG BEGIN { @test = 1; exit(); }
+PROG BEGIN { @test = 1;  }
 EXPECT @test: 1
 
 NAME scalar maps can be disabled
-PROG config = { print_maps_on_exit=0 } BEGIN { @test = 1; exit(); }
+PROG config = { print_maps_on_exit=0 } BEGIN { @test = 1;  }
 EXPECT_NONE @test: 1

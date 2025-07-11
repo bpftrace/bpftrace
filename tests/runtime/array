@@ -140,17 +140,17 @@ EXPECT @y: 1
 AFTER ./testprogs/array_access
 
 NAME cast literal to int array
-PROG BEGIN { printf("first byte: %x\n", ((int8[8])12345)[0]); exit(); }
+PROG BEGIN { printf("first byte: %x\n", ((int8[8])12345)[0]); }
 EXPECT first byte: 39
 TIMEOUT 1
 
 NAME cast to int array with automatic size
-PROG BEGIN { printf("byte: %x\n", ((int8[])12345)[0]); exit(); }
+PROG BEGIN { printf("byte: %x\n", ((int8[])12345)[0]); }
 EXPECT byte: 39
 TIMEOUT 1
 
 NAME cast int array to int internal
-PROG BEGIN { printf("ip: %x\n", (uint32)pton("127.0.0.1")); exit(); }
+PROG BEGIN { printf("ip: %x\n", (uint32)pton("127.0.0.1")); }
 EXPECT ip: 100007f
 AFTER ./testprogs/array_access
 

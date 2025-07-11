@@ -685,7 +685,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
-  int num_special_attached = 0;
+  int num_begin_end_attached = 0;
+  int num_signal_attached = 0;
 
   auto begin_probe = resources.special_probes.find("BEGIN");
   if (begin_probe != resources.special_probes.end()) {
@@ -694,17 +695,17 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       return -1;
 
     LOG(V1) << "Attaching BEGIN";
-    ++num_special_attached;
+    ++num_begin_end_attached;
   }
 
   if (resources.special_probes.contains("END")) {
-    ++num_special_attached;
+    ++num_begin_end_attached;
   }
 
   for (auto &probe : resources.signal_probes) {
     auto &sig_prog = bytecode_.getProgramForProbe(probe);
     sigusr1_prog_fds_.emplace_back(sig_prog.fd());
-    ++num_special_attached;
+    ++num_signal_attached;
   }
 
   if (child_ && has_usdt_) {
@@ -780,7 +781,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     num_attached += ap->probe_count();
   }
 
-  auto total_attached = num_attached + num_special_attached;
+  auto total_attached = num_attached + num_begin_end_attached +
+                        num_signal_attached;
 
   if (total_attached == 0) {
     LOG(ERROR) << "Attachment failed for all probes.";
@@ -806,7 +808,9 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     if (err)
       return err;
   } else {
-    poll_output(out);
+    bool should_drain = num_begin_end_attached > 0 &&
+                        num_signal_attached == 0 && num_attached == 0;
+    poll_output(out, should_drain);
   }
 
 #ifdef HAVE_LIBSYSTEMD
