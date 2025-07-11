@@ -747,6 +747,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
       }
     }
 
+    bytecode_.attach_external();
+
     // The kernel appears to fire some probes in the order that they were
     // attached and others in reverse order. In order to make sure that blocks
     // are executed in the same order they were declared, iterate over the

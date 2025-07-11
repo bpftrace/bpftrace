@@ -314,6 +314,16 @@ void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
   }
 }
 
+void BpfBytecode::attach_external()
+{
+  for (const auto &prog : programs_) {
+    auto *p = prog.second.bpf_prog();
+    if (bpf_program__autoattach(p)) {
+      bpf_program__attach(p);
+    }
+  }
+}
+
 bool BpfBytecode::all_progs_loaded()
 {
   return std::ranges::all_of(programs_, [](const auto &prog) {
