@@ -14,6 +14,7 @@
 #include "probe_types.h"
 #include "types.h"
 #include "usdt.h"
+#include "util/strings.h"
 
 namespace bpftrace::ast {
 
@@ -1191,6 +1192,15 @@ private:
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
+inline std::string probe_orig_name(AttachPointList &aps)
+{
+  std::vector<std::string> ap_names;
+  std::ranges::transform(aps,
+                         std::back_inserter(ap_names),
+                         [](const AttachPoint *ap) { return ap->raw_input; });
+  return util::str_join(ap_names, ",");
+}
+
 class Probe : public Node {
 public:
   explicit Probe(ASTContext &ctx,
@@ -1201,19 +1211,21 @@ public:
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
         pred(pred),
-        block(block) {};
+        block(block),
+        orig_name(probe_orig_name(this->attach_points)) {};
   explicit Probe(ASTContext &ctx, const Probe &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         attach_points(clone(ctx, other.attach_points, loc)),
         pred(clone(ctx, other.pred, loc)),
         block(clone(ctx, other.block, loc)),
+        orig_name(other.orig_name),
         index_(other.index_) {};
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
   Block *block = nullptr;
+  std::string orig_name;
 
-  std::string name() const;
   std::string args_typename() const;
 
   int index() const;

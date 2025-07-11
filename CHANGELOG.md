@@ -90,6 +90,8 @@ and this project adheres to
   - [#4194](https://github.com/bpftrace/bpftrace/pull/4291)
 - Only cache symbols from targeted process
   - [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
+- Refactor naming of Probe objects
+  - [#4353](https://github.com/bpftrace/bpftrace/pull/4353)
 #### Deprecated
 #### Removed
 #### Fixed
