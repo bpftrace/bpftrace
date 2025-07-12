@@ -42,6 +42,7 @@ add_library(ast STATIC
   passes/recursion_check.cpp
   passes/type_system.cpp
   passes/unstable_feature.cpp
+  passes/usdt_arguments.cpp
 )
 
 add_dependencies(ast parser)
