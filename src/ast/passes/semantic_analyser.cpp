@@ -901,6 +901,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
           builtin.builtin_type = CreatePointer(
               CreateRecord("struct pt_regs", record), AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
+        } else {
+          builtin.builtin_type = CreatePointer(CreateNone());
         }
         break;
       }
@@ -1866,7 +1868,7 @@ If you're seeing errors, try clamping the string sizes. For example:
       if (func.name() != call.func ||
           (func.linkage() != btf::Function::Linkage::Global &&
            func.linkage() != btf::Function::Linkage::Extern)) {
-        break;
+      break;
       }
       found = true;
       auto proto = func.type();
