@@ -229,7 +229,7 @@ EXPECT_REGEX_NONE @
 TIMEOUT 1
 
 NAME sigint under heavy load
-RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
+RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { print("end"); }'
 EXPECT end
 AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
