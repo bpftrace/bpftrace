@@ -14,6 +14,7 @@
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
+#include "ast/passes/usdt_arguments.h"
 #include "btf.h"
 #include "driver.h"
 #include "tracepoint_format_parser.h"
@@ -39,6 +40,8 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
+  passes.emplace_back(CreateUSDTImportPass()); // Import USDT stdlib if needed
+  passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
