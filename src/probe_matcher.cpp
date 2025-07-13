@@ -486,6 +486,10 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = get_iters_params(matches);
         else if (probe_type == ProbeType::uprobe)
           param_lists = get_uprobe_params(matches);
+        else if (probe_type == ProbeType::kprobe)
+          param_lists = bpftrace_->btf_->get_kprobes_params(matches);
+        else if (probe_type == ProbeType::kretprobe)
+          param_lists = bpftrace_->btf_->get_kretprobes_params(matches);
       }
 
       for (const auto& match : matches) {

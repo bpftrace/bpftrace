@@ -727,6 +727,104 @@ FuncParamLists BTF::get_params_from_btf(
   return params;
 }
 
+FuncParamLists BTF::get_kprobes_params_from_btf(
+    const BTFObj &btf_obj,
+    const std::set<std::string> &funcs,
+    bool is_kretprobe) const
+{
+  std::stringstream type;
+  auto *dump = dump_new(btf_obj.btf, dump_printf, &type);
+  if (auto err = libbpf_get_error(dump)) {
+    char err_buf[256] = {};
+    libbpf_strerror(err, err_buf, sizeof(err_buf));
+    LOG(V1) << "BTF: failed to initialize dump (" << err_buf << ")";
+    return {};
+  }
+  SCOPE_EXIT
+  {
+    btf_dump__free(dump);
+  };
+
+  FuncParamLists params;
+  auto id = start_id(btf_obj.btf), max = type_cnt(btf_obj.btf);
+  for (; id <= max; id++) {
+    const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
+    if (!t)
+      continue;
+
+    if (!btf_is_func(t))
+      continue;
+
+    std::string func_name;
+    const std::string pure_func_name = btf__name_by_offset(btf_obj.btf,
+                                                           t->name_off);
+    const std::string obj_func_name = btf_obj.name + ":" + pure_func_name;
+
+    // First match the module prefix name, then match the pure function name.
+    // For example, first match "kprobe:vmlinux:do_sys*", then "kprobe:do_sys*".
+    // The same goes for other modules, such as "kvm".
+    if (funcs.contains(obj_func_name))
+      func_name = obj_func_name;
+    else if (funcs.contains(pure_func_name))
+      func_name = pure_func_name;
+    else
+      continue;
+
+    t = btf__type_by_id(btf_obj.btf, t->type);
+    if (!t)
+      continue;
+
+    BPFTRACE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
+                         decl_opts,
+                         .field_name = "");
+
+    if (!is_kretprobe) {
+      const auto *p = btf_params(t);
+
+      for (__u16 j = 0, argN = 0, len = btf_vlen(t); j < len; j++, p++) {
+        const std::string arg_name = "arg" + std::to_string(argN);
+
+        // set by dump_printf callback
+        type.str("");
+        if (btf_dump__emit_type_decl(dump, p->type, &decl_opts)) {
+          LOG(V1) << "failed to dump argument: " << arg_name;
+          break;
+        }
+
+        // Note that floating point arguments are typically passed in special
+        // registers which don’t count as argN arguments. e.g. on x86_64 the
+        // first 6 non-floating point arguments are passed in registers and
+        // all following arguments are passed on the stack
+        const auto *pt = btf__type_by_id(btf_obj.btf, p->type);
+        if (pt && BTF_INFO_KIND(pt->info) == BTF_KIND_FLOAT)
+          continue;
+
+        params[func_name].push_back(type.str() + " " + arg_name);
+        argN++;
+      }
+    } else {
+      if (!t->type) {
+        params[func_name].emplace_back("void");
+        continue;
+      }
+
+      // set by dump_printf callback
+      type.str("");
+      if (btf_dump__emit_type_decl(dump, t->type, &decl_opts)) {
+        LOG(ERROR) << "failed to dump return type for: " << func_name;
+        break;
+      }
+
+      params[func_name].push_back(type.str() + " retval");
+    }
+  }
+
+  if (id != (max + 1))
+    LOG(BUG) << "BTF data inconsistency " << id << "," << max;
+
+  return params;
+}
+
 FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
     const BTFObj &btf_obj,
     const std::set<std::string> &rawtracepoints) const
@@ -828,6 +926,23 @@ FuncParamLists BTF::get_params(const std::set<std::string> &funcs) const
   return get_params_impl(
       funcs, [this](const BTFObj &btf_obj, const std::set<std::string> &funcs) {
         return get_params_from_btf(btf_obj, funcs);
+      });
+}
+
+FuncParamLists BTF::get_kprobes_params(const std::set<std::string> &funcs) const
+{
+  return get_params_impl(
+      funcs, [this](const BTFObj &btf_obj, const std::set<std::string> &funcs) {
+        return get_kprobes_params_from_btf(btf_obj, funcs, false);
+      });
+}
+
+FuncParamLists BTF::get_kretprobes_params(
+    const std::set<std::string> &funcs) const
+{
+  return get_params_impl(
+      funcs, [this](const BTFObj &btf_obj, const std::set<std::string> &funcs) {
+        return get_kprobes_params_from_btf(btf_obj, funcs, true);
       });
 }
 

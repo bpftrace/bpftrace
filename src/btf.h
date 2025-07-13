@@ -100,6 +100,9 @@ public:
   std::unordered_set<std::string> get_all_iters() const;
   std::unique_ptr<std::istream> get_all_raw_tracepoints();
   FuncParamLists get_params(const std::set<std::string>& funcs) const;
+  FuncParamLists get_kprobes_params(const std::set<std::string>& funcs) const;
+  FuncParamLists get_kretprobes_params(
+      const std::set<std::string>& funcs) const;
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
 
@@ -141,6 +144,9 @@ private:
           get_param_btf_cb) const;
   FuncParamLists get_params_from_btf(const BTFObj& btf_obj,
                                      const std::set<std::string>& funcs) const;
+  FuncParamLists get_kprobes_params_from_btf(const BTFObj& btf_obj,
+                                             const std::set<std::string>& funcs,
+                                             bool is_kretprobe) const;
   FuncParamLists get_raw_tracepoints_params_from_btf(
       const BTFObj& btf_obj,
       const std::set<std::string>& rawtracepoints) const;
