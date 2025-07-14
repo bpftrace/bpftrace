@@ -1,82 +1,82 @@
 NAME invalid_format
-RUN {{BPFTRACE}} -q -f jsonx -e 'BEGIN { @scalar = 5; exit(); }'
+RUN {{BPFTRACE}} -q -f jsonx -e 'BEGIN { @scalar = 5;  }'
 EXPECT ERROR: Invalid output format "jsonx"
 WILL_FAIL
 
 NAME scalar
-PROG BEGIN { @scalar = 5; exit(); }
+PROG BEGIN { @scalar = 5;  }
 EXPECT_JSON runtime/outputs/scalar.json
 
 NAME scalar_str
-PROG BEGIN { @scalar_str = "a b \n d e"; exit(); }
+PROG BEGIN { @scalar_str = "a b \n d e";  }
 EXPECT_JSON runtime/outputs/scalar_str.json
 
 NAME complex
-PROG BEGIN { @complex[comm,2] = 5; exit(); }
+PROG BEGIN { @complex[comm,2] = 5;  }
 EXPECT_JSON runtime/outputs/complex.json
 
 NAME map
-PROG BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }
+PROG BEGIN { @map["key1"] = 2; @map["key2"] = 3;  }
 EXPECT_JSON runtime/outputs/map.json
 
 NAME multiple maps
-PROG BEGIN { @map1["key1"] = 2; @map2["key2"] = 3; exit(); }
+PROG BEGIN { @map1["key1"] = 2; @map2["key2"] = 3;  }
 EXPECT_JSON runtime/outputs/multiple_maps.ndjson
 
 NAME histogram
-PROG BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }
+PROG BEGIN { @hist = hist(2); @hist = hist(1025);  }
 EXPECT_JSON runtime/outputs/hist.json
 
 NAME histogram zero
-PROG BEGIN { @hist = hist(2); zero(@hist); exit(); }
+PROG BEGIN { @hist = hist(2); zero(@hist);  }
 EXPECT_JSON runtime/outputs/hist_zero.json
 
 NAME multiple histograms
-PROG BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }
+PROG BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025);  }
 EXPECT_JSON runtime/outputs/hist_multiple.json
 
 NAME multiple histograms multiple keys
-PROG BEGIN { @["bpftrace", 2] = hist(2);@["curl", 3] = hist(511); @["curl", 3] = hist(1024); exit(); }
+PROG BEGIN { @["bpftrace", 2] = hist(2);@["curl", 3] = hist(511); @["curl", 3] = hist(1024);  }
 EXPECT_JSON runtime/outputs/hist_multiple_multiple_keys.json
 
 NAME histogram-finegrain
-PROG BEGIN { $i = 0; while ($i < 1024) { @ = hist($i, 3); $i++; } exit(); }
+PROG BEGIN { $i = 0; while ($i < 1024) { @ = hist($i, 3); $i++; }  }
 EXPECT_JSON runtime/outputs/hist_2args.json
 
 NAME linear histogram
-PROG BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }
+PROG BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10);  }
 EXPECT_JSON runtime/outputs/lhist.json
 
 NAME linear histogram zero
-PROG BEGIN { @h = lhist(2, 0, 100, 10); zero(@h); exit(); }
+PROG BEGIN { @h = lhist(2, 0, 100, 10); zero(@h);  }
 EXPECT_JSON runtime/outputs/lhist_zero.json
 
 NAME multiple linear histograms
-PROG BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10); exit(); }
+PROG BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10);  }
 EXPECT_JSON runtime/outputs/lhist_multiple.json
 
 NAME stats
-PROG BEGIN { @stats = stats(2); @stats = stats(10); exit(); }
+PROG BEGIN { @stats = stats(2); @stats = stats(10);  }
 EXPECT_JSON runtime/outputs/stats.json
 
 NAME multiple stats
-PROG BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10); exit(); }
+PROG BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10);  }
 EXPECT_JSON runtime/outputs/stats_multiple.json
 
 NAME printf
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test %d", 5); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test %d", 5);  }'
 EXPECT {"type": "printf", "data": "test 5"}
 
 NAME printf_escaping
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test \r \n \t \\ \" bar");  }'
 EXPECT {"type": "printf", "data": "test \r \n \t \\ \" bar"}
 
 NAME time
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { time(); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { time();  }'
 EXPECT_REGEX ^{"type": "time", "data": "[0-9]*:[0-9]*:[0-9]*\\n"}$
 
 NAME syscall
-RUN {{BPFTRACE}} --unsafe -f json -e 'BEGIN { system("echo a b c"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -f json -e 'BEGIN { system("echo a b c");  }'
 EXPECT {"type": "syscall", "data": "a b c\n"}
 
 NAME join_delim
@@ -84,17 +84,17 @@ RUN {{BPFTRACE}} --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { joi
 EXPECT {"type": "join", "data": "/bin/echo,'A'"}
 
 NAME cat
-RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime");  }'
 EXPECT_REGEX ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 
 NAME strerror
-RUN {{BPFTRACE}} -f json -e 'BEGIN { print((strerror(7))); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'BEGIN { print((strerror(7)));  }'
 EXPECT {"type": "value", "data": "Argument list too long"}
 
 # Careful with '[' and ']', they are read by the test engine as a regex
 # character class, so make sure to escape them.
 NAME tuple
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string", (4, 5));  }'
 EXPECT {"type": "map", "data": {"@": [1,2,"string",[4,5]]}}
 
 NAME tuple_with_struct
@@ -103,7 +103,7 @@ EXPECT {"type": "map", "data": {"@": [0,{ "m": 2, "n": 3 }]}}
 AFTER ./testprogs/simple_struct
 
 NAME tuple_with_escaped_string
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string with \"quotes\""); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = (1, 2, "string with \"quotes\"");  }'
 EXPECT {"type": "map", "data": {"@": [1,2,"string with \"quotes\""]}}
 
 NAME print_non_map
@@ -132,32 +132,32 @@ EXPECT {"type": "value", "data": { "y": { "m": [2] }, "a": { "n": 3 } }}
 AFTER ./testprogs/simple_struct
 
 NAME print_avg_map_args
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@);  }'
 EXPECT {"type": "stats", "data": {"@": {"c": 3, "d": 4}}}
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@);  }'
 EXPECT {"type": "stats", "data": {"@": {"a": 1, "b": 2, "c": 3, "d": 4}}}
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); clear(@); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); clear(@);  }'
 EXPECT {"type": "hist", "data": {"@": {"2": [{"min": 16, "max": 31, "count": 1}], "3": [{"min": 16, "max": 31, "count": 1}]}}}
 TIMEOUT 1
 
 NAME print_hist_with_large_top_arg
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); clear(@); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); clear(@);  }'
 EXPECT {"type": "hist", "data": {"@": {"1": [{"min": 8, "max": 15, "count": 1}], "2": [{"min": 16, "max": 31, "count": 1}], "3": [{"min": 16, "max": 31, "count": 1}]}}}
 TIMEOUT 1
 
 NAME helper_error
-RUN {{BPFTRACE}} -k -q -f json -e 'struct foo {int a;}; BEGIN { $tmp = ((struct foo*) 0)->a; exit(); }'
+RUN {{BPFTRACE}} -k -q -f json -e 'struct foo {int a;}; BEGIN { $tmp = ((struct foo*) 0)->a;  }'
 EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "retcode": -14, "filename": "stdin", "line": 1, "col": 37}
 TIMEOUT 1
 
 NAME cgroup_path
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup));  }' | tail -n +2 | python3 -c 'import sys,json; print(json.load(sys.stdin))'
 EXPECT_REGEX ^{'type': 'value', 'data': '.*'}$
 
 NAME strftime
@@ -166,12 +166,12 @@ EXPECT_REGEX ^{'type': 'value', 'data': \[1, '[0-9]{2}\/[0-9]{2}\/[0-9]{2}'\]}$
 TIMEOUT 1
 
 NAME print_hex_values
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @=(int16*) 0x32; exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @=(int16*) 0x32;  }'
 EXPECT {"type": "map", "data": {"@": 50}}
 
 # To preserve backwards compat for machines parsing output, we do not symbolize enums in JSON output mode
 NAME enum_not_symbolized
-RUN {{BPFTRACE}} -q -f json -e 'enum { FOO = 333 }; BEGIN { $f = FOO; print($f); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'enum { FOO = 333 }; BEGIN { $f = FOO; print($f);  }'
 EXPECT {"type": "value", "data": 333}
 
 # But if user explicitly asks for enum symbolization, we provide it in JSON output
@@ -187,6 +187,6 @@ EXPECT {"type": "value", "data": { "m": 2, "n": { "i": 5, "f": "" } }}
 AFTER ./testprogs/struct_with_union
 
 NAME print bool type
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print((true, false)); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print((true, false));  }'
 EXPECT {"type": "value", "data": [true,false]}
 TIMEOUT 1
