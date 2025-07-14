@@ -35,6 +35,12 @@ RUN {{BPFTRACE}} -l 'kprobe*'
 EXPECT_REGEX kprobe:.*
 TIMEOUT 1
 
+NAME it lists kprobes with verbose mode
+RUN {{BPFTRACE}} -lv kprobe:*
+EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists tracepoints
 RUN {{BPFTRACE}} -l | grep tracepoint
 EXPECT_REGEX tracepoint:.*

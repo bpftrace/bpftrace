@@ -70,6 +70,8 @@ and this project adheres to
 - Introduce `tseries` for capturing time series data
   - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
 #### Changed
+- kprobe: support verbose mode listing
+  - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)
 - `-p` CLI flag now applies to all probes (except BEGIN/END)
   - [#3800](https://github.com/bpftrace/bpftrace/pull/3800)
 - Introduce automatic session probes
