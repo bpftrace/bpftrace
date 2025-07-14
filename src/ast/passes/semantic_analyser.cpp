@@ -3576,7 +3576,7 @@ void SemanticAnalyser::visit(Predicate &pred)
   visit(pred.expr);
   if (is_final_pass()) {
     const auto &ty = pred.expr.type();
-    if (!ty.IsIntTy() && !ty.IsPtrTy()) {
+    if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy()) {
       pred.addError() << "Invalid type for predicate: "
                       << pred.expr.type().GetTy();
     }

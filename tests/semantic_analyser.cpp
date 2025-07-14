@@ -415,6 +415,7 @@ TEST_F(SemanticAnalyserTest, if_statements)
 TEST_F(SemanticAnalyserTest, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }");
+  test("kprobe:f / true / { 123 }");
   test("kprobe:f / \"str\" / { 123 }", Error{ R"(
 stdin:1:10-19: ERROR: Invalid type for predicate: string
 kprobe:f / "str" / { 123 }
