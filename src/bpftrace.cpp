@@ -838,6 +838,16 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
 
   poll_output(out, /* drain */ true);
 
+  uint64_t total_lost_events = bytecode_.get_event_loss_counter(*this,
+                                                                max_cpu_id_);
+  if (total_lost_events > 0) {
+    // We incrementally log lost event counts to stdout via `output`
+    // so users can get a record of it in their txt/json output
+    // but let's log to stderr here to make sure this message doesn't
+    // get lost to users in scripts with high frequency output
+    LOG(WARNING) << "Total lost event count: " << total_lost_events;
+  }
+
   return 0;
 }
 
