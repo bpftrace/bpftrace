@@ -4,6 +4,7 @@
 
 - [Builtins](#builtins)
 - [Functions](#functions)
+- [Macros](#macros)
 - [Map Functions](#map-functions)
 
 ## Builtins
@@ -1292,6 +1293,31 @@ uprobe:/bin/bash:readline
 **async**
 
 Removes a watchpoint
+
+## Macros
+
+| Name | Description |
+| --- | --- |
+| [`assert`](#assert) | Simple assertion macro that will exit the entire script with an error code if the condition is not met. |
+| [`ppid`](#ppid) | Get the pid of the parent process |
+
+### assert
+Simple assertion macro that will exit the entire script with an error code if the condition is not met.
+
+#### Parameters
+- **$cond**: (bool) The condition to check
+- **$msg**: (string) The message to print if the condition is not met
+
+#### Last Expression
+- **None**
+### ppid
+Get the pid of the parent process
+
+#### Parameters
+- **$task**: (struct task_struct *) The current task struct
+
+#### Last Expression
+- **uint32**: The pid of the parent process
 
 ## Map Functions
 
