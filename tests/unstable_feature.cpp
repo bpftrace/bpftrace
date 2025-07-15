@@ -54,18 +54,21 @@ TEST(unstable_feature, check_error)
              "feature, "
              "set the config flag to enable. unstable_map_decl=enable");
   test_error("config = { unstable_macro=0 } macro add_one($x) { $x } BEGIN { "
-             "@a[0] = 0; }",
+             "@a[0] = 0; add_one(1); }",
              "macros feature is not enabled by default. To enable this "
              "unstable feature, "
              "set the config flag to enable. unstable_macro=enable");
   test_error(
       "config = { unstable_macro=error } macro add_one($x) { $x } BEGIN { "
-      "@a[0] = 0; }",
+      "@a[0] = 0; add_one(1); }",
       "macros feature is not enabled by default. To enable this unstable "
       "feature, "
       "set the config flag to enable. unstable_macro=enable");
 
   test("config = { unstable_macro=warn } macro add_one($x) { $x } BEGIN { "
+       "@a[0] = 0; add_one(1); }");
+  // Macros have to be called to get the error/warning
+  test("config = { unstable_macro=error } macro add_one($x) { $x } BEGIN { "
        "@a[0] = 0; }");
 
   test("config = { unstable_tseries=warn } BEGIN { @ = tseries(4, 1s, 10); }");
