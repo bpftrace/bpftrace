@@ -94,6 +94,8 @@ and this project adheres to
   - [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
 - Automatically exit if only BEGIN/END probes are specified
   - [#4358](https://github.com/bpftrace/bpftrace/pull/4358)
+- Moved documentation for builtins, functions, and map functions out of adoc
+  - [#4367](https://github.com/bpftrace/bpftrace/pull/4367)
 #### Deprecated
 #### Removed
 #### Fixed
