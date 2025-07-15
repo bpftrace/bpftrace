@@ -73,6 +73,8 @@ and this project adheres to
   - [#4354](https://github.com/bpftrace/bpftrace/pull/4354)
 - Add `BENCH` for creating microbenchmarks
   - [#4343](https://github.com/bpftrace/bpftrace/pull/4343)
+- Add 'assert' and 'ppid' to the macro standard library
+  - [#4366](https://github.com/bpftrace/bpftrace/pull/4366)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)

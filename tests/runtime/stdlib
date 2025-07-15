@@ -1,0 +1,8 @@
+NAME assert_macro
+PROG BEGIN { assert(false, "My error message"); }
+EXPECT Assertion failed. Msg: My error message
+WILL_FAIL
+
+NAME ppid_macro
+PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
