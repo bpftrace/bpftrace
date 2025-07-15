@@ -741,6 +741,8 @@ int BPFtrace::run(Output &out, BpfBytecode bytecode)
     }
   }
 
+  bytecode_.attach_external();
+
   for (auto &probe : std::ranges::reverse_view(resources.probes)) {
     if (BPFtrace::exitsig_recv) {
       request_finalize();
