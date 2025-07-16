@@ -121,6 +121,7 @@ struct Probe {
   bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
+  uint64_t bpf_prog_id = 0;
   std::vector<std::string> funcs;
   bool is_session = false;
 

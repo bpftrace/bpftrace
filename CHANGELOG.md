@@ -69,6 +69,8 @@ and this project adheres to
   - [#4345](https://github.com/bpftrace/bpftrace/pull/4345)
 - Introduce `tseries` for capturing time series data
   - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
+- Add ability to attach to running BPF programs and sub-programs via `fentry:bpf:prog_name` or `fentry:bpf:prog_id:prog_name`
+  - [#4354](https://github.com/bpftrace/bpftrace/pull/4354)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)

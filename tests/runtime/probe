@@ -615,3 +615,12 @@ EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
 EXPECT WARNING: Unable to attach probe: uprobe:./testprogs/uprobe_test:uprobeFunction3. Skipping.
 EXPECT ERROR: Attachment failed for all probes.
 WILL_FAIL
+
+# This is hacky because we can't easily run a separate bpftrace program in BEFORE
+# because it would require more hacks in the runtime runner.py
+# including waiting for probe attachment in the BEFORE program
+NAME attach_to_bpf_program
+RUN {{BPFTRACE}} runtime/scripts/bpf_attach.bt & sleep 3 && {{BPFTRACE}} -e 'fentry:bpf:interval_us_* { print(probe); if (@c >= 1) { exit(); } @c = count(); }'
+EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_1
+EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_2
+TIMEOUT 10

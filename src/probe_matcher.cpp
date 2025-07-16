@@ -13,6 +13,7 @@
 #include "probe_matcher.h"
 #include "scopeguard.h"
 #include "tracefs/tracefs.h"
+#include "util/bpf_progs.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
@@ -143,7 +144,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::fentry:
     case ProbeType::fexit: {
-      symbol_stream = get_fentry_symbols();
+      if (target == "bpf") {
+        symbol_stream = get_running_bpf_programs();
+      } else {
+        symbol_stream = get_fentry_symbols();
+      }
       break;
     }
     case ProbeType::usdt: {
@@ -248,6 +253,16 @@ std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
   else {
     return get_symbols_from_traceable_funcs(true);
   }
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::get_running_bpf_programs() const
+{
+  std::string funcs;
+  auto ids_and_syms = util::get_bpf_progs();
+  for (const auto& [id, symbol] : ids_and_syms) {
+    funcs += "bpf:" + std::to_string(id) + ":" + symbol + "\n";
+  }
+  return std::make_unique<std::istringstream>(funcs);
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const
@@ -542,14 +557,24 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       search_input = attach_point.func;
       break;
     }
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
+      if (attach_point.target == "bpf") {
+        search_input = "bpf:" +
+                       (attach_point.bpf_prog_id
+                            ? std::to_string(attach_point.bpf_prog_id)
+                            : "*") +
+                       ":" + attach_point.func;
+        break;
+      }
+      [[fallthrough]];
+    }
     case ProbeType::special:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
-    case ProbeType::tracepoint:
-    case ProbeType::fentry:
-    case ProbeType::fexit: {
+    case ProbeType::tracepoint: {
       // Do not expand "target:" as that would match all functions in target.
       // This may occur when an absolute address is given instead of a function.
       if (attach_point.func.empty())

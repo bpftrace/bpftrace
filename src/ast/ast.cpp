@@ -5,6 +5,7 @@
 #include "ast/context.h"
 #include "attached_probe.h"
 #include "log.h"
+#include "util/int_parser.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {
@@ -182,10 +183,24 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
       if (match.find(":") != std::string::npos)
         ap.target = util::erase_prefix(ap.func);
       break;
+    case ProbeType::fentry:
+    case ProbeType::fexit: {
+      if (match.starts_with("bpf:")) {
+        auto parts = util::split_string(match, ':');
+        ap.target = parts[0];
+        auto prog_id = util::to_uint(parts[1]);
+        if (!prog_id) {
+          LOG(BUG) << "Invalid bpf prog id: " << parts[1];
+        } else {
+          ap.bpf_prog_id = *prog_id;
+        }
+        ap.func = parts[2];
+        break;
+      }
+      [[fallthrough]];
+    }
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-    case ProbeType::fentry:
-    case ProbeType::fexit:
     case ProbeType::tracepoint:
     case ProbeType::rawtracepoint:
       // Tracepoint, raw tracepoint, uprobe, and fentry/fexit probes specify
@@ -314,6 +329,8 @@ std::string AttachPoint::name() const
     n += ":" + lang;
   if (!ns.empty())
     n += ":" + ns;
+  if (bpf_prog_id != 0)
+    n += ":" + std::to_string(bpf_prog_id);
   if (!func.empty()) {
     n += ":" + func;
     if (func_offset != 0)

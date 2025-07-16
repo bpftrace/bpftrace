@@ -129,6 +129,7 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.async = ap.async;
   probe.pin = ap.pin;
   probe.is_session = ap.expansion == ast::ExpansionType::SESSION;
+  probe.bpf_prog_id = ap.bpf_prog_id;
   return probe;
 }
 

@@ -7,6 +7,7 @@
 #include "bpfprogram.h"
 #include "log.h"
 #include "util/exceptions.h"
+#include "util/fd.h"
 
 namespace bpftrace {
 
@@ -67,7 +68,7 @@ void BpfProgram::set_attach_target(const Probe &probe,
 
   const std::string &mod = probe.path;
   const std::string &fun = probe.attach_point;
-  const std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
+  std::string attach_target = !mod.empty() ? mod + ":" + fun : fun;
 
   std::string btf_fun;
   __u32 btf_kind = BTF_KIND_FUNC;
@@ -81,17 +82,34 @@ void BpfProgram::set_attach_target(const Probe &probe,
     btf_fun = fun;
   }
 
-  if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
-    const std::string msg = "No BTF found for " + attach_target + ".";
+  std::string err_msg;
+
+  if ((probe.type == ProbeType::fentry || probe.type == ProbeType::fexit) &&
+      mod == "bpf") {
+    int raw_fd = bpf_prog_get_fd_by_id(static_cast<__u32>(probe.bpf_prog_id));
+    if (raw_fd < 0) {
+      err_msg = "No valid BPF program found with name: " + fun +
+                " and id: " + std::to_string(probe.bpf_prog_id) + ".";
+    } else {
+      bpf_prog_fd_ = util::FD(raw_fd);
+      attach_target = fun;
+    }
+  } else if (btf.get_btf_id(btf_fun, mod, btf_kind) < 0) {
+    err_msg = "No BTF found for " + attach_target + ".";
+  }
+
+  if (!err_msg.empty()) {
     if (config.missing_probes == ConfigMissingProbes::error) {
-      LOG(ERROR) << msg;
+      LOG(ERROR) << err_msg;
     } else if (config.missing_probes == ConfigMissingProbes::warn) {
-      LOG(WARNING) << msg;
+      LOG(WARNING) << err_msg;
     }
     bpf_program__set_autoload(bpf_prog_, false);
   }
 
-  bpf_program__set_attach_target(bpf_prog_, 0, attach_target.c_str());
+  bpf_program__set_attach_target(bpf_prog_,
+                                 bpf_prog_fd_ ? *bpf_prog_fd_ : 0,
+                                 attach_target.c_str());
 }
 
 void BpfProgram::set_no_autoattach()
