@@ -96,10 +96,10 @@ public:
   bool has_uprobe_multi();
   bool has_skb_output();
   bool has_prog_fentry();
-  bool has_iter(std::string name);
   // These are virtual so they can be overridden in tests by the mock
   virtual bool has_fentry();
   virtual bool has_kernel_func(Kfunc kfunc);
+  virtual bool has_iter(std::string name);
 
   std::string report();
 

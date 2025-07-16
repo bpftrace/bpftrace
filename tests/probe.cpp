@@ -4,6 +4,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -28,7 +29,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
 
   ast::CDefinitions no_c_defs; // Output from clang parser.
 
-  // N.B. No macro or tracepoint expansion.
+  // N.B. No macro expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
@@ -36,6 +37,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(CreateParsePass())
                 .add(ast::CreateResolveImportsPass({}))
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(CreateParseBTFPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())

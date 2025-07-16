@@ -2,6 +2,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "btf_common.h"
@@ -22,7 +23,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   ast::CDefinitions no_c_defs; // Output from clang parser.
   ast::TypeMetadata no_types;  // No external types defined.
 
-  // N.B. No macro or tracepoint expansion.
+  // N.B. No macro expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
@@ -30,6 +31,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateSemanticPass())
@@ -89,8 +91,8 @@ TEST(portability_analyser, curtask_disabled)
 
 TEST(portability_analyser, selective_probes_disabled)
 {
-  test("usdt:/bin/sh:probe { 1 }", 1);
-  test("usdt:/bin/sh:namespace:probe { 1 }", 1);
+  test("usdt:/bin/sh:tp1 { 1 }", 1);
+  test("usdt:/bin/sh:prov1:tp1 { 1 }", 1);
 
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace, "watchpoint:0x10000000:8:rw { 1 }", 1);
