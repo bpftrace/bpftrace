@@ -11,6 +11,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
@@ -138,6 +139,7 @@ public:
                   .add(CreateParsePass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
+                  .add(ast::CreateProbeExpansionPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
                   .add(ast::CreateCMacroExpansionPass())
@@ -2298,8 +2300,8 @@ TEST_F(SemanticAnalyserTest, usdt)
   test("usdt:/bin/sh:probe { 1 }");
   test("usdt:sh:probe { 1 }");
   test("usdt:/bin/sh:namespace:probe { 1 }");
-  test("usdt:/notexistfile:probe { 1 }", Error{});
-  test("usdt:notexistfile:probe { 1 }", Error{});
+  test("usdt:/notexistfile:namespace:probe { 1 }", Error{});
+  test("usdt:notexistfile:namespace:probe { 1 }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, begin_end_probes)
@@ -2436,7 +2438,7 @@ TEST_F(SemanticAnalyserTest, args_builtin_wrong_use)
   test("kretprobe:f { args.foo }", Error{});
   test("uretprobe:/bin/sh/:f { args.foo }", Error{});
   test("profile:ms:1 { args.foo }", Error{});
-  test("usdt:sh:probe { args.foo }", Error{});
+  test("usdt:sh:namespace:probe { args.foo }", Error{});
   test("profile:ms:100 { args.foo }", Error{});
   test("hardware:cache-references:1000000 { args.foo }", Error{});
   test("software:faults:1000 { args.foo }", Error{});
