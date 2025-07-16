@@ -133,6 +133,11 @@ std::string TracepointFormatParser::get_struct_name(const std::string &probe_id)
   return get_struct_name(category, event_name);
 }
 
+std::string TracepointFormatParser::get_struct_name(const ast::AttachPoint &ap)
+{
+  return get_struct_name(ap.target, ap.func);
+}
+
 std::string TracepointFormatParser::parse_field(const std::string &line,
                                                 int *last_offset,
                                                 BPFtrace &bpftrace)
