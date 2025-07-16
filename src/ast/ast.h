@@ -1180,7 +1180,7 @@ public:
 
   std::string name() const;
 
-  AttachPoint &create_expansion_copy(ASTContext &ctx,
+  AttachPoint *create_expansion_copy(ASTContext &ctx,
                                      const std::string &match) const;
 
   int index() const;
@@ -1370,6 +1370,8 @@ public:
   MacroList macros;
   SubprogList functions;
   ProbeList probes;
+
+  void clear_empty_probes();
 };
 
 std::string opstr(const Binop &binop);

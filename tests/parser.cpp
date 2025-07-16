@@ -24,7 +24,6 @@ void test_parse_failure(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
-                .add(ast::CreateProbeExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));
 
@@ -88,7 +87,6 @@ void test(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
-                .add(ast::CreateProbeExpansionPass())
                 .run();
   ASSERT_TRUE(bool(ok));
 

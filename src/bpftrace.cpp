@@ -172,7 +172,7 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
       assert(type == ProbeType::uprobe || type == ProbeType::uretprobe);
       std::unordered_map<std::string, Probe> target_map;
       for (const auto &func : matches) {
-        ast::AttachPoint &match_ap = ap.create_expansion_copy(ctx, func);
+        ast::AttachPoint &match_ap = *ap.create_expansion_copy(ctx, func);
         // Use the original (possibly wildcarded) function name
         match_ap.func = ap.func;
         auto found = target_map.find(match_ap.target);

@@ -1,5 +1,6 @@
 #include "ast/passes/probe_expansion.h"
 
+#include "ast/ast.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -240,32 +241,84 @@ void SessionAnalyser::visit(Probe &probe)
 
 class ProbeExpander : public Visitor<ProbeExpander> {
 public:
-  void expand(Program &program, ExpansionResult result);
+  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace)
+      : ast_(ast), bpftrace_(bpftrace)
+  {
+  }
+
+  void expand(ExpansionResult result);
 
   using Visitor<ProbeExpander>::visit;
+  void visit(Program &prog);
   void visit(AttachPointList &aps);
 
 private:
   ExpansionResult result_;
+  uint64_t probe_count_ = 0;
+
+  ASTContext &ast_;
+  BPFtrace &bpftrace_;
 };
 
-void ProbeExpander::expand(Program &program, ExpansionResult result)
+void ProbeExpander::expand(ExpansionResult result)
 {
   result_ = std::move(result);
-  visit(program);
+  visit(*ast_.root);
+}
+
+void ProbeExpander::visit(Program &prog)
+{
+  Visitor<ProbeExpander>::visit(prog);
+
+  prog.clear_empty_probes();
 }
 
 void ProbeExpander::visit(AttachPointList &aps)
 {
+  const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
+
+  AttachPointList new_aps;
   for (auto *ap : aps) {
-    ExpansionType type = result_.get_expansion(*ap);
-    if (type != ExpansionType::NONE)
-      ap->expansion = type;
-    if (type == ExpansionType::SESSION &&
-        probetype(ap->provider) == ProbeType::kprobe) {
-      ap->ret_probe = &result_.get_session_ret_probe(*ap);
+    auto expansion = result_.get_expansion(*ap);
+    switch (expansion) {
+      case ExpansionType::FULL: {
+        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+
+        probe_count_ += matches.size();
+        if (probe_count_ > max_bpf_progs) {
+          auto &err = ap->addError();
+          err << "Your program is trying to generate more than "
+              << std::to_string(probe_count_)
+              << " BPF programs, which exceeds the current limit of "
+              << std::to_string(max_bpf_progs);
+          err.addHint() << "You can increase the limit through the "
+                           "BPFTRACE_MAX_BPF_PROGS "
+                           "environment variable.";
+          return;
+        }
+
+        for (const auto &match : matches) {
+          new_aps.push_back(ap->create_expansion_copy(ast_, match));
+        }
+        break;
+      }
+
+      case ExpansionType::SESSION: {
+        if (probetype(ap->provider) == ProbeType::kprobe) {
+          ap->ret_probe = &result_.get_session_ret_probe(*ap);
+        }
+        [[fallthrough]];
+      }
+      case ExpansionType::MULTI:
+      case ExpansionType::NONE: {
+        ap->expansion = expansion;
+        new_aps.push_back(ap);
+        break;
+      }
     }
   }
+
+  aps = new_aps;
 }
 
 Pass CreateProbeExpansionPass()
@@ -277,8 +330,8 @@ Pass CreateProbeExpansionPass()
     SessionAnalyser sessions(ast, bpftrace);
     result = sessions.analyse(std::move(result));
 
-    ProbeExpander expander;
-    expander.expand(*ast.root, std::move(result));
+    ProbeExpander expander(ast, bpftrace);
+    expander.expand(std::move(result));
   };
 
   return Pass::create("ProbeExpansion", fn);
