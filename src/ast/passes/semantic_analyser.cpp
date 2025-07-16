@@ -1077,7 +1077,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         ASTContext dummyctx;
         str_size = std::max(str_size,
                             attach_point->create_expansion_copy(dummyctx, match)
-                                .name()
+                                ->name()
                                 .length());
       }
     }
@@ -3849,13 +3849,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (!listing_) {
-      if (util::has_wildcard(ap.func)) {
-        ap.addError() << "iter probe type does not support wildcards";
-      } else if (!bpftrace_.btf_->get_all_iters().contains(ap.func)) {
-        ap.addError() << "iter " << ap.func
-                      << " not available for your kernel version.";
-      }
+    if (!listing_ && !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
+      ap.addError() << "iter " << ap.func
+                    << " not available for your kernel version.";
     }
 
     if (ap.func.empty())
@@ -3887,7 +3883,10 @@ void SemanticAnalyser::visit(Probe &probe)
 
   for (AttachPoint *ap : probe.attach_points) {
     if (!listing_ && aps > 1 && ap->provider == "iter") {
-      ap->addError() << "Only single iter attach point is allowed.";
+      if (util::has_wildcard(ap->raw_input))
+        ap->addError() << "iter probe type does not support wildcards";
+      else
+        ap->addError() << "Only single iter attach point is allowed.";
       return;
     }
     visit(ap);

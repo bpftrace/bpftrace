@@ -302,10 +302,7 @@ private:
                      bool dummy = false);
 
   // Generate a probe and register it to the BPFtrace class.
-  void add_probe(AttachPoint &ap,
-                 Probe &probe,
-                 const std::string &name,
-                 FunctionType *func_type);
+  void add_probe(AttachPoint &ap, Probe &probe, FunctionType *func_type);
 
   [[nodiscard]] ScopedExpr getMapKey(Map &map, Expression &key_expr);
   [[nodiscard]] ScopedExpr getMultiMapKey(
@@ -3439,7 +3436,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
 void CodegenLLVM::add_probe(AttachPoint &ap,
                             Probe &probe,
-                            const std::string &name,
                             FunctionType *func_type)
 {
   current_attach_point_ = &ap;
@@ -3476,7 +3472,6 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
     for (int i = 0; i < ap.usdt.num_locations; ++i) {
       reset_ids();
 
-      std::string full_func_id = name + "_loc" + std::to_string(i);
       generateProbe(probe, ap, probefull_, func_type, i);
       bpftrace_.add_probe(ast_, ap, probe, i);
       current_usdt_location_index_++;
@@ -3602,12 +3597,6 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
                                               { b_.getPtrTy() }, // ctx
                                               false);
 
-  // Skip if we've generated too many, an error will have already been
-  // generated below when we first crossed this threshold.
-  const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
-  if (probe_count_ > max_bpf_progs)
-    return ScopedExpr();
-
   // We begin by saving state that gets changed by the codegen pass, so we
   // can restore it for the next pass (printf_id_, time_id_).
   auto reset_ids = async_ids_.create_reset_ids();
@@ -3615,39 +3604,12 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
   for (auto *attach_point : probe.attach_points) {
     reset_ids();
     current_attach_point_ = attach_point;
-    if (attach_point->expansion == ExpansionType::FULL) {
-      // Do expansion - generate a separate LLVM function for each match
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
-          *attach_point);
 
-      probe_count_ += matches.size();
-      if (probe_count_ > max_bpf_progs) {
-        auto &err = probe.addError();
-        err << "Your program is trying to generate more than "
-            << std::to_string(probe_count_)
-            << " BPF programs, which exceeds the current limit of "
-            << std::to_string(max_bpf_progs);
-        err.addHint()
-            << "You can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
-               "environment variable.";
-        return ScopedExpr();
-      }
+    if (attach_point->index() == 0)
+      attach_point->set_index(getNextIndexForProbe());
 
-      for (const auto &match : matches) {
-        reset_ids();
-        if (attach_point->index() == 0)
-          attach_point->set_index(getNextIndexForProbe());
-
-        auto &match_ap = attach_point->create_expansion_copy(ast_, match);
-        add_probe(match_ap, probe, match, func_type);
-        generated = true;
-      }
-    } else {
-      if (probe.index() == 0)
-        probe.set_index(getNextIndexForProbe());
-      add_probe(*attach_point, probe, attach_point->name(), func_type);
-      generated = true;
-    }
+    add_probe(*attach_point, probe, func_type);
+    generated = true;
   }
   if (!generated) {
     generateProbe(

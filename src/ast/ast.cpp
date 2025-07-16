@@ -151,50 +151,50 @@ bool is_comparison_op(Operator op)
   return false; // unreached
 }
 
-AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
+AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
                                                 const std::string &match) const
 {
   // Create a new node with the same raw tracepoint. We initialize all the
   // information about the attach point, and then override/reset values
   // depending on the specific probe type.
-  auto &ap = *ctx.make_node<AttachPoint>(raw_input,
-                                         ignore_invalid,
-                                         Location(loc));
-  ap.index_ = index_;
-  ap.provider = provider;
-  ap.target = target;
-  ap.lang = lang;
-  ap.ns = ns;
-  ap.func = func;
-  ap.pin = pin;
-  ap.usdt = usdt;
-  ap.freq = freq;
-  ap.len = len;
-  ap.mode = mode;
-  ap.async = async;
-  ap.expansion = expansion;
-  ap.address = address;
-  ap.func_offset = func_offset;
+  auto *ap = ctx.make_node<AttachPoint>(raw_input,
+                                        ignore_invalid,
+                                        Location(loc));
+  ap->index_ = index_;
+  ap->provider = provider;
+  ap->target = target;
+  ap->lang = lang;
+  ap->ns = ns;
+  ap->func = func;
+  ap->pin = pin;
+  ap->usdt = usdt;
+  ap->freq = freq;
+  ap->len = len;
+  ap->mode = mode;
+  ap->async = async;
+  ap->expansion = expansion;
+  ap->address = address;
+  ap->func_offset = func_offset;
 
-  switch (probetype(ap.provider)) {
+  switch (probetype(ap->provider)) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      ap.func = match;
+      ap->func = match;
       if (match.find(":") != std::string::npos)
-        ap.target = util::erase_prefix(ap.func);
+        ap->target = util::erase_prefix(ap->func);
       break;
     case ProbeType::fentry:
     case ProbeType::fexit: {
       if (match.starts_with("bpf:")) {
         auto parts = util::split_string(match, ':');
-        ap.target = parts[0];
+        ap->target = parts[0];
         auto prog_id = util::to_uint(parts[1]);
         if (!prog_id) {
           LOG(BUG) << "Invalid bpf prog id: " << parts[1];
         } else {
-          ap.bpf_prog_id = *prog_id;
+          ap->bpf_prog_id = *prog_id;
         }
-        ap.func = parts[2];
+        ap->func = parts[2];
         break;
       }
       [[fallthrough]];
@@ -206,22 +206,22 @@ AttachPoint &AttachPoint::create_expansion_copy(ASTContext &ctx,
       // Tracepoint, raw tracepoint, uprobe, and fentry/fexit probes specify
       // both a target (category for tracepoints, binary for uprobes, and
       // kernel module for fentry/fexit and a function name.
-      ap.func = match;
-      ap.target = util::erase_prefix(ap.func);
+      ap->func = match;
+      ap->target = util::erase_prefix(ap->func);
       break;
     case ProbeType::usdt:
       // USDT probes specify a target binary path, a provider, and a function
       // name.
-      ap.func = match;
-      ap.target = util::erase_prefix(ap.func);
-      ap.ns = util::erase_prefix(ap.func);
+      ap->func = match;
+      ap->target = util::erase_prefix(ap->func);
+      ap->ns = util::erase_prefix(ap->func);
       break;
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
       // Watchpoint probes come with target prefix. Strip the target to get the
       // function
-      ap.func = match;
-      util::erase_prefix(ap.func);
+      ap->func = match;
+      util::erase_prefix(ap->func);
       break;
     case ProbeType::software:
     case ProbeType::hardware:
@@ -381,6 +381,16 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
   return std::ranges::any_of(attach_points, [probe_type](auto *ap) {
     return probetype(ap->provider) == probe_type;
   });
+}
+
+void Program::clear_empty_probes()
+{
+  auto it = std::ranges::remove_if(probes.begin(),
+                                   probes.end(),
+                                   [](const Probe *p) {
+                                     return p->attach_points.empty();
+                                   });
+  probes.erase(it.begin(), it.end());
 }
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)
