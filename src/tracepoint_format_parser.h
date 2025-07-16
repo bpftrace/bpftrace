@@ -3,6 +3,7 @@
 #include <istream>
 #include <set>
 
+#include "ast/ast.h"
 #include "ast/pass_manager.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -15,6 +16,7 @@ public:
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
   static std::string get_struct_name(const std::string &probe_id);
+  static std::string get_struct_name(const ast::AttachPoint &ap);
   static void clear_struct_list()
   {
     struct_list.clear();
