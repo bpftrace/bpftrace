@@ -67,7 +67,8 @@ void compare_bytecode(const std::string &input1, const std::string &input2)
 
 TEST(probe, short_name)
 {
-  compare_bytecode("tracepoint:a:b { args }", "t:a:b { args }");
+  compare_bytecode("tracepoint:sched:sched_one { args }",
+                   "t:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "k:f { pid }");
   compare_bytecode("kretprobe:f { pid }", "kr:f { pid }");
   compare_bytecode("uprobe:sh:f { 1 }", "u:sh:f { 1 }");
