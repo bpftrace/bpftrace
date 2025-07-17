@@ -162,13 +162,7 @@ void ExpansionAnalyser::visit(Builtin &builtin)
   if (!probe_)
     return;
 
-  if (builtin.ident == "args") {
-    for (auto *ap : probe_->attach_points) {
-      if (probetype(ap->provider) == ProbeType::tracepoint) {
-        result_.set_expansion(*ap, ExpansionType::FULL);
-      }
-    }
-  } else if (builtin.ident == "probe") {
+  if (builtin.ident == "probe") {
     for (auto *ap : probe_->attach_points)
       result_.set_expansion(*ap, ExpansionType::FULL);
   }

@@ -219,7 +219,7 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { func }");
   test("uprobe:/bin/sh:f { func }");
   test("kprobe:f { probe }");
-  test("tracepoint:a:b { args }");
+  test("tracepoint:sched:sched_one { args }");
   test("kprobe:f { jiffies }");
 
   test("kprobe:f { fake }", Error{ R"(
@@ -2896,7 +2896,7 @@ BEGIN { @x = stats(10); @y[@x] = 1; }
 
 TEST_F(SemanticAnalyserTest, probe_short_name)
 {
-  test("t:a:b { args }");
+  test("t:sched:sched_one { args }");
   test("k:f { pid }");
   test("kr:f { pid }");
   test("u:sh:f { 1 }");

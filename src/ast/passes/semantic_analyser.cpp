@@ -806,25 +806,14 @@ void SemanticAnalyser::visit(Identifier &identifier)
 void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
                                                Builtin &builtin)
 {
-  // tracepoint wildcard expansion, part 2 of 3. This:
-  // 1. expands the wildcard, then sets args to be the first matched probe.
-  //    This is so that enough of the type information is available to
-  //    survive the later semantic analyser checks.
-  // 2. sets is_tparg so that codegen does the real type setting after
-  //    expansion.
-  auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
-  if (!matches.empty()) {
-    const auto &match = *matches.begin();
-    std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-        match);
-    builtin.builtin_type = CreateRecord(
-        tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
-    builtin.builtin_type.SetAS(attach_point->target == "syscalls"
-                                   ? AddrSpace::user
-                                   : AddrSpace::kernel);
-    builtin.builtin_type.MarkCtxAccess();
-    builtin.builtin_type.is_tparg = true;
-  }
+  std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+      *attach_point);
+  builtin.builtin_type = CreateRecord(
+      tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
+  builtin.builtin_type.SetAS(
+      attach_point->target == "syscalls" ? AddrSpace::user : AddrSpace::kernel);
+  builtin.builtin_type.MarkCtxAccess();
+  builtin.builtin_type.is_tparg = true;
 }
 
 ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
@@ -2980,14 +2969,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         continue;
       }
 
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
+      std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
           *attach_point);
-      for (const auto &match : matches) {
-        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-            match);
-        structs[tracepoint_struct] =
-            bpftrace_.structs.Lookup(tracepoint_struct).lock();
-      }
+      structs[tracepoint_struct] =
+          bpftrace_.structs.Lookup(tracepoint_struct).lock();
     }
   } else {
     structs[type.GetName()] = type.GetStruct();
