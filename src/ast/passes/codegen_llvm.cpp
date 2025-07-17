@@ -295,7 +295,6 @@ private:
   // This is used to progress state (eg. asyncids) in this class instance for
   // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
-                     const AttachPoint &ap,
                      const std::string &name,
                      FunctionType *func_type,
                      std::optional<int> usdt_location_index = std::nullopt,
@@ -443,7 +442,6 @@ private:
   llvm::DILocalScope *scope_ = nullptr;
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
-  std::string tracepoint_struct_;
   uint64_t probe_count_ = 0;
   // Probes and attach points are indexed from 1, 0 means no index
   // (no index is used for probes whose attach points are indexed individually)
@@ -2616,7 +2614,9 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     }
   }
 
-  std::string cast_type = is_tparg ? tracepoint_struct_ : type.GetName();
+  std::string cast_type = is_tparg ? TracepointFormatParser::get_struct_name(
+                                         *current_attach_point_)
+                                   : type.GetName();
 
   // This overwrites the stored type!
   type = CreateRecord(cast_type, bpftrace_.structs.Lookup(cast_type));
@@ -3354,18 +3354,12 @@ ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
 }
 
 void CodegenLLVM::generateProbe(Probe &probe,
-                                const AttachPoint &ap,
                                 const std::string &name,
                                 FunctionType *func_type,
                                 std::optional<int> usdt_location_index,
                                 bool dummy)
 {
-  // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
-  // by args builtin.
   auto probe_type = probetype(current_attach_point_->provider);
-  if (probe_type == ProbeType::tracepoint)
-    tracepoint_struct_ = TracepointFormatParser::get_struct_name(ap);
-
   int index = current_attach_point_->index() ?: probe.index();
   auto func_name = util::get_function_name_for_probe(name,
                                                      index,
@@ -3472,12 +3466,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
     for (int i = 0; i < ap.usdt.num_locations; ++i) {
       reset_ids();
 
-      generateProbe(probe, ap, probefull_, func_type, i);
+      generateProbe(probe, probefull_, func_type, i);
       bpftrace_.add_probe(ast_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
-    generateProbe(probe, ap, probefull_, func_type);
+    generateProbe(probe, probefull_, func_type);
     bpftrace_.add_probe(ast_, ap, probe);
   }
   current_attach_point_ = nullptr;
@@ -3612,8 +3606,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
     generated = true;
   }
   if (!generated) {
-    generateProbe(
-        probe, *current_attach_point_, "dummy", func_type, std::nullopt, true);
+    generateProbe(probe, "dummy", func_type, std::nullopt, true);
   }
 
   current_attach_point_ = nullptr;
