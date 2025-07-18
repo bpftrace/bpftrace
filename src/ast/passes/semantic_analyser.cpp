@@ -19,7 +19,6 @@
 #include "config.h"
 #include "log.h"
 #include "printf.h"
-#include "probe_matcher.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
@@ -1058,17 +1057,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       return;
     size_t str_size = 0;
     for (AttachPoint *attach_point : probe->attach_points) {
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
-          *attach_point);
-      for (const auto &match : matches) {
-        // No need to preserve this node, as we are just expanding to see the
-        // size of the name. This could be refactored into a separate pass.
-        ASTContext dummyctx;
-        str_size = std::max(str_size,
-                            attach_point->create_expansion_copy(dummyctx, match)
-                                ->name()
-                                .length());
-      }
+      str_size = std::max(str_size, attach_point->name().length());
     }
     builtin.builtin_type = CreateString(str_size + 1);
   } else if (builtin.ident == "username") {
