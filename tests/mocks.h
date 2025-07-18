@@ -190,6 +190,11 @@ public:
     return false;
   }
 
+  bool has_iter(std::string name __attribute__((unused))) override
+  {
+    return has_features_;
+  }
+
   bool has_features_;
 };
 

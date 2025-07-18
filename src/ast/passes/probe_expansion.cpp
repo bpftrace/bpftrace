@@ -1,19 +1,58 @@
 #include "ast/passes/probe_expansion.h"
 
+#include "ast/ast.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "log.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
 
 using ast::ExpansionType;
 
+class ExpansionResult {
+public:
+  ExpansionResult() = default;
+  ExpansionResult(const ExpansionResult &) = delete;
+  ExpansionResult &operator=(const ExpansionResult &) = delete;
+  ExpansionResult(ExpansionResult &&) = default;
+  ExpansionResult &operator=(ExpansionResult &&) = default;
+
+  void set_expansion(AttachPoint &ap, ExpansionType type)
+  {
+    expansions[&ap] = type;
+  }
+  ExpansionType get_expansion(AttachPoint &ap)
+  {
+    auto exp = expansions.find(&ap);
+    if (exp == expansions.end())
+      return ExpansionType::NONE;
+    return exp->second;
+  }
+  void set_session_ret_probe(AttachPoint &ap, Probe &ret_probe)
+  {
+    session_ret_probes[&ap] = &ret_probe;
+  }
+  Probe &get_session_ret_probe(AttachPoint &ap)
+  {
+    auto it = session_ret_probes.find(&ap);
+    if (it == session_ret_probes.end()) {
+      LOG(BUG) << "Requesting return probe for non-session attach-point";
+    }
+    return *it->second;
+  }
+
+private:
+  std::map<AttachPoint *, ExpansionType> expansions;
+  std::map<AttachPoint *, Probe *> session_ret_probes;
+};
+
 class ExpansionAnalyser : public Visitor<ExpansionAnalyser> {
 public:
   ExpansionAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
   {
   }
-  void analyse(Program &program);
+  ExpansionResult analyse(Program &program);
 
   using Visitor<ExpansionAnalyser>::visit;
   void visit(Probe &probe);
@@ -21,14 +60,16 @@ public:
   void visit(Builtin &builtin);
 
 private:
+  ExpansionResult result_;
   Probe *probe_ = nullptr;
 
   BPFtrace &bpftrace_;
 };
 
-void ExpansionAnalyser::analyse(Program &program)
+ExpansionResult ExpansionAnalyser::analyse(Program &program)
 {
   visit(program);
+  return std::move(result_);
 }
 
 void ExpansionAnalyser::visit(Probe &probe)
@@ -113,7 +154,7 @@ void ExpansionAnalyser::visit(AttachPoint &ap)
   }
 
   if (expansion != ExpansionType::NONE)
-    ap.expansion = expansion;
+    result_.set_expansion(ap, expansion);
 }
 
 void ExpansionAnalyser::visit(Builtin &builtin)
@@ -121,15 +162,9 @@ void ExpansionAnalyser::visit(Builtin &builtin)
   if (!probe_)
     return;
 
-  if (builtin.ident == "args") {
-    for (auto *ap : probe_->attach_points) {
-      if (probetype(ap->provider) == ProbeType::tracepoint) {
-        ap->expansion = ExpansionType::FULL;
-      }
-    }
-  } else if (builtin.ident == "probe") {
+  if (builtin.ident == "probe") {
     for (auto *ap : probe_->attach_points)
-      ap->expansion = ExpansionType::FULL;
+      result_.set_expansion(*ap, ExpansionType::FULL);
   }
 }
 
@@ -143,16 +178,20 @@ public:
   using Visitor<SessionAnalyser>::visit;
   void visit(Probe &probe);
 
-  void analyse();
+  ExpansionResult analyse(ExpansionResult result);
 
 private:
+  ExpansionResult result_;
+
   const ASTContext &ast_;
   const BPFtrace &bpftrace_;
 };
 
-void SessionAnalyser::analyse()
+ExpansionResult SessionAnalyser::analyse(ExpansionResult result)
 {
+  result_ = std::move(result);
   visit(*ast_.root);
+  return std::move(result_);
 }
 
 void SessionAnalyser::visit(Probe &probe)
@@ -167,7 +206,7 @@ void SessionAnalyser::visit(Probe &probe)
     // Session probes use the same attach mechanism as multi probes so the
     // attach point must be multi-expanded.
     auto &ap = *probe.attach_points[0];
-    if (ap.expansion != ExpansionType::MULTI)
+    if (result_.get_expansion(ap) != ExpansionType::MULTI)
       return;
 
     for (Probe *other_probe : ast_.root->probes) {
@@ -177,15 +216,15 @@ void SessionAnalyser::visit(Probe &probe)
         continue;
       auto &other_ap = *other_probe->attach_points[0];
       if (probetype(other_ap.provider) != ProbeType::kretprobe ||
-          other_ap.expansion != ExpansionType::MULTI) {
+          result_.get_expansion(other_ap) != ExpansionType::MULTI) {
         continue;
       }
 
       if (ap.target == other_ap.target && ap.func == other_ap.func) {
         if (bpftrace_.feature_->has_kprobe_session()) {
-          ap.expansion = ExpansionType::SESSION;
-          ap.ret_probe = other_probe;
-          other_ap.expansion = ExpansionType::SESSION;
+          result_.set_expansion(ap, ExpansionType::SESSION);
+          result_.set_expansion(other_ap, ExpansionType::SESSION);
+          result_.set_session_ret_probe(ap, *other_probe);
         } else {
           return;
         }
@@ -194,13 +233,99 @@ void SessionAnalyser::visit(Probe &probe)
   }
 }
 
+class ProbeExpander : public Visitor<ProbeExpander> {
+public:
+  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace)
+      : ast_(ast), bpftrace_(bpftrace)
+  {
+  }
+
+  void expand(ExpansionResult result);
+
+  using Visitor<ProbeExpander>::visit;
+  void visit(Program &prog);
+  void visit(AttachPointList &aps);
+
+private:
+  ExpansionResult result_;
+  uint64_t probe_count_ = 0;
+
+  ASTContext &ast_;
+  BPFtrace &bpftrace_;
+};
+
+void ProbeExpander::expand(ExpansionResult result)
+{
+  result_ = std::move(result);
+  visit(*ast_.root);
+}
+
+void ProbeExpander::visit(Program &prog)
+{
+  Visitor<ProbeExpander>::visit(prog);
+
+  clear_empty_probes(prog.probes);
+}
+
+void ProbeExpander::visit(AttachPointList &aps)
+{
+  const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
+
+  AttachPointList new_aps;
+  for (auto *ap : aps) {
+    auto expansion = result_.get_expansion(*ap);
+    switch (expansion) {
+      case ExpansionType::FULL: {
+        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+
+        probe_count_ += matches.size();
+        if (probe_count_ > max_bpf_progs) {
+          auto &err = ap->addError();
+          err << "Your program is trying to generate more than "
+              << std::to_string(probe_count_)
+              << " BPF programs, which exceeds the current limit of "
+              << std::to_string(max_bpf_progs);
+          err.addHint() << "You can increase the limit through the "
+                           "BPFTRACE_MAX_BPF_PROGS "
+                           "environment variable.";
+          return;
+        }
+
+        for (const auto &match : matches) {
+          new_aps.push_back(ap->create_expansion_copy(ast_, match));
+        }
+        break;
+      }
+
+      case ExpansionType::SESSION: {
+        if (probetype(ap->provider) == ProbeType::kprobe) {
+          ap->ret_probe = &result_.get_session_ret_probe(*ap);
+        }
+        [[fallthrough]];
+      }
+      case ExpansionType::MULTI:
+      case ExpansionType::NONE: {
+        ap->expansion = expansion;
+        new_aps.push_back(ap);
+        break;
+      }
+    }
+  }
+
+  aps = new_aps;
+}
+
 Pass CreateProbeExpansionPass()
 {
   auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
     ExpansionAnalyser analyser(bpftrace);
-    analyser.analyse(*ast.root);
+    auto result = analyser.analyse(*ast.root);
+
     SessionAnalyser sessions(ast, bpftrace);
-    sessions.analyse();
+    result = sessions.analyse(std::move(result));
+
+    ProbeExpander expander(ast, bpftrace);
+    expander.expand(std::move(result));
   };
 
   return Pass::create("ProbeExpansion", fn);

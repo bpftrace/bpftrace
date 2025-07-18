@@ -27,7 +27,6 @@
 #include "bpftrace.h"
 #include "disasm.h"
 #include "log.h"
-#include "probe_matcher.h"
 #include "usdt.h"
 #include "util/bpf_names.h"
 #include "util/cpus.h"

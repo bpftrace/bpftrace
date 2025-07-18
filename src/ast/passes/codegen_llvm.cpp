@@ -295,7 +295,6 @@ private:
   // This is used to progress state (eg. asyncids) in this class instance for
   // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
-                     const std::string &full_func_id,
                      const std::string &name,
                      FunctionType *func_type,
                      std::optional<int> usdt_location_index = std::nullopt,
@@ -446,7 +445,6 @@ private:
   llvm::DILocalScope *scope_ = nullptr;
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
-  std::string tracepoint_struct_;
   uint64_t probe_count_ = 0;
   // Probes and attach points are indexed from 1, 0 means no index
   // (no index is used for probes whose attach points are indexed individually)
@@ -2619,7 +2617,9 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     }
   }
 
-  std::string cast_type = is_tparg ? tracepoint_struct_ : type.GetName();
+  std::string cast_type = is_tparg ? TracepointFormatParser::get_struct_name(
+                                         *current_attach_point_)
+                                   : type.GetName();
 
   // This overwrites the stored type!
   type = CreateRecord(cast_type, bpftrace_.structs.Lookup(cast_type));
@@ -3357,18 +3357,12 @@ ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
 }
 
 void CodegenLLVM::generateProbe(Probe &probe,
-                                const std::string &full_func_id,
                                 const std::string &name,
                                 FunctionType *func_type,
                                 std::optional<int> usdt_location_index,
                                 bool dummy)
 {
-  // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
-  // by args builtin.
   auto probe_type = probetype(current_attach_point_->provider);
-  if (probe_type == ProbeType::tracepoint)
-    tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
-
   int index = current_attach_point_->index() ?: probe.index();
   auto func_name = util::get_function_name_for_probe(name,
                                                      index,
@@ -3477,12 +3471,12 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
       reset_ids();
 
       std::string full_func_id = name + "_loc" + std::to_string(i);
-      generateProbe(probe, full_func_id, probefull_, func_type, i);
+      generateProbe(probe, probefull_, func_type, i);
       bpftrace_.add_probe(ast_, ap, probe, i);
       current_usdt_location_index_++;
     }
   } else {
-    generateProbe(probe, name, probefull_, func_type);
+    generateProbe(probe, probefull_, func_type);
     bpftrace_.add_probe(ast_, ap, probe);
   }
   current_attach_point_ = nullptr;
@@ -3602,12 +3596,6 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
                                               { b_.getPtrTy() }, // ctx
                                               false);
 
-  // Skip if we've generated too many, an error will have already been
-  // generated below when we first crossed this threshold.
-  const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
-  if (probe_count_ > max_bpf_progs)
-    return ScopedExpr();
-
   // We begin by saving state that gets changed by the codegen pass, so we
   // can restore it for the next pass (printf_id_, time_id_).
   auto reset_ids = async_ids_.create_reset_ids();
@@ -3615,42 +3603,15 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
   for (auto *attach_point : probe.attach_points) {
     reset_ids();
     current_attach_point_ = attach_point;
-    if (attach_point->expansion == ExpansionType::FULL) {
-      // Do expansion - generate a separate LLVM function for each match
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
-          *attach_point);
 
-      probe_count_ += matches.size();
-      if (probe_count_ > max_bpf_progs) {
-        auto &err = probe.addError();
-        err << "Your program is trying to generate more than "
-            << std::to_string(probe_count_)
-            << " BPF programs, which exceeds the current limit of "
-            << std::to_string(max_bpf_progs);
-        err.addHint()
-            << "You can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
-               "environment variable.";
-        return ScopedExpr();
-      }
+    if (attach_point->index() == 0)
+      attach_point->set_index(getNextIndexForProbe());
 
-      for (const auto &match : matches) {
-        reset_ids();
-        if (attach_point->index() == 0)
-          attach_point->set_index(getNextIndexForProbe());
-
-        auto &match_ap = attach_point->create_expansion_copy(ast_, match);
-        add_probe(match_ap, probe, match, func_type);
-        generated = true;
-      }
-    } else {
-      if (probe.index() == 0)
-        probe.set_index(getNextIndexForProbe());
-      add_probe(*attach_point, probe, attach_point->name(), func_type);
-      generated = true;
-    }
+    add_probe(*attach_point, probe, attach_point->name(), func_type);
+    generated = true;
   }
   if (!generated) {
-    generateProbe(probe, "dummy", "dummy", func_type, std::nullopt, true);
+    generateProbe(probe, "dummy", func_type, std::nullopt, true);
   }
 
   current_attach_point_ = nullptr;

@@ -19,7 +19,6 @@
 #include "config.h"
 #include "log.h"
 #include "printf.h"
-#include "probe_matcher.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
@@ -806,25 +805,14 @@ void SemanticAnalyser::visit(Identifier &identifier)
 void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
                                                Builtin &builtin)
 {
-  // tracepoint wildcard expansion, part 2 of 3. This:
-  // 1. expands the wildcard, then sets args to be the first matched probe.
-  //    This is so that enough of the type information is available to
-  //    survive the later semantic analyser checks.
-  // 2. sets is_tparg so that codegen does the real type setting after
-  //    expansion.
-  auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
-  if (!matches.empty()) {
-    const auto &match = *matches.begin();
-    std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-        match);
-    builtin.builtin_type = CreateRecord(
-        tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
-    builtin.builtin_type.SetAS(attach_point->target == "syscalls"
-                                   ? AddrSpace::user
-                                   : AddrSpace::kernel);
-    builtin.builtin_type.MarkCtxAccess();
-    builtin.builtin_type.is_tparg = true;
-  }
+  std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+      *attach_point);
+  builtin.builtin_type = CreateRecord(
+      tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
+  builtin.builtin_type.SetAS(
+      attach_point->target == "syscalls" ? AddrSpace::user : AddrSpace::kernel);
+  builtin.builtin_type.MarkCtxAccess();
+  builtin.builtin_type.is_tparg = true;
 }
 
 ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
@@ -1069,17 +1057,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       return;
     size_t str_size = 0;
     for (AttachPoint *attach_point : probe->attach_points) {
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
-          *attach_point);
-      for (const auto &match : matches) {
-        // No need to preserve this node, as we are just expanding to see the
-        // size of the name. This could be refactored into a separate pass.
-        ASTContext dummyctx;
-        str_size = std::max(str_size,
-                            attach_point->create_expansion_copy(dummyctx, match)
-                                .name()
-                                .length());
-      }
+      str_size = std::max(str_size, attach_point->name().length());
     }
     builtin.builtin_type = CreateString(str_size + 1);
   } else if (builtin.ident == "username") {
@@ -2980,14 +2958,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         continue;
       }
 
-      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
+      std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
           *attach_point);
-      for (const auto &match : matches) {
-        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-            match);
-        structs[tracepoint_struct] =
-            bpftrace_.structs.Lookup(tracepoint_struct).lock();
-      }
+      structs[tracepoint_struct] =
+          bpftrace_.structs.Lookup(tracepoint_struct).lock();
     }
   } else {
     structs[type.GetName()] = type.GetStruct();
@@ -3849,13 +3823,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (!listing_) {
-      if (util::has_wildcard(ap.func)) {
-        ap.addError() << "iter probe type does not support wildcards";
-      } else if (!bpftrace_.btf_->get_all_iters().contains(ap.func)) {
-        ap.addError() << "iter " << ap.func
-                      << " not available for your kernel version.";
-      }
+    if (!listing_ && !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
+      ap.addError() << "iter " << ap.func
+                    << " not available for your kernel version.";
     }
 
     if (ap.func.empty())

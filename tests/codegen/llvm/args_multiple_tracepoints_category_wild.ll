@@ -43,7 +43,7 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_sched_two_1(ptr %0) #0 section "s_tracepoint_sched_sched_two_1" !dbg !56 {
+define i64 @tracepoint_sched_sched_two_2(ptr %0) #0 section "s_tracepoint_sched_sched_two_2" !dbg !56 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -61,7 +61,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define i64 @tracepoint_sched_extra_sched_extra_1(ptr %0) #0 section "s_tracepoint_sched_extra_sched_extra_1" !dbg !59 {
+define i64 @tracepoint_sched_extra_sched_extra_3(ptr %0) #0 section "s_tracepoint_sched_extra_sched_extra_3" !dbg !59 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -141,9 +141,9 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !54 = !{!55}
 !55 = !DILocalVariable(name: "ctx", arg: 1, scope: !50, file: !2, type: !53)
-!56 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_1", linkageName: "tracepoint_sched_sched_two_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !57)
+!56 = distinct !DISubprogram(name: "tracepoint_sched_sched_two_2", linkageName: "tracepoint_sched_sched_two_2", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !57)
 !57 = !{!58}
 !58 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !53)
-!59 = distinct !DISubprogram(name: "tracepoint_sched_extra_sched_extra_1", linkageName: "tracepoint_sched_extra_sched_extra_1", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !60)
+!59 = distinct !DISubprogram(name: "tracepoint_sched_extra_sched_extra_3", linkageName: "tracepoint_sched_extra_sched_extra_3", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !60)
 !60 = !{!61}
 !61 = !DILocalVariable(name: "ctx", arg: 1, scope: !59, file: !2, type: !53)

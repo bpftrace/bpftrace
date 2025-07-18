@@ -1180,7 +1180,7 @@ public:
 
   std::string name() const;
 
-  AttachPoint &create_expansion_copy(ASTContext &ctx,
+  AttachPoint *create_expansion_copy(ASTContext &ctx,
                                      const std::string &match) const;
 
   int index() const;
@@ -1238,6 +1238,8 @@ private:
   int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
+
+void clear_empty_probes(ProbeList &probes);
 
 class SubprogArg : public Node {
 public:

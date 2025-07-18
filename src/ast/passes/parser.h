@@ -34,8 +34,8 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
-  passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
+  passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
