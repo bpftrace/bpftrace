@@ -12,6 +12,6 @@ Warning: please make sure that you have implemented and tested your
 
 ##### Checklist
 
-- [ ] Language changes are updated in `man/adoc/bpftrace.adoc`
+- [ ] Language changes are updated in `docs/language.md`, `docs/stdlib.md`, or `man/adoc/bpftrace.adoc`
 - [ ] User-visible and non-trivial changes updated in `CHANGELOG.md`
 - [ ] The new behaviour is covered by tests

@@ -1,4 +1,5 @@
 # bpftrace Reference Guide
 
-All details about the bpftrace language, usage, and examples have been moved
-to the [manual](../man/adoc/bpftrace.adoc).
+- [The bpftrace Language](language.md)
+- [Standard Library](stdlib.md)
+- [CLI Manual](../man/adoc/bpftrace.adoc)

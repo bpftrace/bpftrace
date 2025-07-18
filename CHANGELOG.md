@@ -98,6 +98,8 @@ and this project adheres to
   - [#4315](https://github.com/bpftrace/bpftrace/pull/4315)
 - Automatically exit if only BEGIN/END probes are specified
   - [#4358](https://github.com/bpftrace/bpftrace/pull/4358)
+- Moved docs for builtins, functions, and map functions into stdlib.md and moved language docs into language.md
+  - [#4367](https://github.com/bpftrace/bpftrace/pull/4367)
 #### Deprecated
 #### Removed
 #### Fixed
