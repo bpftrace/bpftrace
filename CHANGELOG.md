@@ -71,6 +71,8 @@ and this project adheres to
   - [#3838](https://github.com/bpftrace/bpftrace/pull/3838)
 - Add ability to attach to running BPF programs and sub-programs via `fentry:bpf:prog_name` or `fentry:bpf:prog_id:prog_name`
   - [#4354](https://github.com/bpftrace/bpftrace/pull/4354)
+- Add `BENCH` for creating microbenchmarks
+  - [#4343](https://github.com/bpftrace/bpftrace/pull/4343)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)

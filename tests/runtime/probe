@@ -514,6 +514,32 @@ EXPECT Hello
        Hello
 TIMEOUT 2
 
+NAME BENCH
+RUN {{BPFTRACE}} --test-mode bench -e 'BEGIN { print("begin\n"); } BENCH:a { @ = count(); } END { print(@); clear(@); }'
+EXPECT_REGEX begin\n
+             @: 1000000\n\n
+             \+-----------\+--------------\+
+             \| BENCHMARK \| AVERAGE TIME \|
+             \+-----------\+--------------\+
+             \| a         \| \d+ns[ ]+\|
+             \+-----------\+--------------\+
+TIMEOUT 2
+
+NAME BENCH multiple
+RUN {{BPFTRACE}} --test-mode bench -e 'BEGIN { printf("begin\n"); } BENCH:a { @a++; } BENCH:b { if (@b == 0) { print(@a); } @b++; } BENCH:c { if(@c == 0) { print(@b);  } @c++; } END { print(@c); clear(@a); clear(@b); clear(@c); }'
+EXPECT_REGEX begin
+             @a: 1000000
+             @b: 1000000
+             @c: 1000000\n\n
+             \+-----------\+--------------\+
+             \| BENCHMARK \| AVERAGE TIME \|
+             \+-----------\+--------------\+
+             \| a         \| \d+ns[ ]+\|
+             \| b         \| \d+ns[ ]+\|
+             \| c         \| \d+ns[ ]+\|
+             \+-----------\+--------------\+
+TIMEOUT 5
+
 # The "probe" builtin forces bpftrace to generate one BPF function for each
 # match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS. The error is
 # attached to the probe that went over the limit, which in this case is the

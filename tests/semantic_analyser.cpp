@@ -2311,6 +2311,16 @@ TEST_F(SemanticAnalyserTest, begin_end_probes)
   test("END { 1 } END { 2 }", Error{});
 }
 
+TEST_F(SemanticAnalyserTest, bench_probes)
+{
+  test("BENCH:a { 1 } BENCH:b { 2 }");
+  test("BENCH: { 1 }", Error{ R"(
+stdin:1:1-7: ERROR: BENCH probes must have a name
+BENCH: { 1 }
+~~~~~~
+)" });
+}
+
 TEST_F(SemanticAnalyserTest, self_probe)
 {
   test("self:signal:SIGUSR1 { 1 }");

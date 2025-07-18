@@ -1200,6 +1200,11 @@ Most providers also support a short name which can be used instead of the full n
 | -
 | Built-in events
 
+| <<probes-bench, `BENCH`>>
+| -
+| Micro benchmarks
+| Kernel/User
+
 | <<probes-self, `self`>>
 | -
 | Built-in events
@@ -1268,6 +1273,47 @@ END {
     clear(@map1);
     clear(@map2);
 }
+----
+
+[#probes-bench]
+=== BENCH
+
+`BENCH` is a special built-in probe type for creating micro benchmarks.
+bpftrace executes each `BENCH` probe repeatedly to measure the average
+execution time of the contained code. If multiple `BENCH` probes exist
+in a script, bpftrace executes them sequentially in the order they are
+specified. To run `BENCH` probes, you must run bpftrace in bench mode:
+`bpftrace --test-mode bench ...`; otherwise, `BENCH` probes will be
+ignored.
+
+----
+BENCH:lhist {
+    @a = lhist(rand % 10, 1, 10, 1);
+}
+
+BENCH:count {
+    @b = count();
+}
+
+BENCH:my_loop {
+    $a = 0;
+    for ($i : 0..10) {
+        $a++;
+    }
+}
+----
+
+----
+Attached 3 probes
+
+
++-----------+-------------+
+| BENCHMARK | NANOSECONDS |
++-----------+-------------+
+| count     | 40          |
+| lhist     | 88          |
+| my_loop   | 124         |
++-----------+-------------+
 ----
 
 [#probes-self]

@@ -268,6 +268,16 @@ void check_special_probe(Probe &p, const std::string &orig_name)
   EXPECT_EQ(orig_name, p.name);
 }
 
+void check_benchmark_probe(Probe &p,
+                           const std::string &orig_name,
+                           const std::string &bench_name)
+{
+  EXPECT_EQ(ProbeType::benchmark, p.type);
+  EXPECT_EQ(orig_name, p.orig_name);
+  EXPECT_EQ(orig_name, p.name);
+  EXPECT_EQ(bench_name, p.path);
+}
+
 TEST(bpftrace, add_begin_probe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
@@ -288,6 +298,20 @@ TEST(bpftrace, add_end_probe)
   ASSERT_EQ(1U, bpftrace->get_special_probes().size());
 
   check_special_probe(bpftrace->get_special_probes()["END"], "END");
+}
+
+TEST(bpftrace, add_bench_probes)
+{
+  auto bpftrace = get_strict_mock_bpftrace();
+  parse_probe("BENCH:a{} BENCH:b{} BENCH:c{}", *bpftrace);
+
+  ASSERT_EQ(0U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  ASSERT_EQ(3U, bpftrace->get_benchmark_probes().size());
+
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(0), "BENCH:a", "a");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(1), "BENCH:b", "b");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(2), "BENCH:c", "c");
 }
 
 TEST(bpftrace, add_probes_single)

@@ -75,6 +75,10 @@ public:
   {
     return resources.special_probes;
   }
+  std::vector<Probe> get_benchmark_probes()
+  {
+    return resources.benchmark_probes;
+  }
 
   int resolve_uname(const std::string &name,
                     struct symbol *sym,

@@ -213,6 +213,7 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   for (auto probe : resources.special_probes)
     special_probes.push_back(probe.second);
   prepare_progs(special_probes, btf, feature, config);
+  prepare_progs(resources.benchmark_probes, btf, feature, config);
   prepare_progs(resources.signal_probes, btf, feature, config);
   prepare_progs(resources.probes, btf, feature, config);
   prepare_progs(resources.watchpoint_probes, btf, feature, config);
