@@ -44,7 +44,6 @@
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
-#include "probe_matcher.h"
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
