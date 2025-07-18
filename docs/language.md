@@ -869,7 +869,7 @@ Most providers also support a short name which can be used instead of the full n
 |     |     |     |
 | --- | --- | --- |
 | **Probe Name** | **Short Name** | **Description** |
-| [`BEGIN/END`](#begin/end) | - | Built-in events |
+| [`BEGIN/END`](#beginend) | - | Built-in events |
 | [`BENCH`](#bench) | - | Micro benchmarks |
 | [`self`](#self) | - | Built-in events |
 | [`hardware`](#hardware) | `h` | Processor-level events |
@@ -881,7 +881,7 @@ Most providers also support a short name which can be used instead of the full n
 | [`rawtracepoint`](#rawtracepoint) | `rt` | Kernel static tracepoints with raw arguments |
 | [`software`](#software) | `s` | Kernel software events |
 | [`tracepoint`](#tracepoint) | `t` | Kernel static tracepoints |
-| [`uprobe/uretprobe`](#uprobe,-uretprobe) | `u`/`ur` | User-level function start/return |
+| [`uprobe/uretprobe`](#uprobe-uretprobe) | `u`/`ur` | User-level function start/return |
 | [`usdt`](#usdt) | `U` | User-level static tracepoints |
 | [`watchpoint/asyncwatchpoint`](#watchpoint-and-asyncwatchpoint) | `w`/`aw` | Memory watchpoints |
 
@@ -1117,6 +1117,8 @@ iter:task_file:/sys/fs/bpf/files {
 
 * `fentry[:module]:fn`
 * `fexit[:module]:fn`
+* `fentry:bpf[:prog_id]:prog_name`
+* `fexit:bpf[:prog_id]:prog_name`
 
 **short names**
 
@@ -1138,6 +1140,15 @@ The original names are still supported for backwards compatibility.
 This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.
 The function arguments are available in the `args` struct which can be inspected by doing verbose listing (see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes)).
 These arguments are also available in the return probe (`fexit`), unlike `kretprobe`.
+
+The bpf variants (e.g. `fentry:bpf[:prog_id]:prog_name`) allow attaching to running BPF programs and sub-programs.
+For example, if bpftrace was already running with a script like `uprobe:./testprogs/uprobe_test:uprobeFunction1 { print("hello"); }` then you could attach to this program with `fexit:bpf:uprobe___testprogs_uprobe_test_uprobeFunction1_1 { print("bye"); }` and this probe would execute after (because it's `fexit`) the `print("hello")` probe executes.
+You can specify just the program name, and in this case bpftrace will attach to all running programs and sub-programs with that name.
+You can differentiate between them using the `probe` builtin.
+You can also specify the program id (e.g. `fentry:bpf:123:*`) to attach to a specific running BPF program or sub-programs called in that running BPF program.
+To see a list of running, valid BPF programs and sub-programs use `bpftrace -l 'fentry:bpf:*'`.
+Note: only BPF programs with a BTF Id can be attached to.
+Also, the `args` builtin is not yet available for this variant.
 
 ```
 # bpftrace -lv 'fentry:tcp_reset'
@@ -1235,7 +1246,7 @@ kprobe:kvm:x86_emulate_insn
 }
 ```
 
-See [BTF Support](../man/adoc/bpftrace.adoc##btf-support) for more details.
+See [BTF Support](#btf-support) for more details.
 
 `kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function.
 
@@ -1427,7 +1438,7 @@ uprobe:/bin/bash:rl_set_prompt
     const char* prompt
 ```
 
-When tracing C{plus}{plus} programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
+When tracing C++ programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 
 ```
 # bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { ... }
@@ -1857,7 +1868,7 @@ BEGIN { @=*uptr(kaddr("do_poweroff")) }
 ```
 
 bpftrace tries to automatically set the correct address space for a pointer based on the probe type, but might fail in cases where it is unclear.
-The address space can be changed with the [kptrs](stdlib.md#kptr) and [uptr](stdlib.md#functios-uptr) functions.
+The address space can be changed with the [kptrs](stdlib.md#kptr) and [uptr](stdlib.md#uptr) functions.
 
 ### BPF License
 
