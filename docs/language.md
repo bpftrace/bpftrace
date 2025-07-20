@@ -1,7 +1,7 @@
 # The bpftrace Language
 
 The `bpftrace` (`bt`) language is inspired by the D language used by `dtrace` and uses the same program structure.
-Each script consists of a [Preamble](#preamble) and one or more [Action Blocks](#action-block).
+Each script consists of a [Preamble](#preamble) and one or more [Action Blocks](#action-blocks).
 
 ```
 preamble
@@ -9,31 +9,6 @@ preamble
 actionblock1
 actionblock2
 ```
-
-- [Action Blocks](#action-blocks)
-- [Arrays](#arrays)
-- [Command Line Parameters](#command-line-parameters)
-- [Comments](#comments)
-- [Conditionals](#conditionals)
-- [Config Block](#config-block)
-- [Config Variables](#config-variables)
-- [Data Types](#data-types)
-- [Filters/Predicates](#filterspedicates)
-- [Floating-point](#floating-point)
-- [Identifiers](#identifiers)
-- [Literals](#literals)
-- [Loops](#loops)
-- [Macros](#macros)
-- [Maps](#variables-and-maps)
-- [Operators and Expressions](#operators-and-expressions)
-- [Preamble](#preamble)
-- [Probes](#probes)
-- [Pointers](#pointers)
-- [Structs](#structs)
-- [Tuples](#tuples)
-- [Type conversion](#type-conversion)
-- [Variables](#variables-and-maps)
-- [**Advanced Topics**](#advanced-topics)
 
 ## Action Blocks
 
