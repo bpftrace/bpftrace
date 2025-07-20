@@ -1,10 +1,5 @@
 # bpftrace Standard Library
 
-- [Builtins](#builtins)
-- [Functions](#functions)
-- [Map Functions](#map-functions)
-- [Invocation Mode](#invocation-mode)
-
 ## Builtins
 
 Builtins are special variables built into the language.
