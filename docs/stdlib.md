@@ -1283,15 +1283,15 @@ interval:s:10 {
 
 Count how often this function is called.
 
-Using `@=count()` is conceptually similar to `@{plus}{plus}`.
+Using `@=count()` is conceptually similar to `@++`.
 The difference is that the `count()` function uses a map type optimized for
 performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
 
-Note: This differs from "raw" writes (e.g. `@{plus}{plus}`) where multiple writers to a
+Note: This differs from "raw" writes (e.g. `@++`) where multiple writers to a
 shared location might lose updates, as bpftrace does not generate any atomic instructions
-for `{plus}{plus}`.
+for `++`.
 
 Example one:
 ```
