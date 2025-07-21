@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "probe_types.h"
+#include "util/strings.h"
 
 namespace bpftrace {
 
@@ -15,12 +16,13 @@ std::ostream &operator<<(std::ostream &os, ProbeType type)
 ProbeType probetype(const std::string &probeName)
 {
   ProbeType retType = ProbeType::invalid;
+  const std::string lowerProbeName = util::to_lower(probeName);
 
   auto v = std::ranges::find_if(PROBE_LIST,
 
-                                [&probeName](const ProbeItem &p) {
-                                  return (p.name == probeName ||
-                                          p.aliases.contains(probeName));
+                                [&lowerProbeName](const ProbeItem &p) {
+                                  return (p.name == lowerProbeName ||
+                                          p.aliases.contains(lowerProbeName));
                                 });
 
   if (v != PROBE_LIST.end())
@@ -31,7 +33,7 @@ ProbeType probetype(const std::string &probeName)
 
 std::string expand_probe_name(const std::string &orig_name)
 {
-  std::string expanded_name = orig_name;
+  std::string expanded_name = util::to_lower(orig_name);
 
   auto v = std::ranges::find_if(PROBE_LIST,
 

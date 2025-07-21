@@ -105,6 +105,8 @@ and this project adheres to
   - [#4358](https://github.com/bpftrace/bpftrace/pull/4358)
 - Moved docs for builtins, functions, and map functions into stdlib.md and moved language docs into language.md
   - [#4367](https://github.com/bpftrace/bpftrace/pull/4367)
+- Make probe provider names case insensitive
+  - [#4371](https://github.com/bpftrace/bpftrace/pull/4371)
 #### Deprecated
 #### Removed
 #### Fixed
