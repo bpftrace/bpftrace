@@ -79,6 +79,13 @@ TEST(probe, short_name)
   compare_bytecode("interval:s:1 { 1 }", "i:s:1 { 1 }");
 }
 
+TEST(probe, case_insensitive)
+{
+  compare_bytecode("tracepoint:a:b { args }", "tRacePoint:a:b { args }");
+  compare_bytecode("kprobe:f { pid }", "KPROBE:f { pid }");
+  compare_bytecode("BEGIN { pid }", "begin { pid }");
+}
+
 class probe_btf : public test_btf {};
 
 TEST_F(probe_btf, short_name)
