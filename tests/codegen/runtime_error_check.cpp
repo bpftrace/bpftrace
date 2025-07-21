@@ -73,7 +73,7 @@ TEST(codegen, runtime_error_check_for_map)
   bpftrace->helper_check_level_ = 1;
 
   test(*bpftrace,
-       "BEGIN { @map[16] = 32; for ($kv : @map) { @x = $kv; } }",
+       "begin { @map[16] = 32; for ($kv : @map) { @x = $kv; } }",
        NAME);
 }
 

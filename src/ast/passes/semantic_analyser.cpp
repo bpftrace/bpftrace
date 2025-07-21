@@ -2824,13 +2824,13 @@ void SemanticAnalyser::visit(For &f)
   // Only do this on the first pass because variables declared later
   // in a script will get added to the outer scope, which these do not
   // reference e.g.
-  // BEGIN { @a[1] = 1; for ($kv : @a) { $x = 2; } let $x; }
+  // begin { @a[1] = 1; for ($kv : @a) { $x = 2; } let $x; }
   if (is_first_pass()) {
     for (auto &stmt : f.stmts) {
       // We save these for potential use at the end of this function in
       // subsequent passes in case the map we're iterating over isn't ready
       // yet and still needs additional passes to resolve its key/value types
-      // e.g. BEGIN { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
+      // e.g. begin { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
       //
       // This is especially tricky because we need to visit all statements
       // inside the for loop to get the types of the referenced variables but
@@ -3153,7 +3153,7 @@ void SemanticAnalyser::visit(Cast &cast)
   if (cast.expr.type().IsCtxAccess() && !cast.cast_type.IsIntTy())
     cast.cast_type.MarkCtxAccess();
   cast.cast_type.SetAS(cast.expr.type().GetAS());
-  // case : BEGIN { @foo = (struct Foo)0; }
+  // case : begin { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (cast.cast_type.GetAS() == AddrSpace::none) {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -3498,7 +3498,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
   }
 
   // Only checking on the first pass for cases like this:
-  // `BEGIN { if (1) { let $x; } else { let $x; } let $x; }`
+  // `begin { if (1) { let $x; } else { let $x; } let $x; }`
   // Notice how the last `let $x` is defined in the outer scope;
   // this means on subsequent passes the first two `let $x` statements
   // would be considered variable shadowing, when in fact, because of order,
@@ -3523,7 +3523,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
     if (auto *scope = find_variable_scope(var_ident)) {
       auto &foundVar = variables_[scope][var_ident];
       // Checking the first pass only for cases like this:
-      // `BEGIN { if (1) { let $x; } $x = 2; }`
+      // `begin { if (1) { let $x; } $x = 2; }`
       // Again, this is legal and there is no ambiguity but `$x = 2` gets
       // placed in the outer scope so subsequent passes would consider
       // this a use before declaration error (below)
@@ -3791,18 +3791,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       ap.addError() << "hardware probe can only have an integer count";
     else if (ap.freq < 0)
       ap.addError() << "hardware frequency should be a positive integer";
-  } else if (ap.provider == "BEGIN" || ap.provider == "END") {
+  } else if (ap.provider == "begin" || ap.provider == "end") {
     if (!ap.target.empty() || !ap.func.empty())
-      ap.addError() << "BEGIN/END probes should not have a target";
+      ap.addError() << "begin/end probes should not have a target";
     if (is_final_pass()) {
-      if (ap.provider == "BEGIN") {
+      if (ap.provider == "begin") {
         if (has_begin_probe_)
-          ap.addError() << "More than one BEGIN probe defined";
+          ap.addError() << "More than one begin probe defined";
         has_begin_probe_ = true;
       }
-      if (ap.provider == "END") {
+      if (ap.provider == "end") {
         if (has_end_probe_)
-          ap.addError() << "More than one END probe defined";
+          ap.addError() << "More than one end probe defined";
         has_end_probe_ = true;
       }
     }
@@ -3813,9 +3813,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       return;
     }
     ap.addError() << ap.target << " is not a supported trigger";
-  } else if (ap.provider == "BENCH") {
+  } else if (ap.provider == "bench") {
     if (ap.target.empty())
-      ap.addError() << "BENCH probes must have a name";
+      ap.addError() << "bench probes must have a name";
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       ap.addError() << "fentry/fexit not available for your kernel version.";

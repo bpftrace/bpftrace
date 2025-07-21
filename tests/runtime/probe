@@ -30,7 +30,7 @@ AFTER ./testprogs/syscall read
 
 # https://github.com/bpftrace/bpftrace/issues/2447
 NAME fentry_multiple_attach_point_multiple_functions
-PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } fentry:vfs_read, fentry:vfs_open /@a != 0/ { @a -= 1 } fentry:vfs_read /@b == 1/ { @b = 0 } fentry:vfs_open /@c == 1/ { @c = 0 }
+PROG begin { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } fentry:vfs_read, fentry:vfs_open /@a != 0/ { @a -= 1 } fentry:vfs_read /@b == 1/ { @b = 0 } fentry:vfs_open /@c == 1/ { @c = 0 }
 EXPECT @a: 0
        @b: 0
        @c: 0
@@ -504,24 +504,24 @@ NAME probe_builtin_scratch_buf
 PROG config = { on_stack_limit = 0 } software:cpu:100000 { print(probe); exit(); }
 EXPECT software:cpu:100000
 
-NAME BEGIN
-PROG BEGIN { printf("Hello\n"); }
+NAME begin
+PROG begin { printf("Hello\n"); }
 EXPECT Hello
 TIMEOUT 2
 
-NAME END_processing_after_exit
-PROG interval:s:1 { exit(); } END { printf("end"); }
+NAME end_processing_after_exit
+PROG interval:s:1 { exit(); } end { printf("end"); }
 EXPECT end
 TIMEOUT 2
 
-NAME BEGIN,END
-PROG BEGIN,END { printf("Hello\n"); exit(); }
+NAME begin,end
+PROG begin,end { printf("Hello\n"); exit(); }
 EXPECT Hello
        Hello
 TIMEOUT 2
 
-NAME BENCH
-RUN {{BPFTRACE}} --test-mode bench -e 'BEGIN { print("begin\n"); } BENCH:a { @ = count(); } END { print(@); clear(@); }'
+NAME bench
+RUN {{BPFTRACE}} --test-mode bench -e 'begin { print("begin\n"); } bench:a { @ = count(); } end { print(@); clear(@); }'
 EXPECT_REGEX begin\n
              @: 1000000\n\n
              \+-----------\+--------------\+
@@ -531,8 +531,8 @@ EXPECT_REGEX begin\n
              \+-----------\+--------------\+
 TIMEOUT 2
 
-NAME BENCH multiple
-RUN {{BPFTRACE}} --test-mode bench -e 'BEGIN { printf("begin\n"); } BENCH:a { @a++; } BENCH:b { if (@b == 0) { print(@a); } @b++; } BENCH:c { if(@c == 0) { print(@b);  } @c++; } END { print(@c); clear(@a); clear(@b); clear(@c); }'
+NAME bench multiple
+RUN {{BPFTRACE}} --test-mode bench -e 'begin { printf("begin\n"); } bench:a { @a++; } bench:b { if (@b == 0) { print(@a); } @b++; } bench:c { if(@c == 0) { print(@b);  } @c++; } end { print(@c); clear(@a); clear(@b); clear(@c); }'
 EXPECT_REGEX begin
              @a: 1000000
              @b: 1000000

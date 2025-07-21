@@ -49,7 +49,7 @@ void test(const std::string &input, int expected_result = 0)
 
 TEST(portability_analyser, generic_field_access_disabled)
 {
-  test("struct Foo { int x;} BEGIN { $f = (struct Foo *)0; $f->x; }", 1);
+  test("struct Foo { int x;} begin { $f = (struct Foo *)0; $f->x; }", 1);
 }
 
 TEST(portability_analyser, tracepoint_field_access)
@@ -79,14 +79,14 @@ TEST(portability_analyser, positional_params_disabled)
   bpftrace->add_param("123");
   bpftrace->add_param("hello");
 
-  test(*bpftrace, "BEGIN { $1 }", 1);
-  test(*bpftrace, "BEGIN { str($2) }", 1);
+  test(*bpftrace, "begin { $1 }", 1);
+  test(*bpftrace, "begin { str($2) }", 1);
 }
 
 TEST(portability_analyser, curtask_disabled)
 {
-  test("BEGIN { curtask }", 1);
-  test("struct task_struct { char comm[16]; } BEGIN { curtask->comm }", 1);
+  test("begin { curtask }", 1);
+  test("struct task_struct { char comm[16]; } begin { curtask->comm }", 1);
 }
 
 TEST(portability_analyser, selective_probes_disabled)

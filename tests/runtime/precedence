@@ -1,15 +1,15 @@
 NAME operator_precedence_1
-PROG BEGIN { print(1 + 2 * 3 ); exit() }
+PROG begin { print(1 + 2 * 3 ); exit() }
 EXPECT 7
 
 NAME operator_precedence_2
-PROG BEGIN { print(1 + 2 * 3 + 1); exit() }
+PROG begin { print(1 + 2 * 3 + 1); exit() }
 EXPECT 8
 
 NAME operator_precedence_3
-PROG BEGIN { print(1 + 2 * 3 + 1 * 10); exit() }
+PROG begin { print(1 + 2 * 3 + 1 * 10); exit() }
 EXPECT 17
 
 NAME operator_precedence_3
-PROG BEGIN { print(1 + 2 / 2 * 3); exit() }
+PROG begin { print(1 + 2 / 2 * 3); exit() }
 EXPECT 4

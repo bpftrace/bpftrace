@@ -269,11 +269,11 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
 
 AttachPointParser::State AttachPointParser::special_parser()
 {
-  // Can only have reached here if provider is `BEGIN` or `END` or `self`
-  assert(ap_->provider == "BEGIN" || ap_->provider == "END" ||
+  // Can only have reached here if provider is `begin` or `end` or `self`
+  assert(ap_->provider == "begin" || ap_->provider == "end" ||
          ap_->provider == "self");
 
-  if (ap_->provider == "BEGIN" || ap_->provider == "END") {
+  if (ap_->provider == "begin" || ap_->provider == "end") {
     if (parts_.size() == 2 && parts_[1] == "*")
       parts_.pop_back();
     if (parts_.size() != 1) {
@@ -292,10 +292,10 @@ AttachPointParser::State AttachPointParser::special_parser()
 
 AttachPointParser::State AttachPointParser::benchmark_parser()
 {
-  // Can only have reached here if provider is `BENCH`
-  assert(ap_->provider == "BENCH");
+  // Can only have reached here if provider is `bench`
+  assert(ap_->provider == "bench");
 
-  if (ap_->provider == "BENCH") {
+  if (ap_->provider == "bench") {
     if (parts_.size() != 2) {
       return argument_count_error(1);
     }

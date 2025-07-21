@@ -109,9 +109,9 @@ void MacroExpander::visit(AssignVarStatement &assignment)
   if (temp_vars_.contains(var)) {
     // Don't change variable names if this is a variable assignment
     // that we created to represent the passed in expression e.g.
-    // macro add_one($x) { $x + 1 } BEGIN { $a = 1; print(add_one($a + 1)); }
+    // macro add_one($x) { $x + 1 } begin { $a = 1; print(add_one($a + 1)); }
     // will become
-    // BEGIN { $a = 1; print({let $$add_one_$a = $a + 1; $$add_one_$a + 1}); }
+    // begin { $a = 1; print({let $$add_one_$a = $a + 1; $$add_one_$a + 1}); }
     return;
   }
 
@@ -306,7 +306,7 @@ std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
         // As per the name these arg variables are not expecting to be mutated
         // because the caller passed in an expression instead of another
         // variable e.g.
-        // macro add1($x) { $x += 1; $x } BEGIN { add1(1 + 1);
+        // macro add1($x) { $x += 1; $x } begin { add1(1 + 1);
         arg_vars_no_mutation_[mvar->ident] = &call;
         temp_vars_.insert(stmt_list.back().as<AssignVarStatement>()->var());
       } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {

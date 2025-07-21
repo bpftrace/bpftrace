@@ -5,7 +5,7 @@ REQUIRES command -v strace
 TIMEOUT 3
 
 NAME sigint quit
-PROG END { printf("%s %d\n", "SUCCESS", 1) }
+PROG end { printf("%s %d\n", "SUCCESS", 1) }
 AFTER pkill -SIGINT bpftrace
 EXPECT SUCCESS 1
 TIMEOUT 2

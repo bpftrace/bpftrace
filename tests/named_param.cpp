@@ -47,22 +47,22 @@ void test_error(const std::string& input, const std::string& error)
 
 TEST(named_param, basic_checks)
 {
-  test("BEGIN { $a = getopt(\"hello\"); }", "map: hello");
-  test("BEGIN { $a = getopt(\"hello\", 1); }", "map: hello");
-  test("BEGIN { $a = getopt(\"hello\", true); }", "map: hello");
-  test("BEGIN { $a = getopt(\"hello\", false); }", "map: hello");
-  test(R"(BEGIN { $a = getopt("hello", "bye"); })", "map: hello");
+  test("begin { $a = getopt(\"hello\"); }", "map: hello");
+  test("begin { $a = getopt(\"hello\", 1); }", "map: hello");
+  test("begin { $a = getopt(\"hello\", true); }", "map: hello");
+  test("begin { $a = getopt(\"hello\", false); }", "map: hello");
+  test(R"(begin { $a = getopt("hello", "bye"); })", "map: hello");
 
-  test_error("BEGIN { $a = getopt(10); }",
+  test_error("begin { $a = getopt(10); }",
              "First argument to 'getopt' must be a string literal");
-  test_error("BEGIN { $a = getopt(\"hello\", $a); }",
+  test_error("begin { $a = getopt(\"hello\", $a); }",
              "Second argument to 'getopt' must be a string literal, integer "
              "literal, or a boolean literal.");
-  test_error("BEGIN { $a = getopt(\"hello\", banana); }",
+  test_error("begin { $a = getopt(\"hello\", banana); }",
              "Second argument to 'getopt' must be a string literal, integer "
              "literal, or a boolean literal.");
   test_error(
-      R"(BEGIN { $a = getopt("hello", 1); $b = getopt("hello", "bye"); })",
+      R"(begin { $a = getopt("hello", 1); $b = getopt("hello", "bye"); })",
       "Command line option 'hello' needs to have the same default value in all "
       "places it is used. Previous default value: 1");
 }
