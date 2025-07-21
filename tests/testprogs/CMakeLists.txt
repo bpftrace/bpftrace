@@ -29,9 +29,7 @@ foreach(testprog_source ${testprog_sources})
       LINK_SEARCH_END_STATIC FALSE
       COMPILE_FLAGS "${testprog_cflags}"
       LINK_FLAGS "-no-pie")
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${testprog_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
+  target_include_directories(${testprog_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include)
   list(APPEND testprogtargets ${testprog_name})
 endforeach()
 
