@@ -15,27 +15,27 @@ EXPECT_REGEX ^\s+[0-9a-f]+$
 AFTER ./testprogs/uprobe_test
 
 NAME bad config
-RUN {{BPFTRACE}} -e 'config = { bad_config=raw } BEGIN {}'
+RUN {{BPFTRACE}} -e 'config = { bad_config=raw } begin {}'
 EXPECT stdin:1:12-26: ERROR: bad_config: not a known configuration option
 WILL_FAIL
 
 NAME env only config
-RUN {{BPFTRACE}} -e 'config = { debug_output=1 } BEGIN {}'
+RUN {{BPFTRACE}} -e 'config = { debug_output=1 } begin {}'
 EXPECT stdin:1:12-26: ERROR: debug_output: can only be set as an environment variable
 WILL_FAIL
 
 NAME maps are printed by default
-PROG BEGIN { @["test"] = count();  }
+PROG begin { @["test"] = count();  }
 EXPECT @[test]: 1
 
 NAME maps can be disabled
-PROG config = { print_maps_on_exit=0 } BEGIN { @["test"] = count();  }
+PROG config = { print_maps_on_exit=0 } begin { @["test"] = count();  }
 EXPECT_NONE @[test]: 1
 
 NAME scalar maps are printed by default
-PROG BEGIN { @test = 1;  }
+PROG begin { @test = 1;  }
 EXPECT @test: 1
 
 NAME scalar maps can be disabled
-PROG config = { print_maps_on_exit=0 } BEGIN { @test = 1;  }
+PROG config = { print_maps_on_exit=0 } begin { @test = 1;  }
 EXPECT_NONE @test: 1

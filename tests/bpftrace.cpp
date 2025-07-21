@@ -285,37 +285,37 @@ void check_benchmark_probe(Probe &p,
 TEST(bpftrace, add_begin_probe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("BEGIN{}", *bpftrace);
+  parse_probe("begin{}", *bpftrace);
 
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(1U, bpftrace->get_special_probes().size());
 
-  check_special_probe(bpftrace->get_special_probes()["BEGIN"], "BEGIN");
+  check_special_probe(bpftrace->get_special_probes()["begin"], "begin");
 }
 
 TEST(bpftrace, add_end_probe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("END{}", *bpftrace);
+  parse_probe("end{}", *bpftrace);
 
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(1U, bpftrace->get_special_probes().size());
 
-  check_special_probe(bpftrace->get_special_probes()["END"], "END");
+  check_special_probe(bpftrace->get_special_probes()["end"], "end");
 }
 
 TEST(bpftrace, add_bench_probes)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("BENCH:a{} BENCH:b{} BENCH:c{}", *bpftrace);
+  parse_probe("bench:a{} bench:b{} bench:c{}", *bpftrace);
 
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
   ASSERT_EQ(3U, bpftrace->get_benchmark_probes().size());
 
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(0), "BENCH:a", "a");
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(1), "BENCH:b", "b");
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(2), "BENCH:c", "c");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(0), "bench:a", "a");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(1), "bench:b", "b");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(2), "bench:c", "c");
 }
 
 TEST(bpftrace, add_probes_single)

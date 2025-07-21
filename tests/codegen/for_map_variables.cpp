@@ -5,7 +5,7 @@ namespace bpftrace::test::codegen {
 TEST(codegen, for_map_variables)
 {
   test(R"(
-    BEGIN
+    begin
     {
       @map[16] = 32;
       $var1 = 123;
@@ -23,7 +23,7 @@ TEST(codegen, for_map_variables)
 TEST(codegen, for_map_variables_multiple_loops)
 {
   test(R"(
-    BEGIN
+    begin
     {
       @[0] = 0;
 

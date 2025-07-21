@@ -1,4 +1,4 @@
-BEGIN
+begin
 {
     printf("hello world!\n");
     exit();

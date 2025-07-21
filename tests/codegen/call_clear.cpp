@@ -4,7 +4,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, call_clear)
 {
-  test("BEGIN { @x = 1; } kprobe:f { clear(@x); }",
+  test("begin { @x = 1; } kprobe:f { clear(@x); }",
 
        NAME);
 }

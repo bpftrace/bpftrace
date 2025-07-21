@@ -81,7 +81,8 @@ TEST(probe, short_name)
 
 TEST(probe, case_insensitive)
 {
-  compare_bytecode("tracepoint:a:b { args }", "tRacePoint:a:b { args }");
+  compare_bytecode("tracepoint:sched:sched_one { args }",
+                   "traCepoInt:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "KPROBE:f { pid }");
   compare_bytecode("BEGIN { pid }", "begin { pid }");
 }

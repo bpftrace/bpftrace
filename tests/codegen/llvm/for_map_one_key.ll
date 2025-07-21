@@ -19,7 +19,7 @@ target triple = "bpf"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !61 {
+define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !61 {
 entry:
   %"@map_val" = alloca i64, align 8
   %"@map_key" = alloca i64, align 8
@@ -137,7 +137,7 @@ attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 !58 = !{!0, !7, !26, !37, !51, !55}
 !59 = !{i32 2, !"Debug Info Version", i32 3}
 !60 = !{i32 7, !"uwtable", i32 0}
-!61 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !65)
+!61 = distinct !DISubprogram(name: "begin_1", linkageName: "begin_1", scope: !2, file: !2, type: !62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !57, retainedNodes: !65)
 !62 = !DISubroutineType(types: !63)
 !63 = !{!24, !64}
 !64 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

@@ -1,4 +1,4 @@
-BEGIN
+begin
 {
   @count = 0;
 }
@@ -15,7 +15,7 @@ watchpoint:increment+arg0:4:w
   unwatch(@addr);
 }
 
-END
+end
 {
   printf("count=%d\n", @count);
 }

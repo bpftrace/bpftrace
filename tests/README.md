@@ -77,7 +77,7 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
   * Example of multi-line EXPECT:
     ```
     NAME multi-line
-    PROG BEGIN { print("hello!"); print("world!") }
+    PROG begin { print("hello!"); print("world!") }
     EXPECT hello!
            world!
     ```
@@ -105,8 +105,8 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
   * Example of multi-line program:
     ```
     NAME multi-line
-    PROG BEGIN { printf("hello ") }
-         END { printf("world!\n") }
+    PROG begin { printf("hello ") }
+         end { printf("world!\n") }
     EXPECT hello world!
     ```
 * `REQUIRES`: Run a command in a shell. If it succeeds, run the testcase.

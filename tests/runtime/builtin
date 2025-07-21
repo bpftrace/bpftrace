@@ -31,19 +31,19 @@ PROG i:ms:1 { printf("SUCCESS %lu\n", cpu); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME ncpus
-PROG BEGIN { printf("%ld\n", ncpus);  }
+PROG begin { printf("%ld\n", ncpus);  }
 EXPECT_REGEX ^[1-9][0-9]*$
 
 NAME comm
-PROG BEGIN { printf("SUCCESS %s\n", comm);  }
+PROG begin { printf("SUCCESS %s\n", comm);  }
 EXPECT SUCCESS bpftrace
 
 NAME kstack
-PROG BEGIN { printf("%s\n", kstack);  }
+PROG begin { printf("%s\n", kstack);  }
 EXPECT Attached 1 probe
 
 NAME ustack
-PROG BEGIN { printf("%s\n", ustack);  }
+PROG begin { printf("%s\n", ustack);  }
 EXPECT Attached 1 probe
 
 NAME arg
@@ -105,8 +105,8 @@ EXPECT SUCCESS kprobe:do_nanosleep
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME begin probe
-PROG BEGIN { printf("%s", probe); } END{printf("-%s\n", probe); }
-EXPECT_REGEX ^BEGIN-END$
+PROG begin { printf("%s", probe); } end{printf("-%s\n", probe); }
+EXPECT_REGEX ^begin-end$
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
@@ -145,14 +145,14 @@ EXPECT_REGEX ^([0-9]+\.[0-9]+ ?)+.*$
 
 NAME log size too small
 ENV BPFTRACE_LOG_SIZE=2
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ERROR: Error loading BPF program for BEGIN_1.
+RUN {{BPFTRACE}} -v -e 'begin { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+EXPECT ERROR: Error loading BPF program for begin_1.
 EXPECT_REGEX ^WARNING: Kernel log seems to be trimmed.*
 WILL_FAIL
 
 NAME increase log size
 ENV BPFTRACE_LOG_SIZE=10000000
-RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+RUN {{BPFTRACE}} -e 'begin { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
 EXPECT hello
 
 NAME cat "no such file"
@@ -160,25 +160,25 @@ PROG i:ms:1 { cat("/does/not/exist/file"); exit(); }
 EXPECT ERROR: failed to open file '/does/not/exist/file': No such file or directory
 
 NAME sizeof
-PROG struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x));  }
+PROG struct Foo { int x; char c; } begin { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x));  }
 EXPECT 8 4 1 1 8
 
 NAME sizeof_ints
-PROG BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32));  }
+PROG begin { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32));  }
 EXPECT 1 1 2 2 4 4
 
 # printf only takes 7 args
 NAME sizeof_ints_pt2
-PROG BEGIN { printf("%d %d\n", sizeof(uint64), sizeof(int64));  }
+PROG begin { printf("%d %d\n", sizeof(uint64), sizeof(int64));  }
 EXPECT 8 8
 
 NAME sizeof_btf
-PROG BEGIN { printf("size=%d\n", sizeof(struct task_struct));  }
+PROG begin { printf("size=%d\n", sizeof(struct task_struct));  }
 EXPECT_REGEX ^size=
 REQUIRES_FEATURE btf
 
 NAME offsetof
-PROG struct Foo { int x; struct Bar { int x; } bar; } BEGIN { printf("%ld %ld\n", offsetof(struct Foo, x), offsetof(struct Foo, bar.x));  }
+PROG struct Foo { int x; struct Bar { int x; } bar; } begin { printf("%ld %ld\n", offsetof(struct Foo, x), offsetof(struct Foo, bar.x));  }
 EXPECT_REGEX ^0 4$
 
 NAME print args in fentry
@@ -255,12 +255,12 @@ EXPECT 1
 AFTER ./testprogs/uprobe_symres
 ARCH x86_64
 
-NAME usermode_builtin_in_BEGIN_END
-PROG BEGIN { printf("%d ", usermode);  } END { print(usermode); }
+NAME usermode_builtin_in_begin_end
+PROG begin { printf("%d ", usermode);  } end { print(usermode); }
 EXPECT 1 1
 ARCH x86_64
 
 NAME usermode_builtin_in_unsupported_arch
-PROG BEGIN { printf("%d ", usermode);  } END { print(usermode); }
+PROG begin { printf("%d ", usermode);  } end { print(usermode); }
 EXPECT ERROR: 'usermode' builtin is only supported on x86_64
 ARCH aarch64

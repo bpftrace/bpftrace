@@ -34,8 +34,8 @@ void test(const std::string &input, const std::string &output)
 
 TEST(deprecated, sarg)
 {
-  test("BEGIN { sarg0 }", "sarg* is deprecated");
-  test("BEGIN { sarg1 }", "sarg* is deprecated");
+  test("begin { sarg0 }", "sarg* is deprecated");
+  test("begin { sarg1 }", "sarg* is deprecated");
 }
 
 } // namespace bpftrace::test::deprecated

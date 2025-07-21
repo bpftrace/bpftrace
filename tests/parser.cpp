@@ -1363,60 +1363,60 @@ TEST(Parser, escape_chars)
 
 TEST(Parser, begin_probe)
 {
-  test("BEGIN { 1 }",
+  test("begin { 1 }",
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        "  int: 1\n");
 
-  test_parse_failure("BEGIN:f { 1 }", R"(
-stdin:1:1-8: ERROR: BEGIN probe type requires 0 arguments, found 1
-BEGIN:f { 1 }
+  test_parse_failure("begin:f { 1 }", R"(
+stdin:1:1-8: ERROR: begin probe type requires 0 arguments, found 1
+begin:f { 1 }
 ~~~~~~~
 )");
 
-  test_parse_failure("BEGIN:path:f { 1 }", R"(
-stdin:1:1-13: ERROR: BEGIN probe type requires 0 arguments, found 2
-BEGIN:path:f { 1 }
+  test_parse_failure("begin:path:f { 1 }", R"(
+stdin:1:1-13: ERROR: begin probe type requires 0 arguments, found 2
+begin:path:f { 1 }
 ~~~~~~~~~~~~
 )");
 }
 
 TEST(Parser, end_probe)
 {
-  test("END { 1 }",
+  test("end { 1 }",
        "Program\n"
-       " END\n"
+       " end\n"
        "  int: 1\n");
 
-  test_parse_failure("END:f { 1 }", R"(
-stdin:1:1-6: ERROR: END probe type requires 0 arguments, found 1
-END:f { 1 }
+  test_parse_failure("end:f { 1 }", R"(
+stdin:1:1-6: ERROR: end probe type requires 0 arguments, found 1
+end:f { 1 }
 ~~~~~
 )");
 
-  test_parse_failure("END:path:f { 1 }", R"(
-stdin:1:1-11: ERROR: END probe type requires 0 arguments, found 2
-END:path:f { 1 }
+  test_parse_failure("end:path:f { 1 }", R"(
+stdin:1:1-11: ERROR: end probe type requires 0 arguments, found 2
+end:path:f { 1 }
 ~~~~~~~~~~
 )");
 }
 
 TEST(Parser, bench_probe)
 {
-  test("BENCH:a { 1 }",
+  test("bench:a { 1 }",
        "Program\n"
-       " BENCH:a\n"
+       " bench:a\n"
        "  int: 1\n");
 
-  test_parse_failure("BENCH{ 1 }", R"(
-stdin:1:1-6: ERROR: BENCH probe type requires 1 arguments, found 0
-BENCH{ 1 }
+  test_parse_failure("bench{ 1 }", R"(
+stdin:1:1-6: ERROR: bench probe type requires 1 arguments, found 0
+bench{ 1 }
 ~~~~~
 )");
 
-  test_parse_failure("BENCH:a:f { 1 }", R"(
-stdin:1:1-10: ERROR: BENCH probe type requires 1 arguments, found 2
-BENCH:a:f { 1 }
+  test_parse_failure("bench:a:f { 1 }", R"(
+stdin:1:1-10: ERROR: bench probe type requires 1 arguments, found 2
+bench:a:f { 1 }
 ~~~~~~~~~
 )");
 }
@@ -1681,10 +1681,10 @@ asyncwatchpoint:func1:8:rw { 1 }
 
 TEST(Parser, multiple_attach_points_kprobe)
 {
-  test("BEGIN,kprobe:sys_open,uprobe:/bin/"
+  test("begin,kprobe:sys_open,uprobe:/bin/"
        "sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        " kprobe:sys_open\n"
        " uprobe:/bin/sh:foo\n"
        " tracepoint:syscalls:sys_enter_*\n"
@@ -2092,29 +2092,29 @@ TEST(Parser, sizeof_type)
 
 TEST(Parser, offsetof_type)
 {
-  test("struct Foo { int x; } BEGIN { offsetof(struct Foo, x); }",
+  test("struct Foo { int x; } begin { offsetof(struct Foo, x); }",
        "struct Foo { int x; };\n"
        "\n"
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        "  offsetof: \n"
        "   struct Foo\n"
        "   x\n");
   test("struct Foo { struct Bar { int x; } bar; } "
-       "BEGIN { offsetof(struct Foo, bar.x); }",
+       "begin { offsetof(struct Foo, bar.x); }",
        "struct Foo { struct Bar { int x; } bar; };\n"
        "\n"
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        "  offsetof: \n"
        "   struct Foo\n"
        "   bar\n"
        "   x\n");
   test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
-                     "BEGIN { offsetof(struct Foo, bar->x); }",
+                     "begin { offsetof(struct Foo, bar->x); }",
                      R"(
 stdin:1:74-79: ERROR: syntax error, unexpected ->, expecting ) or .
-struct Foo { struct Bar { int x; } *bar; } BEGIN { offsetof(struct Foo, bar->x); }
+struct Foo { struct Bar { int x; } *bar; } begin { offsetof(struct Foo, bar->x); }
                                                                          ~~~~~
 )");
 }
@@ -2122,11 +2122,11 @@ struct Foo { struct Bar { int x; } *bar; } BEGIN { offsetof(struct Foo, bar->x);
 TEST(Parser, offsetof_expression)
 {
   test("struct Foo { int x; }; "
-       "BEGIN { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
+       "begin { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
        "struct Foo { int x; };;\n"
        "\n"
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        "  =\n"
        "   variable: $foo\n"
        "   (struct Foo *)\n"
@@ -2139,11 +2139,11 @@ TEST(Parser, offsetof_expression)
 
 TEST(Parser, offsetof_builtin_type)
 {
-  test("struct Foo { timestamp x; } BEGIN { offsetof(struct Foo, timestamp); }",
+  test("struct Foo { timestamp x; } begin { offsetof(struct Foo, timestamp); }",
        "struct Foo { timestamp x; };\n"
        "\n"
        "Program\n"
-       " BEGIN\n"
+       " begin\n"
        "  offsetof: \n"
        "   struct Foo\n"
        "   timestamp\n");
@@ -2730,43 +2730,43 @@ uprobe:asdf:Stream {} tracepoint:only_one_arg {}
 
 TEST(Parser, config)
 {
-  test("config = { blah = 5 } BEGIN {}", R"(
+  test("config = { blah = 5 } begin {}", R"(
 Program
  config
   =
    var: blah
    int: 5
- BEGIN
+ begin
 )");
 
-  test("config = { blah = 5; } BEGIN {}", R"(
+  test("config = { blah = 5; } begin {}", R"(
 Program
  config
   =
    var: blah
    int: 5
- BEGIN
+ begin
 )");
 
-  test("config = { blah = false; } BEGIN {}", R"(
+  test("config = { blah = false; } begin {}", R"(
 Program
  config
   =
    var: blah
    bool: false
- BEGIN
+ begin
 )");
 
-  test("config = { blah = tomato; } BEGIN {}", R"(
+  test("config = { blah = tomato; } begin {}", R"(
 Program
  config
   =
    var: blah
    string: tomato
- BEGIN
+ begin
 )");
 
-  test("config = { blah = 5; zoop = \"a\"; } BEGIN {}", R"(
+  test("config = { blah = 5; zoop = \"a\"; } begin {}", R"(
 Program
  config
   =
@@ -2775,13 +2775,13 @@ Program
   =
    var: zoop
    string: a
- BEGIN
+ begin
 )");
 
-  test("config = {} BEGIN {}", R"(
+  test("config = {} begin {}", R"(
 Program
  config
- BEGIN
+ begin
 )");
 }
 
@@ -2806,11 +2806,11 @@ config = { @start = nsecs; } i:s:1 { exit(); }
            ~~~~~~
 )");
 
-  test_parse_failure("BEGIN { @start = nsecs; } config = { "
+  test_parse_failure("begin { @start = nsecs; } config = { "
                      "BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
                      R"(
 stdin:1:27-33: ERROR: syntax error, unexpected config, expecting {
-BEGIN { @start = nsecs; } config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
+begin { @start = nsecs; } config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
                           ~~~~~~
 )");
 
@@ -2851,17 +2851,17 @@ TEST(Parser, keywords_as_identifiers)
                                         "offsetof", "return", "sizeof",
                                         "unroll",   "while" };
   for (const auto &keyword : keywords) {
-    test("BEGIN { $x = (struct Foo*)0; $x->" + keyword + "; }",
-         "Program\n BEGIN\n  =\n   variable: $x\n   (struct Foo *)\n    int: "
+    test("begin { $x = (struct Foo*)0; $x->" + keyword + "; }",
+         "Program\n begin\n  =\n   variable: $x\n   (struct Foo *)\n    int: "
          "0\n "
          " .\n   dereference\n    variable: $x\n   " +
              keyword + "\n");
-    test("BEGIN { $x = (struct Foo)0; $x." + keyword + "; }",
-         "Program\n BEGIN\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
+    test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
+         "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
          " .\n   variable: $x\n   " +
              keyword + "\n");
-    test("BEGIN { $x = offsetof(*curtask, " + keyword + "); }",
-         "Program\n BEGIN\n  =\n   variable: $x\n   offsetof: \n    "
+    test("begin { $x = offsetof(*curtask, " + keyword + "); }",
+         "Program\n begin\n  =\n   variable: $x\n   offsetof: \n    "
          "dereference\n     builtin: curtask\n    " +
              keyword + "\n");
   }
@@ -3006,9 +3006,9 @@ TEST(Parser, subprog_enum)
 
 TEST(Parser, for_loop)
 {
-  test("BEGIN { for ($kv : @map) { print($kv) } }", R"(
+  test("begin { for ($kv : @map) { print($kv) } }", R"(
 Program
- BEGIN
+ begin
   for
    decl
     variable: $kv
@@ -3020,25 +3020,25 @@ Program
 
   // Error location is incorrect: #3063
   // No body
-  test_parse_failure("BEGIN { for ($kv : @map) print($kv); }", R"(
+  test_parse_failure("begin { for ($kv : @map) print($kv); }", R"(
 stdin:1:27-32: ERROR: syntax error, unexpected identifier, expecting {
-BEGIN { for ($kv : @map) print($kv); }
+begin { for ($kv : @map) print($kv); }
                           ~~~~~
 )");
 
   // Map for decl
-  test_parse_failure("BEGIN { for (@kv : @map) { } }", R"(
+  test_parse_failure("begin { for (@kv : @map) { } }", R"(
 stdin:1:13-17: ERROR: syntax error, unexpected map, expecting variable
-BEGIN { for (@kv : @map) { } }
+begin { for (@kv : @map) { } }
             ~~~~
 )");
 }
 
 TEST(Parser, for_range)
 {
-  test("BEGIN { for ($i : 0..10) { print($i) } }", R"(
+  test("begin { for ($i : 0..10) { print($i) } }", R"(
 Program
- BEGIN
+ begin
   for
    decl
     variable: $i
@@ -3052,82 +3052,82 @@ Program
 )");
 
   // Binary expressions must be wrapped.
-  test_parse_failure("BEGIN { for ($i : 1+1..10) { print($i) } }", R"(
+  test_parse_failure("begin { for ($i : 1+1..10) { print($i) } }", R"(
 stdin:1:19-22: ERROR: syntax error, unexpected +, expecting [ or . or ->
-BEGIN { for ($i : 1+1..10) { print($i) } }
+begin { for ($i : 1+1..10) { print($i) } }
                   ~~~
 )");
-  test_parse_failure("BEGIN { for ($i : 0..1+1) { print($i) } }", R"(
+  test_parse_failure("begin { for ($i : 0..1+1) { print($i) } }", R"(
 stdin:1:19-25: ERROR: syntax error, unexpected +, expecting )
-BEGIN { for ($i : 0..1+1) { print($i) } }
+begin { for ($i : 0..1+1) { print($i) } }
                   ~~~~~~
 )");
 
   // Invalid range operator.
-  test_parse_failure("BEGIN { for ($i : 0...10) { print($i) } }", R"(
+  test_parse_failure("begin { for ($i : 0...10) { print($i) } }", R"(
 stdin:1:19-24: ERROR: syntax error, unexpected .
-BEGIN { for ($i : 0...10) { print($i) } }
+begin { for ($i : 0...10) { print($i) } }
                   ~~~~~
 )");
 
   // Missing end range.
-  test_parse_failure("BEGIN { for ($i : 0..) { print($i) } }", R"(
+  test_parse_failure("begin { for ($i : 0..) { print($i) } }", R"(
 stdin:1:19-24: ERROR: syntax error, unexpected )
-BEGIN { for ($i : 0..) { print($i) } }
+begin { for ($i : 0..) { print($i) } }
                   ~~~~~
 )");
 
   // Missing start range.
-  test_parse_failure("BEGIN { for ($i : ..10) { print($i) } }", R"(
+  test_parse_failure("begin { for ($i : ..10) { print($i) } }", R"(
 stdin:1:19-21: ERROR: syntax error, unexpected .
-BEGIN { for ($i : ..10) { print($i) } }
+begin { for ($i : ..10) { print($i) } }
                   ~~
 )");
 }
 
 TEST(Parser, variable_declarations)
 {
-  test("BEGIN { let $x; }", R"(
+  test("begin { let $x; }", R"(
 Program
- BEGIN
+ begin
   decl
    variable: $x
 )");
 
-  test("BEGIN { let $x: int8; }", R"(
+  test("begin { let $x: int8; }", R"(
 Program
- BEGIN
+ begin
   decl :: [int8]
    variable: $x
 )");
 
-  test("BEGIN { let $x = 1; }", R"(
+  test("begin { let $x = 1; }", R"(
 Program
- BEGIN
+ begin
   decl
    variable: $x
    int: 1
 )");
 
-  test("BEGIN { let $x: int8 = 1; }", R"(
+  test("begin { let $x: int8 = 1; }", R"(
 Program
- BEGIN
+ begin
   decl :: [int8]
    variable: $x
    int: 1
 )");
 
   // Needs the let keyword
-  test_parse_failure("BEGIN { $x: int8; }", R"(
+  test_parse_failure("begin { $x: int8; }", R"(
 stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
-BEGIN { $x: int8; }
+begin { $x: int8; }
         ~~~
 )");
 
   // Needs the let keyword
-  test_parse_failure("BEGIN { $x: int8 = 1; }", R"(
+  test_parse_failure("begin { $x: int8 = 1; }", R"(
 stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
-BEGIN { $x: int8 = 1; }
+begin { $x: int8 = 1; }
         ~~~
 )");
 }
@@ -3151,37 +3151,37 @@ TEST(Parser, bare_blocks)
 TEST(Parser, block_expressions)
 {
   // Non-legal trailing statement
-  test_parse_failure("BEGIN { $x = { $a = 1; $b = 2 } exit(); }", R"(
+  test_parse_failure("begin { $x = { $a = 1; $b = 2 } exit(); }", R"(
 stdin:1:31-32: ERROR: syntax error, unexpected }, expecting ;
-BEGIN { $x = { $a = 1; $b = 2 } exit(); }
+begin { $x = { $a = 1; $b = 2 } exit(); }
                               ~
 )");
 
   // No expression, statement with trailing ;
-  test_parse_failure("BEGIN { $x = { $a = 1; $b = 2; } exit(); }", R"(
+  test_parse_failure("begin { $x = { $a = 1; $b = 2; } exit(); }", R"(
 stdin:1:32-33: ERROR: syntax error, unexpected }
-BEGIN { $x = { $a = 1; $b = 2; } exit(); }
+begin { $x = { $a = 1; $b = 2; } exit(); }
                                ~
 )");
 
   // Missing ; after block expression
-  test_parse_failure("BEGIN { $x = { $a = 1; $a } exit(); }", R"(
+  test_parse_failure("begin { $x = { $a = 1; $a } exit(); }", R"(
 stdin:1:29-33: ERROR: syntax error, unexpected identifier, expecting ; or }
-BEGIN { $x = { $a = 1; $a } exit(); }
+begin { $x = { $a = 1; $a } exit(); }
                             ~~~~
 )");
 
   // Illegal; no map assignment
-  test_parse_failure("BEGIN { $x = { $a = 1; count() } exit(); }", R"(
+  test_parse_failure("begin { $x = { $a = 1; count() } exit(); }", R"(
 stdin:1:34-38: ERROR: syntax error, unexpected identifier, expecting ; or }
-BEGIN { $x = { $a = 1; count() } exit(); }
+begin { $x = { $a = 1; count() } exit(); }
                                  ~~~~
 )");
 
   // Good, no map assignment
-  test("BEGIN { $x = { $a = 1; $a }; exit(); }", R"(
+  test("begin { $x = { $a = 1; $a }; exit(); }", R"(
 Program
- BEGIN
+ begin
   =
    variable: $x
    =
@@ -3192,9 +3192,9 @@ Program
 )");
 
   // Good, with map assignment
-  test("BEGIN { $x = { $a = 1; count() }; exit(); }", R"(
+  test("begin { $x = { $a = 1; count() }; exit(); }", R"(
 Program
- BEGIN
+ begin
   =
    variable: $x
    =
@@ -3207,16 +3207,16 @@ Program
 
 TEST(Parser, map_declarations)
 {
-  test("let @a = hash(5); BEGIN { $x; }", R"(
+  test("let @a = hash(5); begin { $x; }", R"(
 Program
  map decl: @a
   bpf type: hash
   max entries: 5
- BEGIN
+ begin
   variable: $x
 )");
 
-  test("let @a = hash(2); let @b = percpuhash(7); BEGIN { $x; }", R"(
+  test("let @a = hash(2); let @b = percpuhash(7); begin { $x; }", R"(
 Program
  map decl: @a
   bpf type: hash
@@ -3224,19 +3224,19 @@ Program
  map decl: @b
   bpf type: percpuhash
   max entries: 7
- BEGIN
+ begin
   variable: $x
 )");
 
-  test_parse_failure("@a = hash(); BEGIN { $x; }", R"(
+  test_parse_failure("@a = hash(); begin { $x; }", R"(
 stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
-@a = hash(); BEGIN { $x; }
+@a = hash(); begin { $x; }
 ~~
 )");
 
-  test_parse_failure("let @a = hash(); BEGIN { $x; }", R"(
+  test_parse_failure("let @a = hash(); begin { $x; }", R"(
 stdin:1:10-16: ERROR: syntax error, unexpected ), expecting integer
-let @a = hash(); BEGIN { $x; }
+let @a = hash(); begin { $x; }
          ~~~~~~
 )");
 }
@@ -3245,71 +3245,71 @@ TEST(Parser, macro_expansion_error)
 {
   // A recursive macro expansion
   test_macro_parse_failure("#define M M+1\n"
-                           "BEGIN { M; }",
+                           "begin { M; }",
                            R"(
 M:1:1-2: ERROR: Macro recursion: M
 M+1
 ~
 stdin:2:9-10: ERROR: expanded from
-BEGIN { M; }
+begin { M; }
         ~
 )");
 
   // Invalid macro expression
   test_macro_parse_failure("#define M {\n"
-                           "BEGIN { M; }",
+                           "begin { M; }",
                            R"(
 stdin:2:9-10: ERROR: unable to expand macro as an expression: {
-BEGIN { M; }
+begin { M; }
         ~
 )");
 
   // Large source code doesn't cause any problem
   std::string padding(16384 * 2, 'p'); // Twice the default value of YY_BUF_SIZE
   test_macro_parse_failure("#define M M+1\n"
-                           "BEGIN { M; }\n"
-                           "END { printf(\"" +
+                           "begin { M; }\n"
+                           "end { printf(\"" +
                                padding + "\"); }",
                            R"(
 M:1:1-2: ERROR: Macro recursion: M
 M+1
 ~
 stdin:2:9-10: ERROR: expanded from
-BEGIN { M; }
+begin { M; }
         ~
 )");
 }
 
 TEST(Parser, imports)
 {
-  test(R"(import "foo"; BEGIN { })", R"(
+  test(R"(import "foo"; begin { })", R"(
 Program
  import foo
- BEGIN
+ begin
 )");
 
-  test(R"(import "foo"; import "bar"; BEGIN { })", R"(
+  test(R"(import "foo"; import "bar"; begin { })", R"(
 Program
  import foo
  import bar
- BEGIN
+ begin
 )");
 
-  test_parse_failure(R"(BEGIN { }; import "foo";)", R"(
+  test_parse_failure(R"(begin { }; import "foo";)", R"(
 stdin:1:9-11: ERROR: syntax error, unexpected ;, expecting {
-BEGIN { }; import "foo";
+begin { }; import "foo";
         ~~
 )");
 
-  test_parse_failure("import 0; BEGIN { }", R"(
+  test_parse_failure("import 0; begin { }", R"(
 stdin:1:8-9: ERROR: syntax error, unexpected integer, expecting string
-import 0; BEGIN { }
+import 0; begin { }
        ~
 )");
 
-  test_parse_failure("import foo; BEGIN { }", R"(
+  test_parse_failure("import foo; begin { }", R"(
 stdin:1:8-11: ERROR: syntax error, unexpected identifier, expecting string
-import foo; BEGIN { }
+import foo; begin { }
        ~~~
 )");
 }

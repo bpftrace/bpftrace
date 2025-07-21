@@ -139,12 +139,12 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
   auto probe = generate_probe(ap, p, usdt_location_idx);
 
   // Add the new probe(s) to resources
-  if (ap.provider == "BEGIN" || ap.provider == "END") {
+  if (ap.provider == "begin" || ap.provider == "end") {
     // special probes
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
-  } else if (ap.provider == "BENCH") {
+  } else if (ap.provider == "bench") {
     resources.benchmark_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {
@@ -688,17 +688,17 @@ int BPFtrace::run(output::Output &out,
   int num_begin_end_attached = 0;
   int num_signal_attached = 0;
 
-  auto begin_probe = resources.special_probes.find("BEGIN");
+  auto begin_probe = resources.special_probes.find("begin");
   if (begin_probe != resources.special_probes.end()) {
     auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
     if (::bpf_prog_test_run_opts(begin_prog.fd(), nullptr))
       return -1;
 
-    LOG(V1) << "Attaching BEGIN";
+    LOG(V1) << "Attaching 'begin' probe";
     ++num_begin_end_attached;
   }
 
-  if (resources.special_probes.contains("END")) {
+  if (resources.special_probes.contains("end")) {
     ++num_begin_end_attached;
   }
 
@@ -850,17 +850,17 @@ int BPFtrace::run(output::Output &out,
 
   attached_probes_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise
-  // perf_event_printer() can ignore the `END` events.
+  // perf_event_printer() can ignore the `end` events.
   finalize_ = false;
   exitsig_recv = false;
 
-  auto end_probe = resources.special_probes.find("END");
+  auto end_probe = resources.special_probes.find("end");
   if (end_probe != resources.special_probes.end()) {
     auto &end_prog = bytecode_.getProgramForProbe((*end_probe).second);
     if (::bpf_prog_test_run_opts(end_prog.fd(), nullptr))
       return -1;
 
-    LOG(V1) << "Attaching END";
+    LOG(V1) << "Attaching 'end' probe";
   }
 
   poll_output(out, /* drain */ true);
@@ -1017,7 +1017,7 @@ void BPFtrace::poll_output(output::Output &out, bool drain)
           LOG(ERROR) << "Failed to run signal probe";
           return;
         }
-        LOG(V1) << "Attaching self:signal";
+        LOG(V1) << "Attaching 'self:signal' probe";
       }
     }
   }

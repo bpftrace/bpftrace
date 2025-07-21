@@ -8,7 +8,7 @@ TEST(codegen, late_variable_decl)
   // don't bleed into inner scopes earlier in the script.
   // All the $x variables below should get their own allocation
   test(R"(
-    BEGIN
+    begin
     {
       if (1) {
 				$x = 1;

@@ -4,7 +4,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, builtin_ctx_field)
 {
-  std::string prog = R"END(
+  std::string prog = R"(
 struct c {
   char c;
 };
@@ -25,7 +25,7 @@ kprobe:f {
   @d = $x->d->c;
   @e = $x->e;
 }
-)END";
+)";
 
   test(prog, NAME);
 }

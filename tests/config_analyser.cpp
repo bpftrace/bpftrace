@@ -100,39 +100,39 @@ void test(BPFtrace &bpftrace, const std::string &input)
 
 TEST(config_analyser, config)
 {
-  test("config = { BAD_CONFIG=1 } BEGIN { }", false);
-  test("config = { BPFTRACE_MAX_MAP_KEYS=1 } BEGIN { }", true);
+  test("config = { BAD_CONFIG=1 } begin { }", false);
+  test("config = { BPFTRACE_MAX_MAP_KEYS=1 } begin { }", true);
 
-  test("config = { BPFTRACE_MAX_MAP_KEYS=perf } BEGIN { }", false);
-  test("config = { BPFTRACE_STACK_MODE=perf } BEGIN { }", true);
-  test("config = { stack_mode=perf } BEGIN { }", true);
-  test("config = { BPFTRACE_MAX_MAP_KEYS=1; stack_mode=perf } BEGIN { $ns = "
+  test("config = { BPFTRACE_MAX_MAP_KEYS=perf } begin { }", false);
+  test("config = { BPFTRACE_STACK_MODE=perf } begin { }", true);
+  test("config = { stack_mode=perf } begin { }", true);
+  test("config = { BPFTRACE_MAX_MAP_KEYS=1; stack_mode=perf } begin { $ns = "
        "nsecs(); }",
        true);
-  test("config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\" } BEGIN { $ns = "
+  test("config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\" } begin { $ns = "
        "nsecs(); }",
        true);
 }
 
 TEST(config_analyser, config_error)
 {
-  test("config = { BAD_CONFIG=1 } BEGIN { }",
+  test("config = { BAD_CONFIG=1 } begin { }",
        R"(stdin:1:12-24: ERROR: BAD_CONFIG: not a known configuration option
-config = { BAD_CONFIG=1 } BEGIN { }
+config = { BAD_CONFIG=1 } begin { }
            ~~~~~~~~~~~~
 )",
        false);
   test(
-      "config = { BPFTRACE_MAX_PROBES = \"hello\" } BEGIN { }",
+      "config = { BPFTRACE_MAX_PROBES = \"hello\" } begin { }",
       R"(stdin:1:12-41: ERROR: BPFTRACE_MAX_PROBES: expecting a number, got hello
-config = { BPFTRACE_MAX_PROBES = "hello" } BEGIN { }
+config = { BPFTRACE_MAX_PROBES = "hello" } begin { }
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )",
       false);
   test(
-      "config = { max_ast_nodes=1 } BEGIN { }",
+      "config = { max_ast_nodes=1 } begin { }",
       R"(stdin:1:12-27: ERROR: max_ast_nodes: can only be set as an environment variable
-config = { max_ast_nodes=1 } BEGIN { }
+config = { max_ast_nodes=1 } begin { }
            ~~~~~~~~~~~~~~~
 )",
       false);
@@ -140,9 +140,9 @@ config = { max_ast_nodes=1 } BEGIN { }
 
 TEST(config_analyser, deprecated)
 {
-  test_for_warning("config = { symbol_source=\"symbol_table\" } BEGIN { }",
+  test_for_warning("config = { symbol_source=\"symbol_table\" } begin { }",
                    "symbol_source is deprecated and has no effect");
-  test_for_warning("config = { symbol_source=\"zzz\" } BEGIN { }",
+  test_for_warning("config = { symbol_source=\"zzz\" } begin { }",
                    "symbol_source is deprecated and has no effect");
 }
 
@@ -151,11 +151,11 @@ TEST(config_analyser, config_setting)
   auto bpftrace = get_mock_bpftrace();
 
   EXPECT_NE(bpftrace->config_->max_map_keys, 9);
-  test(*bpftrace, "config = { BPFTRACE_MAX_MAP_KEYS=9 } BEGIN { }");
+  test(*bpftrace, "config = { BPFTRACE_MAX_MAP_KEYS=9 } begin { }");
   EXPECT_EQ(bpftrace->config_->max_map_keys, 9);
 
   EXPECT_NE(bpftrace->config_->stack_mode, StackMode::perf);
-  test(*bpftrace, "config = { stack_mode=perf } BEGIN { }");
+  test(*bpftrace, "config = { stack_mode=perf } begin { }");
   EXPECT_EQ(bpftrace->config_->stack_mode, StackMode::perf);
 
   EXPECT_NE(bpftrace->config_->user_symbol_cache_type,
@@ -163,7 +163,7 @@ TEST(config_analyser, config_setting)
   EXPECT_NE(bpftrace->config_->log_size, 150);
   test(*bpftrace,
        "config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\"; log_size=150 "
-       "} BEGIN { }");
+       "} begin { }");
   EXPECT_EQ(bpftrace->config_->user_symbol_cache_type,
             UserSymbolCacheType::per_program);
   EXPECT_EQ(bpftrace->config_->log_size, 150);

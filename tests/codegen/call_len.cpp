@@ -1,7 +1,7 @@
 #include "common.h"
 
 namespace bpftrace::test::codegen::call_len {
-constexpr auto PROG = "BEGIN { @x[1] = 1; } kprobe:f { $s = len(@x); }";
+constexpr auto PROG = "begin { @x[1] = 1; } kprobe:f { $s = len(@x); }";
 
 TEST_F(codegen_btf, call_len_for_each_map_elem)
 {

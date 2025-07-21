@@ -77,8 +77,8 @@ TEST(pid_filter_pass, no_add_filter)
   test("profile:hz:99 { 1 }", false, false);
 
   std::vector<std::string> no_filter_probes = {
-    "BEGIN",
-    "END",
+    "begin",
+    "end",
     "uprobe:/bin/sh:f",
     "uretprobe:/bin/sh:f",
     "usdt:sh:probe",

@@ -1,4 +1,4 @@
-BEGIN {
+begin {
     @count = 0;
 }
 

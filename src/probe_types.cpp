@@ -17,7 +17,6 @@ ProbeType probetype(const std::string &probeName)
 {
   ProbeType retType = ProbeType::invalid;
   const std::string lowerProbeName = util::to_lower(probeName);
-
   auto v = std::ranges::find_if(PROBE_LIST,
 
                                 [&lowerProbeName](const ProbeItem &p) {
@@ -34,13 +33,9 @@ ProbeType probetype(const std::string &probeName)
 std::string expand_probe_name(const std::string &orig_name)
 {
   std::string expanded_name = util::to_lower(orig_name);
-
-  auto v = std::ranges::find_if(PROBE_LIST,
-
-                                [&orig_name](const ProbeItem &p) {
-                                  return (p.name == orig_name ||
-                                          p.aliases.contains(orig_name));
-                                });
+  auto v = std::ranges::find_if(PROBE_LIST, [&orig_name](const ProbeItem &p) {
+    return (p.name == orig_name || p.aliases.contains(orig_name));
+  });
 
   if (v != PROBE_LIST.end())
     expanded_name = v->name;
