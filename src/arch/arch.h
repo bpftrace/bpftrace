@@ -93,8 +93,8 @@ constexpr Machine current()
   return Machine::ARM;
 #elif defined(__s390x__)
   return Machine::S390X;
-#elif defined(__ppc64__)
-  return Machine::POWERPC;
+#elif defined(__ppc64__) || defined(__powerpc64__)
+  return Machine::PPC64;
 #elif defined(__mips64)
   return Machine::MIPS64;
 #elif defined(__riscv) && (__riscv_xlen == 64)
