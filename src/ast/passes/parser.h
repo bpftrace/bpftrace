@@ -12,6 +12,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/source_expansion.h"
 #include "ast/passes/unstable_feature.h"
 #include "btf.h"
 #include "driver.h"
@@ -32,6 +33,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateImportScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
   passes.emplace_back(CreateMacroExpansionPass());
+  passes.emplace_back(CreateSourceExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateProbeExpansionPass());

@@ -40,6 +40,7 @@ add_library(ast STATIC
   passes/resolve_imports.cpp
   passes/return_path_analyser.cpp
   passes/recursion_check.cpp
+  passes/source_expansion.cpp
   passes/type_system.cpp
   passes/unstable_feature.cpp
 )

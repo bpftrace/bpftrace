@@ -1,0 +1,13 @@
+macro m1() {
+    print((file, line));
+}
+
+macro m2() {
+    m1();
+}
+
+// Adding macros to test correct line number.
+// It should be the root call site (line 12 in this case)
+BEGIN {
+    m2();
+}

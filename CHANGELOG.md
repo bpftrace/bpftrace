@@ -73,6 +73,8 @@ and this project adheres to
   - [#4354](https://github.com/bpftrace/bpftrace/pull/4354)
 - Add `BENCH` for creating microbenchmarks
   - [#4343](https://github.com/bpftrace/bpftrace/pull/4343)
+- Add `file` and `line` builtins for source information
+  - [#4374](https://github.com/bpftrace/bpftrace/pull/4374)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)
