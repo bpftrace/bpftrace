@@ -391,20 +391,17 @@ NAME ustack_with_inlined_funcs
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
 EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s*mywrapper.*
 TIMEOUT 1
-REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME ustack_with_inlined_funcs_with_limit
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack(2)); exit(); } }' -c ./testprogs/usdt_inlined
 EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+$
 TIMEOUT 1
-REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME ustack_with_inlined_funcs_env_perf
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
 ENV BPFTRACE_STACK_MODE=perf
 EXPECT_REGEX ^\s+[0-9a-f]+ myclock \(inlined\)\s*[0-9a-f]+ mywrapper_inlined \(inlined\)\s*[0-9a-f]+ mywrapper.*
 TIMEOUT 1
-REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME cat
 PROG i:ms:1 { cat("/proc/uptime"); exit();}

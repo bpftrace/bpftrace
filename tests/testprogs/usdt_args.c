@@ -1,10 +1,8 @@
-#ifdef HAVE_SYSTEMTAP_SYS_SDT_H
-#include <sys/sdt.h>
-#else
-#define DTRACE_PROBE1(a, b, d) (void)0
-#endif
 #include <stddef.h>
 #include <stdint.h>
+
+#include "sdt.h"
+
 /* For best results compile using gcc -O1 (or higher)
  *
  * Clang likes to always put the argument on stack rather than outputting an
@@ -90,7 +88,6 @@ int main()
     array[i].i_u64 = test_value;
   }
 
-#ifdef HAVE_SYSTEMTAP_SYS_SDT_H
   /* Constants */
   DTRACE_PROBE1(usdt_args, const_u64, (uint64_t)test_value);
   DTRACE_PROBE1(usdt_args, const_64, (int64_t)test_value);
@@ -139,7 +136,6 @@ int main()
   volatile static __thread uint64_t tls_64 = (uint64_t)test_value;
   DTRACE_PROBE1(usdt_args, tls_u64, tls_64);
 #endif
-#endif /* HAVE_SYSTEMTAP_SYS_SDT_H */
 
   return 0;
 }

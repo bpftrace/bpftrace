@@ -89,4 +89,7 @@ UseTab: Never
 ---
 Language: Json
 DisableFormat: true
+---
+Language: ObjC
+DisableFormat: true
 ...

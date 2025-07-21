@@ -7,9 +7,7 @@ foreach(testlib_source ${testlib_sources})
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMPILE_FLAGS "-g -O0")
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${testlib_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
+  target_include_directories(${testlib_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include)
   # clear the executable bit - ensure bpftrace can trace non-executable
   # shared objects
   add_custom_command(TARGET ${testlib_name}
