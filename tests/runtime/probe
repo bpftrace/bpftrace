@@ -72,14 +72,20 @@ NAME fentry_missing_probes
 PROG fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT ERROR: No BTF found for nonsense.
 WILL_FAIL
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
 
 NAME fentry_warn_missing_probes
 PROG config = { missing_probes = "warn" } fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT WARNING: No BTF found for nonsense.
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
 
 NAME fentry_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT_NONE WARNING: No BTF found for nonsense.
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
 
 # Sanity check for kfunc/kretfunc alias
 NAME kfunc
@@ -606,6 +612,8 @@ NAME fexit_order
 RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt
 EXPECT_REGEX (first)+ second
 AFTER ./testprogs/syscall nanosleep 233;
+REQUIRES_FEATURE fentry
+REQUIRES_FEATURE btf
 
 NAME software_order
 RUN {{BPFTRACE}} runtime/scripts/software_order.bt
