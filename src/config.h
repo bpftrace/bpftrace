@@ -45,7 +45,7 @@ public:
   bool print_maps_on_exit = true;
   ConfigUnstable unstable_macro = ConfigUnstable::warn;
   ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
-  ConfigUnstable unstable_import = ConfigUnstable::error;
+  ConfigUnstable unstable_import = ConfigUnstable::warn;
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
 #ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
