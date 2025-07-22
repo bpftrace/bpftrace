@@ -4,7 +4,6 @@
 
 Builtins are special variables built into the language.
 Unlike scratch and map variables they don’t need a `$` or `@` as prefix (except for the positional parameters).
-The 'Kernel' column indicates the minimum kernel version required and the 'BPF Helper' column indicates the raw BPF helper function used for this builtin.
 
 | Variable | Type | BPF Helper | Description |
 | --- | --- | --- | --- |
