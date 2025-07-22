@@ -1,0 +1,36 @@
+name: Standard Library Documentation Check
+
+on:
+  push:
+    branches: [ master, release/* ]
+  pull_request:
+    paths:
+      - "src/stdlib/**/*.bt"
+      - "scripts/generate_stdlib_docs.py"
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-stdlib-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Generate stdlib documentation
+      run: ./scripts/generate_stdlib_docs.py
+    - name: Check for changes in docs/stdlib.md
+      run: |
+        if git diff --exit-code docs/stdlib.md; then
+          echo "✅ docs/stdlib.md is up to date"
+        else
+          echo "❌ docs/stdlib.md is out of date. Please run './scripts/generate_stdlib_docs.py src/stdlib/base.bt' and commit the changes."
+          echo "Changes detected:"
+          git diff docs/stdlib.md
+          exit 1
+        fi
