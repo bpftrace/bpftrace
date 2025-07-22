@@ -19,9 +19,11 @@ The 'Kernel' column indicates the minimum kernel version required and the 'BPF H
 | `ncpus` | uint64 | n/a | Number of CPUs |
 | `curtask` | uint64 | get_current_task | Pointer to `struct task_struct` of the current task |
 | `elapsed` | uint64 | (see nsec) | ktime_get_ns / ktime_get_boot_ns | Nanoseconds elapsed since bpftrace initialization, based on `nsecs` |
+| `file` | string | n/a | Name of the file where this builtin is used. For inline scripts this is "stdin" |
 | `func` | string | n/a | Name of the current function being traced (kprobes,uprobes) |
 | `gid` | uint64 | get_current_uid_gid | Group ID of the current thread, as seen from the init namespace |
 | `jiffies` | uint64 | get_jiffies_64 | Jiffies of the kernel. In 32-bit system, using this builtin might be slower. |
+| `line` | int64 | n/a | Line in the file where this builtin is used. |
 | `numaid` | uint32 | numa_node_id | ID of the NUMA node executing the BPF program |
 | `pid` | uint32 | get_current_pid_tgid / get_ns_current_pid_tgid | Process ID of the current thread (aka thread group ID), as seen from the PID namespace of bpftrace |
 | `probe` | string | n/na | n/a | Name of the current probe |

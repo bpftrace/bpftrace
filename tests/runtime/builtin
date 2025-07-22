@@ -264,3 +264,11 @@ NAME usermode_builtin_in_unsupported_arch
 PROG BEGIN { printf("%d ", usermode);  } END { print(usermode); }
 EXPECT ERROR: 'usermode' builtin is only supported on x86_64
 ARCH aarch64
+
+NAME file and line with stdin
+PROG BEGIN { print((file, line));  }
+EXPECT (stdin, 1)
+
+NAME file and line with file
+RUN {{BPFTRACE}} runtime/scripts/file_line.bt
+EXPECT (runtime/scripts/file_line.bt, 12)
