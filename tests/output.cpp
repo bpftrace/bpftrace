@@ -1,9 +1,12 @@
+#include <chrono>
 #include <sstream>
 
 #include "bpfmap.h"
 #include "mocks.h"
 #include "output.h"
+#include "progress.h"
 #include "gtest/gtest.h"
+
 
 namespace bpftrace::test::output {
 
@@ -96,6 +99,16 @@ TEST(TextOutput, lhist_suffix)
 )",
             out.str());
   EXPECT_TRUE(err.str().empty());
+}
+
+TEST(TextOutput, progress)
+{
+  auto console = CreateConsoleProgress(std::cout, true);
+  auto unbounded = console->unbounded("foo");
+  for (size_t i = 0; i < 1000; i++) {
+    unbounded->tick();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 }
 
 } // namespace bpftrace::test::output
