@@ -8,6 +8,7 @@
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/loop_return.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/probe_expansion.h"
@@ -41,6 +42,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
+  passes.emplace_back(CreateLoopReturnPass());
   return passes;
 }
 
