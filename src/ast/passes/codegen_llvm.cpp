@@ -2088,6 +2088,45 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto scoped_arg = visit(call.vargs.at(0));
 
     return ScopedExpr(b_.CreateGetSocketCookie(scoped_arg.value(), call.loc));
+  } else if (call.func == "__usdt_arg") {
+    // Special handling for __usdt_arg function calls
+    // Convert ctx (struct pt_regs *) to long for compatibility with BTF
+    // declaration
+    auto scoped_ctx = visit(call.vargs.at(0));
+    auto scoped_arg_num = visit(call.vargs.at(1));
+
+    // Convert pointer to integer for BTF compatibility
+    Value *ctx_as_int = b_.CreatePtrToInt(scoped_ctx.value(), b_.getInt64Ty());
+
+    // Get or create the function with correct signature (i64, i64) -> i64
+    auto *func = extern_funcs_[call.func];
+    if (!func) {
+      SmallVector<llvm::Type *> arg_types = { b_.getInt64Ty(),
+                                              b_.getInt64Ty() };
+      FunctionType *function_type = FunctionType::get(b_.getInt64Ty(),
+                                                      arg_types,
+                                                      false);
+      func = llvm::Function::Create(function_type,
+                                    llvm::Function::ExternalLinkage,
+                                    call.func,
+                                    module_.get());
+      func->addFnAttr(Attribute::AlwaysInline);
+      func->addFnAttr(Attribute::NoUnwind);
+      func->setDSOLocal(true);
+
+      for (auto &arg : func->args()) {
+        arg.addAttr(Attribute::NoUndef);
+      }
+      extern_funcs_[call.func] = func;
+    }
+
+    SmallVector<llvm::Value *> arg_values = { ctx_as_int,
+                                              scoped_arg_num.value() };
+    auto *inst = b_.CreateCall(func, arg_values, call.func);
+    return ScopedExpr(inst, [this, inst, &call] {
+      inst->setDebugLoc(
+          debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
+    });
   } else {
     auto *func = extern_funcs_[call.func];
     if (!func) {
