@@ -41,7 +41,6 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateUSDTImportPass()); // Import USDT stdlib if needed
-  passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
