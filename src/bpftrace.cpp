@@ -326,18 +326,15 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
       case Type::integer:
         if (arg.type.IsSigned()) {
           int64_t val = 0;
-          switch (arg.type.GetIntBitWidth()) {
-            case 64:
+          switch (arg.type.GetIntByteWidth()) {
+            case 8:
               val = *reinterpret_cast<int64_t *>(arg_data + arg.offset);
               break;
-            case 32:
+            case 4:
               val = *reinterpret_cast<int32_t *>(arg_data + arg.offset);
               break;
-            case 16:
+            case 2:
               val = *reinterpret_cast<int16_t *>(arg_data + arg.offset);
-              break;
-            case 8:
-              val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
               break;
             case 1:
               val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
@@ -351,18 +348,15 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
           arg_values.push_back(std::make_unique<PrintableSInt>(val));
         } else {
           uint64_t val = 0;
-          switch (arg.type.GetIntBitWidth()) {
-            case 64:
+          switch (arg.type.GetIntByteWidth()) {
+            case 8:
               val = *reinterpret_cast<uint64_t *>(arg_data + arg.offset);
               break;
-            case 32:
+            case 4:
               val = *reinterpret_cast<uint32_t *>(arg_data + arg.offset);
               break;
-            case 16:
+            case 2:
               val = *reinterpret_cast<uint16_t *>(arg_data + arg.offset);
-              break;
-            case 8:
-              val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
               break;
             case 1:
               val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);

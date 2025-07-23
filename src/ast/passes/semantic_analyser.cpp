@@ -623,14 +623,14 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
 static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
 {
   static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
-    { "uint8", std::tuple<size_t, bool>{ 8, false } },
-    { "int8", std::tuple<size_t, bool>{ 8, true } },
-    { "uint16", std::tuple<size_t, bool>{ 16, false } },
-    { "int16", std::tuple<size_t, bool>{ 16, true } },
-    { "uint32", std::tuple<size_t, bool>{ 32, false } },
-    { "int32", std::tuple<size_t, bool>{ 32, true } },
-    { "uint64", std::tuple<size_t, bool>{ 64, false } },
-    { "int64", std::tuple<size_t, bool>{ 64, true } },
+    { "uint8", std::tuple<size_t, bool>{ 1, false } },
+    { "int8", std::tuple<size_t, bool>{ 1, true } },
+    { "uint16", std::tuple<size_t, bool>{ 2, false } },
+    { "int16", std::tuple<size_t, bool>{ 2, true } },
+    { "uint32", std::tuple<size_t, bool>{ 4, false } },
+    { "int32", std::tuple<size_t, bool>{ 4, true } },
+    { "uint64", std::tuple<size_t, bool>{ 8, false } },
+    { "int64", std::tuple<size_t, bool>{ 8, true } },
   };
   return intcasts;
 }
@@ -763,7 +763,7 @@ void SemanticAnalyser::visit(Identifier &identifier)
 {
   if (c_definitions_.enums.contains(identifier.ident)) {
     const auto &enum_name = std::get<1>(c_definitions_.enums[identifier.ident]);
-    identifier.ident_type = CreateEnum(64, enum_name);
+    identifier.ident_type = CreateEnum(8, enum_name);
   } else if (bpftrace_.structs.Has(identifier.ident)) {
     identifier.ident_type = CreateRecord(
         identifier.ident, bpftrace_.structs.Lookup(identifier.ident));
@@ -1543,10 +1543,10 @@ void SemanticAnalyser::visit(Call &call)
       case 1:
       case 2:
       case 4:
-        pointee_size = sizes.at(0) * 8;
+        pointee_size = sizes.at(0);
         break;
       default:
-        pointee_size = 64;
+        pointee_size = 8;
     }
     call.return_type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);
   } else if (call.func == "cgroupid") {
@@ -1790,7 +1790,7 @@ If you're seeing errors, try clamping the string sizes. For example:
                       << arg.type().GetTy() << " provided)";
       return;
     }
-    call.return_type = CreateUInt(arg.type().GetIntBitWidth());
+    call.return_type = CreateUInt(arg.type().GetIntByteWidth());
   } else if (call.func == "skboutput") {
     if (!bpftrace_.feature_->has_skb_output()) {
       call.addError() << "BPF_FUNC_skb_output is not available for your kernel "
@@ -2350,7 +2350,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   // Binop on two pointers
   if (other.IsPtrTy()) {
     if (compare) {
-      binop.result_type = CreateUInt(64);
+      binop.result_type = CreateUInt(8);
 
       if (is_final_pass()) {
         const auto *le = lht.GetPointeeTy();
@@ -2364,7 +2364,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
         }
       }
     } else if (logical) {
-      binop.result_type = CreateUInt(64);
+      binop.result_type = CreateUInt(8);
     } else {
       invalid_op();
     }
@@ -2378,7 +2378,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
     else if (binop.op == Operator::PLUS || binop.op == Operator::MINUS)
       binop.result_type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
     else if (compare || logical)
-      binop.result_type = CreateInt(64);
+      binop.result_type = CreateInt(8);
     else
       invalid_op();
   }
@@ -2424,10 +2424,10 @@ void SemanticAnalyser::visit(Binop &binop)
   if (is_int_binop) {
     // Implicit size promotion to larger of the two
     auto size = std::max(lht.GetSize(), rht.GetSize());
-    binop.result_type = CreateInteger(size * 8, is_signed);
+    binop.result_type = CreateInteger(size, is_signed);
   } else {
     // Default type - will be overriden below as necessary
-    binop.result_type = CreateInteger(64, is_signed);
+    binop.result_type = CreateInteger(8, is_signed);
   }
 
   auto addr_lhs = binop.left.type().GetAS();
@@ -2547,12 +2547,12 @@ void SemanticAnalyser::visit(Unop &unop)
                       << " operator can not be used on expressions of type '"
                       << type << "'";
     } else {
-      unop.result_type = CreateUInt(8 * type.GetSize());
+      unop.result_type = CreateUInt(type.GetSize());
     }
   } else if (type.IsPtrTy() && valid_ptr_op) {
     unop.result_type = unop.expr.type();
   } else {
-    unop.result_type = CreateInteger(64, type.IsSigned());
+    unop.result_type = CreateInteger(8, type.IsSigned());
   }
 }
 
@@ -2592,7 +2592,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
   }
 
   if (lhs.IsIntegerTy()) {
-    ternary.result_type = CreateInteger(64, lhs.IsSigned());
+    ternary.result_type = CreateInteger(8, lhs.IsSigned());
   } else {
     auto lsize = lhs.GetSize();
     auto rsize = rhs.GetSize();
@@ -3388,7 +3388,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           } else {
             assignTy = storedTy;
             assignment.expr = ctx_.make_node<Cast>(
-                CreateInteger(storedTy.GetSize() * 8, true),
+                CreateInteger(storedTy.GetSize(), true),
                 assignment.expr,
                 Location(assignment.loc));
             visit(assignment.expr);
@@ -3407,7 +3407,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         if (can_fit) {
           assignTy = storedTy;
           assignment.expr = ctx_.make_node<Cast>(
-              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
+              CreateInteger(storedTy.GetSize(), storedTy.IsSigned()),
               assignment.expr,
               Location(assignment.loc));
           visit(assignment.expr);
@@ -4245,7 +4245,7 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
     // be space for any integer in the map key later
     // This should have a better solution.
     new_key_type.SetSign(expr_type.IsSigned());
-    new_key_type.SetIntBitWidth(64);
+    new_key_type.SetIntByteWidth(8);
   }
 
   validate_map_key(new_key_type, node);
