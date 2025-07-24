@@ -50,6 +50,7 @@ add_executable(bpftrace_test
   output.cpp
   parser.cpp
   portability_analyser.cpp
+  probe_expansion.cpp
   procmon.cpp
   probe.cpp
   config_analyser.cpp

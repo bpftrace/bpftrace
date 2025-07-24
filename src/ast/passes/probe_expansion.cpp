@@ -1,5 +1,7 @@
 #include "ast/passes/probe_expansion.h"
 
+#include <algorithm>
+
 #include "ast/ast.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -29,22 +31,9 @@ public:
       return ExpansionType::NONE;
     return exp->second;
   }
-  void set_session_ret_probe(AttachPoint &ap, Probe &ret_probe)
-  {
-    session_ret_probes[&ap] = &ret_probe;
-  }
-  Probe &get_session_ret_probe(AttachPoint &ap)
-  {
-    auto it = session_ret_probes.find(&ap);
-    if (it == session_ret_probes.end()) {
-      LOG(BUG) << "Requesting return probe for non-session attach-point";
-    }
-    return *it->second;
-  }
 
 private:
   std::unordered_map<AttachPoint *, ExpansionType> expansions;
-  std::unordered_map<AttachPoint *, Probe *> session_ret_probes;
 };
 
 class ExpansionAnalyser : public Visitor<ExpansionAnalyser> {
@@ -168,68 +157,87 @@ void ExpansionAnalyser::visit(Builtin &builtin)
   }
 }
 
-class SessionAnalyser : public Visitor<SessionAnalyser> {
+class SessionExpander : public Visitor<SessionExpander> {
 public:
-  explicit SessionAnalyser(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace)
+  explicit SessionExpander(ASTContext &ast,
+                           BPFtrace &bpftrace,
+                           ExpansionResult &expansion_result)
+      : ast_(ast), bpftrace_(bpftrace), expansion_result_(expansion_result)
   {
   }
 
-  using Visitor<SessionAnalyser>::visit;
+  using Visitor<SessionExpander>::visit;
   void visit(Probe &probe);
 
-  ExpansionResult analyse(ExpansionResult result);
+  Probe expand(Probe &entry, Probe &exit);
 
 private:
-  ExpansionResult result_;
+  Probe *find_matching_retprobe(Probe &probe);
 
-  const ASTContext &ast_;
+  ASTContext &ast_;
   const BPFtrace &bpftrace_;
+  ExpansionResult &expansion_result_;
 };
 
-ExpansionResult SessionAnalyser::analyse(ExpansionResult result)
+Probe *SessionExpander::find_matching_retprobe(Probe &probe)
 {
-  result_ = std::move(result);
-  visit(*ast_.root);
-  return std::move(result_);
+  ProbeList retprobes;
+  AttachPoint *ap = probe.attach_points[0];
+  // Search for a probe which:
+  // - has a single kretprobe attach point
+  // - attaches to the same target and function as probe
+  // - is multi-expanded (session expansion uses the same attach mechanism)
+  // - has no predicate
+  std::ranges::copy_if(
+      ast_.root->probes, std::back_inserter(retprobes), [&](Probe *other) {
+        return other->attach_points.size() == 1 && other->pred == nullptr &&
+               probetype(other->attach_points[0]->provider) ==
+                   ProbeType::kretprobe &&
+               expansion_result_.get_expansion(*other->attach_points[0]) ==
+                   ExpansionType::MULTI &&
+               other->attach_points[0]->target == ap->target &&
+               other->attach_points[0]->func == ap->func;
+      });
+
+  // If there's not exactly one match, we don't know how to do session expansion
+  if (retprobes.size() == 1)
+    return retprobes[0];
+
+  return nullptr;
 }
 
-void SessionAnalyser::visit(Probe &probe)
+void SessionExpander::visit(Probe &probe)
 {
   // If the probe has a single multi-expanded kprobe attach point, check if
   // there's another probe with a single multi-expanded kretprobe attach point
-  // with the same target. If so, use session expansion if available.
-  // Also, we do not allow predicates in any of the probes for now.
+  // with the same target. If so, perform session expansion by merging the two
+  // probes together.
+  // Currently, we don't allow predicates in either of the probes.
   if (probe.attach_points.size() == 1 &&
       probetype(probe.attach_points[0]->provider) == ProbeType::kprobe &&
       probe.pred == nullptr) {
-    // Session probes use the same attach mechanism as multi probes so the
-    // attach point must be multi-expanded.
-    auto &ap = *probe.attach_points[0];
-    if (result_.get_expansion(ap) != ExpansionType::MULTI)
+    Probe *retprobe = find_matching_retprobe(probe);
+    if (!retprobe)
       return;
 
-    for (Probe *other_probe : ast_.root->probes) {
-      // Other probe must also have a single multi-expanded attach point and no
-      // predicate
-      if (other_probe->attach_points.size() != 1 || other_probe->pred)
-        continue;
-      auto &other_ap = *other_probe->attach_points[0];
-      if (probetype(other_ap.provider) != ProbeType::kretprobe ||
-          result_.get_expansion(other_ap) != ExpansionType::MULTI) {
-        continue;
-      }
+    if (!bpftrace_.feature_->has_kprobe_session())
+      return;
 
-      if (ap.target == other_ap.target && ap.func == other_ap.func) {
-        if (bpftrace_.feature_->has_kprobe_session()) {
-          result_.set_expansion(ap, ExpansionType::SESSION);
-          result_.set_expansion(other_ap, ExpansionType::SESSION);
-          result_.set_session_ret_probe(ap, *other_probe);
-        } else {
-          return;
-        }
-      }
-    }
+    AttachPointList attach_points = probe.attach_points;
+    auto *if_cond = ast_.make_node<If>(
+        ast_.make_node<Builtin>("__session_is_return",
+                                Location(probe.block->loc)),
+        retprobe->block,
+        probe.block,
+        Location(probe.block->loc));
+
+    probe.block = ast_.make_node<Block>(std::vector<Statement>{ if_cond },
+                                        Location(probe.block->loc));
+
+    expansion_result_.set_expansion(*probe.attach_points[0],
+                                    ExpansionType::SESSION);
+
+    std::erase(ast_.root->probes, retprobe);
   }
 }
 
@@ -297,12 +305,7 @@ void ProbeExpander::visit(AttachPointList &aps)
         break;
       }
 
-      case ExpansionType::SESSION: {
-        if (probetype(ap->provider) == ProbeType::kprobe) {
-          ap->ret_probe = &result_.get_session_ret_probe(*ap);
-        }
-        [[fallthrough]];
-      }
+      case ExpansionType::SESSION:
       case ExpansionType::MULTI:
       case ExpansionType::NONE: {
         ap->expansion = expansion;
@@ -321,8 +324,8 @@ Pass CreateProbeExpansionPass()
     ExpansionAnalyser analyser(bpftrace);
     auto result = analyser.analyse(*ast.root);
 
-    SessionAnalyser sessions(ast, bpftrace);
-    result = sessions.analyse(std::move(result));
+    SessionExpander session_expander(ast, bpftrace, result);
+    session_expander.visit(*ast.root);
 
     ProbeExpander expander(ast, bpftrace);
     expander.expand(std::move(result));

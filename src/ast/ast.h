@@ -1138,7 +1138,6 @@ public:
         mode(other.mode),
         async(other.async),
         expansion(other.expansion),
-        ret_probe(other.ret_probe),
         address(other.address),
         func_offset(other.func_offset),
         ignore_invalid(other.ignore_invalid),
@@ -1171,7 +1170,6 @@ public:
   bool async = false; // for watchpoint probes, if it's an async watchpoint
 
   ExpansionType expansion = ExpansionType::NONE;
-  Probe *ret_probe = nullptr; // for session probes
 
   uint64_t address = 0;
   uint64_t func_offset = 0;
