@@ -9,6 +9,8 @@ namespace bpftrace::ast {
 
 namespace {
 
+const auto FLOW_ERROR = "unable to fold literals due to overflow or underflow";
+
 class LiteralFolder : public Visitor<LiteralFolder, std::optional<Expression>> {
 public:
   LiteralFolder(ASTContext &ast, BPFtrace &bpftrace)
@@ -65,23 +67,49 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
       value = left || right;
       break;
     case Operator::PLUS:
+      value = left + right;
+      break;
     case Operator::MINUS:
+      value = left - right;
+      break;
     case Operator::MUL:
-    case Operator::DIV:
+      value = left && right;
+      break;
+    case Operator::DIV: {
+      if (!right) {
+        op.addError() << FLOW_ERROR;
+      }
+      value = static_cast<bool>(left && right);
+      break;
+    }
     case Operator::MOD:
+      if (!right) {
+        op.addError() << FLOW_ERROR;
+      }
+      value = false;
+      break;
     case Operator::BAND:
+      value = left & right;
+      break;
     case Operator::BOR:
+      value = left | right;
+      break;
     case Operator::BXOR:
+      value = left ^ right;
+      break;
     case Operator::LEFT:
+      value = left < right;
+      break;
     case Operator::RIGHT:
+      value = left > right;
+      break;
+    case Operator::LNOT:
+    case Operator::BNOT:
     case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:
-    case Operator::LNOT:
-    case Operator::BNOT:
-      LOG(BUG) << "binary operator is not a comparison: "
-               << static_cast<int>(op.op);
+      LOG(BUG) << "binary operator is not valid: " << static_cast<int>(op.op);
   }
 
   return ast.make_node<Boolean>(value, Location(op.loc));
@@ -429,7 +457,7 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
 
   if (!result) {
     // This is not a valid expression.
-    op.addError() << "unable to fold literals due to overflow or underflow";
+    op.addError() << FLOW_ERROR;
     return std::nullopt;
   }
 

@@ -19,13 +19,13 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !42 {
 entry:
   %"struct Foo.m16" = alloca i32, align 4
-  %"||_result15" = alloca i64, align 8
+  %"||_result15" = alloca i8, align 1
   %"struct Foo.m8" = alloca i32, align 4
-  %"||_result" = alloca i64, align 8
+  %"||_result" = alloca i8, align 1
   %"struct Foo.m6" = alloca i32, align 4
-  %"&&_result5" = alloca i64, align 8
+  %"&&_result5" = alloca i8, align 1
   %"struct Foo.m" = alloca i32, align 4
-  %"&&_result" = alloca i64, align 8
+  %"&&_result" = alloca i8, align 1
   %"$foo" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i64 0, ptr %"$foo", align 8
@@ -53,17 +53,17 @@ entry:
   br i1 false, label %"&&_true", label %"&&_false"
 
 "&&_true":                                        ; preds = %"&&_lhs_true"
-  store i64 1, ptr %"&&_result", align 8
+  store i8 1, ptr %"&&_result", align 1
   br label %"&&_merge"
 
 "&&_false":                                       ; preds = %"&&_lhs_true", %entry
-  store i64 0, ptr %"&&_result", align 8
+  store i8 0, ptr %"&&_result", align 1
   br label %"&&_merge"
 
 "&&_merge":                                       ; preds = %"&&_false", %"&&_true"
-  %9 = load i64, ptr %"&&_result", align 8
+  %9 = load i8, ptr %"&&_result", align 1
   %10 = getelementptr %printf_t, ptr %2, i32 0, i32 1
-  store i64 %9, ptr %10, align 8
+  store i8 %9, ptr %10, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result5")
   br i1 true, label %"&&_lhs_true1", label %"&&_false3"
 
@@ -80,17 +80,17 @@ entry:
   br i1 %rhs_true_cond, label %"&&_true2", label %"&&_false3"
 
 "&&_true2":                                       ; preds = %"&&_lhs_true1"
-  store i64 1, ptr %"&&_result5", align 8
+  store i8 1, ptr %"&&_result5", align 1
   br label %"&&_merge4"
 
 "&&_false3":                                      ; preds = %"&&_lhs_true1", %"&&_merge"
-  store i64 0, ptr %"&&_result5", align 8
+  store i8 0, ptr %"&&_result5", align 1
   br label %"&&_merge4"
 
 "&&_merge4":                                      ; preds = %"&&_false3", %"&&_true2"
-  %16 = load i64, ptr %"&&_result5", align 8
+  %16 = load i8, ptr %"&&_result5", align 1
   %17 = getelementptr %printf_t, ptr %2, i32 0, i32 2
-  store i64 %16, ptr %17, align 8
+  store i8 %16, ptr %17, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
   %18 = load i64, ptr %"$foo", align 8
   %19 = inttoptr i64 %18 to ptr
@@ -107,17 +107,17 @@ entry:
   br i1 false, label %"||_true", label %"||_false"
 
 "||_false":                                       ; preds = %"||_lhs_false"
-  store i64 0, ptr %"||_result", align 8
+  store i8 0, ptr %"||_result", align 1
   br label %"||_merge"
 
 "||_true":                                        ; preds = %"||_lhs_false", %"&&_merge4"
-  store i64 1, ptr %"||_result", align 8
+  store i8 1, ptr %"||_result", align 1
   br label %"||_merge"
 
 "||_merge":                                       ; preds = %"||_true", %"||_false"
-  %23 = load i64, ptr %"||_result", align 8
+  %23 = load i8, ptr %"||_result", align 1
   %24 = getelementptr %printf_t, ptr %2, i32 0, i32 3
-  store i64 %23, ptr %24, align 8
+  store i8 %23, ptr %24, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result15")
   br i1 false, label %"||_true13", label %"||_lhs_false11"
 
@@ -134,17 +134,17 @@ entry:
   br i1 %rhs_true_cond18, label %"||_true13", label %"||_false12"
 
 "||_false12":                                     ; preds = %"||_lhs_false11"
-  store i64 0, ptr %"||_result15", align 8
+  store i8 0, ptr %"||_result15", align 1
   br label %"||_merge14"
 
 "||_true13":                                      ; preds = %"||_lhs_false11", %"||_merge"
-  store i64 1, ptr %"||_result15", align 8
+  store i8 1, ptr %"||_result15", align 1
   br label %"||_merge14"
 
 "||_merge14":                                     ; preds = %"||_true13", %"||_false12"
-  %30 = load i64, ptr %"||_result15", align 8
+  %30 = load i8, ptr %"||_result15", align 1
   %31 = getelementptr %printf_t, ptr %2, i32 0, i32 4
-  store i64 %30, ptr %31, align 8
+  store i8 %30, ptr %31, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %2, i64 40, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
