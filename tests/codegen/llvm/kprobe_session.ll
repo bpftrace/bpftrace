@@ -23,28 +23,31 @@ entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %is_return = call i8 @bpf_session_is_return()
-  %1 = icmp ne i8 %is_return, 0
-  br i1 %1, label %exit_probe, label %entry_probe
+  %true_cond = icmp ne i8 %is_return, 0
+  br i1 %true_cond, label %if_body, label %else_body
 
-entry_probe:                                      ; preds = %entry
+if_body:                                          ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  store i64 1, ptr %"@_val", align 8
+  store i64 0, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
+  br label %if_end
+
+if_end:                                           ; preds = %else_body, %if_body
   ret i64 0
 
-exit_probe:                                       ; preds = %entry
+else_body:                                        ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key1")
   store i64 0, ptr %"@_key1", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val2")
-  store i64 0, ptr %"@_val2", align 8
+  store i64 1, ptr %"@_val2", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key1", ptr %"@_val2", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val2")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key1")
-  ret i64 0
+  br label %if_end
 }
 
 ; Function Attrs: nounwind

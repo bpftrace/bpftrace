@@ -1121,6 +1121,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
                             "tracepoint/fentry/uprobe probes ("
                          << type << " used here)";
     }
+  } else if (builtin.ident == "__session_is_return") {
+    builtin.builtin_type = CreateBool();
   } else {
     builtin.addError() << "Unknown builtin variable: '" << builtin.ident << "'";
   }
