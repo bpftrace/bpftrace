@@ -253,6 +253,7 @@ void ProbeExpander::visit(AttachPointList &aps)
 
   AttachPointList new_aps;
   for (auto *ap : aps) {
+    auto probe_type = probetype(ap->provider);
     auto expansion = result_.get_expansion(*ap);
     switch (expansion) {
       case ExpansionType::FULL: {
@@ -278,7 +279,33 @@ void ProbeExpander::visit(AttachPointList &aps)
       }
 
       case ExpansionType::SESSION:
-      case ExpansionType::MULTI:
+      case ExpansionType::MULTI: {
+        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        if (util::has_wildcard(ap->target)) {
+          // If we have a wildcard in the target path, we need to generate one
+          // attach point per expanded target
+          assert(probe_type == ProbeType::uprobe ||
+                 probe_type == ProbeType::uretprobe);
+
+          std::unordered_map<std::string, AttachPoint *> new_aps_by_target;
+          for (const auto &func : matches) {
+            auto *match_ap = ap->create_expansion_copy(ast_, func);
+            // Reset the original (possibly wildcarded) function name
+            auto expanded_func = match_ap->func;
+            match_ap->func = ap->func;
+
+            auto new_ap = new_aps_by_target.emplace(match_ap->target, match_ap);
+            result_.add_expanded_func(*new_ap.first->second,
+                                      match_ap->target + ":" + expanded_func);
+          }
+          for (auto &[_, new_ap] : new_aps_by_target)
+            new_aps.push_back(std::move(new_ap));
+        } else if (!matches.empty()) {
+          result_.set_expanded_funcs(*ap, std::move(matches));
+          new_aps.push_back(ap);
+        }
+        break;
+      }
       case ExpansionType::NONE: {
         new_aps.push_back(ap);
         break;

@@ -2,6 +2,7 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/optional.hpp>
+#include <cereal/types/set.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/unordered_set.hpp>

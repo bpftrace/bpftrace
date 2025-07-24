@@ -90,7 +90,7 @@ void check_kprobe(Probe &p,
 }
 
 void check_kprobe_multi(Probe &p,
-                        const std::vector<std::string> &funcs,
+                        const std::set<std::string> &funcs,
                         const std::string &orig_name,
                         const std::string &name)
 {
@@ -122,7 +122,7 @@ void check_uprobe(Probe &p,
 
 void check_uprobe_multi(Probe &p,
                         const std::string &path,
-                        const std::vector<std::string> &funcs,
+                        const std::set<std::string> &funcs,
                         const std::string &orig_name,
                         const std::string &name)
 {
@@ -302,7 +302,7 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(false))
-      .Times(2);
+      .Times(1);
 
   parse_probe("kprobe:sys_read,kprobe:my_*,kprobe:sys_write{}", *bpftrace);
 
@@ -525,7 +525,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_uprobe_multi)
 
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(no_pid, "/bin/sh"))
-      .Times(2);
+      .Times(1);
 
   parse_probe("uprobe:/bin/sh:*open {}", *bpftrace);
 
@@ -577,7 +577,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file_uprobe_multi)
 
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_func_symbols_from_file(no_pid, "/bin/*sh"))
-      .Times(2);
+      .Times(1);
 
   parse_probe("uprobe:/bin/*sh:*open {}", *bpftrace);
 
@@ -1197,7 +1197,7 @@ void check_probe(Probe &p, ProbeType type, const std::string &name)
 }
 
 void check_kprobe_session(Probe &p,
-                          const std::vector<std::string> &funcs,
+                          const std::set<std::string> &funcs,
                           const std::string &name)
 {
   check_kprobe_multi(p, funcs, name, name);
@@ -1328,7 +1328,7 @@ TEST_F(bpftrace_btf, add_probes_wildcard_kprobe_session)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
               get_symbols_from_traceable_funcs(false))
-      .Times(2);
+      .Times(1);
 
   parse_probe("kprobe:my_*{} kretprobe:my_*{}", *bpftrace);
 

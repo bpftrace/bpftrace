@@ -115,10 +115,10 @@ public:
   {
   }
   ~BPFtrace() override;
-  virtual int add_probe(ast::ASTContext &ctx,
-                        const ast::AttachPoint &ap,
+  virtual int add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         ast::ExpansionType expansion,
+                        std::set<std::string> expanded_funcs,
                         int usdt_location_idx = 0);
   Probe generateWatchpointSetupProbe(const ast::AttachPoint &ap,
                                      const ast::Probe &probe);
@@ -273,6 +273,7 @@ private:
   Probe generate_probe(const ast::AttachPoint &ap,
                        const ast::Probe &p,
                        ast::ExpansionType expansion,
+                       std::set<std::string> expanded_funcs,
                        int usdt_location_idx = 0);
   bool has_iter_ = false;
   int epollfd_ = -1;
