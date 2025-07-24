@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
 
@@ -41,8 +43,27 @@ public:
     return exp->second;
   }
 
+  void set_expanded_funcs(AttachPoint &ap, std::set<std::string> funcs)
+  {
+    expanded_funcs.emplace(&ap, std::move(funcs));
+  }
+  void add_expanded_func(AttachPoint &ap, const std::string &func)
+  {
+    auto funcs = expanded_funcs.emplace(&ap, std::set<std::string>());
+    funcs.first->second.insert(func);
+  }
+  std::set<std::string> get_expanded_funcs(AttachPoint &ap)
+  {
+    auto funcs = expanded_funcs.find(&ap);
+    if (funcs == expanded_funcs.end())
+      return {};
+
+    return funcs->second;
+  }
+
 private:
   std::unordered_map<AttachPoint *, ExpansionType> expansions;
+  std::unordered_map<AttachPoint *, std::set<std::string>> expanded_funcs;
 };
 
 Pass CreateProbeExpansionPass();

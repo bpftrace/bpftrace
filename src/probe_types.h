@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cereal/access.hpp>
 #include <ostream>
+#include <set>
 #include <string>
 #include <sys/types.h>
 #include <unistd.h>
@@ -124,7 +125,7 @@ struct Probe {
   uint64_t address = 0;
   uint64_t func_offset = 0;
   uint64_t bpf_prog_id = 0;
-  std::vector<std::string> funcs;
+  std::set<std::string> funcs;
   bool is_session = false;
 
 private:

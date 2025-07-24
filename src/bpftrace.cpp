@@ -106,6 +106,7 @@ Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
 Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
                                const ast::Probe &p,
                                ast::ExpansionType expansion,
+                               std::set<std::string> expanded_funcs,
                                int usdt_location_idx)
 {
   Probe probe;
@@ -127,18 +128,20 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.async = ap.async;
   probe.pin = ap.pin;
   probe.is_session = expansion == ast::ExpansionType::SESSION;
+  probe.funcs = std::move(expanded_funcs);
   probe.bpf_prog_id = ap.bpf_prog_id;
   return probe;
 }
 
-int BPFtrace::add_probe(ast::ASTContext &ctx,
-                        const ast::AttachPoint &ap,
+int BPFtrace::add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         ast::ExpansionType expansion,
+                        std::set<std::string> expanded_funcs,
                         int usdt_location_idx)
 {
   auto type = probetype(ap.provider);
-  auto probe = generate_probe(ap, p, expansion, usdt_location_idx);
+  auto probe = generate_probe(
+      ap, p, expansion, std::move(expanded_funcs), usdt_location_idx);
 
   // Add the new probe(s) to resources
   if (ap.provider == "begin" || ap.provider == "end") {
@@ -158,38 +161,6 @@ int BPFtrace::add_probe(ast::ASTContext &ctx,
     // (async)watchpoint - generate also the setup probe
     resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
     resources.watchpoint_probes.emplace_back(std::move(probe));
-  } else if (expansion == ast::ExpansionType::MULTI ||
-             expansion == ast::ExpansionType::SESSION) {
-    // (k|u)probe_(multi|session) - do expansion and set probe.funcs
-    auto matches = probe_matcher_->get_matches_for_ap(ap);
-    if (matches.empty())
-      return 1;
-
-    if (util::has_wildcard(ap.target)) {
-      // If we have a wildcard in the target path, we need to generate one
-      // probe per expanded target.
-      assert(type == ProbeType::uprobe || type == ProbeType::uretprobe);
-      std::unordered_map<std::string, Probe> target_map;
-      for (const auto &func : matches) {
-        ast::AttachPoint &match_ap = *ap.create_expansion_copy(ctx, func);
-        // Use the original (possibly wildcarded) function name
-        match_ap.func = ap.func;
-        auto found = target_map.find(match_ap.target);
-        if (found != target_map.end()) {
-          found->second.funcs.push_back(func);
-        } else {
-          auto probe = generate_probe(match_ap, p, expansion);
-          probe.funcs.push_back(func);
-          target_map.insert({ { match_ap.target, probe } });
-        }
-      }
-      for (auto &pair : target_map) {
-        resources.probes.push_back(std::move(pair.second));
-      }
-    } else {
-      probe.funcs = std::vector<std::string>(matches.begin(), matches.end());
-      resources.probes.push_back(std::move(probe));
-    }
   } else {
     resources.probes.emplace_back(std::move(probe));
   }

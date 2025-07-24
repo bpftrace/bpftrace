@@ -602,9 +602,8 @@ Result<std::unique_ptr<AttachedMultiKprobeProbe>> AttachedMultiKprobeProbe::
   std::vector<const char *> syms;
   unsigned int i = 0;
 
-  for (i = 0; i < probe.funcs.size(); i++) {
-    syms.push_back(probe.funcs[i].c_str());
-  }
+  for (const auto &func : probe.funcs)
+    syms.push_back(func.c_str());
 
   opts.kprobe_multi.syms = syms.data();
   opts.kprobe_multi.cnt = syms.size();

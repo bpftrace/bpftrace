@@ -16,10 +16,10 @@ public:
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
   MOCK_METHOD5(add_probe,
-               int(ast::ASTContext &,
-                   const ast::AttachPoint &,
+               int(const ast::AttachPoint &,
                    const ast::Probe &,
                    ast::ExpansionType,
+                   std::set<std::string>,
                    int));
 #pragma GCC diagnostic pop
 
