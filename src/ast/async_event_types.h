@@ -74,7 +74,7 @@ struct Buf {
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, uint32_t length);
 } __attribute__((packed));
 
-struct HelperError {
+struct RuntimeError {
   uint64_t action_id;
   uint64_t error_id;
   int32_t return_value;

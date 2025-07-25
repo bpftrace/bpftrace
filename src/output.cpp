@@ -247,6 +247,14 @@ std::string Output::get_helper_error_msg(libbpf::bpf_func_id func_id,
   return msg;
 }
 
+std::string Output::get_divide_by_zero_err() const
+{
+  std::string msg =
+      "Divide or modulo by 0 detected. This can lead to unexpected "
+      "results. 1 is being used as the result.";
+  return msg;
+}
+
 std::string Output::value_to_str(BPFtrace &bpftrace,
                                  const SizedType &type,
                                  const std::vector<uint8_t> &value,
@@ -1032,15 +1040,28 @@ void TextOutput::attached_probes(uint64_t num_probes) const
     out_ << "Attached " << num_probes << " probes" << std::endl;
 }
 
-void TextOutput::helper_error(int retcode, const HelperErrorInfo &info) const
+void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info) const
 {
-  LOG(WARNING,
-      std::string(info.source_location),
-      std::vector(info.source_context),
-      out_)
-      << get_helper_error_msg(info.func_id, retcode)
-      << "\nAdditional Info - helper: " << info.func_id
-      << ", retcode: " << retcode;
+  switch (info.error_id) {
+    case RuntimeErrorId::HELPER_ERROR: {
+      LOG(WARNING,
+          std::string(info.source_location),
+          std::vector(info.source_context),
+          out_)
+          << get_helper_error_msg(info.func_id, retcode)
+          << "\nAdditional Info - helper: " << info.func_id
+          << ", retcode: " << retcode;
+      break;
+    }
+    case RuntimeErrorId::DIVIDE_BY_ZERO: {
+      LOG(WARNING,
+          std::string(info.source_location),
+          std::vector(info.source_context),
+          out_)
+          << get_divide_by_zero_err();
+      break;
+    }
+  }
 }
 
 void TextOutput::benchmark_results(
@@ -1055,9 +1076,9 @@ void TextOutput::benchmark_results(
   }
 
   auto sep = [&]() {
-    out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
-         << "+" << std::setw(AVERAGE_TIME.size() + 2) << std::setfill('-') << ""
-         << "+" << std::endl;
+    out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << "" << "+"
+         << std::setw(AVERAGE_TIME.size() + 2) << std::setfill('-') << "" << "+"
+         << std::endl;
   };
 
   sep();
@@ -1454,13 +1475,24 @@ void JsonOutput::attached_probes(uint64_t num_probes) const
   message(MessageType::attached_probes, "probes", num_probes);
 }
 
-void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info) const
+void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info) const
 {
-  out_ << R"({"type": "helper_error", "msg": ")"
-       << get_helper_error_msg(info.func_id, retcode) << R"(", "helper": ")"
-       << info.func_id << R"(", "retcode": )" << retcode << R"(, "filename": ")"
-       << info.filename << R"(", "line": )" << info.line << R"(, "col": )"
-       << info.column << "}" << std::endl;
+  switch (info.error_id) {
+    case RuntimeErrorId::HELPER_ERROR: {
+      out_ << R"({"type": "helper_error", "msg": ")"
+           << get_helper_error_msg(info.func_id, retcode) << R"(", "helper": ")"
+           << info.func_id << R"(", "retcode": )" << retcode
+           << R"(, "filename": ")" << info.filename << R"(", "line": )"
+           << info.line << R"(, "col": )" << info.column << "}" << std::endl;
+      break;
+    }
+    case RuntimeErrorId::DIVIDE_BY_ZERO: {
+      out_ << R"({"type": "ub_error", "msg": ")" << get_divide_by_zero_err()
+           << R"(", "filename": ")" << info.filename << R"(", "line": )"
+           << info.line << R"(, "col": )" << info.column << "}" << std::endl;
+      break;
+    }
+  }
 }
 
 void JsonOutput::benchmark_results(
