@@ -47,6 +47,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/link.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "async_action.h"
@@ -209,7 +210,8 @@ public:
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
                        LLVMContext &llvm_ctx,
-                       USDTHelper &usdt_helper);
+                       USDTHelper &usdt_helper,
+                       ExpansionResult &expansions);
 
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
   ScopedExpr visit(Integer &integer);
@@ -427,6 +429,7 @@ private:
   CDefinitions &c_definitions_;
   LLVMContext &llvm_ctx_;
   USDTHelper &usdt_helper_;
+  ExpansionResult &expansions_;
   std::unique_ptr<Module> module_;
   AsyncIds async_ids_;
 
@@ -479,12 +482,14 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          BPFtrace &bpftrace,
                          CDefinitions &c_definitions,
                          LLVMContext &llvm_ctx,
-                         USDTHelper &usdt_helper)
+                         USDTHelper &usdt_helper,
+                         ExpansionResult &expansions)
     : ast_(ast),
       bpftrace_(bpftrace),
       c_definitions_(c_definitions),
       llvm_ctx_(llvm_ctx),
       usdt_helper_(usdt_helper),
+      expansions_(expansions),
       module_(std::make_unique<Module>("bpftrace", llvm_ctx)),
 
       b_(llvm_ctx, *module_, bpftrace, async_ids_),
@@ -3412,13 +3417,6 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 {
   current_attach_point_ = &ap;
   probefull_ = ap.name();
-  if (ap.expansion != ExpansionType::NONE &&
-      ap.expansion != ExpansionType::FULL) {
-    // For non-full expansion, we need to avoid generating the code for attach
-    // points with no matches as the BPF program would fail to load.
-    if (bpftrace_.probe_matcher_->get_matches_for_ap(ap).empty())
-      return;
-  }
   if (probetype(ap.provider) == ProbeType::usdt) {
     auto usdt = usdt_helper_.find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
     if (!usdt.has_value()) {
@@ -3439,12 +3437,19 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
       reset_ids();
 
       generateProbe(probe, probefull_, func_type, i);
-      bpftrace_.add_probe(ast_, ap, probe, i);
+      bpftrace_.add_probe(ap,
+                          probe,
+                          expansions_.get_expansion(ap),
+                          expansions_.get_expanded_funcs(ap),
+                          i);
       current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, probefull_, func_type);
-    bpftrace_.add_probe(ast_, ap, probe);
+    bpftrace_.add_probe(ap,
+                        probe,
+                        expansions_.get_expansion(ap),
+                        expansions_.get_expanded_funcs(ap));
   }
   current_attach_point_ = nullptr;
 }
@@ -5280,7 +5285,8 @@ Pass CreateCompilePass(
                       [usdt_helper](ASTContext &ast,
                                     BPFtrace &bpftrace,
                                     CDefinitions &c_definitions,
-                                    CompileContext &ctx) mutable {
+                                    CompileContext &ctx,
+                                    ExpansionResult &expansions) mutable {
                         USDTHelper default_usdt;
                         if (!usdt_helper) {
                           usdt_helper = std::ref(default_usdt);
@@ -5289,7 +5295,8 @@ Pass CreateCompilePass(
                                          bpftrace,
                                          c_definitions,
                                          *ctx.context,
-                                         usdt_helper->get());
+                                         usdt_helper->get(),
+                                         expansions);
                         return CompiledModule(llvm.compile());
                       });
 }
