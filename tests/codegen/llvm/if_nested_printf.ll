@@ -18,6 +18,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %printf_args = alloca %printf_t, align 8
+  %mod_result = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
@@ -31,34 +32,48 @@ if_body:                                          ; preds = %entry
   %4 = lshr i64 %get_pid_tgid3, 32
   %pid4 = trunc i64 %4 to i32
   %5 = zext i32 %pid4 to i64
-  %6 = urem i64 %5, 2
-  %7 = icmp eq i64 %6, 0
-  %true_cond5 = icmp ne i1 %7, false
-  br i1 %true_cond5, label %if_body1, label %if_end2
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %mod_result)
+  br i1 false, label %is_zero, label %not_zero
 
 if_end:                                           ; preds = %if_end2, %entry
   ret i64 0
 
-if_body1:                                         ; preds = %if_body
+if_body1:                                         ; preds = %zero_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 8, i1 false)
-  %8 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
-  store i64 0, ptr %8, align 8
+  %6 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
+  store i64 0, ptr %6, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 8, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end2:                                          ; preds = %counter_merge, %if_body
+if_end2:                                          ; preds = %counter_merge, %zero_merge
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %mod_result)
   br label %if_end
+
+is_zero:                                          ; preds = %if_body
+  store i64 1, ptr %mod_result, align 8
+  br label %zero_merge
+
+not_zero:                                         ; preds = %if_body
+  %7 = urem i64 %5, 2
+  store i64 %7, ptr %mod_result, align 8
+  br label %zero_merge
+
+zero_merge:                                       ; preds = %not_zero, %is_zero
+  %8 = load i64, ptr %mod_result, align 8
+  %9 = icmp eq i64 %8, 0
+  %true_cond5 = icmp ne i1 %9, false
+  br i1 %true_cond5, label %if_body1, label %if_end2
 
 event_loss_counter:                               ; preds = %if_body1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %9 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %9
-  %10 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %11 = load i64, ptr %10, align 8
-  %12 = add i64 %11, 1
-  store i64 %12, ptr %10, align 8
+  %10 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %10
+  %11 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %12 = load i64, ptr %11, align 8
+  %13 = add i64 %12, 1
+  store i64 %13, ptr %11, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %if_body1
