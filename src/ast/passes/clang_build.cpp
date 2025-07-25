@@ -12,6 +12,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/TargetParser/Host.h>
 #include <sstream>
+#include <sys/mman.h>
 
 #if LLVM_VERSION_MAJOR <= 16
 #include <clang/Basic/DebugInfoOptions.h>
@@ -37,76 +38,61 @@ void ClangBuildError::log(llvm::raw_ostream &OS) const
 
 namespace {
 
-class PipeFds {
+class MemFds {
 public:
-  PipeFds(int rfd, int wfd)
-      : rfd_(rfd),
-        wfd_(wfd),
-        read_("/dev/fd/" + std::to_string(rfd)),
-        write_("/dev/fd/" + std::to_string(wfd)) {};
-  PipeFds(PipeFds &&other)
-      : rfd_(other.rfd_),
-        wfd_(other.wfd_),
-        read_(other.read_),
-        write_(other.write_)
+  MemFds(int fd) : fd_(fd), path_("/dev/fd/" + std::to_string(fd)) {};
+  MemFds(MemFds &&other) : fd_(other.fd_), path_(other.path_)
   {
-    other.rfd_ = -1;
-    other.wfd_ = -1;
+    other.fd_ = -1;
   }
-  PipeFds(const PipeFds &other) = delete;
-  ~PipeFds()
+  MemFds(const MemFds &other) = delete;
+  ~MemFds()
   {
-    close_read();
-    close_write();
+    close_fd();
   }
 
   const std::string &write_file()
   {
-    return write_;
+    return path_;
   }
 
   std::string read_all()
   {
-    close_write();
-    std::ifstream file(read_);
-    if (file.fail()) {
-      return ""; // Nothing to read.
+    // Seek to the beginning of the file, and read the entire contents
+    // into a single string that can be returned. We stat the file up
+    // front in order to avoid excessive chunking.
+    struct stat st;
+    if (fstat(fd_, &st) < 0) {
+      return "";
     }
-    std::stringstream contents;
-    contents << file.rdbuf();
-    return contents.str();
+    std::string result;
+    result.resize(st.st_size);
+    if (read(fd_, result.data(), st.st_size) < 0) {
+      return "";
+    }
+    return result;
   }
 
-  void close_read()
+  void close_fd()
   {
-    if (rfd_ >= 0) {
-      close(rfd_);
-      rfd_ = -1;
-    }
-  }
-
-  void close_write()
-  {
-    if (wfd_ >= 0) {
-      close(wfd_);
-      wfd_ = -1;
+    if (fd_ >= 0) {
+      close(fd_);
+      fd_ = -1;
     }
   }
 
 private:
-  int rfd_ = -1;
-  int wfd_ = -1;
-  std::string read_;
-  std::string write_;
+  int fd_ = -1;
+  std::string path_;
 };
 
-Result<PipeFds> create_pipe()
+Result<MemFds> create_memfd()
 {
-  int fds[2];
-  if (pipe2(fds, O_CLOEXEC) < 0) {
-    return make_error<ClangBuildError>("failed to create pipes");
+  int fd = memfd_create("memfd", MFD_CLOEXEC);
+  if (fd < 0) {
+    return make_error<ClangBuildError>("failed to create memfd");
   }
-  return PipeFds(fds[0], fds[1]);
+  return MemFds(fd);
 }
 
 } // namespace
@@ -158,12 +144,12 @@ static Result<> build(CompileContext &ctx,
       diagOpts,
       new clang::TextDiagnosticPrinter(err, diagOpts.get()));
 
-  // We create a temporary pipe that we can use to splurp the output,
+  // We create a temporary memfd that we can use to store the output,
   // since the ClangDriver API is framed in terms of filenames. Perhaps
   // we could use the internals here, but that carries other risks.
-  auto pipefds = create_pipe();
-  if (!pipefds) {
-    return pipefds.takeError();
+  auto memfd = create_memfd();
+  if (!memfd) {
+    return memfd.takeError();
   }
 
   // Create the compiler invocation. Note that the `-O2` introduces some passes
@@ -178,7 +164,7 @@ static Result<> build(CompileContext &ctx,
     args.push_back(s.c_str());
   }
   args.push_back("-o");
-  args.push_back(pipefds->write_file().c_str());
+  args.push_back(memfd->write_file().c_str());
   args.push_back(name.c_str());
 
   // Configure the instance. We want to read the source file named
@@ -229,7 +215,7 @@ static Result<> build(CompileContext &ctx,
     return make_error<ClangBuildError>("failed to generate module");
   }
   result.modules.emplace_back(std::move(mod));
-  result.objects.emplace_back(pipefds->read_all());
+  result.objects.emplace_back(memfd->read_all());
   return OK();
 }
 
