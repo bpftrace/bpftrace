@@ -15,10 +15,11 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD4(add_probe,
+  MOCK_METHOD5(add_probe,
                int(ast::ASTContext &,
                    const ast::AttachPoint &,
                    const ast::Probe &,
+                   ast::ExpansionType,
                    int));
 #pragma GCC diagnostic pop
 
@@ -102,7 +103,7 @@ TEST(codegen, probe_count)
 kprobe:f { 1; } kprobe:d { 1; }
 )");
   MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_, _, _, _)).Times(2);
+  EXPECT_CALL(bpftrace, add_probe(_, _, _, _, _)).Times(2);
 
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);

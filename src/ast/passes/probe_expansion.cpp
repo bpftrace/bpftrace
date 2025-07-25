@@ -2,39 +2,12 @@
 
 #include <algorithm>
 
-#include "ast/ast.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
-
-using ast::ExpansionType;
-
-class ExpansionResult {
-public:
-  ExpansionResult() = default;
-  ExpansionResult(const ExpansionResult &) = delete;
-  ExpansionResult &operator=(const ExpansionResult &) = delete;
-  ExpansionResult(ExpansionResult &&) = default;
-  ExpansionResult &operator=(ExpansionResult &&) = default;
-
-  void set_expansion(AttachPoint &ap, ExpansionType type)
-  {
-    expansions[&ap] = type;
-  }
-  ExpansionType get_expansion(AttachPoint &ap)
-  {
-    auto exp = expansions.find(&ap);
-    if (exp == expansions.end())
-      return ExpansionType::NONE;
-    return exp->second;
-  }
-
-private:
-  std::unordered_map<AttachPoint *, ExpansionType> expansions;
-};
 
 class ExpansionAnalyser : public Visitor<ExpansionAnalyser> {
 public:
@@ -243,28 +216,27 @@ void SessionExpander::visit(Probe &probe)
 
 class ProbeExpander : public Visitor<ProbeExpander> {
 public:
-  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace)
+  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace, ExpansionResult &result)
+      : ast_(ast), bpftrace_(bpftrace), result_(result)
   {
   }
 
-  void expand(ExpansionResult result);
+  void expand();
 
   using Visitor<ProbeExpander>::visit;
   void visit(Program &prog);
   void visit(AttachPointList &aps);
 
 private:
-  ExpansionResult result_;
   uint64_t probe_count_ = 0;
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  ExpansionResult &result_;
 };
 
-void ProbeExpander::expand(ExpansionResult result)
+void ProbeExpander::expand()
 {
-  result_ = std::move(result);
   visit(*ast_.root);
 }
 
@@ -308,7 +280,6 @@ void ProbeExpander::visit(AttachPointList &aps)
       case ExpansionType::SESSION:
       case ExpansionType::MULTI:
       case ExpansionType::NONE: {
-        ap->expansion = expansion;
         new_aps.push_back(ap);
         break;
       }
@@ -327,8 +298,10 @@ Pass CreateProbeExpansionPass()
     SessionExpander session_expander(ast, bpftrace, result);
     session_expander.visit(*ast.root);
 
-    ProbeExpander expander(ast, bpftrace);
-    expander.expand(std::move(result));
+    ProbeExpander expander(ast, bpftrace, result);
+    expander.expand();
+
+    return result;
   };
 
   return Pass::create("ProbeExpansion", fn);
