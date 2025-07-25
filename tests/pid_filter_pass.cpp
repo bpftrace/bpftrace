@@ -2,6 +2,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/probe_expansion.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -29,6 +30,7 @@ void test(const std::string& input, bool has_pid, bool has_filter)
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreatePidFilterPass())
                 .run();
@@ -62,7 +64,7 @@ TEST(pid_filter_pass, add_filter)
     "fentry:f",
     "fexit:f",
     "tracepoint:category:event",
-    "rawtracepoint:event",
+    "rawtracepoint:module:event",
   };
 
   for (auto& probe : filter_probes) {

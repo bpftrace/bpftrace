@@ -52,22 +52,6 @@ enum class Operator {
   BNOT,
 };
 
-// There are 2 kinds of attach point expansion:
-// - full expansion  - separate LLVM function is generated for each match
-// - multi expansion - one LLVM function and BPF program is generated for all
-//                     matches, the list of expanded functions is attached to
-//                     the BPF program using the k(u)probe.multi mechanism
-// - session expansion - extension of the multi expansion when a single BPF
-//                       program is shared for both the entry and the exit probe
-//                       (when they are both attached to the same attach points)
-//                       using the kprobe.session mechanism
-enum class ExpansionType {
-  NONE,
-  FULL,
-  MULTI,
-  SESSION,
-};
-
 class Node {
 public:
   Node(ASTContext &ctx, Location &&loc) : state_(*ctx.state_), loc(loc) {};
@@ -1137,7 +1121,6 @@ public:
         len(other.len),
         mode(other.mode),
         async(other.async),
-        expansion(other.expansion),
         address(other.address),
         func_offset(other.func_offset),
         ignore_invalid(other.ignore_invalid),
@@ -1168,8 +1151,6 @@ public:
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr
   std::string mode;   // for watchpoint probes, the watch mode
   bool async = false; // for watchpoint probes, if it's an async watchpoint
-
-  ExpansionType expansion = ExpansionType::NONE;
 
   uint64_t address = 0;
   uint64_t func_offset = 0;

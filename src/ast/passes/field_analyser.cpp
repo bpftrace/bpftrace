@@ -2,6 +2,7 @@
 
 #include "arch/arch.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
@@ -18,7 +19,8 @@ namespace {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
-  explicit FieldAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
+  explicit FieldAnalyser(BPFtrace &bpftrace, ExpansionResult &expansions)
+      : bpftrace_(bpftrace), expansions_(expansions)
   {
   }
 
@@ -48,6 +50,7 @@ private:
   std::string attach_func_;
   SizedType sized_type_;
   BPFtrace &bpftrace_;
+  ExpansionResult &expansions_;
   libbpf::bpf_prog_type prog_type_{ libbpf::BPF_PROG_TYPE_UNSPEC };
   bool has_builtin_args_;
   Probe *probe_ = nullptr;
@@ -230,7 +233,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
         probe_type != ProbeType::uprobe)
       continue;
 
-    if (ap->expansion != ExpansionType::NONE) {
+    if (expansions_.get_expansion(*ap) != ExpansionType::NONE) {
       std::set<std::string> matches;
 
       // Find all the matches for the wildcard..
@@ -385,8 +388,8 @@ void FieldAnalyser::visit(Subprog &subprog)
 
 Pass CreateFieldAnalyserPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b) {
-    FieldAnalyser analyser(b);
+  auto fn = [](ASTContext &ast, BPFtrace &b, ExpansionResult &expansions) {
+    FieldAnalyser analyser(b, expansions);
     analyser.visit(ast.root);
   };
 
