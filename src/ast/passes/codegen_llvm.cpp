@@ -2317,6 +2317,7 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
       b_.CreateCondBr(cond, is_zero, not_zero);
       b_.SetInsertPoint(is_zero);
       b_.CreateStore(b_.getInt64(1), mod_result);
+      b_.CreateRuntimeError(RuntimeErrorId::DIVIDE_BY_ZERO, binop.loc);
       b_.CreateBr(zero_merge);
 
       b_.SetInsertPoint(not_zero);
@@ -2324,10 +2325,9 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
       b_.CreateBr(zero_merge);
 
       b_.SetInsertPoint(zero_merge);
-      return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(), mod_result),
-                        [this, mod_result, d = std::move(del)] {
-                          b_.CreateLifetimeEnd(mod_result);
-                        });
+      auto *result = b_.CreateLoad(b_.getInt64Ty(), mod_result);
+      b_.CreateLifetimeEnd(mod_result);
+      return ScopedExpr(result, std::move(del));
     }
     case Operator::BAND:
       return ScopedExpr(b_.CreateAnd(lhs, rhs), std::move(del));

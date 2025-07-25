@@ -138,6 +138,8 @@ and this project adheres to
   - [#4244](https://github.com/bpftrace/bpftrace/pull/4244)
 - Report expanded probe name when trying to attach
   - [#4353](https://github.com/bpftrace/bpftrace/pull/4353)
+- Fix codegen optimization bug with the modulo operator
+  - [#4383](https://github.com/bpftrace/bpftrace/pull/4383)
 #### Security
 #### Docs
 #### Tools

@@ -19,7 +19,7 @@ public:
   void syscall(const std::string &syscall) override;
   void lost_events(uint64_t lost) override;
   void attached_probes(uint64_t num_probes) override;
-  void helper_error(int retcode, const HelperErrorInfo &info) override;
+  void runtime_error(int retcode, const RuntimeErrorInfo &info) override;
   void benchmark_results(
       const std::vector<std::pair<std::string, uint32_t>> &results) override;
   void end() override;

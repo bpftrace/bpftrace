@@ -31,6 +31,7 @@ TIMEOUT 1
 NAME zero_modulo
 PROG BEGIN { @mod1 = 1; @mod0 = 0; print((uint64)10 % (uint64)@mod0); }
 EXPECT 1
+EXPECT stdin:1:48-49: WARNING: Divide or modulo by 0 detected. This can lead to unexpected results. 1 is being used as the result.
 TIMEOUT 1
 
 NAME c_array_indexing

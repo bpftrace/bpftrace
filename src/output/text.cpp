@@ -561,31 +561,47 @@ void TextOutput::attached_probes(uint64_t num_probes)
     out_ << "Attached " << num_probes << " probes" << std::endl;
 }
 
-void TextOutput::helper_error(int retcode, const HelperErrorInfo &info)
+void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 {
-  std::string msg;
-  if (info.func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG) {
-    msg = "Map full; can't update element. Try increasing max_map_keys config "
-          "or manually setting the max entries in a map declaration e.g. `let "
-          "@a = hash(5000)`";
-  } else if (info.func_id == libbpf::BPF_FUNC_map_delete_elem &&
-             retcode == -ENOENT) {
-    msg = "Can't delete map element because it does not exist.";
-  }
-  // bpftrace sets the return code to 0 for map_lookup_elem failures
-  // which is why we're not also checking the retcode
-  else if (info.func_id == libbpf::BPF_FUNC_map_lookup_elem) {
-    msg = "Can't lookup map element because it does not exist.";
-  } else {
-    msg = strerror(-retcode);
-  }
+  switch (info.error_id) {
+    case RuntimeErrorId::HELPER_ERROR: {
+      std::string msg;
+      if (info.func_id == libbpf::BPF_FUNC_map_update_elem &&
+          retcode == -E2BIG) {
+        msg = "Map full; can't update element. Try increasing max_map_keys "
+              "config "
+              "or manually setting the max entries in a map declaration e.g. "
+              "`let "
+              "@a = hash(5000)`";
+      } else if (info.func_id == libbpf::BPF_FUNC_map_delete_elem &&
+                 retcode == -ENOENT) {
+        msg = "Can't delete map element because it does not exist.";
+      }
+      // bpftrace sets the return code to 0 for map_lookup_elem failures
+      // which is why we're not also checking the retcode
+      else if (info.func_id == libbpf::BPF_FUNC_map_lookup_elem) {
+        msg = "Can't lookup map element because it does not exist.";
+      } else {
+        msg = strerror(-retcode);
+      }
 
-  LOG(WARNING,
-      std::string(info.source_location),
-      std::vector(info.source_context),
-      out_)
-      << msg << "\nAdditional Info - helper: " << info.func_id
-      << ", retcode: " << retcode;
+      LOG(WARNING,
+          std::string(info.source_location),
+          std::vector(info.source_context),
+          out_)
+          << msg << "\nAdditional Info - helper: " << info.func_id
+          << ", retcode: " << retcode;
+      return;
+    }
+    default: {
+      LOG(WARNING,
+          std::string(info.source_location),
+          std::vector(info.source_context),
+          out_)
+          << info;
+      return;
+    }
+  }
 }
 
 void TextOutput::benchmark_results(
@@ -600,9 +616,9 @@ void TextOutput::benchmark_results(
   }
 
   auto sep = [&]() {
-    out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << ""
-         << "+" << std::setw(AVERAGE_TIME.size() + 2) << std::setfill('-') << ""
-         << "+" << std::endl;
+    out_ << "+" << std::setw(longest_name + 2) << std::setfill('-') << "" << "+"
+         << std::setw(AVERAGE_TIME.size() + 2) << std::setfill('-') << "" << "+"
+         << std::endl;
   };
 
   sep();

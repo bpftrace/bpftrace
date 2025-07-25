@@ -34,4 +34,20 @@ void RequiredResources::load_state(const uint8_t *ptr, size_t len)
   archive(*this);
 }
 
+std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
+{
+  switch (info.error_id) {
+    case RuntimeErrorId::HELPER_ERROR: {
+      // Helper errors are handled separately in output
+      os << "";
+      break;
+    }
+    case RuntimeErrorId::DIVIDE_BY_ZERO: {
+      os << DIVIDE_BY_ZERO_MSG;
+      break;
+    }
+  }
+  return os;
+}
+
 } // namespace bpftrace
