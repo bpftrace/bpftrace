@@ -172,7 +172,6 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
   ap->len = len;
   ap->mode = mode;
   ap->async = async;
-  ap->expansion = expansion;
   ap->address = address;
   ap->func_offset = func_offset;
 
