@@ -65,23 +65,42 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
       value = left || right;
       break;
     case Operator::PLUS:
+      value = left + right;
+      break;
     case Operator::MINUS:
+      value = left - right;
+      break;
     case Operator::MUL:
+      value = left && right;
+      break;
     case Operator::DIV:
+      value = static_cast<bool>(left && right);
+      break;
     case Operator::MOD:
+      value = false;
+      break;
     case Operator::BAND:
+      value = left & right;
+      break;
     case Operator::BOR:
+      value = left | right;
+      break;
     case Operator::BXOR:
+      value = left ^ right;
+      break;
     case Operator::LEFT:
+      value = left < right;
+      break;
     case Operator::RIGHT:
+      value = left > right;
+      break;
+    case Operator::LNOT:
+    case Operator::BNOT:
     case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:
-    case Operator::LNOT:
-    case Operator::BNOT:
-      LOG(BUG) << "binary operator is not a comparison: "
-               << static_cast<int>(op.op);
+      LOG(BUG) << "binary operator is not valid: " << static_cast<int>(op.op);
   }
 
   return ast.make_node<Boolean>(value, Location(op.loc));

@@ -483,7 +483,7 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
 Program
  kprobe:f
   ?: :: [(string[13],string[13])]
-   < :: [uint64]
+   < :: [bool]
     builtin: pid :: [uint32]
     int: 10000
    tuple: :: [(string[2],string[13])]
@@ -3121,15 +3121,34 @@ TEST_F(SemanticAnalyserTest, cast_sign)
   EXPECT_EQ(CreateUInt64(), ul->var()->var_type);
 }
 
-TEST_F(SemanticAnalyserTest, binop_sign)
+TEST_F(SemanticAnalyserTest, binop_bool_and_int)
+{
+  std::string operators[] = {
+    "==", "!=", "<", "<=", ">",  ">=", "&&", "||", "+",
+    "-",  "/",  "*", ">>", "<<", "&",  "|",  "^",
+  };
+
+  // Making a single variable below so as not to trigger fold_literals code
+
+  // both sides bool
+  for (std::string op : operators) {
+    test("kretprobe:f { $a = true; $b = $a " + op + " false; }");
+  }
+
+  // one side int
+  for (std::string op : operators) {
+    test("kretprobe:f { $a = true; $b = $a " + op + " 1; }");
+  }
+}
+
+TEST_F(SemanticAnalyserTest, binop_arithmetic)
 {
   // Make sure types are correct
   std::string prog_pre = "struct t { long l; unsigned long ul }; "
                          "kprobe:f { $t = ((struct t *)0xFF); ";
 
-  std::string operators[] = { "==", "!=", "<", "<=", ">",
-                              ">=", "+",  "-", "/",  "*" };
-  for (std::string op : operators) {
+  std::string arithmetic_operators[] = { "+", "-", "/", "*" };
+  for (std::string op : arithmetic_operators) {
     std::string prog = prog_pre + "$varA = $t->l " + op +
                        " $t->l; "
                        "$varB = $t->ul " +
@@ -3137,7 +3156,14 @@ TEST_F(SemanticAnalyserTest, binop_sign)
                        " $t->l; "
                        "$varC = $t->ul " +
                        op +
-                       " $t->ul;"
+                       " $t->ul; "
+                       "$varD = $t->ul " +
+                       op +
+                       " true; "
+                       "$bool_t = false; "
+                       "$varE = $bool_t " +
+                       op +
+                       " true; "
                        "}";
 
     auto ast = test(prog);
@@ -3153,6 +3179,55 @@ TEST_F(SemanticAnalyserTest, binop_sign)
                      ->block->stmts.at(3)
                      .as<ast::AssignVarStatement>();
     EXPECT_EQ(CreateUInt64(), varC->var()->var_type);
+    auto *varD = ast.root->probes.at(0)
+                     ->block->stmts.at(4)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateUInt64(), varD->var()->var_type);
+    // This one is not like the others
+    auto *varE = ast.root->probes.at(0)
+                     ->block->stmts.at(5)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateBool(), varE->var()->var_type);
+  }
+}
+
+TEST_F(SemanticAnalyserTest, binop_compare)
+{
+  std::string prog_pre = "struct t { long l }; "
+                         "kprobe:f { $t = ((struct t *)0xFF); ";
+  std::string compare_operators[] = { "==", "!=", "<", "<=", ">", ">=" };
+
+  for (std::string op : compare_operators) {
+    std::string prog = prog_pre + "$varA = 1 " + op +
+                       " 1; "
+                       "$varB = $t " +
+                       op +
+                       " 1; "
+                       "$varC = true " +
+                       op +
+                       " 1; "
+                       "$varD = true " +
+                       op +
+                       " $t; "
+                       "}";
+
+    auto ast = test(prog);
+    auto *varA = ast.root->probes.at(0)
+                     ->block->stmts.at(1)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateBool(), varA->var()->var_type);
+    auto *varB = ast.root->probes.at(0)
+                     ->block->stmts.at(2)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateBool(), varB->var()->var_type);
+    auto *varC = ast.root->probes.at(0)
+                     ->block->stmts.at(3)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateBool(), varC->var()->var_type);
+    auto *varD = ast.root->probes.at(0)
+                     ->block->stmts.at(4)
+                     .as<ast::AssignVarStatement>();
+    EXPECT_EQ(CreateBool(), varD->var()->var_type);
   }
 }
 
