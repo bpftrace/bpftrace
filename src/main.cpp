@@ -43,7 +43,7 @@
 #include "globalvars.h"
 #include "lockdown.h"
 #include "log.h"
-#include "output.h"
+#include "probe_matcher.h"
 #include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
@@ -687,17 +687,6 @@ int main(int argc, char* argv[])
 {
   Log::get().set_colorize(is_colorize());
   Args args = parse_args(argc, argv);
-  std::ostream* os = &std::cout;
-  std::ofstream outputstream;
-  if (!args.output_file.empty()) {
-    outputstream.open(args.output_file);
-    if (outputstream.fail()) {
-      LOG(ERROR) << "Failed to open output file: \"" << args.output_file
-                 << "\": " << strerror(errno);
-      exit(1);
-    }
-    os = &outputstream;
-  }
 
   switch (args.obc) {
     case OutputBufferConfig::UNSET:
@@ -1015,29 +1004,12 @@ int main(int argc, char* argv[])
   if (args.test_mode == TestMode::CODEGEN)
     return 0;
 
-  // Our output requires the parsed C definitions in order to map enum values to
-  // the suitable display name.
-  auto& c_definitions = pmresult->get<ast::CDefinitions>();
-  std::unique_ptr<Output> output;
-  if (args.output_format.empty() || args.output_format == "text") {
-    output = std::make_unique<TextOutput>(c_definitions, *os);
-  } else if (args.output_format == "json") {
-    output = std::make_unique<JsonOutput>(c_definitions, *os);
-  } else {
-    LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
-               << "Valid formats: 'text', 'json'";
-    usage(std::cerr);
-    exit(1);
-  }
-
-  if (!bpftrace.feature_->has_map_ringbuf()) {
-    LOG(ERROR) << "Your kernel is too old and is missing the "
-                  "BPF_MAP_TYPE_RINGBUF, which bpftrace requires.";
-    return 1;
-  }
-
+  auto c_definitions = pmresult->get<ast::CDefinitions>();
   auto& bytecode = pmresult->get<BpfBytecode>();
-
-  return run_bpftrace(
-      bpftrace, *output, bytecode, std::move(args.named_params));
+  return run_bpftrace(bpftrace,
+                      args.output_file,
+                      args.output_format,
+                      c_definitions,
+                      bytecode,
+                      std::move(args.named_params));
 }
