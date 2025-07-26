@@ -197,8 +197,7 @@ These can be set via the [Config Block](#config-block) directly in a script (bef
 Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 
 * PER_PROGRAM - each program has its own cache. If there are more processes with enabled ASLR for a single program, this might produce incorrect results.
-* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment ti
-me.
+* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment time.
 If there are many processes running, it will consume a lot of a memory.
 * NONE - caching disabled. This saves the most memory, but at the cost of speed.
 
