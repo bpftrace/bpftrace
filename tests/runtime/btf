@@ -1,5 +1,5 @@
 NAME user_supplied_c_def_using_btf
-PROG struct foo { struct task_struct t; } BEGIN {  }
+PROG struct foo { struct task_struct t; } begin {  }
 EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
@@ -14,17 +14,17 @@ EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
 NAME enum_value_reference
-PROG BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC));  }
+PROG begin { printf("%d\n", sizeof(BTF_VAR_STATIC));  }
 EXPECT_REGEX ^8$
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type
-PROG struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); exit() }
+PROG struct task_struct { int x; } begin { printf("%d\n", curtask->x); exit() }
 EXPECT_REGEX -?[0-9][0-9]*
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type_missing_def
-PROG struct task_struct { struct thread_info x; } BEGIN { printf("%d\n", curtask->x.status); }
+PROG struct task_struct { struct thread_info x; } begin { printf("%d\n", curtask->x.status); }
 EXPECT_REGEX error:.*'struct thread_info'
 REQUIRES_FEATURE btf
 WILL_FAIL
@@ -90,6 +90,6 @@ REQUIRES lsmod | grep '^kvm'
 # This test only matters on Clang-built kernels, which support btf_type_tag
 # and require special handling in bpftrace
 NAME btf_type_tag_access
-PROG BEGIN { printf("SUCCESS %d\n", curtask->parent->pid); exit() }
+PROG begin { printf("SUCCESS %d\n", curtask->parent->pid); exit() }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE btf

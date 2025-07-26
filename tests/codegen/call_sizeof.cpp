@@ -4,7 +4,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, call_sizeof)
 {
-  test("struct Foo { int x; char c; } BEGIN { @x = sizeof(struct Foo) }",
+  test("struct Foo { int x; char c; } begin { @x = sizeof(struct Foo) }",
 
        NAME);
 }

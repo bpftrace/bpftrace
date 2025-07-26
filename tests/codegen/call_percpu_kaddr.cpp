@@ -4,12 +4,12 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, call_percpu_kaddr)
 {
-  test("BEGIN { percpu_kaddr(\"process_counts\", 0); }", NAME);
+  test("begin { percpu_kaddr(\"process_counts\", 0); }", NAME);
 }
 
 TEST(codegen, call_percpu_kaddr_this_cpu)
 {
-  test("BEGIN { percpu_kaddr(\"process_counts\"); }", NAME);
+  test("begin { percpu_kaddr(\"process_counts\"); }", NAME);
 }
 
 } // namespace bpftrace::test::codegen

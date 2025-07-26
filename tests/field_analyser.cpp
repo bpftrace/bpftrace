@@ -136,7 +136,7 @@ TEST_F(field_analyser_btf, btf_arrays)
 {
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace,
-       "BEGIN {\n"
+       "begin {\n"
        "  @ = (struct Arrays *) 0;\n"
        "}",
        true);
@@ -196,7 +196,7 @@ TEST_F(field_analyser_btf, DISABLED_btf_arrays_multi_dim)
 {
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace,
-       "BEGIN {\n"
+       "begin {\n"
        "  @ = (struct Arrays *) 0;\n"
        "}",
        true);
@@ -261,7 +261,7 @@ TEST_F(field_analyser_btf, arrays_compound_data)
 {
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace,
-       "BEGIN {\n"
+       "begin {\n"
        "  $x = (struct ArrayWithCompoundData *) 0;\n"
        "  $x->data[0]->foo1->a\n"
        "}",
@@ -371,7 +371,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
 TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, "BEGIN { @ = (struct FirstFieldsAreAnonUnion *)0; }");
+  test(*bpftrace, "begin { @ = (struct FirstFieldsAreAnonUnion *)0; }");
 
   ASSERT_TRUE(bpftrace->structs.Has("struct FirstFieldsAreAnonUnion"));
   auto record =

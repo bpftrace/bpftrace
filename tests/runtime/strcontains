@@ -5,7 +5,7 @@ REQUIRES_FEATURE dpath fentry
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME literals
-PROG BEGIN { if (strcontains("abc", "a")) { printf("OK\n");  } }
+PROG begin { if (strcontains("abc", "a")) { printf("OK\n");  } }
 EXPECT OK
 TIMEOUT 1
 
@@ -23,86 +23,86 @@ AFTER ./testprogs/true zztest test
 EXPECT true
 
 NAME basic substring match
-PROG BEGIN { print(strcontains("hello-test-world", "test"));  }
+PROG begin { print(strcontains("hello-test-world", "test"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME substring at end
-PROG BEGIN { print(strcontains("hello-test-world", "world"));  }
+PROG begin { print(strcontains("hello-test-world", "world"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME substring at beginning
-PROG BEGIN { print(strcontains("hello-test-world", "hello"));  }
+PROG begin { print(strcontains("hello-test-world", "hello"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME no match
-PROG BEGIN { print(strcontains("hello-test-world", "not-there"));  }
+PROG begin { print(strcontains("hello-test-world", "not-there"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME empty haystack, empty needle
-PROG BEGIN { print(strcontains("", ""));  }
+PROG begin { print(strcontains("", ""));  }
 EXPECT true
 TIMEOUT 1
 
 NAME non-empty haystack, empty needle
-PROG BEGIN { print(strcontains("hello", ""));  }
+PROG begin { print(strcontains("hello", ""));  }
 EXPECT true
 TIMEOUT 1
 
 NAME empty haystack, non-empty needle
-PROG BEGIN { print(strcontains("", "test"));  }
+PROG begin { print(strcontains("", "test"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME exact match
-PROG BEGIN { print(strcontains("hello", "hello"));  }
+PROG begin { print(strcontains("hello", "hello"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME needle longer than haystack
-PROG BEGIN { print(strcontains("hello", "hello-longer"));  }
+PROG begin { print(strcontains("hello", "hello-longer"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME case sensitivity check
-PROG BEGIN { print(strcontains("Hello World", "hello"));  }
+PROG begin { print(strcontains("Hello World", "hello"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME multiple occurrences
-PROG BEGIN { print(strcontains("test-test-test", "test"));  }
+PROG begin { print(strcontains("test-test-test", "test"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME overlapping potential matches
-PROG BEGIN { print(strcontains("ababac", "abac"));  }
+PROG begin { print(strcontains("ababac", "abac"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME special characters
-PROG BEGIN { print(strcontains("hello\tworld", "\two"));  }
+PROG begin { print(strcontains("hello\tworld", "\two"));  }
 EXPECT true
 TIMEOUT 1
 
 NAME null terminator inside haystack
-PROG BEGIN { $str = "hello\0world"; print(strcontains($str, "world"));  }
+PROG begin { $str = "hello\0world"; print(strcontains($str, "world"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME content after null terminator
-PROG BEGIN { $str = "hello\0test"; print(strcontains($str, "test"));  }
+PROG begin { $str = "hello\0test"; print(strcontains($str, "test"));  }
 EXPECT false
 TIMEOUT 1
 
 NAME null character in needle
-PROG BEGIN { $needle = "wo\0rld"; print(strcontains("hello world", $needle));  }
+PROG begin { $needle = "wo\0rld"; print(strcontains("hello world", $needle));  }
 EXPECT true
 TIMEOUT 1
 
 NAME null character in both
-PROG BEGIN { $haystack = "hello\0world"; $needle = "wo\0rld"; print(strcontains($haystack, $needle));  }
+PROG begin { $haystack = "hello\0world"; $needle = "wo\0rld"; print(strcontains($haystack, $needle));  }
 EXPECT false
 TIMEOUT 1

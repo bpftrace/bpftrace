@@ -1,4 +1,4 @@
-BEGIN
+begin
 {
     @count = 0;
 }
@@ -19,7 +19,7 @@ usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe
     }
 }
 
-END
+end
 {
     printf("found %d processes\n", @count);
 

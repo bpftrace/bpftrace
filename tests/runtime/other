@@ -73,31 +73,31 @@ RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n
 EXPECT a=11
 
 NAME unroll_printf
-PROG BEGIN { unroll (1) { printf("a"); } printf("b\n");  }
+PROG begin { unroll (1) { printf("a"); } printf("b\n");  }
 EXPECT ab
 
 NAME if_compare_and_print_string
-PROG BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} }
+PROG begin { if (comm == "bpftrace") { printf("comm: %s\n", comm);} }
 EXPECT comm: bpftrace
 
 NAME struct positional string compare - equal returns true
-RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} }' "hello" "hello"
+RUN {{BPFTRACE}} -e 'begin { if (str($1) == str($2)) { printf("I got %s\n", str($1));} }' "hello" "hello"
 EXPECT I got hello
 
 NAME struct positional string compare - equal returns false
-RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} }' "hi" "hello"
+RUN {{BPFTRACE}} -e 'begin { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} }' "hi" "hello"
 EXPECT not equal
 
 NAME struct positional string compare - not equal
-RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} }' "hello" "hello"
+RUN {{BPFTRACE}} -e 'begin { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} }' "hello" "hello"
 EXPECT not equal
 
 NAME positional string compare via variable - equal
-RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1, 6); if ($x == "hello") { printf("I got %s\n", "hello");} else { printf("not equal\n");} }' "hello"
+RUN {{BPFTRACE}} -e 'begin { $x = str($1, 6); if ($x == "hello") { printf("I got %s\n", "hello");} else { printf("not equal\n");} }' "hello"
 EXPECT I got hello
 
 NAME positional string compare via variable - not equal
-RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1, 5); if ($x == "hello") { printf("I got hello\n");} else { printf("not %s\n", "equal");} }' "hell"
+RUN {{BPFTRACE}} -e 'begin { $x = str($1, 5); if ($x == "hello") { printf("I got hello\n");} else { printf("not %s\n", "equal");} }' "hell"
 EXPECT not equal
 
 NAME positional attachpoint
@@ -116,7 +116,7 @@ EXPECT hello world
 TIMEOUT 1
 
 NAME positional unsigned hex
-RUN {{BPFTRACE}} -e 'BEGIN {printf("%lu", $1);}' 0xffffffffffffffff
+RUN {{BPFTRACE}} -e 'begin {printf("%lu", $1);}' 0xffffffffffffffff
 EXPECT 18446744073709551615
 TIMEOUT 1
 
@@ -125,11 +125,11 @@ RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] =
 EXPECT @[syscall]: 1
 
 NAME struct partial string compare - pass
-RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} }' "hhvm" "hhvm-proc"
+RUN {{BPFTRACE}} -e 'begin { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} }' "hhvm" "hhvm-proc"
 EXPECT I got hhvm
 
 NAME struct partial string compare - pass reverse
-RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} }' "hhvm-proc" "hhvm"
+RUN {{BPFTRACE}} -e 'begin { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} }' "hhvm-proc" "hhvm"
 EXPECT I got hhvm-proc
 
 NAME strncmp function argument
@@ -141,53 +141,53 @@ RUN {{BPFTRACE}} -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a 
 EXPECT hello hello
 
 NAME optional_positional_int
-PROG BEGIN { printf("-%d-\n", $1); exit() }
+PROG begin { printf("-%d-\n", $1); exit() }
 EXPECT -0-
 TIMEOUT 1
 
 NAME optional_positional_str
-PROG BEGIN { printf("-%s-\n", str($1)); exit() }
+PROG begin { printf("-%s-\n", str($1)); exit() }
 EXPECT --
 TIMEOUT 1
 
 NAME positional number as string
-RUN {{BPFTRACE}} -e 'BEGIN { printf("-%s-\n", str($1)); exit() }' 1
+RUN {{BPFTRACE}} -e 'begin { printf("-%s-\n", str($1)); exit() }' 1
 EXPECT -1-
 TIMEOUT 1
 
 NAME positional as string literal
-RUN {{BPFTRACE}} -e 'BEGIN { @ = kaddr(str($1)); exit() }' vfs_read
+RUN {{BPFTRACE}} -e 'begin { @ = kaddr(str($1)); exit() }' vfs_read
 EXPECT Attached 1 probe
 
 NAME positional arg count
-RUN {{BPFTRACE}} -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); }' "one" 2
+RUN {{BPFTRACE}} -e 'begin { printf("got %d args: %s %d\n", $#, str($1), $2); }' "one" 2
 EXPECT got 2 args: one 2
 
 NAME positional multiple bases
-RUN {{BPFTRACE}} -e 'BEGIN { printf("got: %d %o 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
+RUN {{BPFTRACE}} -e 'begin { printf("got: %d %o 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
 EXPECT got: 123 775 0x123
 
 NAME positional pointer arithmetic
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%s", str($1 + 1));  }' hello
+RUN {{BPFTRACE}} -e 'begin { printf("%s", str($1 + 1));  }' hello
 EXPECT ello
 TIMEOUT 1
 
 NAME positional strncmp
-RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp("hello", "hell", $1) == 0) { printf("ok\n"); }  }' 3
+RUN {{BPFTRACE}} -e 'begin { if (strncmp("hello", "hell", $1) == 0) { printf("ok\n"); }  }' 3
 EXPECT ok
 TIMEOUT 1
 
 NAME positional lhist
-RUN {{BPFTRACE}} -e 'BEGIN { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
+RUN {{BPFTRACE}} -e 'begin { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
 EXPECT_REGEX @: *\n[\[(].*
 
 NAME positional buf
-RUN {{BPFTRACE}} -e 'BEGIN { @ = buf("hello", $1);  }' 5
+RUN {{BPFTRACE}} -e 'begin { @ = buf("hello", $1);  }' 5
 EXPECT @: hello
 TIMEOUT 1
 
 NAME positional tseries
-RUN {{BPFTRACE}} -e 'BEGIN { @ = tseries($1, 1ms, 1); exit()}' 0
+RUN {{BPFTRACE}} -e 'begin { @ = tseries($1, 1ms, 1); exit()}' 0
 EXPECT_REGEX @:.*
 
 NAME positional kstack
@@ -204,32 +204,32 @@ MIN_KERNEL 6.12
 AFTER ./testprogs/uprobe_loop
 
 NAME lhist can be cleared
-PROG BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }
+PROG begin{ @[1] = lhist(3,0,10,1); clear(@); exit() }
 EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME hist can be cleared
-PROG BEGIN{ @[1] = hist(1); clear(@); exit() }
+PROG begin{ @[1] = hist(1); clear(@); exit() }
 EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME stats can be cleared
-PROG BEGIN{ @[1] = stats(1); clear(@); exit() }
+PROG begin{ @[1] = stats(1); clear(@); exit() }
 EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME avg can be cleared
-PROG BEGIN{ @[1] = avg(1); clear(@); exit() }
+PROG begin{ @[1] = avg(1); clear(@); exit() }
 EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME tseries can be cleared
-PROG BEGIN{ @[1] = tseries(1, 1ms, 5); clear(@); exit() }
+PROG begin{ @[1] = tseries(1, 1ms, 5); clear(@); exit() }
 EXPECT_REGEX_NONE @
 TIMEOUT 1
 
 NAME sigint under heavy load
-RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { print("end"); }'
+RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } end { print("end"); }'
 EXPECT end
 AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
@@ -276,104 +276,104 @@ EXPECT done
 
 NAME per_cpu_map_min_if
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @ = 10; } i:ms:1 { @--; @mn = min(@); if (@mn < 5) { printf("done\n");  }}
+PROG begin { @ = 10; } i:ms:1 { @--; @mn = min(@); if (@mn < 5) { printf("done\n");  }}
 EXPECT done
 
 NAME per_cpu_map_max_if
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n");  }}
+PROG begin { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n");  }}
 EXPECT done
 
 NAME per_cpu_map_avg_if
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n");  }}
+PROG begin { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n");  }}
 EXPECT done
 
 NAME per_cpu_map_arithmetic
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } }
+PROG begin { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } }
 EXPECT done
 
 NAME per_cpu_map_cast
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); }
+PROG begin { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); }
 EXPECT 1-10
 
 NAME per_cpu_map_as_map_key
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN {@a = count(); @b = sum(5); @c = min(1); @d = max(10); @e = avg(7); @[@a, @b, @c, @d, @e] = 1;  }
+PROG begin {@a = count(); @b = sum(5); @c = min(1); @d = max(10); @e = avg(7); @[@a, @b, @c, @d, @e] = 1;  }
 EXPECT @[1, 5, 1, 10, 7]: 1
 
 NAME dry run empty output
-RUN {{BPFTRACE}} --dry-run -e 'BEGIN { printf("hello\n"); @ = 0; }'
+RUN {{BPFTRACE}} --dry-run -e 'begin { printf("hello\n"); @ = 0; }'
 EXPECT_NONE hello
 EXPECT_NONE @: 0
 
 NAME symbolize enum in map key
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE] = 11; @[TWO] = 22; @m[ONE] = 333;  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE] = 11; @[TWO] = 22; @m[ONE] = 333;  }
 EXPECT @[ONE]: 11
 EXPECT @[TWO]: 22
 EXPECT @m[ONE]: 333
 
 NAME symbolize enum in tuple map key
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE,TWO,ONE] = -1;  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE,TWO,ONE] = -1;  }
 EXPECT @[ONE, TWO, ONE]: -1
 
 NAME symbolize enum in map value
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @ = ONE;  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @ = ONE;  }
 EXPECT @: ONE
 
 NAME symbolize enum in tuple map value
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @ = (ONE, TWO);  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @ = (ONE, TWO);  }
 EXPECT @: (ONE, TWO)
 
 NAME no symbolize enum after arithmetic
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE+1] = TWO-1;  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE+1] = TWO-1;  }
 EXPECT @[2]: 1
 
 NAME no symbolize enum after arithmetic mixed
-PROG enum { ONE = 1, TWO = 2 }; BEGIN { @[ONE+1] = TWO-1; @[ONE] = ONE;  }
+PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE+1] = TWO-1; @[ONE] = ONE;  }
 EXPECT @[2]: 1
 EXPECT @[1]: 1
 
 NAME symbolize enum in scratch variable
-PROG enum { FOO = 333 }; BEGIN { $f = FOO; print($f);  }
+PROG enum { FOO = 333 }; begin { $f = FOO; print($f);  }
 EXPECT FOO
 
 NAME symbolize enum in scratch variable tuple
-PROG enum { FOO = 333, BAR }; BEGIN { $t = (FOO, BAR); print($t);  }
+PROG enum { FOO = 333, BAR }; begin { $t = (FOO, BAR); print($t);  }
 EXPECT (FOO, BAR)
 
 NAME symbolize int cast to enum
-PROG enum BAZ { FOO = 333, BAR }; BEGIN { print((enum BAZ)333);  }
+PROG enum BAZ { FOO = 333, BAR }; begin { print((enum BAZ)333);  }
 EXPECT FOO
 
 NAME no symbolize int cast to unknown enum variant
-PROG enum BAZ { FOO = 333, BAR }; BEGIN { $x = 444; print((enum BAZ)$x);  }
+PROG enum BAZ { FOO = 333, BAR }; begin { $x = 444; print((enum BAZ)$x);  }
 EXPECT 444
 
 NAME valid license
-PROG config={license="Dual BSD/GPL"} BEGIN { @p[1] = 1; print(len(@p));  }
+PROG config={license="Dual BSD/GPL"} begin { @p[1] = 1; print(len(@p));  }
 EXPECT 1
 
 NAME invalid license
-PROG config={license="Potato"} BEGIN { @p[1] = 1; print(len(@p));  }
+PROG config={license="Potato"} begin { @p[1] = 1; print(len(@p));  }
 EXPECT ERROR: Your bpftrace program cannot load because you are using a license that is non-GPL compatible. License: Potato
 WILL_FAIL
 
 NAME named command line params
-RUN {{BPFTRACE}} -e 'BEGIN { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=20 --cc=False
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=20 --cc=False
 EXPECT (20, false, true, hello)
 TIMEOUT 1
 
 NAME named and positional params
-RUN {{BPFTRACE}} -e 'BEGIN { print(($1, getopt("aa", 10), $2, getopt("bb", "hello"), getopt("cc")));  }' pos1 -- --aa=20 --bb=bye pos2 --cc
+RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), $2, getopt("bb", "hello"), getopt("cc")));  }' pos1 -- --aa=20 --bb=bye pos2 --cc
 EXPECT (pos1, 20, pos2, bye, true)
 TIMEOUT 1
 
 # Can't run through the standard AOT path because we need to pass CLI args
 NAME named command line params aot
-RUN {{BPFTRACE}} -e 'BEGIN { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot -- --dd --aa=20 --cc=False
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot -- --dd --aa=20 --cc=False
 EXPECT (20, false, true, hello)
 TIMEOUT 1
 
@@ -383,18 +383,18 @@ EXPECT 20
 TIMEOUT 1
 
 NAME named command line params before double dash
-RUN {{BPFTRACE}} -e 'BEGIN {  }' --aa=20
+RUN {{BPFTRACE}} -e 'begin {  }' --aa=20
 EXPECT USAGE:
 WILL_FAIL
 
 NAME named command line params wrong value type
-RUN {{BPFTRACE}} -e 'BEGIN { print(getopt("aa", 10));  }' -- --aa=False
+RUN {{BPFTRACE}} -e 'begin { print(getopt("aa", 10));  }' -- --aa=False
 EXPECT ERROR: program command line option --aa invalid integer (value: False)
 EXPECT_NONE USAGE:
 WILL_FAIL
 
 NAME unexpected named command line params
-RUN {{BPFTRACE}} -e 'BEGIN { print(getopt("aa", 10));  }' -- --bb
+RUN {{BPFTRACE}} -e 'begin { print(getopt("aa", 10));  }' -- --bb
 EXPECT ERROR: unexpected program command line options: --bb
 EXPECT HINT: expected program options: --aa
 EXPECT_NONE USAGE:

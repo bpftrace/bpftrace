@@ -250,7 +250,7 @@ public:
   // function. you might want to "hoist" an alloca to make it available to
   // blocks that do not follow from yours, for example to make $a accessible in
   // both branches here:
-  // BEGIN { if (nsecs > 0) { $a = 1 } else { $a = 2 } print($a); exit() }
+  // begin { if (nsecs > 0) { $a = 1 } else { $a = 2 } print($a); exit() }
   void hoist(const std::function<void()> &functor);
 
   // Returns the integer type used to represent pointers in traced code.

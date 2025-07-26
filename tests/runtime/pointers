@@ -1,73 +1,73 @@
 NAME u8 pointer increment
-PROG BEGIN { @=(int8*) 0x32; @+=1;  }
+PROG begin { @=(int8*) 0x32; @+=1;  }
 EXPECT @: 0x33
 
 NAME u16 pointer increment
-PROG BEGIN { @=(int16*) 0x32; @+=1;  }
+PROG begin { @=(int16*) 0x32; @+=1;  }
 EXPECT @: 0x34
 
 NAME u32 pointer increment
-PROG BEGIN { @=(int32*) 0x32; @+=1;  }
+PROG begin { @=(int32*) 0x32; @+=1;  }
 EXPECT @: 0x36
 
 NAME u64 pointer increment
-PROG BEGIN { @=(int64*) 0x32; @+=1;  }
+PROG begin { @=(int64*) 0x32; @+=1;  }
 EXPECT @: 0x3a
 
 NAME u8 pointer unop post increment
-PROG BEGIN { @=(int8*) 0x32; @++;  }
+PROG begin { @=(int8*) 0x32; @++;  }
 EXPECT @: 0x33
 
 NAME u16 pointer unop post increment
-PROG BEGIN { @=(int16*) 0x32; @++;  }
+PROG begin { @=(int16*) 0x32; @++;  }
 EXPECT @: 0x34
 
 NAME u32 pointer unop post increment
-PROG BEGIN { @=(int32*) 0x32; @++;  }
+PROG begin { @=(int32*) 0x32; @++;  }
 EXPECT @: 0x36
 
 NAME u64 pointer unop post increment
-PROG BEGIN { @=(int64*) 0x32; @++;  }
+PROG begin { @=(int64*) 0x32; @++;  }
 EXPECT @: 0x3a
 
 NAME u8 pointer unop pre increment
-PROG BEGIN { @=(int8*) 0x32; @++;  }
+PROG begin { @=(int8*) 0x32; @++;  }
 EXPECT @: 0x33
 
 NAME u16 pointer unop pre increment
-PROG BEGIN { @=(int16*) 0x32; @++;  }
+PROG begin { @=(int16*) 0x32; @++;  }
 EXPECT @: 0x34
 
 NAME u32 pointer unop pre increment
-PROG BEGIN { @=(int32*) 0x32; @++;  }
+PROG begin { @=(int32*) 0x32; @++;  }
 EXPECT @: 0x36
 
 NAME u64 pointer unop pre increment
-PROG BEGIN { @=(int64*) 0x32; @++;  }
+PROG begin { @=(int64*) 0x32; @++;  }
 EXPECT @: 0x3a
 
 NAME Pointer decrement 1
-PROG BEGIN { @=(int32*) 0x32; @-=1;  }
+PROG begin { @=(int32*) 0x32; @-=1;  }
 EXPECT @: 0x2e
 
 NAME Pointer decrement
-PROG BEGIN { @=(int32*) 0x32; @--;  }
+PROG begin { @=(int32*) 0x32; @--;  }
 EXPECT @: 0x2e
 
 NAME Pointer increment 6
-PROG BEGIN { @=(int32*) 0x32; @+=6;  }
+PROG begin { @=(int32*) 0x32; @+=6;  }
 EXPECT @: 0x4a
 
 NAME Pointer decrement 6
-PROG BEGIN { @=(int32*) 0x32; @-=6;  }
+PROG begin { @=(int32*) 0x32; @-=6;  }
 EXPECT @: 0x1a
 
 NAME Struct pointer math
-PROG struct A {int32_t a; int32_t b; char c[28] }; BEGIN { $a=(struct A*) 1024; printf("%lu - 5 x %lu = %lu\n", $a, sizeof(struct A), $a-5);  }
+PROG struct A {int32_t a; int32_t b; char c[28] }; begin { $a=(struct A*) 1024; printf("%lu - 5 x %lu = %lu\n", $a, sizeof(struct A), $a-5);  }
 EXPECT 1024 - 5 x 36 = 844
 
 NAME Pointer decrement with map
-PROG BEGIN { @dec = 4; @=(int32*) 0x32; @-=@dec;  }
+PROG begin { @dec = 4; @=(int32*) 0x32; @-=@dec;  }
 EXPECT @: 0x22
 
 NAME Pointer walk through struct
@@ -85,17 +85,17 @@ EXPECT @x: 2
 AFTER ./testprogs/array_access
 
 NAME Pointer is truthy for if conditions
-PROG BEGIN { if (curtask) { @ = 1; }  }
+PROG begin { if (curtask) { @ = 1; }  }
 EXPECT @: 1
 
 NAME Pointer is truthy for tenary expressions
-PROG BEGIN { @ = curtask ? 1 : 2;  }
+PROG begin { @ = curtask ? 1 : 2;  }
 EXPECT @: 1
 
 NAME Pointer is useable in logical and expressions
-PROG BEGIN { @ = (curtask && 0) ? 1 : 2;  }
+PROG begin { @ = (curtask && 0) ? 1 : 2;  }
 EXPECT @: 2
 
 NAME Pointer is useable in logical or expressions
-PROG BEGIN { @ = (curtask || 0) ? 1 : 2;  }
+PROG begin { @ = (curtask || 0) ? 1 : 2;  }
 EXPECT @: 1

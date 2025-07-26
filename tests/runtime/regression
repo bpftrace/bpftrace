@@ -1,6 +1,6 @@
 # https://github.com/bpftrace/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
-PROG struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (struct Foo *)0; @bar = @foo->bar; @x = @foo->bar.x; printf("_%s_\n", "done");  }
+PROG struct Foo { int m; struct { int x; int y; } bar; int n; } begin { @foo = (struct Foo *)0; @bar = @foo->bar; @x = @foo->bar.x; printf("_%s_\n", "done");  }
 EXPECT _done_
 TIMEOUT 1
 
@@ -12,13 +12,13 @@ EXPECT 2 0 1 1 1
 # https://github.com/bpftrace/bpftrace/issues/759
 # Update test once https://github.com/bpftrace/bpftrace/pull/781 lands
 # NAME ntop_map_printf
-# RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } END { printf("v6: %s", @b); clear(@a); clear(@b) }'
+# RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } end { printf("v6: %s", @b); clear(@a); clear(@b) }'
 # AFTER ./testprogs/ntop
 # EXPECT v4: 127.0.0.1; v6: ffee:ffee:ddcc:ddcc:bbaa:bbaa:c0a8:1
 # TIMEOUT 1
 
 NAME modulo_operator
-PROG BEGIN { @x = 4; printf("%d\n", @x % 2); exit() }
+PROG begin { @x = 4; printf("%d\n", @x % 2); exit() }
 EXPECT 0
 
 NAME c_array_indexing
@@ -38,32 +38,32 @@ TIMEOUT 1
 
 # https://github.com/bpftrace/bpftrace/issues/1952
 NAME async_id_invalid_probe_expansion
-PROG kprobe:zzzzz { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }
+PROG kprobe:zzzzz { probe; printf("asdf\n") } begin { printf("_%s_\n", "success"); exit() }
 EXPECT _success_
 TIMEOUT 1
 
 NAME strncmp_n_longer_than_buffer
-PROG BEGIN { printf("_%d_\n", strncmp("wow", comm, 17)); exit() }
+PROG begin { printf("_%d_\n", strncmp("wow", comm, 17)); exit() }
 EXPECT _1_
 TIMEOUT 1
 
 NAME strncmp_checks_for_nul
-PROG BEGIN { printf("_%d_\n", strncmp("one", "one ", 4)); exit() }
+PROG begin { printf("_%d_\n", strncmp("one", "one ", 4)); exit() }
 EXPECT _1_
 TIMEOUT 1
 
 NAME string compare with empty
-PROG BEGIN { if ("hello" == "") { printf("equal"); } else { printf("not equal"); }  }
+PROG begin { if ("hello" == "") { printf("equal"); } else { printf("not equal"); }  }
 EXPECT not equal
 TIMEOUT 3
 
 NAME string compare with prefix
-PROG BEGIN { if ("hello" == "hell") { printf("equal"); } else { printf("not equal"); }  }
+PROG begin { if ("hello" == "hell") { printf("equal"); } else { printf("not equal"); }  }
 EXPECT not equal
 TIMEOUT 3
 
 NAME strncmp with prefix
-PROG BEGIN { if (strncmp("hello", "hell", 5) == 0) { printf("equal"); } else { printf("not equal"); }  }
+PROG begin { if (strncmp("hello", "hell", 5) == 0) { printf("equal"); } else { printf("not equal"); }  }
 EXPECT not equal
 TIMEOUT 3
 
@@ -105,7 +105,7 @@ EXPECT Attached 1 probe
 TIMEOUT 1
 
 NAME unaligned key with aligned value
-PROG BEGIN { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
+PROG begin { @mapA["aaaabbb", 0] = 1; @mapA["ccccdddd", 0] = 1; }
 EXPECT Attached 1 probe
 TIMEOUT 1
 
@@ -115,6 +115,6 @@ TIMEOUT 1
 # doesn't happen, but this runtime test exercises a pattern that previously
 # produced code that failed to verify.
 NAME preserve context pointer
-PROG BEGIN { @test[(uint64)1] = (uint64)1; } tracepoint:syscalls:sys_enter_kill { if (strcontains(comm, "test")) { @test[args.pid] = 1; } if (args.pid == @test[1]) { print((1)); } if (args.pid == @test[1]) { print((1));  } }
+PROG begin { @test[(uint64)1] = (uint64)1; } tracepoint:syscalls:sys_enter_kill { if (strcontains(comm, "test")) { @test[args.pid] = 1; } if (args.pid == @test[1]) { print((1)); } if (args.pid == @test[1]) { print((1));  } }
 EXPECT Attached 2 probes
 TIMEOUT 1

@@ -17,7 +17,7 @@ void test(const std::string& input,
   BPFtrace& bpftrace = *mock_bpftrace;
 
   // The input provided here is embedded into an expression.
-  ast::ASTContext ast("stdin", "BEGIN { " + input + " }");
+  ast::ASTContext ast("stdin", "begin { " + input + " }");
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
@@ -37,7 +37,7 @@ void test(const std::string& input,
   if (!output.empty() || !warn.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     if (!output.empty()) {
-      EXPECT_THAT(out.str(), HasSubstr("BEGIN\n  " + output))
+      EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
           << msg.str() << out.str();
     }
     if (!warn.empty()) {
