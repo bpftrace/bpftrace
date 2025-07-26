@@ -5,9 +5,12 @@
 #include "bpftrace.h"
 #include "output/output.h"
 #include "types.h"
+#include "util/opaque.h"
 #include "util/result.h"
 
 namespace bpftrace {
+
+using util::OpaqueValue;
 
 // TypeFormatError means that the type is not convertible.
 //
@@ -26,8 +29,7 @@ private:
 // but it is generally an internal implementation detail.
 void sort_by_key(
     const SizedType &key,
-    std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-        &values_by_key);
+    std::vector<std::pair<OpaqueValue, OpaqueValue>> &values_by_key);
 
 // format is responsible for translating from a `SizedType` value,
 // pointed at by `data` (with `sz` bytes), into an `output::Value`
@@ -38,8 +40,7 @@ void sort_by_key(
 Result<output::Primitive> format(BPFtrace &bpftrace,
                                  const ast::CDefinitions &c_definitions,
                                  const SizedType &ty,
-                                 const std::vector<uint8_t> &value,
-                                 size_t nvalues = 1,
+                                 const OpaqueValue &value,
                                  uint32_t div = 1);
 
 // format, when providing some `MapInfo&` is capable of formatting
