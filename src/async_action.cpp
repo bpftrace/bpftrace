@@ -12,6 +12,26 @@
 
 namespace bpftrace::async_action {
 
+static Result<std::vector<output::Primitive>> prepare_args(
+    BPFtrace &bpftrace,
+    const ast::CDefinitions &c_definitions,
+    const std::vector<Field> &fields,
+    const OpaqueValue &value)
+{
+  std::vector<output::Primitive> res;
+  for (const auto &field : fields) {
+    auto v = format(bpftrace,
+                    c_definitions,
+                    field.type,
+                    value.slice(field.offset, field.type.GetSize()));
+    if (!v) {
+      return v.takeError();
+    }
+    res.emplace_back(std::move(*v));
+  }
+  return res;
+}
+
 void AsyncHandlers::exit(const OpaqueValue &data)
 {
   const auto &exit = data.bitcast<AsyncEvent::Exit>();
@@ -211,10 +231,13 @@ void AsyncHandlers::syscall(const OpaqueValue &data)
             static_cast<uint64_t>(AsyncAction::syscall);
   auto &fmt = std::get<0>(bpftrace.resources.system_args[id]);
   auto &args = std::get<1>(bpftrace.resources.system_args[id]);
-  auto arg_values = bpftrace.get_arg_values(
-      c_definitions, args, data.slice(sizeof(uint64_t)).data());
+  auto vals = prepare_args(
+      bpftrace, c_definitions, args, data.slice(sizeof(uint64_t)));
+  if (!vals) {
+    LOG(BUG) << "Error processing syscall arguments: " << vals.takeError();
+  }
 
-  out.syscall(util::exec_system(fmt.format_str(arg_values).c_str()));
+  out.syscall(util::exec_system(fmt.format(*vals).c_str()));
 }
 
 void AsyncHandlers::cat(const OpaqueValue &data)
@@ -222,11 +245,14 @@ void AsyncHandlers::cat(const OpaqueValue &data)
   auto id = data.bitcast<uint64_t>() - static_cast<uint64_t>(AsyncAction::cat);
   auto &fmt = std::get<0>(bpftrace.resources.cat_args[id]);
   auto &args = std::get<1>(bpftrace.resources.cat_args[id]);
-  auto arg_values = bpftrace.get_arg_values(
-      c_definitions, args, data.slice(sizeof(uint64_t)).data());
+  auto vals = prepare_args(
+      bpftrace, c_definitions, args, data.slice(sizeof(uint64_t)));
+  if (!vals) {
+    LOG(BUG) << "Error processing cat arguments: " << vals.takeError();
+  }
 
   std::stringstream buf;
-  util::cat_file(fmt.format_str(arg_values).c_str(),
+  util::cat_file(fmt.format(*vals).c_str(),
                  bpftrace.config_->max_cat_bytes,
                  buf);
   out.cat(buf.str());
@@ -238,10 +264,13 @@ void AsyncHandlers::printf(const OpaqueValue &data)
             static_cast<uint64_t>(AsyncAction::printf);
   auto &fmt = std::get<0>(bpftrace.resources.printf_args[id]);
   auto &args = std::get<1>(bpftrace.resources.printf_args[id]);
-  auto arg_values = bpftrace.get_arg_values(
-      c_definitions, args, data.slice(sizeof(uint64_t)).data());
+  auto vals = prepare_args(
+      bpftrace, c_definitions, args, data.slice(sizeof(uint64_t)));
+  if (!vals) {
+    LOG(BUG) << "Error processing printf arguments: " << vals.takeError();
+  }
 
-  out.printf(fmt.format_str(arg_values));
+  out.printf(fmt.format(*vals));
 }
 
 } // namespace bpftrace::async_action

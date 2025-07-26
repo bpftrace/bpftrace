@@ -142,7 +142,9 @@ public:
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,
                                      const Location &loc);
-  Value *CreateGetStrAllocation(const std::string &name, const Location &loc);
+  Value *CreateGetStrAllocation(const std::string &name,
+                                const Location &loc,
+                                uint64_t pad = 0);
   Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                           const std::string &name,
                                           const Location &loc);
