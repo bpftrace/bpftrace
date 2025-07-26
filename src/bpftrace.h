@@ -164,7 +164,7 @@ public:
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(
       const ast::CDefinitions &c_definitions,
       const std::vector<Field> &args,
-      uint8_t *arg_data);
+      const char *arg_data);
   void add_param(const std::string &param);
   std::string get_param(size_t index) const;
   size_t num_params() const;
@@ -178,8 +178,7 @@ public:
       const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
 
-  bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
-
+  bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
   void parse_module_btf(const std::set<std::string> &modules);
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
