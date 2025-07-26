@@ -264,6 +264,7 @@ private:
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
+  std::unordered_set<std::string> has_benchmark_;
 };
 
 } // namespace
@@ -3816,6 +3817,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   } else if (ap.provider == "BENCH") {
     if (ap.target.empty())
       ap.addError() << "BENCH probes must have a name";
+    if (is_final_pass()) {
+      if (has_benchmark_.contains(ap.target))
+        ap.addError() << "\"" + ap.target + "\""
+                      << " was used as the name for more than one BENCH probe";
+
+      has_benchmark_.emplace(ap.target);
+    }
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       ap.addError() << "fentry/fexit not available for your kernel version.";
