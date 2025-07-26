@@ -264,6 +264,11 @@ public:
                     bool max,
                     bool is_signed);
 
+  llvm::Value *CreateCheckedBinop(Operator op,
+                                  Value *lhs,
+                                  Value *rhs,
+                                  const Location &loc);
+
 private:
   Module &module_;
   BPFtrace &bpftrace_;

@@ -34,6 +34,13 @@ EXPECT 1
 EXPECT stdin:1:48-49: WARNING: Divide or modulo by 0 detected. This can lead to unexpected results. 1 is being used as the result.
 TIMEOUT 1
 
+# For a division operation where the RHS is 0 we treat the result as 1
+NAME zero_divide
+PROG BEGIN { @mod1 = 1; @mod0 = 0; print((uint64)10 / (uint64)@mod0); }
+EXPECT 1
+EXPECT stdin:1:48-49: WARNING: Divide or modulo by 0 detected. This can lead to unexpected results. 1 is being used as the result.
+TIMEOUT 1
+
 NAME c_array_indexing
 RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
 EXPECT h e l l o

@@ -20,7 +20,7 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %printf_args = alloca %printf_t, align 8
   %runtime_error_t = alloca %runtime_error_t, align 8
-  %mod_result = alloca i64, align 8
+  %op_result = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
@@ -34,7 +34,7 @@ if_body:                                          ; preds = %entry
   %4 = lshr i64 %get_pid_tgid3, 32
   %pid4 = trunc i64 %4 to i32
   %5 = zext i32 %pid4 to i64
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %mod_result)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %op_result)
   br i1 false, label %is_zero, label %not_zero
 
 if_end:                                           ; preds = %if_end2, %entry
@@ -53,7 +53,7 @@ if_end2:                                          ; preds = %counter_merge8, %ze
   br label %if_end
 
 is_zero:                                          ; preds = %if_body
-  store i64 1, ptr %mod_result, align 8
+  store i64 1, ptr %op_result, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
   store i64 30006, ptr %7, align 8
@@ -67,12 +67,12 @@ is_zero:                                          ; preds = %if_body
 
 not_zero:                                         ; preds = %if_body
   %10 = urem i64 %5, 2
-  store i64 %10, ptr %mod_result, align 8
+  store i64 %10, ptr %op_result, align 8
   br label %zero_merge
 
 zero_merge:                                       ; preds = %not_zero, %counter_merge
-  %11 = load i64, ptr %mod_result, align 8
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %mod_result)
+  %11 = load i64, ptr %op_result, align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %op_result)
   %12 = icmp eq i64 %11, 0
   %true_cond5 = icmp ne i1 %12, false
   br i1 %true_cond5, label %if_body1, label %if_end2
