@@ -22,13 +22,21 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class HelperErrorInfo {
+enum class RuntimeErrorId {
+  DIVIDE_BY_ZERO,
+  HELPER_ERROR,
+};
+
+class RuntimeErrorInfo {
 public:
   // This class effectively wraps a location, but preserves only the parts that
   // are needed to emit the error in a useful way. This is because it may be
   // serialized and used by a separate runtime.
-  HelperErrorInfo(libbpf::bpf_func_id func_id, const ast::Location &loc)
-      : func_id(func_id),
+  RuntimeErrorInfo(RuntimeErrorId error_id,
+                   libbpf::bpf_func_id func_id,
+                   const ast::Location &loc)
+      : error_id(error_id),
+        func_id(func_id),
         filename(loc->filename()),
         line(loc->line()),
         column(loc->column()),
@@ -36,9 +44,18 @@ public:
         source_context(loc->source_context())
   {
   }
-  HelperErrorInfo()
-      : func_id(static_cast<libbpf::bpf_func_id>(-1)), line(0), column(0) {};
 
+  RuntimeErrorInfo(RuntimeErrorId error_id, const ast::Location &loc)
+      : RuntimeErrorInfo(error_id, static_cast<libbpf::bpf_func_id>(-1), loc) {
+        };
+
+  RuntimeErrorInfo()
+      : error_id(RuntimeErrorId::HELPER_ERROR),
+        func_id(static_cast<libbpf::bpf_func_id>(-1)),
+        line(0),
+        column(0) {};
+
+  const RuntimeErrorId error_id;
   const libbpf::bpf_func_id func_id;
   const std::string filename;
   const int line;
@@ -51,7 +68,13 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(func_id, filename, line, column, source_location, source_context);
+    archive(error_id,
+            func_id,
+            filename,
+            line,
+            column,
+            source_location,
+            source_context);
   }
 };
 
@@ -119,7 +142,7 @@ public:
   // pass should be collecting this, but it's complex to move the logic.
   //
   // Don't add more async arguments here!.
-  std::unordered_map<int64_t, HelperErrorInfo> helper_error_info;
+  std::unordered_map<int64_t, RuntimeErrorInfo> runtime_error_info;
   std::vector<std::string> probe_ids;
 
   // Map metadata
@@ -153,7 +176,7 @@ private:
             cat_args,
             non_map_print_args,
             // Hard to annotate flex types, so skip
-            // helper_error_info,
+            // runtime_error_info,
             printf_args,
             probe_ids,
             maps_info,

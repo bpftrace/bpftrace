@@ -8,7 +8,7 @@ namespace bpftrace::ast {
 #define FOR_LIST_OF_ASYNC_IDS(DO)                                              \
   DO(cat)                                                                      \
   DO(cgroup_path)                                                              \
-  DO(helper_error)                                                             \
+  DO(runtime_error)                                                            \
   DO(join)                                                                     \
   DO(bpf_print)                                                                \
   DO(non_map_print)                                                            \

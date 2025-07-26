@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_t.0" = type { ptr, ptr }
-%helper_error_t = type <{ i64, i64, i32 }>
+%runtime_error_t = type <{ i64, i64, i32 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
@@ -19,7 +19,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
 entry:
-  %helper_error_t = alloca %helper_error_t, align 8
+  %runtime_error_t = alloca %runtime_error_t, align 8
   %"@_newval" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -51,14 +51,14 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br i1 %5, label %helper_merge, label %helper_failure
 
 helper_failure:                                   ; preds = %lookup_merge
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %helper_error_t)
-  %6 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 0
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
+  %6 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
   store i64 30006, ptr %6, align 8
-  %7 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 1
+  %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %7, align 8
-  %8 = getelementptr %helper_error_t, ptr %helper_error_t, i64 0, i32 2
+  %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
   store i32 %4, ptr %8, align 4
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %helper_error_t, i64 20, i64 0)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %runtime_error_t, i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -78,7 +78,7 @@ event_loss_counter:                               ; preds = %helper_failure
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %helper_error_t)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %runtime_error_t)
   br label %helper_merge
 }
 

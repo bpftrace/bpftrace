@@ -104,7 +104,8 @@ public:
                        bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
-  virtual void helper_error(int retcode, const HelperErrorInfo &info) const = 0;
+  virtual void runtime_error(int retcode,
+                             const RuntimeErrorInfo &info) const = 0;
   virtual void benchmark_results(
       const std::map<std::string, uint32_t> &results) const = 0;
 
@@ -127,6 +128,7 @@ protected:
                      int &end_value) const;
   std::string get_helper_error_msg(libbpf::bpf_func_id func_id,
                                    int retcode) const;
+  std::string get_divide_by_zero_err() const;
   // Convert a log2 histogram into string
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,
@@ -273,7 +275,7 @@ public:
                bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void runtime_error(int retcode, const RuntimeErrorInfo &info) const override;
   void benchmark_results(
       const std::map<std::string, uint32_t> &results) const override;
 
@@ -363,7 +365,7 @@ public:
                uint64_t value) const;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(int retcode, const HelperErrorInfo &info) const override;
+  void runtime_error(int retcode, const RuntimeErrorInfo &info) const override;
   void benchmark_results(
       const std::map<std::string, uint32_t> &results) const override;
 
