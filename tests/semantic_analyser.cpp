@@ -2321,6 +2321,14 @@ stdin:1:1-7: ERROR: bench probes must have a name
 bench: { 1 }
 ~~~~~~
 )" });
+  test("BENCH:a { 1 } BENCH:a { 2 }", Error{ R"(
+stdin:1:14-22: ERROR: "a" was used as the name for more than one BENCH probe
+BENCH:a { 1 } BENCH:a { 2 }
+             ~~~~~~~~
+stdin:1:1-8: ERROR: this is the other instance
+BENCH:a { 1 } BENCH:a { 2 }
+~~~~~~~
+)" });
 }
 
 TEST_F(SemanticAnalyserTest, self_probe)
