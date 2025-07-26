@@ -2883,4 +2883,56 @@ void IRBuilderBPF::CreateMinMax(Value *val,
   SetInsertPoint(merge_block);
 }
 
+llvm::Value *IRBuilderBPF::CreateCheckedBinop(Binop &binop,
+                                              Value *lhs,
+                                              Value *rhs)
+{
+  assert(binop.op == Operator::DIV || binop.op == Operator::MOD);
+  // We need to do an explicit 0 check or else a Clang compiler optimization
+  // will assume that the value can't ever be 0, as this is undefined behavior,
+  // and remove a conditional null check for map values which will return 0 if
+  // the map value is null (this happens in CreateMapLookupElem). This would be
+  // fine but the BPF verifier will complain about the lack of a null check.
+  // Issue: https://github.com/bpftrace/bpftrace/issues/4379
+  // From Google's AI: "LLVM, like other optimizing compilers, is allowed to
+  // make assumptions based on the absence of undefined behavior. If a program's
+  // code, after optimization, would result in undefined behavior (like division
+  // by zero by CreateURem), the compiler is free to make transformations that
+  // assume such a situation will never occur."
+  AllocaInst *op_result = CreateAllocaBPF(getInt64Ty(), "op_result");
+
+  llvm::Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *is_zero = BasicBlock::Create(module_.getContext(),
+                                           "is_zero",
+                                           parent);
+  BasicBlock *not_zero = BasicBlock::Create(module_.getContext(),
+                                            "not_zero",
+                                            parent);
+  BasicBlock *zero_merge = BasicBlock::Create(module_.getContext(),
+                                              "zero_merge",
+                                              parent);
+
+  Value *cond = CreateICmpEQ(rhs, getInt64(0), "zero_cond");
+
+  CreateCondBr(cond, is_zero, not_zero);
+  SetInsertPoint(is_zero);
+  CreateStore(getInt64(1), op_result);
+  CreateRuntimeError(RuntimeErrorId::DIVIDE_BY_ZERO, binop.loc);
+  CreateBr(zero_merge);
+
+  SetInsertPoint(not_zero);
+  if (binop.op == Operator::MOD) {
+    CreateStore(CreateURem(lhs, rhs), op_result);
+  } else if (binop.op == Operator::DIV) {
+    CreateStore(CreateUDiv(lhs, rhs), op_result);
+  }
+
+  CreateBr(zero_merge);
+
+  SetInsertPoint(zero_merge);
+  auto *result = CreateLoad(getInt64Ty(), op_result);
+  CreateLifetimeEnd(op_result);
+  return result;
+}
+
 } // namespace bpftrace::ast

@@ -2283,51 +2283,12 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
     case Operator::MUL:
       return ScopedExpr(b_.CreateMul(lhs, rhs), std::move(del));
     case Operator::DIV:
-      return ScopedExpr(b_.CreateUDiv(lhs, rhs), std::move(del));
     case Operator::MOD: {
       // Always do an unsigned modulo operation here even if `do_signed`
       // is true. bpf instruction set does not support signed division.
       // We already warn in the semantic analyser that signed modulo can
       // lead to undefined behavior (because we will treat it as unsigned).
-      // Additionally, we need to do a 0 check or else a compiler optimization
-      // will assume that the value can't ever be null and remove the null check
-      // which is problematic if the right side of the modulo is a map value
-      // e.g. (10 % @my_map[1]) - From Google's AI: "LLVM, like other optimizing
-      // compilers, is allowed to make assumptions based on the absence of
-      // undefined behavior. If a program's code, after optimization, would
-      // result in undefined behavior (like division by zero by CreateURem), the
-      // compiler is free to make transformations that assume such a situation
-      // will never occur."
-      AllocaInst *mod_result = b_.CreateAllocaBPF(b_.getInt64Ty(),
-                                                  "mod_result");
-
-      llvm::Function *parent = b_.GetInsertBlock()->getParent();
-      BasicBlock *is_zero = BasicBlock::Create(module_->getContext(),
-                                               "is_zero",
-                                               parent);
-      BasicBlock *not_zero = BasicBlock::Create(module_->getContext(),
-                                                "not_zero",
-                                                parent);
-      BasicBlock *zero_merge = BasicBlock::Create(module_->getContext(),
-                                                  "zero_merge",
-                                                  parent);
-
-      Value *cond = b_.CreateICmpEQ(rhs, b_.getInt64(0), "zero_cond");
-
-      b_.CreateCondBr(cond, is_zero, not_zero);
-      b_.SetInsertPoint(is_zero);
-      b_.CreateStore(b_.getInt64(1), mod_result);
-      b_.CreateRuntimeError(RuntimeErrorId::DIVIDE_BY_ZERO, binop.loc);
-      b_.CreateBr(zero_merge);
-
-      b_.SetInsertPoint(not_zero);
-      b_.CreateStore(b_.CreateURem(lhs, rhs), mod_result);
-      b_.CreateBr(zero_merge);
-
-      b_.SetInsertPoint(zero_merge);
-      auto *result = b_.CreateLoad(b_.getInt64Ty(), mod_result);
-      b_.CreateLifetimeEnd(mod_result);
-      return ScopedExpr(result, std::move(del));
+      return ScopedExpr(b_.CreateCheckedBinop(binop, lhs, rhs), std::move(del));
     }
     case Operator::BAND:
       return ScopedExpr(b_.CreateAnd(lhs, rhs), std::move(del));
