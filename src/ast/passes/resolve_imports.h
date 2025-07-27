@@ -50,6 +50,20 @@ public:
   const std::filesystem::path path;
 };
 
+class ScriptObject {
+public:
+  ScriptObject(ASTContext &&ast, bool internal)
+      : ast(std::move(ast)), internal(internal) {};
+
+  // The parsed source context.
+  ASTContext ast;
+
+  // Indicates whether or not this came from an internal source (e.g. the
+  // standard library). This may be used by subsequent passes to import/resolve
+  // in different orders or at different times.
+  const bool internal;
+};
+
 // Imports holds the set of imported modules. This includes the parsed ASTs for
 // any source files, the loaded module for serialized modules, any dlhandles
 // for loaded dynamic plugins, and the BPF objects for any binary blobs.
@@ -58,7 +72,7 @@ public:
   std::map<std::string, LoadedObject> c_sources;
   std::map<std::string, LoadedObject> c_headers;
   std::map<std::string, ExternalObject> objects;
-  std::map<std::string, ASTContext> scripts;
+  std::map<std::string, ScriptObject> scripts;
 
   // Public import call.
   Result<OK> import_any(Node &node,

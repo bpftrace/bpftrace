@@ -51,16 +51,18 @@ static Result<OK> import_script([[maybe_unused]] Node &node,
                                 const std::string &name,
                                 const std::string &&data,
                                 const std::vector<std::filesystem::path> &paths,
-                                std::map<std::string, ASTContext> &contents)
+                                std::map<std::string, ScriptObject> &contents,
+                                bool internal)
 {
   if (contents.contains(name)) {
     return OK(); // Already added.
   }
 
   // Construct our context.
-  auto [it, added] = contents.emplace(name, ASTContext(name, data));
+  auto [it, added] = contents.emplace(
+      name, ScriptObject(ASTContext(name, data), internal));
   assert(added);
-  auto &ast = it->second;
+  auto &ast = it->second.ast;
 
   // Perform the basic parse pass. Note that this parse is done extremely
   // early, and does zero expansion or parsing of attachpoints, etc.
@@ -92,7 +94,7 @@ static Result<OK> import_script(Node &node,
                                 const std::string &name,
                                 const std::filesystem::path &path,
                                 const std::vector<std::filesystem::path> &paths,
-                                std::map<std::string, ASTContext> &contents)
+                                std::map<std::string, ScriptObject> &contents)
 {
   if (contents.contains(name)) {
     return OK(); // Already added.
@@ -107,7 +109,7 @@ static Result<OK> import_script(Node &node,
   }
   std::stringstream buf;
   buf << file.rdbuf();
-  return import_script(node, imports, name, buf.str(), paths, contents);
+  return import_script(node, imports, name, buf.str(), paths, contents, false);
 }
 
 static Result<OK> import_object(Node &node,
@@ -219,7 +221,8 @@ Result<OK> Imports::import_any(Node &node,
   // Import supported extensions.
   std::filesystem::path path(name);
   if (path.extension() == ".bt") {
-    return import_script(node, *this, name, std::string(data), paths, scripts);
+    return import_script(
+        node, *this, name, std::string(data), paths, scripts, true);
   } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
     return import_c(node, name, data, c_sources);
   } else if (path.extension() == ".h") {

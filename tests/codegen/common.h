@@ -66,7 +66,7 @@ static void test(BPFtrace &bpftrace,
                 .put(bpftrace)
                 .add(CreateParsePass())
                 .add(ast::CreateResolveImportsPass({}))
-                .add(ast::CreateImportScriptsPass())
+                .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())

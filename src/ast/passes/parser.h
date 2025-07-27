@@ -29,8 +29,12 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParsePass());
   passes.emplace_back(CreateConfigPass());
   passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
-  passes.emplace_back(CreateImportScriptsPass());
+  // N.B. We expand the AST with all externally imported scripts, then check
+  // against unstable features, *then* import all internal scripts. This means
+  // that internal scripts are except from the unstable feature warning.
+  passes.emplace_back(CreateImportExternalScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
+  passes.emplace_back(CreateImportInternalScriptsPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
