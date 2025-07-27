@@ -252,6 +252,10 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
                                         " not allowed in probe");
       maybe_throw_helper_verifier_error(
           log,
+          "program of this type cannot use helper",
+          " not allowed in probe");
+      maybe_throw_helper_verifier_error(
+          log,
           "pointer arithmetic on ptr_or_null_ prohibited, null-check it first",
           ": result needs to be null-checked before accessing fields");
 

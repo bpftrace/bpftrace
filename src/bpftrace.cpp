@@ -647,11 +647,19 @@ int BPFtrace::run(output::Output &out,
   } catch (const HelperVerifierError &e) {
     // To provide the most useful diagnostics, provide the error for every
     // callsite. After all, they all must be fixed.
+    bool found = false;
     for (const auto &info : helper_use_loc_[e.func_id]) {
       LOG(ERROR,
           std::string(info.source_location),
           std::vector(info.source_context))
           << e.what();
+      found = true;
+    }
+    if (!found) {
+      // An error occurred, but we don't have location for this helper. It may
+      // be a C file or elsewhere, and we need to plumb this through somehow.
+      // At least inform the user what has gone wrong in this case.
+      LOG(ERROR) << e.what();
     }
     return -1;
   } catch (const std::runtime_error &e) {
