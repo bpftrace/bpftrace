@@ -4402,7 +4402,7 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
     elems.push_back(b_.getPtrTy());
     elems.push_back(b_.getPtrTy());
   }
-  auto *type = StructType::create(elems, "struct map_t", false);
+  auto *type = StructType::create(elems, "struct map_internal_repr_t", false);
 
   auto *var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(var_name, type));
