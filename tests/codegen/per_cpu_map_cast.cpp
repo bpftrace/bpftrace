@@ -54,7 +54,7 @@ TEST(codegen, avg_cast_loop)
 
 TEST(codegen, count_no_cast_for_print)
 {
-  test("BEGIN { @ = count(); print(@) }", NAME);
+  test("begin { @ = count(); print(@) }", NAME);
 }
 
 TEST(codegen, count_cast_loop_multi_key)

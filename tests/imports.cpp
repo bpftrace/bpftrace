@@ -115,11 +115,11 @@ TEST(Imports, stdlib_works)
   };
 
   // The standard library import should be implicit.
-  test(R"(BEGIN {})", {}, fn);
+  test(R"(begin {})", {}, fn);
 
   // Importing explicitly without any explicit file system paths should be the
   // same result as importing the standard library implicitly.
-  test(R"(import "stdlib"; BEGIN {})", {}, fn);
+  test(R"(import "stdlib"; begin {})", {}, fn);
 }
 
 TEST_F(ImportTest, stdlib_implicit_rules)
@@ -129,13 +129,13 @@ TEST_F(ImportTest, stdlib_implicit_rules)
 
   // If we have a `stdlib` directory, it should override the implicit import.
   ASSERT_TRUE(create_file(*dir, "stdlib/foo.bt", ""));
-  test(R"(import "stdlib"; BEGIN {})", { dir->path() }, [](Imports &imports) {
+  test(R"(import "stdlib"; begin {})", { dir->path() }, [](Imports &imports) {
     EXPECT_TRUE(imports.scripts.contains("stdlib/foo.bt"));
     EXPECT_FALSE(imports.scripts.contains("stdlib/base.bt"));
   });
 
   // Without the explicit import, it should use the builtin one.
-  test(R"(BEGIN {})", { dir->path() }, [](Imports &imports) {
+  test(R"(begin {})", { dir->path() }, [](Imports &imports) {
     EXPECT_FALSE(imports.scripts.contains("stdlib/foo.bt"));
     EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
   });
@@ -152,8 +152,8 @@ TEST_F(ImportTest, world_writable_ignored)
   ASSERT_TRUE(create_dir(*dir, "a"));
   ASSERT_TRUE(create_dir(*dir, "a/lib", std::filesystem::perms(0777)));
   ASSERT_TRUE(create_file(*dir, "a/lib/foo.bt", ""));
-  test(R"(import "lib"; BEGIN {})", { dir->path() / "a" }, err);
-  test(R"(import "lib/foo.bt"; BEGIN {})", { dir->path() / "a" }, err);
+  test(R"(import "lib"; begin {})", { dir->path() / "a" }, err);
+  test(R"(import "lib/foo.bt"; begin {})", { dir->path() / "a" }, err);
 
   // This is a base that is broken. We don't allow the recursive import
   // (because that could move), but do allow the nested import, because
@@ -161,8 +161,8 @@ TEST_F(ImportTest, world_writable_ignored)
   ASSERT_TRUE(create_dir(*dir, "b", std::filesystem::perms(0777)));
   ASSERT_TRUE(create_dir(*dir, "b/lib"));
   ASSERT_TRUE(create_file(*dir, "b/lib/foo.bt", ""));
-  test(R"(import "lib"; BEGIN {})", { dir->path() / "b" }, err);
-  test(R"(import "lib/foo.bt"; BEGIN {})",
+  test(R"(import "lib"; begin {})", { dir->path() / "b" }, err);
+  test(R"(import "lib/foo.bt"; begin {})",
        { dir->path() / "b" },
        []([[maybe_unused]] Imports &import) {});
 }
@@ -175,7 +175,7 @@ TEST_F(ImportTest, import_ordering)
   ASSERT_TRUE(create_file(*dir, "b/lib/bar.bt", ""));
 
   // This should match the first directory, and import everything there only.
-  test(R"(import "lib"; BEGIN {})",
+  test(R"(import "lib"; begin {})",
        { dir->path() / "a", dir->path() / "b" },
        [](Imports &imports) {
          EXPECT_TRUE(imports.scripts.contains("lib/foo.bt"));
@@ -183,7 +183,7 @@ TEST_F(ImportTest, import_ordering)
        });
 
   // This should match only the second import.
-  test(R"(import "lib/bar.bt"; BEGIN {})",
+  test(R"(import "lib/bar.bt"; begin {})",
        { dir->path() / "a", dir->path() / "b" },
        [](Imports &imports) {
          EXPECT_FALSE(imports.scripts.contains("lib/foo.bt"));

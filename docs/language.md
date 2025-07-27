@@ -32,7 +32,7 @@ An action is a semicolon (`;`) separated list of statements and always enclosed 
 A basic script that traces the `open(2)` and `openat(2)` system calls can be written as follows:
 
 ```
-BEGIN {
+begin {
 	printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
 }
 
@@ -44,7 +44,7 @@ tracepoint:syscalls:sys_enter_openat {
 
 The above script has two action blocks and a total of 3 probes.
 
-The first action block uses the special `BEGIN` probe, which fires once during `bpftrace` startup.
+The first action block uses the special `begin` probe, which fires once during `bpftrace` startup.
 This probe is used to print a header, indicating that the tracing has started.
 
 The second action block uses two probes, one for `open` and one for `openat`, and defines an action that prints the file being `open` ed as well as the `pid` and `comm` of the process that execute the syscall.
@@ -80,7 +80,7 @@ Named parameters can be accessed in a bpftrace program via the `getopt` function
 
 Named parameters must come AFTER a double dash (`--`) when being passed on the command line, e.g.,
 ```
-# bpftrace -e 'BEGIN { print((getopt("aa", 1), getopt("bb"))); }' -- --aa=20 --bb
+# bpftrace -e 'begin { print((getopt("aa", 1), getopt("bb"))); }' -- --aa=20 --bb
 ```
 Here `getopt("aa", 1)` would evaluate to `20` and `getopt("bb")` would evaluate to `true`.
 
@@ -92,7 +92,7 @@ Positional parameters can be accessed in a bpftrace program via, what looks like
 
 Positional parameters can be placed before or after a double dash, e.g.,
 ```
-# bpftrace -e 'BEGIN { print(($1, $2)); }' p1 -- 20
+# bpftrace -e 'begin { print(($1, $2)); }' p1 -- 20
 ```
 
 Here `$1` would evaluate to a string `p1` and `$2` would evaluate to a number `20`.
@@ -105,11 +105,11 @@ If a positional parameter is used in `str()`, it is interpreted as a pointer to 
 Only addition of a single constant, less or equal to the length of the supplied string, is allowed. Example:
 
 ```
-# bpftrace -e 'BEGIN { printf("I got %d, %s (%d args)\n", $1, str($2), $#); }' 42 "hello"
+# bpftrace -e 'begin { printf("I got %d, %s (%d args)\n", $1, str($2), $#); }' 42 "hello"
 
 I got 42, hello (2 args)
 
-# bpftrace -e 'BEGIN { printf("%s\n", str($1 + 1)) }' "hello"
+# bpftrace -e 'begin { printf("%s\n", str($1 + 1)) }' "hello"
 
 ello
 ```
@@ -173,7 +173,7 @@ config = {
     max_map_keys=2
 }
 
-BEGIN { ... }
+begin { ... }
 
 uprobe:./testprogs/uprobe_test:uprobeFunction1 { ... }
 ```
@@ -380,7 +380,7 @@ the type upon declaration.
 | int64 | Signed 64 bit integer |
 
 ```
-BEGIN { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
+begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
 
 /*
  * Output:
@@ -441,7 +441,7 @@ print($a); // prints 60000000000
 Character literals are not supported at this time, and the corresponding ASCII code must be used instead:
 
 ```
-BEGIN {
+begin {
   printf("Echo A: %c\n", 65);
 }
 ```
@@ -622,7 +622,7 @@ macro add_two($x) {
   add_one($x) + 1
 }
 
-BEGIN {
+begin {
   print(one());                   // prints 1
 
   $a = 10;
@@ -649,7 +649,7 @@ macro wrong_parameter_type($x) {
   $x++
 }
 
-BEGIN {
+begin {
   @x = 1;
   unhygienic_access();
 
@@ -843,8 +843,8 @@ Most providers also support a short name which can be used instead of the full n
 |     |     |     |
 | --- | --- | --- |
 | **Probe Name** | **Short Name** | **Description** |
-| [`BEGIN/END`](#beginend) | - | Built-in events |
-| [`BENCH`](#bench) | - | Micro benchmarks |
+| [`begin/end`](#beginend) | - | Built-in events |
+| [`bench`](#bench) | - | Micro benchmarks |
 | [`self`](#self) | - | Built-in events |
 | [`hardware`](#hardware) | `h` | Processor-level events |
 | [`interval`](#interval) | `i` | Timed output |
@@ -859,42 +859,42 @@ Most providers also support a short name which can be used instead of the full n
 | [`usdt`](#usdt) | `U` | User-level static tracepoints |
 | [`watchpoint/asyncwatchpoint`](#watchpoint-and-asyncwatchpoint) | `w`/`aw` | Memory watchpoints |
 
-### BEGIN/END
+### begin/end
 
 These are special built-in events provided by the bpftrace runtime.
-`BEGIN` is triggered before all other probes are attached.
-`END` is triggered after all other probes are detached.
+`begin` is triggered before all other probes are attached.
+`end` is triggered after all other probes are detached.
 
-Note that specifying an `END` probe doesn’t override the printing of 'non-empty' maps at exit.
-To prevent printing all used maps need be cleared in the `END` probe:
+Note that specifying an `end` probe doesn’t override the printing of 'non-empty' maps at exit.
+To prevent printing all used maps need be cleared in the `end` probe:
 
 ```
-END {
+end {
     clear(@map1);
     clear(@map2);
 }
 ```
 
-### BENCH
+### bench
 
-`BENCH` is a special built-in probe type for creating micro benchmarks.
-bpftrace executes each `BENCH` probe repeatedly to measure the average
-execution time of the contained code. If multiple `BENCH` probes exist
+`bench` is a special built-in probe type for creating micro benchmarks.
+bpftrace executes each `bench` probe repeatedly to measure the average
+execution time of the contained code. If multiple `bench` probes exist
 in a script, bpftrace executes them sequentially in the order they are
-specified. To run `BENCH` probes, you must run bpftrace in bench mode:
-`bpftrace --test-mode bench ...`; otherwise, `BENCH` probes will be
+specified. To run `bench` probes, you must run bpftrace in bench mode:
+`bpftrace --test-mode bench ...`; otherwise, `bench` probes will be
 ignored.
 
 ```
-BENCH:lhist {
+bench:lhist {
     @a = lhist(rand % 10, 1, 10, 1);
 }
 
-BENCH:count {
+bench:count {
     @b = count();
 }
 
-BENCH:my_loop {
+bench:my_loop {
     $a = 0;
     for ($i : 0..10) {
         $a++;
@@ -1657,7 +1657,7 @@ Both the source and the destination type must have the same size.
 The main purpose of this is to allow casts from/to byte arrays.
 
 ```
-BEGIN {
+begin {
   $a = (int8[8])12345;
   printf("%x %x\n", $a[0], $a[1]);
   printf("%d\n", (uint64)$a);
@@ -1727,7 +1727,7 @@ Maps can also be declared in the global scope, before probes and after the confi
 let @a = hash(100);
 let @b = percpulruhash(20);
 
-BEGIN { ... }
+begin { ... }
 ```
 
 The utility of this is that you can specify different underlying BPF map types.
@@ -1837,7 +1837,7 @@ This error is hidden by default but can be enabled with the `-k` flag:
 
 ```
 stdin:1:9-12: WARNING: Failed to probe_read_user: Bad address (-14)
-BEGIN { @=*uptr(kaddr("do_poweroff")) }
+begin { @=*uptr(kaddr("do_poweroff")) }
         ~~~
 ```
 
@@ -1935,7 +1935,7 @@ The default search directory can be overridden using the environment variable BP
 ### Map Printing
 
 By default when a bpftrace program exits it will print all maps to stdout.
-If you don’t want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `END` probe and `clear` the maps you don’t want printed.
+If you don’t want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `end` probe and `clear` the maps you don’t want printed.
 
 For example, these two scripts are equivalent and will print nothing on exit:
 ```
@@ -1943,19 +1943,19 @@ config = {
   print_maps_on_exit=0
 }
 
-BEGIN {
+begin {
   @a = 1;
   @b[1] = 1;
 }
 ```
 
 ```
-BEGIN {
+begin {
   @a = 1;
   @b[1] = 1;
 }
 
-END {
+end {
   clear(@a);
   clear(@b);
 }
@@ -1971,7 +1971,7 @@ during comparisons, `printf()`, or other.
 For example:
 
 ```
-BEGIN {
+begin {
   @c = count();
   @s = sum(3);
   @s = sum(9);

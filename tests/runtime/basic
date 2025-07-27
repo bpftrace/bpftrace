@@ -229,62 +229,62 @@ TIMEOUT 1
 WILL_FAIL
 
 NAME libraries under /usr/include are in the search path
-RUN {{BPFTRACE}} -e "$(echo "#include <sys/xattr.h>"; echo "BEGIN { }")" 2>&1
+RUN {{BPFTRACE}} -e "$(echo "#include <sys/xattr.h>"; echo "begin { }")" 2>&1
 EXPECT_NONE file not found
 REQUIRES ls /usr/include/sys/xattr.h
 TIMEOUT 1
 
 NAME non existent library include fails
-RUN {{BPFTRACE}} -e "$(echo "#include <lol/no.h>"; echo "BEGIN { }")" 2>&1
+RUN {{BPFTRACE}} -e "$(echo "#include <lol/no.h>"; echo "begin { }")" 2>&1
 EXPECT definitions.h:2:10: fatal error: 'lol/no.h' file not found
 TIMEOUT 1
 WILL_FAIL
 
 NAME defines work
-RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\n", _UNDERSCORE); }')"
+RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'begin { printf("%d\n", _UNDERSCORE); }')"
 EXPECT 314
 TIMEOUT 1
 
 NAME clear map
-PROG BEGIN { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); }
+PROG begin { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); }
 EXPECT ok
 TIMEOUT 1
 
 NAME clear count-map
-PROG BEGIN { @ = count(); @a[1] = count(); clear(@); clear(@a); }
+PROG begin { @ = count(); @a[1] = count(); clear(@); clear(@a); }
 EXPECT @: 0
 TIMEOUT 1
 
 NAME delete map
-PROG BEGIN { @ = 1; @a[1] = 1; @b[1, 2] = 2; if (delete(@)) { printf("ok1\n"); } delete(@a, 1); if (delete(@b, (1, 2))) { printf("ok2\n"); } if (!delete(@b, (5, 6))) { printf("ok3\n"); } }
+PROG begin { @ = 1; @a[1] = 1; @b[1, 2] = 2; if (delete(@)) { printf("ok1\n"); } delete(@a, 1); if (delete(@b, (1, 2))) { printf("ok2\n"); } if (!delete(@b, (5, 6))) { printf("ok3\n"); } }
 EXPECT ok1
 EXPECT ok2
 EXPECT ok3
 TIMEOUT 1
 
 NAME delete count-map
-PROG BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
+PROG begin { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
 EXPECT @: 0
 TIMEOUT 1
 
 NAME delete deprecated
-PROG BEGIN { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
+PROG begin { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
 EXPECT_NONE @a[1]: 1
 EXPECT_NONE @b[2, hi]: 2
 TIMEOUT 1
 
 NAME bad delete warning
-PROG BEGIN { @a[1] = 1; delete(@a, 2); }
+PROG begin { @a[1] = 1; delete(@a, 2); }
 EXPECT stdin:1:20-33: WARNING: Can't delete map element because it does not exist.
 TIMEOUT 1
 
 NAME bad delete no warning
-PROG BEGIN { @a[1] = 1; $x = delete(@a, 2); if (1 && !delete(@a, 3)) {} }
+PROG begin { @a[1] = 1; $x = delete(@a, 2); if (1 && !delete(@a, 3)) {} }
 EXPECT_NONE stdin:1:20-33: WARNING: Can't delete map element because it does not exist.
 TIMEOUT 1
 
 NAME increment/decrement map
-PROG BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); }
+PROG begin { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); }
 EXPECT 10 12 12 10
 TIMEOUT 1
 
@@ -294,7 +294,7 @@ EXPECT SUCCESS
 TIMEOUT 10
 
 NAME increment/decrement variable
-PROG BEGIN { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x);  }
+PROG begin { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x);  }
 EXPECT 10 12 12 10
 TIMEOUT 1
 
@@ -309,66 +309,66 @@ EXPECT_REGEX ringbuf: yes
 TIMEOUT 1
 
 NAME basic while loop
-PROG BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) }  }
+PROG begin { $a = 0; while ($a <= 100) { @=avg($a++) }  }
 EXPECT @: 50
 REQUIRES_FEATURE loop
 
 NAME disable warnings
-RUN {{BPFTRACE}} --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); }' 2>&1| grep -c -E "WARNING|invalid option"
+RUN {{BPFTRACE}} --no-warnings -e 'begin { @x = stats(10); print(@x, 2); clear(@x); }' 2>&1| grep -c -E "WARNING|invalid option"
 EXPECT_REGEX ^0$
 TIMEOUT 1
 WILL_FAIL
 
 NAME kaddr fails
-PROG BEGIN { print(kaddr("asdfzzzzzzz")) }
+PROG begin { print(kaddr("asdfzzzzzzz")) }
 EXPECT stdin:1:9-35: ERROR: Failed to resolve kernel symbol: asdfzzzzzzz
-       BEGIN { print(kaddr("asdfzzzzzzz")) }
+       begin { print(kaddr("asdfzzzzzzz")) }
                ~~~~~~~~~~~~~~~~~~~~~~~~~~
 TIMEOUT 1
 WILL_FAIL
 
 NAME variable strings are memset
-PROG BEGIN { $x = "xxxxx"; $x = "a"; @[$x] = 1; $y = "yyyyy"; $y = "a"; @[$y] = 1; printf("len: %d\n", len(@));  }
+PROG begin { $x = "xxxxx"; $x = "a"; @[$x] = 1; $y = "yyyyy"; $y = "a"; @[$y] = 1; printf("len: %d\n", len(@));  }
 EXPECT len: 1
 TIMEOUT 1
 
 NAME map strings are memset
-PROG BEGIN { @x = "xxxxx"; @x = "a"; @[@x] = 1; @y = "yyyyy"; @y = "a"; @[@y] = 1; printf("len: %d\n", len(@));  }
+PROG begin { @x = "xxxxx"; @x = "a"; @[@x] = 1; @y = "yyyyy"; @y = "a"; @[@y] = 1; printf("len: %d\n", len(@));  }
 EXPECT len: 1
 TIMEOUT 1
 
 NAME print_per_cpu_map_vals
 REQUIRES_FEATURE lookup_percpu_elem
-PROG BEGIN { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx));  }
+PROG begin { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx));  }
 EXPECT (5, 1, 5, 1, -1)
 TIMEOUT 3
 
 NAME print large int
-PROG BEGIN { $a = 10223372036854775807; print(($a));  }
+PROG begin { $a = 10223372036854775807; print(($a));  }
 EXPECT 10223372036854775807
 TIMEOUT 1
 
 NAME has_key exists
-PROG BEGIN { @a[1] = 0; if (has_key(@a, 1)) { printf("ok\n"); }  }
+PROG begin { @a[1] = 0; if (has_key(@a, 1)) { printf("ok\n"); }  }
 EXPECT ok
 
 NAME has_key no_exists
-PROG BEGIN { @a[1] = 0; if (has_key(@a, 2)) { printf("ok\n"); }  }
+PROG begin { @a[1] = 0; if (has_key(@a, 2)) { printf("ok\n"); }  }
 EXPECT_NONE ok
 
 NAME has_key complex tuple
-PROG BEGIN { @a[1, ("hello", (int8)5)] = 0; if (has_key(@a, (1, ("hello", 5)))) { printf("ok\n"); }  }
+PROG begin { @a[1, ("hello", (int8)5)] = 0; if (has_key(@a, (1, ("hello", 5)))) { printf("ok\n"); }  }
 EXPECT ok
 
 NAME has_key map value as key
-PROG BEGIN { @g = 2; @a[2] = 0; if (has_key(@a, @g)) { printf("ok\n"); }  }
+PROG begin { @g = 2; @a[2] = 0; if (has_key(@a, @g)) { printf("ok\n"); }  }
 EXPECT ok
 
 NAME exit code
-PROG BEGIN { exit(69); }
+PROG begin { exit(69); }
 RETURN_CODE 69
 TIMEOUT 1
 
 NAME block expression
-PROG BEGIN { let $a = { let $b = 1; $b }; print($a);  }
+PROG begin { let $a = { let $b = 1; $b }; print($a);  }
 EXPECT 1

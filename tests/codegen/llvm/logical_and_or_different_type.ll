@@ -16,7 +16,7 @@ target triple = "bpf"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @BEGIN_1(ptr %0) #0 section "s_BEGIN_1" !dbg !42 {
+define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !42 {
 entry:
   %"struct Foo.m16" = alloca i32, align 4
   %"||_result15" = alloca i64, align 8
@@ -226,7 +226,7 @@ attributes #4 = { memory(none) }
 !39 = !{!0, !7, !22, !29, !31}
 !40 = !{i32 2, !"Debug Info Version", i32 3}
 !41 = !{i32 7, !"uwtable", i32 0}
-!42 = distinct !DISubprogram(name: "BEGIN_1", linkageName: "BEGIN_1", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
+!42 = distinct !DISubprogram(name: "begin_1", linkageName: "begin_1", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
 !43 = !DISubroutineType(types: !44)
 !44 = !{!26, !45}
 !45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)

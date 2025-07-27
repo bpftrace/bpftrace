@@ -11,7 +11,7 @@ PROG i:ms:1 { printf("value: %dms100\n", 100); exit();}
 EXPECT value: 100ms100
 
 NAME printf_llu
-PROG BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); }
+PROG begin { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); }
 EXPECT Elapsed time: 1s
 
 NAME printf_argument_alignment
@@ -19,31 +19,31 @@ RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_t
 EXPECT 123 hello 456 world
 
 NAME printf_more_arguments
-PROG BEGIN { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd");  }
+PROG begin { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd");  }
 EXPECT 1st: aa; 2nd: abb;; 3rd: abcc;;; 4th: abcdd;;;;
 
 NAME printf_length_modifiers
-PROG BEGIN { $x = 0x12345678abcdef; printf("%hhx %hx %x %jx\n", $x, $x, $x, $x);  }
+PROG begin { $x = 0x12345678abcdef; printf("%hhx %hx %x %jx\n", $x, $x, $x, $x);  }
 EXPECT ef cdef 78abcdef 12345678abcdef
 
 NAME printf_char
-PROG BEGIN { printf("%c%c%c%c\n", 0x41, 0x42, 0x43, 0x44);  }
+PROG begin { printf("%c%c%c%c\n", 0x41, 0x42, 0x43, 0x44);  }
 EXPECT ABCD
 
 NAME printf_enum_symbolize
-PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s %d %s %d %s\n", ONE, ONE, TWO, TWO, OTHER, OTHER); exit() }
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { printf("%d %s %d %s %d %s\n", ONE, ONE, TWO, TWO, OTHER, OTHER); exit() }
 EXPECT 1 ONE 2 TWO 99999 OTHER
 
 NAME printf_enum_symbolize_var
-PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { $one = ONE; $two = TWO; $other = OTHER; printf("%d %s %d %s %d %s\n", $one, $one, $two, $two, $other, $other); exit() }
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { $one = ONE; $two = TWO; $other = OTHER; printf("%d %s %d %s %d %s\n", $one, $one, $two, $two, $other, $other); exit() }
 EXPECT 1 ONE 2 TWO 99999 OTHER
 
 NAME printf_enum_symbolize_map
-PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { @one = ONE; @two = TWO; @other = OTHER; printf("%d %s %d %s %d %s\n", @one, @one, @two, @two, @other, @other); exit() }
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { @one = ONE; @two = TWO; @other = OTHER; printf("%d %s %d %s %d %s\n", @one, @one, @two, @two, @other, @other); exit() }
 EXPECT 1 ONE 2 TWO 99999 OTHER
 
 NAME printf_enum_symbolize_width
-PROG enum Foo { A, B, C, }; BEGIN { printf("%-5s %5s %s\n", A, B, C); exit() }
+PROG enum Foo { A, B, C, }; begin { printf("%-5s %5s %s\n", A, B, C); exit() }
 EXPECT A         B C
 
 NAME printf_enum_symbolize_tracepoint
@@ -54,11 +54,11 @@ AFTER ping localhost -c 5
 TIMEOUT 5
 
 NAME printf_enum_symbolize_cast
-PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { printf("%d %s\n", ONE, (enum Foo)1); exit() }
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { printf("%d %s\n", ONE, (enum Foo)1); exit() }
 EXPECT 1 ONE
 
 NAME printf_invalid_enum_symbolize_cast
-PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; BEGIN { $x = 100; printf("%d %s\n", ONE, (enum Foo)$x); exit() }
+PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { $x = 100; printf("%d %s\n", ONE, (enum Foo)$x); exit() }
 EXPECT 1 100
 
 NAME time
@@ -136,7 +136,7 @@ AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 REQUIRES_FEATURE probe_read_kernel
 
 NAME str_big_read
-PROG BEGIN { @s = str(0); @ss = @s; print("success!"); exit() }
+PROG begin { @s = str(0); @ss = @s; print("success!"); exit() }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT success!
 REQUIRES_FEATURE probe_read_kernel
@@ -151,7 +151,7 @@ REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME tuple_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { print((1, (2, "XXXX"))) }
+PROG config = { on_stack_limit = 0 } begin { print((1, (2, "XXXX"))) }
 EXPECT (1, (2, XXXX))
 
 NAME str_scratch_buf
@@ -162,57 +162,57 @@ REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME fmt_str_args_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { printf("%s %d\n", "XXXX", 1); exit() }
+PROG config = { on_stack_limit = 0 } begin { printf("%s %d\n", "XXXX", 1); exit() }
 EXPECT XXXX 1
 
 NAME map_val_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @x = 1; @y = @x; print(@y); exit() }
+PROG config = { on_stack_limit = 0 } begin { @x = 1; @y = @x; print(@y); exit() }
 EXPECT @y: 1
 
 NAME variable_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { $x = "XXXX"; $y = $x; print($y); exit() }
+PROG config = { on_stack_limit = 0 } begin { $x = "XXXX"; $y = $x; print($y); exit() }
 EXPECT XXXX
 
 # Verify enough buffer space is allocated for same variable name in multiple scopes
 NAME variable_for_loop_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } exit() }
+PROG config = { on_stack_limit = 0 } begin { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } exit() }
 EXPECT (1, 1)
 
 # Verify enough buffer space is allocated for same variable name in multiple subprograms
 NAME variable_probe_subprog_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { $x = "XXXX" } i:ms:100 { $x = "YYYY";  }END { $x = "ZZZZ"; print($x) }
+PROG config = { on_stack_limit = 0 } begin { $x = "XXXX" } i:ms:100 { $x = "YYYY";  }end { $x = "ZZZZ"; print($x) }
 EXPECT ZZZZ
 
 NAME scalar_map_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @x = "xxxx"; print(@x); exit() }
+PROG config = { on_stack_limit = 0 } begin { @x = "xxxx"; print(@x); exit() }
 EXPECT @x: xxxx
 
 NAME map_key_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @x[1, 2] = 1; @[1, 1] = 3; @x[2, 1] = 2; delete(@x[1, 2]); delete(@x, (1, 1)); print(@x); exit() }
+PROG config = { on_stack_limit = 0 } begin { @x[1, 2] = 1; @[1, 1] = 3; @x[2, 1] = 2; delete(@x[1, 2]); delete(@x, (1, 1)); print(@x); exit() }
 EXPECT @x[2, 1]: 2
 
 NAME hist_map_key_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @["ok_key"] = hist(1); exit() }
+PROG config = { on_stack_limit = 0 } begin { @["ok_key"] = hist(1); exit() }
 EXPECT @[ok_key]:
 
 NAME hist_scalar_map_key_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @ = hist(1); exit() }
+PROG config = { on_stack_limit = 0 } begin { @ = hist(1); exit() }
 EXPECT @:
 
 NAME lhist_map_key_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @["ok_key"] = lhist(2,0,10,2); exit() }
+PROG config = { on_stack_limit = 0 } begin { @["ok_key"] = lhist(2,0,10,2); exit() }
 EXPECT @[ok_key]:
 
 NAME lhist_scalar_map_key_scratch_buf
-PROG config = { on_stack_limit = 0 } BEGIN { @ = lhist(2,0,10,2); exit() }
+PROG config = { on_stack_limit = 0 } begin { @ = lhist(2,0,10,2); exit() }
 EXPECT @:
 
 NAME tseries_map_key_scratch_buf
-PROG BEGIN { @["ok_key"] = tseries(2,1s,1); exit() }
+PROG begin { @["ok_key"] = tseries(2,1s,1); exit() }
 EXPECT @[ok_key]:
 
 NAME tseries_scalar_map_key_scratch_buf
-PROG BEGIN { @ = tseries(2,1s,2); exit() }
+PROG begin { @ = tseries(2,1s,2); exit() }
 EXPECT @:
 
 NAME str_big_for
@@ -238,11 +238,11 @@ PROG i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }
 EXPECT @[ok_key]: 1
 
 NAME buf_map_multikey
-PROG BEGIN { @[buf("ok_key", 7), 1] = hist(1);  }
+PROG begin { @[buf("ok_key", 7), 1] = hist(1);  }
 EXPECT @[ok_key\x00, 1]:
 
 NAME buf_hist_map_key
-PROG BEGIN { @[buf("ok_key", 7)] = hist(1);  }
+PROG begin { @[buf("ok_key", 7)] = hist(1);  }
 EXPECT @[ok_key\x00]:
 
 NAME buf_map_value
@@ -250,11 +250,11 @@ PROG i:ms:100 { @ = buf("ok_value", 8); exit(); }
 EXPECT @: ok_value
 
 NAME buf_no_ascii
-PROG BEGIN { printf("%rx", buf("Hello\0", 6));  }
+PROG begin { printf("%rx", buf("Hello\0", 6));  }
 EXPECT \x48\x65\x6c\x6c\x6f\x00
 
 NAME buf_no_ascii_no_escaping
-PROG BEGIN { printf("%rh", buf("Hello\0", 6));  }
+PROG begin { printf("%rh", buf("Hello\0", 6));  }
 EXPECT 48 65 6c 6c 6f 00
 
 NAME ksym
@@ -294,42 +294,42 @@ PROG i:ms:100 { @ = count(); exit();}
 EXPECT_REGEX @:\s[0-9]+
 
 NAME sum
-PROG BEGIN { @sum = sum(1); @sum = sum(2); @sum = sum(3); }
+PROG begin { @sum = sum(1); @sum = sum(2); @sum = sum(3); }
 EXPECT @sum: 6
 
 NAME avg
-PROG BEGIN { @avg = avg(1); @avg = avg(2); @avg = avg(3); }
+PROG begin { @avg = avg(1); @avg = avg(2); @avg = avg(3); }
 EXPECT @avg: 2
 
 NAME min
-PROG BEGIN { @min = min(2); @min = min(1); @min = min(3); }
+PROG begin { @min = min(2); @min = min(1); @min = min(3); }
 EXPECT @min: 1
 
 NAME max
-PROG BEGIN { @max = max(1); @max = max(3); @max = max(2); }
+PROG begin { @max = max(1); @max = max(3); @max = max(2); }
 EXPECT @max: 3
 
 NAME stats
-PROG BEGIN { @stats = stats(1); @stats = stats(2); @stats = stats(3); }
+PROG begin { @stats = stats(1); @stats = stats(2); @stats = stats(3); }
 EXPECT @stats: { .count = 3, .average = 2, .total = 6 }
 
 NAME hist
-PROG BEGIN { @=hist(-1); @=hist(2); @=hist(3); @=hist(7); @=hist(20); }
+PROG begin { @=hist(-1); @=hist(2); @=hist(3); @=hist(7); @=hist(20); }
 EXPECT_FILE runtime/outputs/hist.txt
 TIMEOUT 1
 
 NAME hist_2_values
-PROG BEGIN { @=hist(3);@=hist(20);}
+PROG begin { @=hist(3);@=hist(20);}
 EXPECT_FILE runtime/outputs/hist_2_values.txt
 TIMEOUT 1
 
 NAME hist_10g
-PROG BEGIN { @ = hist(10 * 1024 * 1024 * 1024);  }
+PROG begin { @ = hist(10 * 1024 * 1024 * 1024);  }
 EXPECT_JSON runtime/outputs/hist_10g.json
 TIMEOUT 1
 
 NAME lhist
-PROG BEGIN { @=lhist(2,0,10,2); @=lhist(3,0,10,2); @=lhist(7,0,10,2); @=lhist(-1,0,10,2); @=lhist(11,0,10,2); exit()}
+PROG begin { @=lhist(2,0,10,2); @=lhist(3,0,10,2); @=lhist(7,0,10,2); @=lhist(-1,0,10,2); @=lhist(11,0,10,2); exit()}
 EXPECT_FILE runtime/outputs/lhist.txt
 
 NAME kstack
@@ -438,17 +438,17 @@ PROG i:ms:100 { @=usym(1); @a=@; exit(); }
 EXPECT @a: 0x1
 
 NAME print_non_map
-PROG BEGIN { $x = 5; print($x); exit() }
+PROG begin { $x = 5; print($x); exit() }
 EXPECT 5
 TIMEOUT 1
 
 NAME print_non_map_builtin
-PROG BEGIN { print(comm); exit() }
+PROG begin { print(comm); exit() }
 EXPECT bpftrace
 TIMEOUT 1
 
 NAME print_non_map_tuple
-PROG BEGIN { $t = (1, 2, "string"); print($t); exit() }
+PROG begin { $t = (1, 2, "string"); print($t); exit() }
 EXPECT (1, 2, string)
 TIMEOUT 1
 
@@ -474,57 +474,57 @@ REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME print_map_item
-PROG BEGIN { @x[1] = 5; print(@x[1]); exit() }
+PROG begin { @x[1] = 5; print(@x[1]); exit() }
 EXPECT 5
 TIMEOUT 1
 
 NAME print_map_item_tuple
-PROG BEGIN { @x[1] = "hi"; print((1, 2, @x[1])); exit() }
+PROG begin { @x[1] = "hi"; print((1, 2, @x[1])); exit() }
 EXPECT (1, 2, hi)
 TIMEOUT 1
 
 NAME strftime
-PROG BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts);  }
+PROG begin { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts);  }
 EXPECT_REGEX [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 
 NAME strftime_as_map_key
-PROG BEGIN { @[strftime("%m/%d/%y", nsecs)] = 1; }
+PROG begin { @[strftime("%m/%d/%y", nsecs)] = 1; }
 EXPECT_REGEX \[[0-9]{2}\/[0-9]{2}\/[0-9]{2}\]: 1
 
 NAME strftime_as_map_value
-PROG BEGIN { @[nsecs] = strftime("%m/%d/%y", nsecs); }
+PROG begin { @[nsecs] = strftime("%m/%d/%y", nsecs); }
 EXPECT_REGEX @\[[0-9]*\]: [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 
 # Output two microsecond timestamps, 123000 nsecs apart. Use python to evaluate and verify there's a 123us delta
 NAME strftime_microsecond_extension
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%s - %s\n", strftime("%s.%f", 123000), strftime("%s.%f", 0));  }' | tail -n +3 | bc
+RUN {{BPFTRACE}} -e 'begin { printf("%s - %s\n", strftime("%s.%f", 123000), strftime("%s.%f", 0));  }' | tail -n +3 | bc
 EXPECT .000123
 TIMEOUT 1
 
 # Similar to above test but test that rolling over past 1s works as expected
 NAME strftime_microsecond_extension_rollover
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%s - %s\n", strftime("%s.%f", 1000123000), strftime("%s.%f", 0));  }' | tail -n +3 | bc
+RUN {{BPFTRACE}} -e 'begin { printf("%s - %s\n", strftime("%s.%f", 1000123000), strftime("%s.%f", 0));  }' | tail -n +3 | bc
 EXPECT 1.000123
 TIMEOUT 1
 
 NAME print_avg_map_args
-PROG BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@);  }
+PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@);  }
 EXPECT_FILE  runtime/outputs/print_avg_map_args.txt
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-PROG BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@);  }
+PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@);  }
 EXPECT_FILE runtime/outputs/print_avg_map_with_large_top.txt
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
-PROG BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("END"); clear(@);  }
-EXPECT_REGEX BEGIN\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
+PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("end"); clear(@);  }
+EXPECT_REGEX begin\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
 NAME print_hist_with_large_top_arg
-PROG BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("END"); clear(@);  }
-EXPECT_REGEX BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
+PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("end"); clear(@);  }
+EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
 NAME path
@@ -584,48 +584,48 @@ EXPECT hello: 0
 REQUIRES_FEATURE iter
 
 NAME cgroup_path
-PROG BEGIN { print(cgroup_path(cgroup & ((1 << 32) - 1)));  }
+PROG begin { print(cgroup_path(cgroup & ((1 << 32) - 1)));  }
 EXPECT_REGEX ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
 MIN_KERNEL 4.18
 
 NAME cgroup_path printf
-PROG BEGIN { printf("path: %s", cgroup_path(cgroup & ((1 << 32) - 1)));  }
+PROG begin { printf("path: %s", cgroup_path(cgroup & ((1 << 32) - 1)));  }
 EXPECT_REGEX path: ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
 MIN_KERNEL 4.18
 
 NAME strerror
-RUN {{BPFTRACE}} --include "errno.h" -e 'BEGIN { print(strerror(EPERM));  }'
+RUN {{BPFTRACE}} --include "errno.h" -e 'begin { print(strerror(EPERM));  }'
 EXPECT Operation not permitted
 
 NAME bswap_int64
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%llx", bswap(0x1122334455667788));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%llx", bswap(0x1122334455667788));  }'
 EXPECT 8877665544332211
 TIMEOUT 1
 
 NAME bswap_int32
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int32)0x12345678));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%x", bswap((int32)0x12345678));  }'
 EXPECT 78563412
 TIMEOUT 1
 
 NAME bswap_int16
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int16)0x1234));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%x", bswap((int16)0x1234));  }'
 EXPECT 3412
 TIMEOUT 1
 
 NAME bswap_int8
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int8)0x12));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%x", bswap((int8)0x12));  }'
 EXPECT 12
 TIMEOUT 1
 
 NAME bswap_int64_op
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%llx", bswap(0x12340000 + 0x5678));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%llx", bswap(0x12340000 + 0x5678));  }'
 EXPECT 7856341200000000
 TIMEOUT 1
 
 NAME bswap_twice
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap(bswap(0x1234)));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%x", bswap(bswap(0x1234)));  }'
 EXPECT 1234
 TIMEOUT 1
 
@@ -697,43 +697,43 @@ PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(sw_tai)); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME map len
-PROG BEGIN { @[0] = 0; @[1] = 1; printf("map len: %d\n", len(@));  }
+PROG begin { @[0] = 0; @[1] = 1; printf("map len: %d\n", len(@));  }
 EXPECT map len: 2
 TIMEOUT 3
 
 NAME map lencmp
-PROG BEGIN { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"); }  }
+PROG begin { @[1] = 1; @[2] = 2; $count = len(@); if ($count > 1) { print("true"); }  }
 EXPECT true
 TIMEOUT 3
 
 NAME map len keyless
-PROG BEGIN { @ = 0; printf("map len: %d\n", len(@));  }
+PROG begin { @ = 0; printf("map len: %d\n", len(@));  }
 EXPECT stdin:1:40-45: ERROR: call to len() expects a map with explicit keys (non-scalar map)
-       BEGIN { @ = 0; printf("map len: %d\n", len(@));  }
+       begin { @ = 0; printf("map len: %d\n", len(@));  }
                                               ~~~~~
 WILL_FAIL
 
 NAME percpu_kaddr
-PROG BEGIN { printf("processes: %d\n", *percpu_kaddr("process_counts", 0));  }
+PROG begin { printf("processes: %d\n", *percpu_kaddr("process_counts", 0));  }
 EXPECT_REGEX processes: -?[0-9]+
 
 NAME percpu_kaddr this cpu
-PROG BEGIN { if (*percpu_kaddr("process_counts") == *percpu_kaddr("process_counts", cpu)) { printf("SUCCESS\n") }  }
+PROG begin { if (*percpu_kaddr("process_counts") == *percpu_kaddr("process_counts", cpu)) { printf("SUCCESS\n") }  }
 EXPECT SUCCESS
 
 NAME percpu_kaddr field access
-PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq->nr_running) } exit() }
+PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq->nr_running) } exit() }
 EXPECT_REGEX nr_running: [0-9]+
 
 NAME percpu_kaddr field access no NULL check
-PROG BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
 EXPECT stdin:1:17-60: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
-       BEGIN { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+       begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 WILL_FAIL
 
 NAME clear on scalar map prevents printing
-PROG BEGIN { @xx = 5; clear(@xx); exit() }
+PROG begin { @xx = 5; clear(@xx); exit() }
 EXPECT_NONE @xx: 5
 
 NAME ustack len
@@ -747,5 +747,5 @@ EXPECT_REGEX @: \d+$
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME block expression with map assignment
-PROG BEGIN { @ = { let $a = 100; avg($a) };  }
+PROG begin { @ = { let $a = 100; avg($a) };  }
 EXPECT @: 100

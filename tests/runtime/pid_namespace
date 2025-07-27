@@ -2,7 +2,7 @@
 # They should both be "1" as bpftrace is the first and only process in this
 # temporary namespace.
 NAME pid_tid_inside
-RUN unshare --fork --pid --mount-proc {{BPFTRACE}} -e 'BEGIN { printf("%d, %d, %d, %d, %d, %d\n", pid, pid(curr_ns), pid(init), tid, tid(curr_ns), tid(init)); exit() }'
+RUN unshare --fork --pid --mount-proc {{BPFTRACE}} -e 'begin { printf("%d, %d, %d, %d, %d, %d\n", pid, pid(curr_ns), pid(init), tid, tid(curr_ns), tid(init)); exit() }'
 EXPECT_REGEX ^1, 1, \d+, 1, 1, \d+$
 EXPECT_REGEX_NONE ^1, 1, 1, 1, 1, 1$
 

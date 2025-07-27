@@ -4,7 +4,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, builtin_ncpus)
 {
-  test("BEGIN { @x = ncpus; exit(); }", NAME);
+  test("begin { @x = ncpus; exit(); }", NAME);
 }
 
 } // namespace bpftrace::test::codegen
