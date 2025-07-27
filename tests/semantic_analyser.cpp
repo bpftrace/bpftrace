@@ -5546,7 +5546,6 @@ TEST_F(SemanticAnalyserTest, external_function)
 stdin:1:12-25: ERROR: Function `foo` requires 2 arguments, got only 1
 kprobe:f { foo((int32)1); }
            ~~~~~~~~~~~~~
-HINT: Function `foo` requires arguments (int32, int64)
 )" });
 
   // Test that calling with the wrong types fails.
