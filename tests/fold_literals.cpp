@@ -177,6 +177,10 @@ TEST(fold_literals, plus)
   test(R"("" + "test")", "string: test");
   test(R"("hello" + 3)", "string: lo");
   test_warning(R"("hello" + 8)", "literal string will always be empty");
+
+  test("false + false", "bool: false");
+  test("false + true", "bool: true");
+  test("true + true", "bool: true");
 }
 
 TEST(fold_literals, minus)
@@ -210,6 +214,11 @@ TEST(fold_literals, minus)
   test_error("0x7fffffffffffffff - (-1)", "overflow"); // Coerced to signed
   test_error("0xffffffffffffffff - (-1)", "overflow");
   test_error("0 - 0xffffffffffffffff", "underflow");
+
+  test("false - false", "bool: false");
+  test("false - true", "bool: true");
+  test("true - true", "bool: false");
+  test("true - false", "bool: true");
 }
 
 TEST(fold_literals, multiply)
@@ -233,6 +242,10 @@ TEST(fold_literals, multiply)
   test("9223372036854775808 * 1", "int: 9223372036854775808");
   test_error("0x8000000000000000 * 0x2", "overflow");
   test_error("0xffffffffffffffff * 0xffffffffffffffff", "overflow");
+
+  test("false * false", "bool: false");
+  test("false * true", "bool: false");
+  test("true * true", "bool: true");
 }
 
 TEST(fold_literals, divide)
@@ -252,6 +265,11 @@ TEST(fold_literals, divide)
   test("0xffffffffffffffff / 1", "int: 18446744073709551615");
   test_error("123 / 0", "unable to fold");
   test_error("-123 / 0", "unable to fold");
+
+  test("false / true", "bool: false");
+  test("true / true", "bool: true");
+  test_error("false / false", "unable to fold");
+  test_error("true / false", "unable to fold");
 }
 
 TEST(fold_literals, mod)
@@ -268,6 +286,11 @@ TEST(fold_literals, mod)
   test("0x8000000000000000 % 0xff", "int: 128");
   test_error("123 % 0", "unable to fold");
   test_error("-123 % 0", "unable to fold");
+
+  test("false % true", "bool: false");
+  test("true % true", "bool: false");
+  test_error("false % false", "unable to fold");
+  test_error("true % false", "unable to fold");
 }
 
 TEST(fold_literals, binary)
@@ -358,6 +381,22 @@ TEST(fold_literals, binary)
   test("-8 >> 2", "signed int: -2"); // Sign extension
   test("0x8000000000000000 >> 1", "int: 4611686018427387904");
   test("0x8000000000000000 >> 63", "int: 1");
+
+  test("true & true", "bool: true");
+  test("true & false", "bool: false");
+  test("false & false", "bool: false");
+  test("true | true", "bool: true");
+  test("true | false", "bool: true");
+  test("false | false", "bool: false");
+  test("true ^ true", "bool: false");
+  test("true ^ false", "bool: true");
+  test("false ^ false", "bool: false");
+  test("true << false", "bool: false");
+  test("true << true", "bool: false");
+  test("false << false", "bool: false");
+  test("true >> false", "bool: true");
+  test("true >> true", "bool: false");
+  test("false >> false", "bool: false");
 }
 
 TEST(fold_literals, logical)

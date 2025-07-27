@@ -2241,7 +2241,8 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
   bool do_signed = lsign && rsign;
 
   // Promote operands if necessary
-  auto size = binop.result_type.GetSize();
+  auto size = std::max(binop.left.type().GetSize(),
+                       binop.right.type().GetSize());
   lhs = b_.CreateIntCast(lhs, b_.getIntNTy(size * 8), lsign);
   rhs = b_.CreateIntCast(rhs, b_.getIntNTy(size * 8), rsign);
 
@@ -3738,8 +3739,10 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
 
 ScopedExpr CodegenLLVM::createLogicalAnd(Binop &binop)
 {
-  assert(binop.left.type().IsIntTy() || binop.left.type().IsPtrTy());
-  assert(binop.right.type().IsIntTy() || binop.right.type().IsPtrTy());
+  assert(binop.left.type().IsIntTy() || binop.left.type().IsPtrTy() ||
+         binop.left.type().IsBoolTy());
+  assert(binop.right.type().IsIntTy() || binop.right.type().IsPtrTy() ||
+         binop.right.type().IsBoolTy());
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(),
@@ -3755,7 +3758,7 @@ ScopedExpr CodegenLLVM::createLogicalAnd(Binop &binop)
                                                "&&_merge",
                                                parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "&&_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt8Ty(), "&&_result");
 
   ScopedExpr scoped_lhs = visit(binop.left);
   Value *lhs = scoped_lhs.value();
@@ -3774,21 +3777,23 @@ ScopedExpr CodegenLLVM::createLogicalAnd(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt8(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt8(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);
-  return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(), result));
+  return ScopedExpr(b_.CreateLoad(b_.getInt8Ty(), result));
 }
 
 ScopedExpr CodegenLLVM::createLogicalOr(Binop &binop)
 {
-  assert(binop.left.type().IsIntTy() || binop.left.type().IsPtrTy());
-  assert(binop.right.type().IsIntTy() || binop.right.type().IsPtrTy());
+  assert(binop.left.type().IsIntTy() || binop.left.type().IsPtrTy() ||
+         binop.left.type().IsBoolTy());
+  assert(binop.right.type().IsIntTy() || binop.right.type().IsPtrTy() ||
+         binop.right.type().IsBoolTy());
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(),
@@ -3804,7 +3809,7 @@ ScopedExpr CodegenLLVM::createLogicalOr(Binop &binop)
                                                "||_merge",
                                                parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "||_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt8Ty(), "||_result");
 
   ScopedExpr scoped_lhs = visit(binop.left);
   Value *lhs = scoped_lhs.value();
@@ -3823,15 +3828,15 @@ ScopedExpr CodegenLLVM::createLogicalOr(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt8(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt8(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);
-  return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(), result));
+  return ScopedExpr(b_.CreateLoad(b_.getInt8Ty(), result));
 }
 
 llvm::Function *CodegenLLVM::createLog2Function()

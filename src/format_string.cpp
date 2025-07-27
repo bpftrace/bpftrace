@@ -122,6 +122,8 @@ std::string validate_format_string(const std::string &fmt,
       // Symbolizing enum
       arg_types.insert(Type::string);
       arg_types.insert(Type::integer);
+    } else if (arg_type == Type::boolean) {
+      arg_types.insert(Type::integer);
     } else {
       arg_types.insert(arg_type);
     }

@@ -58,3 +58,8 @@ PROG begin { @a[false, 1, true] = 1; @a[true, (int32)2, false] = 2;  }
 EXPECT @a[false, 1, true]: 1
 EXPECT @a[true, 2, false]: 2
 TIMEOUT 1
+
+NAME complex bool logical
+PROG BEGIN { $a = 100000; $b = 0; $c = $a > $b; $d = $a && $b; $e = $c || $d; $f = (uint64)$c; print(($c, $d, $e, $f)); }
+EXPECT (true, false, true, 1)
+TIMEOUT 1

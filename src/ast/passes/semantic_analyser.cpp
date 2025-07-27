@@ -2352,8 +2352,6 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   // Binop on two pointers
   if (other.IsPtrTy()) {
     if (compare) {
-      binop.result_type = CreateUInt(64);
-
       if (is_final_pass()) {
         const auto *le = lht.GetPointeeTy();
         const auto *re = rht.GetPointeeTy();
@@ -2365,23 +2363,19 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
           warn.addContext(binop.right.loc()) << "right (" << *re << ")";
         }
       }
-    } else if (logical) {
-      binop.result_type = CreateUInt(64);
-    } else {
+    } else if (!logical) {
       invalid_op();
     }
   }
-  // Binop on a pointer and int
-  else if (other.IsIntTy()) {
+  // Binop on a pointer and (int or bool)
+  else if (other.IsIntTy() || other.IsBoolTy()) {
     // sum is associative but minus only works with pointer on the left hand
     // side
     if (binop.op == Operator::MINUS && !left_is_ptr)
       invalid_op();
     else if (binop.op == Operator::PLUS || binop.op == Operator::MINUS)
       binop.result_type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
-    else if (compare || logical)
-      binop.result_type = CreateInt(64);
-    else
+    else if (!compare && !logical)
       invalid_op();
   }
   // Might need an additional pass to resolve the type
@@ -2405,15 +2399,13 @@ void SemanticAnalyser::visit(Binop &binop)
   const auto &rht = binop.right.type();
   bool lsign = binop.left.type().IsSigned();
   bool rsign = binop.right.type().IsSigned();
-  bool is_int_binop = (lht.IsCastableMapTy() || lht.IsIntTy()) &&
-                      (rht.IsCastableMapTy() || rht.IsIntTy());
-
-  if (lht.IsPtrTy() || rht.IsPtrTy()) {
-    binop_ptr(binop);
-    return;
-  }
+  bool is_int_binop = (lht.IsCastableMapTy() || lht.IsIntTy() ||
+                       lht.IsBoolTy()) &&
+                      (rht.IsCastableMapTy() || rht.IsIntTy() ||
+                       rht.IsBoolTy());
 
   bool is_signed = lsign && rsign;
+  bool is_comparison = is_comparison_op(binop.op);
   switch (binop.op) {
     case Operator::LEFT:
     case Operator::RIGHT:
@@ -2423,13 +2415,29 @@ void SemanticAnalyser::visit(Binop &binop)
       break;
   }
 
-  if (is_int_binop) {
-    // Implicit size promotion to larger of the two
-    auto size = std::max(lht.GetSize(), rht.GetSize());
-    binop.result_type = CreateInteger(size * 8, is_signed);
-  } else {
-    // Default type - will be overriden below as necessary
-    binop.result_type = CreateInteger(64, is_signed);
+  if (is_comparison) {
+    binop.result_type = CreateBool();
+  }
+
+  if (lht.IsBoolTy() && rht.IsBoolTy()) {
+    binop.result_type = CreateBool();
+    return;
+  }
+
+  if (lht.IsPtrTy() || rht.IsPtrTy()) {
+    binop_ptr(binop);
+    return;
+  }
+
+  if (!is_comparison) {
+    if (is_int_binop) {
+      // Implicit size promotion to larger of the two
+      auto size = std::max(lht.GetSize(), rht.GetSize());
+      binop.result_type = CreateInteger(size * 8, is_signed);
+    } else {
+      // Default type - will be overriden below as necessary
+      binop.result_type = CreateInteger(64, is_signed);
+    }
   }
 
   auto addr_lhs = binop.left.type().GetAS();

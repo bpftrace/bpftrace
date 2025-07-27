@@ -320,6 +320,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
 
   for (auto arg : args) {
     switch (arg.type.GetTy()) {
+      case Type::boolean:
+        arg_values.push_back(std::make_unique<PrintableInt>(
+            *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
+        break;
       case Type::integer:
         if (arg.type.IsSigned()) {
           int64_t val = 0;
