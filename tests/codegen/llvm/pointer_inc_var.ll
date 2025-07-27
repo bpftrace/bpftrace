@@ -3,10 +3,10 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
-%"struct map_t" = type { ptr, ptr }
+%"struct map_internal_repr_t" = type { ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
-@ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
+@ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !22
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !29
 

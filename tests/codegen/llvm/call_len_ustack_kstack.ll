@@ -3,20 +3,20 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
-%"struct map_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_t.0" = type { ptr, ptr, ptr, ptr }
-%"struct map_t.1" = type { ptr, ptr, ptr, ptr }
-%"struct map_t.2" = type { ptr, ptr, ptr, ptr }
-%"struct map_t.3" = type { ptr, ptr }
+%"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.0" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.1" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.2" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.3" = type { ptr, ptr }
 %kstack_key = type { i64, i64 }
 %ustack_key = type { i64, i64, i32, i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
-@AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
-@AT_y = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
-@stack_bpftrace_127 = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !24
-@stack_scratch = dso_local global %"struct map_t.2" zeroinitializer, section ".maps", !dbg !48
-@ringbuf = dso_local global %"struct map_t.3" zeroinitializer, section ".maps", !dbg !60
+@AT_x = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
+@AT_y = dso_local global %"struct map_internal_repr_t.0" zeroinitializer, section ".maps", !dbg !22
+@stack_bpftrace_127 = dso_local global %"struct map_internal_repr_t.1" zeroinitializer, section ".maps", !dbg !24
+@stack_scratch = dso_local global %"struct map_internal_repr_t.2" zeroinitializer, section ".maps", !dbg !48
+@ringbuf = dso_local global %"struct map_internal_repr_t.3" zeroinitializer, section ".maps", !dbg !60
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !74
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !78
 
