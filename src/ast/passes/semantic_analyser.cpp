@@ -1885,36 +1885,33 @@ If you're seeing errors, try clamping the string sizes. For example:
                         << argument_types.takeError();
         continue;
       }
+      // Check the argument count.
+      if (argument_types->size() != call.vargs.size()) {
+        call.addError() << "Function `" << call.func << "` requires "
+                        << argument_types->size() << " arguments, got only "
+                        << call.vargs.size();
+        continue;
+      }
       std::vector<std::pair<std::string, SizedType>> args;
-      for (const auto &[name, type] : *argument_types) {
+      for (size_t i = 0; i < argument_types->size(); i++) {
+        const auto &[name, type] = argument_types->at(i);
         auto compat_arg_type = getCompatType(type);
         if (!compat_arg_type) {
+          // If the required type is a **pointer**, and the provided type is
+          // a **pointer**, then we let it slide. Just assume the user knows
+          // what they are doing. The verifier will catch them out otherwise.
+          if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
+            args.emplace_back(name, call.vargs[i].type());
+            continue;
+          }
           call.addError() << "Unable to convert argument type: "
                           << compat_arg_type.takeError();
           continue;
         }
         args.emplace_back(name, std::move(*compat_arg_type));
       }
-      // Build our full proto as an error message.
-      std::stringstream fullmsg;
-      fullmsg << "Function `" << call.func << "` requires arguments (";
-      bool first = true;
-      for (const auto &[name, type] : args) {
-        if (!first) {
-          fullmsg << ", ";
-        }
-        fullmsg << typestr(type);
-        first = false;
-      }
-      fullmsg << ")";
-      // Check the argument count.
-      if (args.size() != call.vargs.size()) {
-        auto &err = call.addError();
-        err << "Function `" << call.func << "` requires "
-            << argument_types->size() << " arguments, got only "
-            << call.vargs.size();
-        err.addHint() << fullmsg.str();
-        continue;
+      if (args.size() != argument_types->size()) {
+        continue; // Already emitted errors.
       }
       // Check all the individual arguments.
       bool ok = true;
@@ -1933,6 +1930,18 @@ If you're seeing errors, try clamping the string sizes. For example:
           ok = false;
         }
       }
+      // Build our full proto as an error message.
+      std::stringstream fullmsg;
+      fullmsg << "Function `" << call.func << "` requires arguments (";
+      bool first = true;
+      for (const auto &[name, type] : args) {
+        if (!first) {
+          fullmsg << ", ";
+        }
+        fullmsg << typestr(type);
+        first = false;
+      }
+      fullmsg << ")";
       if (!ok) {
         call.addError() << fullmsg.str();
         continue;
