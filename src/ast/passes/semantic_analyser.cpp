@@ -639,12 +639,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=0,
       .max_args=1 },
   },
-  { "socket_cookie",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::pointer }, // struct sock *
-      } } },
   { "fail",
     { .min_args=1,
       .max_args=128,
@@ -1715,24 +1709,6 @@ void SemanticAnalyser::visit(Call &call)
                         << arg.type().GetTy() << " provided)";
       }
     }
-  } else if (call.func == "socket_cookie") {
-    auto logError = [&]<typename T>(T name) {
-      call.addError() << call.func
-                      << "() only supports 'struct sock *' as the argument ("
-                      << name << " provided)";
-    };
-
-    const auto &type = call.vargs.at(0).type();
-    if (!type.IsPtrTy() || !type.GetPointeeTy() ||
-        !type.GetPointeeTy()->IsRecordTy()) {
-      logError(type.GetTy());
-      return;
-    }
-    if (!type.GetPointeeTy()->IsSameType(CreateRecord("struct sock"))) {
-      logError("'" + type.GetPointeeTy()->GetName() + " *'");
-      return;
-    }
-    call.return_type = CreateUInt64();
   } else if (call.func == "fail") {
     // This is basically a static_assert failure. It will halt the compilation.
     // We expect to hit this path only when using the `typeof` folds.
