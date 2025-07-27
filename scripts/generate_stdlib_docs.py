@@ -7,22 +7,26 @@ import glob
 import os
 import sys
 import re
-from typing import NamedTuple, Optional
+from typing import Optional
 
-class Param(NamedTuple):
-    name: str
-    type: str
-    description: str
+class Param:
+    name: str = ""
+    type: str = "none"
+    description: str = ""
 
-class LastExpr(NamedTuple):
-    type: str
-    description: str
+class LastExpr:
+    type: str = "none"
+    description: str = ""
 
-class Macro(NamedTuple):
-    name: str
-    params: list[Param]
-    last_expr: LastExpr
-    description: str
+class Macro:
+    name: str = ""
+    params: list[Param] = None
+    last_expr: LastExpr = LastExpr()
+    summary: str = ""
+    description: str = ""
+
+    def __init__(self):
+      self.params = []
 
 def parse_param_string(param_string: str) -> Optional[Param]:
     """
@@ -33,11 +37,11 @@ def parse_param_string(param_string: str) -> Optional[Param]:
 
     match = re.match(pattern, param_string.strip())
     if match:
-        param_type = match.group(1).strip()
-        name = match.group(2).strip()
-        description = match.group(4).strip()
-
-        return Param(name=name, type=param_type,description=description)
+        param = Param()
+        param.type = match.group(1).strip()
+        param.name = match.group(2).strip()
+        param.description = match.group(4).strip()
+        return param
 
     return None
 
@@ -50,10 +54,10 @@ def parse_last_expr_string(param_string: str) -> Optional[LastExpr]:
 
     match = re.match(pattern, param_string.strip())
     if match:
-        expr_type = match.group(1).strip()
-        description = match.group(2).strip()
-
-        return LastExpr(type=expr_type, description=description)
+        last_expr = LastExpr()
+        last_expr.type = match.group(1).strip()
+        last_expr.description = match.group(2).strip()
+        return last_expr
 
     return None
 
@@ -74,54 +78,39 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
             print(f"Error: File '{file_path}' not found.")
             return None
 
-
-        found_comment_start = False
-        params = []
-        last_expr = LastExpr(type="none", description="")
-        description = ""
+        current = Macro()
         with open(file_path, 'r', encoding='utf-8') as file:
             for line in file:
-                # print(f"Line: {line}")
                 line_content = line.lstrip().rstrip()
-                if line_content.startswith("/*"):
-                    found_comment_start = True
-                    last_expr = LastExpr(type="none", description="")
-                    params = []
-                    description = ""
-                    continue
-                if line_content.startswith("*/"):
-                    found_comment_start = False
-                    continue
-                if found_comment_start:
+                if line_content.startswith("//"):
+                    # Don't strip, because we may have markdown with meaningful
+                    # whitespace at the beginning of the line that we preserve.
+                    line_content = line_content[2:]
+                    if len(line_content) > 0 and line_content[:1].isspace():
+                        line_content = line_content[1:]
                     if line_content.startswith(":param"):
                         parsed_param = parse_param_string(line_content)
                         if parsed_param:
-                            params.append(parsed_param)
+                            current.params.append(parsed_param)
                     elif line_content.startswith(":last_expr"):
                         parsed_last_expr = parse_last_expr_string(line_content)
                         if parsed_last_expr:
-                            last_expr = parsed_last_expr
-                    else:
-                        description += line_content + "\n"
-                    continue
-                if not found_comment_start and line_content.startswith("macro"):
-                    macro_name = parse_macro_name(line_content)
-                    if macro_name:
-                        # There must at least be a description or it's an undocumented macro
-                        if description:
-                            # Create a new macro with the parsed name
-                            macro = Macro(
-                                name=macro_name,
-                                params=params,
-                                last_expr=last_expr,
-                                description=description.strip()
-                            )
-                            macros.append(macro)
+                            current.last_expr = parsed_last_expr
+                    elif not current.summary:
+                        current.summary = line_content
+                    elif current.description or line_content:
+                        current.description += line_content + "\n"
+                elif line_content.startswith("macro"):
+                    current.name = parse_macro_name(line_content)
+                    if current.name:
+                        # There must at least be a description or it's an
+                        # undocumented macro.
+                        if current.summary:
+                            macros.append(current)
                         else:
-                            print(f"Warning: Macro '{macro_name}' will not be added to the docs.")
-                    last_expr = LastExpr(type="none", description="")
-                    description = ""
-                    params = []
+                            print(f"Warning: Macro '{current.name}' will not be added to the docs.")
+                else:
+                    current = Macro()
 
         return macros
 
@@ -166,14 +155,16 @@ def write_markdown_doc(macros: list[Macro]):
             updated_lines.append("| Name | Description |\n")
             updated_lines.append("| --- | --- |\n")
             for macro in macros:
-                updated_lines.append(f"| [`{macro.name}`](#{macro.name}) | {macro.description} |\n")
+                updated_lines.append(f"| [`{macro.name}`](#{macro.name}) | {macro.summary} |\n")
             updated_lines.append("\n")
 
             # Make the macro details
             for macro in macros:
                 updated_lines.append(f"### {macro.name}\n")
-                updated_lines.append(f"{macro.description}\n")
+                updated_lines.append(f"{macro.summary}\n")
                 updated_lines.append("\n")
+                if macro.description:
+                  updated_lines.append(f"{macro.description}\n")
                 updated_lines.append("#### Parameters\n")
                 for param in macro.params:
                     updated_lines.append(f"- **{param.name}**: ({param.type}) {param.description}\n")
@@ -183,7 +174,7 @@ def write_markdown_doc(macros: list[Macro]):
                     updated_lines.append("- **None**\n")
                 else:
                     updated_lines.append(f"- **{macro.last_expr.type}**: {macro.last_expr.description}\n")
-            updated_lines.append("\n")
+                updated_lines.append("\n")
         else:
             updated_lines.append(cleaned_line)
 
