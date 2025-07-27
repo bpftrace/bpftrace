@@ -77,10 +77,6 @@ static constexpr auto LICENSE = "LICENSE";
 static auto getTargetMachine()
 {
   static auto *target = []() {
-    LLVMInitializeBPFTargetInfo();
-    LLVMInitializeBPFTarget();
-    LLVMInitializeBPFTargetMC();
-    LLVMInitializeBPFAsmPrinter();
     std::string error_str;
     const auto *target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple,
                                                             error_str);
@@ -5270,6 +5266,10 @@ std::unique_ptr<llvm::Module> CodegenLLVM::compile()
 
 Pass CreateLLVMInitPass()
 {
+  LLVMInitializeBPFTargetInfo();
+  LLVMInitializeBPFTarget();
+  LLVMInitializeBPFTargetMC();
+  LLVMInitializeBPFAsmPrinter();
   return Pass::create("llvm-init", [] { return CompileContext(); });
 }
 
