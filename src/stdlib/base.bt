@@ -1,9 +1,7 @@
-/*
-Simple assertion macro that will exit the entire script with an error code if the condition is not met.
-
-:param (bool) $cond: The condition to check
-:param (string) $msg: The message to print if the condition is not met
-*/
+// Simple assertion macro that will exit the entire script with an error code if the condition is not met.
+//
+// :param (bool) $cond: The condition to check
+// :param (string) $msg: The message to print if the condition is not met
 macro assert($cond, $msg) {
   if (!$cond) {
     printf("Assertion failed. Msg: %s", $msg);
@@ -11,13 +9,10 @@ macro assert($cond, $msg) {
   }
 }
 
-/*
-Get the pid of the parent process
-
-:param (struct task_struct *) $task: The current task struct
-
-:last_expr (uint32): The pid of the parent process
-*/
+// Get the pid of the parent process
+//
+// :param (struct task_struct *) $task: The current task struct
+// :last_expr (uint32): The pid of the parent process
 macro ppid($task) {
     $task->real_parent->pid
 }
