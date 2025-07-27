@@ -19,11 +19,16 @@ entry:
   %"$ret" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$ret")
   store i64 0, ptr %"$ret", align 8
+  %"$$socket_cookie_$sk" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$socket_cookie_$sk")
+  store i64 0, ptr %"$$socket_cookie_$sk", align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 0
   %sk = load volatile i64, ptr %2, align 8
-  %get_socket_cookie = call i64 inttoptr (i64 46 to ptr)(i64 %sk) #3
-  store i64 %get_socket_cookie, ptr %"$ret", align 8
+  store i64 %sk, ptr %"$$socket_cookie_$sk", align 8
+  %3 = load i64, ptr %"$$socket_cookie_$sk", align 8
+  %__bpf_socket_cookie = call i64 @__bpf_socket_cookie(i64 %3), !dbg !41
+  store i64 %__bpf_socket_cookie, ptr %"$ret", align 8
   ret i64 0
 }
 
@@ -33,10 +38,13 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
+; Function Attrs: alwaysinline nounwind
+declare dso_local i64 @__bpf_socket_cookie(i64 noundef %0) #3
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { memory(none) }
+attributes #3 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}
@@ -82,3 +90,4 @@ attributes #3 = { memory(none) }
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
+!41 = !DILocation(line: 34, column: 3, scope: !35)
