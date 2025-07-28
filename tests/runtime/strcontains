@@ -116,3 +116,16 @@ EXPECT f is the first letter
 NAME invalid indexing
 PROG begin { $a = "foo"; $i = (uint64)10; printf("the mystery letter is %c", $a[$i]); }
 EXPECT_REGEX the mystery letter is .*
+
+NAME types
+PROG BEGIN { strcontains("foo", 1) }
+EXPECT_REGEX .* ERROR:.*
+WILL_FAIL
+
+NAME variable not present
+PROG BEGIN { $a = "bar"; print(strcontains("foo", $a)) }
+EXPECT false
+
+NAME variable present
+PROG BEGIN { $a = "bar"; print(strcontains("foobar", $a)) }
+EXPECT true
