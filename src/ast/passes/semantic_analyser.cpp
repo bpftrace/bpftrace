@@ -145,7 +145,8 @@ public:
   void visit(Typeof &typeof);
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
-  void visit(Variable &var);
+  void visit(Variable &var, bool use = false);
+  void visit(VariableAddr &addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
   void visit(While &while_block);
@@ -156,6 +157,7 @@ public:
   void visit(ArrayAccess &arr);
   void visit(TupleAccess &acc);
   void visit(MapAccess &acc);
+  void visit(MapAddr &addr);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(Expression &expr);
@@ -2122,17 +2124,31 @@ void SemanticAnalyser::visit(Map &map)
   }
 }
 
-void SemanticAnalyser::visit(Variable &var)
+void SemanticAnalyser::visit(Variable &var, bool use)
 {
   if (auto *found = find_variable(var.ident)) {
     var.var_type = found->type;
     if (!found->was_assigned) {
-      var.addWarning() << "Variable used before it was assigned: " << var.ident;
+      if (use) {
+        found->was_assigned = true;
+      } else {
+        var.addWarning() << "Variable used before it was assigned: "
+                         << var.ident;
+      }
     }
     return;
   }
 
   var.addError() << "Undefined or undeclared variable: " << var.ident;
+}
+
+void SemanticAnalyser::visit(VariableAddr &addr)
+{
+  visit(*addr.var, true);
+  const auto &ty = addr.var->type();
+  if (!ty.IsNoneTy()) {
+    addr.ptr_type = CreatePointer(ty);
+  }
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
@@ -3057,6 +3073,12 @@ void SemanticAnalyser::visit(MapAccess &acc)
     }
     pass_tracker_.inc_num_unresolved();
   }
+}
+
+void SemanticAnalyser::visit(MapAddr &addr)
+{
+  Visitor<SemanticAnalyser>::visit(addr);
+  addr.ptr_type = CreatePointer(CreateVoid());
 }
 
 void SemanticAnalyser::reconcile_map_key(Map *map, const Expression &key_expr)

@@ -223,6 +223,7 @@ public:
   ScopedExpr visit(Offsetof &offof);
   ScopedExpr visit(Map &map);
   ScopedExpr visit(Variable &var);
+  ScopedExpr visit(VariableAddr &addr);
   ScopedExpr visit(Binop &binop);
   ScopedExpr visit(Unop &unop);
   ScopedExpr visit(Ternary &ternary);
@@ -230,6 +231,7 @@ public:
   ScopedExpr visit(ArrayAccess &arr);
   ScopedExpr visit(TupleAccess &acc);
   ScopedExpr visit(MapAccess &acc);
+  ScopedExpr visit(MapAddr &addr);
   ScopedExpr visit(Cast &cast);
   ScopedExpr visit(Tuple &tuple);
   ScopedExpr visit(ExprStatement &expr);
@@ -2163,6 +2165,12 @@ ScopedExpr CodegenLLVM::visit(Variable &var)
   }
 }
 
+ScopedExpr CodegenLLVM::visit(VariableAddr &addr)
+{
+  // Always return the address of the variable.
+  return ScopedExpr(getVariable(addr.var->ident).value);
+}
+
 ScopedExpr CodegenLLVM::binop_string(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE) {
@@ -2820,6 +2828,12 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
     if (dyn_cast<AllocaInst>(value))
       b_.CreateLifetimeEnd(value);
   });
+}
+
+ScopedExpr CodegenLLVM::visit(MapAddr &addr)
+{
+  // Just return the map address directly.
+  return ScopedExpr(b_.GetMapVar(addr.map->ident));
 }
 
 ScopedExpr CodegenLLVM::visit(Cast &cast)
