@@ -587,13 +587,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=true },
           arg_type_spec{ .type=Type::integer } } } },
-  { "strcontains",
-    { .min_args=2,
-      .max_args=2,
-      .discard_ret_warn = true,
-      .arg_types={
-          arg_type_spec{ .type=Type::string, .literal=false },
-          arg_type_spec{ .type=Type::string, .literal=false } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
@@ -1368,10 +1361,11 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();
-    if (!t.IsIntegerTy() && !t.IsPtrTy()) {
-      call.addError() << call.func
-                      << "() expects an integer or a pointer type as first "
-                      << "argument (" << t << " provided)";
+    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy()) {
+      call.addError()
+          << call.func
+          << "() expects a string, integer or a pointer type as first "
+          << "argument (" << t << " provided)";
     }
     auto strlen = bpftrace_.config_->max_strlen;
     if (call.vargs.size() == 2) {
@@ -1794,23 +1788,6 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "Builtin strncmp requires a non-negative literal";
     }
     call.return_type = CreateUInt64();
-  } else if (call.func == "strcontains") {
-    static constexpr auto warning = R"(
-strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.
-
-If you're seeing errors, try clamping the string sizes. For example:
-* `str($ptr, 16)`
-* `path($ptr, 16)`
-)";
-
-    if (is_final_pass()) {
-      auto arg0_sz = call.vargs.at(0).type().GetSize();
-      auto arg1_sz = call.vargs.at(1).type().GetSize();
-      if (arg0_sz * arg1_sz > 2000) {
-        call.addWarning() << warning;
-      }
-    }
-    call.return_type = CreateBool();
   } else if (call.func == "override") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
