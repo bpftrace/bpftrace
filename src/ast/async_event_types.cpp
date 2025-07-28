@@ -59,7 +59,7 @@ std::vector<llvm::Type*> Buf::asLLVMType(ast::IRBuilderBPF& b, uint32_t length)
   };
 }
 
-std::vector<llvm::Type*> HelperError::asLLVMType(ast::IRBuilderBPF& b)
+std::vector<llvm::Type*> RuntimeError::asLLVMType(ast::IRBuilderBPF& b)
 {
   return {
     b.getInt64Ty(), // asyncid

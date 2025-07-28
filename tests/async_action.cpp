@@ -166,9 +166,10 @@ TEST_F(AsyncActionTest, time_invalid_format)
   EXPECT_THAT(log, testing::HasSubstr("strftime returned 0"));
 }
 
-TEST_F(AsyncActionTest, helper_error)
+TEST_F(AsyncActionTest, runtime_error)
 {
   struct TestCase {
+    RuntimeErrorId rte_id;
     libbpf::bpf_func_id func_id;
     int return_value;
     std::string expected_substring;
@@ -179,14 +180,16 @@ TEST_F(AsyncActionTest, helper_error)
 
   std::vector<TestCase> test_cases = {
     // case 1: `map_update_elem` returns `-E2BIG`
-    { .func_id = libbpf::BPF_FUNC_map_update_elem,
+    { .rte_id = RuntimeErrorId::HELPER_ERROR,
+      .func_id = libbpf::BPF_FUNC_map_update_elem,
       .return_value = -E2BIG,
       .expected_substring = "WARNING: Map full; can't update element",
       .filename = std::string("test1.bt"),
       .line = 10,
       .column = 5 },
     // case 2: `map_delete_elem` returns `-ENOENT`
-    { .func_id = libbpf::BPF_FUNC_map_delete_elem,
+    { .rte_id = RuntimeErrorId::HELPER_ERROR,
+      .func_id = libbpf::BPF_FUNC_map_delete_elem,
       .return_value = -ENOENT,
       .expected_substring =
           "WARNING: Can't delete map element because it does not exist",
@@ -194,7 +197,8 @@ TEST_F(AsyncActionTest, helper_error)
       .line = 15,
       .column = 8 },
     // case 3: `map_lookup_elem` failed to lookup map element
-    { .func_id = libbpf::BPF_FUNC_map_lookup_elem,
+    { .rte_id = RuntimeErrorId::HELPER_ERROR,
+      .func_id = libbpf::BPF_FUNC_map_lookup_elem,
       .return_value = 0,
       .expected_substring =
           "WARNING: Can't lookup map element because it does not exist",
@@ -202,33 +206,45 @@ TEST_F(AsyncActionTest, helper_error)
       .line = 20,
       .column = 3 },
     // case 4: default case - other function ID and error code
-    { .func_id = libbpf::BPF_FUNC_trace_printk,
+    { .rte_id = RuntimeErrorId::HELPER_ERROR,
+      .func_id = libbpf::BPF_FUNC_trace_printk,
       .return_value = -EPERM,
       .expected_substring = "WARNING: " + std::string(strerror(EPERM)),
+      .filename = std::string("test4.bt"),
+      .line = 25,
+      .column = 1 },
+    // case 5: divide by zero error
+    { .rte_id = RuntimeErrorId::DIVIDE_BY_ZERO,
+      .func_id = libbpf::BPF_FUNC_trace_printk, // unused
+      .return_value = 0,                        // unused
+      .expected_substring =
+          "WARNING: Divide or modulo by 0 detected. This can lead to "
+          "unexpected results. 1 is being used as the result.",
       .filename = std::string("test4.bt"),
       .line = 25,
       .column = 1 }
   };
 
+  uint64_t async_id = 1;
   for (const auto &tc : test_cases) {
     auto src_loc = ast::SourceLocation(
         location(&tc.filename, tc.line, tc.column));
     auto location_chain = std::make_shared<ast::LocationChain>(src_loc);
-    HelperErrorInfo info(tc.func_id, location_chain);
+    RuntimeErrorInfo info(tc.rte_id, tc.func_id, location_chain);
 
-    bpftrace->resources.helper_error_info.emplace(tc.func_id, std::move(info));
+    bpftrace->resources.runtime_error_info.emplace(async_id, std::move(info));
 
-    AsyncEvent::HelperError error_event(static_cast<int64_t>(
-                                            AsyncAction::helper_error),
-                                        tc.func_id,
-                                        tc.return_value);
+    AsyncEvent::RuntimeError error_event(static_cast<int64_t>(
+                                             AsyncAction::runtime_error),
+                                         async_id,
+                                         tc.return_value);
 
-    handlers.helper_error(OpaqueValue::from(error_event));
+    handlers.runtime_error(OpaqueValue::from(error_event));
 
     auto s = out.str();
+
     EXPECT_THAT(s, testing::HasSubstr(tc.expected_substring))
-        << "function: " << tc.func_id << " return " << tc.return_value
-        << " failed";
+        << "warning substring doesn't have string";
 
     std::string expected_loc = std::to_string(tc.line) + ":" +
                                std::to_string(tc.column);
@@ -237,6 +253,7 @@ TEST_F(AsyncActionTest, helper_error)
 
     EXPECT_THAT(s, testing::HasSubstr(std::to_string(tc.return_value)))
         << "Return value not found in output: " << tc.return_value;
+    ++async_id;
   }
 }
 

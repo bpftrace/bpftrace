@@ -465,7 +465,9 @@ CallInst *IRBuilderBPF::CreateHelperCall(libbpf::bpf_func_id func_id,
                                          const Twine &Name,
                                          const Location &loc)
 {
-  bpftrace_.helper_use_loc_[func_id].emplace_back(func_id, loc);
+  bpftrace_.helper_use_loc_[func_id].emplace_back(RuntimeErrorId::HELPER_ERROR,
+                                                  func_id,
+                                                  loc);
   PointerType *helper_ptr_type = PointerType::get(helper_type, 0);
   Constant *helper_func = ConstantExpr::getCast(Instruction::IntToPtr,
                                                 getInt64(func_id),
@@ -814,7 +816,10 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
     CreateMemsetBPF(value, getInt8(0), type.GetSize());
   else
     CreateStore(getInt64(0), value);
-  CreateHelperError(getInt32(0), libbpf::BPF_FUNC_map_lookup_elem, loc);
+  CreateRuntimeError(RuntimeErrorId::HELPER_ERROR,
+                     getInt32(0),
+                     libbpf::BPF_FUNC_map_lookup_elem,
+                     loc);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_merge_block);
@@ -933,7 +938,10 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   SetInsertPoint(error_success_block);
 
-  CreateHelperError(getInt32(0), libbpf::BPF_FUNC_map_lookup_percpu_elem, loc);
+  CreateRuntimeError(RuntimeErrorId::HELPER_ERROR,
+                     getInt32(0),
+                     libbpf::BPF_FUNC_map_lookup_percpu_elem,
+                     loc);
   CreateBr(while_end);
 
   SetInsertPoint(error_failure_block);
@@ -2572,38 +2580,48 @@ static bool return_zero_if_err(libbpf::bpf_func_id func_id)
   return false;
 }
 
-void IRBuilderBPF::CreateHelperError(Value *return_value,
-                                     libbpf::bpf_func_id func_id,
-                                     const Location &loc)
+void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
+                                      const Location &loc)
 {
-  assert(return_value && return_value->getType() == getInt32Ty());
+  CreateRuntimeError(
+      rte_id, getInt64(0), static_cast<libbpf::bpf_func_id>(-1), loc);
+}
 
-  if (bpftrace_.helper_check_level_ == 0 ||
-      (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
-    return;
+void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
+                                      Value *return_value,
+                                      libbpf::bpf_func_id func_id,
+                                      const Location &loc)
+{
+  if (rte_id == RuntimeErrorId::HELPER_ERROR) {
+    assert(return_value && return_value->getType() == getInt32Ty());
 
-  int error_id = async_ids_.helper_error();
-  bpftrace_.resources.helper_error_info.try_emplace(
-      error_id, HelperErrorInfo(func_id, loc));
-  auto elements = AsyncEvent::HelperError().asLLVMType(*this);
-  StructType *helper_error_struct = GetStructType("helper_error_t",
-                                                  elements,
-                                                  true);
-  AllocaInst *buf = CreateAllocaBPF(helper_error_struct, "helper_error_t");
+    if (bpftrace_.helper_check_level_ == 0 ||
+        (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
+      return;
+  }
+
+  int error_id = async_ids_.runtime_error();
+  bpftrace_.resources.runtime_error_info.try_emplace(
+      error_id, RuntimeErrorInfo(rte_id, func_id, loc));
+  auto elements = AsyncEvent::RuntimeError().asLLVMType(*this);
+  StructType *runtime_error_struct = GetStructType("runtime_error_t",
+                                                   elements,
+                                                   true);
+  AllocaInst *buf = CreateAllocaBPF(runtime_error_struct, "runtime_error_t");
   CreateStore(
       GetIntSameSize(static_cast<int64_t>(
-                         async_action::AsyncAction::helper_error),
+                         async_action::AsyncAction::runtime_error),
                      elements.at(0)),
-      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(0) }));
+      CreateGEP(runtime_error_struct, buf, { getInt64(0), getInt32(0) }));
   CreateStore(
       GetIntSameSize(error_id, elements.at(1)),
-      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(1) }));
+      CreateGEP(runtime_error_struct, buf, { getInt64(0), getInt32(1) }));
   CreateStore(
       return_value,
-      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(2) }));
+      CreateGEP(runtime_error_struct, buf, { getInt64(0), getInt32(2) }));
 
   const auto &layout = module_.getDataLayout();
-  auto struct_size = layout.getTypeAllocSize(helper_error_struct);
+  auto struct_size = layout.getTypeAllocSize(runtime_error_struct);
   CreateOutput(buf, struct_size, loc);
   CreateLifetimeEnd(buf);
 }
@@ -2631,7 +2649,7 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
   Value *condition = CreateICmpSGE(ret, Constant::getNullValue(ret->getType()));
   CreateCondBr(condition, helper_merge_block, helper_failure_block);
   SetInsertPoint(helper_failure_block);
-  CreateHelperError(ret, func_id, loc);
+  CreateRuntimeError(RuntimeErrorId::HELPER_ERROR, ret, func_id, loc);
   CreateBr(helper_merge_block);
   SetInsertPoint(helper_merge_block);
 }
@@ -2863,6 +2881,58 @@ void IRBuilderBPF::CreateMinMax(Value *val,
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
+}
+
+llvm::Value *IRBuilderBPF::CreateCheckedBinop(Binop &binop,
+                                              Value *lhs,
+                                              Value *rhs)
+{
+  assert(binop.op == Operator::DIV || binop.op == Operator::MOD);
+  // We need to do an explicit 0 check or else a Clang compiler optimization
+  // will assume that the value can't ever be 0, as this is undefined behavior,
+  // and remove a conditional null check for map values which will return 0 if
+  // the map value is null (this happens in CreateMapLookupElem). This would be
+  // fine but the BPF verifier will complain about the lack of a null check.
+  // Issue: https://github.com/bpftrace/bpftrace/issues/4379
+  // From Google's AI: "LLVM, like other optimizing compilers, is allowed to
+  // make assumptions based on the absence of undefined behavior. If a program's
+  // code, after optimization, would result in undefined behavior (like division
+  // by zero by CreateURem), the compiler is free to make transformations that
+  // assume such a situation will never occur."
+  AllocaInst *op_result = CreateAllocaBPF(getInt64Ty(), "op_result");
+
+  llvm::Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *is_zero = BasicBlock::Create(module_.getContext(),
+                                           "is_zero",
+                                           parent);
+  BasicBlock *not_zero = BasicBlock::Create(module_.getContext(),
+                                            "not_zero",
+                                            parent);
+  BasicBlock *zero_merge = BasicBlock::Create(module_.getContext(),
+                                              "zero_merge",
+                                              parent);
+
+  Value *cond = CreateICmpEQ(rhs, getInt64(0), "zero_cond");
+
+  CreateCondBr(cond, is_zero, not_zero);
+  SetInsertPoint(is_zero);
+  CreateStore(getInt64(1), op_result);
+  CreateRuntimeError(RuntimeErrorId::DIVIDE_BY_ZERO, binop.loc);
+  CreateBr(zero_merge);
+
+  SetInsertPoint(not_zero);
+  if (binop.op == Operator::MOD) {
+    CreateStore(CreateURem(lhs, rhs), op_result);
+  } else if (binop.op == Operator::DIV) {
+    CreateStore(CreateUDiv(lhs, rhs), op_result);
+  }
+
+  CreateBr(zero_merge);
+
+  SetInsertPoint(zero_merge);
+  auto *result = CreateLoad(getInt64Ty(), op_result);
+  CreateLifetimeEnd(op_result);
+  return result;
 }
 
 } // namespace bpftrace::ast

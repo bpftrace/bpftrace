@@ -190,9 +190,11 @@ public:
                          const Location &loc);
   void CreateSignal(Value *sig, const Location &loc);
   void CreateOverrideReturn(Value *ctx, Value *rc);
-  void CreateHelperError(Value *return_value,
-                         libbpf::bpf_func_id func_id,
-                         const Location &loc);
+  void CreateRuntimeError(RuntimeErrorId rte_id, const Location &loc);
+  void CreateRuntimeError(RuntimeErrorId rte_id,
+                          Value *return_value,
+                          libbpf::bpf_func_id func_id,
+                          const Location &loc);
   void CreateHelperErrorCond(Value *return_value,
                              libbpf::bpf_func_id func_id,
                              const Location &loc,
@@ -261,6 +263,8 @@ public:
                     Value *is_set_ptr,
                     bool max,
                     bool is_signed);
+
+  llvm::Value *CreateCheckedBinop(Binop &binop, Value *lhs, Value *rhs);
 
 private:
   Module &module_;

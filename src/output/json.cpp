@@ -434,17 +434,31 @@ void JsonOutput::attached_probes(uint64_t num_probes)
        << std::endl;
 }
 
-void JsonOutput::helper_error(int retcode, const HelperErrorInfo &info)
+void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 {
-  out_ << R"({"type": "helper_error")";
-  out_ << R"(, "msg": )";
-  JsonEmitter<std::string>::emit(out_, strerror(-retcode));
-  out_ << R"(, "helper": )";
-  std::stringstream ss;
-  ss << info.func_id;
-  JsonEmitter<std::string>::emit(out_, ss.str());
-  out_ << R"(, "retcode": )";
-  JsonEmitter<int64_t>::emit(out_, retcode);
+  switch (info.error_id) {
+    case RuntimeErrorId::HELPER_ERROR: {
+      out_ << R"({"type": "helper_error")";
+      out_ << R"(, "msg": )";
+      JsonEmitter<std::string>::emit(out_, strerror(-retcode));
+      out_ << R"(, "helper": )";
+      std::stringstream ss;
+      ss << info.func_id;
+      JsonEmitter<std::string>::emit(out_, ss.str());
+      out_ << R"(, "retcode": )";
+      JsonEmitter<int64_t>::emit(out_, retcode);
+      break;
+    }
+    default: {
+      out_ << R"({"type": "runtime_error")";
+      out_ << R"(, "msg": )";
+      std::stringstream ss;
+      ss << info;
+      JsonEmitter<std::string>::emit(out_, ss.str());
+      break;
+    }
+  }
+
   out_ << R"(, "filename": )";
   JsonEmitter<std::string>::emit(out_, info.filename);
   out_ << R"(, "line": )";

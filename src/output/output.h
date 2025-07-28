@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include "required_resources.h" // For HelperErrorInfo.
+#include "required_resources.h" // For RuntimeErrorInfo.
 
 namespace bpftrace::output {
 
@@ -155,7 +155,7 @@ public:
   virtual void syscall(const std::string& syscall) = 0;
   virtual void lost_events(uint64_t lost) = 0;
   virtual void attached_probes(uint64_t num_probes) = 0;
-  virtual void helper_error(int retcode, const HelperErrorInfo& info) = 0;
+  virtual void runtime_error(int retcode, const RuntimeErrorInfo& info) = 0;
   virtual void benchmark_results(
       const std::vector<std::pair<std::string, uint32_t>>& results) = 0;
   virtual void end() = 0;

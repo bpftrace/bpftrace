@@ -245,8 +245,8 @@ void perf_event_printer(void *cb_cookie, void *raw_data, int size)
   } else if (printf_id == async_action::AsyncAction::join) {
     ctx->handlers.join(data);
     return;
-  } else if (printf_id == async_action::AsyncAction::helper_error) {
-    ctx->handlers.helper_error(data);
+  } else if (printf_id == async_action::AsyncAction::runtime_error) {
+    ctx->handlers.runtime_error(data);
     return;
   } else if (printf_id == async_action::AsyncAction::watchpoint_attach) {
     ctx->handlers.watchpoint_attach(data);

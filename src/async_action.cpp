@@ -55,13 +55,13 @@ void AsyncHandlers::time(const OpaqueValue &data)
   out.time(timestr);
 }
 
-void AsyncHandlers::helper_error(const OpaqueValue &data)
+void AsyncHandlers::runtime_error(const OpaqueValue &data)
 {
-  const auto &helper_error = data.bitcast<AsyncEvent::HelperError>();
-  auto error_id = helper_error.error_id;
-  const auto return_value = helper_error.return_value;
-  const auto &info = bpftrace.resources.helper_error_info[error_id];
-  out.helper_error(return_value, info);
+  const auto &runtime_error = data.bitcast<AsyncEvent::RuntimeError>();
+  auto error_id = runtime_error.error_id;
+  const auto return_value = runtime_error.return_value;
+  const auto &info = bpftrace.resources.runtime_error_info[error_id];
+  out.runtime_error(return_value, info);
 }
 
 void AsyncHandlers::print_non_map(const OpaqueValue &data)

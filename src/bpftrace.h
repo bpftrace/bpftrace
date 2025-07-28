@@ -199,7 +199,7 @@ public:
   StructManager structs;
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
-  std::map<libbpf::bpf_func_id, std::vector<HelperErrorInfo>> helper_use_loc_;
+  std::map<libbpf::bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
   const util::FuncsModulesMap &get_traceable_funcs() const;
   const util::FuncsModulesMap &get_raw_tracepoints() const;
   util::KConfig kconfig;

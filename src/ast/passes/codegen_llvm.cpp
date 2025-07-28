@@ -2283,13 +2283,13 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
     case Operator::MUL:
       return ScopedExpr(b_.CreateMul(lhs, rhs), std::move(del));
     case Operator::DIV:
-      return ScopedExpr(b_.CreateUDiv(lhs, rhs), std::move(del));
-    case Operator::MOD:
+    case Operator::MOD: {
       // Always do an unsigned modulo operation here even if `do_signed`
       // is true. bpf instruction set does not support signed division.
       // We already warn in the semantic analyser that signed modulo can
       // lead to undefined behavior (because we will treat it as unsigned).
-      return ScopedExpr(b_.CreateURem(lhs, rhs), std::move(del));
+      return ScopedExpr(b_.CreateCheckedBinop(binop, lhs, rhs), std::move(del));
+    }
     case Operator::BAND:
       return ScopedExpr(b_.CreateAnd(lhs, rhs), std::move(del));
     case Operator::BOR:
