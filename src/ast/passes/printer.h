@@ -25,11 +25,14 @@ public:
   void visit(Call &call);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
+  void visit(Typeof &typeof);
+  void visit(Typeok &typeok);
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
   void visit(Variable &var);
   void visit(Binop &binop);
   void visit(Unop &unop);
+  void visit(TypeCmp &typecmp);
   void visit(Ternary &ternary);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
