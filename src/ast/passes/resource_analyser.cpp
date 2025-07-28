@@ -438,15 +438,8 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor<ResourceAnalyser>::visit(map);
 
-  if (map.read_only) {
-    // This becomes a read-only global
-    auto it = named_param_defaults_.defaults.find(map.ident);
-    if (it == named_param_defaults_.defaults.end()) {
-      // TODO: implement this optimization for read-only maps.
-      // This currently only works for named params via (`getopt`).
-      LOG(BUG) << "No default value for read-only map: " << map.ident;
-      return;
-    }
+  auto it = named_param_defaults_.defaults.find(map.ident);
+  if (it != named_param_defaults_.defaults.end()) {
     resources_.global_vars.add_named_param(map.ident, it->second);
     if (std::holds_alternative<std::string>(it->second)) {
       const auto max_strlen = bpftrace_.config_->max_strlen;

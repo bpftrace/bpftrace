@@ -50,9 +50,7 @@ void NamedParamPass::visit(Expression &expr)
 
   globalvars::GlobalVarValue np_default;
 
-  auto *map_node = ast_.make_node<Map>(arg_name->value,
-                                       true,
-                                       Location(call->loc));
+  auto *map_node = ast_.make_node<Map>(arg_name->value, Location(call->loc));
   map_node->key_type = CreateInt64();
 
   if (call->vargs.size() == 1) {
