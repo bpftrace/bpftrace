@@ -264,6 +264,7 @@ private:
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
+  std::unordered_map<std::string, Location> benchmark_locs_;
 };
 
 } // namespace
@@ -3824,6 +3825,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   } else if (ap.provider == "bench") {
     if (ap.target.empty())
       ap.addError() << "bench probes must have a name";
+    if (is_final_pass()) {
+      auto it = benchmark_locs_.find(ap.target);
+
+      if (it != benchmark_locs_.end()) {
+        auto &err = ap.addError();
+        err << "\"" + ap.target + "\""
+            << " was used as the name for more than one BENCH probe";
+        err.addContext(it->second) << "this is the other instance";
+      }
+
+      benchmark_locs_.emplace(ap.target, ap.loc);
+    }
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
     if (!bpftrace_.feature_->has_fentry()) {
       ap.addError() << "fentry/fexit not available for your kernel version.";
