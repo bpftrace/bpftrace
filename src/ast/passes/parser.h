@@ -10,6 +10,7 @@
 #include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
@@ -45,6 +46,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
+  passes.emplace_back(CreateNamedParamsPass());
   return passes;
 }
 

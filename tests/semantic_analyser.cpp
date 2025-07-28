@@ -10,6 +10,7 @@
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
@@ -145,6 +146,7 @@ public:
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
+                  .add(ast::CreateNamedParamsPass())
                   .add(ast::CreateSemanticPass())
                   .run();
     EXPECT_TRUE(bool(ok));

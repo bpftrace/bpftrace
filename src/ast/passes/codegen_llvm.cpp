@@ -47,6 +47,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/link.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
@@ -205,6 +206,7 @@ public:
   explicit CodegenLLVM(ASTContext &ast,
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
+                       NamedParamDefaults &named_param_defaults,
                        LLVMContext &llvm_ctx,
                        USDTHelper &usdt_helper,
                        ExpansionResult &expansions);
@@ -423,6 +425,7 @@ private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
+  NamedParamDefaults &named_param_defaults_;
   LLVMContext &llvm_ctx_;
   USDTHelper &usdt_helper_;
   ExpansionResult &expansions_;
@@ -477,12 +480,14 @@ private:
 CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          BPFtrace &bpftrace,
                          CDefinitions &c_definitions,
+                         NamedParamDefaults &named_param_defaults,
                          LLVMContext &llvm_ctx,
                          USDTHelper &usdt_helper,
                          ExpansionResult &expansions)
     : ast_(ast),
       bpftrace_(bpftrace),
       c_definitions_(c_definitions),
+      named_param_defaults_(named_param_defaults),
       llvm_ctx_(llvm_ctx),
       usdt_helper_(usdt_helper),
       expansions_(expansions),
@@ -2776,7 +2781,7 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
 
 ScopedExpr CodegenLLVM::visit(MapAccess &acc)
 {
-  if (acc.map->read_only) {
+  if (named_param_defaults_.defaults.contains(acc.map->ident)) {
     if (acc.map->value_type.IsStringTy()) {
       const auto max_strlen = bpftrace_.config_->max_strlen;
       Value *np_alloc = b_.CreateGetStrAllocation(acc.map->ident, acc.loc);
@@ -5290,6 +5295,7 @@ Pass CreateCompilePass(
                       [usdt_helper](ASTContext &ast,
                                     BPFtrace &bpftrace,
                                     CDefinitions &c_definitions,
+                                    NamedParamDefaults &named_param_defaults,
                                     CompileContext &ctx,
                                     ExpansionResult &expansions) mutable {
                         USDTHelper default_usdt;
@@ -5299,6 +5305,7 @@ Pass CreateCompilePass(
                         CodegenLLVM llvm(ast,
                                          bpftrace,
                                          c_definitions,
+                                         named_param_defaults,
                                          *ctx.context,
                                          usdt_helper->get(),
                                          expansions);

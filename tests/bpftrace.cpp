@@ -7,6 +7,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -68,6 +69,7 @@ static auto parse_probe(const std::string &str,
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
+                .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateCompilePass(std::ref(*usdt)))
