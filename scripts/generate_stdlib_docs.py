@@ -22,7 +22,8 @@ class Macro(NamedTuple):
     name: str
     params: list[Param]
     last_expr: LastExpr
-    description: str
+    short_description: str
+    long_description: str
 
 def parse_param_string(param_string: str) -> Optional[Param]:
     """
@@ -78,7 +79,8 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
         found_comment_start = False
         params = []
         last_expr = LastExpr(type="none", description="")
-        description = ""
+        short_description = ""
+        long_description = ""
         with open(file_path, 'r', encoding='utf-8') as file:
             for line in file:
                 # print(f"Line: {line}")
@@ -87,12 +89,16 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
                     found_comment_start = True
                     last_expr = LastExpr(type="none", description="")
                     params = []
-                    description = ""
+                    short_description = ""
+                    long_description = ""
                     continue
                 if line_content.startswith("*/"):
                     found_comment_start = False
                     continue
                 if found_comment_start:
+                    if "*/" in line_content:
+                        line_content = line_content.replace("*/", "")
+                        found_comment_start = False
                     if line_content.startswith(":param"):
                         parsed_param = parse_param_string(line_content)
                         if parsed_param:
@@ -102,25 +108,30 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
                         if parsed_last_expr:
                             last_expr = parsed_last_expr
                     else:
-                        description += line_content + "\n"
+                        if not short_description:
+                            short_description = line_content
+                        else:
+                            long_description += line_content + "\n"
                     continue
                 if not found_comment_start and line_content.startswith("macro"):
                     macro_name = parse_macro_name(line_content)
                     if macro_name:
                         # There must at least be a description or it's an undocumented macro
-                        if description:
+                        if short_description:
                             # Create a new macro with the parsed name
                             macro = Macro(
                                 name=macro_name,
                                 params=params,
                                 last_expr=last_expr,
-                                description=description.strip()
+                                short_description=short_description.strip(),
+                                long_description=long_description.strip(),
                             )
                             macros.append(macro)
                         else:
                             print(f"Warning: Macro '{macro_name}' will not be added to the docs.")
                     last_expr = LastExpr(type="none", description="")
-                    description = ""
+                    short_description = ""
+                    long_description = ""
                     params = []
 
         return macros
@@ -166,13 +177,16 @@ def write_markdown_doc(macros: list[Macro]):
             updated_lines.append("| Name | Description |\n")
             updated_lines.append("| --- | --- |\n")
             for macro in macros:
-                updated_lines.append(f"| [`{macro.name}`](#{macro.name}) | {macro.description} |\n")
+                updated_lines.append(f"| [`{macro.name}`](#{macro.name}) | {macro.short_description} |\n")
             updated_lines.append("\n")
 
             # Make the macro details
             for macro in macros:
                 updated_lines.append(f"### {macro.name}\n")
-                updated_lines.append(f"{macro.description}\n")
+                if macro.long_description:
+                    updated_lines.append(f"{macro.long_description}\n")
+                else:
+                    updated_lines.append(f"{macro.short_description}\n")
                 updated_lines.append("\n")
                 updated_lines.append("#### Parameters\n")
                 for param in macro.params:
@@ -183,7 +197,7 @@ def write_markdown_doc(macros: list[Macro]):
                     updated_lines.append("- **None**\n")
                 else:
                     updated_lines.append(f"- **{macro.last_expr.type}**: {macro.last_expr.description}\n")
-            updated_lines.append("\n")
+                updated_lines.append("\n")
         else:
             updated_lines.append(cleaned_line)
 
