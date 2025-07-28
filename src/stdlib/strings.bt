@@ -1,0 +1,44 @@
+// Compares whether the string haystack contains the string needle.
+//
+// If needle is contained true is returned, else false is returned.
+macro strcontains(haystack, needle) {
+  let $haystack = haystack;
+  let $needle = needle;
+  let $found = false;
+  if (sizeof($needle) == 0 || $needle[0] == 0) {
+    // Special case: the needle is zero-sized.
+    $found = true;
+  } else {
+    for ($i : ((uint64)0)..sizeof($haystack)) {
+      // Help the verifier know this is safe.
+      if ($i >= sizeof($haystack)) {
+        break;
+      }
+      if ($haystack[$i] == 0) {
+        break;
+      }
+      for ($j : ((uint64)0)..sizeof($needle)) {
+        // Help the verifier know this is safe.
+        if ($j >= sizeof($needle)) {
+          break;
+        }
+        if ($needle[$j] == 0) {
+          $found = true;
+          break;
+        }
+        let $k = $i+$j;
+        // Help the verifier a bit more.
+        if ($k >= sizeof($haystack)) {
+          break;
+        }
+        if ($haystack[$k] != $needle[$j]) {
+          break;
+        }
+      }
+      if ($found) {
+        break;
+      }
+    }
+  }
+  $found
+}
