@@ -131,6 +131,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> BREAK "break"
 %token <std::string> SIZEOF "sizeof"
 %token <std::string> OFFSETOF "offsetof"
+%token <std::string> TYPEOF "typeof"
+%token <std::string> TYPEOK "typeok"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
 %token <bool> BOOL "bool"
@@ -146,6 +148,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
+%type <ast::Typeof *> typeof_expr any_type
+%type <ast::Typeok *> typeok_expr
 %type <ast::Expression> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList> vargs
@@ -338,10 +342,10 @@ config_assign_stmt:
                 ;
 
 subprog:
-                SUBPROG IDENT "(" subprog_args ")" ":" type block {
+                SUBPROG IDENT "(" subprog_args ")" ":" any_type block {
                     $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8), @$);
                 }
-        |       SUBPROG IDENT "(" ")" ":" type block {
+        |       SUBPROG IDENT "(" ")" ":" any_type block {
                     $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7), @$);
                 }
                 ;
@@ -352,7 +356,7 @@ subprog_args:
                 ;
 
 subprog_arg:
-                VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
+                var ":" any_type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
                 ;
 
 macro:
@@ -543,8 +547,8 @@ map_decl_stmt:
         ;
 
 var_decl_stmt:
-                 LET var {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, @$); }
-        |        LET var COLON type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
+                 LET var                {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, @$); }
+        |        LET var COLON any_type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
         ;
 
 primary_expr:
@@ -579,6 +583,7 @@ postfix_expr:
         |       call                           { $$ = $1; }
         |       sizeof_expr                    { $$ = $1; }
         |       offsetof_expr                  { $$ = $1; }
+        |       typeok_expr                    { $$ = $1; }
         |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
         |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
         |       map      INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
@@ -660,6 +665,8 @@ equality_expr:
                 relational_expr                  { $$ = $1; }
         |       equality_expr EQ relational_expr { $$ = driver.ctx.make_node<ast::Binop>($1, ast::Operator::EQ, $3, @2); }
         |       equality_expr NE relational_expr { $$ = driver.ctx.make_node<ast::Binop>($1, ast::Operator::NE, $3, @2); }
+        |       typeof_expr EQ typeof_expr       { $$ = driver.ctx.make_node<ast::TypeCmp>($1, $3, @2); }
+        |       typeof_expr NE typeof_expr       { $$ = driver.ctx.make_node<ast::Unop>(driver.ctx.make_node<ast::TypeCmp>($1, $3, @2), ast::Operator::LNOT, false, @2); }
                 ;
 
 relational_expr:
@@ -691,11 +698,11 @@ addi_expr:
 
 cast_expr:
                 unary_expr                                  { $$ = $1; }
-        |       LPAREN type RPAREN cast_expr                { $$ = driver.ctx.make_node<ast::Cast>($2, $4, @1 + @3); }
+        |       LPAREN any_type RPAREN cast_expr            { $$ = driver.ctx.make_node<ast::Cast>($2, $4, @1 + @3); }
 /* workaround for typedef types, see https://github.com/bpftrace/bpftrace/pull/2560#issuecomment-1521783935 */
-        |       LPAREN IDENT RPAREN cast_expr               { $$ = driver.ctx.make_node<ast::Cast>(ast::ident_to_record($2, 0), $4, @1 + @3); }
-        |       LPAREN IDENT "*" RPAREN cast_expr           { $$ = driver.ctx.make_node<ast::Cast>(ast::ident_to_record($2, 1), $5, @1 + @4); }
-        |       LPAREN IDENT "*" "*" RPAREN cast_expr       { $$ = driver.ctx.make_node<ast::Cast>(ast::ident_to_record($2, 2), $6, @1 + @5); }
+        |       LPAREN IDENT RPAREN cast_expr               { $$ = driver.ctx.make_node<ast::Cast>(driver.ctx.make_node<ast::Typeof>(ast::ident_to_record($2, 0), @2), $4, @1 + @3); }
+        |       LPAREN IDENT "*" RPAREN cast_expr           { $$ = driver.ctx.make_node<ast::Cast>(driver.ctx.make_node<ast::Typeof>(ast::ident_to_record($2, 1), @2), $5, @1 + @4); }
+        |       LPAREN IDENT "*" "*" RPAREN cast_expr       { $$ = driver.ctx.make_node<ast::Cast>(driver.ctx.make_node<ast::Typeof>(ast::ident_to_record($2, 2), @2), $6, @1 + @5); }
                 ;
 
 sizeof_expr:
@@ -708,6 +715,19 @@ offsetof_expr:
                 /* For example: offsetof(*curtask, comm) */
         |       OFFSETOF "(" expr "," struct_field ")"             { $$ = driver.ctx.make_node<ast::Offsetof>($3, $5, @$); }
                 ;
+
+typeok_expr:
+                TYPEOK "(" any_type ")"  { $$ = driver.ctx.make_node<ast::Typeok>($3, @$); }
+                ;
+
+typeof_expr:
+                TYPEOF "(" type ")"  { $$ = driver.ctx.make_node<ast::Typeof>($3, @$); }
+        |       TYPEOF "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeof>($3, @$); }
+                ;
+
+any_type:
+                type        { $$ = driver.ctx.make_node<ast::Typeof>($1, @$); }
+        |       typeof_expr { $$ = $1; }
 
 keyword:
                 BREAK         { $$ = $1; }
