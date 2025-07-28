@@ -4,7 +4,8 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_t" = type { ptr, ptr }
-%exit_t = type <{ i64, i8 }>
+%print_error_t = type { i64, %print_error_args_t }
+%print_error_args_t = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !7
@@ -17,43 +18,78 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %exit = alloca %exit_t, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
-  %1 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 40000, ptr %1, align 8
-  %2 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
-  store i64 1, ptr %2, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
+  %"struct Foo.l" = alloca i64, align 8
+  %"struct Foo.c" = alloca i8, align 1
+  %print_error_args = alloca %print_error_t, align 8
+  %"$foo" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
+  store i64 0, ptr %"$foo", align 8
+  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %2 = getelementptr i8, ptr %1, i64 112
+  %arg0 = load volatile i64, ptr %2, align 8
+  store i64 %arg0, ptr %"$foo", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_error_args)
+  call void @llvm.memset.p0.i64(ptr align 1 %print_error_args, i8 0, i64 24, i1 false)
+  %3 = getelementptr %print_error_t, ptr %print_error_args, i32 0, i32 0
+  store i64 30000, ptr %3, align 8
+  %4 = getelementptr %print_error_t, ptr %print_error_args, i32 0, i32 1
+  %5 = load i64, ptr %"$foo", align 8
+  %6 = inttoptr i64 %5 to ptr
+  %7 = call ptr @llvm.preserve.static.offset(ptr %6)
+  %8 = getelementptr i8, ptr %7, i64 0
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.c")
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.c", i32 1, ptr %8)
+  %9 = load i8, ptr %"struct Foo.c", align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.c")
+  %10 = getelementptr %print_error_args_t, ptr %4, i32 0, i32 0
+  %11 = sext i8 %9 to i64
+  store i64 %11, ptr %10, align 8
+  %12 = load i64, ptr %"$foo", align 8
+  %13 = inttoptr i64 %12 to ptr
+  %14 = call ptr @llvm.preserve.static.offset(ptr %13)
+  %15 = getelementptr i8, ptr %14, i64 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.l")
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.l", i32 8, ptr %15)
+  %16 = load i64, ptr %"struct Foo.l", align 8
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.l")
+  %17 = getelementptr %print_error_args_t, ptr %4, i32 0, i32 1
+  store i64 %16, ptr %17, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_error_args, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %entry
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #2
-  %3 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %3
-  %4 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %5 = load i64, ptr %4, align 8
-  %6 = add i64 %5, 1
-  store i64 %6, ptr %4, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
+  %18 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %18
+  %19 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %20 = load i64, ptr %19, align 8
+  %21 = add i64 %20, 1
+  store i64 %21, ptr %19, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
-  ret i64 0
-
-deadcode:                                         ; No predecessors!
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_error_args)
   ret i64 0
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { memory(none) }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

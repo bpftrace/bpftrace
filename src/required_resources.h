@@ -30,6 +30,7 @@ static const auto DIVIDE_BY_ZERO_MSG =
 enum class RuntimeErrorId {
   DIVIDE_BY_ZERO,
   HELPER_ERROR,
+  PRINT_ERROR,
 };
 
 class RuntimeErrorInfo {
@@ -112,6 +113,8 @@ public:
   // fmt strings for BPF helpers (bpf_seq_printf, bpf_trace_printk)
   std::vector<FormatString> bpf_print_fmts;
   std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>, RuntimeErrorInfo>>
+      print_error_args;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
@@ -184,6 +187,7 @@ private:
             non_map_print_args,
             // Hard to annotate flex types, so skip
             // runtime_error_info,
+            // printe_error_info,
             printf_args,
             probe_ids,
             maps_info,

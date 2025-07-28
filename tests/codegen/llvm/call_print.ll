@@ -43,7 +43,7 @@ entry:
   %"print_@x" = alloca %print_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"print_@x")
   %1 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 0
-  store i64 30001, ptr %1, align 8
+  store i64 40001, ptr %1, align 8
   %2 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 1
   store i32 0, ptr %2, align 4
   %3 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 2

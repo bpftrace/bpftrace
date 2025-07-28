@@ -12,6 +12,7 @@ namespace bpftrace::ast {
   DO(join)                                                                     \
   DO(bpf_print)                                                                \
   DO(non_map_print)                                                            \
+  DO(print_error)                                                              \
   DO(printf)                                                                   \
   DO(map_key)                                                                  \
   DO(read_map_value)                                                           \

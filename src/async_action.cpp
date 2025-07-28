@@ -240,8 +240,20 @@ void AsyncHandlers::printf(const OpaqueValue &data)
   auto &args = std::get<1>(bpftrace.resources.printf_args[id]);
   auto arg_values = bpftrace.get_arg_values(
       c_definitions, args, data.slice(sizeof(uint64_t)).data());
-
   out.printf(fmt.format_str(arg_values));
+}
+
+void AsyncHandlers::print_error(const OpaqueValue &data)
+{
+  auto id = data.bitcast<uint64_t>() -
+            static_cast<uint64_t>(AsyncAction::print_error);
+  auto &tuple = bpftrace.resources.print_error_args[id];
+  auto &fmt = std::get<0>(tuple);
+  auto &args = std::get<1>(tuple);
+  auto &errorInfo = std::get<2>(tuple);
+  auto arg_values = bpftrace.get_arg_values(
+      c_definitions, args, data.slice(sizeof(uint64_t)).data());
+  out.print_error(fmt.format_str(arg_values), errorInfo);
 }
 
 } // namespace bpftrace::async_action

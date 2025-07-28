@@ -20,7 +20,7 @@ entry:
   %print_int_8_t = alloca %print_int_8_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_8_t)
   %1 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
-  store i64 30007, ptr %1, align 8
+  store i64 40007, ptr %1, align 8
   %2 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
   store i64 0, ptr %2, align 8
   %3 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2

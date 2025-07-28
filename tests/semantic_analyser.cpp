@@ -2048,29 +2048,33 @@ TEST_F(SemanticAnalyserTest, unop_increment_decrement)
   test("kprobe:f { $x = \"a\"; $x++; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf)
+TEST_F(SemanticAnalyserTest, printf_and_print_error)
 {
-  test("kprobe:f { printf(\"hi\") }");
-  test("kprobe:f { printf(1234) }", Error{});
-  test("kprobe:f { printf() }", Error{});
-  test("kprobe:f { $fmt = \"mystring\"; printf($fmt) }", Error{});
-  test("kprobe:f { printf(\"%s\", comm) }");
-  test("kprobe:f { printf(\"%-16s\", comm) }");
-  test("kprobe:f { printf(\"%-10.10s\", comm) }");
-  test("kprobe:f { printf(\"%A\", comm) }", Error{});
-  test("kprobe:f { @x = printf(\"hi\") }", Error{});
-  test("kprobe:f { $x = printf(\"hi\") }", Error{});
-  test("kprobe:f { printf(\"%d %d %d %d %d %d %d %d %d\", "
-       "1, 2, 3, 4, 5, 6, 7, 8, 9); }");
-  test("kprobe:f { printf(\"%dns\", nsecs) }");
+  std::vector<std::string> funcs = { "printf", "print_error" };
+  for (const auto &func : funcs) {
+    test("kprobe:f { " + func + "(\"hi\") }");
+    test("kprobe:f { " + func + "(1234) }", Error{});
+    test("kprobe:f { " + func + "() }", Error{});
+    test("kprobe:f { $fmt = \"mystring\"; " + func + "($fmt) }", Error{});
+    test("kprobe:f { " + func + "(\"%s\", comm) }");
+    test("kprobe:f { " + func + "(\"%-16s\", comm) }");
+    test("kprobe:f { " + func + "(\"%-10.10s\", comm) }");
+    test("kprobe:f { " + func + "(\"%A\", comm) }", Error{});
+    test("kprobe:f { @x = " + func + "(\"hi\") }", Error{});
+    test("kprobe:f { $x = " + func + "(\"hi\") }", Error{});
+    test("kprobe:f { " + func +
+         "(\"%d %d %d %d %d %d %d %d %d\", "
+         "1, 2, 3, 4, 5, 6, 7, 8, 9); }");
+    test("kprobe:f { " + func + "(\"%dns\", nsecs) }");
 
-  {
-    // Long format string should be ok
-    std::stringstream prog;
+    {
+      // Long format string should be ok
+      std::stringstream prog;
 
-    prog << "i:ms:100 { printf(\"" << std::string(200, 'a')
-         << " %d\\n\", 1); }";
-    test(prog.str());
+      prog << "i:ms:100 { " + func + "(\"" << std::string(200, 'a')
+           << " %d\\n\", 1); }";
+      test(prog.str());
+    }
   }
 }
 

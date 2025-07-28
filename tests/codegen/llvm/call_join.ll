@@ -49,7 +49,7 @@ lookup_join_failure:                              ; preds = %entry
 
 lookup_join_merge:                                ; preds = %entry
   %6 = getelementptr %join_t, ptr %lookup_join_map, i64 0, i32 0
-  store i64 30005, ptr %6, align 8
+  store i64 40005, ptr %6, align 8
   %7 = getelementptr %join_t, ptr %lookup_join_map, i64 0, i32 1
   store i64 0, ptr %7, align 8
   %8 = getelementptr %join_t, ptr %lookup_join_map, i64 0, i32 2

@@ -396,6 +396,23 @@ void JsonOutput::value(const Value &value)
   emit_data(out_, "value", std::nullopt, value);
 }
 
+void JsonOutput::print_error(const std::string &str,
+                             const RuntimeErrorInfo &info)
+{
+  out_ << R"({"type": "print_error")";
+  out_ << R"(, "msg": )";
+  std::stringstream ss;
+  ss << str;
+  JsonEmitter<std::string>::emit(out_, ss.str());
+  out_ << R"(, "filename": )";
+  JsonEmitter<std::string>::emit(out_, info.filename);
+  out_ << R"(, "line": )";
+  JsonEmitter<uint64_t>::emit(out_, info.line);
+  out_ << R"(, "col": )";
+  JsonEmitter<uint64_t>::emit(out_, info.column);
+  out_ << R"(})" << std::endl;
+}
+
 void JsonOutput::printf(const std::string &str)
 {
   emit_data(out_, "printf", std::nullopt, str);

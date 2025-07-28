@@ -37,8 +37,9 @@ void RequiredResources::load_state(const uint8_t *ptr, size_t len)
 std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
 {
   switch (info.error_id) {
-    case RuntimeErrorId::HELPER_ERROR: {
-      // Helper errors are handled separately in output
+    case RuntimeErrorId::HELPER_ERROR:
+    case RuntimeErrorId::PRINT_ERROR: {
+      // These errors are handled separately in output
       os << "";
       break;
     }

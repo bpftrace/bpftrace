@@ -269,6 +269,10 @@ void perf_event_printer(void *cb_cookie, void *raw_data, int size)
              printf_id <= async_action::AsyncAction::printf_end) {
     ctx->handlers.printf(data);
     return;
+  } else if (printf_id >= async_action::AsyncAction::print_error &&
+             printf_id <= async_action::AsyncAction::print_error_end) {
+    ctx->handlers.print_error(data);
+    return;
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
   }

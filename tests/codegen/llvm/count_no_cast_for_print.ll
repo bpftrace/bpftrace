@@ -49,7 +49,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"print_@")
   %3 = getelementptr %print_t, ptr %"print_@", i64 0, i32 0
-  store i64 30001, ptr %3, align 8
+  store i64 40001, ptr %3, align 8
   %4 = getelementptr %print_t, ptr %"print_@", i64 0, i32 1
   store i32 0, ptr %4, align 4
   %5 = getelementptr %print_t, ptr %"print_@", i64 0, i32 2

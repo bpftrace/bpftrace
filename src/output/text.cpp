@@ -523,6 +523,16 @@ void TextOutput::primitive(const Primitive &p)
   TextEmitter<Primitive>::emit(out_, p);
 }
 
+void TextOutput::print_error(const std::string &str,
+                             const RuntimeErrorInfo &info)
+{
+  LOG(ERROR,
+      std::string(info.source_location),
+      std::vector(info.source_context),
+      out_)
+      << str;
+}
+
 void TextOutput::printf(const std::string &str)
 {
   out_ << str;

@@ -8,13 +8,15 @@ namespace bpftrace::async_action {
 
 enum class AsyncAction {
   // clang-format off
-  printf      = 0,     // printf reserves 0-9999 for printf_ids
-  printf_end  = 9999,
-  syscall     = 10000, // system reserves 10000-19999 for printf_ids
-  syscall_end = 19999,
-  cat         = 20000, // cat reserves 20000-29999 for printf_ids
-  cat_end     = 29999,
-  exit        = 30000,
+  printf          = 0,     // printf reserves 0-9999 for printf_ids
+  printf_end      = 9999,
+  syscall         = 10000, // system reserves 10000-19999 for printf_ids
+  syscall_end     = 19999,
+  cat             = 20000, // cat reserves 20000-29999 for printf_ids
+  cat_end         = 29999,
+  print_error     = 30000, // print_error reserves 20000-29999 for printf_ids
+  print_error_end = 39999,
+  exit            = 40000,
   print,
   clear,
   zero,
@@ -52,6 +54,7 @@ public:
   void syscall(const OpaqueValue &data);
   void cat(const OpaqueValue &data);
   void printf(const OpaqueValue &data);
+  void print_error(const OpaqueValue &data);
 
 private:
   BPFtrace &bpftrace;

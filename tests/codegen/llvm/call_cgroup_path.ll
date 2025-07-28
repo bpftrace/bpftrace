@@ -28,7 +28,7 @@ entry:
   store i64 %get_cgroup_id, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_cgroup_path_t_16_t)
   %3 = getelementptr %print_cgroup_path_t_16_t, ptr %print_cgroup_path_t_16_t, i64 0, i32 0
-  store i64 30007, ptr %3, align 8
+  store i64 40007, ptr %3, align 8
   %4 = getelementptr %print_cgroup_path_t_16_t, ptr %print_cgroup_path_t_16_t, i64 0, i32 1
   store i64 0, ptr %4, align 8
   %5 = getelementptr %print_cgroup_path_t_16_t, ptr %print_cgroup_path_t_16_t, i32 0, i32 2

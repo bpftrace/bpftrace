@@ -6,7 +6,7 @@ Simple assertion macro that will exit the entire script with an error code if th
 */
 macro assert($cond, $msg) {
   if (!$cond) {
-    printf("Assertion failed. Msg: %s", $msg);
+    print_error("Assertion failed. Msg: %s", $msg);
     exit(1);
   }
 }
