@@ -32,7 +32,6 @@ public:
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(MapAccess &acc);
-  void visit(Cast &cast);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
   void visit(AssignMapStatement &assignment);
@@ -170,12 +169,6 @@ void FieldAnalyser::visit(MapAccess &acc)
 {
   visit(acc.key);
   visit(acc.map); // Leaves sized_type_ as value type.
-}
-
-void FieldAnalyser::visit(Cast &cast)
-{
-  visit(cast.expr);
-  resolve_type(cast.cast_type);
 }
 
 void FieldAnalyser::visit(Sizeof &szof)

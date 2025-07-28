@@ -17,6 +17,7 @@ public:
   void visit(For &for_loop);
   void visit(Map &map);
   void visit(MapAccess &acc);
+  void visit(Typeof &typeof);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
   void visit(Expression &expr);
@@ -77,6 +78,19 @@ void MapDefaultKey::visit(MapAccess &acc)
 {
   checkAccess(*acc.map, true);
   visit(acc.key);
+}
+
+void MapDefaultKey::visit([[maybe_unused]] Typeof &typeof)
+{
+  if (std::holds_alternative<Expression>(typeof.record)) {
+    const auto &expr = std::get<Expression>(typeof.record);
+    if (expr.is<Map>()) {
+      // Do nothing; allow these to exist. It will extract the value of the map
+      // whether it is keyed or not.
+      return;
+    }
+  }
+  Visitor<MapDefaultKey>::visit(typeof);
 }
 
 void MapDefaultKey::visit(AssignScalarMapStatement &assign)

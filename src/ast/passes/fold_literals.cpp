@@ -599,6 +599,12 @@ std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
   return std::nullopt;
 }
 
+void fold(ASTContext &ast, BPFtrace &b, Expression &expr)
+{
+  LiteralFolder folder(ast, b);
+  folder.visit(expr);
+}
+
 Pass CreateFoldLiteralsPass()
 {
   auto fn = [](ASTContext &ast, BPFtrace &b) {

@@ -32,9 +32,6 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
-                .add(ast::CreateMapSugarPass())
-                .add(ast::CreateFieldAnalyserPass())
-                .add(ast::CreateSemanticPass())
                 .add(ast::CreatePortabilityPass())
                 .run();
   ASSERT_TRUE(bool(ok));

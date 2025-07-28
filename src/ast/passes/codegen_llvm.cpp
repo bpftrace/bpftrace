@@ -2824,9 +2824,10 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
 
 ScopedExpr CodegenLLVM::visit(Cast &cast)
 {
+  const auto &ty = cast.type();
   auto scoped_expr = visit(cast.expr);
-  if (cast.cast_type.IsIntTy()) {
-    auto *int_ty = b_.GetType(cast.cast_type);
+  if (ty.IsIntTy()) {
+    auto *int_ty = b_.GetType(ty);
     if (cast.expr.type().IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
@@ -2836,26 +2837,24 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
       } else {
         // array is in memory - need to proberead
-        auto *buf = b_.CreateAllocaBPF(cast.cast_type);
-        b_.CreateProbeRead(
-            buf, cast.cast_type, array, cast.loc, cast.expr.type().GetAS());
+        auto *buf = b_.CreateAllocaBPF(ty);
+        b_.CreateProbeRead(buf, ty, array, cast.loc, cast.expr.type().GetAS());
         array = buf;
       }
       return ScopedExpr(b_.CreateLoad(int_ty, array, true));
     } else {
-      return ScopedExpr(
-          b_.CreateIntCast(scoped_expr.value(),
-                           b_.getIntNTy(cast.cast_type.GetIntBitWidth()),
-                           cast.cast_type.IsSigned(),
-                           "cast"));
+      return ScopedExpr(b_.CreateIntCast(scoped_expr.value(),
+                                         b_.getIntNTy(ty.GetIntBitWidth()),
+                                         ty.IsSigned(),
+                                         "cast"));
     }
-  } else if (cast.cast_type.IsArrayTy() && cast.expr.type().IsIntTy()) {
+  } else if (ty.IsArrayTy() && cast.expr.type().IsIntTy()) {
     // We need to store the cast integer on stack and reinterpret the pointer to
     // it to an array pointer.
     auto *v = b_.CreateAllocaBPF(scoped_expr.value()->getType());
     b_.CreateStore(scoped_expr.value(), v);
     return ScopedExpr(v, [this, v] { b_.CreateLifetimeEnd(v); });
-  } else if (cast.cast_type.IsBoolTy()) {
+  } else if (ty.IsBoolTy()) {
     if (cast.expr.type().IsStringTy()) {
       auto *first_char = b_.CreateGEP(b_.getInt8Ty(),
                                       scoped_expr.value(),
@@ -3461,14 +3460,12 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
   // arguments to the function
   arg_types.push_back(b_.getPtrTy());
   std::ranges::transform(subprog.args,
-
                          std::back_inserter(arg_types),
                          [this](SubprogArg *arg) {
-                           return b_.GetType(arg->type);
+                           return b_.GetType(arg->typeof->type());
                          });
-  FunctionType *func_type = FunctionType::get(b_.GetType(subprog.return_type),
-                                              arg_types,
-                                              false);
+  FunctionType *func_type = FunctionType::get(
+      b_.GetType(subprog.return_type->type()), arg_types, false);
 
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::InternalLinkage, subprog.name, module_.get());
@@ -3481,7 +3478,8 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 
   int arg_index = 0;
   for (SubprogArg *arg : subprog.args) {
-    auto *alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name);
+    auto *alloca = b_.CreateAllocaBPF(b_.GetType(arg->typeof->type()),
+                                      arg->name);
     b_.CreateStore(func->getArg(arg_index + 1), alloca);
     variables_[scope_stack_.back()][arg->name] = VariableLLVM{
       .value = alloca, .type = alloca->getAllocatedType()
@@ -3491,7 +3489,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 
   for (Statement &stmt : subprog.stmts)
     visit(stmt);
-  if (subprog.return_type.IsVoidTy())
+  if (subprog.return_type->type().IsVoidTy())
     createRet();
 
   FunctionPassManager fpm;

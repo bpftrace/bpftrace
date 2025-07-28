@@ -10,6 +10,7 @@
 #include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "ast/helpers.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
@@ -141,6 +142,7 @@ public:
   void visit(Call &call);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
+  void visit(Typeof &typeof);
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
   void visit(Variable &var);
@@ -156,6 +158,7 @@ public:
   void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
+  void visit(Expression &expr);
   void visit(ExprStatement &expr);
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
@@ -1966,6 +1969,14 @@ void SemanticAnalyser::visit(Offsetof &offof)
   }
 }
 
+void SemanticAnalyser::visit(Typeof &typeof)
+{
+  Visitor<SemanticAnalyser>::visit(typeof);
+  if (std::holds_alternative<SizedType>(typeof.record)) {
+    resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
+  }
+}
+
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 {
   call.return_type = CreateStack(kernel);
@@ -2614,6 +2625,17 @@ void SemanticAnalyser::visit(If &if_node)
       if_node.addError() << "Invalid condition in if(): " << cond;
   }
 
+  // See the relevant expression and typecmp operators. Because we allow for
+  // introspection into the type system, we prune invalid if branches here. We
+  // leave the if intact, but it will be surely be removed during optimization.
+  if (auto *b = if_node.cond.as<Boolean>()) {
+    if (b->value) {
+      if_node.else_block->stmts.clear();
+    } else {
+      if_node.if_block->stmts.clear();
+    }
+  }
+
   visit(if_node.if_block);
   visit(if_node.else_block);
 }
@@ -2645,12 +2667,13 @@ void SemanticAnalyser::visit(Jump &jump)
         visit(jump.return_value);
       }
       if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
-        if ((subprog->return_type.IsVoidTy() !=
-             !jump.return_value.has_value()) ||
-            (jump.return_value.has_value() &&
-             jump.return_value->type() != subprog->return_type)) {
+        const auto &ty = subprog->return_type->type();
+        if (is_final_pass() &&
+            (ty.IsVoidTy() != !jump.return_value.has_value() ||
+             (jump.return_value.has_value() &&
+              jump.return_value->type() != ty))) {
           jump.addError() << "Function " << subprog->name << " is of type "
-                          << subprog->return_type << ", cannot return "
+                          << ty << ", cannot return "
                           << (jump.return_value.has_value()
                                   ? jump.return_value->type()
                                   : CreateVoid());
@@ -3064,9 +3087,15 @@ static std::unordered_map<std::string_view, std::string_view>
 void SemanticAnalyser::visit(Cast &cast)
 {
   visit(cast.expr);
+  visit(cast.typeof);
 
-  // cast type is synthesised in parser, if it is a struct, it needs resolving
-  resolve_struct_type(cast.cast_type, cast);
+  const auto &ty = cast.type();
+  if (ty.IsNoneTy()) {
+    if (is_final_pass()) {
+      cast.addError() << "Incomplete cast, unknown type";
+    }
+    return; // Revisit next cycle.
+  }
 
   auto rhs = cast.expr.type();
   if (rhs.IsRecordTy()) {
@@ -3076,52 +3105,27 @@ void SemanticAnalyser::visit(Cast &cast)
     cast.addError() << "Cannot cast from \"" << cast.expr.type() << "\" type";
   }
 
-  if (!cast.cast_type.IsIntTy() && !cast.cast_type.IsPtrTy() &&
-      !cast.cast_type.IsBoolTy() &&
-      (!cast.cast_type.IsPtrTy() || cast.cast_type.GetElementTy()->IsIntTy() ||
-       cast.cast_type.GetElementTy()->IsRecordTy()) &&
+  if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
+      (!ty.IsPtrTy() || ty.GetElementTy()->IsIntTy() ||
+       ty.GetElementTy()->IsRecordTy()) &&
       // we support casting integers to int arrays
-      !(cast.cast_type.IsArrayTy() &&
-        cast.cast_type.GetElementTy()->IsBoolTy()) &&
-      !(cast.cast_type.IsArrayTy() &&
-        cast.cast_type.GetElementTy()->IsIntTy())) {
+      !(ty.IsArrayTy() && ty.GetElementTy()->IsBoolTy()) &&
+      !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();
-    err << "Cannot cast to \"" << cast.cast_type << "\"";
-    if (auto it = KNOWN_TYPE_ALIASES.find(cast.cast_type.GetName());
+    err << "Cannot cast to \"" << ty << "\"";
+    if (auto it = KNOWN_TYPE_ALIASES.find(ty.GetName());
         it != KNOWN_TYPE_ALIASES.end()) {
       err.addHint() << "Did you mean \"" << it->second << "\"?";
     }
   }
 
-  if (cast.cast_type.IsArrayTy()) {
-    if (cast.cast_type.GetNumElements() == 0) {
-      if (cast.cast_type.GetElementTy()->GetSize() == 0)
-        cast.addError() << "Could not determine size of the array";
-      else {
-        if (rhs.GetSize() % cast.cast_type.GetElementTy()->GetSize() != 0) {
-          cast.addError() << "Cannot determine array size: the element size is "
-                             "incompatible with the cast integer size";
-        }
-
-        // cast to unsized array (e.g. int8[]), determine size from RHS
-        auto num_elems = rhs.GetSize() /
-                         cast.cast_type.GetElementTy()->GetSize();
-        cast.cast_type = CreateArray(num_elems, *cast.cast_type.GetElementTy());
-      }
-    }
-
-    if (rhs.IsIntTy() || rhs.IsBoolTy())
-      cast.cast_type.is_internal = true;
-  }
-
-  if (cast.cast_type.IsEnumTy()) {
-    if (!c_definitions_.enum_defs.contains(cast.cast_type.GetName())) {
-      cast.addError() << "Unknown enum: " << cast.cast_type.GetName();
+  if (ty.IsEnumTy()) {
+    if (!c_definitions_.enum_defs.contains(ty.GetName())) {
+      cast.addError() << "Unknown enum: " << ty.GetName();
     } else {
       if (auto *integer = cast.expr.as<Integer>()) {
-        if (!c_definitions_.enum_defs[cast.cast_type.GetName()].contains(
-                integer->value)) {
-          cast.addError() << "Enum: " << cast.cast_type.GetName()
+        if (!c_definitions_.enum_defs[ty.GetName()].contains(integer->value)) {
+          cast.addError() << "Enum: " << ty.GetName()
                           << " doesn't contain a variant value of "
                           << integer->value;
         }
@@ -3129,40 +3133,21 @@ void SemanticAnalyser::visit(Cast &cast)
     }
   }
 
-  if (cast.cast_type.IsBoolTy() && !rhs.IsIntTy() && !rhs.IsStringTy() &&
-      !rhs.IsPtrTy() && !rhs.IsCastableMapTy()) {
+  if (ty.IsBoolTy() && !rhs.IsIntTy() && !rhs.IsStringTy() && !rhs.IsPtrTy() &&
+      !rhs.IsCastableMapTy()) {
     if (is_final_pass()) {
-      cast.addError() << "Cannot cast from \"" << rhs << "\" to \""
-                      << cast.cast_type << "\"";
+      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
+                      << "\"";
     }
   }
 
-  if ((cast.cast_type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
-       !rhs.IsBoolTy() && !rhs.IsCtxAccess() && !rhs.IsArrayTy() &&
-       !rhs.IsCastableMapTy()) ||
+  if ((ty.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() && !rhs.IsBoolTy() &&
+       !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
       // casting from/to int arrays must respect the size
-      (cast.cast_type.IsArrayTy() &&
-       (!rhs.IsBoolTy() || cast.cast_type.GetSize() != rhs.GetSize()) &&
-       (!rhs.IsIntTy() || cast.cast_type.GetSize() != rhs.GetSize())) ||
-      (rhs.IsArrayTy() && (!cast.cast_type.IsIntTy() ||
-                           cast.cast_type.GetSize() != rhs.GetSize()))) {
-    cast.addError() << "Cannot cast from \"" << rhs << "\" to \""
-                    << cast.cast_type << "\"";
-  }
-
-  if (cast.expr.type().IsCtxAccess() && !cast.cast_type.IsIntTy())
-    cast.cast_type.MarkCtxAccess();
-  cast.cast_type.SetAS(cast.expr.type().GetAS());
-  // case : begin { @foo = (struct Foo)0; }
-  // case : profile:hz:99 $task = (struct task_struct *)curtask.
-  if (cast.cast_type.GetAS() == AddrSpace::none) {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType type = single_provider_type(probe);
-      cast.cast_type.SetAS(find_addrspace(type));
-    } else {
-      // Assume kernel space for data in subprogs
-      cast.cast_type.SetAS(AddrSpace::kernel);
-    }
+      (ty.IsArrayTy() && (!rhs.IsBoolTy() || ty.GetSize() != rhs.GetSize()) &&
+       (!rhs.IsIntTy() || ty.GetSize() != rhs.GetSize())) ||
+      (rhs.IsArrayTy() && (!ty.IsIntTy() || ty.GetSize() != rhs.GetSize()))) {
+    cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty << "\"";
   }
 }
 
@@ -3185,6 +3170,31 @@ void SemanticAnalyser::visit(Tuple &tuple)
   }
 
   tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
+}
+
+void SemanticAnalyser::visit(Expression &expr)
+{
+  Visitor<SemanticAnalyser>::visit(expr);
+
+  // Because we may have replaced the type comparison operator with a literal
+  // true/false value, we need to refold expressions. Further, we will fold
+  // explicit true/false if branches, as they may contain invalid types.
+  if (is_final_pass()) {
+    fold(ctx_, bpftrace_, expr);
+  }
+  if (auto *typecmp = expr.as<TypeCmp>()) {
+    if (!typecmp->first->type().IsNoneTy() &&
+        !typecmp->second->type().IsNoneTy()) {
+      if (typecmp->first->type() == typecmp->second->type()) {
+        expr.value = ctx_.make_node<Boolean>(true, Location(typecmp->loc));
+      } else {
+        expr.value = ctx_.make_node<Boolean>(false, Location(typecmp->loc));
+      }
+    } else if (is_final_pass()) {
+      // We can't fold this because we don't have types for both sides.
+      typecmp->addError() << "Invalid type for `typeof`: no type available";
+    }
+  }
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -3228,7 +3238,9 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   // @y`
   const bool map_contains_int = map_type_before && map_type_before->IsIntTy();
   if (map_contains_int && assignment.expr.type().IsCastableMapTy()) {
-    assignment.expr = ctx_.make_node<Cast>(*map_type_before,
+    auto *typeof = ctx_.make_node<Typeof>(*map_type_before,
+                                          Location(assignment.loc));
+    assignment.expr = ctx_.make_node<Cast>(typeof,
                                            assignment.expr,
                                            Location(assignment.loc));
   }
@@ -3336,7 +3348,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 
   if (assignment.expr.type().IsCastableMapTy()) {
-    assignment.expr = ctx_.make_node<Cast>(CreateInt64(),
+    auto *typeof = ctx_.make_node<Typeof>(CreateInt64(),
+                                          Location(assignment.loc));
+    assignment.expr = ctx_.make_node<Cast>(typeof,
                                            assignment.expr,
                                            Location(assignment.loc));
   }
@@ -3389,10 +3403,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                 << storedTy << "'";
           } else {
             assignTy = storedTy;
-            assignment.expr = ctx_.make_node<Cast>(
+            auto *typeof = ctx_.make_node<Typeof>(
                 CreateInteger(storedTy.GetSize() * 8, true),
-                assignment.expr,
                 Location(assignment.loc));
+            assignment.expr = ctx_.make_node<Cast>(typeof,
+                                                   assignment.expr,
+                                                   Location(assignment.loc));
             visit(assignment.expr);
           }
         }
@@ -3408,10 +3424,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         }
         if (can_fit) {
           assignTy = storedTy;
-          assignment.expr = ctx_.make_node<Cast>(
+          auto *typeof = ctx_.make_node<Typeof>(
               CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
-              assignment.expr,
               Location(assignment.loc));
+          assignment.expr = ctx_.make_node<Cast>(typeof,
+                                                 assignment.expr,
+                                                 Location(assignment.loc));
           visit(assignment.expr);
         } else {
           assignment.addError()
@@ -3489,12 +3507,21 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
 void SemanticAnalyser::visit(VarDeclStatement &decl)
 {
+  visit(decl.typeof);
   const std::string &var_ident = decl.var->ident;
 
-  if (decl.type && !IsValidVarDeclType(*decl.type)) {
-    decl.addError() << "Invalid variable declaration type: " << *decl.type;
-  } else if (decl.type && decl.var->var_type.IsNoneTy()) {
-    decl.var->var_type = *decl.type;
+  if (decl.typeof) {
+    const auto &ty = decl.typeof->type();
+    if (!ty.IsNoneTy()) {
+      if (!IsValidVarDeclType(ty)) {
+        decl.addError() << "Invalid variable declaration type: " << ty;
+      } else {
+        decl.var->var_type = ty;
+      }
+    } else if (is_final_pass()) {
+      // We couldn't resolve that specific type by now.
+      decl.addError() << "Type cannot be resolved: still none";
+    }
   }
 
   // Only checking on the first pass for cases like this:
@@ -3885,12 +3912,17 @@ void SemanticAnalyser::visit(Probe &probe)
 
 void SemanticAnalyser::visit(Subprog &subprog)
 {
+  // Note that we visit the subprogram and process arguments *after*
+  // constructing the stack with the variable states. This is because the
+  // arguments, etc. may have types defined in terms of the arguments
+  // themselves. We already handle detecting circular dependencies.
   scope_stack_.push_back(&subprog);
   top_level_node_ = &subprog;
   for (SubprogArg *arg : subprog.args) {
-    variables_[scope_stack_.back()].insert(
-        { arg->name,
-          { .type = arg->type, .can_resize = true, .was_assigned = true } });
+    variables_[scope_stack_.back()].insert({ arg->name,
+                                             { .type = arg->typeof->type(),
+                                               .can_resize = true,
+                                               .was_assigned = true } });
   }
   Visitor<SemanticAnalyser>::visit(subprog);
   scope_stack_.pop_back();

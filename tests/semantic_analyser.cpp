@@ -4298,9 +4298,6 @@ TEST_F(SemanticAnalyserTest, subprog_buildin_disallowed)
 stdin:1:25-29: ERROR: Builtin func not supported outside probe
 fn f(): int64 { return func; }
                         ~~~~
-stdin:1:18-29: ERROR: Function f is of type int64, cannot return none
-fn f(): int64 { return func; }
-                 ~~~~~~~~~~~
 )" });
 }
 
