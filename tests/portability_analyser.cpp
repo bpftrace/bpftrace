@@ -2,6 +2,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -34,6 +35,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
+                .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreatePortabilityPass())
                 .run();

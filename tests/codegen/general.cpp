@@ -60,7 +60,6 @@ kprobe:f
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .add(ast::AllParsePasses())
-                .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateClangBuildPass())
                 .add(ast::CreateTypeSystemPass())

@@ -11,6 +11,7 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
@@ -115,6 +116,7 @@ public:
                             BPFtrace &bpftrace,
                             CDefinitions &c_definitions,
                             MapMetadata &map_metadata,
+                            NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
                             bool has_child = true,
                             bool listing = false)
@@ -122,6 +124,7 @@ public:
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
         map_metadata_(map_metadata),
+        named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
         listing_(listing),
         has_child_(has_child)
@@ -172,6 +175,7 @@ private:
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
   MapMetadata &map_metadata_;
+  NamedParamDefaults &named_param_defaults_;
   TypeMetadata &type_metadata_;
   bool listing_;
 
@@ -3047,7 +3051,8 @@ void SemanticAnalyser::visit(MapAccess &acc)
   } else {
     // If there is no record of any assignment after the first pass
     // then it's safe to say this map is undefined.
-    if (!is_first_pass() && !acc.map->read_only) {
+    bool read_only = named_param_defaults_.defaults.contains(acc.map->ident);
+    if (!is_first_pass() && !read_only) {
       acc.addError() << "Undefined map: " << acc.map->ident;
     }
     pass_tracker_.inc_num_unresolved();
@@ -4441,11 +4446,13 @@ Pass CreateSemanticPass(bool listing)
                       BPFtrace &b,
                       CDefinitions &c_definitions,
                       MapMetadata &mm,
+                      NamedParamDefaults &named_param_defaults,
                       TypeMetadata &types) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
+                               named_param_defaults,
                                types,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);

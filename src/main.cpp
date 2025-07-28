@@ -328,7 +328,6 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
   add(ast::CreatePidFilterPass());
-  add(ast::CreateNamedParamsPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
@@ -341,7 +340,6 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreatePortabilityPass());
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateNamedParamsPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
