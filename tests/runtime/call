@@ -71,6 +71,12 @@ NAME errorf_length_modifiers
 PROG begin { $x = 0x12345678abcdef; errorf("%hhx %hx %x %jx\n", $x, $x, $x, $x);  }
 EXPECT stdin:1:32-75: ERROR: ef cdef 78abcdef 12345678abcdef
 
+NAME errorf_macro_expansion
+PROG macro bad() { errorf("Something bad"); } begin { bad(); }
+EXPECT stdin:1:15-38: ERROR: Something bad
+EXPECT stdin:1:50-55: ERROR: expanded from
+EXPECT macro bad() { errorf("Something bad"); } begin { bad(); }
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*:[0-9]*:[0-9]*

@@ -33,6 +33,14 @@ enum class RuntimeErrorId {
   ERRORF,
 };
 
+struct ErrorLocation {
+  const std::string filename;
+  const int line;
+  const int column;
+  const std::string source_location;
+  const std::vector<std::string> source_context;
+};
+
 class RuntimeErrorInfo {
 public:
   // This class effectively wraps a location, but preserves only the parts that
@@ -41,14 +49,23 @@ public:
   RuntimeErrorInfo(RuntimeErrorId error_id,
                    libbpf::bpf_func_id func_id,
                    const ast::Location &loc)
-      : error_id(error_id),
-        func_id(func_id),
-        filename(loc->filename()),
-        line(loc->line()),
-        column(loc->column()),
-        source_location(loc->source_location()),
-        source_context(loc->source_context())
+      : error_id(error_id), func_id(func_id)
   {
+    auto curr_loc = loc;
+
+    while (curr_loc) {
+      locations.emplace_back(curr_loc->filename(),
+                             curr_loc->line(),
+                             curr_loc->column(),
+                             curr_loc->source_location(),
+                             curr_loc->source_context());
+      auto &parent = curr_loc->parent;
+      if (parent) {
+        curr_loc = parent->loc;
+      } else {
+        break;
+      }
+    }
   }
 
   RuntimeErrorInfo(RuntimeErrorId error_id, const ast::Location &loc)
@@ -57,30 +74,18 @@ public:
 
   RuntimeErrorInfo()
       : error_id(RuntimeErrorId::HELPER_ERROR),
-        func_id(static_cast<libbpf::bpf_func_id>(-1)),
-        line(0),
-        column(0) {};
+        func_id(static_cast<libbpf::bpf_func_id>(-1)) {};
 
   const RuntimeErrorId error_id;
   const libbpf::bpf_func_id func_id;
-  const std::string filename;
-  const int line;
-  const int column;
-  const std::string source_location;
-  const std::vector<std::string> source_context;
+  std::vector<ErrorLocation> locations;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(error_id,
-            func_id,
-            filename,
-            line,
-            column,
-            source_location,
-            source_context);
+    archive(error_id, func_id, locations);
   }
 };
 

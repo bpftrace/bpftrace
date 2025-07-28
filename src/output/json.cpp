@@ -403,12 +403,13 @@ void JsonOutput::errorf(const std::string &str, const RuntimeErrorInfo &info)
   std::stringstream ss;
   ss << str;
   JsonEmitter<std::string>::emit(out_, ss.str());
+  // Json only prints the top level location
   out_ << R"(, "filename": )";
-  JsonEmitter<std::string>::emit(out_, info.filename);
+  JsonEmitter<std::string>::emit(out_, info.locations.begin()->filename);
   out_ << R"(, "line": )";
-  JsonEmitter<uint64_t>::emit(out_, info.line);
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->line);
   out_ << R"(, "col": )";
-  JsonEmitter<uint64_t>::emit(out_, info.column);
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->column);
   out_ << R"(})" << std::endl;
 }
 
@@ -475,12 +476,13 @@ void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
     }
   }
 
+  // Json only prints the top level location
   out_ << R"(, "filename": )";
-  JsonEmitter<std::string>::emit(out_, info.filename);
+  JsonEmitter<std::string>::emit(out_, info.locations.begin()->filename);
   out_ << R"(, "line": )";
-  JsonEmitter<uint64_t>::emit(out_, info.line);
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->line);
   out_ << R"(, "col": )";
-  JsonEmitter<uint64_t>::emit(out_, info.column);
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->column);
   out_ << R"(})" << std::endl;
 }
 
