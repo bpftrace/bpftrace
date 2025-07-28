@@ -1950,17 +1950,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateStrncmp(
         left_string.value(), right_string.value(), size, false));
-  } else if (call.func == "strcontains") {
-    auto &left_arg = call.vargs.at(0);
-    auto &right_arg = call.vargs.at(1);
-
-    auto left_string = visit(left_arg);
-    auto right_string = visit(right_arg);
-
-    return ScopedExpr(b_.CreateStrcontains(left_string.value(),
-                                           left_arg.type().GetSize(),
-                                           right_string.value(),
-                                           right_arg.type().GetSize()));
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
