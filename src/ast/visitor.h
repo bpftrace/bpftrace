@@ -91,6 +91,10 @@ public:
   {
     return visitImpl(typeof.record);
   }
+  R visit(Typeid &type_id)
+  {
+    return visitImpl(type_id.typeof);
+  }
   R visit([[maybe_unused]] MapDeclStatement &decl)
   {
     return default_value();
