@@ -145,6 +145,16 @@ void Printer::visit(Offsetof &offof)
   --depth_;
 }
 
+void Printer::visit(Typeof &typeof)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "typeof: " << std::endl;
+
+  ++depth_;
+  visit(typeof.record);
+  --depth_;
+}
+
 void Printer::visit(MapDeclStatement &decl)
 {
   std::string indent(depth_, ' ');
@@ -386,8 +396,8 @@ void Printer::visit(VarDeclStatement &decl)
 {
   std::string indent(depth_, ' ');
 
-  if (decl.type) {
-    out_ << indent << "decl" << type(*decl.type) << std::endl;
+  if (decl.typeof) {
+    out_ << indent << "decl" << type(decl.typeof->type()) << std::endl;
   } else {
     out_ << indent << "decl" << std::endl;
   }
@@ -520,15 +530,15 @@ void Printer::visit(SubprogArg &arg)
   std::string indent(depth_, ' ');
 
   ++depth_;
-  out_ << indent << arg.name << type(arg.type) << std::endl;
+  out_ << indent << arg.var->ident << type(arg.typeof->type()) << std::endl;
   --depth_;
 }
 
 void Printer::visit(Subprog &subprog)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "subprog: " << subprog.name << type(subprog.return_type)
-       << std::endl;
+  out_ << indent << "subprog: " << subprog.name
+       << type(subprog.return_type->type()) << std::endl;
 
   ++depth_;
 

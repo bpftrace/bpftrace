@@ -32,9 +32,9 @@ public:
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(MapAccess &acc);
-  void visit(Cast &cast);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
+  void visit(Typeof &typeof);
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(Unop &unop);
@@ -172,12 +172,6 @@ void FieldAnalyser::visit(MapAccess &acc)
   visit(acc.map); // Leaves sized_type_ as value type.
 }
 
-void FieldAnalyser::visit(Cast &cast)
-{
-  visit(cast.expr);
-  resolve_type(cast.cast_type);
-}
-
 void FieldAnalyser::visit(Sizeof &szof)
 {
   if (std::holds_alternative<SizedType>(szof.record)) {
@@ -193,6 +187,15 @@ void FieldAnalyser::visit(Offsetof &offof)
     resolve_type(std::get<SizedType>(offof.record));
   } else {
     visit(offof.record);
+  }
+}
+
+void FieldAnalyser::visit(Typeof &typeof)
+{
+  if (std::holds_alternative<SizedType>(typeof.record)) {
+    resolve_type(std::get<SizedType>(typeof.record));
+  } else {
+    visit(typeof.record);
   }
 }
 
