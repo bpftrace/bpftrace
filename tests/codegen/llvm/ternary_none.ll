@@ -40,7 +40,7 @@ left:                                             ; preds = %entry
 right:                                            ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
   %5 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 30000, ptr %5, align 8
+  store i64 40000, ptr %5, align 8
   %6 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
   store i8 0, ptr %6, align 1
   %ringbuf_output1 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)

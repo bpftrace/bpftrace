@@ -26,7 +26,7 @@ entry:
 helper_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %3 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %3, align 8
+  store i64 40006, ptr %3, align 8
   %4 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %4, align 8
   %5 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2

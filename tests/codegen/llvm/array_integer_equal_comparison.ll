@@ -62,7 +62,7 @@ entry:
 if_body:                                          ; preds = %arraycmp.done
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
   %17 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 30000, ptr %17, align 8
+  store i64 40000, ptr %17, align 8
   %18 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
   store i8 0, ptr %18, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)

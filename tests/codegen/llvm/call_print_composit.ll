@@ -29,7 +29,7 @@ entry:
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @abc, i64 4, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_tuple_16_t)
   %3 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 0
-  store i64 30007, ptr %3, align 8
+  store i64 40007, ptr %3, align 8
   %4 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 1
   store i64 0, ptr %4, align 8
   %5 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i32 0, i32 2

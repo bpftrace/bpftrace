@@ -40,7 +40,7 @@ lookup_failure:                                   ; preds = %entry
   store i64 0, ptr %lookup_elem_val, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %2 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %2, align 8
+  store i64 40006, ptr %2, align 8
   %3 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %3, align 8
   %4 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
@@ -77,7 +77,7 @@ counter_merge:                                    ; preds = %event_loss_counter,
 helper_failure:                                   ; preds = %lookup_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t1)
   %13 = getelementptr %runtime_error_t, ptr %runtime_error_t1, i64 0, i32 0
-  store i64 30006, ptr %13, align 8
+  store i64 40006, ptr %13, align 8
   %14 = getelementptr %runtime_error_t, ptr %runtime_error_t1, i64 0, i32 1
   store i64 1, ptr %14, align 8
   %15 = getelementptr %runtime_error_t, ptr %runtime_error_t1, i64 0, i32 2

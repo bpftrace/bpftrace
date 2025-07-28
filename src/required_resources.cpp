@@ -38,8 +38,13 @@ std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
 {
   switch (info.error_id) {
     case RuntimeErrorId::HELPER_ERROR: {
-      // Helper errors are handled separately in output
-      os << "";
+      // This error is handled separately in output
+      os << "bpf helper error";
+      break;
+    }
+    case RuntimeErrorId::ERRORF: {
+      // This error is handled separately in output
+      os << "errorf";
       break;
     }
     case RuntimeErrorId::DIVIDE_BY_ZERO: {

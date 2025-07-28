@@ -24,7 +24,7 @@ entry:
   %exit = alloca %exit_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
   %1 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 30000, ptr %1, align 8
+  store i64 40000, ptr %1, align 8
   %2 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
   store i8 0, ptr %2, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)

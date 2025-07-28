@@ -173,8 +173,8 @@ void ResourceAnalyser::visit(Call &call)
 {
   Visitor<ResourceAnalyser>::visit(call);
 
-  if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
-      call.func == "debugf") {
+  if (call.func == "printf" || call.func == "errorf" || call.func == "system" ||
+      call.func == "cat" || call.func == "debugf") {
     std::vector<SizedType> args;
 
     // NOTE: the same logic can be found in the semantic_analyser pass
@@ -219,6 +219,11 @@ void ResourceAnalyser::visit(Call &call)
       } else {
         resources_.printf_args.emplace_back(fmtstr, tuple->fields);
       }
+    } else if (call.func == "errorf") {
+      resources_.errorf_args.emplace_back(
+          fmtstr,
+          tuple->fields,
+          RuntimeErrorInfo(RuntimeErrorId::ERRORF, call.loc));
     } else if (call.func == "debugf") {
       resources_.bpf_print_fmts.emplace_back(fmtstr);
     } else if (call.func == "system") {

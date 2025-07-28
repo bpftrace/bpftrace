@@ -53,7 +53,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 helper_failure:                                   ; preds = %lookup_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %6 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %6, align 8
+  store i64 40006, ptr %6, align 8
   %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %7, align 8
   %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2

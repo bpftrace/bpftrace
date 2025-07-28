@@ -61,6 +61,16 @@ NAME printf_invalid_enum_symbolize_cast
 PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { $x = 100; printf("%d %s\n", ONE, (enum Foo)$x); exit() }
 EXPECT 1 100
 
+NAME errorf
+PROG begin { errorf("Something bad with args: %d, %s", 10, "arg2"); }
+EXPECT stdin:1:9-62: ERROR: Something bad with args: 10, arg2
+
+# Just a quick smoke test to show that errorf works
+# the same as printf
+NAME errorf_length_modifiers
+PROG begin { $x = 0x12345678abcdef; errorf("%hhx %hx %x %jx\n", $x, $x, $x, $x);  }
+EXPECT stdin:1:32-75: ERROR: ef cdef 78abcdef 12345678abcdef
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*:[0-9]*:[0-9]*

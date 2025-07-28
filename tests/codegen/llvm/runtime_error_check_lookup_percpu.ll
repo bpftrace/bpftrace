@@ -69,7 +69,7 @@ lookup_merge:                                     ; preds = %helper_merge, %look
 helper_failure:                                   ; preds = %lookup_failure
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %5 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %5, align 8
+  store i64 40006, ptr %5, align 8
   %6 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %6, align 8
   %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
@@ -135,7 +135,7 @@ lookup_failure3:                                  ; preds = %while_body
 error_success:                                    ; preds = %lookup_failure3
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t5)
   %22 = getelementptr %runtime_error_t, ptr %runtime_error_t5, i64 0, i32 0
-  store i64 30006, ptr %22, align 8
+  store i64 40006, ptr %22, align 8
   %23 = getelementptr %runtime_error_t, ptr %runtime_error_t5, i64 0, i32 1
   store i64 1, ptr %23, align 8
   %24 = getelementptr %runtime_error_t, ptr %runtime_error_t5, i64 0, i32 2

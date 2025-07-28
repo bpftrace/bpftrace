@@ -43,7 +43,7 @@ entry:
   %"zero_@x" = alloca %zero_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"zero_@x")
   %1 = getelementptr %zero_t, ptr %"zero_@x", i64 0, i32 0
-  store i64 30003, ptr %1, align 8
+  store i64 40003, ptr %1, align 8
   %2 = getelementptr %zero_t, ptr %"zero_@x", i64 0, i32 1
   store i32 0, ptr %2, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %"zero_@x", i64 12, i64 0)

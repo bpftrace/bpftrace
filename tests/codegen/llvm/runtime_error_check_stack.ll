@@ -95,7 +95,7 @@ get_stack_fail:                                   ; preds = %helper_merge
 helper_failure:                                   ; preds = %lookup_stack_scratch_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %14 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %14, align 8
+  store i64 40006, ptr %14, align 8
   %15 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
   store i64 0, ptr %15, align 8
   %16 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
@@ -125,7 +125,7 @@ counter_merge:                                    ; preds = %event_loss_counter,
 helper_failure1:                                  ; preds = %get_stack_success
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t3)
   %22 = getelementptr %runtime_error_t, ptr %runtime_error_t3, i64 0, i32 0
-  store i64 30006, ptr %22, align 8
+  store i64 40006, ptr %22, align 8
   %23 = getelementptr %runtime_error_t, ptr %runtime_error_t3, i64 0, i32 1
   store i64 1, ptr %23, align 8
   %24 = getelementptr %runtime_error_t, ptr %runtime_error_t3, i64 0, i32 2
@@ -154,7 +154,7 @@ counter_merge6:                                   ; preds = %event_loss_counter5
 helper_failure11:                                 ; preds = %merge_block
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t13)
   %29 = getelementptr %runtime_error_t, ptr %runtime_error_t13, i64 0, i32 0
-  store i64 30006, ptr %29, align 8
+  store i64 40006, ptr %29, align 8
   %30 = getelementptr %runtime_error_t, ptr %runtime_error_t13, i64 0, i32 1
   store i64 2, ptr %30, align 8
   %31 = getelementptr %runtime_error_t, ptr %runtime_error_t13, i64 0, i32 2
@@ -228,7 +228,7 @@ get_stack_fail30:                                 ; preds = %helper_merge33
 helper_failure32:                                 ; preds = %lookup_stack_scratch_merge26
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t34)
   %46 = getelementptr %runtime_error_t, ptr %runtime_error_t34, i64 0, i32 0
-  store i64 30006, ptr %46, align 8
+  store i64 40006, ptr %46, align 8
   %47 = getelementptr %runtime_error_t, ptr %runtime_error_t34, i64 0, i32 1
   store i64 3, ptr %47, align 8
   %48 = getelementptr %runtime_error_t, ptr %runtime_error_t34, i64 0, i32 2
@@ -258,7 +258,7 @@ counter_merge37:                                  ; preds = %event_loss_counter3
 helper_failure43:                                 ; preds = %get_stack_success29
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t45)
   %54 = getelementptr %runtime_error_t, ptr %runtime_error_t45, i64 0, i32 0
-  store i64 30006, ptr %54, align 8
+  store i64 40006, ptr %54, align 8
   %55 = getelementptr %runtime_error_t, ptr %runtime_error_t45, i64 0, i32 1
   store i64 4, ptr %55, align 8
   %56 = getelementptr %runtime_error_t, ptr %runtime_error_t45, i64 0, i32 2
@@ -287,7 +287,7 @@ counter_merge48:                                  ; preds = %event_loss_counter4
 helper_failure53:                                 ; preds = %merge_block22
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t55)
   %61 = getelementptr %runtime_error_t, ptr %runtime_error_t55, i64 0, i32 0
-  store i64 30006, ptr %61, align 8
+  store i64 40006, ptr %61, align 8
   %62 = getelementptr %runtime_error_t, ptr %runtime_error_t55, i64 0, i32 1
   store i64 5, ptr %62, align 8
   %63 = getelementptr %runtime_error_t, ptr %runtime_error_t55, i64 0, i32 2
