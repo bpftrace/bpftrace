@@ -65,8 +65,10 @@ public:
   {
     return visitImpl(var_addr.var);
   }
-  R visit([[maybe_unused]] SubprogArg &subprog_arg)
+  R visit(SubprogArg &subprog_arg)
   {
+    visitImpl(subprog_arg.var);
+    visitImpl(subprog_arg.typeof);
     return default_value();
   }
   R visit([[maybe_unused]] AttachPoint &ap)
@@ -81,9 +83,13 @@ public:
   {
     return visitImpl(szof.record);
   }
-  R visit([[maybe_unused]] Offsetof &ofof)
+  R visit(Offsetof &ofof)
   {
     return visitImpl(ofof.record);
+  }
+  R visit(Typeof &typeof)
+  {
+    return visitImpl(typeof.record);
   }
   R visit([[maybe_unused]] MapDeclStatement &decl)
   {
@@ -136,7 +142,9 @@ public:
   }
   R visit(Cast &cast)
   {
-    return visitImpl(cast.expr);
+    visitImpl(cast.expr);
+    visitImpl(cast.typeof);
+    return default_value();
   }
   R visit(Tuple &tuple)
   {
@@ -171,7 +179,9 @@ public:
   }
   R visit(VarDeclStatement &decl)
   {
-    return visitImpl(decl.var);
+    visitImpl(decl.var);
+    visitImpl(decl.typeof);
+    return default_value();
   }
   R visit(Jump &jump)
   {
@@ -234,6 +244,7 @@ public:
   {
     visitImpl(subprog.args);
     visitImpl(subprog.block);
+    visitImpl(subprog.return_type);
     return default_value();
   }
   R visit([[maybe_unused]] Import &imp)
