@@ -33,6 +33,7 @@ public:
   void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
+  void visit(TypeCmp &typecmp);
   void visit(Ternary &ternary);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);

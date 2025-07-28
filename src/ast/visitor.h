@@ -109,6 +109,12 @@ public:
   {
     return visitImpl(unop.expr);
   }
+  R visit(TypeCmp &typecmp)
+  {
+    visitImpl(typecmp.first);
+    visitImpl(typecmp.second);
+    return default_value();
+  }
   R visit(Ternary &ternary)
   {
     visitImpl(ternary.cond);
