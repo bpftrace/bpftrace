@@ -544,13 +544,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=true },
           arg_type_spec{ .type=Type::integer } } } },
-  { "strcontains",
-    { .min_args=2,
-      .max_args=2,
-      .discard_ret_warn = true,
-      .arg_types={
-          arg_type_spec{ .type=Type::string, .literal=false },
-          arg_type_spec{ .type=Type::string, .literal=false } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
@@ -1726,23 +1719,6 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "Builtin strncmp requires a non-negative literal";
     }
     call.return_type = CreateUInt64();
-  } else if (call.func == "strcontains") {
-    static constexpr auto warning = R"(
-strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.
-
-If you're seeing errors, try clamping the string sizes. For example:
-* `str($ptr, 16)`
-* `path($ptr, 16)`
-)";
-
-    if (is_final_pass()) {
-      auto arg0_sz = call.vargs.at(0).type().GetSize();
-      auto arg1_sz = call.vargs.at(1).type().GetSize();
-      if (arg0_sz * arg1_sz > 2000) {
-        call.addWarning() << warning;
-      }
-    }
-    call.return_type = CreateBool();
   } else if (call.func == "override") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
@@ -2143,7 +2119,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   const SizedType &type = arr.expr.type();
 
   if (is_final_pass()) {
-    if (!type.IsArrayTy() && !type.IsPtrTy()) {
+    if (!type.IsArrayTy() && !type.IsPtrTy() && !type.IsStringTy()) {
       arr.addError() << "The array index operator [] can only be "
                         "used on arrays and pointers, found "
                      << type.GetTy() << ".";
@@ -2163,9 +2139,14 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
                          << " is out of bounds for array of size " << num;
         }
       }
-    } else {
-      arr.addError() << "The array index operator [] only "
-                        "accepts positive literal integer indices.";
+    } else if (!arr.indexpr.type().IsIntTy()) {
+      // We can't statically verify the bounds here; the user will be
+      // responsible for injecting suitable bounds, but we don't want to limit
+      // them on what they are capable of here. Arguably this may cause the
+      // user to hit up against the verifier in some cases, but this is already
+      // perfectly possible by casting to an array and using an arbitrarily
+      // large fixed integer, which can still trigger verifier errors.
+      arr.addError() << "The array index operator [] requires an integer.";
     }
   }
 
@@ -2173,6 +2154,8 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     arr.element_type = *type.GetElementTy();
   else if (type.IsPtrTy())
     arr.element_type = *type.GetPointeeTy();
+  else if (type.IsStringTy())
+    arr.element_type = CreateInt8();
   arr.element_type.SetAS(type.GetAS());
 
   // BPF verifier cannot track BTF information for double pointers so we
