@@ -495,6 +495,28 @@ public:
   std::vector<std::string> field;
 };
 
+class Typeof : public Node {
+public:
+  explicit Typeof(ASTContext &ctx, SizedType record, Location &&loc)
+      : Node(ctx, std::move(loc)), record(record) {};
+  explicit Typeof(ASTContext &ctx, Expression expr, Location &&loc)
+      : Node(ctx, std::move(loc)), record(expr) {};
+  explicit Typeof(ASTContext &ctx, const Typeof &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        record(clone(ctx, other.record, loc + other.loc)) {};
+
+  const SizedType &type() const
+  {
+    if (std::holds_alternative<SizedType>(record)) {
+      return std::get<SizedType>(record);
+    } else {
+      return std::get<Expression>(record).type();
+    }
+  }
+
+  std::variant<Expression, SizedType> record;
+};
+
 class MapDeclStatement : public Node {
 public:
   explicit MapDeclStatement(ASTContext &ctx,
@@ -752,23 +774,21 @@ public:
 class Cast : public Node {
 public:
   explicit Cast(ASTContext &ctx,
-                SizedType type,
+                Typeof *typeof,
                 Expression expr,
                 Location &&loc)
-      : Node(ctx, std::move(loc)),
-        cast_type(std::move(type)),
-        expr(std::move(expr)) {};
+      : Node(ctx, std::move(loc)), typeof(typeof), expr(std::move(expr)) {};
   explicit Cast(ASTContext &ctx, const Cast &other, const Location &loc)
       : Node(ctx, loc + other.loc),
-        cast_type(other.cast_type),
+        typeof(clone(ctx, other.typeof, loc)),
         expr(clone(ctx, other.expr, loc)) {};
 
   const SizedType &type() const
   {
-    return cast_type;
+    return typeof->type();
   }
 
-  SizedType cast_type;
+  Typeof *typeof;
   Expression expr;
 };
 
@@ -804,9 +824,9 @@ class VarDeclStatement : public Node {
 public:
   explicit VarDeclStatement(ASTContext &ctx,
                             Variable *var,
-                            SizedType type,
+                            Typeof *typeof,
                             Location &&loc)
-      : Node(ctx, std::move(loc)), var(var), type(type) {};
+      : Node(ctx, std::move(loc)), var(var), typeof(typeof) {};
   explicit VarDeclStatement(ASTContext &ctx, Variable *var, Location &&loc)
       : Node(ctx, std::move(loc)), var(var) {};
   explicit VarDeclStatement(ASTContext &ctx,
@@ -814,10 +834,10 @@ public:
                             const Location &loc)
       : Node(ctx, loc + other.loc),
         var(clone(ctx, other.var, loc)),
-        type(other.type) {};
+        typeof(clone(ctx, other.typeof, loc)) {};
 
   Variable *var = nullptr;
-  std::optional<SizedType> type;
+  Typeof *typeof = nullptr;
 };
 
 // Scalar map assignment is purely syntactic sugar that is removed by the pass
@@ -1229,19 +1249,19 @@ using ProbeList = std::vector<Probe *>;
 class SubprogArg : public Node {
 public:
   explicit SubprogArg(ASTContext &ctx,
-                      std::string name,
-                      SizedType type,
+                      Variable *var,
+                      Typeof *typeof,
                       Location &&loc)
-      : Node(ctx, std::move(loc)),
-        name(std::move(name)),
-        type(std::move(type)) {};
+      : Node(ctx, std::move(loc)), var(var), typeof(typeof) {};
   explicit SubprogArg(ASTContext &ctx,
                       const SubprogArg &other,
                       const Location &loc)
-      : Node(ctx, loc + other.loc), name(other.name), type(other.type) {};
+      : Node(ctx, loc + other.loc),
+        var(clone(ctx, other.var, loc)),
+        typeof(clone(ctx, other.typeof, loc)) {};
 
-  const std::string name;
-  SizedType type;
+  Variable *var = nullptr;
+  Typeof *typeof = nullptr;
 };
 using SubprogArgList = std::vector<SubprogArg *>;
 
@@ -1249,24 +1269,24 @@ class Subprog : public Node {
 public:
   explicit Subprog(ASTContext &ctx,
                    std::string name,
-                   SizedType return_type,
+                   Typeof *return_type,
                    SubprogArgList &&args,
                    BlockExpr *block,
                    Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
-        return_type(std::move(return_type)),
+        return_type(return_type),
         args(std::move(args)),
         block(block) {};
   explicit Subprog(ASTContext &ctx, const Subprog &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
-        return_type(other.return_type),
+        return_type(clone(ctx, other.return_type, loc)),
         args(clone(ctx, other.args, loc)),
         block(clone(ctx, other.block, loc)) {};
 
   const std::string name;
-  SizedType return_type;
+  Typeof *return_type;
   SubprogArgList args;
   BlockExpr *block = nullptr;
 };

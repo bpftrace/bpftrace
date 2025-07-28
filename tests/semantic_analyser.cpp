@@ -2666,14 +2666,14 @@ TEST_F(SemanticAnalyserTest, map_casts_are_global)
 TEST_F(SemanticAnalyserTest, cast_unknown_type)
 {
   test("begin { (struct faketype *)cpu }", Error{ R"(
-stdin:1:9-29: ERROR: Cannot resolve unknown type "struct faketype"
+stdin:1:9-28: ERROR: Cannot resolve unknown type "struct faketype"
 begin { (struct faketype *)cpu }
-        ~~~~~~~~~~~~~~~~~~~~
+        ~~~~~~~~~~~~~~~~~~~
 )" });
   test("begin { (faketype)cpu }", Error{ R"(
-stdin:1:9-19: ERROR: Cannot resolve unknown type "faketype"
+stdin:1:9-18: ERROR: Cannot resolve unknown type "faketype"
 begin { (faketype)cpu }
-        ~~~~~~~~~~
+        ~~~~~~~~~
 stdin:1:9-19: ERROR: Cannot cast to "faketype"
 begin { (faketype)cpu }
         ~~~~~~~~~~
@@ -2684,36 +2684,36 @@ TEST_F(SemanticAnalyserTest, cast_c_integers)
 {
   // Casting to a C integer type gives a hint with the correct name
   test("begin { (char)cpu }", Error{ R"(
-stdin:1:9-15: ERROR: Cannot resolve unknown type "char"
+stdin:1:9-14: ERROR: Cannot resolve unknown type "char"
 begin { (char)cpu }
-        ~~~~~~
+        ~~~~~
 stdin:1:9-15: ERROR: Cannot cast to "char"
 begin { (char)cpu }
         ~~~~~~
 HINT: Did you mean "int8"?
 )" });
   test("begin { (short)cpu }", Error{ R"(
-stdin:1:9-16: ERROR: Cannot resolve unknown type "short"
+stdin:1:9-15: ERROR: Cannot resolve unknown type "short"
 begin { (short)cpu }
-        ~~~~~~~
+        ~~~~~~
 stdin:1:9-16: ERROR: Cannot cast to "short"
 begin { (short)cpu }
         ~~~~~~~
 HINT: Did you mean "int16"?
 )" });
   test("begin { (int)cpu }", Error{ R"(
-stdin:1:9-14: ERROR: Cannot resolve unknown type "int"
+stdin:1:9-13: ERROR: Cannot resolve unknown type "int"
 begin { (int)cpu }
-        ~~~~~
+        ~~~~
 stdin:1:9-14: ERROR: Cannot cast to "int"
 begin { (int)cpu }
         ~~~~~
 HINT: Did you mean "int32"?
 )" });
   test("begin { (long)cpu }", Error{ R"(
-stdin:1:9-15: ERROR: Cannot resolve unknown type "long"
+stdin:1:9-14: ERROR: Cannot resolve unknown type "long"
 begin { (long)cpu }
-        ~~~~~~
+        ~~~~~
 stdin:1:9-15: ERROR: Cannot cast to "long"
 begin { (long)cpu }
         ~~~~~~
@@ -5030,10 +5030,10 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   test("begin { let $a: int16 = 1; $a = (int8)2; }");
 
   // Test more types
-  test("begin { let $a: struct x; }");
-  test("begin { let $a: struct x *; }");
+  test("struct x { int a; }; begin { let $a: struct x; }");
+  test("struct x { int a; }; begin { let $a: struct x *; }");
   test("begin { let $a: struct task_struct *; $a = curtask; }");
-  test("begin { let $a: struct Foo[10]; }");
+  test("struct x { int a; } begin { let $a: struct x[10]; }");
   test("begin { if (pid) { let $x; } $x = 2; }");
   test("begin { if (pid) { let $x; } else { let $x; } let $x; }");
 
@@ -5607,6 +5607,76 @@ kprobe:f { fail("always fail"); }
            ~~~~~~~~~~~~~~~~~~~
 )" });
   test(R"(kprobe:f { if (false) { fail("always false"); } })");
+}
+
+TEST_F(SemanticAnalyserTest, typeof_decls)
+{
+  test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
+  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
+
+  // These types should be enforced.
+  test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
+       Error{ R"(
+stdin:1:49-59: ERROR: Type mismatch for $y: trying to assign value of type 'string' when variable already has a type 'uint8'
+kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
+                                                ~~~~~~~~~~
+)" });
+  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
+stdin:1:46-52: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string'
+kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
+                                             ~~~~~~
+)" });
+  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; })",
+       Error{ R"(
+stdin:1:46-57: ERROR: Type mismatch for $y: trying to assign value of type 'string' when variable already has a type 'string'
+kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; }
+                                             ~~~~~~~~~~~
+)" });
+
+  // But ordering should not matter, as long as the scope is the same.
+  test("kprobe:f { let $x; let $y : typeof($x); $y = 2; $x = (uint8)1; }");
+  test(R"(kprobe:f { let $x; let $y : typeof($x); $y = "bar"; $x = "foo"; })");
+}
+
+TEST_F(SemanticAnalyserTest, typeof_subprog)
+{
+  // Basic subprogram arguments can be defined relatively.
+  test("fn foo($x : int64, $y : typeof($x)) : int64 { return 0; }");
+  test("fn foo($x : typeof($y), $y : int64) : int64 { return 0; }");
+  test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return 0; }");
+  test("fn foo($x : typeof($y), $y : int64) : typeof($y) { return 0; }");
+
+  // But we can't define using non-existent variables.
+  test("fn foo($x : int64, $y : typeof($z)) : int64 { return 0; }", Error{ R"(
+stdin:1:26-36: ERROR: Undefined or undeclared variable: $z
+fn foo($x : int64, $y : typeof($z)) : int64 { return 0; }
+                         ~~~~~~~~~~
+)" });
+  test("fn foo($x : int64, $y : int64) : typeof($z) { return 0; }", Error{ R"(
+stdin:1:36-46: ERROR: Undefined or undeclared variable: $z
+fn foo($x : int64, $y : int64) : typeof($z) { return 0; }
+                                   ~~~~~~~~~~
+)" });
+}
+
+TEST_F(SemanticAnalyserTest, typeof_casts)
+{
+  // Legal casts are still legal.
+  test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))10; })");
+  test(R"(kprobe:f { $x = (void*)0; $y = (typeof($x))1; })");
+
+  // Overflow & signed warnings still apply.
+  test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))256; })");
+  test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))-1; })");
+
+  // Illegal casts are still illegal.
+  test(
+      R"(struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; })",
+      Error{ R"(
+stdin:1:61-74: ERROR: Cannot cast to "struct foo"
+struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
+                                                            ~~~~~~~~~~~~~
+)" });
 }
 
 } // namespace bpftrace::test::semantic_analyser

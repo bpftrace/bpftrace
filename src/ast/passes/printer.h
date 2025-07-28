@@ -26,6 +26,7 @@ public:
   void visit(Call &call);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
+  void visit(Typeof &typeof);
   void visit(Map &map);
   void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
