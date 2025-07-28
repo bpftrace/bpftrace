@@ -700,6 +700,8 @@ equality_expr:
                 relational_expr                  { $$ = $1; }
         |       equality_expr EQ relational_expr { $$ = driver.ctx.make_node<ast::Binop>($1, ast::Operator::EQ, $3, @2); }
         |       equality_expr NE relational_expr { $$ = driver.ctx.make_node<ast::Binop>($1, ast::Operator::NE, $3, @2); }
+        |       typeof_expr EQ typeof_expr       { $$ = driver.ctx.make_node<ast::TypeCmp>($1, $3, @2); }
+        |       typeof_expr NE typeof_expr       { $$ = driver.ctx.make_node<ast::Unop>(driver.ctx.make_node<ast::TypeCmp>($1, $3, @2), ast::Operator::LNOT, false, @2); }
                 ;
 
 relational_expr:

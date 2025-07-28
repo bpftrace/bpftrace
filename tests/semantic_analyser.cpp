@@ -5679,4 +5679,15 @@ struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, typeof_if_constexpr)
+{
+  // We should be able to selectively analyze specific branches. Only the
+  // correct type branch will be chosen, and we will not encounted a type error
+  // for the other branch.
+  test(
+      R"(kprobe:f { $x = 1; if (typeof($x) == typeof("abc")) { $x = "foo"; } else { $x = 2; } })");
+  test(
+      R"(kprobe:f { $x = "xyz"; if (typeof($x) == typeof("abc")) { $x = "foo"; } else { $x = 2; } })");
+}
+
 } // namespace bpftrace::test::semantic_analyser

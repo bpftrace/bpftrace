@@ -48,23 +48,47 @@ class PassTracker {
 public:
   void mark_final_pass()
   {
-    is_final_pass_ = true;
+    assert(state_ == SecondChance);
+    state_ = FinalPass;
+  }
+  void mark_second_chance()
+  {
+    assert(state_ == Converging);
+    state_ = SecondChance;
+  }
+  void clear_second_chance()
+  {
+    assert(state_ == SecondChance);
+    state_ = Converging;
   }
   bool is_final_pass() const
   {
-    return is_final_pass_;
+    return state_ == FinalPass;
+  }
+  bool is_second_chance() const
+  {
+    return state_ == SecondChance;
   }
   void inc_num_unresolved()
   {
     num_unresolved_++;
   }
+  void add_unresolved_branch(IfExpr *if_expr)
+  {
+    unresolved_branches_.push_back(if_expr);
+  }
   void reset_num_unresolved()
   {
     num_unresolved_ = 0;
+    unresolved_branches_.clear();
   }
   int get_num_unresolved() const
   {
     return num_unresolved_;
+  }
+  const std::vector<IfExpr *> &get_unresolved_branches()
+  {
+    return unresolved_branches_;
   }
   int get_num_passes() const
   {
@@ -76,8 +100,14 @@ public:
   }
 
 private:
-  bool is_final_pass_ = false;
+  enum State {
+    Converging,
+    SecondChance,
+    FinalPass,
+  };
+  State state_ = Converging;
   int num_unresolved_ = 0;
+  std::vector<IfExpr *> unresolved_branches_;
   int num_passes_ = 1;
 };
 
@@ -185,6 +215,7 @@ private:
 
   bool is_final_pass() const;
   bool is_first_pass() const;
+  bool is_second_chance() const;
 
   std::optional<size_t> check(Sizeof &szof);
   std::optional<size_t> check(Offsetof &offof);
@@ -2723,7 +2754,34 @@ void SemanticAnalyser::visit(Unop &unop)
 
 void SemanticAnalyser::visit(IfExpr &if_expr)
 {
+  // In order to evaluate literals and resolved type operators, we need to fold
+  // the condition. This is handled in the `Expression` visitor. Branches that
+  // are always `false` are exempted from semantic checks. If after folding the
+  // condition still has unresolved `typeof` operators, then we are not able to
+  // visit yet. These branches are also not allowed to contain information
+  // necessary to resolve types, that is a cycle in the dependency graph, the
+  // `if` condition must be resolvable first. If the condition *is* resolvable
+  // and is a constant, then we prune the dead code paths and will never use
+  // them for semantic analysis.
   visit(if_expr.cond);
+  CollectNodes<Typeof> typeofs;
+  typeofs.visit(if_expr.cond, [](const Typeof &typeof) {
+    return typeof.type().IsNoneTy(); // Not resolved.
+  });
+  if (!typeofs.nodes().empty()) {
+    pass_tracker_.add_unresolved_branch(&if_expr);
+    return; // Skip visiting this `if` for now.
+  }
+  if (auto *b = if_expr.cond.as<Boolean>()) {
+    if (b->value) {
+      visit(if_expr.left);
+      return;
+    } else {
+      visit(if_expr.right);
+      return;
+    }
+  }
+
   visit(if_expr.left);
   visit(if_expr.right);
 
@@ -3362,6 +3420,21 @@ void SemanticAnalyser::visit(Expression &expr)
       expr.value = ctx_.make_node<Integer>(*v,
                                            Location(offof->loc),
                                            /*force_unsigned=*/true);
+    }
+  } else if (auto *typecmp = expr.as<TypeCmp>()) {
+    // These are inlined as soon as they can be resolved. If the type is still
+    // none at the second chance point, these are resolved to be false.
+    if (!typecmp->first->type().IsNoneTy() &&
+        !typecmp->second->type().IsNoneTy()) {
+      if (typecmp->first->type() == typecmp->second->type()) {
+        expr.value = ctx_.make_node<Boolean>(true, Location(typecmp->loc));
+      } else {
+        expr.value = ctx_.make_node<Boolean>(false, Location(typecmp->loc));
+      }
+    } else if (is_final_pass()) {
+      // During the final pass, we don't let any unresolved `typeof` operators
+      // to remain in the graph for obvious reasons.
+      typecmp->addError() << "Invalid type for `typeof`: no type available";
     }
   }
 }
@@ -4138,25 +4211,40 @@ int SemanticAnalyser::analyse()
 {
   std::string errors;
 
-  int last_num_unresolved = 0;
+  auto last_num_unresolved = std::numeric_limits<int>::max();
+  auto last_unresolved_branches = pass_tracker_.get_unresolved_branches();
+
   // Multiple passes to handle variables being used before they are defined
   while (ctx_.diagnostics().ok()) {
     pass_tracker_.reset_num_unresolved();
-
     visit(ctx_.root);
-
     if (is_final_pass()) {
       return pass_tracker_.get_num_passes();
     }
 
-    int num_unresolved = pass_tracker_.get_num_unresolved();
+    auto num_unresolved = pass_tracker_.get_num_unresolved();
+    auto unresolved_branches = pass_tracker_.get_unresolved_branches();
 
-    if (num_unresolved > 0 &&
-        (last_num_unresolved == 0 || num_unresolved < last_num_unresolved)) {
-      // If we're making progress, keep making passes
+    if (unresolved_branches != last_unresolved_branches) {
+      // While we have unresolved branches that are changing, we need to reset
+      // our unresolved number since it may increase.
+      last_unresolved_branches = std::move(unresolved_branches);
+      last_num_unresolved = std::numeric_limits<int>::max();
+      if (pass_tracker_.is_second_chance()) {
+        pass_tracker_.clear_second_chance();
+      }
+    } else if (num_unresolved > 0 && num_unresolved < last_num_unresolved) {
+      // If we're making progress, keep making passes.
       last_num_unresolved = num_unresolved;
+      if (pass_tracker_.is_second_chance()) {
+        pass_tracker_.clear_second_chance();
+      }
     } else {
-      pass_tracker_.mark_final_pass();
+      if (pass_tracker_.is_second_chance()) {
+        pass_tracker_.mark_final_pass();
+      } else {
+        pass_tracker_.mark_second_chance();
+      }
     }
 
     pass_tracker_.inc_num_passes();

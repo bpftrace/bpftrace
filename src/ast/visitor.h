@@ -113,6 +113,12 @@ public:
   {
     return visitImpl(unop.expr);
   }
+  R visit(TypeCmp &typecmp)
+  {
+    visitImpl(typecmp.first);
+    visitImpl(typecmp.second);
+    return default_value();
+  }
   R visit(IfExpr &if_expr)
   {
     visitImpl(if_expr.cond);

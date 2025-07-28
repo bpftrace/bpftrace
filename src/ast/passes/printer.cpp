@@ -235,6 +235,22 @@ void Printer::visit(Unop &unop)
   --depth_;
 }
 
+void Printer::visit(TypeCmp &typecmp)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "typecmp: " << std::endl;
+
+  ++depth_;
+  visit(typecmp.first);
+  --depth_;
+
+  out_ << indent << "==" << std::endl;
+
+  ++depth_;
+  visit(typecmp.second);
+  --depth_;
+}
+
 void Printer::visit(IfExpr &if_expr)
 {
   std::string indent(depth_, ' ');

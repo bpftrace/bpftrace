@@ -135,6 +135,7 @@ class VariableAddr;
 class MapAddr;
 class Binop;
 class Unop;
+class TypeCmp;
 class FieldAccess;
 class ArrayAccess;
 class TupleAccess;
@@ -162,6 +163,7 @@ class Expression : public VariantNode<Integer,
                                       MapAddr,
                                       Binop,
                                       Unop,
+                                      TypeCmp,
                                       FieldAccess,
                                       ArrayAccess,
                                       TupleAccess,
@@ -515,6 +517,28 @@ public:
   }
 
   std::variant<Expression, SizedType> record;
+};
+
+class TypeCmp : public Node {
+public:
+  explicit TypeCmp(ASTContext &ctx,
+                   Typeof *first,
+                   Typeof *second,
+                   Location &&loc)
+      : Node(ctx, std::move(loc)), first(first), second(second) {};
+  explicit TypeCmp(ASTContext &ctx, const TypeCmp &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        first(clone(ctx, other.first, loc)),
+        second(clone(ctx, other.second, loc)) {};
+
+  const SizedType &type() const
+  {
+    static SizedType boolean = CreateBool();
+    return boolean;
+  }
+
+  Typeof *first = nullptr;
+  Typeof *second = nullptr;
 };
 
 class MapDeclStatement : public Node {
