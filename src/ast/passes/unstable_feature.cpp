@@ -18,6 +18,7 @@ const auto IMPORTS = "imports";
 const auto MACROS = "macros";
 const auto TSERIES = "tseries";
 const auto ADDR = "address-of operator (&)";
+const auto TYPEINFO = "typeinfo";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -47,6 +48,7 @@ public:
   void visit(VariableAddr &var_addr);
   void visit(Import &imp);
   void visit(Call &call);
+  void visit(Typeinfo &typeinfo);
 
 private:
   BPFtrace &bpftrace_;
@@ -118,6 +120,17 @@ void UnstableFeature::visit(Call &call)
       !warned_features.contains(UNSTABLE_TSERIES)) {
     LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
     warned_features.insert(UNSTABLE_TSERIES);
+  }
+}
+
+void UnstableFeature::visit(Typeinfo &typeinfo)
+{
+  if (bpftrace_.config_->unstable_typeinfo == ConfigUnstable::error) {
+    typeinfo.addError() << get_error(TYPEINFO, UNSTABLE_TYPEINFO);
+  } else if (bpftrace_.config_->unstable_typeinfo == ConfigUnstable::warn &&
+             !warned_features.contains(UNSTABLE_TYPEINFO)) {
+    LOG(WARNING) << get_warning(TYPEINFO, UNSTABLE_TYPEINFO);
+    warned_features.insert(UNSTABLE_TYPEINFO);
   }
 }
 

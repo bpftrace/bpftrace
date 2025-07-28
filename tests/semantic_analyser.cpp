@@ -5675,4 +5675,24 @@ struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, typeinfo_if_constexpr)
+{
+  // We should be able to selectively analyze specific branches. Only the
+  // correct type branch will be chosen, and we will not encounted a type error
+  // for the other branch.
+  test(
+      R"(kprobe:f { $x = 1; if (typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
+  test(
+      R"(kprobe:f { $x = "xyz"; if (typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeinfo($x) != typeinfo(1)) { fail("only integers"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeinfo($x) == typeinfo(1)) { fail("no integers"); } })",
+      Error{ R"(
+stdin:1:55-74: ERROR: no integers
+kprobe:f { $x = 1; if (typeinfo($x) == typeinfo(1)) { fail("no integers"); } }
+                                                      ~~~~~~~~~~~~~~~~~~~
+)" });
+}
+
 } // namespace bpftrace::test::semantic_analyser

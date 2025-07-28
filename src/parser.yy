@@ -132,6 +132,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> SIZEOF "sizeof"
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> TYPEOF "typeof"
+%token <std::string> TYPEINFO "typeinfo"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
 %token <bool> BOOL "bool"
@@ -167,6 +168,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
 %type <ast::RootStatements> root_stmts
 %type <ast::Range *> range
+%type <ast::Typeinfo *> typeinfo_expr
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
@@ -595,9 +597,10 @@ postfix_expr:
         |       tuple_access_expr              { $$ = $1; }
 /* array  */
         |       postfix_expr "[" expr "]"      { $$ = driver.ctx.make_node<ast::ArrayAccess>($1, $3, @2 + @4); }
-        |       call                           { $$ = $1; }
         |       sizeof_expr                    { $$ = $1; }
         |       offsetof_expr                  { $$ = $1; }
+        |       typeinfo_expr                  { $$ = $1; }
+        |       call                           { $$ = $1; }
         |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
         |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
         |       map      INCREMENT             { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
@@ -773,6 +776,11 @@ typeof_expr:
         |       TYPEOF "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeof>($3, @$); }
                 ;
 
+typeinfo_expr:
+                TYPEINFO "(" type ")"  { $$ = driver.ctx.make_node<ast::Typeinfo>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
+        |       TYPEINFO "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeinfo>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
+                ;
+
 any_type:
                 type        { $$ = driver.ctx.make_node<ast::Typeof>($1, @$); }
         |       typeof_expr { $$ = $1; }
@@ -791,6 +799,8 @@ keyword:
         |       UNROLL        { $$ = $1; }
         |       WHILE         { $$ = $1; }
         |       SUBPROG       { $$ = $1; }
+        |       TYPEOF        { $$ = $1; }
+        |       TYPEINFO      { $$ = $1; }
         ;
 
 ident:

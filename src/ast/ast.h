@@ -143,6 +143,7 @@ class Cast;
 class Tuple;
 class IfExpr;
 class BlockExpr;
+class Typeinfo;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -169,7 +170,8 @@ class Expression : public VariantNode<Integer,
                                       Cast,
                                       Tuple,
                                       IfExpr,
-                                      BlockExpr> {
+                                      BlockExpr,
+                                      Typeinfo> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -515,6 +517,25 @@ public:
   }
 
   std::variant<Expression, SizedType> record;
+};
+
+class Typeinfo : public Node {
+public:
+  explicit Typeinfo(ASTContext &ctx, Typeof *typeof, Location &&loc)
+      : Node(ctx, std::move(loc)), typeof(typeof) {};
+  explicit Typeinfo(ASTContext &ctx, const Typeinfo &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        typeof(clone(ctx, other.typeof, loc + other.loc)) {};
+
+  const SizedType &type() const
+  {
+    // This must always be resolved inline, and when used as an expression will
+    // be replaced during semantic analysis with a suitable tuple.
+    static SizedType none = CreateNone();
+    return none;
+  }
+
+  Typeof *typeof = nullptr;
 };
 
 class MapDeclStatement : public Node {
