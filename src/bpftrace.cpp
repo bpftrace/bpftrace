@@ -625,10 +625,22 @@ int BPFtrace::run(output::Output &out,
     // callsite. After all, they all must be fixed.
     bool found = false;
     for (const auto &info : helper_use_loc_[e.func_id]) {
-      LOG(ERROR,
-          std::string(info.source_location),
-          std::vector(info.source_context))
-          << e.what();
+      bool first = true;
+      for (const auto &loc : info.locations) {
+        if (first) {
+          LOG(ERROR,
+              std::string(loc.source_location),
+              std::vector(loc.source_context))
+              << e.what();
+          first = false;
+        } else {
+          LOG(ERROR,
+              std::string(loc.source_location),
+              std::vector(loc.source_context))
+              << "expanded from";
+        }
+      }
+
       found = true;
     }
     if (!found) {

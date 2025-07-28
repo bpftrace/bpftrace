@@ -526,11 +526,21 @@ void TextOutput::primitive(const Primitive &p)
 void TextOutput::print_error(const std::string &str,
                              const RuntimeErrorInfo &info)
 {
-  LOG(ERROR,
-      std::string(info.source_location),
-      std::vector(info.source_context),
-      out_)
-      << str;
+  bool first = true;
+  for (const auto &loc : info.locations) {
+    if (first) {
+      // No need to print the source context as that's just the `print_error`
+      // call
+      LOG(ERROR, std::string(loc.source_location), out_) << str;
+      first = false;
+    } else {
+      LOG(ERROR,
+          std::string(loc.source_location),
+          std::vector(loc.source_context),
+          out_)
+          << "expanded from";
+    }
+  }
 }
 
 void TextOutput::printf(const std::string &str)
@@ -596,21 +606,30 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
       }
 
       LOG(WARNING,
-          std::string(info.source_location),
-          std::vector(info.source_context),
+          std::string(info.locations.begin()->source_location),
+          std::vector(info.locations.begin()->source_context),
           out_)
           << msg << "\nAdditional Info - helper: " << info.func_id
           << ", retcode: " << retcode;
-      return;
+      break;
     }
     default: {
       LOG(WARNING,
-          std::string(info.source_location),
-          std::vector(info.source_context),
+          std::string(info.locations.begin()->source_location),
+          std::vector(info.locations.begin()->source_context),
           out_)
           << info;
-      return;
+      break;
     }
+  }
+
+  // Print the chain
+  for (size_t i = 1; i < info.locations.size(); ++i) {
+    LOG(WARNING,
+        std::string(info.locations[i].source_location),
+        std::vector(info.locations[i].source_context),
+        out_)
+        << "expanded from";
   }
 }
 
