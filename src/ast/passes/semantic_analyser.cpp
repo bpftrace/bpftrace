@@ -1849,106 +1849,106 @@ If you're seeing errors, try clamping the string sizes. For example:
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and
     // check that they are exactly equal.
-    bool found = false;
-    for (const btf::Function &func :
-         type_metadata_.global | btf::filter<btf::Function>()) {
-      if (func.name() != call.func ||
-          (func.linkage() != btf::Function::Linkage::Global &&
-           func.linkage() != btf::Function::Linkage::Extern)) {
-        continue;
-      }
-      found = true;
-      auto proto = func.type();
-      if (!proto) {
-        call.addError() << "Unable to find function proto: "
-                        << proto.takeError();
-        continue;
-      }
-      // Extract our return type.
-      auto return_type = proto->return_type();
-      if (!return_type) {
-        call.addError() << "Unable to read return type: "
-                        << return_type.takeError();
-        continue;
-      }
-      auto compat_return_type = getCompatType(*return_type);
-      if (!compat_return_type) {
-        call.addError() << "Unable to convert return type: "
-                        << compat_return_type.takeError();
-        continue;
-      }
-      call.return_type = *compat_return_type;
-      // Convert all arguments.
-      auto argument_types = proto->argument_types();
-      if (!argument_types) {
-        call.addError() << "Unable to read argument types: "
-                        << argument_types.takeError();
-        continue;
-      }
-      // Check the argument count.
-      if (argument_types->size() != call.vargs.size()) {
-        call.addError() << "Function `" << call.func << "` requires "
-                        << argument_types->size() << " arguments, got only "
-                        << call.vargs.size();
-        continue;
-      }
-      std::vector<std::pair<std::string, SizedType>> args;
-      for (size_t i = 0; i < argument_types->size(); i++) {
-        const auto &[name, type] = argument_types->at(i);
-        auto compat_arg_type = getCompatType(type);
-        if (!compat_arg_type) {
-          // If the required type is a **pointer**, and the provided type is
-          // a **pointer**, then we let it slide. Just assume the user knows
-          // what they are doing. The verifier will catch them out otherwise.
-          if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
-            args.emplace_back(name, call.vargs[i].type());
-            continue;
-          }
-          call.addError() << "Unable to convert argument type: "
-                          << compat_arg_type.takeError();
+    auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
+    if (!maybe_func) {
+      call.addError() << "Unknown function: '" << call.func << "'";
+      return;
+    }
+
+    const auto &func = *maybe_func;
+
+    if (func.linkage() != btf::Function::Linkage::Global &&
+        func.linkage() != btf::Function::Linkage::Extern) {
+      call.addError() << "Unsupported function linkage: '" << call.func << "'";
+      return;
+    }
+
+    auto proto = func.type();
+    if (!proto) {
+      call.addError() << "Unable to find function proto: " << proto.takeError();
+      return;
+    }
+    // Extract our return type.
+    auto return_type = proto->return_type();
+    if (!return_type) {
+      call.addError() << "Unable to read return type: "
+                      << return_type.takeError();
+      return;
+    }
+    auto compat_return_type = getCompatType(*return_type);
+    if (!compat_return_type) {
+      call.addError() << "Unable to convert return type: "
+                      << compat_return_type.takeError();
+      return;
+    }
+    call.return_type = *compat_return_type;
+    // Convert all arguments.
+    auto argument_types = proto->argument_types();
+    if (!argument_types) {
+      call.addError() << "Unable to read argument types: "
+                      << argument_types.takeError();
+      return;
+    }
+    // Check the argument count.
+    if (argument_types->size() != call.vargs.size()) {
+      call.addError() << "Function `" << call.func << "` requires "
+                      << argument_types->size() << " arguments, got only "
+                      << call.vargs.size();
+      return;
+    }
+    std::vector<std::pair<std::string, SizedType>> args;
+    for (size_t i = 0; i < argument_types->size(); i++) {
+      const auto &[name, type] = argument_types->at(i);
+      auto compat_arg_type = getCompatType(type);
+      if (!compat_arg_type) {
+        // If the required type is a **pointer**, and the provided type is
+        // a **pointer**, then we let it slide. Just assume the user knows
+        // what they are doing. The verifier will catch them out otherwise.
+        if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
+          args.emplace_back(name, call.vargs[i].type());
           continue;
         }
-        args.emplace_back(name, std::move(*compat_arg_type));
-      }
-      if (args.size() != argument_types->size()) {
-        continue; // Already emitted errors.
-      }
-      // Check all the individual arguments.
-      bool ok = true;
-      for (size_t i = 0; i < args.size(); i++) {
-        const auto &[name, type] = args[i];
-        if (type != call.vargs[i].type()) {
-          if (!name.empty()) {
-            call.vargs[i].node().addError()
-                << "Expected " << typestr(type) << " for argument `" << name
-                << "` got " << typestr(call.vargs[i].type());
-          } else {
-            call.vargs[i].node().addError()
-                << "Expected " << typestr(type) << " got "
-                << typestr(call.vargs[i].type());
-          }
-          ok = false;
-        }
-      }
-      // Build our full proto as an error message.
-      std::stringstream fullmsg;
-      fullmsg << "Function `" << call.func << "` requires arguments (";
-      bool first = true;
-      for (const auto &[name, type] : args) {
-        if (!first) {
-          fullmsg << ", ";
-        }
-        fullmsg << typestr(type);
-        first = false;
-      }
-      fullmsg << ")";
-      if (!ok) {
-        call.addError() << fullmsg.str();
+        call.addError() << "Unable to convert argument type: "
+                        << compat_arg_type.takeError();
         continue;
       }
+      args.emplace_back(name, std::move(*compat_arg_type));
     }
-    if (!found) {
-      call.addError() << "Unknown function: '" << call.func << "'";
+    if (args.size() != argument_types->size()) {
+      return; // Already emitted errors.
+    }
+    // Check all the individual arguments.
+    bool ok = true;
+    for (size_t i = 0; i < args.size(); i++) {
+      const auto &[name, type] = args[i];
+      if (type != call.vargs[i].type()) {
+        if (!name.empty()) {
+          call.vargs[i].node().addError()
+              << "Expected " << typestr(type) << " for argument `" << name
+              << "` got " << typestr(call.vargs[i].type());
+        } else {
+          call.vargs[i].node().addError()
+              << "Expected " << typestr(type) << " got "
+              << typestr(call.vargs[i].type());
+        }
+        ok = false;
+      }
+    }
+    // Build our full proto as an error message.
+    std::stringstream fullmsg;
+    fullmsg << "Function `" << call.func << "` requires arguments (";
+    bool first = true;
+    for (const auto &[name, type] : args) {
+      if (!first) {
+        fullmsg << ", ";
+      }
+      fullmsg << typestr(type);
+      first = false;
+    }
+    fullmsg << ")";
+    if (!ok) {
+      call.addError() << fullmsg.str();
+      return;
     }
   }
 }

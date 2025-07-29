@@ -44,11 +44,17 @@ Pass CreateTypeSystemPass()
 Pass CreateDumpTypesPass(std::ostream &out)
 {
   auto fn = [&out](TypeMetadata &tm) {
-    for (const btf::Function &func : tm.global | btf::filter<btf::Function>()) {
-      out << func << "\n";
+    for (const auto &type : tm.global) {
+      if (!type.is<btf::Function>()) {
+        continue;
+      }
+      out << type.as<btf::Function>() << "\n";
     }
-    for (const btf::Var &var : tm.global | btf::filter<btf::Var>()) {
-      out << var << "\n";
+    for (const auto &type : tm.global) {
+      if (!type.is<btf::Var>()) {
+        continue;
+      }
+      out << type.as<btf::Var>() << "\n";
     }
   };
   return Pass::create("DumpTypes", fn);
