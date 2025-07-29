@@ -872,11 +872,4 @@ private:
   HandleRef handle_;
 };
 
-template <typename T>
-auto filter()
-{
-  return std::ranges::views::filter([](AnyType t) { return t.is<T>(); }) |
-         std::ranges::views::transform([](AnyType t) { return t.as<T>(); });
-}
-
 } // namespace bpftrace::btf

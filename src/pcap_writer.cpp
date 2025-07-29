@@ -63,7 +63,7 @@ void PCAPwriter::close(void)
 }
 
 bool PCAPwriter::write(uint64_t ns __attribute__((__unused__)),
-                       void *pkt __attribute__((__unused__)),
+                       const void *pkt __attribute__((__unused__)),
                        unsigned int size __attribute__((__unused__)))
 {
   return false;

@@ -33,7 +33,11 @@ TEST(btf, kernel_types)
 
   // Want to see all the functions available?
   std::unordered_set<std::string> funcs;
-  for (const Function &func : *btf | filter<Function>()) {
+  for (const auto &type : *btf) {
+    if (!type.is<btf::Function>()) {
+      continue;
+    }
+    const auto &func = type.as<btf::Function>();
     EXPECT_FALSE(funcs.contains(func.name()));
     funcs.insert(func.name());
   }
@@ -41,7 +45,11 @@ TEST(btf, kernel_types)
 
   // Let's just look at the variables.
   std::unordered_set<std::string> vars;
-  for (const Var &var : *btf | filter<Var>()) {
+  for (const auto &type : *btf) {
+    if (!type.is<btf::Var>()) {
+      continue;
+    }
+    const auto &var = type.as<btf::Var>();
     EXPECT_FALSE(vars.contains(var.name()));
     vars.insert(var.name());
   }
@@ -423,12 +431,20 @@ TEST(btf, filtered_iteration)
   ASSERT_TRUE(bool(ptr_int32));
 
   std::vector<std::string> integer_names;
-  for (const Integer &integer : btf | filter<Integer>()) {
+  for (const auto &type : btf) {
+    if (!type.is<btf::Integer>()) {
+      continue;
+    }
+    const auto &integer = type.as<btf::Integer>();
     EXPECT_TRUE(integer.bytes() == 4 || integer.bytes() == 8);
   }
 
   size_t pointer_count = 0;
-  for (const Pointer &pointer : btf | filter<Pointer>()) {
+  for (const auto &type : btf) {
+    if (!type.is<btf::Pointer>()) {
+      continue;
+    }
+    const auto &pointer = type.as<btf::Pointer>();
     pointer_count++;
     auto element = pointer.element_type();
     ASSERT_TRUE(bool(element));
