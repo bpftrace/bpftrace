@@ -57,6 +57,10 @@ public:
   {
     return default_value();
   }
+  R visit(VariableAddr &addr)
+  {
+    return visitImpl(addr.var);
+  }
   R visit(SubprogArg &subprog_arg)
   {
     visitImpl(subprog_arg.typeof);
@@ -132,6 +136,10 @@ public:
     visitImpl(acc.map);
     visitImpl(acc.key);
     return default_value();
+  }
+  R visit(MapAddr &addr)
+  {
+    return visitImpl(addr.map);
   }
   R visit(Cast &cast)
   {

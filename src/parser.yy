@@ -606,8 +606,10 @@ unary_expr:
         |       postfix_expr         { $$ = $1; }
         |       INCREMENT var        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
         |       DECREMENT var        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
+        |       BAND var             { $$ = driver.ctx.make_node<ast::VariableAddr>($2, @1); }
         |       INCREMENT map        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
         |       DECREMENT map        { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
+        |       BAND map             { $$ = driver.ctx.make_node<ast::MapAddr>($2, @1); }
         |       INCREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::INCREMENT, false, @1); }
         |       DECREMENT map_expr   { $$ = driver.ctx.make_node<ast::Unop>($2, ast::Operator::DECREMENT, false, @1); }
         |       block_expr           { $$ = $1; }

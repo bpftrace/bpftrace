@@ -130,6 +130,7 @@ class Sizeof;
 class Offsetof;
 class Map;
 class Variable;
+class VariableAddr;
 class Binop;
 class Unop;
 class TypeCmp;
@@ -137,6 +138,7 @@ class FieldAccess;
 class ArrayAccess;
 class TupleAccess;
 class MapAccess;
+class MapAddr;
 class Cast;
 class Tuple;
 class Ternary;
@@ -155,6 +157,7 @@ class Expression : public VariantNode<Integer,
                                       Offsetof,
                                       Map,
                                       Variable,
+                                      VariableAddr,
                                       Binop,
                                       Unop,
                                       TypeCmp,
@@ -162,6 +165,7 @@ class Expression : public VariantNode<Integer,
                                       ArrayAccess,
                                       TupleAccess,
                                       MapAccess,
+                                      MapAddr,
                                       Cast,
                                       Tuple,
                                       Ternary,
@@ -579,6 +583,24 @@ public:
   SizedType var_type;
 };
 
+class VariableAddr : public Node {
+public:
+  explicit VariableAddr(ASTContext &ctx, Variable *var, Location &&loc)
+      : Node(ctx, std::move(loc)), var(var) {};
+  explicit VariableAddr(ASTContext &ctx,
+                        const VariableAddr &other,
+                        const Location &loc)
+      : Node(ctx, loc + other.loc), var(clone(ctx, other.var, loc)) {};
+
+  const SizedType &type() const
+  {
+    return ptr_type;
+  }
+
+  Variable *var = nullptr;
+  SizedType ptr_type;
+};
+
 class Binop : public Node {
 public:
   explicit Binop(ASTContext &ctx,
@@ -732,6 +754,22 @@ public:
 
   Map *map = nullptr;
   Expression key;
+};
+
+class MapAddr : public Node {
+public:
+  explicit MapAddr(ASTContext &ctx, Map *map, Location &&loc)
+      : Node(ctx, std::move(loc)), map(map) {};
+  explicit MapAddr(ASTContext &ctx, const MapAddr &other, const Location &loc)
+      : Node(ctx, loc + other.loc), map(clone(ctx, other.map, loc)) {};
+
+  const SizedType &type() const
+  {
+    return ptr_type;
+  }
+
+  Map *map = nullptr;
+  SizedType ptr_type;
 };
 
 class Cast : public Node {

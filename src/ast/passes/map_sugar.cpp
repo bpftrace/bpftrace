@@ -18,6 +18,7 @@ public:
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(Typeof &typeof);
+  void visit(MapAddr &addr);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
   void visit(Expression &expr);
@@ -91,6 +92,11 @@ void MapDefaultKey::visit([[maybe_unused]] Typeof &typeof)
     }
   }
   Visitor<MapDefaultKey>::visit(typeof);
+}
+
+void MapDefaultKey::visit([[maybe_unused]] MapAddr &addr)
+{
+  // Do nothing; leave maps alone here.
 }
 
 void MapDefaultKey::visit(AssignScalarMapStatement &assign)
