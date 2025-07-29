@@ -1,0 +1,36 @@
+macro strcontains($haystack, $needle) {
+  let $found = false;
+  if (sizeof($needle) == 0 || $needle[0] == 0) {
+    // Special case: the needle is zero-sized.
+    $found = true;
+  } else {
+    for ($i : 0..sizeof($haystack)) {
+      if ($i < 0 || (uint64)$i >= sizeof($haystack)) {
+        break;
+      }
+      if ($haystack[$i] == 0) {
+        break;
+      }
+      for ($j : 0..sizeof($needle)) {
+        if ($j < 0 || (uint64)$j >= sizeof($needle)) {
+          break;
+        }
+        if ($needle[$j] == 0) {
+          $found = true;
+          break;
+        }
+        let $k = $i+$j;
+        if ($k < 0 || (uint64)$k >= sizeof($haystack)) {
+          break;
+        }
+        if ($haystack[$k] != $needle[$j]) {
+          break;
+        }
+      }
+      if ($found) {
+        break;
+      }
+    }
+  }
+  $found
+}
