@@ -7,6 +7,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -36,6 +37,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateImportExternalScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
   passes.emplace_back(CreateImportInternalScriptsPass());
+  passes.emplace_back(CreateFoldLiteralsPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
@@ -47,6 +49,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
   passes.emplace_back(CreateNamedParamsPass());
+  passes.emplace_back(CreateFoldLiteralsPass());
   return passes;
 }
 

@@ -4,6 +4,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -81,6 +82,7 @@ private:
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
+  std::unordered_map<std::string, Expression> lit_vars_;
   std::unordered_set<Variable *> temp_vars_;
   std::unordered_map<std::string, Call *> arg_vars_no_mutation_;
   const std::vector<std::string> macro_stack_;
@@ -139,8 +141,11 @@ void MacroExpander::visit(Variable &var)
 
   if (auto it = vars_.find(var.ident); it != vars_.end()) {
     var.ident = it->second;
-  } else if (!temp_vars_.contains(&var)) {
+  } else if (!temp_vars_.contains(&var) && !lit_vars_.contains(var.ident)) {
     var.ident = get_new_var_ident(var.ident);
+  } else {
+    // N.B. that this may still be a variable that is unexpanded that matches a
+    // literal. This check is done in `Expression` as it must be replaced.
   }
 }
 
@@ -181,6 +186,16 @@ void MacroExpander::visit(Expression &expr)
   if (!call) {
     // Recursively expand the new expression, which may again contain macros...
     Visitor<MacroExpander>::visit(expr);
+
+    // If this is a literal, check whether this needs to be replaced by the same
+    // literal. This effectively allows folding of literals after macro
+    // expansion, otherwise we have assignment, etc.
+    if (auto *var = expr.as<Variable>()) {
+      auto it = lit_vars_.find(var->ident);
+      if (it != lit_vars_.end()) {
+        expr.value = it->second.value;
+      }
+    }
     return;
   }
 
@@ -295,6 +310,17 @@ std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
         call.addError()
             << "Mismatched arg to macro call. Macro expects a variable for arg "
             << macro.vargs.at(i).as<Variable>()->ident << " but got a map.";
+      }
+    } else if (is_literal(call.vargs.at(i))) {
+      if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
+        // Don't allow any mutation of this variable, as it will be replaced by
+        // a literal, which would certainly be a surprising thing to done.
+        arg_vars_no_mutation_[mvar->ident] = &call;
+        lit_vars_[mvar->ident] = clone(ast_, call.vargs.at(i), call.loc);
+      } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
+        call.addError()
+            << "Mismatched arg to macro call. Macro expects a map for arg "
+            << mmap->ident << " but got a literal.";
       }
     } else {
       if (auto *mvar = macro.vargs.at(i).as<Variable>()) {

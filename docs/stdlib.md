@@ -1231,6 +1231,8 @@ Removes a watchpoint
 | --- | --- |
 | [`assert`](#assert) | Simple assertion macro that will exit the entire script with an error code if the condition is not met. |
 | [`ppid`](#ppid) | Get the pid of the parent process |
+| [`static_assert_literal`](#static_assert_literal) | Asserts that a value is a literal. |
+| [`static_assert`](#static_assert) | Force a compile-time check. |
 
 ### assert
 Simple assertion macro that will exit the entire script with an error code if the condition is not met.
@@ -1250,6 +1252,25 @@ Get the pid of the parent process
 
 #### Last Expression
 - **uint32**: The pid of the parent process
+
+### static_assert_literal
+Asserts that a value is a literal.
+
+#### Parameters
+- **$v**: (literal) The must-be literal value
+
+#### Last Expression
+- **None**
+
+### static_assert
+Force a compile-time check.
+
+#### Parameters
+- **$v**: (literal) The boolean value, must evaluate as a literal
+- **$msg**: (string) The message to emit, must be a string literal
+
+#### Last Expression
+- **None**
 
 ## Map Functions
 

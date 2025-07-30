@@ -116,7 +116,7 @@ TEST(macro_expansion, maps)
              "got a variable.");
   test_error("macro set(@x) { @x[1] = 1; @x[1] } begin { $a = 0; set(1); }",
              "Mismatched arg to macro call. Macro expects a map for arg @x but "
-             "got an expression.");
+             "got a literal.");
   test_error("macro set() { @x[1] = 1; 1 } begin { @x[0] = 0; set(); }",
              "Unhygienic access to map: @x. Maps must be passed into the macro "
              "as arguments");

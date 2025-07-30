@@ -11,6 +11,7 @@ namespace bpftrace::ast {
 // literals. Note however, that it is up to the pass to ensure that the full
 // expression is recursively folded.
 void fold(ASTContext &ast, Expression &expr);
+bool is_literal(Expression &expr);
 
 // Fold all nodes.
 Pass CreateFoldLiteralsPass();
