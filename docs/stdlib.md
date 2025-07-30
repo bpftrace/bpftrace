@@ -41,6 +41,7 @@ Unlike scratch and map variables they don’t need a `$` or `@` as prefix (excep
 | [`cat`](#cat) | Print file content | Async |
 | [`cgroupid`](#cgroupid) | Resolve cgroup ID | Compile Time |
 | [`cgroup_path`](#cgroup_path) | Convert cgroup id to cgroup path | Sync |
+| [`errorf`](#errorf) | Print a formatted error | Async |
 | [`exit`](#exit) | Quit bpftrace with an optional exit code | Async |
 | [`getopt`](#getopt) | Get named command line option/parameter | Sync |
 | [`join`](#join) | Combine an array of char* into one string and print it | Async |
@@ -214,6 +215,26 @@ BEGIN {
   print($cgroup_path); /* This may print a different path */
   printf("%s %s", $cgroup_path, $cgroup_path); /* This may print two different paths */
 }
+```
+
+### errorf
+
+**variants**
+
+* `void errorf(const string fmt, args...)`
+
+**async**
+
+`errorf()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location.
+
+```
+BEGIN { errorf("Something bad with args: %d, %s", 10, "arg2"); }
+```
+
+Prints:
+
+```
+EXPECT stdin:1:9-62: ERROR: Something bad with args: 10, arg2
 ```
 
 ### exit

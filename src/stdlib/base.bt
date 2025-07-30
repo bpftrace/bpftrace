@@ -4,7 +4,7 @@
 // :param (string) $msg: The message to print if the condition is not met
 macro assert($cond, $msg) {
   if (!$cond) {
-    printf("Assertion failed. Msg: %s", $msg);
+    errorf("assert failed: %s", $msg);
     exit(1);
   }
 }

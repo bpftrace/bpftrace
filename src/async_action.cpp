@@ -264,13 +264,24 @@ void AsyncHandlers::printf(const OpaqueValue &data)
             static_cast<uint64_t>(AsyncAction::printf);
   auto &fmt = std::get<0>(bpftrace.resources.printf_args[id]);
   auto &args = std::get<1>(bpftrace.resources.printf_args[id]);
+  auto severity = std::get<2>(bpftrace.resources.printf_args[id]);
+  auto &source_info = std::get<3>(bpftrace.resources.printf_args[id]);
   auto vals = prepare_args(
       bpftrace, c_definitions, args, data.slice(sizeof(uint64_t)));
   if (!vals) {
     LOG(BUG) << "Error processing printf arguments: " << vals.takeError();
   }
 
-  out.printf(fmt.format(*vals));
+  switch (severity) {
+    case PrintfSeverity::NONE: {
+      out.printf(fmt.format(*vals));
+      return;
+    }
+    case PrintfSeverity::ERROR: {
+      out.errorf(fmt.format(*vals), source_info);
+      return;
+    }
+  }
 }
 
 } // namespace bpftrace::async_action

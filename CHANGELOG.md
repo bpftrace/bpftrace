@@ -78,6 +78,8 @@ and this project adheres to
   - [#4343](https://github.com/bpftrace/bpftrace/pull/4343)
 - Add 'assert' and 'ppid' to the macro standard library
   - [#4366](https://github.com/bpftrace/bpftrace/pull/4366)
+- Add 'errorf' for printing error messages with the source location
+  - [#4414](https://github.com/bpftrace/bpftrace/pull/4414)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)

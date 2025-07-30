@@ -32,6 +32,11 @@ enum class RuntimeErrorId {
   HELPER_ERROR,
 };
 
+enum class PrintfSeverity {
+  NONE,
+  ERROR,
+};
+
 struct SourceLocation {
   std::string filename;
   int line;
@@ -138,7 +143,9 @@ public:
   void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
-  std::vector<std::tuple<FormatString, std::vector<Field>>> printf_args;
+  std::vector<
+      std::tuple<FormatString, std::vector<Field>, PrintfSeverity, SourceInfo>>
+      printf_args;
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
   // fmt strings for BPF helpers (bpf_seq_printf, bpf_trace_printk)
   std::vector<FormatString> bpf_print_fmts;

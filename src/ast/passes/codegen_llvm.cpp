@@ -108,8 +108,6 @@ static bool shouldForceInitPidNs(const ExpressionList &args)
 
 namespace {
 
-using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
-
 class InternalError : public ErrorInfo<InternalError> {
 public:
   InternalError(std::string msg) : msg_(std::move(msg)) {};
@@ -261,7 +259,7 @@ private:
 
   void createFormatStringCall(Call &call,
                               int id,
-                              const CallArgs &call_args,
+                              const std::vector<Field> &call_args,
                               const std::string &call_name,
                               async_action::AsyncAction async_action);
 
@@ -1708,13 +1706,24 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr();
 
     } else {
+      auto async_id = async_ids_.printf();
       createFormatStringCall(call,
-                             async_ids_.printf(),
-                             bpftrace_.resources.printf_args,
+                             async_id,
+                             std::get<1>(
+                                 bpftrace_.resources.printf_args[async_id]),
                              "printf",
                              async_action::AsyncAction::printf);
       return ScopedExpr();
     }
+  } else if (call.func == "errorf") {
+    auto async_id = async_ids_.printf();
+    createFormatStringCall(call,
+                           async_id,
+                           std::get<1>(
+                               bpftrace_.resources.printf_args[async_id]),
+                           "errorf",
+                           async_action::AsyncAction::printf);
+    return ScopedExpr();
   } else if (call.func == "debugf") {
     auto print_id = async_ids_.bpf_print();
     auto *fmt = createFmtString(print_id);
@@ -1735,16 +1744,19 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                          call.loc);
     return ScopedExpr();
   } else if (call.func == "system") {
+    auto async_id = async_ids_.system();
     createFormatStringCall(call,
-                           async_ids_.system(),
-                           bpftrace_.resources.system_args,
+                           async_id,
+                           std::get<1>(
+                               bpftrace_.resources.system_args[async_id]),
                            "system",
                            async_action::AsyncAction::syscall);
     return ScopedExpr();
   } else if (call.func == "cat") {
+    auto async_id = async_ids_.cat();
     createFormatStringCall(call,
-                           async_ids_.cat(),
-                           bpftrace_.resources.cat_args,
+                           async_id,
+                           std::get<1>(bpftrace_.resources.cat_args[async_id]),
                            "cat",
                            async_action::AsyncAction::cat);
     return ScopedExpr();
@@ -4107,13 +4119,12 @@ MDNode *CodegenLLVM::createLoopMetadata()
 
 void CodegenLLVM::createFormatStringCall(Call &call,
                                          int id,
-                                         const CallArgs &call_args,
+                                         const std::vector<Field> &call_args,
                                          const std::string &call_name,
                                          async_action::AsyncAction async_action)
 {
   std::vector<llvm::Type *> elements;
-  const auto &args = std::get<1>(call_args.at(id));
-  for (const Field &arg : args) {
+  for (const Field &arg : call_args) {
     llvm::Type *ty = b_.GetType(arg.type);
     elements.push_back(ty);
   }

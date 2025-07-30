@@ -1,6 +1,6 @@
 NAME assert_macro
 PROG BEGIN { assert(false, "My error message"); }
-EXPECT Assertion failed. Msg: My error message
+EXPECT stdlib/base.bt:7:5-38: ERROR: assert failed: My error message
 WILL_FAIL
 
 NAME ppid_macro
