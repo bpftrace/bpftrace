@@ -77,3 +77,7 @@ EXPECT (2, 6)
 NAME it can be part of an expression passed to a macro
 PROG macro add_one($x) { $x + 1 } begin { $a = add_one(add_one(1) + 1); print($a);  }
 EXPECT 4
+
+NAME it expands idents if there is a matching macro
+PROG macro one() { $x = 1; $x } begin { $a = one; print($a);  }
+EXPECT 1

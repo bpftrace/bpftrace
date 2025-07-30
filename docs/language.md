@@ -624,6 +624,7 @@ macro add_two($x) {
 
 begin {
   print(one());                   // prints 1
+  print(one);                     // prints 1 (bare identifier works if the macro accepts 0 args)
 
   $a = 10;
   print(plus_one($a));            // prints 11

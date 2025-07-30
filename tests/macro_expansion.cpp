@@ -58,6 +58,7 @@ void test_warning(const std::string& input, const std::string& warn)
 TEST(macro_expansion, basic_checks)
 {
   test("macro print_me() { print(\"me\"); } begin { print_me(); }");
+  test("macro print_me() { print(\"me\"); } begin { print_me; }");
   test("macro add1($x) { $x + 1 } macro add2($x) { $x + add1($x) } macro "
        "add3($x) { $x + add2($x) } begin { print(add3(1)); }");
   test("macro add1($x) { $x += 1; } begin { $y = 1; add1($y); }");
@@ -87,6 +88,8 @@ TEST(macro_expansion, basic_checks)
       "macro add1($x) { $x + add3($x) } macro add2($x) { $x + add1($x) } macro "
       "add3($x) { $x + add2($x) } begin { print(add3(1)); }",
       "Recursive macro call detected. Call chain: add3 > add2 > add1 > add3");
+  test_error("macro add1($x) { $x += 1; $x } begin { $y = 1; $z = add1; }",
+             "ERROR: Call to macro has no number arguments. Expected: 1");
 }
 
 TEST(macro_expansion, variables)

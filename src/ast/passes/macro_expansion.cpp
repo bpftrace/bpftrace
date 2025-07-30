@@ -65,13 +65,15 @@ public:
 
   std::optional<std::variant<BlockExpr *, Block *>> expand(Macro &macro,
                                                            Call &call);
+  std::optional<std::variant<BlockExpr *, Block *>> expand(Macro &macro,
+                                                           Identifier &ident);
 
 private:
   ASTContext &ast_;
   const std::string macro_name_;
   const std::unordered_map<std::string, Macro *> &macros_;
 
-  bool is_recursive_call(const std::string &macro_name, const Call &call);
+  bool is_recursive_call(const std::string &macro_name, const Node &node);
   std::string get_new_var_ident(std::string original_ident);
   bool is_top_level()
   {
@@ -159,11 +161,11 @@ void MacroExpander::visit(Map &map)
 }
 
 bool MacroExpander::is_recursive_call(const std::string &macro_name,
-                                      const Call &call)
+                                      const Node &node)
 {
   for (size_t i = 0; i < macro_stack_.size(); ++i) {
     if (macro_stack_.at(i) == macro_name) {
-      auto &err = call.addError();
+      auto &err = node.addError();
       err << "Recursive macro call detected. Call chain: ";
       for (; i < macro_stack_.size(); ++i) {
         err << macro_stack_.at(i) << " > ";
@@ -177,38 +179,47 @@ bool MacroExpander::is_recursive_call(const std::string &macro_name,
 
 void MacroExpander::visit(Expression &expr)
 {
+  auto *ident = expr.as<Identifier>();
   auto *call = expr.as<Call>();
-  if (!call) {
+
+  if (!ident && !call) {
     // Recursively expand the new expression, which may again contain macros...
     Visitor<MacroExpander>::visit(expr);
     return;
   }
 
-  for (auto &varg : call->vargs) {
-    visit(varg);
+  const std::string &name = ident ? ident->ident : call->func;
+
+  if (call) {
+    for (auto &varg : call->vargs) {
+      visit(varg);
+    }
   }
 
-  if (auto it = macros_.find(call->func); it != macros_.end()) {
+  if (auto it = macros_.find(name); it != macros_.end()) {
     Macro *macro = it->second;
 
-    if (is_recursive_call(macro->name, *call)) {
+    if (is_recursive_call(name, expr.node())) {
       return;
     }
 
     if (std::holds_alternative<Block *>(macro->block)) {
-      call->addError() << "Macro '" << macro->name
-                       << "' expanded to a block instead of a block "
-                          "expression. Try removing the semicolon from the "
-                          "end of the last statement in the macro body.";
+      auto &err = expr.node().addError();
+      err << "Macro '" << name
+          << "' expanded to a block instead of a block "
+             "expression. Try removing the semicolon from the "
+             "end of the last statement in the macro body.";
       return;
     }
 
     auto next_macro_stack = macro_stack_;
-    next_macro_stack.push_back(macro->name);
+    next_macro_stack.push_back(name);
 
-    auto r = MacroExpander(
-                 ast_, macro->name, macros_, std::move(next_macro_stack))
-                 .expand(*macro, *call);
+    auto r =
+        ident ? MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+                    .expand(*macro, *ident)
+              : MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+                    .expand(*macro, *call);
     if (r) {
       expr.value = std::get<BlockExpr *>(*r);
     }
@@ -223,29 +234,38 @@ void MacroExpander::visit(Statement &stmt)
     return;
   }
 
+  auto *ident = expr_stmt->expr.as<Identifier>();
   auto *call = expr_stmt->expr.as<Call>();
-  if (!call) {
+
+  if (!ident && !call) {
+    // Recursively expand the new expression, which may again contain macros...
     Visitor<MacroExpander>::visit(stmt);
     return;
   }
 
-  for (auto &varg : call->vargs) {
-    visit(varg);
+  const std::string &name = ident ? ident->ident : call->func;
+
+  if (call) {
+    for (auto &varg : call->vargs) {
+      visit(varg);
+    }
   }
 
-  if (auto it = macros_.find(call->func); it != macros_.end()) {
+  if (auto it = macros_.find(name); it != macros_.end()) {
     Macro *macro = it->second;
 
-    if (is_recursive_call(macro->name, *call)) {
+    if (is_recursive_call(name, expr_stmt->expr.node())) {
       return;
     }
 
     auto next_macro_stack = macro_stack_;
-    next_macro_stack.push_back(macro->name);
+    next_macro_stack.push_back(name);
 
-    auto r = MacroExpander(
-                 ast_, macro->name, macros_, std::move(next_macro_stack))
-                 .expand(*macro, *call);
+    auto r =
+        ident ? MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+                    .expand(*macro, *ident)
+              : MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+                    .expand(*macro, *call);
 
     if (!r) {
       return;
@@ -342,6 +362,31 @@ std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
   visit(cloned_block);
 
   if (ast_.diagnostics().ok()) {
+    return cloned_block;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
+    Macro &macro,
+    Identifier &ident)
+{
+  if (!macro.vargs.empty()) {
+    ident.addError() << "Call to macro has no number arguments. Expected: "
+                     << macro.vargs.size();
+    return std::nullopt;
+  }
+
+  if (std::holds_alternative<Block *>(macro.block)) {
+    auto *bare_block = std::get<Block *>(macro.block);
+    Block *cloned_block = clone(ast_, bare_block, ident.loc);
+    return cloned_block;
+  }
+
+  if (std::holds_alternative<BlockExpr *>(macro.block)) {
+    auto *bare_block = std::get<BlockExpr *>(macro.block);
+    BlockExpr *cloned_block = clone(ast_, bare_block, ident.loc);
     return cloned_block;
   }
 
