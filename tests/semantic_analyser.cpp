@@ -4289,7 +4289,7 @@ TEST_F(SemanticAnalyserTest, subprog_map)
 TEST_F(SemanticAnalyserTest, subprog_builtin)
 {
   test("fn f(): void { print(\"Hello world\"); }");
-  test("fn f(): uint64 { return sizeof(int64); }");
+  test("fn f(): uint64 { return (uint64)sizeof(int64); }");
   test("fn f(): uint64 { return nsecs; }");
 }
 

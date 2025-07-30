@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <cstring>
+#include <optional>
 #include <regex>
 #include <string>
 #include <sys/stat.h>
@@ -216,6 +217,9 @@ private:
   bool is_final_pass() const;
   bool is_first_pass() const;
   bool is_second_chance() const;
+
+  std::optional<size_t> check(Sizeof &szof);
+  std::optional<size_t> check(Offsetof &offof);
 
   [[nodiscard]] bool check_arg(const Call &call,
                                size_t index,
@@ -2034,36 +2038,83 @@ If you're seeing errors, try clamping the string sizes. For example:
   }
 }
 
-void SemanticAnalyser::visit(Sizeof &szof)
+std::optional<size_t> SemanticAnalyser::check(Sizeof &szof)
 {
   Visitor<SemanticAnalyser>::visit(szof);
+
   if (std::holds_alternative<SizedType>(szof.record)) {
-    resolve_struct_type(std::get<SizedType>(szof.record), szof);
+    auto &ty = std::get<SizedType>(szof.record);
+    resolve_struct_type(ty, szof);
+    if (!ty.IsNoneTy()) {
+      return ty.GetSize();
+    }
+  } else {
+    const auto &ty = std::get<Expression>(szof.record).type();
+    if (!ty.IsNoneTy()) {
+      return ty.GetSize();
+    }
   }
+
+  return std::nullopt;
+}
+
+void SemanticAnalyser::visit(Sizeof &szof)
+{
+  const auto v = check(szof);
+  if (!v && is_final_pass()) {
+    szof.addError() << "sizeof not resolved, is type complete?";
+  }
+}
+
+std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
+{
+  Visitor<SemanticAnalyser>::visit(offof);
+
+  auto check_type = [&](SizedType record) -> std::optional<size_t> {
+    size_t offset = 0;
+    // Check if all sub-fields are present.
+    for (const auto &field : offof.field) {
+      if (!record.IsRecordTy()) {
+        offof.addError() << "'" << record << "' " << "is not a record type.";
+        return std::nullopt;
+      } else if (!bpftrace_.structs.Has(record.GetName())) {
+        offof.addError() << "'" << record.GetName() << "' does not exist.";
+        return std::nullopt;
+      } else if (!record.HasField(field)) {
+        offof.addError() << "'" << record.GetName() << "' "
+                         << "has no field named " << "'" << field << "'";
+        return std::nullopt;
+      } else {
+        // Get next sub-field
+        const auto &f = record.GetField(field);
+        offset += f.offset;
+        record = f.type;
+      }
+    }
+    return offset;
+  };
+
+  std::optional<size_t> offset;
+  if (std::holds_alternative<SizedType>(offof.record)) {
+    auto &ty = std::get<SizedType>(offof.record);
+    resolve_struct_type(ty, offof);
+    offset = check_type(ty);
+  } else {
+    const auto &ty = std::get<Expression>(offof.record).type();
+    offset = check_type(ty);
+  }
+  if (offset) {
+    return offset.value();
+  }
+
+  return std::nullopt;
 }
 
 void SemanticAnalyser::visit(Offsetof &offof)
 {
-  Visitor<SemanticAnalyser>::visit(offof);
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    auto &ty = std::get<SizedType>(offof.record);
-    resolve_struct_type(ty, offof);
-
-    // Check if all sub-fields are present.
-    SizedType record = ty;
-    for (const auto &field : offof.field) {
-      if (!record.IsRecordTy()) {
-        offof.addError() << "'" << record << "' " << "is not a record type.";
-      } else if (!bpftrace_.structs.Has(record.GetName())) {
-        offof.addError() << "'" << record.GetName() << "' does not exist.";
-      } else if (!record.HasField(field)) {
-        offof.addError() << "'" << record.GetName() << "' "
-                         << "has no field named " << "'" << field << "'";
-      } else {
-        // Get next sub-field
-        record = record.GetField(field).type;
-      }
-    }
+  const auto v = check(offof);
+  if (!v && is_final_pass()) {
+    offof.addError() << "offsetof not resolved, is type complete?";
   }
 }
 
@@ -3379,6 +3430,16 @@ void SemanticAnalyser::visit(Expression &expr)
       expr.value = ctx_.make_node<Boolean>(false, Location(typeok->loc));
     } else {
       pass_tracker_.inc_num_unresolved();
+    }
+  } else if (auto *szof = expr.as<Sizeof>()) {
+    const auto v = check(*szof);
+    if (v) {
+      expr.value = ctx_.make_node<Integer>(*v, Location(szof->loc));
+    }
+  } else if (auto *offof = expr.as<Offsetof>()) {
+    const auto v = check(*offof);
+    if (v) {
+      expr.value = ctx_.make_node<Integer>(*v, Location(offof->loc));
     }
   }
 }

@@ -217,8 +217,6 @@ public:
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
   ScopedExpr visit(Call &call);
-  ScopedExpr visit(Sizeof &szof);
-  ScopedExpr visit(Offsetof &offof);
   ScopedExpr visit(Map &map);
   ScopedExpr visit(Variable &var);
   ScopedExpr visit(Binop &binop);
@@ -2144,31 +2142,6 @@ llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
                    bpftrace_.delta_taitime_->tv_nsec;
   Value *ns = b_.CreateGetNs(TimestampMode::boot, loc);
   return b_.CreateAdd(ns, b_.getInt64(delta));
-}
-
-ScopedExpr CodegenLLVM::visit(Sizeof &szof)
-{
-  if (std::holds_alternative<SizedType>(szof.record)) {
-    return ScopedExpr(b_.getInt64(std::get<SizedType>(szof.record).GetSize()));
-  }
-  return ScopedExpr(
-      b_.getInt64(std::get<Expression>(szof.record).type().GetSize()));
-}
-
-ScopedExpr CodegenLLVM::visit(Offsetof &offof)
-{
-  ssize_t offset = 0;
-  SizedType record;
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    record = std::get<SizedType>(offof.record);
-  } else {
-    record = std::get<Expression>(offof.record).type();
-  }
-  for (const auto &field : offof.field) {
-    offset += record.GetField(field).offset;
-    record = record.GetField(field).type;
-  }
-  return ScopedExpr(b_.getInt64(offset));
 }
 
 ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
