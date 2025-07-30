@@ -128,25 +128,19 @@ PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("her
 BEFORE ./testprogs/usdt_multiple_locations
 EXPECT Attached 6 probes
 
-# TODO(mmarchini): re-enable this test
-# This test relies on the latest version of bcc. Before re-enabling this test,
-# we should:
-#  - Skip if bcc doesn't support multiple probes with the same name
 NAME usdt probes - attach to probe with args by file
-PROG usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }
-EXPECT Hello world
+PROG usdt:./testprogs/usdt_test:* { print(str(arg1)); @c = count(); if (@c > 20) { exit(); } }
+EXPECT Hello World1
+EXPECT Hello World2
+EXPECT Hello World3
 BEFORE ./testprogs/usdt_test
-REQUIRES bash -c "exit 1"
 
-# TODO(mmarchini): re-enable this test
-# This test relies on the latest version of bcc. Before re-enabling this test,
-# we should:
-#  - Skip if bcc doesn't support multiple probes with the same name
 NAME usdt probes - attach to probe with args by pid
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }' -p {{BEFORE_PID}}
-EXPECT Hello world
+RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { print(str(arg1)); @c = count(); if (@c > 20) { exit(); } }' -p {{BEFORE_PID}}
+EXPECT Hello World1
+EXPECT Hello World2
+EXPECT Hello World3
 BEFORE ./testprogs/usdt_test
-REQUIRES bash -c "exit 1"
 
 NAME usdt probes - attach to probe with probe builtin and args by file
 PROG usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }
