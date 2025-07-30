@@ -1,5 +1,7 @@
-#include "ast/passes/fold_literals.h"
+#include <optional>
+
 #include "ast/ast.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -13,8 +15,9 @@ const auto FLOW_ERROR = "unable to fold literals due to overflow or underflow";
 
 class LiteralFolder : public Visitor<LiteralFolder, std::optional<Expression>> {
 public:
+  LiteralFolder(ASTContext &ast) : ast_(ast) {};
   LiteralFolder(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace) {};
+      : ast_(ast), bpftrace_(std::ref(bpftrace)) {};
 
   using Visitor<LiteralFolder, std::optional<Expression>>::visit;
 
@@ -31,7 +34,7 @@ public:
 
 private:
   ASTContext &ast_;
-  BPFtrace &bpftrace_;
+  std::optional<std::reference_wrapper<BPFtrace>> bpftrace_;
 
   Node *top_level_node_ = nullptr;
 };
@@ -513,17 +516,23 @@ std::optional<Expression> LiteralFolder::visit(Ternary &op)
 
 std::optional<Expression> LiteralFolder::visit(PositionalParameterCount &param)
 {
+  if (!bpftrace_) {
+    return std::nullopt;
+  }
   // This is always an unsigned integer value.
-  return ast_.make_node<Integer>(bpftrace_.num_params(),
+  return ast_.make_node<Integer>(bpftrace_->get().num_params(),
                                  Location(param.loc),
                                  /*force_unsigned=*/true);
 }
 
 std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
 {
+  if (!bpftrace_) {
+    return std::nullopt;
+  }
   // By default, we treat parameters as integer literals if we can, and
   // rely on the user to have an explicit `str` cast.
-  const std::string &val = bpftrace_.get_param(param.n);
+  const std::string &val = bpftrace_->get().get_param(param.n);
   // If empty, treat as zero. This is the documented behavior.
   if (val.empty()) {
     param.addWarning() << "Positional parameter $" << param.n
@@ -558,13 +567,19 @@ std::optional<Expression> LiteralFolder::visit(Call &call)
     // First, we need to check if this directly wraps a positional parameter.
     // If yes, then we prevent it from expanding to zero as is the default.
     if (auto *param = call.vargs.at(0).as<PositionalParameter>()) {
-      call.vargs[0] = ast_.make_node<String>(bpftrace_.get_param(param->n),
-                                             Location(param->loc));
+      if (!bpftrace_) {
+        return std::nullopt; // Can't fold yet.
+      }
+      call.vargs[0] = ast_.make_node<String>(
+          bpftrace_->get().get_param(param->n), Location(param->loc));
     } else if (auto *binop = call.vargs.at(0).as<Binop>()) {
       auto *param = binop->left.as<PositionalParameter>();
       if (param && binop->op == Operator::PLUS) {
-        binop->left = ast_.make_node<String>(bpftrace_.get_param(param->n),
-                                             Location(param->loc));
+        if (!bpftrace_) {
+          return std::nullopt; // Can't fold yet.
+        }
+        binop->left = ast_.make_node<String>(
+            bpftrace_->get().get_param(param->n), Location(param->loc));
       }
     }
 
@@ -638,6 +653,12 @@ std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
   }
 
   return std::nullopt;
+}
+
+void fold(ASTContext &ast, Expression &expr)
+{
+  LiteralFolder folder(ast);
+  folder.visit(expr);
 }
 
 Pass CreateFoldLiteralsPass()
