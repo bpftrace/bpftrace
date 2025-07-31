@@ -36,3 +36,20 @@ embed(
 # to run the field_analyser tests on.
 add_executable(data_source_cxx data_source_cxx.cpp)
 target_compile_options(data_source_cxx PRIVATE -g)
+
+# Build an object for the loader unit tests.
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/native_object.o
+    COMMAND ${CMAKE_C_COMPILER}
+      -fPIC -fno-unwind-tables -fno-asynchronous-unwind-tables
+      -c ${CMAKE_CURRENT_SOURCE_DIR}/native_object.c
+      -o ${CMAKE_CURRENT_BINARY_DIR}/native_object.o
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/native_object.c
+)
+
+embed(
+  data_source_native_object
+  native_object.o
+  OUTPUT data_source_native_object.h
+  VAR native_object
+)
