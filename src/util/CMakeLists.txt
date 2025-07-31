@@ -10,6 +10,7 @@ add_library(util STATIC
   io.cpp
   kernel.cpp
   math.cpp
+  memfd.cpp
   opaque.cpp
   paths.cpp
   result.cpp
