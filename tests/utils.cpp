@@ -417,10 +417,11 @@ TEST(utils, find_near_self)
 TEST(utils, get_pids_for_program)
 {
   auto pids = get_pids_for_program("/proc/self/exe");
-  EXPECT_THAT(pids, testing::Contains(getpid()));
+  ASSERT_TRUE(bool(pids));
+  EXPECT_THAT(*pids, testing::Contains(getpid()));
 
   pids = get_pids_for_program("/doesnotexist");
-  EXPECT_EQ(pids.size(), 0);
+  ASSERT_FALSE(bool(pids));
 }
 
 TEST(utils, round_up_to_next_power_of_two)

@@ -8,6 +8,7 @@
 #endif
 
 #include "config.h"
+#include "log.h"
 #include "scopeguard.h"
 #include "usyms.h"
 #include "util/symbols.h"
@@ -152,8 +153,14 @@ void Usyms::cache_bcc(const std::string &elf_file, std::optional<int> opt_pid)
     // records the offsets
     auto pids = opt_pid.has_value() ? std::vector<int>{ *opt_pid }
                                     : util::get_pids_for_program(elf_file);
-    for (int pid : pids)
+    if (!pids) {
+      LOG(WARNING) << "Unable to get pids for " << elf_file << ": "
+                   << pids.takeError();
+      return;
+    }
+    for (int pid : *pids) {
       pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
+    }
   }
 }
 
@@ -198,7 +205,12 @@ void Usyms::cache_blazesym(const std::string &elf_file,
   if (cache_type == UserSymbolCacheType::per_pid) {
     auto pids = opt_pid.has_value() ? std::vector<int>{ *opt_pid }
                                     : util::get_pids_for_program(elf_file);
-    for (int pid : pids) {
+    if (!pids) {
+      LOG(WARNING) << "Unable to get pids for " << elf_file << ": "
+                   << pids.takeError();
+      return;
+    }
+    for (int pid : *pids) {
       blaze_cache_src_process cache = {
         .type_size = sizeof(cache),
         .pid = static_cast<uint32_t>(pid),
