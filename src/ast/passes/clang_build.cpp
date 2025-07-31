@@ -25,6 +25,7 @@
 #include "ast/passes/resolve_imports.h"
 #include "bpftrace.h"
 #include "stdlib/stdlib.h"
+#include "util/memfd.h"
 #include "util/result.h"
 
 namespace bpftrace::ast {
@@ -35,67 +36,6 @@ void ClangBuildError::log(llvm::raw_ostream &OS) const
 {
   OS << msg_;
 }
-
-namespace {
-
-class MemFds {
-public:
-  MemFds(int fd) : fd_(fd), path_("/dev/fd/" + std::to_string(fd)) {};
-  MemFds(MemFds &&other) : fd_(other.fd_), path_(other.path_)
-  {
-    other.fd_ = -1;
-  }
-  MemFds(const MemFds &other) = delete;
-  ~MemFds()
-  {
-    close_fd();
-  }
-
-  const std::string &write_file()
-  {
-    return path_;
-  }
-
-  std::string read_all()
-  {
-    // Seek to the beginning of the file, and read the entire contents
-    // into a single string that can be returned. We stat the file up
-    // front in order to avoid excessive chunking.
-    struct stat st;
-    if (fstat(fd_, &st) < 0) {
-      return "";
-    }
-    std::string result;
-    result.resize(st.st_size);
-    if (read(fd_, result.data(), st.st_size) < 0) {
-      return "";
-    }
-    return result;
-  }
-
-  void close_fd()
-  {
-    if (fd_ >= 0) {
-      close(fd_);
-      fd_ = -1;
-    }
-  }
-
-private:
-  int fd_ = -1;
-  std::string path_;
-};
-
-Result<MemFds> create_memfd()
-{
-  int fd = memfd_create("memfd", MFD_CLOEXEC);
-  if (fd < 0) {
-    return make_error<ClangBuildError>("failed to create memfd");
-  }
-  return MemFds(fd);
-}
-
-} // namespace
 
 static Result<> build(CompileContext &ctx,
                       const std::string &name,
@@ -147,7 +87,7 @@ static Result<> build(CompileContext &ctx,
   // We create a temporary memfd that we can use to store the output,
   // since the ClangDriver API is framed in terms of filenames. Perhaps
   // we could use the internals here, but that carries other risks.
-  auto memfd = create_memfd();
+  auto memfd = util::MemFd::create(name);
   if (!memfd) {
     return memfd.takeError();
   }
@@ -164,7 +104,7 @@ static Result<> build(CompileContext &ctx,
     args.push_back(s.c_str());
   }
   args.push_back("-o");
-  args.push_back(memfd->write_file().c_str());
+  args.push_back(memfd->path().c_str());
   args.push_back(name.c_str());
 
   // Configure the instance. We want to read the source file named
@@ -214,8 +154,12 @@ static Result<> build(CompileContext &ctx,
     // diagnostic. Surface it directly as an error in the pipeline.
     return make_error<ClangBuildError>("failed to generate module");
   }
+  auto data = memfd->read_all();
+  if (!data) {
+    return data.takeError();
+  }
   result.modules.emplace_back(std::move(mod));
-  result.objects.emplace_back(memfd->read_all());
+  result.objects.emplace_back(std::move(*data));
   return OK();
 }
 

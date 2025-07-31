@@ -46,6 +46,7 @@ add_executable(bpftrace_test
   log.cpp
   macro_expansion.cpp
   main.cpp
+  memfd.cpp
   mocks.cpp
   opaque.cpp
   output.cpp
