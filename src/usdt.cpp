@@ -97,7 +97,12 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
 usdt_probe_list USDTHelper::probes_for_all_pids()
 {
   usdt_probe_list probes;
-  for (int pid : util::get_all_running_pids()) {
+  auto pids = util::get_all_running_pids();
+  if (!pids) {
+    LOG(ERROR) << "Unable to get pids: " << pids.takeError();
+    return probes;
+  }
+  for (int pid : *pids) {
     for (auto &probe : probes_for_pid(pid, false)) {
       probes.push_back(std::move(probe));
     }

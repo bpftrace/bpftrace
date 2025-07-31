@@ -829,19 +829,20 @@ std::string ClangParser::get_arch_include_path()
 
 static void query_clang_include_dirs(std::vector<std::string> &result)
 {
-  try {
-    auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
-    auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
-    auto check = util::exec_system(cmd.c_str());
-    std::istringstream lines(check);
-    std::string line;
-    while (std::getline(lines, line) &&
-           line != "#include <...> search starts here:") {
-    }
-    while (std::getline(lines, line) && line != "End of search list.")
-      result.push_back(util::trim(line));
-  } catch (std::runtime_error &) { // If exec_system fails, just ignore it
+  auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
+  auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
+  auto check = util::exec_system(cmd.c_str());
+  if (!check) {
+    // Exec failed, ignore and move on.
+    return;
   }
+  std::istringstream lines(*check);
+  std::string line;
+  while (std::getline(lines, line) &&
+         line != "#include <...> search starts here:") {
+  }
+  while (std::getline(lines, line) && line != "End of search list.")
+    result.push_back(util::trim(line));
 }
 
 std::vector<std::string> ClangParser::system_include_paths()
