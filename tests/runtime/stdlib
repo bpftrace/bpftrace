@@ -6,3 +6,11 @@ WILL_FAIL
 NAME ppid_macro
 PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
+
+NAME stdint_macro
+PROG BEGIN { printf("SUCCESS %zu\n", UINTMAX); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+
+NAME limits_macro
+PROG BEGIN { printf("SUCCESS %zu\n", UINT_MAX); exit(); }
+EXPECT_REGEX SUCCESS [0-9][0-9]*
