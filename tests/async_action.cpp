@@ -86,7 +86,8 @@ std::string handler_proxy(AsyncActionTest &test,
     test.bpftrace->resources.cat_args.emplace_back(fmt, fields);
     test.handlers.cat(arg_data);
   } else if (id == AsyncAction::printf) {
-    test.bpftrace->resources.printf_args.emplace_back(fmt, fields);
+    test.bpftrace->resources.printf_args.emplace_back(
+        fmt, fields, PrintfSeverity::NONE, SourceInfo());
     test.handlers.printf(arg_data);
   }
 

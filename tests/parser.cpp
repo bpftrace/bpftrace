@@ -1820,6 +1820,7 @@ TEST(Parser, wildcard_func)
     "arg0",
     "args",
     "curtask",
+    "errorf",
     "func",
     "gid"
     "rand",
