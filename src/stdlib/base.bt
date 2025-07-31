@@ -9,10 +9,160 @@ macro assert($cond, $msg) {
   }
 }
 
+// ID of the cgroup the current process belongs to
+//
+// Only works with cgroupv2
+// bpf helper: get_current_cgroup_id
+//
+// :last_expr (uint64)
+macro cgroup() {
+  __cgroup
+}
+
+// Name of the current thread
+//
+// bpf helper: get_current_comm
+//
+// :last_expr (string)
+macro comm() {
+  __comm
+}
+
+// Child process ID, if bpftrace is invoked with `-c`
+//
+// :last_expr (uint32)
+macro cpid() {
+  __cpid
+}
+
+// ID of the processor executing the BPF program
+//
+// BPF program, in this case, is the probe body
+// bpf helper: raw_smp_processor_id
+//
+// :last_expr (uint32)
+macro cpu() {
+  __cpu
+}
+
+// Pointer to `struct task_struct` of the current task
+//
+// bpf helper: get_current_task
+//
+// :last_expr (uint64)
+macro curtask() {
+  __curtask
+}
+
+// ktime_get_ns - ktime_get_boot_ns
+//
+// :last_expr (uint64)
+macro elapsed() {
+  __elapsed
+}
+
+// Name of the current function being traced (kprobes,uprobes,fentry)
+//
+// :last_expr (string)
+macro func() {
+  __func
+}
+
+// Group ID of the current thread, as seen from the init namespace
+//
+// bpf helper: get_current_uid_gid
+//
+// :last_expr (uint64)
+macro gid() {
+  __gid
+}
+
+// Jiffies of the kernel
+//
+// On 32-bit systems, using this builtin might be slower
+// bpf helper: get_jiffies_64
+//
+// :last_expr (uint64)
+macro jiffies() {
+  __jiffies
+}
+
+// Number of CPUs
+//
+// :last_expr (uint64)
+macro ncpus() {
+  __ncpus
+}
+
+// ID of the NUMA node executing the BPF program
+//
+// BPF program, in this case, is the probe body
+// bpf helper: numa_node_id
+//
+// :last_expr (uint32)
+macro numaid() {
+  __numaid
+}
+
 // Get the pid of the parent process
 //
 // :param (struct task_struct *) $task: The current task struct
 // :last_expr (uint32): The pid of the parent process
 macro ppid($task) {
     $task->real_parent->pid
+}
+
+// Name of the fully expanded probe
+//
+// For example: `kprobe:do_nanosleep`
+//
+// :last_expr (string)
+macro probe() {
+  __probe
+}
+
+// Get a pseudo random number
+//
+// bpf helper: get_prandom_u32
+//
+// :last_expr (uint32)
+macro rand() {
+  __rand
+}
+
+// Value returned by the function being traced
+//
+// (kretprobe, uretprobe, fexit)
+// For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`
+//
+// :last_expr (uint64)
+macro retval() {
+  __retval
+}
+
+// User ID of the current thread, as seen from the init namespace
+//
+// bpf helper: get_current_uid_gid
+//
+// :last_expr (uint64)
+macro uid() {
+  __uid
+}
+
+// Returns 1 if the current process is in user mode, 0 otherwise
+//
+// Currently only available on x86_64.
+//
+// :last_expr (uint8)
+macro usermode() {
+  __usermode
+}
+
+// Get the current username
+//
+// Often this is just "root"
+//
+// :last_expr (string)
+macro username() {
+  __username
 }

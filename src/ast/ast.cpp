@@ -241,7 +241,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
 {
   ProbeType type = probetype(provider);
 
-  if (identifier == "reg" || identifier == "usermode") {
+  if (identifier == "reg" || identifier == "__usermode") {
     switch (type) {
       case ProbeType::kprobe:
       case ProbeType::kretprobe:

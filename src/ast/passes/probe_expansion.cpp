@@ -124,7 +124,7 @@ void ExpansionAnalyser::visit(Builtin &builtin)
   if (!probe_)
     return;
 
-  if (builtin.ident == "probe") {
+  if (builtin.ident == "__probe") {
     for (auto *ap : probe_->attach_points)
       result_.set_expansion(*ap, ExpansionType::FULL);
   }

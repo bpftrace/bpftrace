@@ -25,12 +25,12 @@ entry:
   %"$var" = alloca [16 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var")
   call void @llvm.memset.p0.i64(ptr align 1 %"$var", i8 0, i64 16, i1 false)
-  %comm = alloca [16 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
-  call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var", ptr align 1 %comm, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
+  %__comm = alloca [16 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %__comm)
+  call void @llvm.memset.p0.i64(ptr align 1 %__comm, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__comm, i64 16)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var", ptr align 1 %__comm, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %__comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"$var", i64 0)

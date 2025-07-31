@@ -22,13 +22,13 @@ entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %strcmp.result = alloca i1, align 1
-  %comm = alloca [16 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
-  call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
+  %__comm = alloca [16 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %__comm)
+  call void @llvm.memset.p0.i64(ptr align 1 %__comm, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__comm, i64 16)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcmp.result)
   store i1 true, ptr %strcmp.result, align 1
-  %1 = getelementptr i8, ptr %comm, i32 0
+  %1 = getelementptr i8, ptr %__comm, i32 0
   %2 = load i8, ptr %1, align 1
   %3 = load i8, ptr @sshd, align 1
   %strcmp.cmp = icmp ne i8 %2, %3
@@ -38,7 +38,7 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   %4 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   %5 = zext i1 %4 to i64
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %__comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 %5, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
@@ -53,7 +53,7 @@ strcmp.done:                                      ; preds = %strcmp.loop1, %strc
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %6 = getelementptr i8, ptr %comm, i32 1
+  %6 = getelementptr i8, ptr %__comm, i32 1
   %7 = load i8, ptr %6, align 1
   %8 = load i8, ptr getelementptr (i8, ptr @sshd, i32 1), align 1
   %strcmp.cmp3 = icmp ne i8 %7, %8

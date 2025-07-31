@@ -22,10 +22,10 @@ entry:
   %runtime_error_t3 = alloca %runtime_error_t, align 8
   %"@x_key" = alloca i64, align 8
   %runtime_error_t = alloca %runtime_error_t, align 8
-  %comm = alloca [16 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %comm)
-  call void @llvm.memset.p0.i64(ptr align 1 %comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %comm, i64 16)
+  %__comm = alloca [16 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %__comm)
+  call void @llvm.memset.p0.i64(ptr align 1 %__comm, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__comm, i64 16)
   %1 = trunc i64 %get_comm to i32
   %2 = icmp sge i32 %1, 0
   br i1 %2, label %helper_merge, label %helper_failure
@@ -45,7 +45,7 @@ helper_failure:                                   ; preds = %entry
 helper_merge:                                     ; preds = %counter_merge, %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %comm, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %__comm, i64 0)
   %6 = trunc i64 %update_elem to i32
   %7 = icmp sge i32 %6, 0
   br i1 %7, label %helper_merge2, label %helper_failure1
@@ -78,7 +78,7 @@ helper_failure1:                                  ; preds = %helper_merge
 
 helper_merge2:                                    ; preds = %counter_merge6, %helper_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %comm)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %__comm)
   ret i64 0
 
 event_loss_counter5:                              ; preds = %helper_failure1
