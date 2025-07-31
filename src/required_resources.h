@@ -32,7 +32,57 @@ enum class RuntimeErrorId {
   HELPER_ERROR,
 };
 
-class RuntimeErrorInfo {
+struct SourceLocation {
+  std::string filename;
+  int line;
+  int column;
+  std::string source_location;
+  std::vector<std::string> source_context;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(filename, line, column, source_location, source_context);
+  }
+};
+
+class SourceInfo {
+public:
+  SourceInfo(const ast::Location &loc)
+  {
+    auto curr_loc = loc;
+
+    while (curr_loc) {
+      locations.emplace_back(curr_loc->filename(),
+                             curr_loc->line(),
+                             curr_loc->column(),
+                             curr_loc->source_location(),
+                             curr_loc->source_context());
+      auto &parent = curr_loc->parent;
+      if (parent) {
+        curr_loc = parent->loc;
+      } else {
+        break;
+      }
+    }
+  }
+
+  SourceInfo() = default;
+
+  std::vector<SourceLocation> locations;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(locations);
+  }
+};
+
+class RuntimeErrorInfo : public SourceInfo {
 public:
   // This class effectively wraps a location, but preserves only the parts that
   // are needed to emit the error in a useful way. This is because it may be
@@ -40,13 +90,7 @@ public:
   RuntimeErrorInfo(RuntimeErrorId error_id,
                    libbpf::bpf_func_id func_id,
                    const ast::Location &loc)
-      : error_id(error_id),
-        func_id(func_id),
-        filename(loc->filename()),
-        line(loc->line()),
-        column(loc->column()),
-        source_location(loc->source_location()),
-        source_context(loc->source_context())
+      : SourceInfo(loc), error_id(error_id), func_id(func_id)
   {
   }
 
@@ -56,30 +100,17 @@ public:
 
   RuntimeErrorInfo()
       : error_id(RuntimeErrorId::HELPER_ERROR),
-        func_id(static_cast<libbpf::bpf_func_id>(-1)),
-        line(0),
-        column(0) {};
+        func_id(static_cast<libbpf::bpf_func_id>(-1)) {};
 
-  const RuntimeErrorId error_id;
-  const libbpf::bpf_func_id func_id;
-  const std::string filename;
-  const int line;
-  const int column;
-  const std::string source_location;
-  const std::vector<std::string> source_context;
+  RuntimeErrorId error_id;
+  libbpf::bpf_func_id func_id;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(error_id,
-            func_id,
-            filename,
-            line,
-            column,
-            source_location,
-            source_context);
+    archive(error_id, func_id);
   }
 };
 
@@ -182,8 +213,7 @@ private:
             strftime_args,
             cat_args,
             non_map_print_args,
-            // Hard to annotate flex types, so skip
-            // runtime_error_info,
+            runtime_error_info,
             printf_args,
             probe_ids,
             maps_info,

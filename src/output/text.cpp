@@ -586,21 +586,30 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
       }
 
       LOG(WARNING,
-          std::string(info.source_location),
-          std::vector(info.source_context),
+          std::string(info.locations.begin()->source_location),
+          std::vector(info.locations.begin()->source_context),
           out_)
           << msg << "\nAdditional Info - helper: " << info.func_id
           << ", retcode: " << retcode;
-      return;
+      break;
     }
     default: {
       LOG(WARNING,
-          std::string(info.source_location),
-          std::vector(info.source_context),
+          std::string(info.locations.begin()->source_location),
+          std::vector(info.locations.begin()->source_context),
           out_)
           << info;
-      return;
+      break;
     }
+  }
+
+  // Print the chain
+  for (size_t i = 1; i < info.locations.size(); ++i) {
+    LOG(WARNING,
+        std::string(info.locations[i].source_location),
+        std::vector(info.locations[i].source_context),
+        out_)
+        << "expanded from";
   }
 }
 
