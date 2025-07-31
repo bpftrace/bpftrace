@@ -13,13 +13,6 @@
 
 namespace bpftrace::util {
 
-char GetPidError::ID;
-
-void GetPidError::log(llvm::raw_ostream &OS) const
-{
-  OS << "Error code: " << err_;
-}
-
 Result<std::string> get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
@@ -27,13 +20,13 @@ Result<std::string> get_pid_exe(const std::string &pid)
   proc_path /= pid;
   proc_path /= "exe";
 
-  try {
-    return std::filesystem::read_symlink(proc_path).string();
-  } catch (const std::filesystem::filesystem_error &e) {
-    int err = e.code().value();
-    LOG(V1) << "Error reading " << proc_path << ". EC: " << err;
-    return make_error<GetPidError>(err);
+  auto path = std::filesystem::read_symlink(proc_path, ec);
+  if (ec) {
+    return make_error<SystemError>("Unable to read '" + proc_path.string() +
+                                       "'",
+                                   ec.value());
   }
+  return path.string();
 }
 
 Result<std::string> get_pid_exe(pid_t pid)
@@ -41,25 +34,31 @@ Result<std::string> get_pid_exe(pid_t pid)
   return get_pid_exe(std::to_string(pid));
 }
 
-std::string get_proc_maps(const std::string &pid)
+Result<std::string> get_proc_maps(const std::string &pid)
 {
   std::error_code ec;
   std::filesystem::path proc_path{ "/proc" };
   proc_path /= pid;
   proc_path /= "maps";
 
-  if (!std::filesystem::exists(proc_path, ec))
-    return "";
-
+  bool exists = std::filesystem::exists(proc_path, ec);
+  if (ec) {
+    return make_error<SystemError>("Unable to stat '" + proc_path.string() +
+                                       "'",
+                                   ec.value());
+  }
+  if (!exists) {
+    return make_error<SystemError>("Process no longer exists", ENOENT);
+  }
   return proc_path.string();
 }
 
-std::string get_proc_maps(pid_t pid)
+Result<std::string> get_proc_maps(pid_t pid)
 {
   return get_proc_maps(std::to_string(pid));
 }
 
-std::vector<int> get_pids_for_program(const std::string &program)
+Result<std::vector<int>> get_pids_for_program(const std::string &program)
 {
   std::error_code ec;
   auto program_abs = std::filesystem::canonical(program, ec);
@@ -71,7 +70,8 @@ std::vector<int> get_pids_for_program(const std::string &program)
     // attach to all running processes for a given binary, and the above uprobe
     // is targetting a specific process. So if this happens, just return no
     // pids. The probe will still attach directly to the targeted process.
-    return {};
+    return make_error<SystemError>("Unable to canonicalize '" + program + "'",
+                                   ec.value());
   }
 
   std::vector<int> pids;
@@ -88,7 +88,7 @@ std::vector<int> get_pids_for_program(const std::string &program)
   return pids;
 }
 
-std::vector<int> get_all_running_pids()
+Result<std::vector<int>> get_all_running_pids()
 {
   std::vector<int> pids;
   for (const auto &process : std::filesystem::directory_iterator("/proc")) {
@@ -100,13 +100,14 @@ std::vector<int> get_all_running_pids()
   return pids;
 }
 
-std::string exec_system(const char *cmd)
+Result<std::string> exec_system(const char *cmd)
 {
   std::array<char, 128> buffer;
   std::string result;
   std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-  if (!pipe)
-    throw FatalUserException("popen() failed!");
+  if (!pipe) {
+    return make_error<SystemError>("popen() failed");
+  }
   while (!feof(pipe.get())) {
     if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
       result += buffer.data();
@@ -114,7 +115,7 @@ std::string exec_system(const char *cmd)
   return result;
 }
 
-std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
+Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid)
 {
   static std::map<pid_t, std::vector<std::string>> paths_cache;
 
@@ -125,22 +126,21 @@ std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
 
   std::vector<std::string> paths;
 
-  // start with the exe
+  // start with the exe.
   auto pid_exe = get_pid_exe(pid);
   if (pid_exe && pid_exe->find("(deleted)") == std::string::npos)
     paths.push_back(*pid_exe);
 
-  // get all the mapped libraries
-  std::string maps_path = get_proc_maps(pid);
-  if (maps_path.empty()) {
-    LOG(WARNING) << "Maps path is empty";
-    return paths;
+  // get all the mapped libraries.
+  auto maps_path = get_proc_maps(pid);
+  if (!maps_path) {
+    return maps_path.takeError();
   }
 
-  std::fstream fs(maps_path, std::ios_base::in);
+  std::fstream fs(*maps_path, std::ios_base::in);
   if (!fs.is_open()) {
-    LOG(WARNING) << "Unable to open procfs mapfile: " << maps_path;
-    return paths;
+    return make_error<SystemError>("Unable to open procfs mapfile '" +
+                                   *maps_path + "'");
   }
 
   std::unordered_set<std::string> seen_mappings;
@@ -167,11 +167,19 @@ std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
   return paths;
 }
 
-std::vector<std::string> get_mapped_paths_for_running_pids()
+Result<std::vector<std::string>> get_mapped_paths_for_running_pids()
 {
   std::unordered_set<std::string> unique_paths;
-  for (auto pid : get_all_running_pids()) {
-    for (auto &path : get_mapped_paths_for_pid(pid)) {
+  auto pids = get_all_running_pids();
+  if (!pids) {
+    return pids.takeError();
+  }
+  for (auto pid : *pids) {
+    auto mapped_paths = get_mapped_paths_for_pid(pid);
+    if (!mapped_paths) {
+      continue; // May have exited, etc.
+    }
+    for (auto &path : *mapped_paths) {
       unique_paths.insert(std::move(path));
     }
   }

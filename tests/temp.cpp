@@ -8,7 +8,6 @@ namespace bpftrace::test::types {
 
 using util::TempDir;
 using util::TempFile;
-using util::TempFileError;
 
 TEST(util, tempfile_no_pattern)
 {
@@ -65,7 +64,7 @@ TEST(util, tempdir_no_pattern)
   EXPECT_EQ(f2->path().filename().string(), "bar");
   auto ok = d->create_file("foo", false);
   EXPECT_FALSE(bool(ok));
-  auto nowOk = handleErrors(std::move(ok), [&](const TempFileError &err) {
+  auto nowOk = handleErrors(std::move(ok), [&](const SystemError &err) {
     EXPECT_EQ(err.err(), EEXIST);
   });
   EXPECT_TRUE(bool(nowOk));

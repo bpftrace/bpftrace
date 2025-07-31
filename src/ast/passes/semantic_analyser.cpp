@@ -3651,38 +3651,45 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
       ap.addError() << "uretprobes can not be attached to a function offset";
 
-    std::vector<std::string> paths;
-    const auto pid = bpftrace_.pid();
-    if (ap.target == "*") {
-      if (pid.has_value())
-        paths = util::get_mapped_paths_for_pid(*pid);
-      else
-        paths = util::get_mapped_paths_for_running_pids();
+    auto get_paths = [&]() -> Result<std::vector<std::string>> {
+      const auto pid = bpftrace_.pid();
+      if (ap.target == "*") {
+        if (pid.has_value())
+          return util::get_mapped_paths_for_pid(*pid);
+        else
+          return util::get_mapped_paths_for_running_pids();
+      } else {
+        return util::resolve_binary_path(ap.target, pid);
+      }
+    };
+    auto paths = get_paths();
+    if (!paths) {
+      // There was an error during path resolution.
+      ap.addError() << "error finding uprobe target: " << paths.takeError();
     } else {
-      paths = util::resolve_binary_path(ap.target, pid);
-    }
-    switch (paths.size()) {
-      case 0:
-        ap.addError() << "uprobe target file '" << ap.target
-                      << "' does not exist or is not executable";
-        break;
-      case 1:
-        // Replace the glob at this stage only if this is *not* a wildcard,
-        // otherwise we rely on the probe matcher. This is not going through
-        // any interfaces that can be properly mocked.
-        if (ap.target.find("*") == std::string::npos)
-          ap.target = paths.front();
-        break;
-      default:
-        // If we are doing a PATH lookup (ie not glob), we follow shell
-        // behavior and take the first match.
-        // Otherwise we keep the target with glob, it will be expanded later
-        if (ap.target.find("*") == std::string::npos) {
-          ap.addWarning() << "attaching to uprobe target file '"
-                          << paths.front() << "' but matched "
-                          << std::to_string(paths.size()) << " binaries";
-          ap.target = paths.front();
-        }
+      switch (paths->size()) {
+        case 0:
+          ap.addError() << "uprobe target file '" << ap.target
+                        << "' does not exist or is not executable";
+          break;
+        case 1:
+          // Replace the glob at this stage only if this is *not* a wildcard,
+          // otherwise we rely on the probe matcher. This is not going through
+          // any interfaces that can be properly mocked.
+          if (ap.target.find("*") == std::string::npos)
+            ap.target = paths->front();
+          break;
+        default:
+          // If we are doing a PATH lookup (ie not glob), we follow shell
+          // behavior and take the first match.
+          // Otherwise we keep the target with glob, it will be expanded later
+          if (ap.target.find("*") == std::string::npos) {
+            ap.addWarning() << "attaching to uprobe target file '"
+                            << paths->front() << "' but matched "
+                            << std::to_string(paths->size()) << " binaries";
+            ap.target = paths->front();
+          }
+      }
     }
   } else if (ap.provider == "usdt") {
     bpftrace_.has_usdt_ = true;

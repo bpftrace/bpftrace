@@ -287,16 +287,27 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
   if (path.empty())
     return std::make_unique<std::istringstream>("");
 
-  std::vector<std::string> real_paths;
-  if (path == "*") {
-    if (pid.has_value())
-      real_paths = util::get_mapped_paths_for_pid(*pid);
-    else
-      real_paths = util::get_mapped_paths_for_running_pids();
-  } else if (path.find('*') != std::string::npos)
-    real_paths = util::resolve_binary_path(path, pid);
-  else
-    real_paths.push_back(path);
+  auto get_paths = [&]() -> Result<std::vector<std::string>> {
+    if (path == "*") {
+      if (pid.has_value()) {
+        return util::get_mapped_paths_for_pid(*pid);
+      } else {
+        return util::get_mapped_paths_for_running_pids();
+      }
+    } else if (path.find('*') != std::string::npos) {
+      return util::resolve_binary_path(path, pid);
+    } else {
+      return std::vector<std::string>({ path });
+    }
+  };
+  auto real_paths = get_paths();
+  if (!real_paths) {
+    // This will crash, but we need to plumb the ability to return errors
+    // through these APIs. Right now we have no other choice.
+    LOG(WARNING) << "Could not resolve binary path: " << real_paths.takeError();
+    return nullptr;
+  }
+
   struct bcc_symbol_option symbol_option;
   memset(&symbol_option, 0, sizeof(symbol_option));
   symbol_option.use_debug_file = 1;
@@ -304,12 +315,12 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
   symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
 
   std::string result;
-  for (auto& real_path : real_paths) {
+  for (auto& real_path : *real_paths) {
     std::set<std::string> syms;
     // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
-    // it's also found in debug info (#1138), so a std::set is used here (and in
-    // the add_symbol callback) to ensure that each symbol will be unique in the
-    // returned string.
+    // it's also found in debug info (#1138), so a std::set is used here
+    // (and in the add_symbol callback) to ensure that each symbol will be
+    // unique in the returned string.
     int err = bcc_elf_foreach_sym(
         real_path.c_str(), add_symbol, &symbol_option, &syms);
     if (err) {
@@ -518,9 +529,9 @@ void ProbeMatcher::list_probes(ast::Program* prog)
             ::free(demangled_name);
           };
 
-          // demangled name may contain symbols not accepted by the attach point
-          // parser, so surround it with quotes to make the entry directly
-          // usable as an attach point
+          // demangled name may contain symbols not accepted by the attach
+          // point parser, so surround it with quotes to make the entry
+          // directly usable as an attach point
           auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
                                      : match_print;
 
@@ -577,8 +588,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
     case ProbeType::tracepoint: {
-      // Do not expand "target:" as that would match all functions in target.
-      // This may occur when an absolute address is given instead of a function.
+      // Do not expand "target:" as that would match all functions in
+      // target. This may occur when an absolute address is given instead of
+      // a function.
       if (attach_point.func.empty())
         return { attach_point.target + ":" };
 
@@ -595,8 +607,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::usdt: {
       auto target = attach_point.target;
       // If PID is specified, targets in symbol_stream will have the
-      // "/proc/<PID>/root" prefix followed by an absolute path, so we make the
-      // target absolute and add a leading wildcard.
+      // "/proc/<PID>/root" prefix followed by an absolute path, so we make
+      // the target absolute and add a leading wildcard.
       if (bpftrace_->pid().has_value()) {
         if (!target.empty()) {
           if (auto abs_target = util::abs_path(target))
@@ -650,5 +662,4 @@ void ProbeMatcher::list_structs(const std::string& search)
   for (const auto& match : get_matches_in_set(search_input, structs))
     std::cout << match << std::endl;
 }
-
 } // namespace bpftrace

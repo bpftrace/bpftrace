@@ -9,12 +9,6 @@
 
 namespace bpftrace::util {
 
-char TempFileError::ID;
-void TempFileError::log(llvm::raw_ostream &OS) const
-{
-  OS << "temporary file " << origin_ << ": " << strerror(err_);
-}
-
 // Generic helper for providing a default pattern and ensuring that it is
 // mutable, in order to call the standard `mktemp` et al. Note that the
 // function `fn` must return `-errno` in the case of failure.
@@ -40,7 +34,7 @@ static Result<std::pair<std::string, int>> mktemp(std::string pattern,
   int fd = fn(mutable_pattern.data());
   if (fd < 0) {
     int err = -fd; // See doc above.
-    return make_error<TempFileError>(pattern, err);
+    return make_error<SystemError>("unable to create " + pattern, err);
   }
   return std::pair<std::string, int>(std::string(mutable_pattern.data()), fd);
 }
@@ -50,7 +44,7 @@ Result<TempFile> TempFile::create(std::string name, bool pattern)
   if (!pattern) {
     int fd = ::open(name.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_TRUNC, 0644);
     if (fd < 0) {
-      return make_error<TempFileError>(name, errno);
+      return make_error<SystemError>("unable to open '" + name + "'");
     }
     return TempFile(std::move(name), fd);
   }
@@ -86,8 +80,7 @@ Result<OK> TempFile::write_all(std::span<const char> bytes)
       continue;
     }
     if (rc < 0) {
-      int err = errno;
-      return make_error<TempFileError>(path_.string(), err);
+      return make_error<SystemError>("unable to write " + path_.string());
     }
     done += rc;
     left -= rc;
@@ -120,7 +113,7 @@ Result<TempFile> TempDir::create_file(std::string name, bool pattern)
 
   // Using a fixed name.
   if (name.empty()) {
-    return make_error<TempFileError>(name, EINVAL);
+    return make_error<SystemError>("invalid file name '" + name + "'", EINVAL);
   }
   return TempFile::create(path_ / name, false);
 }
