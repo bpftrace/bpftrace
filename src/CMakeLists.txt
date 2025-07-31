@@ -215,6 +215,7 @@ unset(BPFTRACE)
 
 add_subdirectory(aot)
 add_subdirectory(arch)
+add_subdirectory(async)
 add_subdirectory(ast)
 add_subdirectory(btf)
 add_subdirectory(cxxdemangler)

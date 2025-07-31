@@ -23,6 +23,11 @@ public:
     return path_;
   }
 
+  int fd() const
+  {
+    return fd_;
+  }
+
   Result<std::string> read_all();
   Result<> write_all(const std::span<const char> data);
 
