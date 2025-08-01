@@ -440,8 +440,9 @@ public:
 
   const SizedType &type() const
   {
-    static SizedType uint64 = CreateUInt64();
-    return uint64;
+    // Same type as an integer literal.
+    static SizedType int64 = CreateInt64();
+    return int64;
   }
 
   std::variant<Expression, SizedType> record;
@@ -466,8 +467,9 @@ public:
 
   const SizedType &type() const
   {
-    static SizedType uint64 = CreateUInt64();
-    return uint64;
+    // Same type as an integer literal.
+    static SizedType int64 = CreateInt64();
+    return int64;
   }
 
   std::variant<Expression, SizedType> record;
