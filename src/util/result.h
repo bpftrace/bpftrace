@@ -67,6 +67,27 @@ auto make_error(Ts... args)
   return llvm::make_error<E>(std::forward<Ts>(args)...);
 }
 
+// As a generalized helper, you may use `make_error<SystemError>` to capture a
+// specific errno value with a given message. This may be used for general
+// purpose utility classes that don't really need specialized error handling.
+class SystemError : public ErrorInfo<SystemError> {
+public:
+  static char ID;
+  void log(llvm::raw_ostream& OS) const override;
+
+  SystemError(std::string msg, int err) : msg_(std::move(msg)), err_(err) {};
+  SystemError(std::string msg) : SystemError(std::move(msg), errno) {};
+
+  int err() const
+  {
+    return err_;
+  }
+
+private:
+  std::string msg_;
+  int err_;
+};
+
 // For error handling there are several cases to consider:
 //
 // (1) If you want to propagate the error, you can return as expected:

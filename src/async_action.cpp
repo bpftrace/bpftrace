@@ -237,7 +237,13 @@ void AsyncHandlers::syscall(const OpaqueValue &data)
     LOG(BUG) << "Error processing syscall arguments: " << vals.takeError();
   }
 
-  out.syscall(util::exec_system(fmt.format(*vals).c_str()));
+  auto result = util::exec_system(fmt.format(*vals).c_str());
+  if (!result) {
+    LOG(ERROR) << "Error executing program: " << result.takeError();
+    return;
+  }
+
+  out.syscall(*result);
 }
 
 void AsyncHandlers::cat(const OpaqueValue &data)

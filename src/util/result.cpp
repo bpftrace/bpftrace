@@ -2,6 +2,17 @@
 
 #include "util/result.h"
 
+namespace bpftrace {
+
+char SystemError::ID;
+
+void SystemError::log(llvm::raw_ostream& OS) const
+{
+  OS << msg_ << "(" << strerror(err_) << ")";
+}
+
+} // namespace bpftrace
+
 namespace llvm {
 
 std::ostream& operator<<(std::ostream& out, const llvm::Error& err)
