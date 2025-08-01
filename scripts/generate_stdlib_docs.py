@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Python script to generate function and macro documentation in stdlib.md
+Python script to generate documentation in stdlib.md
 """
 
 import glob
@@ -9,76 +9,53 @@ import sys
 import re
 from typing import Optional
 
-class Param:
+class Helper:
     name: str = ""
-    type: str = "none"
-    description: str = ""
-
-class LastExpr:
-    type: str = "none"
-    description: str = ""
-
-class Macro:
-    name: str = ""
-    params: list[Param] = None
-    last_expr: LastExpr = LastExpr()
-    summary: str = ""
+    variants: list[str] = []
     description: str = ""
 
     def __init__(self):
-      self.params = []
+      self.variants = []
 
-def parse_param_string(param_string: str) -> Optional[Param]:
-    """
-    Parse a parameter string in the format:
-    ":param (type) $name: description"
-    """
-    pattern = r':param\s+\(([^)]+)\)\s+((\$|@)[^:]+):\s*(.+)'
+def parse_variant_string(line: str) -> Optional[str]:
+    pattern = r':variant\s+(.+)'
 
-    match = re.match(pattern, param_string.strip())
-    if match:
-        param = Param()
-        param.type = match.group(1).strip()
-        param.name = match.group(2).strip()
-        param.description = match.group(4).strip()
-        return param
-
-    return None
-
-def parse_last_expr_string(param_string: str) -> Optional[LastExpr]:
-    """
-    Parse a parameter string in the format:
-    ":last_expr (type): description"
-    """
-    pattern = r':last_expr\s+\(([^)]+)\):\s*(.+)'
-
-    match = re.match(pattern, param_string.strip())
-    if match:
-        last_expr = LastExpr()
-        last_expr.type = match.group(1).strip()
-        last_expr.description = match.group(2).strip()
-        return last_expr
-
-    return None
-
-def parse_macro_name(macro_string: str) -> Optional[str]:
-    # Pattern to match "macro name("
-    pattern = r'macro\s+([^(]+)\('
-
-    match = re.match(pattern, macro_string.strip())
+    match = re.match(pattern, line.strip())
     if match:
         return match.group(1).strip()
 
     return None
 
-def read_file_lines(file_path: str) -> Optional[list[Macro]]:
-    macros: list[Macro] = []
+def variant_has_no_args(variant: str) -> bool:
+    return "()" in variant
+
+def parse_function_name_string(line: str) -> Optional[str]:
+    pattern = r':function\s+(.+)'
+
+    match = re.match(pattern, line.strip())
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+def parse_macro_name(line: str) -> Optional[str]:
+    # Pattern to match "macro name("
+    pattern = r'macro\s+([^(]+)\('
+
+    match = re.match(pattern, line.strip())
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+def read_file_lines(file_path: str) -> Optional[list[Helper]]:
+    helpers: list[Helper] = []
     try:
         if not os.path.exists(file_path):
             print(f"Error: File '{file_path}' not found.")
             return None
 
-        current = Macro()
+        current = Helper()
         with open(file_path, 'r', encoding='utf-8') as file:
             for line in file:
                 line_content = line.lstrip().rstrip()
@@ -88,31 +65,36 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
                     line_content = line_content[2:]
                     if len(line_content) > 0 and line_content[:1].isspace():
                         line_content = line_content[1:]
-                    if line_content.startswith(":param"):
-                        parsed_param = parse_param_string(line_content)
-                        if parsed_param:
-                            current.params.append(parsed_param)
-                    elif line_content.startswith(":last_expr"):
-                        parsed_last_expr = parse_last_expr_string(line_content)
-                        if parsed_last_expr:
-                            current.last_expr = parsed_last_expr
-                    elif not current.summary:
-                        current.summary = line_content
-                    elif current.description or line_content:
+                    if line_content.startswith(":variant"):
+                        parsed_variant = parse_variant_string(line_content)
+                        if parsed_variant:
+                            current.variants.append(parsed_variant)
+                            if variant_has_no_args(parsed_variant):
+                                current.variants.append(parsed_variant.replace("()", ""))
+
+                    elif line_content.startswith(":function"):
+                        parsed_function_name = parse_function_name_string(line_content)
+                        if parsed_function_name:
+                            current.name = parsed_function_name
+                    elif line_content or current.description:
                         current.description += line_content + "\n"
                 elif line_content.startswith("macro"):
-                    current.name = parse_macro_name(line_content)
-                    if current.name:
+                    parsed_name = parse_macro_name(line_content)
+                    if parsed_name:
+                        current.name = parsed_name
                         # There must at least be a description or it's an
                         # undocumented macro.
-                        if current.summary:
-                            macros.append(current)
+                        if current.description:
+                            helpers.append(current)
                         else:
-                            print(f"Warning: Macro '{current.name}' will not be added to the docs.")
+                            print(f"Warning: Helper '{current.name}' will not be added to the docs.")
+                    current = Helper()
                 else:
-                    current = Macro()
+                    if current.name and current.description:
+                        helpers.append(current)
+                    current = Helper()
 
-        return macros
+        return helpers
 
     except PermissionError:
         print(f"Error: Permission denied to read '{file_path}'.")
@@ -124,22 +106,22 @@ def read_file_lines(file_path: str) -> Optional[list[Macro]]:
         print(f"Error reading file '{file_path}': {e}")
         return None
 
-def write_markdown_doc(macros: list[Macro]):
+def write_markdown_doc(helpers: list[Helper]):
     print("Writing markdown file to docs/stdlib.md")
 
     current_lines = []
     with open("docs/stdlib.md", "r", encoding="utf-8") as file:
         current_lines = file.readlines()
 
-    in_macro_section = False
+    in_helpers_section = False
     cleaned_lines = []
     for raw_line in current_lines:
         line = raw_line.strip()
-        if line == "## Macros":
-            in_macro_section = True
-        elif line == "## Map Functions":
-            in_macro_section = False
-        elif in_macro_section:
+        if line == "## Helpers":
+            in_helpers_section = True
+        elif line == "## Map Value Functions":
+            in_helpers_section = False
+        elif in_helpers_section:
             continue
 
         cleaned_lines.append(raw_line)
@@ -147,33 +129,16 @@ def write_markdown_doc(macros: list[Macro]):
     updated_lines = []
     for cleaned_line in cleaned_lines:
         line = cleaned_line.strip()
-        if line == "## Macros":
+        if line == "## Helpers":
             updated_lines.append(cleaned_line)
             updated_lines.append("\n")
 
-            # Make the table
-            updated_lines.append("| Name | Description |\n")
-            updated_lines.append("| --- | --- |\n")
-            for macro in macros:
-                updated_lines.append(f"| [`{macro.name}`](#{macro.name}) | {macro.summary} |\n")
-            updated_lines.append("\n")
-
-            # Make the macro details
-            for macro in macros:
-                updated_lines.append(f"### {macro.name}\n")
-                updated_lines.append(f"{macro.summary}\n")
+            for helper in helpers:
+                updated_lines.append(f"### {helper.name}\n")
+                for variant in helper.variants:
+                    updated_lines.append(f"- `{variant}`\n")
                 updated_lines.append("\n")
-                if macro.description:
-                  updated_lines.append(f"{macro.description}\n")
-                updated_lines.append("#### Parameters\n")
-                for param in macro.params:
-                    updated_lines.append(f"- **{param.name}**: ({param.type}) {param.description}\n")
-                updated_lines.append("\n")
-                updated_lines.append("#### Last Expression\n")
-                if macro.last_expr.type == "none":
-                    updated_lines.append("- **None**\n")
-                else:
-                    updated_lines.append(f"- **{macro.last_expr.type}**: {macro.last_expr.description}\n")
+                updated_lines.append(f"{helper.description}\n")
                 updated_lines.append("\n")
         else:
             updated_lines.append(cleaned_line)
@@ -190,14 +155,15 @@ def main():
     else:
         print(f"All stdlib files: {stdlib_files}")
 
-    all_macros: list[Macro] = []
+    all_helpers: list[Helper] = []
     for file in stdlib_files:
-        macros = read_file_lines(file)
-        if macros:
-            all_macros += macros
+        helpers = read_file_lines(file)
+        if helpers:
+            all_helpers += helpers
 
-    if len(all_macros) > 0:
-        write_markdown_doc(all_macros)
+    if len(all_helpers) > 0:
+        sorted_by_name = sorted(all_helpers, key=lambda h: h.name)
+        write_markdown_doc(sorted_by_name)
     else:
         sys.exit(1)
 
