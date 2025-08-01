@@ -13,6 +13,63 @@ namespace {
 
 const auto FLOW_ERROR = "unable to fold literals due to overflow or underflow";
 
+class LiteralChecker : public Visitor<LiteralChecker, bool> {
+public:
+  using Visitor<LiteralChecker, bool>::visit;
+  bool visit([[maybe_unused]] Integer &integer)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] NegativeInteger &integer)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] String &str)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] Boolean &boolean)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] PositionalParameter &param)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] PositionalParameterCount &paramcount)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] Sizeof &szof)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] Offsetof &offof)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] Typeof &typeof)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] Typeok &typeok)
+  {
+    return true;
+  }
+  bool visit([[maybe_unused]] TypeCmp &typecmp)
+  {
+    return true;
+  }
+  bool visit(Binop &binop)
+  {
+    return visit(binop.left) && visit(binop.right);
+  }
+  bool visit(Ternary &ternary)
+  {
+    return visit(ternary.cond) && visit(ternary.left) && visit(ternary.right);
+  }
+};
+
 class LiteralFolder : public Visitor<LiteralFolder, std::optional<Expression>> {
 public:
   LiteralFolder(ASTContext &ast) : ast_(ast) {};
@@ -651,6 +708,11 @@ void fold(ASTContext &ast, Expression &expr)
 {
   LiteralFolder folder(ast);
   folder.visit(expr);
+}
+
+bool is_literal(Expression &expr)
+{
+  return LiteralChecker().visit(expr);
 }
 
 Pass CreateFoldLiteralsPass()

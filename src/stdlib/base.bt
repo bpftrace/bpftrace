@@ -16,3 +16,25 @@ macro assert($cond, $msg) {
 macro ppid($task) {
     $task->real_parent->pid
 }
+
+// Asserts that a value is a literal.
+//
+// :param (literal) $v: The must-be literal value
+macro static_assert_literal($v) {
+  if ($v && false) {
+    // This prune will be pruned if `$v && false` can be folded, it
+    // can only be folded if `$v` is a literal of any kind.
+    fail("value must evaluate to a literal");
+  }
+}
+
+// Force a compile-time check.
+//
+// :param (literal) $v: The boolean value, must evaluate as a literal
+// :param (string) $msg: The message to emit, must be a string literal
+macro static_assert($v, $msg) {
+  static_assert_literal($v);
+  if (!$v) {
+    fail($msg);
+  }
+}

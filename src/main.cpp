@@ -324,30 +324,6 @@ struct Args {
   std::vector<std::string> named_params;
 };
 
-void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
-{
-  add(ast::CreateFoldLiteralsPass());
-  add(ast::CreatePidFilterPass());
-  add(ast::CreateClangBuildPass());
-  add(ast::CreateTypeSystemPass());
-  add(ast::CreateSemanticPass());
-  add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
-}
-
-void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
-{
-  add(ast::CreatePortabilityPass());
-  add(ast::CreateFoldLiteralsPass());
-  add(ast::CreateClangBuildPass());
-  add(ast::CreateTypeSystemPass());
-  add(ast::CreateSemanticPass());
-  add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
-}
-
 ast::Pass printPass(const std::string& name)
 {
   return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
@@ -901,21 +877,32 @@ int main(int argc, char* argv[])
       pm.add(printPass(name));
     }
   };
+  // Check for basic portability, which can capture the use of e.g. positional
+  // parameters. After parsing and expansion, we will re-run the portability
+  // pass to capture any other portability issues (see below).
+  if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
+    addPass(ast::CreatePortabilityPass());
+  }
   // Start with all the basic parsing steps.
   for (auto& pass : ast::AllParsePasses(std::move(flags))) {
     addPass(std::move(pass));
   }
-  pm.add(ast::CreateLLVMInitPass());
-
-  switch (args.build_mode) {
-    case BuildMode::DYNAMIC:
-      CreateDynamicPasses(addPass);
-      break;
-    case BuildMode::AHEAD_OF_TIME:
-      CreateAotPasses(addPass);
-      break;
+  if (args.build_mode == BuildMode::DYNAMIC) {
+    addPass(ast::CreatePidFilterPass());
+  } else {
+    // See above: everything is now expanded so we can check specific builtins,
+    // identifiers, etc. there will be no more positional parameters.
+    addPass(ast::CreatePortabilityPass());
   }
+  addPass(ast::CreateLLVMInitPass());
+  addPass(ast::CreateClangBuildPass());
+  addPass(ast::CreateTypeSystemPass());
+  addPass(ast::CreateSemanticPass());
+  addPass(ast::CreateResourcePass());
+  addPass(ast::CreateRecursionCheckPass());
+  addPass(ast::CreateReturnPathPass());
 
+  // No AST transforms from here; don't dump.
   if (bt_debug.contains(DebugStage::Types)) {
     pm.add(ast::CreateDumpTypesPass(std::cout));
   }
