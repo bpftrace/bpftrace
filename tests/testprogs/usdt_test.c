@@ -21,8 +21,8 @@ int main()
 {
   while (1) {
     myclock();
-    // Sleep is necessary to not overflow perf buffer
-    usleep(1000);
+    // Reduce the frequency of events to reduce test flakyness
+    usleep(100000);
   }
   return 0;
 }
