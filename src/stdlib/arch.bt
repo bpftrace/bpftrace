@@ -1,0 +1,11 @@
+// Returns true if the current process is in user mode, false otherwise.
+//
+// Currently only available on x86_64.
+macro usermode() {
+  if (valid(ctx.cs)) {
+    (ctx.cs & 0x3) != 0
+  } else {
+    fail("usermode is only supported on x86");
+    false
+  }
+}
