@@ -2895,7 +2895,7 @@ TEST(Parser, subprog_invalid_return_type)
 {
   // Error location is incorrect: #3063
   test_parse_failure("fn f(): nonexistent {}", R"(
-stdin:1:9-21: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+stdin:1:9-21: ERROR: syntax error, unexpected identifier
 fn f(): nonexistent {}
         ~~~~~~~~~~~~
 )");
@@ -2960,7 +2960,7 @@ TEST(Parser, subprog_invalid_arg)
 {
   // Error location is incorrect: #3063
   test_parse_failure("fn f($x : invalid): void {}", R"(
-stdin:1:11-19: ERROR: syntax error, unexpected identifier, expecting struct or integer type or builtin type or sized type
+stdin:1:11-19: ERROR: syntax error, unexpected identifier
 fn f($x : invalid): void {}
           ~~~~~~~~
 )");
