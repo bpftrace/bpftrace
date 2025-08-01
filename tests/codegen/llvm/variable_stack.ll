@@ -22,34 +22,47 @@ entry:
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
-  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i8, ptr %1, i64 112
-  %arg0 = load volatile i64, ptr %2, align 8
-  %3 = icmp ugt i64 %arg0, 0
-  %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %else_body
+  %1 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
+  %2 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %3 = getelementptr i8, ptr %2, i64 112
+  %arg0 = load volatile i64, ptr %3, align 8
+  %4 = icmp ugt i64 %arg0, 0
+  %cond = icmp ne i1 %4, false
+  br i1 %cond, label %true, label %false
 
-if_body:                                          ; preds = %entry
+true:                                             ; preds = %entry
   store i64 1, ptr %"$x", align 8
-  br label %if_end
+  store i8 1, ptr %1, align 1
+  br label %done
 
-if_end:                                           ; preds = %else_body, %if_body
-  ret i64 0
-
-else_body:                                        ; preds = %entry
+false:                                            ; preds = %entry
   store i64 2, ptr %"$x1", align 8
-  br label %if_end
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %true
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
+  ret i64 0
 }
 
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #3
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

@@ -28,10 +28,10 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
   call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 7, i1 false)
   %get_ns = call i64 inttoptr (i64 125 to ptr)()
-  %true_cond = icmp ne i64 %get_ns, 0
-  br i1 %true_cond, label %left, label %right
+  %cond = icmp ne i64 %get_ns, 0
+  br i1 %cond, label %true, label %false
 
-left:                                             ; preds = %entry
+true:                                             ; preds = %entry
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %2 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %2
@@ -44,7 +44,7 @@ left:                                             ; preds = %entry
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 %3, i64 7, i1 false)
   br label %done
 
-right:                                            ; preds = %entry
+false:                                            ; preds = %entry
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #4
   %6 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %6
@@ -57,7 +57,7 @@ right:                                            ; preds = %entry
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %1, ptr align 1 %7, i64 7, i1 false)
   br label %done
 
-done:                                             ; preds = %right, %left
+done:                                             ; preds = %false, %true
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$x", ptr align 1 %1, i64 7, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0

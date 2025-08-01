@@ -15,7 +15,13 @@ public:
   bool visit(Program &prog);
   bool visit(Subprog &subprog);
   bool visit(Jump &jump);
+
+  bool visit(std::vector<Statement> &stmts);
+
+  bool visit(Ternary &ternary);
   bool visit(If &if_node);
+  bool visit(Block &block);
+  bool visit(BlockExpr &expr);
 };
 
 } // namespace
@@ -30,11 +36,9 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
 {
   if (subprog.return_type.IsVoidTy())
     return true;
+  if (visit(subprog.stmts))
+    return true;
 
-  for (auto &stmt : subprog.stmts) {
-    if (visit(stmt))
-      return true;
-  }
   subprog.addError() << "Not all code paths returned a value";
   return false;
 }
@@ -44,22 +48,34 @@ bool ReturnPathAnalyser::visit(Jump &jump)
   return jump.ident == JumpType::RETURN;
 }
 
+bool ReturnPathAnalyser::visit(std::vector<Statement> &stmts)
+{
+  for (auto &stmt : stmts) {
+    if (visit(stmt)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ReturnPathAnalyser::visit(Ternary &ternary)
+{
+  return visit(ternary.left) && visit(ternary.right);
+}
+
 bool ReturnPathAnalyser::visit(If &if_node)
 {
-  bool result = false;
-  for (auto &stmt : if_node.if_block->stmts) {
-    if (visit(stmt))
-      result = true;
-  }
-  if (!result) {
-    // if block has no return
-    return false;
-  }
+  return visit(if_node.if_block) && visit(if_node.else_block);
+}
 
-  // True if both blocks have a return.
-  // False if else block has no return (or there is no else block).
-  return std::ranges::any_of(if_node.else_block->stmts,
-                             [this](auto &stmt) { return visit(stmt); });
+bool ReturnPathAnalyser::visit(Block &block)
+{
+  return visit(block.stmts);
+}
+
+bool ReturnPathAnalyser::visit(BlockExpr &expr)
+{
+  return visit(expr.stmts);
 }
 
 Pass CreateReturnPathPass()

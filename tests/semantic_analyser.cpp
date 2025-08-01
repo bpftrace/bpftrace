@@ -14,6 +14,7 @@
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf_common.h"
@@ -138,6 +139,7 @@ public:
                   .put(mock->bpftrace)
                   .put(types->types)
                   .add(CreateParsePass())
+                  .add(ast::CreateSimplifyCFGPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateProbeExpansionPass())

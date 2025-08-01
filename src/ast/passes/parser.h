@@ -13,6 +13,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/unstable_feature.h"
 #include "btf.h"
 #include "driver.h"
@@ -36,6 +37,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateImportExternalScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
   passes.emplace_back(CreateImportInternalScriptsPass());
+  passes.emplace_back(CreateSimplifyCFGPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());

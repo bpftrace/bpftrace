@@ -5,6 +5,7 @@
 #include "ast/ast.h"
 #include "ast/context.h"
 #include "ast/passes/macro_expansion.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 
@@ -61,7 +62,6 @@ public:
   void visit(Variable &var);
   void visit(Map &map);
   void visit(Expression &expr);
-  void visit(Statement &stmt);
 
   std::optional<std::variant<BlockExpr *, Block *>> expand(Macro &macro,
                                                            Call &call);
@@ -215,53 +215,6 @@ void MacroExpander::visit(Expression &expr)
   }
 }
 
-void MacroExpander::visit(Statement &stmt)
-{
-  auto *expr_stmt = stmt.as<ExprStatement>();
-  if (!expr_stmt) {
-    Visitor<MacroExpander>::visit(stmt);
-    return;
-  }
-
-  auto *call = expr_stmt->expr.as<Call>();
-  if (!call) {
-    Visitor<MacroExpander>::visit(stmt);
-    return;
-  }
-
-  for (auto &varg : call->vargs) {
-    visit(varg);
-  }
-
-  if (auto it = macros_.find(call->func); it != macros_.end()) {
-    Macro *macro = it->second;
-
-    if (is_recursive_call(macro->name, *call)) {
-      return;
-    }
-
-    auto next_macro_stack = macro_stack_;
-    next_macro_stack.push_back(macro->name);
-
-    auto r = MacroExpander(
-                 ast_, macro->name, macros_, std::move(next_macro_stack))
-                 .expand(*macro, *call);
-
-    if (!r) {
-      return;
-    }
-
-    if (std::holds_alternative<BlockExpr *>(macro->block)) {
-      // Finding a block expression instead of a block is ok
-      // as we can just create a expression statement which is legal
-      stmt.value = ast_.make_node<ExprStatement>(std::get<BlockExpr *>(*r),
-                                                 Location(expr_stmt->loc));
-    } else {
-      stmt.value = std::get<Block *>(*r);
-    }
-  }
-}
-
 std::string MacroExpander::get_new_var_ident(std::string original_ident)
 {
   return std::string("$$") + macro_name_ + std::string("_") + original_ident;
@@ -350,7 +303,7 @@ std::optional<std::variant<BlockExpr *, Block *>> MacroExpander::expand(
 
 Pass CreateMacroExpansionPass()
 {
-  auto fn = [](ASTContext &ast) {
+  auto fn = [](ASTContext &ast, [[maybe_unused]] SimplifiedAST &sentinel) {
     auto macros = collect_macros(ast);
     if (ast.diagnostics().ok()) {
       MacroExpander expander(ast, "none", macros, {});

@@ -20,6 +20,7 @@
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf_common.h"
@@ -67,6 +68,7 @@ static void test(BPFtrace &bpftrace,
                 .add(CreateParsePass())
                 .add(ast::CreateResolveImportsPass({}))
                 .add(ast::CreateImportInternalScriptsPass())
+                .add(ast::CreateSimplifyCFGPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())

@@ -1,6 +1,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/simplify_cfg.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -26,6 +27,7 @@ void test(const std::string& input,
                 .put(ast)
                 .put(bpftrace)
                 .add(CreateParsePass())
+                .add(ast::CreateSimplifyCFGPass())
                 .add(ast::CreateMacroExpansionPass())
                 .run();
 

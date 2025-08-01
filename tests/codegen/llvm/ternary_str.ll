@@ -32,18 +32,18 @@ entry:
   %pid = trunc i64 %3 to i32
   %4 = zext i32 %pid to i64
   %5 = icmp ult i64 %4, 10000
-  %true_cond = icmp ne i1 %5, false
-  br i1 %true_cond, label %left, label %right
+  %cond = icmp ne i1 %5, false
+  br i1 %cond, label %true, label %false
 
-left:                                             ; preds = %entry
+true:                                             ; preds = %entry
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @lo, i64 3, i1 false)
   br label %done
 
-right:                                            ; preds = %entry
+false:                                            ; preds = %entry
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @hi, i64 3, i1 false)
   br label %done
 
-done:                                             ; preds = %right, %left
+done:                                             ; preds = %false, %true
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %2, i64 0)

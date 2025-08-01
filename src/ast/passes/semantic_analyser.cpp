@@ -13,6 +13,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
 #include "btf/compat.h"
@@ -160,7 +161,6 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(Predicate &pred);
   void visit(AttachPoint &ap);
@@ -2661,20 +2661,6 @@ void SemanticAnalyser::visit(Ternary &ternary)
   }
 }
 
-void SemanticAnalyser::visit(If &if_node)
-{
-  visit(if_node.cond);
-
-  if (is_final_pass()) {
-    const Type &cond = if_node.cond.type().GetTy();
-    if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean)
-      if_node.addError() << "Invalid condition in if(): " << cond;
-  }
-
-  visit(if_node.if_block);
-  visit(if_node.else_block);
-}
-
 void SemanticAnalyser::visit(Unroll &unroll)
 {
   visit(unroll.expr);
@@ -4476,6 +4462,7 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
 Pass CreateSemanticPass(bool listing)
 {
   auto fn = [listing](ASTContext &ast,
+                      [[maybe_unused]] SimplifiedAST &_,
                       BPFtrace &b,
                       CDefinitions &c_definitions,
                       MapMetadata &mm,

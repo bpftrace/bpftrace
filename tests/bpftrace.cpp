@@ -10,6 +10,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
@@ -64,6 +65,7 @@ static auto parse_probe(const std::string &str,
                 .put(bpftrace)
                 .put(no_types)
                 .add(CreateParsePass())
+                .add(ast::CreateSimplifyCFGPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())

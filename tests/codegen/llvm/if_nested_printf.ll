@@ -21,38 +21,34 @@ entry:
   %printf_args = alloca %printf_t, align 8
   %runtime_error_t = alloca %runtime_error_t, align 8
   %op_result = alloca i64, align 8
+  %1 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
-  %1 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %1 to i32
-  %2 = zext i32 %pid to i64
-  %3 = icmp ugt i64 %2, 10000
-  %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %if_end
+  %2 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %2 to i32
+  %3 = zext i32 %pid to i64
+  %4 = icmp ugt i64 %3, 10000
+  %cond = icmp ne i1 %4, false
+  br i1 %cond, label %true, label %false
 
-if_body:                                          ; preds = %entry
-  %get_pid_tgid3 = call i64 inttoptr (i64 14 to ptr)() #3
-  %4 = lshr i64 %get_pid_tgid3, 32
-  %pid4 = trunc i64 %4 to i32
-  %5 = zext i32 %pid4 to i64
+true:                                             ; preds = %entry
+  %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)() #3
+  %5 = lshr i64 %get_pid_tgid1, 32
+  %pid2 = trunc i64 %5 to i32
+  %6 = zext i32 %pid2 to i64
   call void @llvm.lifetime.start.p0(i64 -1, ptr %op_result)
   br i1 false, label %is_zero, label %not_zero
 
-if_end:                                           ; preds = %if_end2, %entry
+false:                                            ; preds = %entry
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %counter_merge5
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 
-if_body1:                                         ; preds = %zero_merge
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
-  call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 8, i1 false)
-  %6 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
-  store i64 0, ptr %6, align 8
-  %ringbuf_output6 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 8, i64 0)
-  %ringbuf_loss9 = icmp slt i64 %ringbuf_output6, 0
-  br i1 %ringbuf_loss9, label %event_loss_counter7, label %counter_merge8
-
-if_end2:                                          ; preds = %counter_merge8, %zero_merge
-  br label %if_end
-
-is_zero:                                          ; preds = %if_body
+is_zero:                                          ; preds = %true
   store i64 1, ptr %op_result, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
@@ -65,8 +61,8 @@ is_zero:                                          ; preds = %if_body
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-not_zero:                                         ; preds = %if_body
-  %10 = urem i64 %5, 2
+not_zero:                                         ; preds = %true
+  %10 = urem i64 %6, 2
   store i64 %10, ptr %op_result, align 8
   br label %zero_merge
 
@@ -74,46 +70,52 @@ zero_merge:                                       ; preds = %not_zero, %counter_
   %11 = load i64, ptr %op_result, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %op_result)
   %12 = icmp eq i64 %11, 0
-  %true_cond5 = icmp ne i1 %12, false
-  br i1 %true_cond5, label %if_body1, label %if_end2
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
+  call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 8, i1 false)
+  %13 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
+  store i64 0, ptr %13, align 8
+  %ringbuf_output3 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 8, i64 0)
+  %ringbuf_loss6 = icmp slt i64 %ringbuf_output3, 0
+  br i1 %ringbuf_loss6, label %event_loss_counter4, label %counter_merge5
 
 event_loss_counter:                               ; preds = %is_zero
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %13 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %13
-  %14 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %15 = load i64, ptr %14, align 8
-  %16 = add i64 %15, 1
-  store i64 %16, ptr %14, align 8
+  %14 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %14
+  %15 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %16 = load i64, ptr %15, align 8
+  %17 = add i64 %16, 1
+  store i64 %17, ptr %15, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %is_zero
   call void @llvm.lifetime.end.p0(i64 -1, ptr %runtime_error_t)
   br label %zero_merge
 
-event_loss_counter7:                              ; preds = %if_body1
-  %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)() #3
-  %17 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded11 = and i64 %get_cpu_id10, %17
-  %18 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded11, i64 0
-  %19 = load i64, ptr %18, align 8
-  %20 = add i64 %19, 1
-  store i64 %20, ptr %18, align 8
-  br label %counter_merge8
+event_loss_counter4:                              ; preds = %zero_merge
+  %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)() #3
+  %18 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded8 = and i64 %get_cpu_id7, %18
+  %19 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded8, i64 0
+  %20 = load i64, ptr %19, align 8
+  %21 = add i64 %20, 1
+  store i64 %21, ptr %19, align 8
+  br label %counter_merge5
 
-counter_merge8:                                   ; preds = %event_loss_counter7, %if_body1
+counter_merge5:                                   ; preds = %event_loss_counter4, %zero_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args)
-  br label %if_end2
+  store i8 1, ptr %1, align 1
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
-
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }

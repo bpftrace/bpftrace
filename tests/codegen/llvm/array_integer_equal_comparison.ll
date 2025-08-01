@@ -23,71 +23,79 @@ entry:
   %arraycmp.result = alloca i1, align 1
   %v2 = alloca i32, align 4
   %v1 = alloca i32, align 4
+  %1 = alloca i8, align 1
   %"$b" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$b")
   store i64 0, ptr %"$b", align 8
   %"$a" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i64 0, ptr %"$a", align 8
-  %1 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %2 = getelementptr i8, ptr %1, i64 112
-  %arg0 = load volatile i64, ptr %2, align 8
-  %3 = inttoptr i64 %arg0 to ptr
-  %4 = call ptr @llvm.preserve.static.offset(ptr %3)
-  %5 = getelementptr i8, ptr %4, i64 0
-  %6 = ptrtoint ptr %5 to i64
-  store i64 %6, ptr %"$a", align 8
-  %7 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %8 = getelementptr i8, ptr %7, i64 112
-  %arg01 = load volatile i64, ptr %8, align 8
-  %9 = inttoptr i64 %arg01 to ptr
-  %10 = call ptr @llvm.preserve.static.offset(ptr %9)
-  %11 = getelementptr i8, ptr %10, i64 0
-  %12 = ptrtoint ptr %11 to i64
-  store i64 %12, ptr %"$b", align 8
-  %13 = load i64, ptr %"$a", align 8
-  %14 = load i64, ptr %"$b", align 8
+  %2 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %3 = getelementptr i8, ptr %2, i64 112
+  %arg0 = load volatile i64, ptr %3, align 8
+  %4 = inttoptr i64 %arg0 to ptr
+  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
+  %6 = getelementptr i8, ptr %5, i64 0
+  %7 = ptrtoint ptr %6 to i64
+  store i64 %7, ptr %"$a", align 8
+  %8 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %9 = getelementptr i8, ptr %8, i64 112
+  %arg01 = load volatile i64, ptr %9, align 8
+  %10 = inttoptr i64 %arg01 to ptr
+  %11 = call ptr @llvm.preserve.static.offset(ptr %10)
+  %12 = getelementptr i8, ptr %11, i64 0
+  %13 = ptrtoint ptr %12 to i64
+  store i64 %13, ptr %"$b", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
+  %14 = load i64, ptr %"$a", align 8
+  %15 = load i64, ptr %"$b", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %v1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %v2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %arraycmp.result)
   store i1 true, ptr %arraycmp.result, align 1
-  %15 = inttoptr i64 %13 to ptr
   %16 = inttoptr i64 %14 to ptr
+  %17 = inttoptr i64 %15 to ptr
   call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %n)
   store i32 0, ptr %i, align 4
   store i32 4, ptr %n, align 4
   br label %while_cond
 
-if_body:                                          ; preds = %arraycmp.done
+true:                                             ; preds = %arraycmp.done
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
-  %17 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 30000, ptr %17, align 8
-  %18 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
-  store i8 0, ptr %18, align 1
+  %18 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
+  store i64 30000, ptr %18, align 8
+  %19 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
+  store i8 0, ptr %19, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %deadcode, %arraycmp.done
+false:                                            ; preds = %arraycmp.done
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %deadcode
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 
 while_cond:                                       ; preds = %arraycmp.loop, %entry
-  %19 = load i32, ptr %n, align 4
-  %20 = load i32, ptr %i, align 4
-  %size_check = icmp slt i32 %20, %19
+  %20 = load i32, ptr %n, align 4
+  %21 = load i32, ptr %i, align 4
+  %size_check = icmp slt i32 %21, %20
   br i1 %size_check, label %while_body, label %arraycmp.done, !llvm.loop !41
 
 while_body:                                       ; preds = %while_cond
-  %21 = load i32, ptr %i, align 4
-  %22 = getelementptr [4 x i32], ptr %15, i32 0, i32 %21
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %v1, i32 4, ptr %22)
-  %23 = load i32, ptr %v1, align 4
-  %24 = load i32, ptr %i, align 4
-  %25 = getelementptr [4 x i32], ptr %16, i32 0, i32 %24
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %v2, i32 4, ptr %25)
-  %26 = load i32, ptr %v2, align 4
-  %arraycmp.cmp = icmp ne i32 %23, %26
+  %22 = load i32, ptr %i, align 4
+  %23 = getelementptr [4 x i32], ptr %16, i32 0, i32 %22
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %v1, i32 4, ptr %23)
+  %24 = load i32, ptr %v1, align 4
+  %25 = load i32, ptr %i, align 4
+  %26 = getelementptr [4 x i32], ptr %17, i32 0, i32 %25
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %v2, i32 4, ptr %26)
+  %27 = load i32, ptr %v2, align 4
+  %arraycmp.cmp = icmp ne i32 %24, %27
   br i1 %arraycmp.cmp, label %arraycmp.false, label %arraycmp.loop
 
 arraycmp.false:                                   ; preds = %while_body
@@ -95,36 +103,37 @@ arraycmp.false:                                   ; preds = %while_body
   br label %arraycmp.done
 
 arraycmp.done:                                    ; preds = %arraycmp.false, %while_cond
-  %27 = load i1, ptr %arraycmp.result, align 1
+  %28 = load i1, ptr %arraycmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %arraycmp.result)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %v1)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %v2)
-  %28 = zext i1 %27 to i64
-  %true_cond = icmp ne i64 %28, 0
-  br i1 %true_cond, label %if_body, label %if_end
+  %29 = zext i1 %28 to i64
+  %cond = icmp ne i64 %29, 0
+  br i1 %cond, label %true, label %false
 
 arraycmp.loop:                                    ; preds = %while_body
-  %29 = load i32, ptr %i, align 4
-  %30 = add i32 %29, 1
-  store i32 %30, ptr %i, align 4
+  %30 = load i32, ptr %i, align 4
+  %31 = add i32 %30, 1
+  store i32 %31, ptr %i, align 4
   br label %while_cond
 
-event_loss_counter:                               ; preds = %if_body
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %31 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %31
-  %32 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %33 = load i64, ptr %32, align 8
-  %34 = add i64 %33, 1
-  store i64 %34, ptr %32, align 8
+event_loss_counter:                               ; preds = %true
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
+  %32 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %32
+  %33 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %34 = load i64, ptr %33, align 8
+  %35 = add i64 %34, 1
+  store i64 %35, ptr %33, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %if_body
+counter_merge:                                    ; preds = %event_loss_counter, %true
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
 
 deadcode:                                         ; No predecessors!
-  br label %if_end
+  store i8 1, ptr %1, align 1
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -133,13 +142,17 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { memory(none) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

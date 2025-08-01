@@ -8,6 +8,7 @@
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf.h"
@@ -36,6 +37,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .put(no_c_defs)
                 .add(CreateParsePass())
                 .add(ast::CreateResolveImportsPass({}))
+                .add(ast::CreateSimplifyCFGPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(CreateParseBTFPass())

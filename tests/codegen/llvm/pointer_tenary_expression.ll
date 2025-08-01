@@ -24,17 +24,17 @@ entry:
   store i64 0, ptr %"$v", align 8
   store i64 1, ptr %"$v", align 8
   %1 = load i64, ptr %"$v", align 8
-  %true_cond = icmp ne i64 %1, 0
-  br i1 %true_cond, label %left, label %right
+  %cond = icmp ne i64 %1, 0
+  br i1 %cond, label %true, label %false
 
-left:                                             ; preds = %entry
+true:                                             ; preds = %entry
   br label %done
 
-right:                                            ; preds = %entry
+false:                                            ; preds = %entry
   br label %done
 
-done:                                             ; preds = %right, %left
-  %result = phi i64 [ 1, %left ], [ 0, %right ]
+done:                                             ; preds = %false, %true
+  %result = phi i64 [ 1, %true ], [ 0, %false ]
   store i64 %result, ptr %"$x", align 8
   ret i64 0
 }

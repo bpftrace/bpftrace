@@ -21,51 +21,64 @@ entry:
   %"$a" = alloca i8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
   store i8 0, ptr %"$a", align 1
+  %1 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
   store i8 1, ptr %"$a", align 1
-  %1 = load i8, ptr %"$a", align 1
-  %true_cond = icmp ne i8 %1, 0
-  br i1 %true_cond, label %if_body, label %if_end
+  %2 = load i8, ptr %"$a", align 1
+  %cond = icmp ne i8 %2, 0
+  br i1 %cond, label %true, label %false
 
-if_body:                                          ; preds = %entry
+true:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
-  %2 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
-  store i64 30000, ptr %2, align 8
-  %3 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
-  store i8 0, ptr %3, align 1
+  %3 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
+  store i64 30000, ptr %3, align 8
+  %4 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
+  store i8 0, ptr %4, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %deadcode, %entry
+false:                                            ; preds = %entry
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %deadcode
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 
-event_loss_counter:                               ; preds = %if_body
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #2
-  %4 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %4
-  %5 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %6 = load i64, ptr %5, align 8
-  %7 = add i64 %6, 1
-  store i64 %7, ptr %5, align 8
+event_loss_counter:                               ; preds = %true
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
+  %5 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %7 = load i64, ptr %6, align 8
+  %8 = add i64 %7, 1
+  store i64 %8, ptr %6, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %if_body
+counter_merge:                                    ; preds = %event_loss_counter, %true
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
 
 deadcode:                                         ; No predecessors!
-  br label %if_end
+  store i8 1, ptr %1, align 1
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { memory(none) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

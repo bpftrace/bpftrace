@@ -25,17 +25,17 @@ entry:
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
   %3 = icmp ult i64 %2, 10000
-  %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %left, label %right
+  %cond = icmp ne i1 %3, false
+  br i1 %cond, label %true, label %false
 
-left:                                             ; preds = %entry
+true:                                             ; preds = %entry
   br label %done
 
-right:                                            ; preds = %entry
+false:                                            ; preds = %entry
   br label %done
 
-done:                                             ; preds = %right, %left
-  %result = phi i64 [ 1, %left ], [ 2, %right ]
+done:                                             ; preds = %false, %true
+  %result = phi i64 [ 1, %true ], [ 2, %false ]
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")

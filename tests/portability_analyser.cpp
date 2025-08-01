@@ -5,6 +5,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_cfg.h"
 #include "ast/passes/type_system.h"
 #include "btf_common.h"
 #include "driver.h"
@@ -31,6 +32,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .put(no_c_defs)
                 .put(no_types)
                 .add(CreateParsePass())
+                .add(ast::CreateSimplifyCFGPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateMapSugarPass())

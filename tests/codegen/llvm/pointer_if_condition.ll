@@ -16,26 +16,42 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
+  %1 = alloca i8, align 1
   %"$v" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
   store i64 0, ptr %"$v", align 8
   store i64 1, ptr %"$v", align 8
-  %1 = load i64, ptr %"$v", align 8
-  %true_cond = icmp ne i64 %1, 0
-  br i1 %true_cond, label %if_body, label %if_end
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
+  %2 = load i64, ptr %"$v", align 8
+  %cond = icmp ne i64 %2, 0
+  br i1 %cond, label %true, label %false
 
-if_body:                                          ; preds = %entry
-  br label %if_end
+true:                                             ; preds = %entry
+  store i8 1, ptr %1, align 1
+  br label %done
 
-if_end:                                           ; preds = %if_body, %entry
+false:                                            ; preds = %entry
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %true
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

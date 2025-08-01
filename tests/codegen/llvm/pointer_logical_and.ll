@@ -17,19 +17,28 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %"&&_result" = alloca i8, align 1
+  %1 = alloca i8, align 1
   %"$v" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
   store i64 0, ptr %"$v", align 8
   store i64 1, ptr %"$v", align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result")
-  %1 = load i64, ptr %"$v", align 8
-  %lhs_true_cond = icmp ne i64 %1, 0
+  %2 = load i64, ptr %"$v", align 8
+  %lhs_true_cond = icmp ne i64 %2, 0
   br i1 %lhs_true_cond, label %"&&_lhs_true", label %"&&_false"
 
-if_body:                                          ; preds = %"&&_merge"
-  br label %if_end
+true:                                             ; preds = %"&&_merge"
+  store i8 1, ptr %1, align 1
+  br label %done
 
-if_end:                                           ; preds = %if_body, %"&&_merge"
+false:                                            ; preds = %"&&_merge"
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %true
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 
 "&&_lhs_true":                                    ; preds = %entry
@@ -44,16 +53,23 @@ if_end:                                           ; preds = %if_body, %"&&_merge
   br label %"&&_merge"
 
 "&&_merge":                                       ; preds = %"&&_false", %"&&_true"
-  %2 = load i8, ptr %"&&_result", align 1
-  %true_cond = icmp ne i8 %2, 0
-  br i1 %true_cond, label %if_body, label %if_end
+  %3 = load i8, ptr %"&&_result", align 1
+  %cond = icmp ne i8 %3, 0
+  br i1 %cond, label %true, label %false
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}

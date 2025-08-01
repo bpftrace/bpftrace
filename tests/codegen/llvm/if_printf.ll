@@ -19,46 +19,55 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %printf_args = alloca %printf_t, align 8
+  %1 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
+  call void @llvm.memset.p0.i64(ptr align 1 %1, i8 0, i64 1, i1 false)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
-  %1 = lshr i64 %get_pid_tgid, 32
-  %pid = trunc i64 %1 to i32
-  %2 = zext i32 %pid to i64
-  %3 = icmp ugt i64 %2, 10000
-  %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %if_end
+  %2 = lshr i64 %get_pid_tgid, 32
+  %pid = trunc i64 %2 to i32
+  %3 = zext i32 %pid to i64
+  %4 = icmp ugt i64 %3, 10000
+  %cond = icmp ne i1 %4, false
+  br i1 %cond, label %true, label %false
 
-if_body:                                          ; preds = %entry
+true:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 16, i1 false)
-  %4 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
-  store i64 0, ptr %4, align 8
-  %5 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 1
+  %5 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
+  store i64 0, ptr %5, align 8
+  %6 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 1
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)() #3
-  %6 = lshr i64 %get_pid_tgid1, 32
-  %pid2 = trunc i64 %6 to i32
-  %7 = getelementptr %printf_args_t, ptr %5, i32 0, i32 0
-  %8 = zext i32 %pid2 to i64
-  store i64 %8, ptr %7, align 8
+  %7 = lshr i64 %get_pid_tgid1, 32
+  %pid2 = trunc i64 %7 to i32
+  %8 = getelementptr %printf_args_t, ptr %6, i32 0, i32 0
+  %9 = zext i32 %pid2 to i64
+  store i64 %9, ptr %8, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %counter_merge, %entry
+false:                                            ; preds = %entry
+  store i8 1, ptr %1, align 1
+  br label %done
+
+done:                                             ; preds = %false, %counter_merge
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %1)
   ret i64 0
 
-event_loss_counter:                               ; preds = %if_body
+event_loss_counter:                               ; preds = %true
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %9 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %9
-  %10 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %11 = load i64, ptr %10, align 8
-  %12 = add i64 %11, 1
-  store i64 %12, ptr %10, align 8
+  %10 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %10
+  %11 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %12 = load i64, ptr %11, align 8
+  %13 = add i64 %12, 1
+  store i64 %13, ptr %11, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %if_body
+counter_merge:                                    ; preds = %event_loss_counter, %true
   call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args)
-  br label %if_end
+  store i8 1, ptr %1, align 1
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
