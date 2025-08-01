@@ -2,6 +2,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/config_analyser.h"
@@ -45,6 +46,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
+  passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateCMacroExpansionPass());
