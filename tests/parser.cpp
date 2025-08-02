@@ -121,28 +121,28 @@ Program
   builtin: tid
 )");
 
-  test("kprobe:f { cgroup }", R"(
+  test("kprobe:f { __cgroup }", R"(
 Program
  kprobe:f
-  builtin: cgroup
+  builtin: __cgroup
 )");
 
-  test("kprobe:f { uid }", R"(
+  test("kprobe:f { __uid }", R"(
 Program
  kprobe:f
-  builtin: uid
+  builtin: __uid
 )");
 
-  test("kprobe:f { username }", R"(
+  test("kprobe:f { __username }", R"(
 Program
  kprobe:f
-  builtin: username
+  builtin: __username
 )");
 
-  test("kprobe:f { gid }", R"(
+  test("kprobe:f { __gid }", R"(
 Program
  kprobe:f
-  builtin: gid
+  builtin: __gid
 )");
 
   test("kprobe:f { nsecs }", R"(
@@ -151,34 +151,34 @@ Program
   builtin: nsecs
 )");
 
-  test("kprobe:f { elapsed }", R"(
+  test("kprobe:f { __elapsed }", R"(
 Program
  kprobe:f
-  builtin: elapsed
+  builtin: __elapsed
 )");
 
-  test("kprobe:f { numaid }", R"(
+  test("kprobe:f { __numaid }", R"(
 Program
  kprobe:f
-  builtin: numaid
+  builtin: __numaid
 )");
 
-  test("kprobe:f { cpu }", R"(
+  test("kprobe:f { __cpu }", R"(
 Program
  kprobe:f
-  builtin: cpu
+  builtin: __cpu
 )");
 
-  test("kprobe:f { curtask }", R"(
+  test("kprobe:f { __curtask }", R"(
 Program
  kprobe:f
-  builtin: curtask
+  builtin: __curtask
 )");
 
-  test("kprobe:f { rand }", R"(
+  test("kprobe:f { __rand }", R"(
 Program
  kprobe:f
-  builtin: rand
+  builtin: __rand
 )");
 
   test("kprobe:f { ctx }", R"(
@@ -187,10 +187,10 @@ Program
   builtin: ctx
 )");
 
-  test("kprobe:f { comm }", R"(
+  test("kprobe:f { __comm }", R"(
 Program
  kprobe:f
-  builtin: comm
+  builtin: __comm
 )");
 
   test("kprobe:f { kstack }", R"(
@@ -217,22 +217,22 @@ Program
   builtin: sarg0
 )");
 
-  test("kprobe:f { retval }", R"(
+  test("kprobe:f { __retval }", R"(
 Program
  kprobe:f
-  builtin: retval
+  builtin: __retval
 )");
 
-  test("kprobe:f { func }", R"(
+  test("kprobe:f { __func }", R"(
 Program
  kprobe:f
-  builtin: func
+  builtin: __func
 )");
 
-  test("kprobe:f { probe }", R"(
+  test("kprobe:f { __probe }", R"(
 Program
  kprobe:f
-  builtin: probe
+  builtin: __probe
 )");
 
   test("kprobe:f { args }", R"(
@@ -386,7 +386,7 @@ uprobe:f:$999999999999999999999999 { 1 }
 )");
 }
 
-TEST(Parser, comment)
+TEST(Parser, __comment)
 {
   test("kprobe:f { /*** ***/0; }", "Program\n kprobe:f\n  int: 0\n");
 }
@@ -802,7 +802,7 @@ TEST(Parser, map_key)
        "     map: @c\n"
        "   int: 1\n");
 
-  test("kprobe:sys_open { @x[pid] = 1; @x[tid,uid,arg9] = 1; }",
+  test("kprobe:sys_open { @x[pid] = 1; @x[tid,__uid,arg9] = 1; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
@@ -813,7 +813,7 @@ TEST(Parser, map_key)
        "   map: @x\n"
        "    tuple:\n"
        "     builtin: tid\n"
-       "     builtin: uid\n"
+       "     builtin: __uid\n"
        "     builtin: arg9\n"
        "   int: 1\n");
 }
@@ -842,7 +842,7 @@ TEST(Parser, predicate_containing_division)
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || comm == "
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __comm == "
        "\"string\" /\n"
        "{\n"
        "  1;\n"
@@ -866,7 +866,7 @@ TEST(Parser, expressions)
        "      ~\n"
        "       int: 0\n"
        "    ==\n"
-       "     builtin: comm\n"
+       "     builtin: __comm\n"
        "     string: string\n"
        "  int: 1\n");
 }
@@ -1735,14 +1735,14 @@ TEST(Parser, wildcard_attach_points)
        "Program\n"
        " kprobe:*\n"
        "  int: 1\n");
-  test("kprobe:sys_* { @x = cpu*retval }",
+  test("kprobe:sys_* { @x = __cpu*__retval }",
        "Program\n"
        " kprobe:sys_*\n"
        "  =\n"
        "   map: @x\n"
        "   *\n"
-       "    builtin: cpu\n"
-       "    builtin: retval\n");
+       "    builtin: __cpu\n"
+       "    builtin: __retval\n");
   test("kprobe:sys_* { @x = *arg0 }",
        "Program\n"
        " kprobe:sys_*\n"
@@ -1819,11 +1819,11 @@ TEST(Parser, wildcard_func)
   std::string keywords[] = {
     "arg0",
     "args",
-    "curtask",
+    "__curtask",
     "errorf",
     "func",
-    "gid"
-    "rand",
+    "__gid"
+    "__rand",
     "uid",
     "avg",
     "cat",
@@ -2861,9 +2861,9 @@ TEST(Parser, keywords_as_identifiers)
          "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
          " .\n   variable: $x\n   " +
              keyword + "\n");
-    test("begin { $x = offsetof(*curtask, " + keyword + "); }",
+    test("begin { $x = offsetof(*__curtask, " + keyword + "); }",
          "Program\n begin\n  =\n   variable: $x\n   offsetof: \n    "
-         "dereference\n     builtin: curtask\n    " +
+         "dereference\n     builtin: __curtask\n    " +
              keyword + "\n");
   }
 }
@@ -3217,13 +3217,13 @@ Program
   variable: $x
 )");
 
-  test("let @a = hash(2); let @b = percpuhash(7); begin { $x; }", R"(
+  test("let @a = hash(2); let @b = per__cpuhash(7); begin { $x; }", R"(
 Program
  map decl: @a
   bpf type: hash
   max entries: 2
  map decl: @b
-  bpf type: percpuhash
+  bpf type: per__cpuhash
   max entries: 7
  begin
   variable: $x

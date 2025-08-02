@@ -23,8 +23,8 @@ entry:
   %"struct sock_common.skc_daddr" = alloca i32, align 4
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 5
-  %retval = load volatile i64, ptr %2, align 8
-  %3 = inttoptr i64 %retval to ptr
+  %__retval = load volatile i64, ptr %2, align 8
+  %3 = inttoptr i64 %__retval to ptr
   %4 = call ptr @llvm.preserve.static.offset(ptr %3)
   %5 = getelementptr i8, ptr %4, i64 0
   %6 = call ptr @llvm.preserve.static.offset(ptr %5)

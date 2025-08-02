@@ -931,24 +931,24 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   } else if (builtin.ident == "pid" || builtin.ident == "tid") {
     builtin.builtin_type = CreateUInt32();
-  } else if (builtin.ident == "nsecs" || builtin.ident == "elapsed" ||
-             builtin.ident == "cgroup" || builtin.ident == "uid" ||
-             builtin.ident == "gid" || builtin.ident == "cpu" ||
-             builtin.ident == "rand" || builtin.ident == "numaid" ||
-             builtin.ident == "jiffies" || builtin.ident == "ncpus") {
+  } else if (builtin.ident == "nsecs" || builtin.ident == "__elapsed" ||
+             builtin.ident == "__cgroup" || builtin.ident == "__uid" ||
+             builtin.ident == "__gid" || builtin.ident == "__cpu" ||
+             builtin.ident == "__rand" || builtin.ident == "__numaid" ||
+             builtin.ident == "__jiffies" || builtin.ident == "__ncpus") {
     builtin.builtin_type = CreateUInt64();
-    if (builtin.ident == "jiffies" &&
+    if (builtin.ident == "__jiffies" &&
         !bpftrace_.feature_->has_helper_jiffies64()) {
       builtin.addError()
           << "BPF_FUNC_jiffies64 is not available for your kernel version";
     }
-  } else if (builtin.ident == "curtask") {
+  } else if (builtin.ident == "__curtask") {
     // Retype curtask to its original type: struct task_struct.
     builtin.builtin_type = CreatePointer(
         CreateRecord("struct task_struct",
                      bpftrace_.structs.Lookup("struct task_struct")),
         AddrSpace::kernel);
-  } else if (builtin.ident == "retval") {
+  } else if (builtin.ident == "__retval") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
@@ -979,13 +979,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "ustack") {
     builtin.builtin_type = CreateStack(
         false, StackType{ .mode = bpftrace_.config_->stack_mode });
-  } else if (builtin.ident == "comm") {
+  } else if (builtin.ident == "__comm") {
     constexpr int COMM_SIZE = 16;
     builtin.builtin_type = CreateString(COMM_SIZE);
     // comm allocated in the bpf stack. See codegen
     // Case: @=comm and strncmp(@, "name")
     builtin.builtin_type.SetAS(AddrSpace::kernel);
-  } else if (builtin.ident == "func") {
+  } else if (builtin.ident == "__func") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
@@ -1061,7 +1061,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.builtin_type = CreateUInt64();
     builtin.builtin_type.SetAS(addrspace);
-  } else if (builtin.ident == "probe") {
+  } else if (builtin.ident == "__probe") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
@@ -1070,15 +1070,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
       str_size = std::max(str_size, attach_point->name().length());
     }
     builtin.builtin_type = CreateString(str_size + 1);
-  } else if (builtin.ident == "username") {
+  } else if (builtin.ident == "__username") {
     builtin.builtin_type = CreateUsername();
-  } else if (builtin.ident == "usermode") {
+  } else if (builtin.ident == "__usermode") {
     if (arch::Host::Machine != arch::Machine::X86_64) {
       builtin.addError() << "'usermode' builtin is only supported on x86_64";
       return;
     }
     builtin.builtin_type = CreateUInt8();
-  } else if (builtin.ident == "cpid") {
+  } else if (builtin.ident == "__cpid") {
     if (!has_child_) {
       builtin.addError() << "cpid cannot be used without child command";
     }
@@ -2939,7 +2939,7 @@ void SemanticAnalyser::visit(For &f)
   builtins.visit(f.stmts);
   for (const Builtin &builtin : builtins.nodes()) {
     if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
-        builtin.ident == "retval") {
+        builtin.ident == "__retval") {
       builtin.addError() << "'" << builtin.ident
                          << "' builtin is not allowed in a for-loop";
     }

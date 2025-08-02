@@ -120,7 +120,7 @@ TEST(probe_expansion, probe_builtin)
 {
   // Even though kprobe_multi is enabled (by default), we should get full
   // expansion due to using the "probe" builtin.
-  test_attach_points("kprobe:sys_read,kprobe:my_*,kprobe:sys_write { probe }",
+  test_attach_points("kprobe:sys_read,kprobe:my_*,kprobe:sys_write { __probe }",
                      { "kprobe:sys_read",
                        "kprobe:my_one",
                        "kprobe:my_two",

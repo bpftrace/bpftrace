@@ -685,7 +685,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs") {
     return ScopedExpr(b_.CreateGetNs(TimestampMode::boot, builtin.loc));
-  } else if (builtin.ident == "elapsed") {
+  } else if (builtin.ident == "__elapsed") {
     AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
     b_.CreateStore(b_.getInt64(0), key);
 
@@ -705,18 +705,18 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(builtin.loc, false));
-  } else if (builtin.ident == "cgroup") {
+  } else if (builtin.ident == "__cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
-  } else if (builtin.ident == "uid" || builtin.ident == "gid" ||
-             builtin.ident == "username") {
+  } else if (builtin.ident == "__uid" || builtin.ident == "__gid" ||
+             builtin.ident == "__username") {
     Value *uidgid = b_.CreateGetUidGid(builtin.loc);
-    if (builtin.ident == "uid" || builtin.ident == "username") {
+    if (builtin.ident == "__uid" || builtin.ident == "__username") {
       return ScopedExpr(b_.CreateAnd(uidgid, 0xffffffff));
-    } else if (builtin.ident == "gid") {
+    } else if (builtin.ident == "__gid") {
       return ScopedExpr(b_.CreateLShr(uidgid, 32));
     }
     __builtin_unreachable();
-  } else if (builtin.ident == "usermode") {
+  } else if (builtin.ident == "__usermode") {
     if (arch::Host::Machine == arch::Machine::X86_64) {
       auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");
       if (!cs_offset) {
@@ -738,28 +738,28 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                          << arch::Host::Machine;
       return ScopedExpr(b_.getInt64(0));
     }
-  } else if (builtin.ident == "numaid") {
+  } else if (builtin.ident == "__numaid") {
     return ScopedExpr(b_.CreateGetNumaId(builtin.loc));
-  } else if (builtin.ident == "cpu") {
+  } else if (builtin.ident == "__cpu") {
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));
-  } else if (builtin.ident == "ncpus") {
+  } else if (builtin.ident == "__ncpus") {
     return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
                                     module_->getGlobalVariable(std::string(
                                         bpftrace::globalvars::NUM_CPUS)),
                                     "num_cpu.cmp"));
-  } else if (builtin.ident == "curtask") {
+  } else if (builtin.ident == "__curtask") {
     return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
-  } else if (builtin.ident == "rand") {
+  } else if (builtin.ident == "__rand") {
     Value *random = b_.CreateGetRandom(builtin.loc);
     return ScopedExpr(b_.CreateZExt(random, b_.getInt64Ty()));
-  } else if (builtin.ident == "comm") {
-    AllocaInst *buf = b_.CreateAllocaBPF(builtin.builtin_type, "comm");
+  } else if (builtin.ident == "__comm") {
+    AllocaInst *buf = b_.CreateAllocaBPF(builtin.builtin_type, "__comm");
     // initializing memory needed for older kernels:
     b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.builtin_type.GetSize());
     b_.CreateGetCurrentComm(buf, builtin.builtin_type.GetSize(), builtin.loc);
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (builtin.ident == "func") {
+  } else if (builtin.ident == "__func") {
     // fentry/fexit probes do not have access to registers, so require use of
     // the get_func_ip helper to get the instruction pointer.
     //
@@ -789,7 +789,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                         [this, value]() { b_.CreateLifetimeEnd(value); });
     }
     return ScopedExpr(value);
-  } else if (builtin.is_argx() || builtin.ident == "retval") {
+  } else if (builtin.is_argx() || builtin.ident == "__retval") {
     auto probe_type = probetype(current_attach_point_->provider);
 
     if (builtin.builtin_type.is_funcarg) {
@@ -854,7 +854,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     Value *expr = b_.CreateLoad(b_.GetType(builtin.builtin_type), dst);
     b_.CreateLifetimeEnd(dst);
     return ScopedExpr(expr);
-  } else if (builtin.ident == "probe") {
+  } else if (builtin.ident == "__probe") {
     auto probe_str = probefull_;
     probe_str.resize(builtin.builtin_type.GetSize() - 1);
     auto *probe_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
@@ -870,13 +870,13 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "args" || builtin.ident == "ctx") {
     // ctx is undocumented builtin: for debugging.
     return ScopedExpr(ctx_);
-  } else if (builtin.ident == "cpid") {
+  } else if (builtin.ident == "__cpid") {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
       LOG(BUG) << "Invalid cpid: " << cpid;
     }
     return ScopedExpr(b_.getInt64(cpid));
-  } else if (builtin.ident == "jiffies") {
+  } else if (builtin.ident == "__jiffies") {
     return ScopedExpr(b_.CreateJiffies64(builtin.loc));
   } else if (builtin.ident == "__session_is_return") {
     return ScopedExpr(CreateKernelFuncCall(

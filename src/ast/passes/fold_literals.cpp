@@ -582,7 +582,7 @@ std::optional<Expression> LiteralFolder::visit(Probe &probe)
 
 std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
 {
-  if (builtin.ident == "usermode") {
+  if (builtin.ident == "__usermode") {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
       for (auto *ap : probe->attach_points) {
         if (!ap->check_available(builtin.ident)) {

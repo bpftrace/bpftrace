@@ -164,7 +164,7 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
-  } else if (builtin.ident == "ncpus") {
+  } else if (builtin.ident == "__ncpus") {
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   }
 }
@@ -580,7 +580,7 @@ bool ResourceAnalyser::exceeds_stack_limit(size_t size)
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
-  return fun == "usym" || fun == "func" || fun == "ustack";
+  return fun == "usym" || fun == "__func" || fun == "ustack";
 }
 
 void ResourceAnalyser::update_map_info(Map &map)
