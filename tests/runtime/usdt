@@ -129,14 +129,14 @@ BEFORE ./testprogs/usdt_multiple_locations
 EXPECT Attached 6 probes
 
 NAME usdt probes - attach to probe with args by file
-PROG usdt:./testprogs/usdt_test:* { print(str(arg1)); @c = count(); if (@c > 20) { exit(); } }
+PROG usdt:./testprogs/usdt_test:* { $a = str(arg1); print($a); @c[$a] = 1; if (len(@c) == 3) { exit(); } }
 EXPECT Hello World1
 EXPECT Hello World2
 EXPECT Hello World3
 BEFORE ./testprogs/usdt_test
 
 NAME usdt probes - attach to probe with args by pid
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { print(str(arg1)); @c = count(); if (@c > 20) { exit(); } }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { $a = str(arg1); print($a); @c[$a] = 1; if (len(@c) == 3) { exit(); } }' -p {{BEFORE_PID}}
 EXPECT Hello World1
 EXPECT Hello World2
 EXPECT Hello World3
