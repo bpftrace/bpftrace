@@ -115,6 +115,7 @@ RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit();
 EXPECT Attached 3 probes
 
 # TODO(Jiawei Zhao): re-enable this test when libbpf can handle SIB usdt argument spec correctly
+# patch: https://patchwork.kernel.org/project/netdevbpf/list/?series=987857
 # NAME usdt probes - attach to probe on multiple files by wildcard
 # PROG usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }
 # EXPECT Attached 49 probes
@@ -124,10 +125,22 @@ RUN {{BPFTRACE}} -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p {{BEFORE_
 EXPECT Attached 2 probes
 BEFORE ./testprogs/usdt_test
 
-NAME usdt probes - attach to multiple probes with different number of locations by wildcard
+
+# When uprobe_multi is supported, a single ebpf program can be attached to multiple
+# identical usdt probes, so we only need to attach to 3 different usdt probes.
+# For systems without uprobe_multi support, we need to manually attach an ebpf
+# program to each probe location, resulting in 6 probes being attached.
+NAME usdt probes - attach to multiple probes with different number of locations by wildcard (with uprobe_multi)
 PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
+REQUIRES_FEATURE uprobe_multi
 BEFORE ./testprogs/usdt_multiple_locations
-EXPECT Attached 6 probes
+EXPECT_REGEX Attached 3 probes
+
+NAME usdt probes - attach to multiple probes with different number of locations by wildcard (without uprobe_multi)
+PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
+REQUIRES_FEATURE !uprobe_multi
+BEFORE ./testprogs/usdt_multiple_locations
+EXPECT_REGEX Attached 6 probes
 
 NAME usdt probes - attach to probe with args by file
 PROG usdt:./testprogs/usdt_test:* { $a = str(arg1); print($a); @c[$a] = 1; if (len(@c) == 3) { exit(); } }
@@ -221,6 +234,7 @@ RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_args:usdt_args:addr_* { printf("%lld 
 EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
 
 # TODO(Jiawei Zhao): re-enable this test when libbpf can handle SIB usdt argument spec correctly
+# patch: https://patchwork.kernel.org/project/netdevbpf/list/?series=987857
 # NAME usdt addr+index arguments
 # RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_args:usdt_args:index_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
 # EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
