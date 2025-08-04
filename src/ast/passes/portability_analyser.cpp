@@ -42,7 +42,7 @@ void PortabilityAnalyser::visit(Builtin &builtin)
   // `struct task_struct` is unstable across kernel versions and configurations.
   // This makes it inherently unportable. We must block it until we support
   // field access relocations.
-  if (builtin.ident == "curtask") {
+  if (builtin.ident == "__curtask") {
     builtin.addError() << "AOT does not yet support accessing `curtask`";
   }
 }

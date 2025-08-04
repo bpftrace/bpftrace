@@ -8,11 +8,13 @@
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_expansion.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
@@ -138,6 +140,8 @@ public:
                   .put(mock->bpftrace)
                   .put(types->types)
                   .add(CreateParsePass())
+                  .add(ast::CreateResolveImportsPass())
+                  .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateProbeExpansionPass())
@@ -197,7 +201,7 @@ class SemanticAnalyserTest : public SemanticAnalyserHarness,
 
 TEST_F(SemanticAnalyserTest, builtin_variables)
 {
-  // Just check that each builtin variable exists.
+  // Just check that each one exists as a builtin or macro
   test("kprobe:f { pid }");
   test("kprobe:f { tid }");
   test("kprobe:f { cgroup }");
@@ -1589,30 +1593,16 @@ TEST_F(SemanticAnalyserTest, call_func)
   // control over the mock features to only
   // disable that.
   test("fentry:f { func }", NoFeatures::Enable, Error{ R"(
-stdin:1:1-9: ERROR: fentry/fexit not available for your kernel version.
-fentry:f { func }
-~~~~~~~~
-stdin:1:12-16: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
-fentry:f { func }
-           ~~~~
+ERROR: BPF_FUNC_get_func_ip not available for your kernel version
 )" });
   test("fexit:f { func }", NoFeatures::Enable, Error{ R"(
-stdin:1:1-8: ERROR: fentry/fexit not available for your kernel version.
-fexit:f { func }
-~~~~~~~
-stdin:1:11-15: ERROR: BPF_FUNC_get_func_ip not available for your kernel version
-fexit:f { func }
-          ~~~~
+BPF_FUNC_get_func_ip not available for your kernel version
 )" });
   test("kretprobe:f { func }", NoFeatures::Enable, Error{ R"(
-stdin:1:15-19: ERROR: The 'func' builtin is not available for kretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
-kretprobe:f { func }
-              ~~~~
+ERROR: The 'func' builtin is not available for kretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
 )" });
   test("uretprobe:/bin/sh:f { func }", NoFeatures::Enable, Error{ R"(
-stdin:1:23-27: ERROR: The 'func' builtin is not available for uretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
-uretprobe:/bin/sh:f { func }
-                      ~~~~
+ERROR: The 'func' builtin is not available for uretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
 )" });
 }
 
@@ -3500,10 +3490,8 @@ stdin:1:31-35: ERROR: Argument mismatch for @x: trying to access with arguments:
 kprobe:f { @x[(uint64)1] = 1; @x[-1] }
                               ~~~~
 )" });
-  test("kretprobe:f { @x[1] = 1; @x[retval] }", Error{ R"(
-stdin:1:26-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int64'
-kretprobe:f { @x[1] = 1; @x[retval] }
-                         ~~~~~~~~~
+  test("kretprobe:f { @x[1] = 1; @x[(uint64)1] }", Error{ R"(
+ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int64'
 )" });
 }
 
@@ -4295,16 +4283,11 @@ TEST_F(SemanticAnalyserTest, subprog_builtin)
   test("fn f(): uint64 { return nsecs; }");
 }
 
-TEST_F(SemanticAnalyserTest, subprog_buildin_disallowed)
+TEST_F(SemanticAnalyserTest, subprog_builtin_disallowed)
 {
   // Error location is incorrect: #3063
   test("fn f(): int64 { return func; }", Error{ R"(
-stdin:1:25-29: ERROR: Builtin func not supported outside probe
-fn f(): int64 { return func; }
-                        ~~~~
-stdin:1:18-29: ERROR: Function f is of type int64, cannot return none
-fn f(): int64 { return func; }
-                 ~~~~~~~~~~~
+ERROR: Builtin __func not supported outside probe
 )" });
 }
 

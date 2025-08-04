@@ -1230,7 +1230,24 @@ Removes a watchpoint
 | Name | Description |
 | --- | --- |
 | [`assert`](#assert) | Simple assertion macro that will exit the entire script with an error code if the condition is not met. |
+| [`cgroup`](#cgroup) | ID of the cgroup the current process belongs to |
+| [`comm`](#comm) | Name of the current thread |
+| [`cpid`](#cpid) | Child process ID, if bpftrace is invoked with `-c` |
+| [`cpu`](#cpu) | ID of the processor executing the BPF program |
+| [`curtask`](#curtask) | Pointer to `struct task_struct` of the current task |
+| [`elapsed`](#elapsed) | ktime_get_ns - ktime_get_boot_ns |
+| [`func`](#func) | Name of the current function being traced (kprobes,uprobes,fentry) |
+| [`gid`](#gid) | Group ID of the current thread, as seen from the init namespace |
+| [`jiffies`](#jiffies) | Jiffies of the kernel |
+| [`ncpus`](#ncpus) | Number of CPUs |
+| [`numaid`](#numaid) | ID of the NUMA node executing the BPF program |
 | [`ppid`](#ppid) | Get the pid of the parent process |
+| [`probe`](#probe) | Name of the fully expanded probe |
+| [`rand`](#rand) | Get a pseudo random number |
+| [`retval`](#retval) | Value returned by the function being traced |
+| [`uid`](#uid) | User ID of the current thread, as seen from the init namespace |
+| [`usermode`](#usermode) | Returns 1 if the current process is in user mode, 0 otherwise |
+| [`username`](#username) | Get the current username |
 
 ### assert
 Simple assertion macro that will exit the entire script with an error code if the condition is not met.
@@ -1238,6 +1255,119 @@ Simple assertion macro that will exit the entire script with an error code if th
 #### Parameters
 - **$cond**: (bool) The condition to check
 - **$msg**: (string) The message to print if the condition is not met
+
+#### Last Expression
+- **None**
+
+### cgroup
+ID of the cgroup the current process belongs to
+
+Only works with cgroupv2
+bpf helper: get_current_cgroup_id
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### comm
+Name of the current thread
+
+bpf helper: get_current_comm
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### cpid
+Child process ID, if bpftrace is invoked with `-c`
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### cpu
+ID of the processor executing the BPF program
+
+BPF program, in this case, is the probe body
+bpf helper: raw_smp_processor_id
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### curtask
+Pointer to `struct task_struct` of the current task
+
+bpf helper: get_current_task
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### elapsed
+ktime_get_ns - ktime_get_boot_ns
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### func
+Name of the current function being traced (kprobes,uprobes,fentry)
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### gid
+Group ID of the current thread, as seen from the init namespace
+
+bpf helper: get_current_uid_gid
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### jiffies
+Jiffies of the kernel
+
+On 32-bit systems, using this builtin might be slower
+bpf helper: get_jiffies_64
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### ncpus
+Number of CPUs
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### numaid
+ID of the NUMA node executing the BPF program
+
+BPF program, in this case, is the probe body
+bpf helper: numa_node_id
+
+
+#### Parameters
 
 #### Last Expression
 - **None**
@@ -1250,6 +1380,73 @@ Get the pid of the parent process
 
 #### Last Expression
 - **uint32**: The pid of the parent process
+
+### probe
+Name of the fully expanded probe
+
+For example: `kprobe:do_nanosleep`
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### rand
+Get a pseudo random number
+
+bpf helper: get_prandom_u32
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### retval
+Value returned by the function being traced
+
+(kretprobe, uretprobe, fexit)
+For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### uid
+User ID of the current thread, as seen from the init namespace
+
+bpf helper: get_current_uid_gid
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### usermode
+Returns 1 if the current process is in user mode, 0 otherwise
+
+Currently only available on x86_64.
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
+
+### username
+Get the current username
+
+Often this is just "root"
+
+
+#### Parameters
+
+#### Last Expression
+- **None**
 
 ## Map Functions
 

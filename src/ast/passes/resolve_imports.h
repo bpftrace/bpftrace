@@ -99,6 +99,6 @@ private:
 };
 
 // This pass resolves imports from the AST itself.
-Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths);
+Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths = {});
 
 } // namespace bpftrace::ast

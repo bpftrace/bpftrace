@@ -23,7 +23,7 @@ entry:
   %usym = alloca %usym_t, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 128
-  %func = load volatile i64, ptr %2, align 8
+  %__func = load volatile i64, ptr %2, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %usym)
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %3 = lshr i64 %get_pid_tgid, 32
@@ -31,7 +31,7 @@ entry:
   %4 = getelementptr %usym_t, ptr %usym, i64 0, i32 0
   %5 = getelementptr %usym_t, ptr %usym, i64 0, i32 1
   %6 = getelementptr %usym_t, ptr %usym, i64 0, i32 2
-  store i64 %func, ptr %4, align 8
+  store i64 %__func, ptr %4, align 8
   store i32 %pid, ptr %5, align 4
   store i32 0, ptr %6, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
