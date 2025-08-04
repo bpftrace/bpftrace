@@ -85,7 +85,7 @@ TEST(probe_expansion, session_ast)
 Program
  kprobe:sys_*
   if
-   builtin: __session_is_return
+   builtin: __builtin_session_is_return
    then
     =
      map: @exit
@@ -120,11 +120,12 @@ TEST(probe_expansion, probe_builtin)
 {
   // Even though kprobe_multi is enabled (by default), we should get full
   // expansion due to using the "probe" builtin.
-  test_attach_points("kprobe:sys_read,kprobe:my_*,kprobe:sys_write { __probe }",
-                     { "kprobe:sys_read",
-                       "kprobe:my_one",
-                       "kprobe:my_two",
-                       "kprobe:sys_write" });
+  test_attach_points(
+      "kprobe:sys_read,kprobe:my_*,kprobe:sys_write { __builtin_probe }",
+      { "kprobe:sys_read",
+        "kprobe:my_one",
+        "kprobe:my_two",
+        "kprobe:sys_write" });
 }
 
 TEST(probe_expansion, kprobe_wildcard_no_matches)

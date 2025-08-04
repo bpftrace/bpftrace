@@ -2510,9 +2510,9 @@ llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
 {
   std::optional<std::string> reg;
-  if (builtin == "__retval") {
+  if (builtin == "__builtin_retval") {
     reg = arch::Host::return_value();
-  } else if (builtin == "__func") {
+  } else if (builtin == "__builtin_func") {
     reg = arch::Host::pc_value();
   } else if (builtin.starts_with("arg")) {
     size_t n = static_cast<size_t>(atoi(builtin.substr(3).c_str()));

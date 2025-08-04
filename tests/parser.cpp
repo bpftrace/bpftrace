@@ -121,28 +121,28 @@ Program
   builtin: tid
 )");
 
-  test("kprobe:f { __cgroup }", R"(
+  test("kprobe:f { __builtin_cgroup }", R"(
 Program
  kprobe:f
-  builtin: __cgroup
+  builtin: __builtin_cgroup
 )");
 
-  test("kprobe:f { __uid }", R"(
+  test("kprobe:f { __builtin_uid }", R"(
 Program
  kprobe:f
-  builtin: __uid
+  builtin: __builtin_uid
 )");
 
-  test("kprobe:f { __username }", R"(
+  test("kprobe:f { __builtin_username }", R"(
 Program
  kprobe:f
-  builtin: __username
+  builtin: __builtin_username
 )");
 
-  test("kprobe:f { __gid }", R"(
+  test("kprobe:f { __builtin_gid }", R"(
 Program
  kprobe:f
-  builtin: __gid
+  builtin: __builtin_gid
 )");
 
   test("kprobe:f { nsecs }", R"(
@@ -151,34 +151,34 @@ Program
   builtin: nsecs
 )");
 
-  test("kprobe:f { __elapsed }", R"(
+  test("kprobe:f { __builtin_elapsed }", R"(
 Program
  kprobe:f
-  builtin: __elapsed
+  builtin: __builtin_elapsed
 )");
 
-  test("kprobe:f { __numaid }", R"(
+  test("kprobe:f { __builtin_numaid }", R"(
 Program
  kprobe:f
-  builtin: __numaid
+  builtin: __builtin_numaid
 )");
 
-  test("kprobe:f { __cpu }", R"(
+  test("kprobe:f { __builtin_cpu }", R"(
 Program
  kprobe:f
-  builtin: __cpu
+  builtin: __builtin_cpu
 )");
 
-  test("kprobe:f { __curtask }", R"(
+  test("kprobe:f { __builtin_curtask }", R"(
 Program
  kprobe:f
-  builtin: __curtask
+  builtin: __builtin_curtask
 )");
 
-  test("kprobe:f { __rand }", R"(
+  test("kprobe:f { __builtin_rand }", R"(
 Program
  kprobe:f
-  builtin: __rand
+  builtin: __builtin_rand
 )");
 
   test("kprobe:f { ctx }", R"(
@@ -187,10 +187,10 @@ Program
   builtin: ctx
 )");
 
-  test("kprobe:f { __comm }", R"(
+  test("kprobe:f { __builtin_comm }", R"(
 Program
  kprobe:f
-  builtin: __comm
+  builtin: __builtin_comm
 )");
 
   test("kprobe:f { kstack }", R"(
@@ -217,22 +217,22 @@ Program
   builtin: sarg0
 )");
 
-  test("kprobe:f { __retval }", R"(
+  test("kprobe:f { __builtin_retval }", R"(
 Program
  kprobe:f
-  builtin: __retval
+  builtin: __builtin_retval
 )");
 
-  test("kprobe:f { __func }", R"(
+  test("kprobe:f { __builtin_func }", R"(
 Program
  kprobe:f
-  builtin: __func
+  builtin: __builtin_func
 )");
 
-  test("kprobe:f { __probe }", R"(
+  test("kprobe:f { __builtin_probe }", R"(
 Program
  kprobe:f
-  builtin: __probe
+  builtin: __builtin_probe
 )");
 
   test("kprobe:f { args }", R"(
@@ -802,7 +802,7 @@ TEST(Parser, map_key)
        "     map: @c\n"
        "   int: 1\n");
 
-  test("kprobe:sys_open { @x[pid] = 1; @x[tid,__uid,arg9] = 1; }",
+  test("kprobe:sys_open { @x[pid] = 1; @x[tid,__builtin_uid,arg9] = 1; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
@@ -813,7 +813,7 @@ TEST(Parser, map_key)
        "   map: @x\n"
        "    tuple:\n"
        "     builtin: tid\n"
-       "     builtin: __uid\n"
+       "     builtin: __builtin_uid\n"
        "     builtin: arg9\n"
        "   int: 1\n");
 }
@@ -842,7 +842,7 @@ TEST(Parser, predicate_containing_division)
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __comm == "
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __builtin_comm == "
        "\"string\" /\n"
        "{\n"
        "  1;\n"
@@ -866,7 +866,7 @@ TEST(Parser, expressions)
        "      ~\n"
        "       int: 0\n"
        "    ==\n"
-       "     builtin: __comm\n"
+       "     builtin: __builtin_comm\n"
        "     string: string\n"
        "  int: 1\n");
 }
@@ -1735,14 +1735,14 @@ TEST(Parser, wildcard_attach_points)
        "Program\n"
        " kprobe:*\n"
        "  int: 1\n");
-  test("kprobe:sys_* { @x = __cpu*__retval }",
+  test("kprobe:sys_* { @x = __builtin_cpu*__builtin_retval }",
        "Program\n"
        " kprobe:sys_*\n"
        "  =\n"
        "   map: @x\n"
        "   *\n"
-       "    builtin: __cpu\n"
-       "    builtin: __retval\n");
+       "    builtin: __builtin_cpu\n"
+       "    builtin: __builtin_retval\n");
   test("kprobe:sys_* { @x = *arg0 }",
        "Program\n"
        " kprobe:sys_*\n"
@@ -1819,11 +1819,11 @@ TEST(Parser, wildcard_func)
   std::string keywords[] = {
     "arg0",
     "args",
-    "__curtask",
+    "__builtin_curtask",
     "errorf",
     "func",
-    "__gid"
-    "__rand",
+    "__builtin_gid"
+    "__builtin_rand",
     "uid",
     "avg",
     "cat",
@@ -2861,9 +2861,9 @@ TEST(Parser, keywords_as_identifiers)
          "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
          " .\n   variable: $x\n   " +
              keyword + "\n");
-    test("begin { $x = offsetof(*__curtask, " + keyword + "); }",
+    test("begin { $x = offsetof(*__builtin_curtask, " + keyword + "); }",
          "Program\n begin\n  =\n   variable: $x\n   offsetof: \n    "
-         "dereference\n     builtin: __curtask\n    " +
+         "dereference\n     builtin: __builtin_curtask\n    " +
              keyword + "\n");
   }
 }

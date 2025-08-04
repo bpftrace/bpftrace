@@ -124,7 +124,7 @@ void ExpansionAnalyser::visit(Builtin &builtin)
   if (!probe_)
     return;
 
-  if (builtin.ident == "__probe") {
+  if (builtin.ident == "__builtin_probe") {
     for (auto *ap : probe_->attach_points)
       result_.set_expansion(*ap, ExpansionType::FULL);
   }
@@ -198,7 +198,7 @@ void SessionExpander::visit(Probe &probe)
 
     AttachPointList attach_points = probe.attach_points;
     auto *if_cond = ast_.make_node<If>(
-        ast_.make_node<Builtin>("__session_is_return",
+        ast_.make_node<Builtin>("__builtin_session_is_return",
                                 Location(probe.block->loc)),
         retprobe->block,
         probe.block,

@@ -70,7 +70,7 @@ macro assert($cond, $msg) {
 //
 // This utilizes the BPF helper `get_current_cgroup_id`
 macro cgroup() {
-  __cgroup
+  __builtin_cgroup
 }
 
 // :function cgroupid
@@ -135,13 +135,13 @@ macro cgroup() {
 //
 // This utilizes the BPF helper `get_current_comm`
 macro comm() {
-  __comm
+  __builtin_comm
 }
 
 // :variant uint32 cpid()
 // Child process ID, if bpftrace is invoked with `-c`
 macro cpid() {
-  __cpid
+  __builtin_cpid
 }
 
 // :variant uint32 cpu()
@@ -151,7 +151,7 @@ macro cpid() {
 //
 // This utilizes the BPF helper `raw_smp_processor_id`
 macro cpu() {
-  __cpu
+  __builtin_cpu
 }
 
 // :variant uint64 curtask()
@@ -159,7 +159,7 @@ macro cpu() {
 //
 // This utilizes the BPF helper `get_current_task`
 macro curtask() {
-  __curtask
+  __builtin_curtask
 }
 
 // :function delete
@@ -210,7 +210,7 @@ macro curtask() {
 // :variant uint64 elapsed()
 // ktime_get_ns - ktime_get_boot_ns
 macro elapsed() {
-  __elapsed
+  __builtin_elapsed
 }
 
 // :function errorf
@@ -256,7 +256,7 @@ macro elapsed() {
 // :variant string func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
 macro func() {
-  __func
+  __builtin_func
 }
 
 // :function getopt
@@ -286,7 +286,7 @@ macro func() {
 //
 // This utilizes the BPF helper `get_current_uid_gid`
 macro gid() {
-  __gid
+  __builtin_gid
 }
 
 // :function has_key
@@ -321,7 +321,7 @@ macro gid() {
 //
 // This utilizes the BPF helper `get_jiffies_64`
 macro jiffies() {
-  __jiffies
+  __builtin_jiffies
 }
 
 // :function join
@@ -474,7 +474,7 @@ macro jiffies() {
 // :variant uint64 ncpus()
 // Number of CPUs
 macro ncpus() {
-  __ncpus
+  __builtin_ncpus
 }
 
 // :function nsecs
@@ -521,7 +521,7 @@ macro ncpus() {
 //
 // This utilizes the BPF helper `numa_node_id`
 macro numaid() {
-  __numaid
+  __builtin_numaid
 }
 
 // :function offsetof
@@ -795,7 +795,7 @@ macro ppid($task) {
 //
 // For example: `kprobe:do_nanosleep`
 macro probe() {
-  __probe
+  __builtin_probe
 }
 
 // :function pton
@@ -813,7 +813,7 @@ macro probe() {
 //
 // This utilizes the BPF helper `get_prandom_u32`
 macro rand() {
-  __rand
+  __builtin_rand
 }
 
 // :function reg
@@ -833,7 +833,7 @@ macro rand() {
 // (kretprobe, uretprobe, fexit)
 // For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`
 macro retval() {
-  __retval
+  __builtin_retval
 }
 
 // :function signal
@@ -1119,7 +1119,7 @@ macro retval() {
 //
 // This utilizes the BPF helper `get_current_uid_gid`
 macro uid() {
-  __uid
+  __builtin_uid
 }
 
 // :function uptr
@@ -1134,7 +1134,7 @@ macro uid() {
 //
 // Currently only available on x86_64.
 macro usermode() {
-  __usermode
+  __builtin_usermode
 }
 
 // :variant string username()
@@ -1142,7 +1142,7 @@ macro usermode() {
 //
 // Often this is just "root"
 macro username() {
-  __username
+  __builtin_username
 }
 
 // :function ustack

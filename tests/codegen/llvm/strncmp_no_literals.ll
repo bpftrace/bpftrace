@@ -22,7 +22,7 @@ entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %strcmp.result = alloca i1, align 1
-  %__comm = alloca [16 x i8], align 1
+  %__builtin_comm = alloca [16 x i8], align 1
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
@@ -32,14 +32,14 @@ entry:
   %4 = getelementptr i8, ptr %3, i64 8
   %5 = load volatile i64, ptr %4, align 8
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %5)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %__comm)
-  call void @llvm.memset.p0.i64(ptr align 1 %__comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__comm, i64 16)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %__builtin_comm)
+  call void @llvm.memset.p0.i64(ptr align 1 %__builtin_comm, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__builtin_comm, i64 16)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcmp.result)
   store i1 false, ptr %strcmp.result, align 1
   %6 = getelementptr i8, ptr %2, i32 0
   %7 = load i8, ptr %6, align 1
-  %8 = getelementptr i8, ptr %__comm, i32 0
+  %8 = getelementptr i8, ptr %__builtin_comm, i32 0
   %9 = load i8, ptr %8, align 1
   %strcmp.cmp = icmp ne i8 %7, %9
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
@@ -61,7 +61,7 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   %10 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   %11 = zext i1 %10 to i64
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %__comm)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %__builtin_comm)
   %predcond = icmp eq i64 %11, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
@@ -72,7 +72,7 @@ strcmp.done:                                      ; preds = %strcmp.loop57, %str
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
   %12 = getelementptr i8, ptr %2, i32 1
   %13 = load i8, ptr %12, align 1
-  %14 = getelementptr i8, ptr %__comm, i32 1
+  %14 = getelementptr i8, ptr %__builtin_comm, i32 1
   %15 = load i8, ptr %14, align 1
   %strcmp.cmp3 = icmp ne i8 %13, %15
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
@@ -84,7 +84,7 @@ strcmp.loop_null_cmp:                             ; preds = %entry
 strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
   %16 = getelementptr i8, ptr %2, i32 2
   %17 = load i8, ptr %16, align 1
-  %18 = getelementptr i8, ptr %__comm, i32 2
+  %18 = getelementptr i8, ptr %__builtin_comm, i32 2
   %19 = load i8, ptr %18, align 1
   %strcmp.cmp7 = icmp ne i8 %17, %19
   br i1 %strcmp.cmp7, label %strcmp.false, label %strcmp.loop_null_cmp6
@@ -96,7 +96,7 @@ strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
 strcmp.loop5:                                     ; preds = %strcmp.loop_null_cmp6
   %20 = getelementptr i8, ptr %2, i32 3
   %21 = load i8, ptr %20, align 1
-  %22 = getelementptr i8, ptr %__comm, i32 3
+  %22 = getelementptr i8, ptr %__builtin_comm, i32 3
   %23 = load i8, ptr %22, align 1
   %strcmp.cmp11 = icmp ne i8 %21, %23
   br i1 %strcmp.cmp11, label %strcmp.false, label %strcmp.loop_null_cmp10
@@ -108,7 +108,7 @@ strcmp.loop_null_cmp6:                            ; preds = %strcmp.loop1
 strcmp.loop9:                                     ; preds = %strcmp.loop_null_cmp10
   %24 = getelementptr i8, ptr %2, i32 4
   %25 = load i8, ptr %24, align 1
-  %26 = getelementptr i8, ptr %__comm, i32 4
+  %26 = getelementptr i8, ptr %__builtin_comm, i32 4
   %27 = load i8, ptr %26, align 1
   %strcmp.cmp15 = icmp ne i8 %25, %27
   br i1 %strcmp.cmp15, label %strcmp.false, label %strcmp.loop_null_cmp14
@@ -120,7 +120,7 @@ strcmp.loop_null_cmp10:                           ; preds = %strcmp.loop5
 strcmp.loop13:                                    ; preds = %strcmp.loop_null_cmp14
   %28 = getelementptr i8, ptr %2, i32 5
   %29 = load i8, ptr %28, align 1
-  %30 = getelementptr i8, ptr %__comm, i32 5
+  %30 = getelementptr i8, ptr %__builtin_comm, i32 5
   %31 = load i8, ptr %30, align 1
   %strcmp.cmp19 = icmp ne i8 %29, %31
   br i1 %strcmp.cmp19, label %strcmp.false, label %strcmp.loop_null_cmp18
@@ -132,7 +132,7 @@ strcmp.loop_null_cmp14:                           ; preds = %strcmp.loop9
 strcmp.loop17:                                    ; preds = %strcmp.loop_null_cmp18
   %32 = getelementptr i8, ptr %2, i32 6
   %33 = load i8, ptr %32, align 1
-  %34 = getelementptr i8, ptr %__comm, i32 6
+  %34 = getelementptr i8, ptr %__builtin_comm, i32 6
   %35 = load i8, ptr %34, align 1
   %strcmp.cmp23 = icmp ne i8 %33, %35
   br i1 %strcmp.cmp23, label %strcmp.false, label %strcmp.loop_null_cmp22
@@ -144,7 +144,7 @@ strcmp.loop_null_cmp18:                           ; preds = %strcmp.loop13
 strcmp.loop21:                                    ; preds = %strcmp.loop_null_cmp22
   %36 = getelementptr i8, ptr %2, i32 7
   %37 = load i8, ptr %36, align 1
-  %38 = getelementptr i8, ptr %__comm, i32 7
+  %38 = getelementptr i8, ptr %__builtin_comm, i32 7
   %39 = load i8, ptr %38, align 1
   %strcmp.cmp27 = icmp ne i8 %37, %39
   br i1 %strcmp.cmp27, label %strcmp.false, label %strcmp.loop_null_cmp26
@@ -156,7 +156,7 @@ strcmp.loop_null_cmp22:                           ; preds = %strcmp.loop17
 strcmp.loop25:                                    ; preds = %strcmp.loop_null_cmp26
   %40 = getelementptr i8, ptr %2, i32 8
   %41 = load i8, ptr %40, align 1
-  %42 = getelementptr i8, ptr %__comm, i32 8
+  %42 = getelementptr i8, ptr %__builtin_comm, i32 8
   %43 = load i8, ptr %42, align 1
   %strcmp.cmp31 = icmp ne i8 %41, %43
   br i1 %strcmp.cmp31, label %strcmp.false, label %strcmp.loop_null_cmp30
@@ -168,7 +168,7 @@ strcmp.loop_null_cmp26:                           ; preds = %strcmp.loop21
 strcmp.loop29:                                    ; preds = %strcmp.loop_null_cmp30
   %44 = getelementptr i8, ptr %2, i32 9
   %45 = load i8, ptr %44, align 1
-  %46 = getelementptr i8, ptr %__comm, i32 9
+  %46 = getelementptr i8, ptr %__builtin_comm, i32 9
   %47 = load i8, ptr %46, align 1
   %strcmp.cmp35 = icmp ne i8 %45, %47
   br i1 %strcmp.cmp35, label %strcmp.false, label %strcmp.loop_null_cmp34
@@ -180,7 +180,7 @@ strcmp.loop_null_cmp30:                           ; preds = %strcmp.loop25
 strcmp.loop33:                                    ; preds = %strcmp.loop_null_cmp34
   %48 = getelementptr i8, ptr %2, i32 10
   %49 = load i8, ptr %48, align 1
-  %50 = getelementptr i8, ptr %__comm, i32 10
+  %50 = getelementptr i8, ptr %__builtin_comm, i32 10
   %51 = load i8, ptr %50, align 1
   %strcmp.cmp39 = icmp ne i8 %49, %51
   br i1 %strcmp.cmp39, label %strcmp.false, label %strcmp.loop_null_cmp38
@@ -192,7 +192,7 @@ strcmp.loop_null_cmp34:                           ; preds = %strcmp.loop29
 strcmp.loop37:                                    ; preds = %strcmp.loop_null_cmp38
   %52 = getelementptr i8, ptr %2, i32 11
   %53 = load i8, ptr %52, align 1
-  %54 = getelementptr i8, ptr %__comm, i32 11
+  %54 = getelementptr i8, ptr %__builtin_comm, i32 11
   %55 = load i8, ptr %54, align 1
   %strcmp.cmp43 = icmp ne i8 %53, %55
   br i1 %strcmp.cmp43, label %strcmp.false, label %strcmp.loop_null_cmp42
@@ -204,7 +204,7 @@ strcmp.loop_null_cmp38:                           ; preds = %strcmp.loop33
 strcmp.loop41:                                    ; preds = %strcmp.loop_null_cmp42
   %56 = getelementptr i8, ptr %2, i32 12
   %57 = load i8, ptr %56, align 1
-  %58 = getelementptr i8, ptr %__comm, i32 12
+  %58 = getelementptr i8, ptr %__builtin_comm, i32 12
   %59 = load i8, ptr %58, align 1
   %strcmp.cmp47 = icmp ne i8 %57, %59
   br i1 %strcmp.cmp47, label %strcmp.false, label %strcmp.loop_null_cmp46
@@ -216,7 +216,7 @@ strcmp.loop_null_cmp42:                           ; preds = %strcmp.loop37
 strcmp.loop45:                                    ; preds = %strcmp.loop_null_cmp46
   %60 = getelementptr i8, ptr %2, i32 13
   %61 = load i8, ptr %60, align 1
-  %62 = getelementptr i8, ptr %__comm, i32 13
+  %62 = getelementptr i8, ptr %__builtin_comm, i32 13
   %63 = load i8, ptr %62, align 1
   %strcmp.cmp51 = icmp ne i8 %61, %63
   br i1 %strcmp.cmp51, label %strcmp.false, label %strcmp.loop_null_cmp50
@@ -228,7 +228,7 @@ strcmp.loop_null_cmp46:                           ; preds = %strcmp.loop41
 strcmp.loop49:                                    ; preds = %strcmp.loop_null_cmp50
   %64 = getelementptr i8, ptr %2, i32 14
   %65 = load i8, ptr %64, align 1
-  %66 = getelementptr i8, ptr %__comm, i32 14
+  %66 = getelementptr i8, ptr %__builtin_comm, i32 14
   %67 = load i8, ptr %66, align 1
   %strcmp.cmp55 = icmp ne i8 %65, %67
   br i1 %strcmp.cmp55, label %strcmp.false, label %strcmp.loop_null_cmp54
@@ -240,7 +240,7 @@ strcmp.loop_null_cmp50:                           ; preds = %strcmp.loop45
 strcmp.loop53:                                    ; preds = %strcmp.loop_null_cmp54
   %68 = getelementptr i8, ptr %2, i32 15
   %69 = load i8, ptr %68, align 1
-  %70 = getelementptr i8, ptr %__comm, i32 15
+  %70 = getelementptr i8, ptr %__builtin_comm, i32 15
   %71 = load i8, ptr %70, align 1
   %strcmp.cmp59 = icmp ne i8 %69, %71
   br i1 %strcmp.cmp59, label %strcmp.false, label %strcmp.loop_null_cmp58

@@ -26,8 +26,8 @@ entry:
   store i64 0, ptr %"@_key", align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 80
-  %__retval = load volatile i64, ptr %2, align 8
-  %cast = trunc i64 %__retval to i32
+  %__builtin_retval = load volatile i64, ptr %2, align 8
+  %cast = trunc i64 %__builtin_retval to i32
   %3 = sext i32 %cast to i64
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)

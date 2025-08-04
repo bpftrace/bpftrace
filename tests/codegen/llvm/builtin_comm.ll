@@ -19,15 +19,15 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !50 {
 entry:
   %"@x_key" = alloca i64, align 8
-  %__comm = alloca [16 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %__comm)
-  call void @llvm.memset.p0.i64(ptr align 1 %__comm, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__comm, i64 16)
+  %__builtin_comm = alloca [16 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %__builtin_comm)
+  call void @llvm.memset.p0.i64(ptr align 1 %__builtin_comm, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__builtin_comm, i64 16)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
-  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %__comm, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %__builtin_comm, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %__comm)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %__builtin_comm)
   ret i64 0
 }
 

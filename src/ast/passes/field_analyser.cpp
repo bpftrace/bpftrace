@@ -86,7 +86,7 @@ void FieldAnalyser::visit(Builtin &builtin)
     // make them resolved and available
     if (probe_type_ == ProbeType::iter)
       builtin_type = "struct bpf_iter__" + attach_func_;
-  } else if (builtin.ident == "__curtask") {
+  } else if (builtin.ident == "__builtin_curtask") {
     builtin_type = "struct task_struct";
   } else if (builtin.ident == "args") {
     if (!probe_)
@@ -94,7 +94,7 @@ void FieldAnalyser::visit(Builtin &builtin)
     resolve_args(*probe_);
     has_builtin_args_ = true;
     return;
-  } else if (builtin.ident == "__retval") {
+  } else if (builtin.ident == "__builtin_retval") {
     if (!probe_)
       return;
     resolve_args(*probe_);
