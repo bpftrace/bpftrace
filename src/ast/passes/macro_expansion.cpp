@@ -59,6 +59,7 @@ public:
 
   void visit(AssignVarStatement &assignment);
   void visit(Variable &var);
+  void visit(VarDeclStatement &decl);
   void visit(Map &map);
   void visit(Expression &expr);
   // We can't add extra params with default values to the standard `visit`
@@ -87,9 +88,10 @@ private:
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
-  std::unordered_set<Variable *> temp_vars_;
-  std::unordered_map<std::string, Call *> arg_vars_no_mutation_;
+  std::unordered_set<std::string> renamed_vars_;
+  std::unordered_map<std::string, Expression> passed_exprs_;
   const std::vector<std::string> macro_stack_;
+  bool visiting_passed_in_expr_ = false;
 };
 
 MacroExpander::MacroExpander(
@@ -112,21 +114,17 @@ void MacroExpander::visit(AssignVarStatement &assignment)
   }
 
   auto *var = assignment.var();
-  if (temp_vars_.contains(var)) {
-    // Don't change variable names if this is a variable assignment
-    // that we created to represent the passed in expression e.g.
-    // macro add_one($x) { $x + 1 } begin { $a = 1; print(add_one($a + 1)); }
-    // will become
-    // begin { $a = 1; print({let $$add_one_$a = $a + 1; $$add_one_$a + 1}); }
-    return;
-  }
 
-  if (auto it = arg_vars_no_mutation_.find(var->ident);
-      it != arg_vars_no_mutation_.end()) {
-    it->second->addError()
+  if (auto it = passed_exprs_.find(var->ident); it != passed_exprs_.end()) {
+    it->second.node().addError()
         << "Macro '" << macro_stack_.back() << "' assigns to parameter '"
         << var->ident << "', meaning it expects a variable, not an expression.";
     return;
+  }
+
+  // Don't rename any variable passed by reference
+  if (!vars_.contains(var->ident)) {
+    renamed_vars_.insert(var->ident);
   }
 
   if (std::holds_alternative<VarDeclStatement *>(assignment.var_decl)) {
@@ -137,6 +135,16 @@ void MacroExpander::visit(AssignVarStatement &assignment)
   visit(assignment.expr);
 }
 
+void MacroExpander::visit(VarDeclStatement &decl)
+{
+  auto *var = decl.var;
+  if (passed_exprs_.contains(var->ident) || vars_.contains(var->ident)) {
+    decl.addError() << "Variable declaration shadows macro arg " << var->ident;
+    return;
+  }
+  visit(decl.var);
+}
+
 void MacroExpander::visit(Variable &var)
 {
   if (is_top_level()) {
@@ -145,7 +153,7 @@ void MacroExpander::visit(Variable &var)
 
   if (auto it = vars_.find(var.ident); it != vars_.end()) {
     var.ident = it->second;
-  } else if (!temp_vars_.contains(&var)) {
+  } else if (renamed_vars_.contains(var.ident) && !visiting_passed_in_expr_) {
     var.ident = get_new_var_ident(var.ident);
   }
 }
@@ -158,7 +166,7 @@ void MacroExpander::visit(Map &map)
 
   if (auto it = maps_.find(map.ident); it != maps_.end()) {
     map.ident = it->second;
-  } else {
+  } else if (!visiting_passed_in_expr_) {
     map.addError() << "Unhygienic access to map: " << map.ident
                    << ". Maps must be passed into the macro as arguments.";
   }
@@ -232,6 +240,19 @@ void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
 
 void MacroExpander::visit(Expression &expr)
 {
+  auto *var = expr.as<Variable>();
+  if (var) {
+    if (auto it = passed_exprs_.find(var->ident); it != passed_exprs_.end()) {
+      expr = clone(ast_, it->second, it->second.loc());
+      // We're evaluating a passed in expression which wasn't defined inside the
+      // macro so map access is hygenic
+      visiting_passed_in_expr_ = true;
+      visit(expr);
+      visiting_passed_in_expr_ = false;
+      return;
+    }
+  }
+
   replace_macro_call(expr);
 }
 
@@ -320,17 +341,7 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
       }
     } else {
       if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
-        stmt_list.emplace_back(ast_.make_node<AssignVarStatement>(
-            ast_.make_node<Variable>(get_new_var_ident(mvar->ident),
-                                     Location(call.loc)),
-            clone(ast_, call.vargs.at(i), call.vargs.at(i).loc()),
-            Location(call.loc)));
-        // As per the name these arg variables are not expecting to be mutated
-        // because the caller passed in an expression instead of another
-        // variable e.g.
-        // macro add1($x) { $x += 1; $x } begin { add1(1 + 1);
-        arg_vars_no_mutation_[mvar->ident] = &call;
-        temp_vars_.insert(stmt_list.back().as<AssignVarStatement>()->var());
+        passed_exprs_[mvar->ident] = call.vargs.at(i);
       } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
         call.addError()
             << "Mismatched arg to macro call. Macro expects a map for arg "

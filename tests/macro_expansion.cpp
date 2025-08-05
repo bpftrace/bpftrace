@@ -107,6 +107,9 @@ TEST(macro_expansion, variables)
   test_error("macro add1($x) { $x += 1; $x } begin { add1(1 + 1); }",
              "Macro 'add1' assigns to parameter '$x', meaning it expects a "
              "variable, not an expression.");
+
+  test_error("macro set($x) { let $x; $x } begin { set(1); }",
+             "Variable declaration shadows macro arg $x");
 }
 
 TEST(macro_expansion, maps)
