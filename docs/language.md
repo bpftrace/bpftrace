@@ -50,6 +50,37 @@ This probe is used to print a header, indicating that the tracing has started.
 The second action block uses two probes, one for `open` and one for `openat`, and defines an action that prints the file being `open` ed as well as the `pid` and `comm` of the process that execute the syscall.
 See the [Probes](#probes) section for details on the available probe types.
 
+## Arguments
+
+This refers to traced function and tracepoint arguments.
+
+There are two ways to access these arguments and the way you choose depends on the [probe type](#probes).
+
+- For `uprobe`, `kprob`, and `usdt` use the `argN` format.
+- For `rawtracepoint`, `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) use the `args` format.
+
+### argN
+
+These keywords allow access to the nth argument passed to the function being traced.
+For the first argument use `arg1`, for the second `arg2`, and so forth.
+The type of each arg is an `int64` and will often require casting to non scalar types, e.g., `$x = (struct qstr *)arg1`.
+These are extracted from the CPU registers.
+The amount of args passed in registers depends on the CPU architecture.
+
+### args
+
+This keyword represents the struct of all arguments of the traced function.
+You can print the entire structure via `print(args)` or access particular fields using the dot syntax, e.g., `$x = str(args.filename);`.
+To see the args for a particular function, you can use [verbose listing mode](../man/adoc/bpftrace.adoc#listing-probes).
+Example:
+```
+# bpftrace -lv 'fentry:tcp_reset'
+
+fentry:tcp_reset
+    struct sock * sk
+    struct sk_buff * skb
+```
+
 ## Arrays
 
 bpftrace supports accessing one-dimensional arrays like those found in `C`.
@@ -410,6 +441,12 @@ Floating-point numbers are not supported by BPF and therefore not by bpftrace.
 ## Identifiers
 
 Identifiers must match the following regular expression: `[_a-zA-Z][_a-zA-Z0-9]*`
+
+## Keywords
+
+`break`, `config`, `continue`, `else`, `for`, `if`, `import`, `let`, `macro`, `offsetof`, `return`, `sizeof`, `unroll`, `while`.
+
+* `return` - The return keyword is used to exit the current probe. This differs from `exit()` in that it doesn’t exit bpftrace.
 
 ## Literals
 
