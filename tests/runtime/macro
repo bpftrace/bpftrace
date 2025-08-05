@@ -84,80 +84,80 @@ EXPECT 1
 
 # Test builtins
 NAME builtin wrapper comm
-PROG begin { if (__comm == comm() && __comm == comm) { print(comm); } }
+PROG begin { if (__builtin_comm == comm() && __builtin_comm == comm) { print(comm); } }
 EXPECT bpftrace
 
 NAME builtin wrapper cgroup
-PROG begin { if (__cgroup == cgroup() && __cgroup == cgroup) { printf("SUCCESS %llu\n", cgroup); } }
+PROG begin { if (__builtin_cgroup == cgroup() && __builtin_cgroup == cgroup) { printf("SUCCESS %llu\n", cgroup); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper cpid
-RUN {{BPFTRACE}} -e 'begin { if (__cpid == cpid() && __cpid == cpid) { printf("SUCCESS %llu\n", cpid); } }' -c './testprogs/syscall nanosleep 1e9'
+RUN {{BPFTRACE}} -e 'begin { if (__builtin_cpid == cpid() && __builtin_cpid == cpid) { printf("SUCCESS %llu\n", cpid); } }' -c './testprogs/syscall nanosleep 1e9'
 EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 3
 
 NAME builtin wrapper cpu
-PROG begin { if (__cpu == cpu() && __cpu == cpu) { printf("SUCCESS %llu\n", cpu); } }
+PROG begin { if (__builtin_cpu == cpu() && __builtin_cpu == cpu) { printf("SUCCESS %llu\n", cpu); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper curtask
-PROG begin { if (__curtask == curtask() && __curtask == curtask) { printf("SUCCESS %llu\n", curtask); } }
+PROG begin { if (__builtin_curtask == curtask() && __builtin_curtask == curtask) { printf("SUCCESS %llu\n", curtask); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper elapsed
-PROG begin { printf("SUCCESS1 %llu\n", __elapsed); printf("SUCCESS2 %llu\n", elapsed); printf("SUCCESS3 %llu\n", elapsed()); }
+PROG begin { printf("SUCCESS1 %llu\n", __builtin_elapsed); printf("SUCCESS2 %llu\n", elapsed); printf("SUCCESS3 %llu\n", elapsed()); }
 EXPECT_REGEX SUCCESS1 [0-9]+
 EXPECT_REGEX SUCCESS2 [0-9]+
 EXPECT_REGEX SUCCESS3 [0-9]+
 
 NAME builtin wrapper func
-PROG k:vfs_read { if (__func == func() && __func == func) { print(func); } exit(); }
+PROG k:vfs_read { if (__builtin_func == func() && __builtin_func == func) { print(func); } exit(); }
 EXPECT vfs_read
 AFTER ./testprogs/syscall read
 
 NAME builtin wrapper gid
-PROG begin { if (__gid == gid() && __gid == gid) { print(gid); } }
+PROG begin { if (__builtin_gid == gid() && __builtin_gid == gid) { print(gid); } }
 EXPECT_REGEX [0-9][0-9]*
 
 NAME builtin wrapper jiffies
-PROG begin { if (__jiffies == jiffies() && __jiffies == jiffies) { printf("SUCCESS %llu\n", jiffies);} }
+PROG begin { if (__builtin_jiffies == jiffies() && __builtin_jiffies == jiffies) { printf("SUCCESS %llu\n", jiffies);} }
 EXPECT_REGEX SUCCESS [0-9]+
 REQUIRES_FEATURE jiffies64
 MIN_KERNEL 5.9
 
 NAME builtin wrapper ncpus
-PROG begin { if (__ncpus == ncpus() && __ncpus == ncpus) { print(ncpus); } }
+PROG begin { if (__builtin_ncpus == ncpus() && __builtin_ncpus == ncpus) { print(ncpus); } }
 EXPECT_REGEX ^[1-9][0-9]*$
 
 NAME builtin wrapper numaid
-PROG begin { if (__numaid == numaid() && __numaid == numaid) { printf("SUCCESS %d\n", numaid); } }
+PROG begin { if (__builtin_numaid == numaid() && __builtin_numaid == numaid) { printf("SUCCESS %d\n", numaid); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper probe
-PROG k:do_nanosleep { if (__probe == probe() && __probe == probe) { print(probe); } exit(); }
+PROG k:do_nanosleep { if (__builtin_probe == probe() && __builtin_probe == probe) { print(probe); } exit(); }
 EXPECT kprobe:do_nanosleep
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME builtin wrapper rand
-PROG begin { printf("SUCCESS1 %llu\n", __rand); printf("SUCCESS2 %llu\n", rand); printf("SUCCESS3 %llu\n", rand()); }
+PROG begin { printf("SUCCESS1 %llu\n", __builtin_rand); printf("SUCCESS2 %llu\n", rand); printf("SUCCESS3 %llu\n", rand()); }
 EXPECT_REGEX SUCCESS1 [0-9]+
 EXPECT_REGEX SUCCESS2 [0-9]+
 EXPECT_REGEX SUCCESS3 [0-9]+
 
 NAME builtin wrapper retval
-PROG kretprobe:vfs_read { if (__retval == retval() && __retval == retval) { printf("SUCCESS %d\n", retval); exit(); } }
+PROG kretprobe:vfs_read { if (__builtin_retval == retval() && __builtin_retval == retval) { printf("SUCCESS %d\n", retval); exit(); } }
 EXPECT_REGEX SUCCESS .*
 AFTER ./testprogs/syscall read
 
 NAME builtin wrapper uid
-PROG begin { if (__uid == uid() && __uid == uid) { printf("SUCCESS %d\n", uid); } }
+PROG begin { if (__builtin_uid == uid() && __builtin_uid == uid) { printf("SUCCESS %d\n", uid); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper usermode
-PROG begin { if (__usermode == usermode() && __usermode == usermode) { printf("SUCCESS %d\n", usermode); } }
+PROG begin { if (__builtin_usermode == usermode() && __builtin_usermode == usermode) { printf("SUCCESS %d\n", usermode); } }
 EXPECT_REGEX SUCCESS 1
 ARCH x86_64
 
 NAME builtin wrapper username
-PROG begin { if (__username == username() && __username == username) { printf("SUCCESS %s\n", username); } }
+PROG begin { if (__builtin_username == username() && __builtin_username == username) { printf("SUCCESS %s\n", username); } }
 EXPECT_REGEX SUCCESS .*

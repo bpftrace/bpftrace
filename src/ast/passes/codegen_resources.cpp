@@ -18,7 +18,7 @@ CodegenResources CodegenResourceAnalyser::analyse(Program &program)
 
 void CodegenResourceAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "__elapsed") {
+  if (builtin.ident == "__builtin_elapsed") {
     resources_.needs_elapsed_map = true;
   } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
     resources_.stackid_maps.insert(StackType{ .mode = config_.stack_mode });

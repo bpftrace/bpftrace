@@ -4287,7 +4287,7 @@ TEST_F(SemanticAnalyserTest, subprog_builtin_disallowed)
 {
   // Error location is incorrect: #3063
   test("fn f(): int64 { return func; }", Error{ R"(
-ERROR: Builtin __func not supported outside probe
+ERROR: Builtin __builtin_func not supported outside probe
 )" });
 }
 
