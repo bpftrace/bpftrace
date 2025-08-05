@@ -1,8 +1,8 @@
 // :variant void assert(bool condition, string message)
 // Simple assertion macro that will exit the entire script with an error code if the condition is not met.
-macro assert($cond, $msg) {
-  if (!$cond) {
-    errorf("assert failed: %s", $msg);
+macro assert(cond, msg) {
+  if (!cond) {
+    errorf("assert failed: %s", msg);
     exit(1);
   }
 }
@@ -642,8 +642,8 @@ macro numaid() {
 
 // :variant uint32 ppid(struct task_struct * task)
 // Get the pid of the parent process
-macro ppid($task) {
-    $task->real_parent->pid
+macro ppid(task) {
+    task->real_parent->pid
 }
 
 // :function print

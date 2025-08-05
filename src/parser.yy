@@ -360,11 +360,13 @@ macro:
         |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
 
 macro_args:
-                macro_args "," map { $$ = std::move($1); $$.push_back($3); }
-        |       macro_args "," var { $$ = std::move($1); $$.push_back($3); }
-        |       map                { $$ = ast::ExpressionList{$1}; }
-        |       var                { $$ = ast::ExpressionList{$1}; }
-        |       %empty             { $$ = ast::ExpressionList{}; }
+                macro_args "," map   { $$ = std::move($1); $$.push_back($3); }
+        |       macro_args "," var   { $$ = std::move($1); $$.push_back($3); }
+        |       macro_args "," ident { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::Identifier>($3, @$)); }
+        |       map                  { $$ = ast::ExpressionList{$1}; }
+        |       var                  { $$ = ast::ExpressionList{$1}; }
+        |       ident                { $$ = ast::ExpressionList{driver.ctx.make_node<ast::Identifier>($1, @$)}; }
+        |       %empty               { $$ = ast::ExpressionList{}; }
                 ;
 
 root_stmts:
