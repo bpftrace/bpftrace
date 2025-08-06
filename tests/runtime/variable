@@ -135,3 +135,19 @@ EXPECT (c, 0)
 NAME late map evaluation with ctx capture
 RUN {{BPFTRACE}} -e 'interval:ms:100 { $x = 1; for ($kv : @a) { print(($x, $kv.0, $kv.1)); exit(); } @a[1] = 1; }'
 EXPECT (1, 1, 1)
+
+NAME variable address with int
+PROG begin { $a = 1; $b = &$a; print(($b, *$b)); }
+EXPECT_REGEX (0x[0-9a-f]+, 1)
+
+NAME variable address with tuple
+PROG begin { $a = (1, "hello", 2); print(*(&$a)); }
+EXPECT (1, hello, 2)
+
+NAME variable address with string
+PROG begin { $a = "hello"; $b = (int8 *)&$a; printf("%c %c\n", *$b, *++$b); }
+EXPECT h e
+
+NAME variable address with builtin
+PROG begin { $a = username; $b = &$a; printf("SUCCESS %s\n", *$b); }
+EXPECT_REGEX SUCCESS .*

@@ -176,6 +176,17 @@ void Printer::visit(Variable &var)
        << std::endl;
 }
 
+void Printer::visit(VariableAddr &var_addr)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "&" << std::endl;
+
+  ++depth_;
+  visit(var_addr.var);
+  --depth_;
+}
+
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');

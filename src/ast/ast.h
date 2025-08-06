@@ -130,6 +130,7 @@ class Sizeof;
 class Offsetof;
 class Map;
 class Variable;
+class VariableAddr;
 class Binop;
 class Unop;
 class FieldAccess;
@@ -154,6 +155,7 @@ class Expression : public VariantNode<Integer,
                                       Offsetof,
                                       Map,
                                       Variable,
+                                      VariableAddr,
                                       Binop,
                                       Unop,
                                       FieldAccess,
@@ -531,6 +533,30 @@ public:
 
   std::string ident;
   SizedType var_type;
+};
+
+class VariableAddr : public Node {
+public:
+  explicit VariableAddr(ASTContext &ctx, Variable *var, Location &&loc)
+      : Node(ctx, std::move(loc)),
+        var(var),
+        var_addr_type(CreatePointer(CreateNone())) {};
+  explicit VariableAddr(ASTContext &ctx,
+                        const VariableAddr &other,
+                        const Location &loc)
+      : Node(ctx, loc + other.loc),
+        var(other.var),
+        var_addr_type(other.var_addr_type) {};
+
+  const SizedType &type() const
+  {
+    assert(var_addr_type.IsPtrTy());
+    return var_addr_type;
+  }
+
+  Variable *var = nullptr;
+  // This should always be a pointer type
+  SizedType var_addr_type;
 };
 
 class Binop : public Node {
