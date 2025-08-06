@@ -59,6 +59,7 @@ public:
 
   void visit(AssignVarStatement &assignment);
   void visit(Variable &var);
+  void visit(VariableAddr &var_addr);
   void visit(VarDeclStatement &decl);
   void visit(Map &map);
   void visit(Expression &expr);
@@ -148,6 +149,11 @@ void MacroExpander::visit(Variable &var)
   } else if (renamed_vars_.contains(var.ident)) {
     var.ident = get_new_var_ident(var.ident);
   }
+}
+
+void MacroExpander::visit(VariableAddr &var_addr)
+{
+  visit(var_addr.var);
 }
 
 void MacroExpander::visit(Map &map)

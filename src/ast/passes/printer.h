@@ -26,8 +26,10 @@ public:
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
   void visit(Map &map);
+  void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
   void visit(Variable &var);
+  void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
   void visit(Ternary &ternary);

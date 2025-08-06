@@ -220,7 +220,9 @@ public:
   ScopedExpr visit(Sizeof &szof);
   ScopedExpr visit(Offsetof &offof);
   ScopedExpr visit(Map &map);
+  ScopedExpr visit(MapAddr &map_addr);
   ScopedExpr visit(Variable &var);
+  ScopedExpr visit(VariableAddr &var_addr);
   ScopedExpr visit(Binop &binop);
   ScopedExpr visit(Unop &unop);
   ScopedExpr visit(Ternary &ternary);
@@ -2179,6 +2181,11 @@ ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
   return ScopedExpr();
 }
 
+ScopedExpr CodegenLLVM::visit(MapAddr &map_addr)
+{
+  return ScopedExpr(b_.GetMapVar(map_addr.map->ident));
+}
+
 ScopedExpr CodegenLLVM::visit(Variable &var)
 {
   // Arrays and structs are not memcopied for local variables
@@ -2189,6 +2196,11 @@ ScopedExpr CodegenLLVM::visit(Variable &var)
     auto &var_llvm = getVariable(var.ident);
     return ScopedExpr(b_.CreateLoad(var_llvm.type, var_llvm.value));
   }
+}
+
+ScopedExpr CodegenLLVM::visit(VariableAddr &var_addr)
+{
+  return ScopedExpr(getVariable(var_addr.var->ident).value);
 }
 
 ScopedExpr CodegenLLVM::binop_string(Binop &binop)
@@ -2488,7 +2500,12 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
   switch (unop.op) {
     case Operator::MUL: {
       ScopedExpr scoped_expr = visit(unop.expr);
-      if (unop.result_type.IsIntegerTy() || unop.result_type.IsPtrTy()) {
+      // FIXME(jordalgo): This requires more investigating/fixing as there still
+      // might be some internal types that don't deref properly after their
+      // address is taken via the & operator, e.g., &$x
+      if (unop.result_type.IsIntegerTy() || unop.result_type.IsPtrTy() ||
+          unop.result_type.IsUsernameTy() || unop.result_type.IsTimestampTy() ||
+          unop.result_type.IsKsymTy()) {
         const auto *et = type.GetPointeeTy();
         AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
         b_.CreateProbeRead(

@@ -169,11 +169,33 @@ void Printer::visit(Map &map)
   out_ << std::endl;
 }
 
+void Printer::visit(MapAddr &map_addr)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "&" << std::endl;
+
+  ++depth_;
+  visit(map_addr.map);
+  --depth_;
+}
+
 void Printer::visit(Variable &var)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "variable: " << var.ident << type(var.var_type)
        << std::endl;
+}
+
+void Printer::visit(VariableAddr &var_addr)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "&" << std::endl;
+
+  ++depth_;
+  visit(var_addr.var);
+  --depth_;
 }
 
 void Printer::visit(Binop &binop)
