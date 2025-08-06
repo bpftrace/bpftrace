@@ -5116,6 +5116,24 @@ begin { $x = 2; if (1) { let $x; } }
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, variable_address)
+{
+  test("begin { $a = 1; $b = &$a; @c = &$a; }");
+
+  auto ast = test("begin { $a = 1; $b = &$a; }");
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
+
+  auto *assignment = stmts.at(1).as<ast::AssignVarStatement>();
+  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsIntTy());
+
+  test("begin { $a = 1; $b = &$c; }", Error{ R"(
+stdin:1:22-25: ERROR: Undefined or undeclared variable: $c
+begin { $a = 1; $b = &$c; }
+                     ~~~
+)" });
+}
+
 TEST_F(SemanticAnalyserTest, block_scoping)
 {
   // if/else

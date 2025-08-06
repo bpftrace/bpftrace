@@ -76,6 +76,13 @@ TEST(unstable_feature, check_error)
       "config = { unstable_tseries=error } begin { @ = tseries(4, 1s, 10); }",
       "tseries feature is not enabled by default. To enable this unstable "
       "feature, set the config flag to enable. unstable_tseries=enable");
+
+  test("config = { unstable_var_addr=warn } begin { $x = 1; &$x; }");
+  test_error(
+      "config = { unstable_var_addr=error } begin { $x = 1; &$x; }",
+      "variable address-of operator (&) feature is not enabled by default. To "
+      "enable this unstable "
+      "feature, set the config flag to enable. unstable_var_addr=enable");
 }
 
 } // namespace bpftrace::test::unstable_feature

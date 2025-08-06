@@ -17,6 +17,7 @@ const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
 const auto MACROS = "macros";
 const auto TSERIES = "tseries";
+const auto VAR_ADDR = "variable address-of operator (&)";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -42,6 +43,7 @@ public:
 
   using Visitor<UnstableFeature>::visit;
   void visit(MapDeclStatement &decl);
+  void visit(VariableAddr &var_addr);
   void visit(Import &imp);
   void visit(Call &call);
 
@@ -113,6 +115,20 @@ void UnstableFeature::visit(Call &call)
       !warned_features.contains(UNSTABLE_TSERIES)) {
     LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
     warned_features.insert(UNSTABLE_TSERIES);
+  }
+}
+
+void UnstableFeature::visit(VariableAddr &var_addr)
+{
+  if (bpftrace_.config_->unstable_var_addr == ConfigUnstable::error) {
+    var_addr.addError() << get_error(VAR_ADDR, UNSTABLE_VAR_ADDR);
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_var_addr == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_VAR_ADDR)) {
+    LOG(WARNING) << get_warning(VAR_ADDR, UNSTABLE_VAR_ADDR);
+    warned_features.insert(UNSTABLE_VAR_ADDR);
   }
 }
 

@@ -57,6 +57,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] VariableAddr &var_addr)
+  {
+    return default_value();
+  }
   R visit([[maybe_unused]] SubprogArg &subprog_arg)
   {
     return default_value();
