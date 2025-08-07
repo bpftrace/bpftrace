@@ -2871,6 +2871,8 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
         array = buf;
       }
       return ScopedExpr(b_.CreateLoad(int_ty, array, true));
+    } else if (cast.expr.type().IsPtrTy()) {
+      return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
     } else {
       return ScopedExpr(
           b_.CreateIntCast(scoped_expr.value(),
