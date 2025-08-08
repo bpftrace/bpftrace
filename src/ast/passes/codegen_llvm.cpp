@@ -2140,7 +2140,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       llvm::Type *result_type = b_.GetType(call.return_type);
       SmallVector<llvm::Type *> arg_types;
       for (const auto &expr : call.vargs) {
-        arg_types.push_back(b_.GetType(expr.type()));
+        // The 'false' is to not emit_codegen_types because these are external
+        // functions and we don't want to change the types. More context in
+        // GetType.
+        arg_types.push_back(b_.GetType(expr.type(), false));
       }
       FunctionType *function_type = FunctionType::get(result_type,
                                                       arg_types,
