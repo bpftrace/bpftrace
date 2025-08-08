@@ -187,7 +187,7 @@ This utilizes the BPF helper `get_current_task`
 
 ### delete
 - `bool delete(map m, mapkey k)`
-- `deprecated `bool delete(mapkey k)`
+- deprecated `bool delete(mapkey k)`
 
 Delete a single key from a map.
 For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.

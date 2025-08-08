@@ -12,13 +12,24 @@ from typing import Optional
 class Helper:
     name: str = ""
     variants: list[str] = []
+    deprecated_variants: list[str] = []
     description: str = ""
 
     def __init__(self):
-      self.variants = []
+        self.variants = []
+        self.deprecated_variants = []
 
 def parse_variant_string(line: str) -> Optional[str]:
     pattern = r':variant\s+(.+)'
+
+    match = re.match(pattern, line.strip())
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+def parse_deprecated_variant_string(line: str) -> Optional[str]:
+    pattern = r':deprecated_variant\s+(.+)'
 
     match = re.match(pattern, line.strip())
     if match:
@@ -71,6 +82,10 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
                             current.variants.append(parsed_variant)
                             if variant_has_no_args(parsed_variant):
                                 current.variants.append(parsed_variant.replace("()", ""))
+                    elif line_content.startswith(":deprecated_variant"):
+                        parsed_variant = parse_deprecated_variant_string(line_content)
+                        if parsed_variant:
+                            current.deprecated_variants.append(parsed_variant)
 
                     elif line_content.startswith(":function"):
                         parsed_function_name = parse_function_name_string(line_content)
@@ -137,6 +152,8 @@ def write_markdown_doc(helpers: list[Helper]):
                 updated_lines.append(f"### {helper.name}\n")
                 for variant in helper.variants:
                     updated_lines.append(f"- `{variant}`\n")
+                for variant in helper.deprecated_variants:
+                    updated_lines.append(f"- deprecated `{variant}`\n")
                 updated_lines.append("\n")
                 updated_lines.append(f"{helper.description}\n")
                 updated_lines.append("\n")
