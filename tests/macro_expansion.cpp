@@ -59,14 +59,16 @@ TEST(macro_expansion, basic_checks)
 {
   test("macro print_me() { print(\"me\"); } begin { print_me(); }");
   test("macro print_me() { print(\"me\"); } begin { print_me; }");
-  test("macro add1($x) { $x + 1 } macro add2($x) { $x + add1($x) } macro "
-       "add3($x) { $x + add2($x) } begin { print(add3(1)); }");
+  test("macro add1(x) { x + 1 } macro add2(x) { x + add1(x) } macro "
+       "add3(x) { x + add2(x) } begin { print(add3(1)); }");
   test("macro add1($x) { $x += 1; } begin { $y = 1; add1($y); }");
   test("macro add3($x) { $x += 1; $x += 1; $x += 1; } begin { $y = 1; "
        "add3($y); }");
   test("macro add1($x) { $x += 1; $x } begin { $y = 1; add1($y); }");
   test("macro add2($x) { $x += 2; $x } macro add1($x) { $x += 1; add2($x); } "
        "begin { $y = 1; add1($y); }");
+  test("macro add1(x) { x + 1 } begin { $y = 1; add1($y); }");
+  test("macro add1(x) { x + 1 } begin { @y = 1; add1(@y); }");
 
   test_error("macro add1($x) { $x += 1; } begin { $y = 1; $z = add1($y); }",
              "Macro 'add1' expanded to a block instead of a block expression. "
@@ -95,7 +97,7 @@ TEST(macro_expansion, basic_checks)
 TEST(macro_expansion, variables)
 {
   test("macro set($x) { $x += 1; $x } begin { $a = 1; set($a); }");
-  test("macro set($x, $y) { $x + $y } begin { $a = 1; set($a, 1); }");
+  test("macro set($x, y) { $x + y } begin { $a = 1; set($a, 1); }");
   test("macro set($x) { $b = $x + 1; $b } begin { $a = 1; set($a); }");
   test("macro set($x) { let $b = $x + 1; $b } begin { $a = 1; set($a); }");
 
@@ -105,8 +107,11 @@ TEST(macro_expansion, variables)
       "but got a map.");
 
   test_error("macro add1($x) { $x += 1; $x } begin { add1(1 + 1); }",
-             "Macro 'add1' assigns to parameter '$x', meaning it expects a "
-             "variable, not an expression.");
+             "Mismatched arg to macro call. Macro expects a variable for arg "
+             "$x but got an expression.");
+
+  test_error("macro set($x) { let $x; $x } begin { $y = 1; set($y); }",
+             "Variable declaration shadows macro arg $x");
 }
 
 TEST(macro_expansion, maps)
@@ -131,7 +136,7 @@ TEST(macro_expansion, maps)
 TEST(macro_expansion, misc)
 {
   // semantic_analyser will catch this undefined call/macro
-  test("macro add3($x) { $x + add5($x) } begin { print(add3(1)); }");
+  test("macro add3(x) { x + add5(x) } begin { print(add3(1)); }");
 }
 
 } // namespace bpftrace::test::macro_expansion

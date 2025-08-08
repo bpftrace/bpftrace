@@ -51,14 +51,15 @@ std::unordered_map<std::string, Macro *> collect_macros(ASTContext &ast)
 class MacroExpander : public Visitor<MacroExpander> {
 public:
   MacroExpander(ASTContext &ast,
-                std::string macro_name,
                 const std::unordered_map<std::string, Macro *> &macros,
-                std::vector<std::string> &&macro_stack);
+                std::string macro_name = "",
+                std::vector<std::string> &&macro_stack = {});
 
   using Visitor<MacroExpander>::visit;
 
   void visit(AssignVarStatement &assignment);
   void visit(Variable &var);
+  void visit(VarDeclStatement &decl);
   void visit(Map &map);
   void visit(Expression &expr);
   // We can't add extra params with default values to the standard `visit`
@@ -74,8 +75,8 @@ public:
 
 private:
   ASTContext &ast_;
-  const std::string macro_name_;
   const std::unordered_map<std::string, Macro *> &macros_;
+  const std::string macro_name_;
 
   bool is_recursive_call(const std::string &macro_name, const Node &node);
   std::string get_new_var_ident(std::string original_ident);
@@ -87,19 +88,19 @@ private:
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
-  std::unordered_set<Variable *> temp_vars_;
-  std::unordered_map<std::string, Call *> arg_vars_no_mutation_;
+  std::unordered_set<std::string> renamed_vars_;
+  std::unordered_map<std::string, Expression> passed_exprs_;
   const std::vector<std::string> macro_stack_;
 };
 
 MacroExpander::MacroExpander(
     ASTContext &ast,
-    std::string macro_name,
     const std::unordered_map<std::string, Macro *> &macros,
+    std::string macro_name,
     std::vector<std::string> &&macro_stack)
     : ast_(ast),
-      macro_name_(std::move(macro_name)),
       macros_(macros),
+      macro_name_(std::move(macro_name)),
       macro_stack_(std::move(macro_stack))
 {
 }
@@ -112,21 +113,10 @@ void MacroExpander::visit(AssignVarStatement &assignment)
   }
 
   auto *var = assignment.var();
-  if (temp_vars_.contains(var)) {
-    // Don't change variable names if this is a variable assignment
-    // that we created to represent the passed in expression e.g.
-    // macro add_one($x) { $x + 1 } begin { $a = 1; print(add_one($a + 1)); }
-    // will become
-    // begin { $a = 1; print({let $$add_one_$a = $a + 1; $$add_one_$a + 1}); }
-    return;
-  }
 
-  if (auto it = arg_vars_no_mutation_.find(var->ident);
-      it != arg_vars_no_mutation_.end()) {
-    it->second->addError()
-        << "Macro '" << macro_stack_.back() << "' assigns to parameter '"
-        << var->ident << "', meaning it expects a variable, not an expression.";
-    return;
+  // Don't rename any variable passed by reference
+  if (!vars_.contains(var->ident)) {
+    renamed_vars_.insert(var->ident);
   }
 
   if (std::holds_alternative<VarDeclStatement *>(assignment.var_decl)) {
@@ -137,6 +127,16 @@ void MacroExpander::visit(AssignVarStatement &assignment)
   visit(assignment.expr);
 }
 
+void MacroExpander::visit(VarDeclStatement &decl)
+{
+  auto *var = decl.var;
+  if (vars_.contains(var->ident)) {
+    decl.addError() << "Variable declaration shadows macro arg " << var->ident;
+    return;
+  }
+  visit(decl.var);
+}
+
 void MacroExpander::visit(Variable &var)
 {
   if (is_top_level()) {
@@ -145,7 +145,7 @@ void MacroExpander::visit(Variable &var)
 
   if (auto it = vars_.find(var.ident); it != vars_.end()) {
     var.ident = it->second;
-  } else if (!temp_vars_.contains(&var)) {
+  } else if (renamed_vars_.contains(var.ident)) {
     var.ident = get_new_var_ident(var.ident);
   }
 }
@@ -192,6 +192,19 @@ void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
     return;
   }
 
+  if (ident) {
+    if (auto it = passed_exprs_.find(ident->ident); it != passed_exprs_.end()) {
+      expr = it->second;
+      // Create a new expander because we're visiting an expression passed into
+      // the macro so it's not part of the surounding macro code and therefore
+      // variables, maps, and idents in this expression shouldn't be modified or
+      // checked
+      MacroExpander expander(ast_, macros_);
+      expander.visit(expr);
+      return;
+    }
+  }
+
   const std::string &name = ident ? ident->ident : call->func;
 
   if (call) {
@@ -220,9 +233,9 @@ void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
     next_macro_stack.push_back(name);
 
     auto r =
-        ident ? MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+        ident ? MacroExpander(ast_, macros_, name, std::move(next_macro_stack))
                     .expand(*macro, *ident)
-              : MacroExpander(ast_, name, macros_, std::move(next_macro_stack))
+              : MacroExpander(ast_, macros_, name, std::move(next_macro_stack))
                     .expand(*macro, *call);
     if (r) {
       expr.value = *r;
@@ -301,37 +314,40 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
 
   StatementList stmt_list;
 
-  for (size_t i = 0; i < call.vargs.size(); i++) {
-    if (auto *cvar = call.vargs.at(i).as<Variable>()) {
-      if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
-        vars_[mvar->ident] = cvar->ident;
+  for (size_t i = 0; i < macro.vargs.size(); i++) {
+    if (auto *mident = macro.vargs.at(i).as<Identifier>()) {
+      if (call.vargs.at(i).is<Variable>() || call.vargs.at(i).is<Map>()) {
+        // Wrap variables and maps in a BlockExpr so their value is used
+        // and they won't be mutated.
+        passed_exprs_[mident->ident] = ast_.make_node<BlockExpr>(
+            StatementList({}),
+            clone(ast_, call.vargs.at(i), call.vargs.at(i).loc()),
+            Location(call.loc));
       } else {
-        call.addError()
-            << "Mismatched arg to macro call. Macro expects a map for arg "
-            << macro.vargs.at(i).as<Map>()->ident << " but got a variable.";
+        passed_exprs_[mident->ident] = clone(ast_,
+                                             call.vargs.at(i),
+                                             call.vargs.at(i).loc());
       }
-    } else if (auto *cmap = call.vargs.at(i).as<Map>()) {
-      if (auto *mmap = macro.vargs.at(i).as<Map>()) {
-        maps_[mmap->ident] = cmap->ident;
+    } else if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
+      if (auto *cvar = call.vargs.at(i).as<Variable>()) {
+        vars_[mvar->ident] = cvar->ident;
+      } else if (call.vargs.at(i).is<Map>()) {
+        call.addError()
+            << "Mismatched arg to macro call. Macro expects a variable for arg "
+            << mvar->ident << " but got a map.";
       } else {
         call.addError()
             << "Mismatched arg to macro call. Macro expects a variable for arg "
-            << macro.vargs.at(i).as<Variable>()->ident << " but got a map.";
+            << mvar->ident << " but got an expression.";
       }
-    } else {
-      if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
-        stmt_list.emplace_back(ast_.make_node<AssignVarStatement>(
-            ast_.make_node<Variable>(get_new_var_ident(mvar->ident),
-                                     Location(call.loc)),
-            clone(ast_, call.vargs.at(i), call.vargs.at(i).loc()),
-            Location(call.loc)));
-        // As per the name these arg variables are not expecting to be mutated
-        // because the caller passed in an expression instead of another
-        // variable e.g.
-        // macro add1($x) { $x += 1; $x } begin { add1(1 + 1);
-        arg_vars_no_mutation_[mvar->ident] = &call;
-        temp_vars_.insert(stmt_list.back().as<AssignVarStatement>()->var());
-      } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
+    } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
+      if (auto *cmap = call.vargs.at(i).as<Map>()) {
+        maps_[mmap->ident] = cmap->ident;
+      } else if (call.vargs.at(i).is<Variable>()) {
+        call.addError()
+            << "Mismatched arg to macro call. Macro expects a map for arg "
+            << mmap->ident << " but got a variable.";
+      } else {
         call.addError()
             << "Mismatched arg to macro call. Macro expects a map for arg "
             << mmap->ident << " but got an expression.";
@@ -360,7 +376,7 @@ Pass CreateMacroExpansionPass()
   auto fn = [](ASTContext &ast) {
     auto macros = collect_macros(ast);
     if (ast.diagnostics().ok()) {
-      MacroExpander expander(ast, "none", macros, {});
+      MacroExpander expander(ast, macros);
       expander.visit(ast.root);
     }
   };

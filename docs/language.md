@@ -632,18 +632,22 @@ They can be useful when you want to factor out code into smaller, more understan
 Or if you want to share code between probes.
 
 At a high level, macros can be thought of as semantic aware text replacement.
-They accept (optional) variable, map, and some expression arguments.
-The body of the macro may only access maps and external variables passed in through the arguments, which is why these are often referred to as "hygienic macros".
+They accept (optional) variable, map, and expression arguments.
+The body of the macro may only access maps and external variables passed in through the arguments, which is why these are often referred to as "hygienic macros", but the macro body can create new variables which only exist inside the body.
+A macro's parameter signature specifies how an argument will be used.
+For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted where ever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
+A valid use of this macro could be `test($x, 1 + 2, @y)`.
+Variables and maps can also be used for ident parameters that expect expressions and would be the same as writing `{ @y }` (Block Expression).
 
-For example, these are valid usages of macros:
+Here are some valid usages of macros:
 
 ```
 macro one() {
   1
 }
 
-macro plus_one($other_name) {
-  $other_name + 1
+macro add_one(x) {
+  x + 1
 }
 
 macro add_one_to_each($a, @b) {
@@ -651,12 +655,14 @@ macro add_one_to_each($a, @b) {
   @b += 1;
 }
 
-macro side_effect($x) {
-  print($x)
+macro side_effects(x) {
+  x;
+  x;
+  x;
 }
 
-macro add_two($x) {
-  add_one($x) + 1
+macro add_two(x) {
+  add_one(x) + 1
 }
 
 begin {
@@ -664,13 +670,14 @@ begin {
   print(one);                     // prints 1 (bare identifier works if the macro accepts 0 args)
 
   $a = 10;
-  print(plus_one($a));            // prints 11
+  print(add_one($a));             // prints 11
+  print(add_one(1 + 1));          // prints 3
 
   @b = 5;
   add_one_to_each($a, @b);
   print($a + @b)                  // prints 17
 
-  side_effect(5)                  // prints 5
+  side_effects({ printf("hi") })  // prints hihihi
 
   print(add_two(1));              // prints 3
 }
@@ -692,6 +699,15 @@ begin {
   unhygienic_access();
 
   wrong_parameter_type(@x);    // BAD: macro expects a scratch variable
+  wrong_parameter_type(1 + 1); // BAD: macro expects a scratch variable
+}
+```
+
+Note: If you want the passed in expression to only be executed once, simply bind it to a variable, e.g.,
+```
+macro add_one(x) {
+  let $x = x;
+  $x + 1
 }
 ```
 
