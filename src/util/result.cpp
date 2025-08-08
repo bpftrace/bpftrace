@@ -8,7 +8,10 @@ char SystemError::ID;
 
 void SystemError::log(llvm::raw_ostream& OS) const
 {
-  OS << msg_ << "(" << strerror(err_) << ")";
+  OS << msg_;
+  if (err_) {
+    OS << "(" << strerror(err_) << ")";
+  }
 }
 
 } // namespace bpftrace

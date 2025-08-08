@@ -5425,15 +5425,18 @@ Pass CreateLinkBitcodePass()
 
 Pass CreateVerifyPass()
 {
-  return Pass::create("verify", [](ASTContext &ast, CompiledModule &cm) {
-    std::stringstream ss;
-    raw_os_ostream OS(ss);
-    bool ret = llvm::verifyModule(*cm.module, &OS);
-    OS.flush();
-    if (ret) {
-      ast.root->addError() << ss.str();
-    }
-  });
+  return Pass::create(
+      "verify", [](ASTContext &ast, CompiledModule &cm) -> Result<> {
+        std::stringstream ss;
+        raw_os_ostream OS(ss);
+        bool ret = llvm::verifyModule(*cm.module, &OS);
+        OS.flush();
+        if (ret) {
+          return make_error<SystemError>(
+              "LLVM verification failed (--verify-llvm-ir)\n" + ss.str(), 0);
+        }
+        return OK();
+      });
 }
 
 Pass CreateOptimizePass()

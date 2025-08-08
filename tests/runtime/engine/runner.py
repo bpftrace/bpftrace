@@ -117,13 +117,13 @@ class Runner(object):
         nsenter_prefix = (" ".join(nsenter) + " ") if len(nsenter) > 0 else ""
 
         if test.run:
-            ret = re.sub("{{BPFTRACE}}", BPFTRACE_BIN, test.run)
+            ret = re.sub("{{BPFTRACE}}", BPFTRACE_BIN + " --verify-llvm-ir", test.run)
 
             return nsenter_prefix + ret
         else:  # PROG
             use_json = "-q -f json" if (len(test.expects) > 0 and test.expects[0].mode == "json") else ""
             escaped_prog = test.prog.replace("'", "'\\''")
-            cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, escaped_prog)
+            cmd = nsenter_prefix + "{} {} --verify-llvm-ir -e '{}'".format(BPFTRACE_BIN, use_json, escaped_prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
                 return cmd + " --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot"
@@ -404,7 +404,6 @@ class Runner(object):
                 'test': test.name,
                 '__BPFTRACE_NOTIFY_PROBES_ATTACHED': '1',
                 '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED': '1',
-                'BPFTRACE_VERIFY_LLVM_IR': '1',
                 'PATH': os.environ.get('PATH', ''),
             }
             env.update(test.env)

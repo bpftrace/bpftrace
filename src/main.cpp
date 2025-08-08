@@ -92,6 +92,7 @@ enum Options {
   NO_FEATURE,
   DEBUG,
   DRY_RUN,
+  VERIFY_LLVM_IR,
 };
 
 constexpr auto FULL_SEARCH = "*:*";
@@ -132,6 +133,7 @@ void usage(std::ostream& out)
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v                      verbose messages" << std::endl;
   out << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
+  out << "    --verify-llvm-ir        check that the generated LLVM IR is valid" << std::endl;
   out << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
   out << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   out << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
@@ -305,6 +307,7 @@ struct Args {
   bool usdt_file_activation = false;
   int helper_check_level = 1;
   bool no_warnings = false;
+  bool verify_llvm_ir = false;
   TestMode test_mode = TestMode::NONE;
   std::string script;
   std::string search;
@@ -444,6 +447,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::DRY_RUN },
+    option{ .name = "verify-llvm-ir",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::VERIFY_LLVM_IR },
     option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 }, // Must
                                                                         // be
                                                                         // last
@@ -496,6 +503,9 @@ Args parse_args(int argc, char* argv[])
         break;
       case Options::DRY_RUN:
         dry_run = true;
+        break;
+      case Options::VERIFY_LLVM_IR:
+        args.verify_llvm_ir = true;
         break;
       case 'o':
         args.output_file = optarg;
@@ -933,10 +943,7 @@ int main(int argc, char* argv[])
     output_ir = std::ofstream(args.output_llvm + ".original.ll");
     pm.add(ast::CreateDumpIRPass(*output_ir));
   }
-  bool verify_llvm_ir = false;
-  util::get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
-                         [&](bool x) { verify_llvm_ir = x; });
-  if (verify_llvm_ir) {
+  if (args.verify_llvm_ir) {
     pm.add(ast::CreateVerifyPass());
   }
   pm.add(ast::CreateOptimizePass());
