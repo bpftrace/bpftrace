@@ -56,13 +56,13 @@ This refers to traced function and tracepoint arguments.
 
 There are two ways to access these arguments and the way you choose depends on the [probe type](#probes).
 
-- For `uprobe`, `kprob`, and `usdt` use the `argN` format.
+- For `uprobe`, `kprobe`, and `usdt` use the `argN` format.
 - For `rawtracepoint`, `tracepoint`, `fentry`, `fexit`, and `uprobe` (with DWARF) use the `args` format.
 
 ### argN
 
 These keywords allow access to the nth argument passed to the function being traced.
-For the first argument use `arg1`, for the second `arg2`, and so forth.
+For the first argument use `arg0`, for the second `arg1`, and so forth.
 The type of each arg is an `int64` and will often require casting to non scalar types, e.g., `$x = (struct qstr *)arg1`.
 These are extracted from the CPU registers.
 The amount of args passed in registers depends on the CPU architecture.

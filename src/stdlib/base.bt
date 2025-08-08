@@ -164,7 +164,7 @@ macro curtask() {
 
 // :function delete
 // :variant bool delete(map m, mapkey k)
-// :variant deprecated `bool delete(mapkey k)
+// :deprecated_variant bool delete(mapkey k)
 //
 // Delete a single key from a map.
 // For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
