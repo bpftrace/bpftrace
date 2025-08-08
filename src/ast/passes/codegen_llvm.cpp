@@ -2140,10 +2140,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       llvm::Type *result_type = b_.GetType(call.return_type);
       SmallVector<llvm::Type *> arg_types;
       for (const auto &expr : call.vargs) {
-        // The 'false' is to not emit_codegen_types because these are external
-        // functions and we don't want to change the types. More context in
-        // GetType.
-        arg_types.push_back(b_.GetType(expr.type(), false));
+        arg_types.push_back(b_.GetType(expr.type()));
       }
       FunctionType *function_type = FunctionType::get(result_type,
                                                       arg_types,
@@ -2445,15 +2442,11 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
     Value *ptr_expr = leftptr ? lhs : rhs;
     Value *other_expr = leftptr ? rhs : lhs;
 
-    if (other_ty.IsIntTy() && other_ty.GetSize() != 8)
-      other_expr = b_.CreateZExt(other_expr, b_.getInt64Ty());
-    Value *expr = b_.CreatePtrOffset(*ptr_ty.GetPointeeTy(),
-                                     other_expr,
-                                     ptr_ty.GetAS());
-    if (binop.op == Operator::PLUS)
-      return ScopedExpr(b_.CreateAdd(ptr_expr, expr));
-    else
-      return ScopedExpr(b_.CreateSub(ptr_expr, expr));
+    return ScopedExpr(b_.CreateGEP(b_.GetType(*ptr_ty.GetPointeeTy()),
+                                   ptr_expr,
+                                   binop.op == Operator::PLUS
+                                       ? other_expr
+                                       : b_.CreateNeg(other_expr)));
   } else {
     LOG(BUG) << "unknown op \"" << opstr(binop) << "\"";
     __builtin_unreachable();
@@ -4377,7 +4370,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
 
   SizedType elem_type = CreatePointer(CreateInt8(), addrspace);
   size_t ptr_width = b_.getPointerStorageTy(addrspace)->getIntegerBitWidth();
-  assert(b_.GetType(elem_type) == b_.getInt64Ty());
+  assert(b_.GetType(elem_type) == b_.getPtrTy());
 
   Value *value = scoped_arg.value();
   AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
@@ -4736,12 +4729,22 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     Value *oldval = b_.CreateMapLookupElem(map, scoped_key.value(), unop.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.value_type,
                                             map.ident + "_newval");
-    if (is_increment)
-      b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
+
+    if (type.IsPtrTy()) {
+      b_.CreateStore(b_.CreateGEP(b_.GetType(*map.value_type.GetPointeeTy()),
+                                  oldval,
+                                  is_increment ? b_.getInt32(1)
+                                               : b_.getInt32(-1)),
                      newval);
-    else
-      b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
-                     newval);
+    } else {
+      if (is_increment)
+        b_.CreateStore(b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval)),
+                       newval);
+      else
+        b_.CreateStore(b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval)),
+                       newval);
+    }
+
     b_.CreateMapUpdateElem(map.ident, scoped_key.value(), newval, unop.loc);
 
     Value *value;
@@ -4755,10 +4758,18 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     const auto &variable = getVariable(var->ident);
     Value *oldval = b_.CreateLoad(variable.type, variable.value);
     Value *newval;
-    if (is_increment)
-      newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
-    else
-      newval = b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval));
+
+    if (type.IsPtrTy()) {
+      newval = b_.CreateGEP(b_.GetType(*type.GetPointeeTy()),
+                            oldval,
+                            is_increment ? b_.getInt32(1) : b_.getInt32(-1));
+    } else {
+      if (is_increment)
+        newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
+      else
+        newval = b_.CreateSub(oldval, b_.GetIntSameSize(step, oldval));
+    }
+
     b_.CreateStore(newval, variable.value);
 
     if (unop.is_post_op)
@@ -5267,7 +5278,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
   std::vector<llvm::Type *> args;
   for (auto &field : func_struct->fields) {
     if (field.name != RETVAL_FIELD_NAME) {
-      args.push_back(b_.GetType(field.type, false));
+      args.push_back(b_.GetType(field.type));
       debug_args.AddField(field.name,
                           field.type,
                           field.offset,
@@ -5277,9 +5288,7 @@ llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
   }
 
   FunctionType *func_type = FunctionType::get(
-      b_.GetType(func_struct->GetField(RETVAL_FIELD_NAME).type, false),
-      args,
-      false);
+      b_.GetType(func_struct->GetField(RETVAL_FIELD_NAME).type), args, false);
 
   auto *fun = llvm::Function::Create(func_type,
                                      llvm::GlobalValue::ExternalWeakLinkage,

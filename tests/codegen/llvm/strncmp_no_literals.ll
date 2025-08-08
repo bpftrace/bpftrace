@@ -30,8 +30,8 @@ entry:
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
   %4 = getelementptr i8, ptr %3, i64 8
-  %5 = load volatile i64, ptr %4, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %5)
+  %5 = load volatile ptr, ptr %4, align 8
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, ptr %5)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %__builtin_comm)
   call void @llvm.memset.p0.i64(ptr align 1 %__builtin_comm, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__builtin_comm, i64 16)

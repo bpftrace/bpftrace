@@ -64,8 +64,8 @@ while_end3:                                       ; preds = %while_cond1
   br label %while_cond
 
 lookup_success:                                   ; preds = %while_body2
-  %7 = load i64, ptr %lookup_elem, align 8
-  store i64 %7, ptr %lookup_elem_val, align 8
+  %7 = load ptr, ptr %lookup_elem, align 8
+  store ptr %7, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %while_body2

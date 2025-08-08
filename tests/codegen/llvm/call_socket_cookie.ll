@@ -21,8 +21,8 @@ entry:
   store i64 0, ptr %"$ret", align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 0
-  %sk = load volatile i64, ptr %2, align 8
-  %get_socket_cookie = call i64 inttoptr (i64 46 to ptr)(i64 %sk) #3
+  %sk = load volatile ptr, ptr %2, align 8
+  %get_socket_cookie = call i64 inttoptr (i64 46 to ptr)(ptr %sk) #3
   store i64 %get_socket_cookie, ptr %"$ret", align 8
   ret i64 0
 }
