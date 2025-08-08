@@ -43,18 +43,17 @@ lookup_merge:                                     ; preds = %lookup_success
   %pid = trunc i64 %2 to i32
   %3 = zext i32 %pid to i64
   %4 = icmp eq i64 %3, 1234
-  %5 = zext i1 %4 to i64
-  %predcond = icmp eq i64 %5, 0
+  %predcond = icmp eq i1 %4, false
   br i1 %predcond, label %pred_false, label %pred_true
 
 value_is_set:                                     ; preds = %lookup_success
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #2
-  %6 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %6
-  %7 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %8 = load i64, ptr %7, align 8
-  %9 = add i64 %8, 1
-  store i64 %9, ptr %7, align 8
+  %5 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %5
+  %6 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %7 = load i64, ptr %6, align 8
+  %8 = add i64 %7, 1
+  store i64 %8, ptr %6, align 8
   ret i64 0
 
 pred_false:                                       ; preds = %lookup_merge

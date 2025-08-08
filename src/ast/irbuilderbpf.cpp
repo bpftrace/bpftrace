@@ -353,19 +353,8 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 /// For convenience, some types are not converted into a directly corresponding
 /// type but instead into a type which is easy to work with in BPF programs
 /// (e.g. store it in maps, etc.). This is the case for two particular types:
-/// - pointers are represented as i64
 /// - structs (records) are represented as byte arrays.
-///
-/// Setting `emit_codegen_types` to false (it is true by default) will change
-/// this behaviour and emit the exact corresponding types. This is typically
-/// necessary when creating a type which must exactly match the type in the
-/// kernel BTF (e.g. a kernel function (kfunc) prototype).
-///
-/// At the moment, `emit_codegen_types=false` only applies to pointers as it is
-/// sufficient for our use cases (and we don't need to bother with emitting
-/// struct types with all the fields). This should be changed eventually.
-llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
-                                  bool emit_codegen_types)
+llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
   if (stype.IsByteArray() || stype.IsRecordTy()) {
@@ -387,10 +376,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
   } else if (stype.IsStack()) {
     ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
-    if (emit_codegen_types)
-      ty = getInt64Ty();
-    else
-      ty = getPtrTy();
+    ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
     ty = getVoidTy();
   } else {
@@ -807,8 +793,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    assert(GetType(type) == getInt64Ty());
-    CreateStore(CreateLoad(getInt64Ty(), call), value);
+    CreateStore(CreateLoad(getPtrTy(), call), value);
   }
   CreateBr(lookup_merge_block);
 
@@ -816,7 +801,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   if (needMemcpy(type))
     CreateMemsetBPF(value, getInt8(0), type.GetSize());
   else
-    CreateStore(getInt64(0), value);
+    CreateStore(Constant::getNullValue(GetType(type)), value);
   CreateRuntimeError(RuntimeErrorId::HELPER_ERROR,
                      getInt32(0),
                      libbpf::BPF_FUNC_map_lookup_elem,
@@ -828,7 +813,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
     return value;
 
   // value is a pointer to i64
-  Value *ret = CreateLoad(getInt64Ty(), value);
+  Value *ret = CreateLoad(GetType(type), value);
   if (dyn_cast<AllocaInst>(value))
     CreateLifetimeEnd(value);
   return ret;
@@ -1676,7 +1661,6 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   // store is a pointer to bool (i1 *)
   Value *result = CreateLoad(getInt1Ty(), store);
   CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), false);
 
   return result;
 }
@@ -2486,8 +2470,6 @@ Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
     assert(arg.type.is_funcarg);
     Value *arg_read = CreateRegisterRead(
         ctx, "arg" + std::to_string(arg.type.funcarg_idx));
-    if (arg.type.GetSize() != 8)
-      arg_read = CreateTrunc(arg_read, GetType(arg.type));
     CreateStore(arg_read,
                 CreateGEP(args_t,
                           result,
@@ -2540,23 +2522,11 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
                                         size_t offset,
                                         const std::string &name)
 {
-  // Bitwidth of register values in struct pt_regs is the same as the kernel
-  // pointer width on all supported architectures.
-  //
-  // FIXME(#3873): Not clear if this applies as a general rule, best to allow
-  // these to be resolved via field names and BTF directly in the future.
   llvm::Type *registerTy = getKernelPointerStorageTy();
-
   Value *result = CreateLoad(registerTy,
                              CreateSafeGEP(getInt8Ty(), ctx, getInt64(offset)),
+                             true,
                              name);
-  // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
-  // so call setVolatile() manually
-  dyn_cast<LoadInst>(result)->setVolatile(true);
-  // Caller expects an int64, so add a cast if the register size is different.
-  if (result->getType()->getIntegerBitWidth() != 64) {
-    result = CreateIntCast(result, getInt64Ty(), false);
-  }
   return result;
 }
 
@@ -2736,7 +2706,7 @@ void IRBuilderBPF::CreateProbeRead(Value *dst,
   // which is disallowed (see https://github.com/bpftrace/bpftrace/pull/2361).
   // However, when reading pointers from kernel or user memory, we need to use
   // the appropriate size for the target system.
-  const size_t ptr_size = getPointerStorageTy(as)->getIntegerBitWidth() / 8;
+  const size_t ptr_size = getPointerStorageTy()->getIntegerBitWidth() / 8;
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   // TODO: support 32-bit big-endian systems
@@ -2749,14 +2719,11 @@ void IRBuilderBPF::CreateProbeRead(Value *dst,
   CreateProbeRead(dst, getInt32(ptr_size), src, as, loc);
 }
 
-llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
-    const SizedType &type,
-    llvm::Value *ptr,
-    bool isVolatile,
-    std::optional<AddrSpace> addrSpace)
+llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(const SizedType &type,
+                                                    llvm::Value *ptr,
+                                                    bool isVolatile)
 {
-  AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
-  llvm::Type *ptr_storage_ty = getPointerStorageTy(as);
+  llvm::Type *ptr_storage_ty = getPointerStorageTy();
 
   if (!type.IsPtrTy() || ptr_storage_ty == getInt64Ty())
     return CreateLoad(GetType(type), ptr, isVolatile);
@@ -2772,11 +2739,10 @@ llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
 }
 
 llvm::Value *IRBuilderBPF::CreatePtrOffset(const SizedType &type,
-                                           llvm::Value *index,
-                                           AddrSpace as)
+                                           llvm::Value *index)
 {
   size_t elem_size = type.IsPtrTy()
-                         ? getPointerStorageTy(as)->getIntegerBitWidth() / 8
+                         ? getPointerStorageTy()->getIntegerBitWidth() / 8
                          : type.GetSize();
 
   return CreateMul(index, getInt64(elem_size));
@@ -2811,27 +2777,15 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
   return CreateGEP(ty, ptr, offsets, name);
 }
 
-llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
+llvm::Type *IRBuilderBPF::getPointerStorageTy()
 {
-  switch (as) {
-    case AddrSpace::user:
-      return getUserPointerStorageTy();
-    default:
-      return getKernelPointerStorageTy();
-  }
+  return getKernelPointerStorageTy();
 }
 
 llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
 {
   static int ptr_width = arch::Host::kernel_ptr_width();
   return getIntNTy(ptr_width);
-}
-
-llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
-{
-  // TODO: we don't currently have an easy way of determining the pointer size
-  // of the uprobed process, so assume it's the same as the kernel's for now.
-  return getKernelPointerStorageTy();
 }
 
 void IRBuilderBPF::CreateMinMax(Value *val,

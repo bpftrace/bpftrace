@@ -32,7 +32,7 @@ public:
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
   void CreateMemsetBPF(Value *ptr, Value *val, uint32_t size);
   void CreateMemcpyBPF(Value *dst, Value *src, uint32_t size);
-  llvm::Type *GetType(const SizedType &stype, bool emit_codegen_types = true);
+  llvm::Type *GetType(const SizedType &stype);
   llvm::Type *GetMapValueType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
@@ -86,11 +86,9 @@ public:
   // SizedType. Used to access elements from structures that ctx points to, or
   // those that have already been pulled onto the BPF stack. Correctly handles
   // pointer size differences (see CreateProbeRead).
-  llvm::Value *CreateDatastructElemLoad(
-      const SizedType &type,
-      llvm::Value *ptr,
-      bool isVolatile = false,
-      std::optional<AddrSpace> addrSpace = std::nullopt);
+  llvm::Value *CreateDatastructElemLoad(const SizedType &type,
+                                        llvm::Value *ptr,
+                                        bool isVolatile = false);
   CallInst *CreateProbeReadStr(Value *dst,
                                llvm::Value *size,
                                Value *src,
@@ -229,9 +227,7 @@ public:
   // For a type T, creates an integer expression representing the byte offset
   // of the element at the given index in T[]. Used for array dereferences and
   // pointer arithmetic.
-  llvm::Value *CreatePtrOffset(const SizedType &type,
-                               llvm::Value *index,
-                               AddrSpace as);
+  llvm::Value *CreatePtrOffset(const SizedType &type, llvm::Value *index);
 
   // Safely handle pointer references by wrapping the address with the
   // intrinsic `preserve_static_offset` [1], which will ensure that LLVM does
@@ -258,7 +254,7 @@ public:
   void hoist(const std::function<void()> &functor);
 
   // Returns the integer type used to represent pointers in traced code.
-  llvm::Type *getPointerStorageTy(AddrSpace as);
+  llvm::Type *getPointerStorageTy();
 
   void CreateMinMax(Value *val,
                     Value *val_ptr,
@@ -319,7 +315,6 @@ private:
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   llvm::Type *getKernelPointerStorageTy();
-  llvm::Type *getUserPointerStorageTy();
   void CreateRingbufOutput(Value *data, size_t size, const Location &loc);
 
   void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
