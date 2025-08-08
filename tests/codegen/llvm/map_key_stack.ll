@@ -41,8 +41,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load i64, ptr %lookup_elem, align 8
-  store i64 %1, ptr %lookup_elem_val, align 8
+  %1 = load ptr, ptr %lookup_elem, align 8
+  store ptr %1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry

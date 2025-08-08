@@ -21,28 +21,29 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %"struct Bar.x" = alloca i32, align 4
-  %"$foo" = alloca i64, align 8
+  %"$foo" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
-  store i64 0, ptr %"$foo", align 8
+  store i0 0, ptr %"$foo", align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
-  store i64 %arg0, ptr %"$foo", align 8
-  %3 = load i64, ptr %"$foo", align 8
-  %4 = inttoptr i64 %3 to ptr
-  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
-  %6 = getelementptr i8, ptr %5, i64 0
-  %7 = call ptr @llvm.preserve.static.offset(ptr %6)
-  %8 = getelementptr i8, ptr %7, i64 0
+  %3 = inttoptr i64 %arg0 to ptr
+  %4 = ptrtoint ptr %3 to i64
+  store i64 %4, ptr %"$foo", align 8
+  %5 = load ptr, ptr %"$foo", align 8
+  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
+  %7 = getelementptr i8, ptr %6, i64 0
+  %8 = call ptr @llvm.preserve.static.offset(ptr %7)
+  %9 = getelementptr i8, ptr %8, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Bar.x")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Bar.x", i32 4, ptr %8)
-  %9 = load i32, ptr %"struct Bar.x", align 4
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Bar.x", i32 4, ptr %9)
+  %10 = load i32, ptr %"struct Bar.x", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Bar.x")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  %10 = sext i32 %9 to i64
-  store i64 %10, ptr %"@x_val", align 8
+  %11 = sext i32 %10 to i64
+  store i64 %11, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

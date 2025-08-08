@@ -16,13 +16,13 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %"$v" = alloca i64, align 8
+  %"$v" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
-  store i64 0, ptr %"$v", align 8
-  store i64 1000, ptr %"$v", align 8
-  %1 = load i64, ptr %"$v", align 8
-  %2 = add i64 %1, 2
-  store i64 %2, ptr %"$v", align 8
+  store i0 0, ptr %"$v", align 1
+  store ptr inttoptr (i64 1000 to ptr), ptr %"$v", align 8
+  %1 = load ptr, ptr %"$v", align 8
+  %2 = getelementptr i16, ptr %1, i32 1
+  store ptr %2, ptr %"$v", align 8
   ret i64 0
 }
 

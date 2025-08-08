@@ -22,8 +22,7 @@ entry:
   %"@x_key" = alloca i64, align 8
   %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)() #2
   %1 = icmp eq i64 %get_cgroup_id, 4294967297
-  %2 = zext i1 %1 to i64
-  %predcond = icmp eq i64 %2, 0
+  %predcond = icmp eq i1 %1, false
   br i1 %predcond, label %pred_false, label %pred_true
 
 pred_false:                                       ; preds = %entry

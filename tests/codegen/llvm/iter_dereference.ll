@@ -23,23 +23,22 @@ entry:
   %"struct bpf_iter_meta.session_id" = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 0
-  %3 = load volatile i64, ptr %2, align 8
-  %predcond = icmp eq i64 %3, 0
+  %3 = load volatile ptr, ptr %2, align 8
+  %predcond = icmp eq ptr %3, null
   br i1 %predcond, label %pred_false, label %pred_true
 
 pred_false:                                       ; preds = %entry
   ret i64 0
 
 pred_true:                                        ; preds = %entry
-  %4 = inttoptr i64 %3 to ptr
-  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
-  %6 = getelementptr i8, ptr %5, i64 8
+  %4 = call ptr @llvm.preserve.static.offset(ptr %3)
+  %5 = getelementptr i8, ptr %4, i64 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct bpf_iter_meta.session_id")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct bpf_iter_meta.session_id", i32 8, ptr %6)
-  %7 = load i64, ptr %"struct bpf_iter_meta.session_id", align 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct bpf_iter_meta.session_id", i32 8, ptr %5)
+  %6 = load i64, ptr %"struct bpf_iter_meta.session_id", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct bpf_iter_meta.session_id")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  store i64 %7, ptr %"@_key", align 8
+  store i64 %6, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
