@@ -18,7 +18,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
 entry:
-  %"@x_val" = alloca i64, align 8
+  %"@x_val" = alloca ptr, align 8
   %"@x_key" = alloca i64, align 8
   %get_cur_task = call i64 inttoptr (i64 35 to ptr)() #2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")

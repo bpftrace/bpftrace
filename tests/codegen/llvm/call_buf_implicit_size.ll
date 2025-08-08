@@ -21,10 +21,10 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !57 {
 entry:
   %"@x_key" = alloca i64, align 8
-  %"$foo" = alloca i64, align 8
+  %"$foo" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
-  store i64 0, ptr %"$foo", align 8
-  store i64 0, ptr %"$foo", align 8
+  store i0 0, ptr %"$foo", align 1
+  store ptr null, ptr %"$foo", align 8
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
@@ -33,11 +33,10 @@ entry:
   store i32 16, ptr %3, align 4
   %4 = getelementptr %buffer_16_t, ptr %2, i32 0, i32 1
   call void @llvm.memset.p0.i64(ptr align 1 %4, i8 0, i64 16, i1 false)
-  %5 = load i64, ptr %"$foo", align 8
-  %6 = inttoptr i64 %5 to ptr
-  %7 = call ptr @llvm.preserve.static.offset(ptr %6)
-  %8 = getelementptr i8, ptr %7, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 16, ptr %8)
+  %5 = load ptr, ptr %"$foo", align 8
+  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
+  %7 = getelementptr i8, ptr %6, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 16, ptr %7)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %2, i64 0)

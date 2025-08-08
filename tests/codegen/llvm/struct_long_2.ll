@@ -21,15 +21,15 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %"struct Foo.x" = alloca i64, align 8
-  %"$foo" = alloca i64, align 8
+  %"$foo" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
-  store i64 0, ptr %"$foo", align 8
+  store i0 0, ptr %"$foo", align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
-  store i64 %arg0, ptr %"$foo", align 8
-  %3 = load i64, ptr %"$foo", align 8
-  %4 = inttoptr i64 %3 to ptr
+  %3 = inttoptr i64 %arg0 to ptr
+  store ptr %3, ptr %"$foo", align 8
+  %4 = load ptr, ptr %"$foo", align 8
   %5 = call ptr @llvm.preserve.static.offset(ptr %4)
   %6 = getelementptr i8, ptr %5, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.x")
