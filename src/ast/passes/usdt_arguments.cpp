@@ -26,11 +26,10 @@ public:
   }
   ast::AssignVarStatement *var_decl(size_t arg, Node &node)
   {
-    auto *ctx_arg = ast_.make_node<Builtin>("ctx", Location(node.loc));
     auto *int_arg = ast_.make_node<ast::Integer>(static_cast<uint64_t>(arg),
                                                  Location(node.loc));
-    std::vector<Expression> args = { ctx_arg, int_arg };
-    Expression expr = ast_.make_node<ast::Call>("__usdt_arg",
+    std::vector<Expression> args = { int_arg };
+    Expression expr = ast_.make_node<ast::Call>("usdt_arg",
                                                 std::move(args),
                                                 Location(node.loc));
     return ast_.make_node<AssignVarStatement>(var(arg, node),

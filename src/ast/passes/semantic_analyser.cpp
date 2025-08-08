@@ -1887,36 +1887,6 @@ If you're seeing errors, try clamping the string sizes. For example:
       return;
     }
     call.return_type = CreateUInt64();
-  } else if (call.func == "__usdt_arg") {
-    // Special handling for __usdt_arg function in USDT context
-    // This function expects (long, long) but we pass (struct pt_regs *, int64)
-    // The ctx parameter should be treated as a pointer value (long)
-    if (call.vargs.size() != 2) {
-      call.addError() << "__usdt_arg() requires exactly 2 arguments ("
-                      << call.vargs.size() << " provided)";
-      return;
-    }
-
-    // First argument should be ctx (struct pt_regs * in USDT context)
-    const auto &ctx_type = call.vargs.at(0).type();
-    if (!ctx_type.IsPtrTy() || !ctx_type.GetPointeeTy() ||
-        !ctx_type.GetPointeeTy()->IsRecordTy() ||
-        !ctx_type.GetPointeeTy()->IsSameType(CreateRecord("struct pt_regs"))) {
-      call.addError()
-          << "__usdt_arg() first argument must be ctx (struct pt_regs *), got "
-          << typestr(ctx_type);
-      return;
-    }
-
-    // Second argument should be int64
-    const auto &arg_num_type = call.vargs.at(1).type();
-    if (!arg_num_type.IsIntTy()) {
-      call.addError() << "__usdt_arg() second argument must be int64, got "
-                      << typestr(arg_num_type);
-      return;
-    }
-
-    call.return_type = CreateInt64();
   } else {
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and
