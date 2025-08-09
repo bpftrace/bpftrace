@@ -13,18 +13,18 @@ target triple = "bpf"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define internal i64 @add(ptr %0, i64 %1, i64 %2) {
+define i64 @add(i64 %0, i64 %1) {
 entry:
   %"$b" = alloca i64, align 8
   %"$a" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
-  store i64 %1, ptr %"$a", align 8
+  store i64 %0, ptr %"$a", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$b")
-  store i64 %2, ptr %"$b", align 8
-  %3 = load i64, ptr %"$a", align 8
-  %4 = load i64, ptr %"$b", align 8
-  %5 = add i64 %3, %4
-  ret i64 %5
+  store i64 %1, ptr %"$b", align 8
+  %2 = load i64, ptr %"$a", align 8
+  %3 = load i64, ptr %"$b", align 8
+  %4 = add i64 %2, %3
+  ret i64 %4
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
