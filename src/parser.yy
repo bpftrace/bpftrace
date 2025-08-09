@@ -170,6 +170,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
+%type <ast::VariableAddr *> var_addr
 %type <ast::Program *> program
 
 
@@ -558,6 +559,7 @@ primary_expr:
         |       param              { $$ = $1; }
         |       param_count        { $$ = $1; }
         |       var                { $$ = $1; }
+        |       var_addr            { $$ = $1; }
         |       map_expr           { $$ = $1; }
         |       "(" vargs "," expr ")"
                 {
@@ -767,6 +769,10 @@ map_expr:
 
 var:
                 VAR { $$ = driver.ctx.make_node<ast::Variable>($1, @$); }
+                ;
+
+var_addr:
+                BAND var { $$ = driver.ctx.make_node<ast::VariableAddr>($2, @$); }
                 ;
 
 vargs:

@@ -144,6 +144,7 @@ public:
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
   void visit(Variable &var);
+  void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
   void visit(While &while_block);
@@ -2184,6 +2185,15 @@ void SemanticAnalyser::visit(Variable &var)
   }
 
   var.addError() << "Undefined or undeclared variable: " << var.ident;
+}
+
+void SemanticAnalyser::visit(VariableAddr &var_addr)
+{
+  visit(var_addr.var);
+  if (auto *found = find_variable(var_addr.var->ident)) {
+    var_addr.var_addr_type = CreatePointer(found->type, found->type.GetAS());
+    return;
+  }
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)
