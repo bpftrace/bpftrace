@@ -20,10 +20,10 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !54 {
 entry:
   %"@mystr_key" = alloca i64, align 8
-  %"struct Foo.str" = alloca i64, align 8
-  %"$foo" = alloca i64, align 8
+  %"struct Foo.str" = alloca ptr, align 8
+  %"$foo" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
-  store i64 0, ptr %"$foo", align 8
+  store i0 0, ptr %"$foo", align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
@@ -33,15 +33,14 @@ entry:
   %cpu.id.bounded = and i64 %get_cpu_id, %3
   %4 = getelementptr [1 x [1 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1024, ptr null)
-  %5 = load i64, ptr %"$foo", align 8
-  %6 = inttoptr i64 %5 to ptr
-  %7 = call ptr @llvm.preserve.static.offset(ptr %6)
-  %8 = getelementptr i8, ptr %7, i64 0
+  %5 = load ptr, ptr %"$foo", align 8
+  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
+  %7 = getelementptr i8, ptr %6, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.str")
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 8, ptr %8)
-  %9 = load i64, ptr %"struct Foo.str", align 8
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.str", i32 8, ptr %7)
+  %8 = load ptr, ptr %"struct Foo.str", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.str")
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 1024, i64 %9)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 1024, ptr %8)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@mystr_key")
   store i64 0, ptr %"@mystr_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_mystr, ptr %"@mystr_key", ptr %4, i64 0)

@@ -353,19 +353,8 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 /// For convenience, some types are not converted into a directly corresponding
 /// type but instead into a type which is easy to work with in BPF programs
 /// (e.g. store it in maps, etc.). This is the case for two particular types:
-/// - pointers are represented as i64
 /// - structs (records) are represented as byte arrays.
-///
-/// Setting `emit_codegen_types` to false (it is true by default) will change
-/// this behaviour and emit the exact corresponding types. This is typically
-/// necessary when creating a type which must exactly match the type in the
-/// kernel BTF (e.g. a kernel function (kfunc) prototype).
-///
-/// At the moment, `emit_codegen_types=false` only applies to pointers as it is
-/// sufficient for our use cases (and we don't need to bother with emitting
-/// struct types with all the fields). This should be changed eventually.
-llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
-                                  bool emit_codegen_types)
+llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
   if (stype.IsByteArray() || stype.IsRecordTy()) {
@@ -387,10 +376,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype,
   } else if (stype.IsStack()) {
     ty = GetStackStructType(stype.IsUstackTy());
   } else if (stype.IsPtrTy()) {
-    if (emit_codegen_types)
-      ty = getInt64Ty();
-    else
-      ty = getPtrTy();
+    ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
     ty = getVoidTy();
   } else {
@@ -807,8 +793,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    assert(GetType(type) == getInt64Ty());
-    CreateStore(CreateLoad(getInt64Ty(), call), value);
+    CreateStore(CreateLoad(getPtrTy(), call), value);
   }
   CreateBr(lookup_merge_block);
 
@@ -828,7 +813,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
     return value;
 
   // value is a pointer to i64
-  Value *ret = CreateLoad(getInt64Ty(), value);
+  Value *ret = CreateLoad(GetType(type), value);
   if (dyn_cast<AllocaInst>(value))
     CreateLifetimeEnd(value);
   return ret;

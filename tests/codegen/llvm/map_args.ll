@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.0" = type { ptr, ptr }
-%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, i64, i64, i64, i64 }
+%"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args" = type { i32, ptr, ptr, ptr, ptr }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7

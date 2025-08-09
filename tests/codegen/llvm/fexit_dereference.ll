@@ -23,19 +23,18 @@ entry:
   %"struct sock_common.skc_daddr" = alloca i32, align 4
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i64, ptr %1, i64 5
-  %__builtin_retval = load volatile i64, ptr %2, align 8
-  %3 = inttoptr i64 %__builtin_retval to ptr
-  %4 = call ptr @llvm.preserve.static.offset(ptr %3)
-  %5 = getelementptr i8, ptr %4, i64 0
-  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
-  %7 = getelementptr i8, ptr %6, i64 0
+  %__builtin_retval = load volatile ptr, ptr %2, align 8
+  %3 = call ptr @llvm.preserve.static.offset(ptr %__builtin_retval)
+  %4 = getelementptr i8, ptr %3, i64 0
+  %5 = call ptr @llvm.preserve.static.offset(ptr %4)
+  %6 = getelementptr i8, ptr %5, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct sock_common.skc_daddr")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct sock_common.skc_daddr", i32 4, ptr %7)
-  %8 = load i32, ptr %"struct sock_common.skc_daddr", align 4
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct sock_common.skc_daddr", i32 4, ptr %6)
+  %7 = load i32, ptr %"struct sock_common.skc_daddr", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct sock_common.skc_daddr")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  %9 = zext i32 %8 to i64
-  store i64 %9, ptr %"@_key", align 8
+  %8 = zext i32 %7 to i64
+  store i64 %8, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)

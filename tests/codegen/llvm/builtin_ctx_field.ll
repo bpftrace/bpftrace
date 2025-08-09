@@ -37,80 +37,74 @@ entry:
   %"@b_key" = alloca i64, align 8
   %"@a_val" = alloca i64, align 8
   %"@a_key" = alloca i64, align 8
-  %"$x" = alloca i64, align 8
+  %"$x" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
-  store i64 0, ptr %"$x", align 8
+  store i0 0, ptr %"$x", align 1
   store ptr %0, ptr %"$x", align 8
-  %1 = load i64, ptr %"$x", align 8
-  %2 = inttoptr i64 %1 to ptr
-  %3 = call ptr @llvm.preserve.static.offset(ptr %2)
-  %4 = getelementptr i8, ptr %3, i64 0
-  %5 = load volatile i64, ptr %4, align 8
+  %1 = load ptr, ptr %"$x", align 8
+  %2 = call ptr @llvm.preserve.static.offset(ptr %1)
+  %3 = getelementptr i8, ptr %2, i64 0
+  %4 = load volatile i64, ptr %3, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key")
   store i64 0, ptr %"@a_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_val")
-  store i64 %5, ptr %"@a_val", align 8
+  store i64 %4, ptr %"@a_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %"@a_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key")
-  %6 = load i64, ptr %"$x", align 8
-  %7 = inttoptr i64 %6 to ptr
-  %8 = call ptr @llvm.preserve.static.offset(ptr %7)
-  %9 = getelementptr i8, ptr %8, i64 8
-  %10 = ptrtoint ptr %9 to i64
-  %11 = inttoptr i64 %10 to ptr
-  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
-  %13 = getelementptr i8, ptr %12, i64 0
-  %14 = load volatile i16, ptr %13, align 2
+  %5 = load ptr, ptr %"$x", align 8
+  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
+  %7 = getelementptr i8, ptr %6, i64 8
+  %8 = ptrtoint ptr %7 to i64
+  %9 = inttoptr i64 %8 to ptr
+  %10 = call ptr @llvm.preserve.static.offset(ptr %9)
+  %11 = getelementptr i8, ptr %10, i64 0
+  %12 = load volatile i16, ptr %11, align 2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_key")
   store i64 0, ptr %"@b_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_val")
-  %15 = sext i16 %14 to i64
-  store i64 %15, ptr %"@b_val", align 8
+  %13 = sext i16 %12 to i64
+  store i64 %13, ptr %"@b_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %"@b_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_key")
-  %16 = load i64, ptr %"$x", align 8
-  %17 = inttoptr i64 %16 to ptr
-  %18 = call ptr @llvm.preserve.static.offset(ptr %17)
-  %19 = getelementptr i8, ptr %18, i64 16
-  %20 = call ptr @llvm.preserve.static.offset(ptr %19)
-  %21 = getelementptr i8, ptr %20, i64 0
-  %22 = load volatile i8, ptr %21, align 1
+  %14 = load ptr, ptr %"$x", align 8
+  %15 = call ptr @llvm.preserve.static.offset(ptr %14)
+  %16 = getelementptr i8, ptr %15, i64 16
+  %17 = call ptr @llvm.preserve.static.offset(ptr %16)
+  %18 = getelementptr i8, ptr %17, i64 0
+  %19 = load volatile i8, ptr %18, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_key")
   store i64 0, ptr %"@c_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@c_val")
-  %23 = sext i8 %22 to i64
-  store i64 %23, ptr %"@c_val", align 8
+  %20 = sext i8 %19 to i64
+  store i64 %20, ptr %"@c_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_c, ptr %"@c_key", ptr %"@c_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_key")
-  %24 = load i64, ptr %"$x", align 8
-  %25 = inttoptr i64 %24 to ptr
-  %26 = call ptr @llvm.preserve.static.offset(ptr %25)
-  %27 = getelementptr i8, ptr %26, i64 24
-  %28 = load volatile i64, ptr %27, align 8
-  %29 = inttoptr i64 %28 to ptr
-  %30 = call ptr @llvm.preserve.static.offset(ptr %29)
-  %31 = getelementptr i8, ptr %30, i64 0
+  %21 = load ptr, ptr %"$x", align 8
+  %22 = call ptr @llvm.preserve.static.offset(ptr %21)
+  %23 = getelementptr i8, ptr %22, i64 24
+  %24 = load volatile ptr, ptr %23, align 8
+  %25 = call ptr @llvm.preserve.static.offset(ptr %24)
+  %26 = getelementptr i8, ptr %25, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct c.c")
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct c.c", i32 1, ptr %31)
-  %32 = load i8, ptr %"struct c.c", align 1
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"struct c.c", i32 1, ptr %26)
+  %27 = load i8, ptr %"struct c.c", align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct c.c")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_key")
   store i64 0, ptr %"@d_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@d_val")
-  %33 = sext i8 %32 to i64
-  store i64 %33, ptr %"@d_val", align 8
+  %28 = sext i8 %27 to i64
+  store i64 %28, ptr %"@d_val", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_d, ptr %"@d_key", ptr %"@d_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_key")
-  %34 = load i64, ptr %"$x", align 8
-  %35 = inttoptr i64 %34 to ptr
-  %36 = call ptr @llvm.preserve.static.offset(ptr %35)
-  %37 = getelementptr i8, ptr %36, i64 32
+  %29 = load ptr, ptr %"$x", align 8
+  %30 = call ptr @llvm.preserve.static.offset(ptr %29)
+  %31 = getelementptr i8, ptr %30, i64 32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct x.e")
-  %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct x.e", i32 5, ptr %37)
+  %probe_read_kernel4 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct x.e", i32 5, ptr %31)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@e_key")
   store i64 0, ptr %"@e_key", align 8
   %update_elem5 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_e, ptr %"@e_key", ptr %"struct x.e", i64 0)

@@ -17,13 +17,13 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %"||_result" = alloca i8, align 1
-  %"$v" = alloca i64, align 8
+  %"$v" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
-  store i64 0, ptr %"$v", align 8
+  store i0 0, ptr %"$v", align 1
   store i64 1, ptr %"$v", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
-  %1 = load i64, ptr %"$v", align 8
-  %lhs_true_cond = icmp ne i64 %1, 0
+  %1 = load ptr, ptr %"$v", align 8
+  %lhs_true_cond = icmp ne ptr %1, null
   br i1 %lhs_true_cond, label %"||_true", label %"||_lhs_false"
 
 if_body:                                          ; preds = %"||_merge"
