@@ -460,4 +460,13 @@ TEST(fold_literals, unary)
   test_error("-0x8000000000000001", "underflow");
 }
 
+TEST(fold_literals, ternary)
+{
+  test("0 ? true : false", "bool: false");
+  test("1 ? true : false", "bool: true");
+  test("-1 ? true : false", "bool: true");
+  test("\"foo\" ? true : false", "bool: true");
+  test("\"\" ? true : false", "bool: false");
+}
+
 } // namespace bpftrace::test::fold_literals

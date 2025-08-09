@@ -21,6 +21,7 @@ public:
   std::optional<Expression> visit(Cast &cast);
   std::optional<Expression> visit(Unop &op);
   std::optional<Expression> visit(Binop &op);
+  std::optional<Expression> visit(Ternary &op);
   std::optional<Expression> visit(PositionalParameterCount &param);
   std::optional<Expression> visit(PositionalParameter &param);
   std::optional<Expression> visit(Call &call);
@@ -470,6 +471,37 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
         }
       },
       result.value());
+}
+
+std::optional<Expression> LiteralFolder::visit(Ternary &op)
+{
+  visit(op.cond);
+  visit(op.left);
+  visit(op.right);
+
+  if (op.cond.is<Integer>()) {
+    if (op.cond.as<Integer>()->value != 0) {
+      return op.left;
+    } else {
+      return op.right;
+    }
+  } else if (op.cond.is<NegativeInteger>()) {
+    return op.left;
+  } else if (op.cond.is<Boolean>()) {
+    if (op.cond.as<Boolean>()->value) {
+      return op.left;
+    } else {
+      return op.right;
+    }
+  } else if (op.cond.is<String>()) {
+    if (!op.cond.as<String>()->value.empty()) {
+      return op.left;
+    } else {
+      return op.right;
+    }
+  }
+
+  return std::nullopt;
 }
 
 std::optional<Expression> LiteralFolder::visit(PositionalParameterCount &param)
