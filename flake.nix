@@ -176,6 +176,7 @@
                   pkgs.libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
+                  pkgs."llvmPackages_${toString llvmVersion}".clang-unwrapped # for Clang C Standard Library
                   pkgs.pahole
                   pkgs.xxd
                   pkgs.zlib
@@ -207,6 +208,7 @@
                   bpftools
                   coreutils
                   pkgs."llvmPackages_${toString llvmVersion}".clang-tools # Needed for the nix-aware "wrapped" clang-tidy
+                  pkgs."llvmPackages_${toString llvmVersion}".clang-unwrapped # for Clang C Standard Library
                   gawk
                   git
                   gnugrep
