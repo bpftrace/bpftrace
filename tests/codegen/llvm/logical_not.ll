@@ -20,9 +20,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !49 {
 entry:
-  %"@y_val" = alloca i8, align 1
+  %"@y_val" = alloca i1, align 1
   %"@y_key" = alloca i64, align 8
-  %"@x_val" = alloca i8, align 1
+  %"@x_val" = alloca i1, align 1
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8

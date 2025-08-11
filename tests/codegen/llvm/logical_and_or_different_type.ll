@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %printf_t = type { i64, %printf_args_t }
-%printf_args_t = type { i64, i64, i64, i64 }
+%printf_args_t = type { i1, i1, i1, i1 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -27,27 +27,25 @@ entry:
   %"&&_result5" = alloca i1, align 1
   %"struct Foo.m" = alloca i32, align 4
   %"&&_result" = alloca i1, align 1
+  %printf_args = alloca %printf_t, align 8
   %"$foo" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$foo")
   store i0 0, ptr %"$foo", align 1
   store i64 0, ptr %"$foo", align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
-  %1 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [40 x i8]]], ptr @__bt__fmt_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 40, i1 false)
-  %3 = getelementptr %printf_t, ptr %2, i32 0, i32 0
-  store i64 0, ptr %3, align 8
-  %4 = getelementptr %printf_t, ptr %2, i32 0, i32 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
+  call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 16, i1 false)
+  %1 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
+  store i64 0, ptr %1, align 8
+  %2 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result")
-  %5 = load ptr, ptr %"$foo", align 8
-  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
-  %7 = getelementptr i8, ptr %6, i64 0
+  %3 = load ptr, ptr %"$foo", align 8
+  %4 = call ptr @llvm.preserve.static.offset(ptr %3)
+  %5 = getelementptr i8, ptr %4, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.m")
-  %probe_read = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m", i32 4, ptr %7)
-  %8 = load i32, ptr %"struct Foo.m", align 4
+  %probe_read = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m", i32 4, ptr %5)
+  %6 = load i32, ptr %"struct Foo.m", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.m")
-  %lhs_true_cond = icmp ne i32 %8, 0
+  %lhs_true_cond = icmp ne i32 %6, 0
   br i1 %lhs_true_cond, label %"&&_lhs_true", label %"&&_false"
 
 "&&_lhs_true":                                    ; preds = %entry
@@ -62,21 +60,21 @@ entry:
   br label %"&&_merge"
 
 "&&_merge":                                       ; preds = %"&&_false", %"&&_true"
-  %9 = load i1, ptr %"&&_result", align 1
-  %10 = getelementptr %printf_args_t, ptr %4, i32 0, i32 0
-  store i1 %9, ptr %10, align 1
+  %7 = load i1, ptr %"&&_result", align 1
+  %8 = getelementptr %printf_args_t, ptr %2, i32 0, i32 0
+  store i1 %7, ptr %8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result5")
   br i1 true, label %"&&_lhs_true1", label %"&&_false3"
 
 "&&_lhs_true1":                                   ; preds = %"&&_merge"
-  %11 = load ptr, ptr %"$foo", align 8
-  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
-  %13 = getelementptr i8, ptr %12, i64 0
+  %9 = load ptr, ptr %"$foo", align 8
+  %10 = call ptr @llvm.preserve.static.offset(ptr %9)
+  %11 = getelementptr i8, ptr %10, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.m6")
-  %probe_read7 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m6", i32 4, ptr %13)
-  %14 = load i32, ptr %"struct Foo.m6", align 4
+  %probe_read7 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m6", i32 4, ptr %11)
+  %12 = load i32, ptr %"struct Foo.m6", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.m6")
-  %rhs_true_cond = icmp ne i32 %14, 0
+  %rhs_true_cond = icmp ne i32 %12, 0
   br i1 %rhs_true_cond, label %"&&_true2", label %"&&_false3"
 
 "&&_true2":                                       ; preds = %"&&_lhs_true1"
@@ -88,18 +86,18 @@ entry:
   br label %"&&_merge4"
 
 "&&_merge4":                                      ; preds = %"&&_false3", %"&&_true2"
-  %15 = load i1, ptr %"&&_result5", align 1
-  %16 = getelementptr %printf_args_t, ptr %4, i32 0, i32 1
-  store i1 %15, ptr %16, align 1
+  %13 = load i1, ptr %"&&_result5", align 1
+  %14 = getelementptr %printf_args_t, ptr %2, i32 0, i32 1
+  store i1 %13, ptr %14, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
-  %17 = load ptr, ptr %"$foo", align 8
-  %18 = call ptr @llvm.preserve.static.offset(ptr %17)
-  %19 = getelementptr i8, ptr %18, i64 0
+  %15 = load ptr, ptr %"$foo", align 8
+  %16 = call ptr @llvm.preserve.static.offset(ptr %15)
+  %17 = getelementptr i8, ptr %16, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.m8")
-  %probe_read9 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m8", i32 4, ptr %19)
-  %20 = load i32, ptr %"struct Foo.m8", align 4
+  %probe_read9 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m8", i32 4, ptr %17)
+  %18 = load i32, ptr %"struct Foo.m8", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.m8")
-  %lhs_true_cond10 = icmp ne i32 %20, 0
+  %lhs_true_cond10 = icmp ne i32 %18, 0
   br i1 %lhs_true_cond10, label %"||_true", label %"||_lhs_false"
 
 "||_lhs_false":                                   ; preds = %"&&_merge4"
@@ -114,21 +112,21 @@ entry:
   br label %"||_merge"
 
 "||_merge":                                       ; preds = %"||_true", %"||_false"
-  %21 = load i1, ptr %"||_result", align 1
-  %22 = getelementptr %printf_args_t, ptr %4, i32 0, i32 2
-  store i1 %21, ptr %22, align 1
+  %19 = load i1, ptr %"||_result", align 1
+  %20 = getelementptr %printf_args_t, ptr %2, i32 0, i32 2
+  store i1 %19, ptr %20, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result15")
   br i1 false, label %"||_true13", label %"||_lhs_false11"
 
 "||_lhs_false11":                                 ; preds = %"||_merge"
-  %23 = load ptr, ptr %"$foo", align 8
-  %24 = call ptr @llvm.preserve.static.offset(ptr %23)
-  %25 = getelementptr i8, ptr %24, i64 0
+  %21 = load ptr, ptr %"$foo", align 8
+  %22 = call ptr @llvm.preserve.static.offset(ptr %21)
+  %23 = getelementptr i8, ptr %22, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.m16")
-  %probe_read17 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m16", i32 4, ptr %25)
-  %26 = load i32, ptr %"struct Foo.m16", align 4
+  %probe_read17 = call i64 inttoptr (i64 4 to ptr)(ptr %"struct Foo.m16", i32 4, ptr %23)
+  %24 = load i32, ptr %"struct Foo.m16", align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.m16")
-  %rhs_true_cond18 = icmp ne i32 %26, 0
+  %rhs_true_cond18 = icmp ne i32 %24, 0
   br i1 %rhs_true_cond18, label %"||_true13", label %"||_false12"
 
 "||_false12":                                     ; preds = %"||_lhs_false11"
@@ -140,24 +138,25 @@ entry:
   br label %"||_merge14"
 
 "||_merge14":                                     ; preds = %"||_true13", %"||_false12"
-  %27 = load i1, ptr %"||_result15", align 1
-  %28 = getelementptr %printf_args_t, ptr %4, i32 0, i32 3
-  store i1 %27, ptr %28, align 1
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %2, i64 40, i64 0)
+  %25 = load i1, ptr %"||_result15", align 1
+  %26 = getelementptr %printf_args_t, ptr %2, i32 0, i32 3
+  store i1 %25, ptr %26, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %"||_merge14"
-  %get_cpu_id19 = call i64 inttoptr (i64 8 to ptr)() #4
-  %29 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded20 = and i64 %get_cpu_id19, %29
-  %30 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded20, i64 0
-  %31 = load i64, ptr %30, align 8
-  %32 = add i64 %31, 1
-  store i64 %32, ptr %30, align 8
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
+  %27 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %27
+  %28 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %29 = load i64, ptr %28, align 8
+  %30 = add i64 %29, 1
+  store i64 %30, ptr %28, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %"||_merge14"
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args)
   ret i64 0
 }
 
