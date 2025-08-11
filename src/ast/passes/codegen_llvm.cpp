@@ -3362,10 +3362,7 @@ ScopedExpr CodegenLLVM::visit(Predicate &pred)
   auto scoped_expr = visit(pred.expr);
 
   auto *cmp_value = b_.CreateICmpEQ(scoped_expr.value(),
-                                    Constant::getNullValue(
-                                        pred.expr.type().IsBoolTy()
-                                            ? b_.getInt1Ty()
-                                            : b_.GetType(pred.expr.type())),
+                                    Constant::getNullValue(b_.GetType(pred.expr.type())),
                                     "predcond");
 
   b_.CreateCondBr(cmp_value, pred_false_block, pred_true_block);
