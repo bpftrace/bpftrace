@@ -2545,7 +2545,7 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
   //
   // FIXME(#3873): Not clear if this applies as a general rule, best to allow
   // these to be resolved via field names and BTF directly in the future.
-  llvm::Type *registerTy = getKernelPointerStorageTy();
+  llvm::Type *registerTy = getPointerStorageTy();
 
   Value *result = CreateLoad(registerTy,
                              CreateSafeGEP(getInt8Ty(), ctx, getInt64(offset)),
@@ -2736,7 +2736,7 @@ void IRBuilderBPF::CreateProbeRead(Value *dst,
   // which is disallowed (see https://github.com/bpftrace/bpftrace/pull/2361).
   // However, when reading pointers from kernel or user memory, we need to use
   // the appropriate size for the target system.
-  const size_t ptr_size = getPointerStorageTy(as)->getIntegerBitWidth() / 8;
+  const size_t ptr_size = getPointerStorageTy()->getIntegerBitWidth() / 8;
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   // TODO: support 32-bit big-endian systems
@@ -2749,34 +2749,29 @@ void IRBuilderBPF::CreateProbeRead(Value *dst,
   CreateProbeRead(dst, getInt32(ptr_size), src, as, loc);
 }
 
-llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
-    const SizedType &type,
-    llvm::Value *ptr,
-    bool isVolatile,
-    std::optional<AddrSpace> addrSpace)
+llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(const SizedType &type,
+                                                    llvm::Value *ptr)
 {
-  AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
-  llvm::Type *ptr_storage_ty = getPointerStorageTy(as);
+  llvm::Type *ptr_storage_ty = getPointerStorageTy();
 
   if (!type.IsPtrTy() || ptr_storage_ty == getInt64Ty())
-    return CreateLoad(GetType(type), ptr, isVolatile);
+    return CreateLoad(GetType(type), ptr, true);
 
   assert(GetType(type) == getInt64Ty());
 
   // Pointer size for the given address space doesn't match the BPF-side
   // representation. Use ptr_storage_ty as the load type and cast the result
   // back to int64.
-  llvm::Value *expr = CreateLoad(ptr_storage_ty, ptr, isVolatile);
+  llvm::Value *expr = CreateLoad(ptr_storage_ty, ptr, true);
 
   return CreateIntCast(expr, getInt64Ty(), false);
 }
 
 llvm::Value *IRBuilderBPF::CreatePtrOffset(const SizedType &type,
-                                           llvm::Value *index,
-                                           AddrSpace as)
+                                           llvm::Value *index)
 {
   size_t elem_size = type.IsPtrTy()
-                         ? getPointerStorageTy(as)->getIntegerBitWidth() / 8
+                         ? getPointerStorageTy()->getIntegerBitWidth() / 8
                          : type.GetSize();
 
   return CreateMul(index, getInt64(elem_size));
@@ -2811,27 +2806,10 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
   return CreateGEP(ty, ptr, offsets, name);
 }
 
-llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
-{
-  switch (as) {
-    case AddrSpace::user:
-      return getUserPointerStorageTy();
-    default:
-      return getKernelPointerStorageTy();
-  }
-}
-
-llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
+llvm::Type *IRBuilderBPF::getPointerStorageTy()
 {
   static int ptr_width = arch::Host::kernel_ptr_width();
   return getIntNTy(ptr_width);
-}
-
-llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
-{
-  // TODO: we don't currently have an easy way of determining the pointer size
-  // of the uprobed process, so assume it's the same as the kernel's for now.
-  return getKernelPointerStorageTy();
 }
 
 void IRBuilderBPF::CreateMinMax(Value *val,
