@@ -2176,13 +2176,6 @@ ScopedExpr CodegenLLVM::visit(Offsetof &offof)
   return ScopedExpr(b_.getInt64(offset));
 }
 
-ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
-{
-  // This is not currently used in code generation. Code is generated either
-  // via `MapAccess` for reads or via `AssignMapStatement` for writes.
-  return ScopedExpr();
-}
-
 ScopedExpr CodegenLLVM::visit(Variable &var)
 {
   // Arrays and structs are not memcopied for local variables
@@ -2813,6 +2806,11 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
     // Lifetime is not extended, it is freed after the load
     return ScopedExpr(b_.CreateLoad(b_.GetType(elem_type), src));
   }
+}
+
+ScopedExpr CodegenLLVM::visit(Map &map)
+{
+  return ScopedExpr(b_.GetMapVar(map.ident));
 }
 
 ScopedExpr CodegenLLVM::visit(MapAccess &acc)

@@ -3,6 +3,7 @@
 #include "ast/ast.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
+#include "call_spec.h"
 
 namespace bpftrace::ast {
 
@@ -201,9 +202,11 @@ void MapDefaultKey::visit(Call &call)
     for (size_t i = 1; i < call.vargs.size(); i++) {
       visit(call.vargs.at(i));
     }
-  } else {
+  } else if (CALL_SPEC.contains(call.func)) {
     Visitor<MapDefaultKey>::visit(call);
   }
+  // Don't desugar calls to unknown functions as maps should
+  // always be passed as references
 }
 
 void MapDefaultKey::visit(For &for_loop)
