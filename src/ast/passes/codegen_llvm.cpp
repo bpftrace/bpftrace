@@ -843,9 +843,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     // bytes to read from stack for each argument. We pass a pointer SizedType
     // to CreateProbeRead to make sure it uses the correct read size while
     // keeping builtin.type an int64.
-    size_t arg_width = b_.getPointerStorageTy(builtin.builtin_type.GetAS())
-                           ->getIntegerBitWidth() /
-                       8;
+    size_t arg_width = b_.getPointerStorageTy()->getIntegerBitWidth() / 8;
     SizedType arg_type = CreatePointer(CreateInt8(),
                                        builtin.builtin_type.GetAS());
     assert(builtin.builtin_type.GetSize() == arg_type.GetSize());
@@ -2408,9 +2406,7 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
 
     if (other_ty.IsIntTy() && other_ty.GetSize() != 8)
       other_expr = b_.CreateZExt(other_expr, b_.getInt64Ty());
-    Value *expr = b_.CreatePtrOffset(*ptr_ty.GetPointeeTy(),
-                                     other_expr,
-                                     ptr_ty.GetAS());
+    Value *expr = b_.CreatePtrOffset(*ptr_ty.GetPointeeTy(), other_expr);
     if (binop.op == Operator::PLUS)
       return ScopedExpr(b_.CreateAdd(ptr_expr, expr));
     else
@@ -2777,7 +2773,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     Value *index = b_.CreateIntCast(scoped_index.value(),
                                     b_.getInt64Ty(),
                                     type.IsSigned());
-    Value *offset = b_.CreatePtrOffset(arr.element_type, index, type.GetAS());
+    Value *offset = b_.CreatePtrOffset(arr.element_type, index);
 
     return probereadDatastructElem(std::move(scoped_expr),
                                    offset,
@@ -4337,7 +4333,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
                                     { b_.getInt64(0), b_.getInt32(2) });
 
   SizedType elem_type = CreatePointer(CreateInt8(), addrspace);
-  size_t ptr_width = b_.getPointerStorageTy(addrspace)->getIntegerBitWidth();
+  size_t ptr_width = b_.getPointerStorageTy()->getIntegerBitWidth();
   assert(b_.GetType(elem_type) == b_.getInt64Ty());
 
   Value *value = scoped_arg.value();
@@ -4588,8 +4584,7 @@ ScopedExpr CodegenLLVM::readDatastructElemFromStack(ScopedExpr &&scoped_src,
 
   if (elem_type.IsIntegerTy() || elem_type.IsPtrTy() || elem_type.IsBoolTy()) {
     // Load the correct type from src
-    return ScopedExpr(
-        b_.CreateDatastructElemLoad(elem_type, src, true, elem_type.GetAS()));
+    return ScopedExpr(b_.CreateDatastructElemLoad(elem_type, src));
   } else {
     // The inner type is an aggregate - instead of copying it, just pass
     // the pointer and extend lifetime of the source data.
@@ -4648,8 +4643,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     // Read data onto stack
     if (data_type.IsCtxAccess()) {
       // Types have already been suitably casted; just do the access.
-      Value *expr = b_.CreateDatastructElemLoad(
-          elem_type, src, true, data_type.GetAS());
+      Value *expr = b_.CreateDatastructElemLoad(elem_type, src);
       // check context access for iter probes (required by kernel)
       if (data_type.IsCtxAccess() &&
           probetype(current_attach_point_->provider) == ProbeType::iter) {
@@ -5386,18 +5380,17 @@ Pass CreateLinkBitcodePass()
 
 Pass CreateVerifyPass()
 {
-  return Pass::create(
-      "verify", [](ASTContext &ast, CompiledModule &cm) -> Result<> {
-        std::stringstream ss;
-        raw_os_ostream OS(ss);
-        bool ret = llvm::verifyModule(*cm.module, &OS);
-        OS.flush();
-        if (ret) {
-          return make_error<SystemError>(
-              "LLVM verification failed (--verify-llvm-ir)\n" + ss.str(), 0);
-        }
-        return OK();
-      });
+  return Pass::create("verify", [](CompiledModule &cm) -> Result<> {
+    std::stringstream ss;
+    raw_os_ostream OS(ss);
+    bool ret = llvm::verifyModule(*cm.module, &OS);
+    OS.flush();
+    if (ret) {
+      return make_error<SystemError>(
+          "LLVM verification failed (--verify-llvm-ir)\n" + ss.str(), 0);
+    }
+    return OK();
+  });
 }
 
 Pass CreateOptimizePass()
