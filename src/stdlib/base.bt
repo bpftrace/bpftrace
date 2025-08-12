@@ -289,6 +289,11 @@ macro gid() {
   __builtin_gid
 }
 
+macro has(@map, key) {
+  $x = key;
+  (bool)__has_key((void *)@map, (void *)&$x)
+}
+
 // :function has_key
 // :variant boolean has_key(map m, mapkey k)
 //
