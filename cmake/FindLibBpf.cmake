@@ -21,7 +21,7 @@ find_library (LIBBPF_LIBRARIES
   PATHS
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
-set(LIBBPF_ERROR_MESSAGE "Please install the libbpf development package")
+set(LIBBPF_ERROR_MESSAGE "Please install the libbpf.a static library")
 
 include (FindPackageHandleStandardArgs)
 
