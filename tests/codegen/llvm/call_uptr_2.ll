@@ -24,15 +24,16 @@ entry:
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
+  %3 = inttoptr i64 %arg0 to ptr
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
-  %probe_read_user = call i64 inttoptr (i64 112 to ptr)(ptr %deref, i32 4, i64 %arg0)
-  %3 = load i32, ptr %deref, align 4
+  %probe_read_user = call i64 inttoptr (i64 112 to ptr)(ptr %deref, i32 4, ptr %3)
+  %4 = load i32, ptr %deref, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  %4 = sext i32 %3 to i64
-  store i64 %4, ptr %"@_val", align 8
+  %5 = sext i32 %4 to i64
+  store i64 %5, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")

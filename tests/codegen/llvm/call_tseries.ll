@@ -95,8 +95,8 @@ exit:                                             ; preds = %update, %lookup_mer
   ret i64 0
 
 lookup_success3:                                  ; preds = %merge
-  %13 = load i64, ptr %lookup_elem2, align 8
-  store i64 %13, ptr %lookup_elem_val, align 8
+  %13 = load ptr, ptr %lookup_elem2, align 8
+  store ptr %13, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure4:                                  ; preds = %merge

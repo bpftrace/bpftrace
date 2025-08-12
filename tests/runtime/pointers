@@ -99,3 +99,7 @@ EXPECT @: 2
 NAME Pointer is useable in logical or expressions
 PROG begin { @ = (curtask || 0) ? 1 : 2;  }
 EXPECT @: 1
+
+NAME pointer/int comparison
+PROG begin { $a = (int64*) 0x32; $a++; if (0x32 < $a && $a > 0x32) { print("SUCCESS"); }  }
+EXPECT SUCCESS

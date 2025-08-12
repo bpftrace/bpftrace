@@ -20,23 +20,22 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
-  %"$a" = alloca i64, align 8
+  %"$a" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
-  store i64 0, ptr %"$a", align 8
+  store i0 0, ptr %"$a", align 1
   %1 = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %1)
   store i64 0, ptr %1, align 8
   %2 = ptrtoint ptr %1 to i64
   store i64 %2, ptr %"$a", align 8
-  %3 = load i64, ptr %"$a", align 8
-  %4 = inttoptr i64 %3 to ptr
-  %5 = getelementptr [8 x i8], ptr %4, i32 0, i64 0
-  %6 = load volatile i8, ptr %5, align 1
+  %3 = load ptr, ptr %"$a", align 8
+  %4 = getelementptr [8 x i8], ptr %3, i32 0, i64 0
+  %5 = load volatile i8, ptr %4, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  %7 = zext i8 %6 to i64
-  store i64 %7, ptr %"@_val", align 8
+  %6 = zext i8 %5 to i64
+  store i64 %6, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")

@@ -20,7 +20,7 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !47 {
 entry:
   %"@x_val" = alloca i8, align 1
   %"@x_key" = alloca i64, align 8
-  %"&&_result" = alloca i8, align 1
+  %"&&_result" = alloca i1, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result")
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #2
   %1 = lshr i64 %get_pid_tgid, 32
@@ -40,19 +40,19 @@ entry:
   br i1 %rhs_true_cond, label %"&&_true", label %"&&_false"
 
 "&&_true":                                        ; preds = %"&&_lhs_true"
-  store i8 1, ptr %"&&_result", align 1
+  store i1 true, ptr %"&&_result", align 1
   br label %"&&_merge"
 
 "&&_false":                                       ; preds = %"&&_lhs_true", %entry
-  store i8 0, ptr %"&&_result", align 1
+  store i1 false, ptr %"&&_result", align 1
   br label %"&&_merge"
 
 "&&_merge":                                       ; preds = %"&&_false", %"&&_true"
-  %7 = load i8, ptr %"&&_result", align 1
+  %7 = load i1, ptr %"&&_result", align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i8 %7, ptr %"@x_val", align 1
+  store i1 %7, ptr %"@x_val", align 1
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

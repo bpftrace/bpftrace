@@ -20,18 +20,18 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$res")
   store i32 0, ptr %"$res", align 4
   %deref1 = alloca i32, align 4
-  %deref = alloca i64, align 8
-  %"$pp" = alloca i64, align 8
+  %deref = alloca ptr, align 8
+  %"$pp" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$pp")
-  store i64 0, ptr %"$pp", align 8
-  store i64 0, ptr %"$pp", align 8
-  %1 = load i64, ptr %"$pp", align 8
+  store i0 0, ptr %"$pp", align 1
+  store ptr null, ptr %"$pp", align 8
+  %1 = load ptr, ptr %"$pp", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 8, i64 %1)
-  %2 = load i64, ptr %deref, align 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 8, ptr %1)
+  %2 = load ptr, ptr %deref, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref1)
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %deref1, i32 4, i64 %2)
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to ptr)(ptr %deref1, i32 4, ptr %2)
   %3 = load i32, ptr %deref1, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref1)
   store i32 %3, ptr %"$res", align 4

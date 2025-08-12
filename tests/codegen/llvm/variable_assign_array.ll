@@ -21,9 +21,9 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %array_access = alloca i32, align 4
-  %"$var" = alloca i64, align 8
+  %"$var" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var")
-  store i64 0, ptr %"$var", align 8
+  store i0 0, ptr %"$var", align 1
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
@@ -32,19 +32,20 @@ entry:
   %5 = getelementptr i8, ptr %4, i64 0
   %6 = ptrtoint ptr %5 to i64
   store i64 %6, ptr %"$var", align 8
-  %7 = load i64, ptr %"$var", align 8
-  %8 = inttoptr i64 %7 to ptr
-  %9 = call ptr @llvm.preserve.static.offset(ptr %8)
-  %10 = getelementptr i8, ptr %9, i64 0
+  %7 = load ptr, ptr %"$var", align 8
+  %8 = ptrtoint ptr %7 to i64
+  %9 = inttoptr i64 %8 to ptr
+  %10 = call ptr @llvm.preserve.static.offset(ptr %9)
+  %11 = getelementptr i8, ptr %10, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 4, ptr %10)
-  %11 = load i32, ptr %array_access, align 4
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 4, ptr %11)
+  %12 = load i32, ptr %array_access, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  %12 = sext i32 %11 to i64
-  store i64 %12, ptr %"@x_val", align 8
+  %13 = sext i32 %12 to i64
+  store i64 %13, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

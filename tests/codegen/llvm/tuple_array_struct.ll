@@ -24,18 +24,19 @@ entry:
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
-  %3 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %4 = getelementptr i8, ptr %3, i64 104
-  %arg1 = load volatile i64, ptr %4, align 8
-  %5 = inttoptr i64 %arg1 to ptr
-  %6 = call ptr @llvm.preserve.static.offset(ptr %5)
-  %7 = getelementptr i8, ptr %6, i64 0
+  %3 = inttoptr i64 %arg0 to ptr
+  %4 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %5 = getelementptr i8, ptr %4, i64 104
+  %arg1 = load volatile i64, ptr %5, align 8
+  %6 = inttoptr i64 %arg1 to ptr
+  %7 = call ptr @llvm.preserve.static.offset(ptr %6)
+  %8 = getelementptr i8, ptr %7, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 24, i1 false)
-  %8 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %8, i32 8, i64 %arg0)
-  %9 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 1
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %9, i32 16, ptr %7)
+  %9 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %9, i32 8, ptr %3)
+  %10 = getelementptr %"struct Foo_int32[4]__tuple_t", ptr %tuple, i32 0, i32 1
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %10, i32 16, ptr %8)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_t, ptr %"@t_key", ptr %tuple, i64 0)

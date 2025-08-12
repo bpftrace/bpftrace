@@ -29,25 +29,26 @@ entry:
   %2 = getelementptr i8, ptr %1, i64 32
   %reg_bp = load volatile i64, ptr %2, align 8
   %3 = sub i64 %reg_bp, 1
+  %4 = inttoptr i64 %3 to ptr
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 1, i64 %3)
-  %4 = load i8, ptr %deref, align 1
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 1, ptr %4)
+  %5 = load i8, ptr %deref, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
-  %5 = sext i8 %4 to i64
+  %6 = sext i8 %5 to i64
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_, ptr %"@_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %6 = load i64, ptr %lookup_elem, align 8
-  %7 = add i64 %6, %5
-  store i64 %7, ptr %lookup_elem, align 8
+  %7 = load i64, ptr %lookup_elem, align 8
+  %8 = add i64 %7, %6
+  store i64 %8, ptr %lookup_elem, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %initial_value)
-  store i64 %5, ptr %initial_value, align 8
+  store i64 %6, ptr %initial_value, align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %initial_value, i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %initial_value)
   br label %lookup_merge
