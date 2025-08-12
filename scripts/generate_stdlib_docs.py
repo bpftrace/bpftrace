@@ -101,8 +101,6 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
                         # undocumented macro.
                         if current.description:
                             helpers.append(current)
-                        else:
-                            print(f"Warning: Helper '{current.name}' will not be added to the docs.")
                     current = Helper()
                 else:
                     if current.name and current.description:
