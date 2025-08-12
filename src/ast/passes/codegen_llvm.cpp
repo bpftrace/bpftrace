@@ -2681,7 +2681,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
           Value *src = b_.CreateSafeGEP(b_.getPtrTy(),
                                         scoped_arg.value(),
                                         b_.getInt64(field.offset));
-          raw = b_.CreateLoad(field_type, src, true);
+          raw = b_.CreateLoad(field_type, src, true /*volatile*/);
         } else {
           // Since `src` is treated as a offset for a constructed probe read,
           // we are not constrained in the same way.
@@ -2869,7 +2869,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
             buf, cast.cast_type, array, cast.loc, cast.expr.type().GetAS());
         array = buf;
       }
-      return ScopedExpr(b_.CreateLoad(int_ty, array, true));
+      return ScopedExpr(b_.CreateLoad(int_ty, array, true /*volatile*/));
     } else if (cast.expr.type().IsPtrTy()) {
       return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
     } else {

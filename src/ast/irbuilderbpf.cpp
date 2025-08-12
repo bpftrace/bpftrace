@@ -2433,11 +2433,8 @@ Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
   Value *expr = CreateLoad(
       GetType(type),
       CreateSafeGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
+      true, /*volatile*/
       name);
-
-  // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
-  // so call setVolatile() manually
-  dyn_cast<LoadInst>(expr)->setVolatile(true);
   return expr;
 }
 
@@ -2531,10 +2528,8 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
 
   Value *result = CreateLoad(registerTy,
                              CreateSafeGEP(getInt8Ty(), ctx, getInt64(offset)),
+                             true, /*volatile*/
                              name);
-  // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
-  // so call setVolatile() manually
-  dyn_cast<LoadInst>(result)->setVolatile(true);
   return result;
 }
 
@@ -2733,14 +2728,14 @@ llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(const SizedType &type,
   llvm::Type *ptr_storage_ty = getPointerStorageTy();
 
   if (!type.IsPtrTy() || ptr_storage_ty == getInt64Ty())
-    return CreateLoad(GetType(type), ptr, true);
+    return CreateLoad(GetType(type), ptr, true /*volatile*/);
 
   assert(GetType(type) == getInt64Ty());
 
   // Pointer size for the given address space doesn't match the BPF-side
   // representation. Use ptr_storage_ty as the load type and cast the result
   // back to int64.
-  llvm::Value *expr = CreateLoad(ptr_storage_ty, ptr, true);
+  llvm::Value *expr = CreateLoad(ptr_storage_ty, ptr, true /*volatile*/);
 
   return CreateIntCast(expr, getInt64Ty(), false);
 }
