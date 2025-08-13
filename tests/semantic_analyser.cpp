@@ -5600,4 +5600,44 @@ TEST_F(SemanticAnalyserTest, printf_str_conversion)
   test(R"(kprobe:f { $x = "foo"; printf("%s", $x) })");
 }
 
+TEST_F(SemanticAnalyserTest, branch_prune)
+{
+  auto ast1 = test("kprobe:f { if (false) { print(1); } }");
+  auto *if_stmt1 = ast1.root->probes.at(0)->block->stmts.at(0).as<ast::If>();
+  EXPECT_TRUE(if_stmt1->if_block->stmts.empty());
+
+  auto ast2 = test("kprobe:f { if (true) { print(1); } else { print(1); } }");
+  auto *if_stmt2 = ast2.root->probes.at(0)->block->stmts.at(0).as<ast::If>();
+  EXPECT_EQ(if_stmt2->if_block->stmts.size(), 1);
+  EXPECT_TRUE(if_stmt1->else_block->stmts.empty());
+
+  auto ast3 = test("kprobe:f { while (false) { print(1); } }");
+  auto *while_block =
+      ast3.root->probes.at(0)->block->stmts.at(0).as<ast::While>();
+  EXPECT_TRUE(while_block->block->stmts.empty());
+
+  // Ternaries become either their left or right
+  auto ast4 = test(R"(kprobe:f { $a = false ? "str" : 1; })");
+  auto *assign_var1 =
+      ast4.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
+  auto *ast_int = assign_var1->expr.as<ast::Integer>();
+  EXPECT_EQ(ast_int->value, 1);
+
+  auto ast5 = test(R"(kprobe:f { $a = true ? "str" : 1; })");
+  auto *assign_var2 =
+      ast5.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
+  auto *ast_str = assign_var2->expr.as<ast::String>();
+  EXPECT_EQ(ast_str->value, "str");
+
+  // Test bad behavior in the pruned branch
+  test(R"(kprobe:f { @a = 1; if (false) { @a = "str"; } })");
+  test(
+      R"(kprobe:f { @a = 1; if (false) { @a = "str"; } else if (false) { @a = (1,2); } else { @a = 2; } })");
+  test(R"(kprobe:f { @a = 1; while (false) { @a = "str"; } })");
+
+  // These are more for literal folding tests
+  // but potentially valuable as an integration test
+  test(R"(kprobe:f { @a = 1; if (1 == 2) { @a = "str"; } })");
+}
+
 } // namespace bpftrace::test::semantic_analyser
