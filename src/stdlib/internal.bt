@@ -1,0 +1,3 @@
+macro usdt_arg(x) {
+   __usdt_arg(ctx, x)
+}

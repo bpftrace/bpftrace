@@ -1115,14 +1115,6 @@ See the address-spaces section for more information on address-spaces.
 The pointer type is left unchanged.
 
 
-### usdt_arg
-- `int64 usdt_arg(int arg_num)`
-
-Returns the argument of an USDT probe at the given index
-
-This is equivalent to using the `argN` builtins
-
-
 ### usermode
 - `uint8 usermode()`
 - `uint8 usermode`

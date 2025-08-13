@@ -1253,14 +1253,6 @@ macro username() {
 //
 // Removes a watchpoint
 
-// Returns the argument of an USDT probe at the given index
-//
-// This is equivalent to using the `argN` builtins
-// :variant int64 usdt_arg(int arg_num)
-macro usdt_arg(x) {
-   __usdt_arg(ctx, x)
-}
-
 // :function zero
 // :variant void zero(map m)
 //
