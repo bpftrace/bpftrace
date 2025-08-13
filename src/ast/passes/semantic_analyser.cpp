@@ -633,6 +633,12 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         arg_type_spec{ .type=Type::pointer }, // struct sock *
       } } },
+  { "fail",
+    { .min_args=1,
+      .max_args=1,
+      .arg_types={
+        arg_type_spec{ .type=Type::string, .literal=true },
+      } } },
 };
 // clang-format on
 
@@ -1893,6 +1899,10 @@ If you're seeing errors, try clamping the string sizes. For example:
       return;
     }
     call.return_type = CreateUInt64();
+  } else if (call.func == "fail") {
+    // This is basically a static_assert failure. It will halt the compilation.
+    // We expect to hit this path only when using the `typeof` folds.
+    call.addError() << call.vargs[0].as<String>()->value;
   } else {
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and

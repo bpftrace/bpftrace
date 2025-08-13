@@ -5603,4 +5603,14 @@ TEST_F(SemanticAnalyserTest, printf_str_conversion)
   test(R"(kprobe:f { $x = "foo"; printf("%s", $x) })");
 }
 
+TEST_F(SemanticAnalyserTest, fail)
+{
+  test(R"(kprobe:f { fail("always fail"); })", Error{ R"(
+stdin:1:12-31: ERROR: always fail
+kprobe:f { fail("always fail"); }
+           ~~~~~~~~~~~~~~~~~~~
+)" });
+  test(R"(kprobe:f { if (false) { fail("always false"); } })");
+}
+
 } // namespace bpftrace::test::semantic_analyser
