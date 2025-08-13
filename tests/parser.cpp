@@ -3133,6 +3133,32 @@ begin { $x: int8 = 1; }
 )");
 }
 
+TEST(Parser, variable_address)
+{
+  test("begin { $x = 1; &$x;  }", R"(
+Program
+ begin
+  =
+   variable: $x
+   int: 1
+  &
+   variable: $x
+)");
+}
+
+TEST(Parser, map_address)
+{
+  test("begin { @a = 1; &@a;  }", R"(
+Program
+ begin
+  =
+   map: @a
+   int: 1
+  &
+   map: @a
+)");
+}
+
 TEST(Parser, bare_blocks)
 {
   test("i:s:1 { $a = 1; { $b = 2; { $c = 3; } } }",

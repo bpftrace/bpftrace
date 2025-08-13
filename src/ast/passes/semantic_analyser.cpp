@@ -142,8 +142,10 @@ public:
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
   void visit(Map &map);
+  void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
   void visit(Variable &var);
+  void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
   void visit(While &while_block);
@@ -255,6 +257,7 @@ private:
   int func_arg_idx_ = -1;
 
   variable *find_variable(const std::string &var_ident);
+  void check_variable(Variable &var, bool check_assigned);
   Node *find_variable_scope(const std::string &var_ident);
 
   std::map<Node *, std::map<std::string, variable>> variables_;
@@ -2172,18 +2175,49 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
 }
+void SemanticAnalyser::visit(MapAddr &map_addr)
+{
+  if (!map_val_.contains(map_addr.map->ident)) {
+    if (!is_first_pass()) {
+      map_addr.addError() << "Undefined map: " << map_addr.map->ident;
+    }
+    pass_tracker_.inc_num_unresolved();
+  } else {
+    visit(map_addr.map);
+  }
+}
 
-void SemanticAnalyser::visit(Variable &var)
+void SemanticAnalyser::check_variable(Variable &var, bool check_assigned)
 {
   if (auto *found = find_variable(var.ident)) {
     var.var_type = found->type;
-    if (!found->was_assigned) {
+    if (!found->was_assigned && check_assigned) {
       var.addWarning() << "Variable used before it was assigned: " << var.ident;
     }
     return;
   }
 
   var.addError() << "Undefined or undeclared variable: " << var.ident;
+}
+
+void SemanticAnalyser::visit(Variable &var)
+{
+  check_variable(var, true);
+}
+
+void SemanticAnalyser::visit(VariableAddr &var_addr)
+{
+  check_variable(*var_addr.var,
+                 false /* Don't warn if variable hasn't been assigned yet */);
+  if (auto *found = find_variable(var_addr.var->ident)) {
+    if (!found->type.IsNoneTy()) {
+      var_addr.var_addr_type = CreatePointer(found->type, found->type.GetAS());
+    }
+  }
+  if (is_final_pass() && var_addr.var_addr_type.IsNoneTy()) {
+    var_addr.addError() << "No type available for variable "
+                        << var_addr.var->ident;
+  }
 }
 
 void SemanticAnalyser::visit(ArrayAccess &arr)

@@ -57,6 +57,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] VariableAddr &var_addr)
+  {
+    return visitImpl(var_addr.var);
+  }
   R visit([[maybe_unused]] SubprogArg &subprog_arg)
   {
     return default_value();
@@ -84,6 +88,10 @@ public:
   R visit([[maybe_unused]] Map &map)
   {
     return default_value();
+  }
+  R visit([[maybe_unused]] MapAddr &map_addr)
+  {
+    return visitImpl(map_addr.map);
   }
   R visit(Binop &binop)
   {

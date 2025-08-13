@@ -357,35 +357,18 @@ Default: true
 
 Controls whether maps are printed on exit. Set to `false` in order to change the default behavior and not automatically print maps at program exit.
 
-### unstable_macro
+### unstable features
+
+These are the list of unstable features:
+- `unstable_macro` -  feature flag for bpftrace macros
+- `unstable_map_decl` - feature flag for map declarations
+- `unstable_tseries` - feature flag for time series map type
+- `unstable_addr` - feature flag for address of operator (&)
+
+All of these accept the following options:
 
 Default: warn
 
-Feature flag for bpftrace macros.
-
-The possible options are:
-- `error` - fail if this feature is used
-- `warn` - enable feature but print a warning
-- `enable` - enable feature
-
-### unstable_map_decl
-
-Default: warn
-
-Feature flag for map declarations.
-
-The possible options are:
-- `error` - fail if this feature is used
-- `warn` - enable feature but print a warning
-- `enable` - enable feature
-
-### unstable_tseries
-
-Default: warn
-
-Feature flag for `tseries`.
-
-The possible options are:
 - `error` - fail if this feature is used
 - `warn` - enable feature but print a warning
 - `enable` - enable feature

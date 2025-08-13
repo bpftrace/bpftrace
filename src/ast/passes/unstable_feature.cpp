@@ -17,6 +17,7 @@ const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
 const auto MACROS = "macros";
 const auto TSERIES = "tseries";
+const auto ADDR = "address-of operator (&)";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -42,6 +43,8 @@ public:
 
   using Visitor<UnstableFeature>::visit;
   void visit(MapDeclStatement &decl);
+  void visit(MapAddr &map_addr);
+  void visit(VariableAddr &var_addr);
   void visit(Import &imp);
   void visit(Call &call);
 
@@ -50,6 +53,8 @@ private:
   // This set is so we don't warn multiple times for the same feature.
   std::unordered_set<std::string> warned_features;
   std::unordered_set<std::string> macros;
+
+  void check_unstable_addr(Node &node);
 };
 
 } // namespace
@@ -114,6 +119,30 @@ void UnstableFeature::visit(Call &call)
     LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
     warned_features.insert(UNSTABLE_TSERIES);
   }
+}
+
+void UnstableFeature::check_unstable_addr(Node &node)
+{
+  if (bpftrace_.config_->unstable_addr == ConfigUnstable::error) {
+    node.addError() << get_error(ADDR, UNSTABLE_ADDR);
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_addr == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_ADDR)) {
+    LOG(WARNING) << get_warning(ADDR, UNSTABLE_ADDR);
+    warned_features.insert(UNSTABLE_ADDR);
+  }
+}
+
+void UnstableFeature::visit(MapAddr &map_addr)
+{
+  check_unstable_addr(map_addr);
+}
+
+void UnstableFeature::visit(VariableAddr &var_addr)
+{
+  check_unstable_addr(var_addr);
 }
 
 Pass CreateUnstableFeaturePass()

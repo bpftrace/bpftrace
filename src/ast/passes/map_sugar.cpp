@@ -17,6 +17,7 @@ public:
   void visit(For &for_loop);
   void visit(Map &map);
   void visit(MapAccess &acc);
+  void visit(MapAddr &map_addr);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
   void visit(Expression &expr);
@@ -77,6 +78,11 @@ void MapDefaultKey::visit(MapAccess &acc)
 {
   checkAccess(*acc.map, true);
   visit(acc.key);
+}
+
+void MapDefaultKey::visit([[maybe_unused]] MapAddr &map_addr)
+{
+  // Don't desugar this into a map access, we want the map pointer
 }
 
 void MapDefaultKey::visit(AssignScalarMapStatement &assign)
