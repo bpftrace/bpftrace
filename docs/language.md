@@ -318,7 +318,7 @@ This exists because the BPF stack is limited to 512 bytes and large objects make
 
 ### perf_rb_pages
 
-Default: 64
+Default: 4,096
 
 Number of pages to allocate per CPU perf ring buffer.
 The value must be a power of 2.
