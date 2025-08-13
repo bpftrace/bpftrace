@@ -144,6 +144,7 @@ class Tuple;
 class IfExpr;
 class BlockExpr;
 class Typeid;
+class Typevalid;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -171,7 +172,8 @@ class Expression : public VariantNode<Integer,
                                       Tuple,
                                       IfExpr,
                                       BlockExpr,
-                                      Typeid> {
+                                      Typeid,
+                                      Typevalid> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -536,6 +538,25 @@ public:
   }
 
   Typeof *typeof = nullptr;
+};
+
+class Typevalid : public Node {
+public:
+  explicit Typevalid(ASTContext &ctx, Expression expr, Location &&loc)
+      : Node(ctx, std::move(loc)), expr(expr) {};
+  explicit Typevalid(ASTContext &ctx,
+                     const Typevalid &other,
+                     const Location &loc)
+      : Node(ctx, loc + other.loc),
+        expr(clone(ctx, other.expr, loc + other.loc)) {};
+
+  const SizedType &type() const
+  {
+    static SizedType boolean = CreateBool();
+    return boolean;
+  }
+
+  Expression expr;
 };
 
 class MapDeclStatement : public Node {
