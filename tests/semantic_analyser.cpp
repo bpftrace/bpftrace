@@ -491,7 +491,7 @@ Program
   ?: :: [(string[13],string[13])]
    < :: [bool]
     builtin: pid :: [uint32]
-    int: 10000
+    int: 10000 :: [int64]
    tuple: :: [(string[2],string[13])]
     string: a
     string: hellolongstr
@@ -2502,47 +2502,47 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
   test("kprobe:f { @x = 1; @y = count(); @x = @y; }", ExpectedAST{ R"(
   =
    map: @x :: [int64]int64
-    int: 0
+    int: 0 :: [int64]
    (int64)
     [] :: [count_t]
      map: @y :: [int64]count_t
-     int: 0
+     int: 0 :: [int64]
 )" });
   test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }", ExpectedAST{ R"(
   =
    map: @x :: [int64]int64
-    int: 0
+    int: 0 :: [int64]
    (int64)
     [] :: [sum_t]
      map: @y :: [int64]sum_t
-     int: 0
+     int: 0 :: [int64]
 )" });
   test("kprobe:f { @x = 1; @y = min(5); @x = @y; }", ExpectedAST{ R"(
   =
    map: @x :: [int64]int64
-    int: 0
+    int: 0 :: [int64]
    (int64)
     [] :: [min_t]
      map: @y :: [int64]min_t
-     int: 0
+     int: 0 :: [int64]
 )" });
   test("kprobe:f { @x = 1; @y = max(5); @x = @y; }", ExpectedAST{ R"(
   =
    map: @x :: [int64]int64
-    int: 0
+    int: 0 :: [int64]
    (int64)
     [] :: [max_t]
      map: @y :: [int64]max_t
-     int: 0
+     int: 0 :: [int64]
 )" });
   test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }", ExpectedAST{ R"(
   =
    map: @x :: [int64]int64
-    int: 0
+    int: 0 :: [int64]
    (int64)
     [] :: [avg_t]
      map: @y :: [int64]avg_t
-     int: 0
+     int: 0 :: [int64]
 )" });
 
   // Assigning to a newly declared map
@@ -3396,11 +3396,11 @@ Program
   =
    variable: $x :: [uint8]
    (uint8)
-    int: 1
+    int: 1 :: [int64]
   =
    variable: $x :: [uint8]
    (uint8)
-    int: 5
+    int: 5 :: [int64]
 )" });
   test("begin { $x = (int8)1; $x = 5; }", ExpectedAST{ R"(
 Program
@@ -3408,11 +3408,11 @@ Program
   =
    variable: $x :: [int8]
    (int8)
-    int: 1
+    int: 1 :: [int64]
   =
    variable: $x :: [int8]
    (int8)
-    int: 5
+    int: 5 :: [int64]
 )" });
 }
 
@@ -4521,8 +4521,8 @@ Program
  begin
   =
    map: @map :: [int64]int64
-    int: 0
-   int: 1
+    int: 0 :: [int64]
+   int: 1 :: [int64]
   for
    decl
     variable: $kv :: [(int64,int64)]
@@ -4542,9 +4542,9 @@ Program
   =
    map: @map :: [(int64,int64)]int64
     tuple: :: [(int64,int64)]
-     int: 0
-     int: 0
-   int: 1
+     int: 0 :: [int64]
+     int: 0 :: [int64]
+   int: 1 :: [int64]
   for
    decl
     variable: $kv :: [((int64,int64),int64)]
@@ -5389,7 +5389,7 @@ Program
    variable: $x :: [int64]
    decl
     variable: $x :: [int64]
-    int: 1
+    int: 1 :: [int64]
    variable: $x :: [int64]
   call: print
    variable: $x :: [int64]

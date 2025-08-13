@@ -157,19 +157,19 @@ TEST(fold_literals, comparison)
 
 TEST(fold_literals, plus)
 {
-  test("0 + 0", "int: 0");
-  test("0 + 1", "int: 1");
-  test("1 + 2", "int: 3");
-  test("5 + 10", "int: 15");
-  test("-5 + 10", "int: 5");
-  test("-10 + -5", "signed int: -15");
-  test("9223372036854775807 + 1", "int: 9223372036854775808");
-  test("9223372036854775808 + 1", "int: 9223372036854775809");
-  test("0 + (-1)", "signed int: -1");
-  test("1 + (-2)", "signed int: -1");
-  test("-5 + 5", "int: 0");
-  test("0xffffffffffffffff + 0", "int: 18446744073709551615");
-  test("0x7fffffffffffffff + (-1)", "int: 9223372036854775806");
+  test("0 + 0", "int: 0 :: [int64]");
+  test("0 + 1", "int: 1 :: [int64]");
+  test("1 + 2", "int: 3 :: [int64]");
+  test("5 + 10", "int: 15 :: [int64]");
+  test("-5 + 10", "int: 5 :: [int64]");
+  test("-10 + -5", "negative int: -15");
+  test("9223372036854775807 + 1", "int: 9223372036854775808 :: [uint64]");
+  test("9223372036854775808 + 1", "int: 9223372036854775809 :: [uint64]");
+  test("0 + (-1)", "negative int: -1");
+  test("1 + (-2)", "negative int: -1");
+  test("-5 + 5", "int: 0 :: [int64]");
+  test("0xffffffffffffffff + 0", "int: 18446744073709551615 :: [uint64]");
+  test("0x7fffffffffffffff + (-1)", "int: 9223372036854775806 :: [int64]");
   test_error("0xffffffffffffffff + 1", "overflow");
   test_error("0x8000000000000000 + (-1)", "overflow"); // Coerced to signed
 
@@ -185,28 +185,28 @@ TEST(fold_literals, plus)
 
 TEST(fold_literals, minus)
 {
-  test("0 - 1", "signed int: -1");
-  test("1 - 2", "signed int: -1");
-  test("0 - 0", "int: 0");
-  test("1 - 1", "int: 0");
-  test("2 - 1", "int: 1");
-  test("0xffffffffffffffff - 1", "int: 18446744073709551614");
-  test("0xffffffffffffffff - 0xffffffffffffffff", "int: 0");
-  test("0x8000000000000000 - 1", "int: 9223372036854775807");
-  test("0x7fffffffffffffff - 0x7fffffffffffffff", "int: 0");
-  test("0x7fffffffffffffff - 0x8000000000000000", "signed int: -1");
-  test("0x8000000000000000 - 0x8000000000000001", "signed int: -1");
-  test("0 - 0x8000000000000000", "signed int: -9223372036854775808");
+  test("0 - 1", "negative int: -1");
+  test("1 - 2", "negative int: -1");
+  test("0 - 0", "int: 0 :: [int64]");
+  test("1 - 1", "int: 0 :: [int64]");
+  test("2 - 1", "int: 1 :: [int64]");
+  test("0xffffffffffffffff - 1", "int: 18446744073709551614 :: [uint64]");
+  test("0xffffffffffffffff - 0xffffffffffffffff", "int: 0 :: [uint64]");
+  test("0x8000000000000000 - 1", "int: 9223372036854775807 :: [uint64]");
+  test("0x7fffffffffffffff - 0x7fffffffffffffff", "int: 0 :: [int64]");
+  test("0x7fffffffffffffff - 0x8000000000000000", "negative int: -1");
+  test("0x8000000000000000 - 0x8000000000000001", "negative int: -1");
+  test("0 - 0x8000000000000000", "negative int: -9223372036854775808");
   test("0x7fffffffffffffff - 0xffffffffffffffff",
-       "signed int: -9223372036854775808",
+       "negative int: -9223372036854775808",
        "");
-  test("0-9223372036854775808", "signed int: -9223372036854775808");
+  test("0-9223372036854775808", "negative int: -9223372036854775808");
   test("0x8000000000000000-0xffffffffffffffff",
-       "signed int: -9223372036854775807",
+       "negative int: -9223372036854775807",
        "");
-  test("0x8000000000000000-0x7fffffffffffffff", "int: 1");
-  test("0-0x8000000000000000", "signed int: -9223372036854775808");
-  test("9223372036854775807-9223372036854775808", "signed int: -1");
+  test("0x8000000000000000-0x7fffffffffffffff", "int: 1 :: [uint64]");
+  test("0-0x8000000000000000", "negative int: -9223372036854775808");
+  test("9223372036854775807-9223372036854775808", "negative int: -1");
   test_error("0 - 0x8000000000000001", "underflow");
   test_error("1 - 0xffffffffffffffff", "underflow");
   test_error("0-9223372036854775809", "underflow");
@@ -223,23 +223,23 @@ TEST(fold_literals, minus)
 
 TEST(fold_literals, multiply)
 {
-  test("0 * 0", "int: 0");
-  test("0 * 1", "int: 0");
-  test("1 * 0", "int: 0");
-  test("1 * 1", "int: 1");
-  test("2 * 3", "int: 6");
-  test("10 * 20", "int: 200");
-  test("-1 * 1", "signed int: -1");
-  test("1 * -1", "signed int: -1");
-  test("-1 * -1", "int: 1");
-  test("-10 * 5", "signed int: -50");
-  test("5 * -10", "signed int: -50");
-  test("-5 * -10", "int: 50");
-  test("0xffffffffffffffff * 0x1", "int: 18446744073709551615");
-  test("0x7fffffffffffffff * 0x2", "int: 18446744073709551614");
-  test("0xffffffffffffffff * 0x0", "int: 0");
-  test("9223372036854775807 * 1", "int: 9223372036854775807");
-  test("9223372036854775808 * 1", "int: 9223372036854775808");
+  test("0 * 0", "int: 0 :: [int64]");
+  test("0 * 1", "int: 0 :: [int64]");
+  test("1 * 0", "int: 0 :: [int64]");
+  test("1 * 1", "int: 1 :: [int64]");
+  test("2 * 3", "int: 6 :: [int64]");
+  test("10 * 20", "int: 200 :: [int64]");
+  test("-1 * 1", "negative int: -1");
+  test("1 * -1", "negative int: -1");
+  test("-1 * -1", "int: 1 :: [int64]");
+  test("-10 * 5", "negative int: -50");
+  test("5 * -10", "negative int: -50");
+  test("-5 * -10", "int: 50 :: [int64]");
+  test("0xffffffffffffffff * 0x1", "int: 18446744073709551615 :: [uint64]");
+  test("0x7fffffffffffffff * 0x2", "int: 18446744073709551614 :: [uint64]");
+  test("0xffffffffffffffff * 0x0", "int: 0 :: [uint64]");
+  test("9223372036854775807 * 1", "int: 9223372036854775807 :: [int64]");
+  test("9223372036854775808 * 1", "int: 9223372036854775808 :: [uint64]");
   test_error("0x8000000000000000 * 0x2", "overflow");
   test_error("0xffffffffffffffff * 0xffffffffffffffff", "overflow");
 
@@ -250,19 +250,19 @@ TEST(fold_literals, multiply)
 
 TEST(fold_literals, divide)
 {
-  test("10 / 2", "int: 5");
-  test("15 / 3", "int: 5");
-  test("100 / 10", "int: 10");
-  test("0 / 5", "int: 0");
-  test("-10 / 2", "signed int: -5");
-  test("10 / -2", "signed int: -5");
-  test("-10 / -2", "int: 5");
-  test("0xffffffffffffffff / 0x10", "int: 1152921504606846975");
-  test("0x7fffffffffffffff / 0xff", "int: 36170086419038336");
-  test("0x8000000000000000 / 0xff", "int: 36170086419038336");
-  test("9223372036854775807 / 1", "int: 9223372036854775807");
-  test("9223372036854775808 / 2", "int: 4611686018427387904");
-  test("0xffffffffffffffff / 1", "int: 18446744073709551615");
+  test("10 / 2", "int: 5 :: [int64]");
+  test("15 / 3", "int: 5 :: [int64]");
+  test("100 / 10", "int: 10 :: [int64]");
+  test("0 / 5", "int: 0 :: [int64]");
+  test("-10 / 2", "negative int: -5");
+  test("10 / -2", "negative int: -5");
+  test("-10 / -2", "int: 5 :: [int64]");
+  test("0xffffffffffffffff / 0x10", "int: 1152921504606846975 :: [uint64]");
+  test("0x7fffffffffffffff / 0xff", "int: 36170086419038336 :: [int64]");
+  test("0x8000000000000000 / 0xff", "int: 36170086419038336 :: [uint64]");
+  test("9223372036854775807 / 1", "int: 9223372036854775807 :: [int64]");
+  test("9223372036854775808 / 2", "int: 4611686018427387904 :: [uint64]");
+  test("0xffffffffffffffff / 1", "int: 18446744073709551615 :: [uint64]");
   test_error("123 / 0", "unable to fold");
   test_error("-123 / 0", "unable to fold");
 
@@ -274,16 +274,16 @@ TEST(fold_literals, divide)
 
 TEST(fold_literals, mod)
 {
-  test("10 % 3", "int: 1");
-  test("15 % 4", "int: 3");
-  test("0 % 5", "int: 0");
-  test("100 % 10", "int: 0");
-  test("-10 % 3", "signed int: -1");
-  test("10 % -3", "int: 1");
-  test("-10 % -3", "signed int: -1");
-  test("0xffffffffffffffff % 0x10", "int: 15");
-  test("0x7fffffffffffffff % 0xff", "int: 127");
-  test("0x8000000000000000 % 0xff", "int: 128");
+  test("10 % 3", "int: 1 :: [int64]");
+  test("15 % 4", "int: 3 :: [int64]");
+  test("0 % 5", "int: 0 :: [int64]");
+  test("100 % 10", "int: 0 :: [int64]");
+  test("-10 % 3", "negative int: -1");
+  test("10 % -3", "int: 1 :: [int64]");
+  test("-10 % -3", "negative int: -1");
+  test("0xffffffffffffffff % 0x10", "int: 15 :: [uint64]");
+  test("0x7fffffffffffffff % 0xff", "int: 127 :: [int64]");
+  test("0x8000000000000000 % 0xff", "int: 128 :: [uint64]");
   test_error("123 % 0", "unable to fold");
   test_error("-123 % 0", "unable to fold");
 
@@ -295,92 +295,92 @@ TEST(fold_literals, mod)
 
 TEST(fold_literals, binary)
 {
-  test("1 & 1", "int: 1");
-  test("1 & 0", "int: 0");
-  test("0 & 0", "int: 0");
-  test("0xffffffffffffffff & 0x1", "int: 1");
-  test("0xffffffffffffffff & 0x0", "int: 0");
+  test("1 & 1", "int: 1 :: [int64]");
+  test("1 & 0", "int: 0 :: [int64]");
+  test("0 & 0", "int: 0 :: [int64]");
+  test("0xffffffffffffffff & 0x1", "int: 1 :: [uint64]");
+  test("0xffffffffffffffff & 0x0", "int: 0 :: [uint64]");
   test("0xffffffffffffffff & 0xffffffffffffffff",
-       "int: 18446744073709551615",
+       "int: 18446744073709551615 :: [uint64]",
        "");
-  test("0x7fffffffffffffff & 0x1", "int: 1");
-  test("0x7fffffffffffffff & 0x0", "int: 0");
+  test("0x7fffffffffffffff & 0x1", "int: 1 :: [int64]");
+  test("0x7fffffffffffffff & 0x0", "int: 0 :: [int64]");
   test("0x7fffffffffffffff & 0x7fffffffffffffff",
-       "int: 9223372036854775807",
+       "int: 9223372036854775807 :: [int64]",
        "");
-  test("-1 & 1", "int: 1");
-  test("-1 & 0", "int: 0");
-  test("-1 & -1", "signed int: -1");
-  test("0x8000000000000000 & 0x1", "int: 0");
+  test("-1 & 1", "int: 1 :: [int64]");
+  test("-1 & 0", "int: 0 :: [int64]");
+  test("-1 & -1", "negative int: -1");
+  test("0x8000000000000000 & 0x1", "int: 0 :: [uint64]");
   test("0x8000000000000000 & 0x8000000000000000",
-       "int: 9223372036854775808",
+       "int: 9223372036854775808 :: [uint64]",
        "");
   test_error("-1 & 0xffffffffffffffff", "overflow");
 
-  test("1 | 1", "int: 1");
-  test("1 | 0", "int: 1");
-  test("0 | 0", "int: 0");
-  test("0xffffffffffffffff | 0x1", "int: 18446744073709551615");
-  test("0xffffffffffffffff | 0x0", "int: 18446744073709551615");
-  test("0x7fffffffffffffff | 0x1", "int: 9223372036854775807");
-  test("0x7fffffffffffffff | 0x0", "int: 9223372036854775807");
-  test("-1 | 1", "signed int: -1");
-  test("-1 | 0", "signed int: -1");
-  test("-1 | -1", "signed int: -1");
-  test("0x8000000000000000 | 0x1", "int: 9223372036854775809");
+  test("1 | 1", "int: 1 :: [int64]");
+  test("1 | 0", "int: 1 :: [int64]");
+  test("0 | 0", "int: 0 :: [int64]");
+  test("0xffffffffffffffff | 0x1", "int: 18446744073709551615 :: [uint64]");
+  test("0xffffffffffffffff | 0x0", "int: 18446744073709551615 :: [uint64]");
+  test("0x7fffffffffffffff | 0x1", "int: 9223372036854775807 :: [int64]");
+  test("0x7fffffffffffffff | 0x0", "int: 9223372036854775807 :: [int64]");
+  test("-1 | 1", "negative int: -1");
+  test("-1 | 0", "negative int: -1");
+  test("-1 | -1", "negative int: -1");
+  test("0x8000000000000000 | 0x1", "int: 9223372036854775809 :: [uint64]");
   test("0x8000000000000000 | 0x8000000000000000",
-       "int: 9223372036854775808",
+       "int: 9223372036854775808 :: [uint64]",
        "");
-  test("0xff | 0x0f", "int: 255");
-  test("0xff | 0xf0", "int: 255");
-  test("-10 | 0x0f", "signed int: -1");
-  test("0x7fffffffffffffff | -1", "signed int: -1");
-  test("0xffffffff | -0xf", "signed int: -1");
-  test("-0xff | -0x0f", "signed int: -15");
+  test("0xff | 0x0f", "int: 255 :: [int64]");
+  test("0xff | 0xf0", "int: 255 :: [int64]");
+  test("-10 | 0x0f", "negative int: -1");
+  test("0x7fffffffffffffff | -1", "negative int: -1");
+  test("0xffffffff | -0xf", "negative int: -1");
+  test("-0xff | -0x0f", "negative int: -15");
 
-  test("1 ^ 1", "int: 0");
-  test("1 ^ 0", "int: 1");
-  test("0 ^ 0", "int: 0");
-  test("0xffffffffffffffff ^ 0x1", "int: 18446744073709551614");
-  test("0xffffffffffffffff ^ 0x0", "int: 18446744073709551615");
-  test("0xffffffffffffffff ^ 0xffffffffffffffff", "int: 0");
-  test("0x7fffffffffffffff ^ 0x1", "int: 9223372036854775806");
-  test("0x7fffffffffffffff ^ 0x0", "int: 9223372036854775807");
-  test("0x7fffffffffffffff ^ 0x7fffffffffffffff", "int: 0");
-  test("-1 ^ 1", "signed int: -2");
-  test("-1 ^ 0", "signed int: -1");
-  test("-1 ^ -1", "int: 0");
-  test("0x8000000000000000 ^ 0x1", "int: 9223372036854775809");
-  test("0x8000000000000000 ^ 0x8000000000000000", "int: 0");
-  test("0xff ^ 0x0f", "int: 240");
-  test("0xff ^ 0xf0", "int: 15");
-  test("-10 ^ 0x0f", "signed int: -7");
-  test("0x7fffffffffffffff ^ -1", "signed int: -9223372036854775808");
-  test("0xffffffff ^ -0xf", "signed int: -4294967282");
-  test("-0xff ^ -0x0f", "int: 240");
+  test("1 ^ 1", "int: 0 :: [int64]");
+  test("1 ^ 0", "int: 1 :: [int64]");
+  test("0 ^ 0", "int: 0 :: [int64]");
+  test("0xffffffffffffffff ^ 0x1", "int: 18446744073709551614 :: [uint64]");
+  test("0xffffffffffffffff ^ 0x0", "int: 18446744073709551615 :: [uint64]");
+  test("0xffffffffffffffff ^ 0xffffffffffffffff", "int: 0 :: [uint64]");
+  test("0x7fffffffffffffff ^ 0x1", "int: 9223372036854775806 :: [int64]");
+  test("0x7fffffffffffffff ^ 0x0", "int: 9223372036854775807 :: [int64]");
+  test("0x7fffffffffffffff ^ 0x7fffffffffffffff", "int: 0 :: [int64]");
+  test("-1 ^ 1", "negative int: -2");
+  test("-1 ^ 0", "negative int: -1");
+  test("-1 ^ -1", "int: 0 :: [int64]");
+  test("0x8000000000000000 ^ 0x1", "int: 9223372036854775809 :: [uint64]");
+  test("0x8000000000000000 ^ 0x8000000000000000", "int: 0 :: [uint64]");
+  test("0xff ^ 0x0f", "int: 240 :: [int64]");
+  test("0xff ^ 0xf0", "int: 15 :: [int64]");
+  test("-10 ^ 0x0f", "negative int: -7");
+  test("0x7fffffffffffffff ^ -1", "negative int: -9223372036854775808");
+  test("0xffffffff ^ -0xf", "negative int: -4294967282");
+  test("-0xff ^ -0x0f", "int: 240 :: [int64]");
 
-  test("1 << 0", "int: 1");
-  test("1 << 1", "int: 2");
-  test("1 << 2", "int: 4");
-  test("1 << 63", "int: 9223372036854775808");
-  test("1 << 64", "int: 1"); // Wraps around
-  test("0xff << 8", "int: 65280");
-  test("0xff << 56", "int: 18374686479671623680");
-  test("-1 << 1", "signed int: -2");
-  test("-1 << 63", "signed int: -9223372036854775808");
-  test("0x7fffffffffffffff << 1", "int: 18446744073709551614");
-  test("0x8000000000000000 << 1", "int: 0"); // Legal overflow
+  test("1 << 0", "int: 1 :: [int64]");
+  test("1 << 1", "int: 2 :: [int64]");
+  test("1 << 2", "int: 4 :: [int64]");
+  test("1 << 63", "int: 9223372036854775808 :: [uint64]");
+  test("1 << 64", "int: 1 :: [int64]"); // Wraps around, still signed
+  test("0xff << 8", "int: 65280 :: [int64]");
+  test("0xff << 56", "int: 18374686479671623680 :: [uint64]");
+  test("-1 << 1", "negative int: -2");
+  test("-1 << 63", "negative int: -9223372036854775808");
+  test("0x7fffffffffffffff << 1", "int: 18446744073709551614 :: [uint64]");
+  test("0x8000000000000000 << 1", "int: 0 :: [uint64]"); // Legal overflow
 
-  test("8 >> 1", "int: 4");
-  test("8 >> 2", "int: 2");
-  test("8 >> 3", "int: 1");
-  test("8 >> 4", "int: 0");
-  test("0xff >> 4", "int: 15");
-  test("0xffffffffffffffff >> 32", "int: 4294967295");
-  test("-1 >> 1", "signed int: -1"); // Sign extension
-  test("-8 >> 2", "signed int: -2"); // Sign extension
-  test("0x8000000000000000 >> 1", "int: 4611686018427387904");
-  test("0x8000000000000000 >> 63", "int: 1");
+  test("8 >> 1", "int: 4 :: [int64]");
+  test("8 >> 2", "int: 2 :: [int64]");
+  test("8 >> 3", "int: 1 :: [int64]");
+  test("8 >> 4", "int: 0 :: [int64]");
+  test("0xff >> 4", "int: 15 :: [int64]");
+  test("0xffffffffffffffff >> 32", "int: 4294967295 :: [uint64]");
+  test("-1 >> 1", "negative int: -1"); // Sign extension
+  test("-8 >> 2", "negative int: -2"); // Sign extension
+  test("0x8000000000000000 >> 1", "int: 4611686018427387904 :: [uint64]");
+  test("0x8000000000000000 >> 63", "int: 1 :: [uint64]");
 
   test("true & true", "bool: true");
   test("true & false", "bool: false");
@@ -442,9 +442,9 @@ TEST(fold_literals, logical)
 
 TEST(fold_literals, unary)
 {
-  test("~(-1)", "int: 0");
-  test("~0xfffffffffffffffe", "int: 1");
-  test("~0", "int: 18446744073709551615");
+  test("~(-1)", "int: 0 :: [int64]");
+  test("~0xfffffffffffffffe", "int: 1 :: [uint64]");
+  test("~0", "int: 18446744073709551615 :: [uint64]");
 
   test("!0", "bool: true");
   test("!1", "bool: false");
@@ -452,11 +452,11 @@ TEST(fold_literals, unary)
   test("!false", "bool: true");
   test("!true", "bool: false");
 
-  test("-1", "signed int: -1");
-  test("-0", "int: 0");
-  test("-0x7fffffffffffffff", "signed int: -9223372036854775807");
-  test("-0x8000000000000000", "signed int: -9223372036854775808");
-  test("-(-0x8000000000000000)", "int: 9223372036854775808");
+  test("-1", "negative int: -1");
+  test("-0", "int: 0 :: [int64]");
+  test("-0x7fffffffffffffff", "negative int: -9223372036854775807");
+  test("-0x8000000000000000", "negative int: -9223372036854775808");
+  test("-(-0x8000000000000000)", "int: 9223372036854775808 :: [uint64]");
   test_error("-0x8000000000000001", "underflow");
 }
 

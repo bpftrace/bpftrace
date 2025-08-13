@@ -259,9 +259,12 @@ std::optional<Expression> LiteralFolder::visit(Unop &op)
   visit(op.expr);
 
   if (auto *integer = op.expr.as<Integer>()) {
+    bool force_unsigned = !integer->type().IsSigned();
     if (op.op == Operator::BNOT) {
       // Still positive.
-      return ast_.make_node<Integer>(~integer->value, Location(op.loc));
+      return ast_.make_node<Integer>(~integer->value,
+                                     Location(op.loc),
+                                     force_unsigned);
     } else if (op.op == Operator::LNOT) {
       return ast_.make_node<Boolean>(!integer->value, Location(op.loc));
     } else if (op.op == Operator::MINUS) {
@@ -422,10 +425,12 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
   auto *ls = op.left.as<NegativeInteger>();
   auto *ru = op.right.as<Integer>();
   auto *rs = op.right.as<NegativeInteger>();
+  bool force_unsigned = false;
 
   // Only allow operations when we can safely marshall to two of the same type.
   // Then `eval_binop` effectively handles all overflow/underflow calculations.
   if (lu && ru) {
+    force_unsigned = !lu->type().IsSigned() || !ru->type().IsSigned();
     if (is_comparison_op(op.op)) {
       return make_boolean(ast_, lu->value, ru->value, op);
     }
@@ -436,6 +441,7 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
     }
     result = eval_binop(ls->value, rs->value, op.op);
   } else if (lu && rs) {
+    force_unsigned = !lu->type().IsSigned();
     if (lu->value <= std::numeric_limits<int64_t>::max()) {
       if (is_comparison_op(op.op)) {
         return make_boolean(
@@ -444,6 +450,7 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
       result = eval_binop(static_cast<int64_t>(lu->value), rs->value, op.op);
     }
   } else if (ls && ru) {
+    force_unsigned = !ru->type().IsSigned();
     if (ru->value <= std::numeric_limits<int64_t>::max()) {
       if (is_comparison_op(op.op)) {
         return make_boolean(
@@ -465,7 +472,7 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
   return std::visit(
       [&](const auto &v) -> Expression {
         if constexpr (std::is_same_v<std::decay_t<decltype(v)>, uint64_t>) {
-          return ast_.make_node<Integer>(v, Location(op.loc));
+          return ast_.make_node<Integer>(v, Location(op.loc), force_unsigned);
         } else {
           return ast_.make_node<NegativeInteger>(v, Location(op.loc));
         }
@@ -507,7 +514,9 @@ std::optional<Expression> LiteralFolder::visit(Ternary &op)
 std::optional<Expression> LiteralFolder::visit(PositionalParameterCount &param)
 {
   // This is always an unsigned integer value.
-  return ast_.make_node<Integer>(bpftrace_.num_params(), Location(param.loc));
+  return ast_.make_node<Integer>(bpftrace_.num_params(),
+                                 Location(param.loc),
+                                 /*force_unsigned=*/true);
 }
 
 std::optional<Expression> LiteralFolder::visit(PositionalParameter &param)
