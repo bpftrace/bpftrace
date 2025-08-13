@@ -216,8 +216,6 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
       break;
     case libbpf::BPF_MAP_TYPE_RINGBUF:
       // values from libbpf/src/libbpf_probes.c
-      // default pagesize 4KB
-      // default perf_rb_pages 64
       key_size = 0;
       value_size = 0;
       max_entries = sysconf(_SC_PAGE_SIZE);

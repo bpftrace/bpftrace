@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cinttypes>
+#include <cmath>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -714,12 +715,13 @@ int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
   std::vector<int> cpus = util::get_online_cpus();
   online_cpus_ = cpus.size();
   for (int cpu : cpus) {
-    void *reader = bpf_open_perf_buffer(&perf_event_printer,
-                                        &perf_event_lost,
-                                        ctx,
-                                        -1,
-                                        cpu,
-                                        config_->perf_rb_pages);
+    auto num_pages = get_buffer_pages();
+    if (!num_pages) {
+      LOG(ERROR) << num_pages.takeError();
+      return -1;
+    }
+    void *reader = bpf_open_perf_buffer(
+        &perf_event_printer, &perf_event_lost, ctx, -1, cpu, *num_pages);
     if (reader == nullptr) {
       LOG(ERROR) << "Failed to open perf buffer";
       return -1;
@@ -1308,6 +1310,36 @@ const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
   }();
 
   return pidns;
+}
+
+uint64_t find_closest_power_of_2(uint64_t n)
+{
+  double log_val = log2(n);
+  auto low_end = static_cast<uint64_t>(pow(2, floor(log_val)));
+  auto high_end = static_cast<uint64_t>(pow(2, ceil(log_val)));
+
+  if (n - low_end <= high_end - n) {
+    return low_end;
+  } else {
+    return high_end;
+  }
+}
+
+Result<uint64_t> BPFtrace::get_buffer_pages() const
+{
+  if (config_->perf_rb_pages) {
+    return config_->perf_rb_pages;
+  }
+  auto available_mem_kb = util::get_available_mem_kb();
+  if (!available_mem_kb) {
+    return available_mem_kb;
+  }
+
+  static uint64_t ceiling = 16544;
+  static uint64_t floor = 256;
+  uint64_t max = std::min(*available_mem_kb, ceiling);
+  uint64_t amount_bytes = std::max(max, floor) * 1024;
+  return find_closest_power_of_2(amount_bytes / sysconf(_SC_PAGE_SIZE));
 }
 
 Dwarf *BPFtrace::get_dwarf(const std::string &filename)
