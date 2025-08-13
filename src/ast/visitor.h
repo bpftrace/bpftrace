@@ -95,6 +95,10 @@ public:
   {
     return visitImpl(typeinfo.typeof);
   }
+  R visit(Typevalid &typevalid)
+  {
+    return visitImpl(typevalid.typeof);
+  }
   R visit([[maybe_unused]] MapDeclStatement &decl)
   {
     return default_value();

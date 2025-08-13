@@ -180,6 +180,7 @@ oct_esc  [0-7]{1,3}
 "offsetof"              { return Parser::make_OFFSETOF(yytext, driver.loc); }
 "typeof"                { return Parser::make_TYPEOF(yytext, driver.loc); }
 "typeinfo"              { return Parser::make_TYPEINFO(yytext, driver.loc); }
+"typevalid"             { return Parser::make_TYPEVALID(yytext, driver.loc); }
 "let"                   { return Parser::make_LET(yytext, driver.loc); }
 "import"                { return Parser::make_IMPORT(yytext, driver.loc); }
 

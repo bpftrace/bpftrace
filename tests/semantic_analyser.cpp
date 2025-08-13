@@ -5603,6 +5603,15 @@ kprobe:f { fail("always fail"); }
            ~~~~~~~~~~~~~~~~~~~
 )" });
   test(R"(kprobe:f { if (false) { fail("always false"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeinfo($x) != typeinfo(1)) { fail("only integers"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeinfo($x) == typeinfo(1)) { fail("no integers"); } })",
+      Error{ R"(
+stdin:1:55-74: ERROR: no integers
+kprobe:f { $x = 1; if (typeinfo($x) == typeinfo(1)) { fail("no integers"); } }
+                                                      ~~~~~~~~~~~~~~~~~~~
+)" });
 }
 
 TEST_F(SemanticAnalyserTest, typeof_decls)
@@ -5693,6 +5702,29 @@ stdin:1:55-74: ERROR: no integers
 kprobe:f { $x = 1; if (typeinfo($x) == typeinfo(1)) { fail("no integers"); } }
                                                       ~~~~~~~~~~~~~~~~~~~
 )" });
+}
+
+TEST_F(SemanticAnalyserTest, typevalid_expr)
+{
+  // We can use `valid` as a regular expression.
+  test(R"(kprobe:f { $x = 1; print(typevalid($x)); })");
+  test(R"(kprobe:f { $x = 1; print(typevalid($y)); })");
+
+  // We get regular errors from `typevalid`.
+  test(R"(kprobe:f { $x = 1; print(typevalid($x, $y)); })", Error{ R"(
+stdin:1:20-39: ERROR: syntax error, unexpected ",", expecting )
+kprobe:f { $x = 1; print(typevalid($x, $y)); }
+                   ~~~~~~~~~~~~~~~~~~~
+)" });
+}
+
+TEST_F(SemanticAnalyserTest, typevalid_if_constexpr)
+{
+  // We will prune `typevalid`.
+  test(
+      R"(kprobe:f { $x = 1; if (typevalid($x[0])) { fail("integer can be indexed"); } })");
+  test(
+      R"(kprobe:f { $x = (int8*)0; if (!typevalid(*$x)) { fail("pointer can't be dereferenced"); } })");
 }
 
 } // namespace bpftrace::test::semantic_analyser

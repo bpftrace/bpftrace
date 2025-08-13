@@ -165,6 +165,16 @@ void Printer::visit(Typeinfo &typeinfo)
   --depth_;
 }
 
+void Printer::visit(Typevalid &typevalid)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "typevalid: " << std::endl;
+
+  ++depth_;
+  visit(typevalid.typeof);
+  --depth_;
+}
+
 void Printer::visit(MapDeclStatement &decl)
 {
   std::string indent(depth_, ' ');
