@@ -283,77 +283,77 @@ TEST(Parser, positional_param_attachpoint)
        "kprobe:$1 { 1 }",
        R"PROG(Program
  kprobe:foo
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(kprobe:$1"here" { 1 })PROG",
        R"PROG(Program
  kprobe:foohere
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:zzzzzzz:$2 { 1 })PROG",
        R"PROG(Program
  uprobe:zzzzzzz:bar
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:/$1/bash:readline { 1 })PROG",
        R"PROG(Program
  uprobe:/foo/bash:readline
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:$1:$2 { 1 })PROG",
        R"PROG(Program
  uprobe:foo:bar
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:$2:$1 { 1 })PROG",
        R"PROG(Program
  uprobe:bar:foo
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:"zz"$2"zz":"aa"$1 { 1 })PROG",
        R"PROG(Program
  uprobe:zzbarzz:aafoo
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:$2:"aa"$1"aa" { 1 })PROG",
        R"PROG(Program
  uprobe:bar:aafooaa
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:"$1":$2 { 1 })PROG",
        R"PROG(Program
  uprobe:$1:bar
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:aa$1aa:$2 { 1 })PROG",
        R"PROG(Program
  uprobe:aafooaa:bar
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test(bpftrace,
        R"PROG(uprobe:$1:$2func$4 { 1 })PROG",
        R"PROG(Program
  uprobe:foo:barfunc
-  int: 1
+  int: 1 :: [int64]
 )PROG");
 
   test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$0 { 1 })", R"(
@@ -388,7 +388,7 @@ uprobe:f:$999999999999999999999999 { 1 }
 
 TEST(Parser, __comment)
 {
-  test("kprobe:f { /*** ***/0; }", "Program\n kprobe:f\n  int: 0\n");
+  test("kprobe:f { /*** ***/0; }", "Program\n kprobe:f\n  int: 0 :: [int64]\n");
 }
 
 TEST(Parser, map_assign)
@@ -398,7 +398,7 @@ TEST(Parser, map_assign)
        " kprobe:sys_open\n"
        "  =\n"
        "   map: @x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
   test("kprobe:sys_open { @x = @y; }",
        "Program\n"
        " kprobe:sys_open\n"
@@ -473,14 +473,14 @@ TEST(Parser, variable_assign)
        " kprobe:sys_open\n"
        "  =\n"
        "   variable: $x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
   test("kprobe:sys_open { $x = -1; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
        "   variable: $x\n"
        "   -\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
 
   char in_cstr[128];
   char out_cstr[128];
@@ -493,7 +493,7 @@ TEST(Parser, variable_assign)
            "  =\n"
            "   variable: $x\n"
            "   -\n"
-           "    int: %lu\n",
+           "    int: %lu :: [uint64]\n",
            static_cast<unsigned long>(LONG_MAX) + 1);
   test(std::string(in_cstr), std::string(out_cstr));
 }
@@ -505,111 +505,111 @@ TEST(semantic_analyser, compound_variable_assignments)
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   <<\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a >>= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   >>\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a += 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   +\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a -= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   -\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a *= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   *\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a /= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   /\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a %= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   %\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a &= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   &\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a |= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   |\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { $a = 0; $a ^= 1 }",
        "Program\n"
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   ^\n"
        "    variable: $a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, compound_variable_assignment_binary_expr)
@@ -619,14 +619,14 @@ TEST(Parser, compound_variable_assignment_binary_expr)
        " kprobe:f\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  =\n"
        "   variable: $a\n"
        "   +\n"
        "    variable: $a\n"
        "    -\n"
-       "     int: 2\n"
-       "     int: 1\n");
+       "     int: 2 :: [int64]\n"
+       "     int: 1 :: [int64]\n");
 }
 
 TEST(Parser, compound_map_assignments)
@@ -638,7 +638,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   <<\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a >>= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -646,7 +646,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   >>\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a += 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -654,7 +654,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   +\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a -= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -662,7 +662,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   -\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a *= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -670,7 +670,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   *\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a /= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -678,7 +678,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   /\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a %= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -686,7 +686,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   %\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a &= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -694,7 +694,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   &\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a |= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -702,7 +702,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   |\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
   test("kprobe:f { @a ^= 1 }",
        "Program\n"
        " kprobe:f\n"
@@ -710,7 +710,7 @@ TEST(Parser, compound_map_assignments)
        "   map: @a\n"
        "   ^\n"
        "    map: @a\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, compound_map_assignment_binary_expr)
@@ -723,8 +723,8 @@ TEST(Parser, compound_map_assignment_binary_expr)
        "   +\n"
        "    map: @a\n"
        "    -\n"
-       "     int: 2\n"
-       "     int: 1\n");
+       "     int: 2 :: [int64]\n"
+       "     int: 1 :: [int64]\n");
 }
 
 TEST(Parser, integer_sizes)
@@ -734,13 +734,13 @@ TEST(Parser, integer_sizes)
        " kprobe:do_nanosleep\n"
        "  =\n"
        "   variable: $x\n"
-       "   int: 305419896\n");
+       "   int: 305419896 :: [int64]\n");
   test("kprobe:do_nanosleep { $x = 0x4444444412345678; }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  =\n"
        "   variable: $x\n"
-       "   int: 4919131752149309048\n");
+       "   int: 4919131752149309048 :: [int64]\n");
 }
 
 TEST(Parser, booleans)
@@ -766,15 +766,15 @@ TEST(Parser, map_key)
        " kprobe:sys_open\n"
        "  =\n"
        "   map: @x\n"
-       "    int: 0\n"
-       "   int: 1\n"
+       "    int: 0 :: [int64]\n"
+       "   int: 1 :: [int64]\n"
        "  =\n"
        "   map: @x\n"
        "    tuple:\n"
-       "     int: 0\n"
-       "     int: 1\n"
-       "     int: 2\n"
-       "   int: 1\n");
+       "     int: 0 :: [int64]\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "   int: 1 :: [int64]\n");
 
   test("kprobe:sys_open { @x[(0,\"hi\",tid)] = 1; }",
        "Program\n"
@@ -782,10 +782,10 @@ TEST(Parser, map_key)
        "  =\n"
        "   map: @x\n"
        "    tuple:\n"
-       "     int: 0\n"
+       "     int: 0 :: [int64]\n"
        "     string: hi\n"
        "     builtin: tid\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 
   test("kprobe:sys_open { @x[@a] = 1; @x[@a,@b,@c] = 1; }",
        "Program\n"
@@ -793,14 +793,14 @@ TEST(Parser, map_key)
        "  =\n"
        "   map: @x\n"
        "    map: @a\n"
-       "   int: 1\n"
+       "   int: 1 :: [int64]\n"
        "  =\n"
        "   map: @x\n"
        "    tuple:\n"
        "     map: @a\n"
        "     map: @b\n"
        "     map: @c\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 
   test("kprobe:sys_open { @x[pid] = 1; @x[tid,__builtin_uid,arg9] = 1; }",
        "Program\n"
@@ -808,14 +808,14 @@ TEST(Parser, map_key)
        "  =\n"
        "   map: @x\n"
        "    builtin: pid\n"
-       "   int: 1\n"
+       "   int: 1 :: [int64]\n"
        "  =\n"
        "   map: @x\n"
        "    tuple:\n"
        "     builtin: tid\n"
        "     builtin: __builtin_uid\n"
        "     builtin: arg9\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, predicate)
@@ -825,7 +825,7 @@ TEST(Parser, predicate)
        " kprobe:sys_open\n"
        "  pred\n"
        "   map: @x\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, predicate_containing_division)
@@ -835,9 +835,9 @@ TEST(Parser, predicate_containing_division)
        " kprobe:sys_open\n"
        "  pred\n"
        "   /\n"
-       "    int: 100\n"
-       "    int: 25\n"
-       "  int: 1\n");
+       "    int: 100 :: [int64]\n"
+       "    int: 25 :: [int64]\n"
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, expressions)
@@ -853,22 +853,22 @@ TEST(Parser, expressions)
        "   ||\n"
        "    &&\n"
        "     <=\n"
-       "      int: 1\n"
-       "      int: 2\n"
+       "      int: 1 :: [int64]\n"
+       "      int: 2 :: [int64]\n"
        "     ||\n"
        "      !=\n"
        "       -\n"
-       "        int: 9\n"
-       "        int: 4\n"
+       "        int: 9 :: [int64]\n"
+       "        int: 4 :: [int64]\n"
        "       *\n"
-       "        int: 5\n"
-       "        int: 10\n"
+       "        int: 5 :: [int64]\n"
+       "        int: 10 :: [int64]\n"
        "      ~\n"
-       "       int: 0\n"
+       "       int: 0 :: [int64]\n"
        "    ==\n"
        "     builtin: __builtin_comm\n"
        "     string: string\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, variable_post_increment_decrement)
@@ -927,28 +927,28 @@ TEST(Parser, bit_shifting)
        "  =\n"
        "   map: @x\n"
        "   <<\n"
-       "    int: 1\n"
-       "    int: 10\n");
+       "    int: 1 :: [int64]\n"
+       "    int: 10 :: [int64]\n");
   test("kprobe:do_nanosleep { @x = 1024 >> 9 }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  =\n"
        "   map: @x\n"
        "   >>\n"
-       "    int: 1024\n"
-       "    int: 9\n");
+       "    int: 1024 :: [int64]\n"
+       "    int: 9 :: [int64]\n");
   test("kprobe:do_nanosleep / 2 < 1 >> 8 / { $x = 1 }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  pred\n"
        "   <\n"
-       "    int: 2\n"
+       "    int: 2 :: [int64]\n"
        "    >>\n"
-       "     int: 1\n"
-       "     int: 8\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 8 :: [int64]\n"
        "  =\n"
        "   variable: $x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, ternary_int)
@@ -961,9 +961,9 @@ TEST(Parser, ternary_int)
        "   ?:\n"
        "    <\n"
        "     builtin: pid\n"
-       "     int: 10000\n"
-       "    int: 1\n"
-       "    int: 2\n");
+       "     int: 10000 :: [int64]\n"
+       "    int: 1 :: [int64]\n"
+       "    int: 2 :: [int64]\n");
 }
 
 TEST(Parser, if_block)
@@ -975,7 +975,7 @@ TEST(Parser, if_block)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    call: printf\n"
        "     string: %d is high\\n\n"
@@ -991,7 +991,7 @@ TEST(Parser, if_stmt_if)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    call: printf\n"
        "     string: %d is high\\n\n"
@@ -1002,7 +1002,7 @@ TEST(Parser, if_stmt_if)
        "  if\n"
        "   <\n"
        "    builtin: pid\n"
-       "    int: 1000\n"
+       "    int: 1000 :: [int64]\n"
        "   then\n"
        "    call: printf\n"
        "     string: %d is low\\n\n"
@@ -1017,11 +1017,11 @@ TEST(Parser, if_block_variable)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    =\n"
        "     variable: $s\n"
-       "     int: 10\n");
+       "     int: 10 :: [int64]\n");
 }
 
 TEST(Parser, if_else)
@@ -1033,7 +1033,7 @@ TEST(Parser, if_else)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    =\n"
        "     variable: $s\n"
@@ -1057,20 +1057,20 @@ TEST(Parser, if_elseif)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    =\n"
        "     variable: $s\n"
-       "     int: 10\n"
+       "     int: 10 :: [int64]\n"
        "   else\n"
        "    if\n"
        "     <\n"
        "      builtin: pid\n"
-       "      int: 10\n"
+       "      int: 10 :: [int64]\n"
        "     then\n"
        "      =\n"
        "       variable: $s\n"
-       "       int: 2\n");
+       "       int: 2 :: [int64]\n");
 }
 
 TEST(Parser, if_elseif_else)
@@ -1082,24 +1082,24 @@ TEST(Parser, if_elseif_else)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    =\n"
        "     variable: $s\n"
-       "     int: 10\n"
+       "     int: 10 :: [int64]\n"
        "   else\n"
        "    if\n"
        "     <\n"
        "      builtin: pid\n"
-       "      int: 10\n"
+       "      int: 10 :: [int64]\n"
        "     then\n"
        "      =\n"
        "       variable: $s\n"
-       "       int: 2\n"
+       "       int: 2 :: [int64]\n"
        "     else\n"
        "      =\n"
        "       variable: $s\n"
-       "       int: 1\n");
+       "       int: 1 :: [int64]\n");
 }
 
 TEST(Parser, if_elseif_elseif_else)
@@ -1111,33 +1111,33 @@ TEST(Parser, if_elseif_elseif_else)
        "  if\n"
        "   >\n"
        "    builtin: pid\n"
-       "    int: 10000\n"
+       "    int: 10000 :: [int64]\n"
        "   then\n"
        "    =\n"
        "     variable: $s\n"
-       "     int: 10\n"
+       "     int: 10 :: [int64]\n"
        "   else\n"
        "    if\n"
        "     <\n"
        "      builtin: pid\n"
-       "      int: 10\n"
+       "      int: 10 :: [int64]\n"
        "     then\n"
        "      =\n"
        "       variable: $s\n"
-       "       int: 2\n"
+       "       int: 2 :: [int64]\n"
        "     else\n"
        "      if\n"
        "       >\n"
        "        builtin: pid\n"
-       "        int: 999999\n"
+       "        int: 999999 :: [int64]\n"
        "       then\n"
        "        =\n"
        "         variable: $s\n"
-       "         int: 0\n"
+       "         int: 0 :: [int64]\n"
        "       else\n"
        "        =\n"
        "         variable: $s\n"
-       "         int: 1\n");
+       "         int: 1 :: [int64]\n");
 }
 
 TEST(Parser, unroll)
@@ -1148,9 +1148,9 @@ TEST(Parser, unroll)
        " kprobe:sys_open\n"
        "  =\n"
        "   variable: $i\n"
-       "   int: 0\n"
+       "   int: 0 :: [int64]\n"
        "  unroll\n"
-       "   int: 5\n"
+       "   int: 5 :: [int64]\n"
        "   block\n"
        "    call: printf\n"
        "     string: i: %d\\n\n"
@@ -1159,7 +1159,7 @@ TEST(Parser, unroll)
        "     variable: $i\n"
        "     +\n"
        "      variable: $i\n"
-       "      int: 1\n");
+       "      int: 1 :: [int64]\n");
 }
 
 TEST(Parser, ternary_str)
@@ -1172,7 +1172,7 @@ TEST(Parser, ternary_str)
        "   ?:\n"
        "    <\n"
        "     builtin: pid\n"
-       "     int: 10000\n"
+       "     int: 10000 :: [int64]\n"
        "    string: lo\n"
        "    string: high\n");
 }
@@ -1187,14 +1187,14 @@ TEST(Parser, ternary_nested)
        "   ?:\n"
        "    <\n"
        "     builtin: pid\n"
-       "     int: 10000\n"
+       "     int: 10000 :: [int64]\n"
        "    ?:\n"
        "     <\n"
        "      builtin: pid\n"
-       "      int: 5000\n"
-       "     int: 1\n"
-       "     int: 2\n"
-       "    int: 3\n");
+       "      int: 5000 :: [int64]\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "    int: 3 :: [int64]\n");
 }
 
 TEST(Parser, call)
@@ -1208,9 +1208,9 @@ TEST(Parser, call)
        "  =\n"
        "   map: @y\n"
        "   call: hist\n"
-       "    int: 1\n"
-       "    int: 2\n"
-       "    int: 3\n"
+       "    int: 1 :: [int64]\n"
+       "    int: 2 :: [int64]\n"
+       "    int: 3 :: [int64]\n"
        "  call: delete\n"
        "   map: @x\n");
 }
@@ -1246,9 +1246,9 @@ TEST(Parser, multiple_probes)
   test("kprobe:sys_open { 1; } kretprobe:sys_open { 2; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  int: 1\n"
+       "  int: 1 :: [int64]\n"
        " kretprobe:sys_open\n"
-       "  int: 2\n");
+       "  int: 2 :: [int64]\n");
 }
 
 TEST(Parser, uprobe)
@@ -1256,40 +1256,40 @@ TEST(Parser, uprobe)
   test("uprobe:/my/program:func { 1; }",
        "Program\n"
        " uprobe:/my/program:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:/my/go/program:\"pkg.func\u2C51\" { 1; }",
        "Program\n"
        " uprobe:/my/go/program:pkg.func\u2C51\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:/with#hash:asdf { 1 }",
        "Program\n"
        " uprobe:/with#hash:asdf\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:/my/program:1234 { 1; }",
        "Program\n"
        " uprobe:/my/program:1234\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   // Trailing alnum chars are allowed (turns the entire arg into a symbol name)
   test("uprobe:/my/program:1234abc { 1; }",
        "Program\n"
        " uprobe:/my/program:1234abc\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   // Test `:`s in quoted string
   test("uprobe:/my/program:\"A::f\" { 1; }",
        "Program\n"
        " uprobe:/my/program:A::f\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   // Language prefix
   test("uprobe:/my/program:cpp:func { 1; }",
        "Program\n"
        " uprobe:/my/program:cpp:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("uprobe:/my/dir+/program:1234abc { 1; }",
        "Program\n"
        " uprobe:/my/dir+/program:1234abc\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("uprobe:f { 1 }", R"(
 stdin:1:1-9: ERROR: uprobe probe type requires 2 or 3 arguments, found 1
@@ -1315,14 +1315,14 @@ TEST(Parser, usdt)
   test("usdt:/my/program:probe { 1; }",
        "Program\n"
        " usdt:/my/program:probe\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   // Without the escapes needed for C++ to compile:
   //    usdt:/my/program:"\"probe\"" { 1; }
   //
   test(R"(usdt:/my/program:"\"probe\"" { 1; })",
        "Program\n"
        " usdt:/my/program:\"probe\"\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("usdt { 1 }", R"(
 stdin:1:1-5: ERROR: usdt probe type requires 2 or 3 arguments, found 0
@@ -1336,19 +1336,19 @@ TEST(Parser, usdt_namespaced_probe)
   test("usdt:/my/program:namespace:probe { 1; }",
        "Program\n"
        " usdt:/my/program:namespace:probe\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program*:namespace:probe { 1; }",
        "Program\n"
        " usdt:/my/program*:namespace:probe\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/*program:namespace:probe { 1; }",
        "Program\n"
        " usdt:/my/*program:namespace:probe\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:*my/program*:namespace:probe { 1; }",
        "Program\n"
        " usdt:*my/program*:namespace:probe\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, escape_chars)
@@ -1366,7 +1366,7 @@ TEST(Parser, begin_probe)
   test("begin { 1 }",
        "Program\n"
        " begin\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("begin:f { 1 }", R"(
 stdin:1:1-8: ERROR: begin probe type requires 0 arguments, found 1
@@ -1386,7 +1386,7 @@ TEST(Parser, end_probe)
   test("end { 1 }",
        "Program\n"
        " end\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("end:f { 1 }", R"(
 stdin:1:1-6: ERROR: end probe type requires 0 arguments, found 1
@@ -1406,7 +1406,7 @@ TEST(Parser, bench_probe)
   test("bench:a { 1 }",
        "Program\n"
        " bench:a\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("bench{ 1 }", R"(
 stdin:1:1-6: ERROR: bench probe type requires 1 arguments, found 0
@@ -1426,11 +1426,11 @@ TEST(Parser, tracepoint_probe)
   test("tracepoint:sched:sched_switch { 1 }",
        "Program\n"
        " tracepoint:sched:sched_switch\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("tracepoint:* { 1 }",
        "Program\n"
        " tracepoint:*:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("tracepoint:f { 1 }", R"(
 stdin:1:1-13: ERROR: tracepoint probe type requires 2 arguments, found 1
@@ -1450,15 +1450,15 @@ TEST(Parser, rawtracepoint_probe)
   test("rawtracepoint:sched:sched_switch { 1 }",
        "Program\n"
        " rawtracepoint:sched:sched_switch\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("rawtracepoint:* { 1 }",
        "Program\n"
        " rawtracepoint:*:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("rawtracepoint:f { 1 }",
        "Program\n"
        " rawtracepoint:*:f\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("rawtracepoint { 1 }", R"(
 stdin:1:1-14: ERROR: rawtracepoint probe type requires 2 or 1 arguments, found 0
@@ -1472,17 +1472,17 @@ TEST(Parser, profile_probe)
   test("profile:ms:997 { 1 }",
        "Program\n"
        " profile:ms:997\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("profile:1us { 1 }",
        "Program\n"
        " profile:us:1\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("profile:5m { 1 }",
        "Program\n"
        " profile:us:300000000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("profile:ms:nan { 1 }", R"(
 stdin:1:1-15: ERROR: Invalid rate of profile probe: invalid integer: nan
@@ -1514,27 +1514,27 @@ TEST(Parser, interval_probe)
   test("interval:s:1 { 1 }",
        "Program\n"
        " interval:s:1\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("interval:s:1e3 { 1 }",
        "Program\n"
        " interval:s:1000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("interval:s:1_0_0_0 { 1 }",
        "Program\n"
        " interval:s:1000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("interval:1us { 1 }",
        "Program\n"
        " interval:us:1\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("interval:5m { 1 }",
        "Program\n"
        " interval:us:300000000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("interval:s:1b { 1 }", R"(
 stdin:1:1-14: ERROR: Invalid rate of interval probe: invalid trailing bytes: 1b
@@ -1560,17 +1560,17 @@ TEST(Parser, software_probe)
   test("software:faults:1000 { 1 }",
        "Program\n"
        " software:faults:1000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("software:faults:1e3 { 1 }",
        "Program\n"
        " software:faults:1000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("software:faults:1_000 { 1 }",
        "Program\n"
        " software:faults:1000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("software:faults:1b { 1 }", R"(
 stdin:1:1-19: ERROR: Invalid count for software probe: invalid trailing bytes: 1b
@@ -1584,17 +1584,17 @@ TEST(Parser, hardware_probe)
   test("hardware:cache-references:1000000 { 1 }",
        "Program\n"
        " hardware:cache-references:1000000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("hardware:cache-references:1e6 { 1 }",
        "Program\n"
        " hardware:cache-references:1000000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test("hardware:cache-references:1_000_000 { 1 }",
        "Program\n"
        " hardware:cache-references:1000000\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("hardware:cache-references:1b { 1 }", R"(
 stdin:1:1-29: ERROR: Invalid count for hardware probe: invalid trailing bytes: 1b
@@ -1608,7 +1608,7 @@ TEST(Parser, watchpoint_probe)
   test("watchpoint:1234:8:w { 1 }",
        "Program\n"
        " watchpoint:1234:8:w\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("watchpoint:1b:8:w { 1 }", R"(
 stdin:1:1-18: ERROR: Invalid function/address argument: invalid trailing bytes: 1b
@@ -1646,7 +1646,7 @@ TEST(Parser, asyncwatchpoint_probe)
   test("asyncwatchpoint:1234:8:w { 1 }",
        "Program\n"
        " asyncwatchpoint:1234:8:w\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   test_parse_failure("asyncwatchpoint:1b:8:w { 1 }", R"(
 stdin:1:1-23: ERROR: Invalid function/address argument: invalid trailing bytes: 1b
@@ -1688,7 +1688,7 @@ TEST(Parser, multiple_attach_points_kprobe)
        " kprobe:sys_open\n"
        " uprobe:/bin/sh:foo\n"
        " tracepoint:syscalls:sys_enter_*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, character_class_attach_point)
@@ -1696,7 +1696,7 @@ TEST(Parser, character_class_attach_point)
   test("kprobe:[Ss]y[Ss]_read { 1 }",
        "Program\n"
        " kprobe:[Ss]y[Ss]_read\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, wildcard_probetype)
@@ -1704,17 +1704,17 @@ TEST(Parser, wildcard_probetype)
   test("t*point:sched:sched_switch { 1; }",
        "Program\n"
        " tracepoint:sched:sched_switch\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("*ware:* { 1; }",
        "Program\n"
        " hardware:*\n"
        " software:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("*:/bin/sh:* { 1; }",
        "Program\n"
        " uprobe:/bin/sh:*\n"
        " usdt:/bin/sh:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, wildcard_attach_points)
@@ -1722,19 +1722,19 @@ TEST(Parser, wildcard_attach_points)
   test("kprobe:sys_* { 1 }",
        "Program\n"
        " kprobe:sys_*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("kprobe:*blah { 1 }",
        "Program\n"
        " kprobe:*blah\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("kprobe:sys*blah { 1 }",
        "Program\n"
        " kprobe:sys*blah\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("kprobe:* { 1 }",
        "Program\n"
        " kprobe:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("kprobe:sys_* { @x = __builtin_cpu*__builtin_retval }",
        "Program\n"
        " kprobe:sys_*\n"
@@ -1757,44 +1757,44 @@ TEST(Parser, wildcard_path)
   test("uprobe:/my/program*:* { 1; }",
        "Program\n"
        " uprobe:/my/program*:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:/my/program*:func { 1; }",
        "Program\n"
        " uprobe:/my/program*:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:*my/program*:func { 1; }",
        "Program\n"
        " uprobe:*my/program*:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("uprobe:/my/program*foo:func { 1; }",
        "Program\n"
        " uprobe:/my/program*foo:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program*:* { 1; }",
        "Program\n"
        " usdt:/my/program*:*\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program*:func { 1; }",
        "Program\n"
        " usdt:/my/program*:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:*my/program*:func { 1; }",
        "Program\n"
        " usdt:*my/program*:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program*foo:func { 1; }",
        "Program\n"
        " usdt:/my/program*foo:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   // Make sure calls or builtins don't cause issues
   test("usdt:/my/program*avg:func { 1; }",
        "Program\n"
        " usdt:/my/program*avg:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program*nsecs:func { 1; }",
        "Program\n"
        " usdt:/my/program*nsecs:func\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, dot_in_func)
@@ -1802,7 +1802,7 @@ TEST(Parser, dot_in_func)
   test("uprobe:/my/go/program:runtime.main.func1 { 1; }",
        "Program\n"
        " uprobe:/my/go/program:runtime.main.func1\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, wildcard_func)
@@ -1810,11 +1810,11 @@ TEST(Parser, wildcard_func)
   test("usdt:/my/program:abc*cd { 1; }",
        "Program\n"
        " usdt:/my/program:abc*cd\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
   test("usdt:/my/program:abc*c*d { 1; }",
        "Program\n"
        " usdt:/my/program:abc*c*d\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 
   std::string keywords[] = {
     "arg0",
@@ -1846,13 +1846,13 @@ TEST(Parser, wildcard_func)
          " usdt:/my/program:" +
              kw +
              "*c*d\n"
-             "  int: 1\n");
+             "  int: 1 :: [int64]\n");
     test("usdt:/my/program:abc*" + kw + "*c*d { 1; }",
          "Program\n"
          " usdt:/my/program:abc*" +
              kw +
              "*c*d\n"
-             "  int: 1\n");
+             "  int: 1 :: [int64]\n");
   }
 }
 
@@ -1863,7 +1863,7 @@ TEST(Parser, short_map_name)
        " kprobe:sys_read\n"
        "  =\n"
        "   map: @\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, include)
@@ -1875,7 +1875,7 @@ TEST(Parser, include)
        " kprobe:sys_read\n"
        "  =\n"
        "   map: @x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, include_quote)
@@ -1887,7 +1887,7 @@ TEST(Parser, include_quote)
        " kprobe:sys_read\n"
        "  =\n"
        "   map: @x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, include_multiple)
@@ -1902,7 +1902,7 @@ TEST(Parser, include_multiple)
        " kprobe:sys_read\n"
        "  =\n"
        "   map: @x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, brackets)
@@ -2060,7 +2060,7 @@ TEST(Parser, cast_precedence)
        "  +\n"
        "   (struct mytype)\n"
        "    builtin: arg0\n"
-       "   int: 123\n");
+       "   int: 123 :: [int64]\n");
 }
 
 TEST(Parser, cast_enum)
@@ -2071,7 +2071,7 @@ TEST(Parser, cast_enum)
        "Program\n"
        " kprobe:sys_read\n"
        "  (enum Foo)\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 }
 
 TEST(Parser, sizeof_expression)
@@ -2131,7 +2131,7 @@ TEST(Parser, offsetof_expression)
        "  =\n"
        "   variable: $foo\n"
        "   (struct Foo *)\n"
-       "    int: 0\n"
+       "    int: 0 :: [int64]\n"
        "  offsetof: \n"
        "   dereference\n"
        "    variable: $foo\n"
@@ -2158,7 +2158,7 @@ TEST(Parser, dereference_precedence)
        "  +\n"
        "   dereference\n"
        "    map: @x\n"
-       "   int: 1\n");
+       "   int: 1 :: [int64]\n");
 
   test("kprobe:sys_read { *@x**@y }",
        "Program\n"
@@ -2284,7 +2284,7 @@ TEST(Parser, cstruct)
        "\n"
        "Program\n"
        " kprobe:sys_read\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, cstruct_semicolon)
@@ -2294,7 +2294,7 @@ TEST(Parser, cstruct_semicolon)
        "\n"
        "Program\n"
        " kprobe:sys_read\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, cstruct_nested)
@@ -2304,7 +2304,7 @@ TEST(Parser, cstruct_nested)
        "\n"
        "Program\n"
        " kprobe:sys_read\n"
-       "  int: 1\n");
+       "  int: 1 :: [int64]\n");
 }
 
 TEST(Parser, unexpected_symbol)
@@ -2500,52 +2500,54 @@ stdin:1:1-25: ERROR: No attach points for probe
 TEST(Parser, int_notation)
 {
   test("k:f { print(1e6); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000000 :: [int64]\n");
   test("k:f { print(5e9); }",
-       "Program\n kprobe:f\n  call: print\n   int: 5000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 5000000000 :: [int64]\n");
   test("k:f { print(1e1_0); }",
-       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000 :: [int64]\n");
   test("k:f { print(1_000_000_000_0); }",
-       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000 :: [int64]\n");
   test("k:f { print(1_0_0_0_00_0_000_0); }",
-       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000 :: [int64]\n");
   test("k:f { print(123_456_789_0); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1234567890\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1234567890 :: [int64]\n");
   test("k:f { print(0xe5); }",
-       "Program\n kprobe:f\n  call: print\n   int: 229\n");
+       "Program\n kprobe:f\n  call: print\n   int: 229 :: [int64]\n");
   test("k:f { print(0x5e5); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1509\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1509 :: [int64]\n");
   test("k:f { print(0xeeee); }",
-       "Program\n kprobe:f\n  call: print\n   int: 61166\n");
+       "Program\n kprobe:f\n  call: print\n   int: 61166 :: [int64]\n");
   test("k:f { print(0777); }",
-       "Program\n kprobe:f\n  call: print\n   int: 511\n");
+       "Program\n kprobe:f\n  call: print\n   int: 511 :: [int64]\n");
   test("k:f { print(0123); }",
-       "Program\n kprobe:f\n  call: print\n   int: 83\n");
+       "Program\n kprobe:f\n  call: print\n   int: 83 :: [int64]\n");
 
   test("k:f { print(1_000u); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
   test("k:f { print(1_000ul); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
   test("k:f { print(1_000ull); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
   test("k:f { print(1_000l); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
   test("k:f { print(1_000ll); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
 
-  test("k:f { print(1ns); }", "Program\n kprobe:f\n  call: print\n   int: 1\n");
+  test("k:f { print(1ns); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1 :: [int64]\n");
   test("k:f { print(1us); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000 :: [int64]\n");
   test("k:f { print(1ms); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000000 :: [int64]\n");
   test("k:f { print(1s); }",
-       "Program\n kprobe:f\n  call: print\n   int: 1000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 1000000000 :: [int64]\n");
   test("k:f { print(1m); }",
-       "Program\n kprobe:f\n  call: print\n   int: 60000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 60000000000 :: [int64]\n");
   test("k:f { print(1h); }",
-       "Program\n kprobe:f\n  call: print\n   int: 3600000000000\n");
-  test("k:f { print(1d); }",
-       "Program\n kprobe:f\n  call: print\n   int: 86400000000000\n");
+       "Program\n kprobe:f\n  call: print\n   int: 3600000000000 :: [int64]\n");
+  test(
+      "k:f { print(1d); }",
+      "Program\n kprobe:f\n  call: print\n   int: 86400000000000 :: [int64]\n");
 
   test_parse_failure("k:f { print(5e-9); }", R"(
 stdin:1:7-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
@@ -2615,11 +2617,11 @@ TEST(Parser, while_loop)
  interval:ms:100
   =
    variable: $a
-   int: 0
+   int: 0 :: [int64]
   while(
    <
     variable: $a
-    int: 10
+    int: 10 :: [int64]
    )
     ++ (post)
      variable: $a
@@ -2683,17 +2685,14 @@ i:s:1 { 0.1 = 1.0 }
 
 TEST(Parser, abs_knl_address)
 {
-  char in_cstr[64];
-  char out_cstr[64];
-
-  snprintf(in_cstr, sizeof(in_cstr), "watchpoint:0x%lx:4:w { 1; }", ULONG_MAX);
-  snprintf(out_cstr,
-           sizeof(out_cstr),
-           "Program\n"
-           " watchpoint:%lu:4:w\n"
-           "  int: 1\n",
-           ULONG_MAX);
-  test(std::string(in_cstr), std::string(out_cstr));
+  char hex_probe[64];
+  char dec_probe[64];
+  snprintf(hex_probe, sizeof(hex_probe), "watchpoint:0x%lx:4:w", ULONG_MAX);
+  snprintf(dec_probe, sizeof(dec_probe), "watchpoint:%lu:4:w", ULONG_MAX);
+  test(std::string(hex_probe) + R"( { 1; })",
+       "Program\n " + std::string(dec_probe) + R"(
+  int: 1 :: [int64]
+)");
 }
 
 TEST(Parser, invalid_provider)
@@ -2854,11 +2853,12 @@ TEST(Parser, keywords_as_identifiers)
   for (const auto &keyword : keywords) {
     test("begin { $x = (struct Foo*)0; $x->" + keyword + "; }",
          "Program\n begin\n  =\n   variable: $x\n   (struct Foo *)\n    int: "
-         "0\n "
+         "0 :: [int64]\n "
          " .\n   dereference\n    variable: $x\n   " +
              keyword + "\n");
     test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
-         "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0\n "
+         "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0 "
+         ":: [int64]\n "
          " .\n   variable: $x\n   " +
              keyword + "\n");
     test("begin { $x = offsetof(*__builtin_curtask, " + keyword + "); }",
@@ -2973,8 +2973,8 @@ TEST(Parser, subprog_return)
        " subprog: f :: [void]\n"
        "  return\n"
        "   +\n"
-       "    int: 1\n"
-       "    int: 1\n");
+       "    int: 1 :: [int64]\n"
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, subprog_string)
@@ -3044,9 +3044,9 @@ Program
    decl
     variable: $i
     start
-     int: 0
+     int: 0 :: [int64]
     end
-     int: 10
+     int: 10 :: [int64]
    stmts
     call: print
      variable: $i
@@ -3107,7 +3107,7 @@ Program
  begin
   decl
    variable: $x
-   int: 1
+   int: 1 :: [int64]
 )");
 
   test("begin { let $x: int8 = 1; }", R"(
@@ -3115,7 +3115,7 @@ Program
  begin
   decl :: [int8]
    variable: $x
-   int: 1
+   int: 1 :: [int64]
 )");
 
   // Needs the let keyword
@@ -3140,7 +3140,7 @@ Program
  begin
   =
    variable: $x
-   int: 1
+   int: 1 :: [int64]
   &
    variable: $x
 )");
@@ -3153,7 +3153,7 @@ Program
  begin
   =
    map: @a
-   int: 1
+   int: 1 :: [int64]
   &
    map: @a
 )");
@@ -3166,13 +3166,13 @@ TEST(Parser, bare_blocks)
        " interval:s:1\n"
        "  =\n"
        "   variable: $a\n"
-       "   int: 1\n"
+       "   int: 1 :: [int64]\n"
        "  =\n"
        "   variable: $b\n"
-       "   int: 2\n"
+       "   int: 2 :: [int64]\n"
        "  =\n"
        "   variable: $c\n"
-       "   int: 3\n");
+       "   int: 3 :: [int64]\n");
 }
 
 TEST(Parser, block_expressions)
@@ -3213,7 +3213,7 @@ Program
    variable: $x
    =
     variable: $a
-    int: 1
+    int: 1 :: [int64]
    variable: $a
   call: exit
 )");
@@ -3226,7 +3226,7 @@ Program
    variable: $x
    =
     variable: $a
-    int: 1
+    int: 1 :: [int64]
    call: count
   call: exit
 )");

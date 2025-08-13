@@ -222,10 +222,14 @@ using RootStatements = std::vector<RootStatement>;
 
 class Integer : public Node {
 public:
-  explicit Integer(ASTContext &ctx, uint64_t n, Location &&loc)
+  explicit Integer(ASTContext &ctx,
+                   uint64_t n,
+                   Location &&loc,
+                   bool force_unsigned = false)
       : Node(ctx, std::move(loc)),
-        integer_type(n >= std::numeric_limits<int64_t>::max() ? CreateUInt64()
-                                                              : CreateInt64()),
+        integer_type(force_unsigned || n > std::numeric_limits<int64_t>::max()
+                         ? CreateUInt64()
+                         : CreateInt64()),
         value(n) {};
   explicit Integer(ASTContext &ctx, const Integer &other, const Location &loc)
       : Node(ctx, loc + other.loc),
@@ -237,9 +241,13 @@ public:
     return integer_type;
   }
 
-  // This literal has a dynamic type, but it is not mutable. The type is always
-  // signed if the signed value is capable of holding the literal, otherwise it
-  // is unsigned.
+  // This literal has a dynamic type, but it is not mutable. The type is
+  // generally signed if the signed value is capable of holding the literal,
+  // otherwise it is unsigned. This is the existing convention.
+  //
+  // However, the `force_unsigned` parameter can override this. This can be
+  // used for small cases that are explicitly unsigned (e.g. `sizeof`), and is
+  // preserved when folding literals in order to provide the intuitive type.
   const SizedType integer_type;
   const uint64_t value;
 };
@@ -440,6 +448,7 @@ public:
 
   const SizedType &type() const
   {
+    // See exception for Integer type construction.
     static SizedType uint64 = CreateUInt64();
     return uint64;
   }
@@ -466,6 +475,7 @@ public:
 
   const SizedType &type() const
   {
+    // See exception for Integer type construction.
     static SizedType uint64 = CreateUInt64();
     return uint64;
   }

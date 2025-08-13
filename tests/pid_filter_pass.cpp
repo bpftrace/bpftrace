@@ -40,7 +40,7 @@ void test(const std::string& input, bool has_pid, bool has_filter)
   if
    !=
     builtin: pid
-    int: 1
+    int: 1 :: [int64]
    then
     return
 )";

@@ -89,11 +89,11 @@ Program
    then
     =
      map: @exit
-     int: 1
+     int: 1 :: [int64]
    else
     =
      map: @entry
-     int: 1
+     int: 1 :: [int64]
 )");
 }
 
