@@ -5681,4 +5681,22 @@ TEST_F(SemanticAnalyserTest, typeof_if_constexpr)
       R"(kprobe:f { $x = "xyz"; if (typeof($x) == typeof("abc")) { $x = "foo"; } else { $x = 2; } })");
 }
 
+TEST_F(SemanticAnalyserTest, fail)
+{
+  test(R"(kprobe:f { fail("always fail"); })", Error{ R"(
+stdin:1:12-31: ERROR: always fail
+kprobe:f { fail("always fail"); }
+           ~~~~~~~~~~~~~~~~~~~
+)" });
+  test(
+      R"(kprobe:f { $x = 1; if (typeof($x) != typeof(1)) { fail("only integers"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeof($x) == typeof(1)) { fail("no integers"); } })",
+      Error{ R"(
+stdin:1:51-70: ERROR: no integers
+kprobe:f { $x = 1; if (typeof($x) == typeof(1)) { fail("no integers"); } }
+                                                  ~~~~~~~~~~~~~~~~~~~
+)" });
+}
+
 } // namespace bpftrace::test::semantic_analyser
