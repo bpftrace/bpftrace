@@ -2710,6 +2710,14 @@ void SemanticAnalyser::visit(If &if_node)
 {
   visit(if_node.cond);
 
+  if (auto *b = if_node.cond.as<Boolean>()) {
+    if (b->value) {
+      if_node.else_block->stmts.clear();
+    } else {
+      if_node.if_block->stmts.clear();
+    }
+  }
+
   if (is_final_pass()) {
     const Type &cond = if_node.cond.type().GetTy();
     if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean)

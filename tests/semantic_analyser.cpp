@@ -5600,4 +5600,29 @@ TEST_F(SemanticAnalyserTest, printf_str_conversion)
   test(R"(kprobe:f { $x = "foo"; printf("%s", $x) })");
 }
 
+TEST_F(SemanticAnalyserTest, branch_prune)
+{
+  auto ast1 = test("kprobe:f { if (false) { print(1); } }");
+  auto *if_stmt1 = ast1.root->probes.at(0)->block->stmts.at(0).as<ast::If>();
+  EXPECT_TRUE(if_stmt1->if_block->stmts.empty());
+
+  auto ast2 = test("kprobe:f { if (true) { print(1); } else { print(1); } }");
+  auto *if_stmt2 = ast2.root->probes.at(0)->block->stmts.at(0).as<ast::If>();
+  EXPECT_EQ(if_stmt2->if_block->stmts.size(), 1);
+  EXPECT_TRUE(if_stmt1->else_block->stmts.empty());
+
+  // Test bad behavior in the pruned branch
+  test(R"(kprobe:f { @a = 1; if (false) { @a = "str"; } })");
+  test(R"(kprobe:f { if (false) { bad_func_call(asdfs); } })");
+  test(R"(kprobe:f { @a = 1; if (true) { @a = 2; } else { @a[1] = "str" } })");
+
+  // Some errors still propagate (we should fix these)
+  test("macro add_one(x) { x + 1 } kprobe:f { if (false) { add_one(1, 2); } }",
+       Error{ R"(
+stdin:1:52-65: ERROR: Call to macro has wrong number arguments. Expected: 1 but got 2
+macro add_one(x) { x + 1 } kprobe:f { if (false) { add_one(1, 2); } }
+                                                   ~~~~~~~~~~~~~
+)" });
+}
+
 } // namespace bpftrace::test::semantic_analyser
