@@ -5607,6 +5607,15 @@ kprobe:f { fail("always fail"); }
            ~~~~~~~~~~~~~~~~~~~
 )" });
   test(R"(kprobe:f { if (false) { fail("always false"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeof($x) != typeof(1)) { fail("only integers"); } })");
+  test(
+      R"(kprobe:f { $x = 1; if (typeof($x) == typeof(1)) { fail("no integers"); } })",
+      Error{ R"(
+stdin:1:51-70: ERROR: no integers
+kprobe:f { $x = 1; if (typeof($x) == typeof(1)) { fail("no integers"); } }
+                                                  ~~~~~~~~~~~~~~~~~~~
+)" });
 }
 
 TEST_F(SemanticAnalyserTest, typeof_decls)
@@ -5688,6 +5697,29 @@ TEST_F(SemanticAnalyserTest, typeof_if_constexpr)
       R"(kprobe:f { $x = 1; if (typeof($x) == typeof("abc")) { $x = "foo"; } else { $x = 2; } })");
   test(
       R"(kprobe:f { $x = "xyz"; if (typeof($x) == typeof("abc")) { $x = "foo"; } else { $x = 2; } })");
+}
+
+TEST_F(SemanticAnalyserTest, valid_expr)
+{
+  // We can use `valid` as a regular expression.
+  test(R"(kprobe:f { $x = 1; print(valid($x)); })");
+  test(R"(kprobe:f { $x = 1; print(valid($y)); })");
+
+  // We get regular errors from `valid`.
+  test(R"(kprobe:f { $x = 1; print(valid($x, $y)); })", Error{ R"(
+stdin:1:20-39: ERROR: valid requires a single expression argument
+kprobe:f { $x = 1; print(valid($x, $y)); }
+                   ~~~~~~~~~~~~~~~~~~~
+)" });
+}
+
+TEST_F(SemanticAnalyserTest, valid_if_constexpr)
+{
+  // We will prune `valid`.
+  test(
+      R"(kprobe:f { $x = 1; if (valid($x[0])) { fail("integer can be indexed"); } })");
+  test(
+      R"(kprobe:f { $x = (int8*)0; if (!valid($x[0])) { fail("pointer can't be indexed"); } })");
 }
 
 } // namespace bpftrace::test::semantic_analyser
