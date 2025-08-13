@@ -714,12 +714,17 @@ int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
   std::vector<int> cpus = util::get_online_cpus();
   online_cpus_ = cpus.size();
   for (int cpu : cpus) {
-    void *reader = bpf_open_perf_buffer(&perf_event_printer,
-                                        &perf_event_lost,
-                                        ctx,
-                                        -1,
-                                        cpu,
-                                        config_->perf_rb_pages);
+    // We don't need a large buffer just for skboutput by default
+    // so unless the user set perf_rb_pages set it to 64 pages.
+    auto num_pages = get_buffer_pages(64);
+    // This won't happen as we don't attempt to get the number of pages
+    // dynamically here
+    if (!num_pages) {
+      LOG(ERROR) << num_pages.takeError();
+      return -1;
+    }
+    void *reader = bpf_open_perf_buffer(
+        &perf_event_printer, &perf_event_lost, ctx, -1, cpu, *num_pages);
     if (reader == nullptr) {
       LOG(ERROR) << "Failed to open perf buffer";
       return -1;
@@ -1308,6 +1313,27 @@ const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
   }();
 
   return pidns;
+}
+
+Result<uint64_t> BPFtrace::get_buffer_pages(
+    std::optional<uint64_t> default_val) const
+{
+  if (config_->perf_rb_pages) {
+    return config_->perf_rb_pages;
+  }
+  if (default_val) {
+    return *default_val;
+  }
+  auto available_mem_kb = util::get_available_mem_kb();
+  if (!available_mem_kb) {
+    return available_mem_kb;
+  }
+
+  static uint64_t ceiling = 16544;
+  static uint64_t floor = 256;
+  uint64_t max = std::min(*available_mem_kb, ceiling);
+  uint64_t amount_bytes = std::max(max, floor) * 1024;
+  return amount_bytes / sysconf(_SC_PAGE_SIZE);
 }
 
 Dwarf *BPFtrace::get_dwarf(const std::string &filename)
