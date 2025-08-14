@@ -402,7 +402,7 @@ struct TextEmitter<Value::TimeSeries> {
     res << "|" << top << "|" << std::endl;
 
     int zero_offset = 0;
-    if (distance(min_value, 0) > 0 && distance(0, max_value) > 0) {
+    if (distance(min_value, 0) < 0 && distance(0, max_value) < 0) {
       zero_offset = static_cast<float>(graph_width) *
                     static_cast<float>(distance(min_value, 0)) /
                     static_cast<float>(distance(min_value, max_value));
