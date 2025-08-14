@@ -44,4 +44,6 @@ std::string to_lower(const std::string &original);
 bool is_str_bool_truthy(const std::string &value);
 bool is_str_bool_falsy(const std::string &value);
 
+std::string to_utf8(const std::u32string &str);
+
 } // namespace bpftrace::util
