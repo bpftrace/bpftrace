@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "ast/ast.h"
 #include "ast/pass_manager.h"
 
 namespace bpftrace::ast {
@@ -14,6 +15,9 @@ namespace bpftrace::ast {
 class MapMetadata : public ast::State<"map-metadata"> {
 public:
   std::unordered_map<std::string, bool> scalar;
+  // Save errors for semantic analysis where branch pruning may discard
+  // branches where an error occured.
+  std::unordered_map<Map *, std::string> errors;
 };
 
 Pass CreateMapSugarPass();

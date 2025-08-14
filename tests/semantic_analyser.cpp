@@ -346,9 +346,9 @@ TEST_F(SemanticAnalyserTest, consistent_map_keys)
   test("begin { @x[@y[@z]] = 5; @y[2] = 1; @z = @x[0]; }");
 
   test("begin { @x = 0; @x[1]; }", Error{ R"(
-stdin:1:17-19: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
+stdin:1:17-22: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
 begin { @x = 0; @x[1]; }
-                ~~
+                ~~~~~
 )" });
   test("begin { @x[1] = 0; @x; }", Error{ R"(
 stdin:1:20-22: ERROR: @x used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)

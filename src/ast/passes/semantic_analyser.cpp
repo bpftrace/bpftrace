@@ -2148,6 +2148,11 @@ void SemanticAnalyser::visit(MapDeclStatement &decl)
 
 void SemanticAnalyser::visit(Map &map)
 {
+  auto found_error = map_metadata_.errors.find(&map);
+  if (found_error != map_metadata_.errors.end()) {
+    map.addError() << found_error->second;
+  }
+
   auto val = map_val_.find(map.ident);
   if (val != map_val_.end()) {
     map.value_type = val->second;
@@ -3109,6 +3114,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
 void SemanticAnalyser::visit(MapAccess &acc)
 {
+  auto found_error = map_metadata_.errors.find(acc.map);
+  if (found_error != map_metadata_.errors.end()) {
+    acc.addError() << found_error->second;
+  }
+
   visit(acc.map);
   visit(acc.key);
   reconcile_map_key(acc.map, acc.key);
@@ -4111,6 +4121,16 @@ bool SemanticAnalyser::check_call(const Call &call)
        ++i) {
     std::visit([&](const auto &v) { ret = ret && check_arg(call, i, v); },
                spec->second.arg_types.at(i));
+  }
+
+  if (!call.vargs.empty()) {
+    if (auto *map = call.vargs.at(0).as<Map>()) {
+      auto found_error = map_metadata_.errors.find(map);
+      if (found_error != map_metadata_.errors.end()) {
+        map->addError() << found_error->second;
+        ret = false;
+      }
+    }
   }
 
   return ret;

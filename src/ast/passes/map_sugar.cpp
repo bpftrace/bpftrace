@@ -140,29 +140,24 @@ bool MapDefaultKey::check(Map &map, bool indexed)
 void MapDefaultKey::checkAccess(Map &map, bool indexed)
 {
   if (!check(map, indexed)) {
-    if (indexed) {
-      map.addError() << map.ident
-                     << " used as a map with an explicit key (non-scalar map), "
-                        "previously used without an explicit key (scalar map)";
-    } else {
-      map.addError()
-          << map.ident
-          << " used as a map without an explicit key (scalar map), previously "
-             "used with an explicit key (non-scalar map)";
-    }
+    metadata.errors[&map] =
+        indexed ? map.ident +
+                      " used as a map with an explicit key (non-scalar map), "
+                      "previously used without an explicit key (scalar map)"
+                : map.ident +
+                      " used as a map without an explicit key (scalar map), "
+                      "previously used with an explicit key (non-scalar map)";
   }
 }
 
 void MapDefaultKey::checkCall(Map &map, bool indexed, Call &call)
 {
   if (!check(map, indexed)) {
-    if (indexed) {
-      map.addError() << "call to " << call.func
-                     << "() expects a map with explicit keys (non-scalar map)";
-    } else {
-      map.addError() << "call to " << call.func
-                     << "() expects a map without explicit keys (scalar map)";
-    }
+    metadata.errors[&map] =
+        indexed ? "call to " + call.func +
+                      "() expects a map with explicit keys (non-scalar map)"
+                : "call to " + call.func +
+                      "() expects a map without explicit keys (scalar map)";
   }
 }
 
