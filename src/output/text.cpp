@@ -410,9 +410,12 @@ struct TextEmitter<Value::TimeSeries> {
     res << std::right;
     TextEmitter<Primitive>::emit(res, max_value);
     res << std::endl;
-    std::string top(graph_width - 2, '_');
+
+    std::u32string bar(graph_width, U'━');
+    bar[0] = U'┣';
+    bar[graph_width - 1] = U'┫';
     res << std::setw(time_size + 1) << std::left << time_fmt;
-    res << "|" << top << "|" << std::endl;
+    res << util::to_utf8(bar) << std::endl;
 
     int zero_offset = 0;
     if (distance(min_value, 0) > 0 && distance(0, max_value) > 0) {
@@ -421,14 +424,14 @@ struct TextEmitter<Value::TimeSeries> {
                     static_cast<float>(distance(min_value, max_value));
     }
     for (const auto &[epoch, v] : ts.values) {
-      std::string line(graph_width, ' ');
+      std::u32string line(graph_width, ' ');
       TextEmitter<Primitive::Timestamp>::emit(res, epoch, time_format, unit);
       res << " ";
 
-      line[0] = '|';
-      line[graph_width - 1] = '|';
+      line[0] = U'┃';
+      line[graph_width - 1] = U'┃';
       if (zero_offset > 0) {
-        line[zero_offset] = '.';
+        line[zero_offset] = U'·';
       }
       // There may be epochs with no valid entry.
       if (!std::holds_alternative<std::monostate>(v.variant)) {
@@ -439,19 +442,16 @@ struct TextEmitter<Value::TimeSeries> {
                          static_cast<float>(distance(min_value, max_value));
         }
         // Ensure that we don't have floating point issues.
-        line[std::max(0, std::min(graph_width - 1, point_offset))] = '*';
-        res << line << " ";
+        line[std::max(0, std::min(graph_width - 1, point_offset))] = U'•';
+        res << util::to_utf8(line) << " ";
         TextEmitter<Primitive>::emit(res, v);
       } else {
-        res << line << " -";
+        res << util::to_utf8(line) << " -";
       }
       res << std::endl;
     }
 
-    std::string bottom(graph_width, '_');
-    bottom[0] = 'v';
-    bottom[graph_width - 1] = 'v';
-    res << std::setw(time_size) << "" << " " << bottom << std::endl;
+    res << std::setw(time_size) << "" << " " << util::to_utf8(bar) << std::endl;
     res << std::setw(time_size) << "" << " ";
     res << std::setw(padding);
     res << std::left;
