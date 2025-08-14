@@ -2817,10 +2817,14 @@ void SemanticAnalyser::visit(If &if_node)
   // them for semantic analysis.
   visit(if_node.cond);
   CollectNodes<Typeof> typeofs;
+  CollectNodes<Call> valids;
   typeofs.visit(if_node.cond, [](const Typeof &typeof) {
     return typeof.type().IsNoneTy(); // Not resolved.
   });
-  if (!typeofs.nodes().empty()) {
+  valids.visit(if_node.cond, [](const Call &call) {
+    return call.func == "valid"; // valid(...).
+  });
+  if (!typeofs.nodes().empty() || !valids.nodes().empty()) {
     pass_tracker_.add_unresolved_branch(&if_node);
     return; // Skip visiting this `if` for now.
   }
@@ -3422,6 +3426,38 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(Expression &expr)
 {
+  // There is a special call for semantic analysis, the `valid` call. This
+  // requires a single argument, and returns true or false depending on whether
+  // the expression is valid.
+  if (auto *call = expr.as<Call>()) {
+    if (call->func == "valid") {
+      if (call->vargs.size() != 1) {
+        call->addError() << "valid requires a single expression argument";
+        return;
+      }
+      // The visit to the expression in `valid` is permitted to fail, and no
+      // diagnositcs will be generated. We still keep all of our semantic
+      // analyzer state, so references are resolved with local variables, etc.
+      auto &arg = call->vargs.at(0);
+      ASTContext discard;
+      auto copy = clone(discard, arg, call->loc);
+      Visitor<SemanticAnalyser>::visit(copy);
+      if (!copy.type().IsNoneTy()) {
+        // This should be folded subsequently.
+        expr.value = ctx_.make_node<Boolean>(true, Location(call->loc));
+      } else if (is_second_chance()) {
+        // By the second chance pass, if this is unresolved then we know that it
+        // not valid and we resolve to false. The resolution of these types is
+        // what gets us back into convergence.
+        expr.value = ctx_.make_node<Boolean>(false, Location(call->loc));
+      } else if (is_final_pass()) {
+      } else {
+        pass_tracker_.inc_num_unresolved();
+      }
+      return; // Don't visit normally.
+    }
+  }
+
   // Visit and fold all other values.
   Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
@@ -4277,6 +4313,11 @@ inline bool SemanticAnalyser::is_final_pass() const
 bool SemanticAnalyser::is_first_pass() const
 {
   return pass_tracker_.get_num_passes() == 1;
+}
+
+bool SemanticAnalyser::is_second_chance() const
+{
+  return pass_tracker_.is_second_chance();
 }
 
 bool SemanticAnalyser::check_arg(const Call &call,
