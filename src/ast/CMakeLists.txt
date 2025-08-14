@@ -17,6 +17,7 @@ add_library(ast STATIC
   pass_manager.cpp
   signal.cpp
 
+  passes/builtins.cpp
   passes/c_macro_expansion.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
