@@ -604,8 +604,8 @@ Result<output::Value> format(BPFtrace &bpftrace,
 
     // Type for the reduction. Note that when the elements are collected
     // they have already been reduced, much like in the histogram case.
-    SizedType reduced_type = value_type.IsSigned() ? CreateInt64()
-                                                   : CreateUInt64();
+    SizedType reduced_type = args.value_type.IsSigned() ? CreateInt64()
+                                                        : CreateUInt64();
     for (const auto &[key, value] : *values_by_key) {
       // Collect all the values for this specific key.
       std::map<uint64_t, output::Primitive> values;
