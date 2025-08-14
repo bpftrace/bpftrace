@@ -211,8 +211,11 @@ struct TextEmitter<Value::Histogram> {
     for (const auto &v : hist.counts) {
       max_value = std::max(max_value, v);
     }
+    int max_width = 52;
+    std::u32string top_bar(max_width + 1, U'▔');
+    out << std::setw(16 + 1) << std::right << "" << "▕"
+        << util::to_utf8(top_bar) << "▎" << std::endl;
     for (size_t i = 0; i < hist.counts.size() || i < hist.labels.size(); i++) {
-      int max_width = 52;
       int bar_width = (hist.counts.at(i) / static_cast<float>(max_value)) *
                       max_width;
       std::ostringstream header;
@@ -247,11 +250,21 @@ struct TextEmitter<Value::Histogram> {
         TextEmitter<Primitive>::emit(header, hist.labels[i]);
         header << ")";
       }
-      std::string bar(bar_width, '@');
-      out << std::setw(16) << std::left << header.str() << std::setw(8)
-          << std::right << hist.counts.at(i) << " |" << std::setw(max_width)
-          << std::left << bar << "|" << std::endl;
+      uint32_t ch;
+      if (i % 2 == 0) {
+        ch = U'▇';
+      } else {
+        ch = U'▇';
+      }
+      std::u32string bar(bar_width, ch);
+      std::u32string padding(max_width - bar_width, ' ');
+      out << std::setw(16) << std::left << header.str() << " ▕"
+          << util::to_utf8(bar) << util::to_utf8(padding) << " ▎"
+          << std::setw(8) << std::left << hist.counts.at(i) << std::endl;
     }
+    std::u32string bottom_bar(max_width + 1, U'▁');
+    out << std::setw(16 + 1) << std::right << "" << "▕"
+        << util::to_utf8(bottom_bar) << "▎" << std::endl;
   }
 };
 
