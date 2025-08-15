@@ -417,8 +417,6 @@ public:
 
 class Call : public Node {
 public:
-  explicit Call(ASTContext &ctx, std::string func, Location &&loc)
-      : Node(ctx, std::move(loc)), func(std::move(func)) {};
   explicit Call(ASTContext &ctx,
                 std::string func,
                 ExpressionList &&vargs,

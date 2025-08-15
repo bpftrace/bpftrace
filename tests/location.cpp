@@ -20,7 +20,7 @@ TEST(Location, single_line)
 
   // Replicate a specific parser error.
   bpftrace::location loc(position(nullptr, 3, 9), position(nullptr, 3, 13));
-  auto &call = *ast.make_node<ast::Call>("foo", loc);
+  auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3:9-13");
@@ -37,7 +37,7 @@ TEST(Location, multi_line)
 
   // Replicate a specific parser error, that spans multiple lines.
   bpftrace::location loc(position(nullptr, 3, 3), position(nullptr, 4, 19));
-  auto &call = *ast.make_node<ast::Call>("foo", loc);
+  auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3-4");
