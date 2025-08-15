@@ -2828,6 +2828,8 @@ void SemanticAnalyser::visit(While &while_block)
 
 void SemanticAnalyser::visit(For &f)
 {
+  // This must be expanded earlier.
+  assert(!f.iterable.is<Tuple>());
   if (f.iterable.is<Range>() && !bpftrace_.feature_->has_helper_loop()) {
     f.addError() << "Missing required kernel feature: loop";
   }

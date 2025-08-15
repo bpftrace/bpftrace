@@ -135,3 +135,7 @@ EXPECT_REGEX .*\n1\n5\n\n
 NAME range with continue
 PROG begin { for ($i : 1..4) { if ($i == 2) { continue; } print($i); }  }
 EXPECT_REGEX .*\n1\n3\n\n
+
+NAME tuple
+PROG BEGIN { for (i : (0, "foo", "bar")) { print(i); } }
+EXPECT_REGEX .*\n0\nfoo\nbar\n\n

@@ -164,6 +164,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
 %type <ast::RootStatements> root_stmts
 %type <ast::Range *> range
+%type <ast::Tuple *> tuple_expr
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::StatementList> block block_or_if stmt_list
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
@@ -497,8 +498,12 @@ loop_stmt:
                 ;
 
 for_stmt:
-                FOR "(" var ":" map ")" block        { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
-        |       FOR "(" var ":" range ")" block      { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+                FOR "(" var ":" map ")" block          { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+        |       FOR "(" var ":" range ")" block        { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+        // Note that this uses a `Variable` block, but the variable itself
+        // lacks the $-prefix. This means that it cannot be referenced as a
+        // variable in the block, and only macro expansion can operate on this.
+        |       FOR "(" IDENT ":" tuple_expr ")" block { $$ = driver.ctx.make_node<ast::For>(driver.ctx.make_node<ast::Variable>($3, @3), $5, std::move($7), @1); }
                 ;
 
 range:
@@ -551,6 +556,14 @@ var_decl_stmt:
         |        LET var COLON type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
         ;
 
+tuple_expr:
+               "(" vargs "," expr ")"
+                {
+                  auto &args = $2;
+                  args.push_back($4);
+                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
+                }
+
 primary_expr:
                 UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
         |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
@@ -563,12 +576,7 @@ primary_expr:
         |       var_addr           { $$ = $1; }
         |       map_addr           { $$ = $1; }
         |       map_expr           { $$ = $1; }
-        |       "(" vargs "," expr ")"
-                {
-                  auto &args = $2;
-                  args.push_back($4);
-                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
-                }
+        |       tuple_expr         { $$ = $1; }
         |       map %prec LOW      { $$ = $1; }
         |       IDENT %prec LOW    { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;

@@ -4,6 +4,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/passes/collect_nodes.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -63,10 +64,11 @@ public:
   void visit(VarDeclStatement &decl);
   void visit(Map &map);
   void visit(Expression &expr);
+  void visit(Statement &stmt);
+
   // We can't add extra params with default values to the standard `visit`
   // because it then becomes ambiguous
   void replace_macro_call(Expression &expr, bool block_ok = false);
-  void visit(Statement &stmt);
 
   std::optional<BlockExpr *> expand(Macro &macro, Call &call);
   std::optional<BlockExpr *> expand(Macro &macro, Identifier &ident);
@@ -254,8 +256,56 @@ void MacroExpander::visit(Expression &expr)
   replace_macro_call(expr);
 }
 
+class ForExpander : public Visitor<ForExpander> {
+public:
+  ForExpander(ASTContext &ast, std::string ident, Expression expr)
+      : ast_(ast), ident_(std::move(ident)), expr_(expr) {};
+
+  using Visitor<ForExpander>::visit;
+  void visit(Expression &expr)
+  {
+    // Note that we expand the naked identifier, as the variable for the
+    // literal tuple expansion will not have a `$`-prefix. See `parser.yy` for
+    // how this works, because we treat this as expression (you can't its
+    // address, or subsequently set it, etc.).
+    if (auto *var = expr.as<Identifier>()) {
+      if (var->ident == ident_) {
+        expr.value = clone(ast_,
+                           expr_.value,
+                           Location(expr_.node().loc)); // Replace directly.
+      }
+    }
+    // Recursively visit.
+    Visitor<ForExpander>::visit(expr);
+  }
+
+private:
+  ASTContext &ast_;
+  const std::string ident_;
+  const Expression expr_;
+};
+
 void MacroExpander::visit(Statement &stmt)
 {
+  // Expand loops which are over tuples. These must be specified directly
+  // as tuples, so we know the number directly from the AST (we don't accept
+  // variables or maps for the tuple, to allow for pure syntax expansion).
+  if (auto *f = stmt.as<For>()) {
+    if (auto *tuple = f->iterable.as<Tuple>()) {
+      // Expand the statement into a set of statement.
+      std::vector<Statement> stmts;
+      for (size_t i = 0; i < tuple->elems.size(); i++) {
+        auto current = clone(ast_, f->stmts, Location(f->loc));
+        ForExpander expander(ast_, f->decl->ident, tuple->elems[i]);
+        expander.visit(current);
+        stmts.emplace_back(
+            ast_.make_node<Block>(std::move(current), Location(f->loc)));
+      }
+      // Replace the current statement.
+      stmt.value = ast_.make_node<Block>(std::move(stmts), Location(f->loc));
+    }
+  }
+
   auto *expr_stmt = stmt.as<ExprStatement>();
   if (!expr_stmt) {
     Visitor<MacroExpander>::visit(stmt);
