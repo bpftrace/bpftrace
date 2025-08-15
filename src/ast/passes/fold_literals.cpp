@@ -15,9 +15,9 @@ const auto FLOW_ERROR = "unable to fold literals due to overflow or underflow";
 
 class LiteralFolder : public Visitor<LiteralFolder, std::optional<Expression>> {
 public:
-  LiteralFolder(ASTContext &ast) : ast_(ast) {};
+  LiteralFolder(ASTContext &ast) : ast_(ast){};
   LiteralFolder(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(std::ref(bpftrace)) {};
+      : ast_(ast), bpftrace_(std::ref(bpftrace)){};
 
   using Visitor<LiteralFolder, std::optional<Expression>>::visit;
 
@@ -31,6 +31,7 @@ public:
   std::optional<Expression> visit(Expression &expr);
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> visit(Builtin &builtin);
+  std::optional<Expression> visit(BlockExpr &block_expr);
 
 private:
   ASTContext &ast_;
@@ -650,6 +651,21 @@ std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
         }
       }
     }
+  }
+
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
+{
+  Visitor<LiteralFolder, std::optional<Expression>>::visit(expr);
+
+  // We fold this only if the statment list is empty, and we find a literal
+  // as the expression value.
+  if (expr.stmts.empty() &&
+      (expr.expr.is<Integer>() || expr.expr.is<NegativeInteger>() ||
+       expr.expr.is<Boolean>() || expr.expr.is<String>())) {
+    return expr.expr;
   }
 
   return std::nullopt;
