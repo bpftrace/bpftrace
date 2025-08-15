@@ -13,6 +13,7 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
@@ -117,6 +118,7 @@ public:
                             MapMetadata &map_metadata,
                             NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
+                            MacroRegistry &macros,
                             bool has_child = true,
                             bool listing = false)
       : ctx_(ctx),
@@ -125,6 +127,7 @@ public:
         map_metadata_(map_metadata),
         named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
+        macros_(macros),
         listing_(listing),
         has_child_(has_child)
   {
@@ -177,6 +180,7 @@ private:
   MapMetadata &map_metadata_;
   NamedParamDefaults &named_param_defaults_;
   TypeMetadata &type_metadata_;
+  MacroRegistry &macros_;
   bool listing_;
 
   bool is_final_pass() const;
@@ -184,6 +188,9 @@ private:
 
   std::optional<size_t> check(Sizeof &szof);
   std::optional<size_t> check(Offsetof &offof);
+
+  // Returns `true` if the expression has already been visited.
+  bool do_apply(Expression &expr);
 
   [[nodiscard]] bool check_arg(const Call &call,
                                size_t index,
@@ -266,6 +273,9 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
   std::map<std::string, bpf_map_type> bpf_map_type_;
+
+  // Used to determine recursion limits with macros.
+  uint64_t macro_depth_ = 0;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
@@ -2825,6 +2835,116 @@ void SemanticAnalyser::visit(While &while_block)
   loop_depth_--;
 }
 
+bool SemanticAnalyser::do_apply(Expression &expr)
+{
+  auto *call = expr.as<Call>();
+  if (!call || call->func != "apply" || call->vargs.size() < 1) {
+    return false; // This is not an apply.
+  }
+
+  // Visit the arguments normally.
+  visit(call->vargs);
+
+  // We can't make progress until we have types for everything.
+  for (const auto &arg : call->vargs) {
+    if (arg.type().IsNoneTy()) {
+      if (is_final_pass()) {
+        arg.node().addError() << "Unable to resolve type for `apply`.";
+      }
+      return true;
+    }
+  }
+
+  // We need a string, ensure that after resolution, folding, etc. the function
+  // expression is a string. This allows us to dispatch to dynamic names based
+  // on the types provided, etc. We treat bare identifiers as function names
+  // here, purely for convenience.
+  std::string func;
+  auto &func_expr = call->vargs.at(0);
+  if (!func_expr.type().IsNoneTy()) {
+    if (is_final_pass()) {
+      func_expr.node().addError() << "Unable to resolve function for `apply`.";
+    }
+    return true;
+  }
+  if (auto *s = func_expr.as<String>()) {
+    func = s->value;
+  } else if (auto *ident = func_expr.as<Identifier>()) {
+    func = ident->ident; // Accept a naked ident for convenience.
+  } else {
+    func_expr.node().addError() << "Function must resolve to a string.";
+    return false; // Invalid apply.
+  }
+
+  // If we are ready to apply, then we can construct our call. All provided
+  // arguments must be tuples, and they are concatenated into the final set.
+  size_t errors = 0;
+  std::vector<Expression> args;
+  for (size_t i = 1; i < call->vargs.size(); i++) {
+    const auto &arg = call->vargs.at(i);
+    if (const auto *tuple = arg.as<Tuple>()) {
+      // It is a literal tuple, and we pass through the expressions directly.
+      for (const auto &elem : tuple->elems) {
+        args.push_back(clone(ctx_, elem, func_expr.node().loc));
+      }
+    } else {
+      const auto &ty = arg.type();
+      if (ty.IsTupleTy()) {
+        // It is a tuple-value, and we need to replace with TupleAccess
+        // operations, each of which expands to become a unique argument.
+        for (ssize_t i = 0; i < ty.GetFieldCount(); i++) {
+          auto expr = clone(ctx_, arg, arg.node().loc);
+          auto *tuple_access = ctx_.make_node<TupleAccess>(
+              expr, i, Location(arg.node().loc));
+          args.emplace_back(tuple_access);
+        }
+      } else {
+        // Other types must be wrapped in a tuple.
+        arg.node().addError() << "Apply arguments must be tuples.";
+        errors++;
+      }
+    }
+  }
+  if (errors != 0) {
+    return true;
+  }
+
+  // Construct the call.
+  //
+  // At this point, it is required to do late macro expansion again since the
+  // apply could be referring to a valid macro. We need our own recursion
+  // defense in this case.
+  expr.value = ctx_.make_node<Call>(func,
+                                    std::move(args),
+                                    Location(expr.node().loc));
+  if (expand(ctx_, macros_, expr, macro_depth_ + 1)) {
+    if (macro_depth_ > bpftrace_.config_->max_apply_recursion) {
+      auto &err = expr.node().addError();
+      err << "Reached recursive expansion limit of "
+          << bpftrace_.config_->max_apply_recursion << ".";
+      err.addHint() << "This can be adjusted with the "
+                       "`max_apply_recursion` configuration.";
+      return true;
+    }
+    // Fold immediately, as this may be required to remove some of the
+    // recursive paths. The way infinite recursion is avoided is by having
+    // literal evaluation or `typeof` folding.
+    fold(ctx_, expr);
+
+    // Re-visit the expression, with an increased macro recursion depth. The
+    // intent is to expand aggressive while we are able to.
+    macro_depth_++;
+    visit(expr);
+    macro_depth_--;
+  } else {
+    // Visit normally, as we will not perform the regular visit on the return
+    // path. This will still visit this specific expression.
+    visit(expr);
+  }
+
+  return true;
+}
+
 void SemanticAnalyser::visit(For &f)
 {
   if (f.iterable.is<Range>() && !bpftrace_.feature_->has_helper_loop()) {
@@ -3342,7 +3462,12 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(Expression &expr)
 {
-  // Visit and fold all other values.
+  // Check the special `apply` intrinsic.
+  if (do_apply(expr)) {
+    return; // Already processed.
+  }
+
+  // Visit and refold all values.
   Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
 
@@ -4631,13 +4756,15 @@ Pass CreateSemanticPass(bool listing)
                       CDefinitions &c_definitions,
                       MapMetadata &mm,
                       NamedParamDefaults &named_param_defaults,
-                      TypeMetadata &types) {
+                      TypeMetadata &types,
+                      MacroRegistry &macros) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
                                named_param_defaults,
                                types,
+                               macros,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);
     semantics.analyse();
