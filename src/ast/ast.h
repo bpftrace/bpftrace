@@ -1088,7 +1088,7 @@ public:
   Expression end;
 };
 
-class Iterable : public VariantNode<Map, Range> {
+class Iterable : public VariantNode<Map, Tuple, Range> {
 public:
   using VariantNode::VariantNode;
   Iterable() : Iterable(static_cast<Map *>(nullptr)) {};
@@ -1098,21 +1098,12 @@ class For : public Node {
 public:
   explicit For(ASTContext &ctx,
                Variable *decl,
-               Map *map,
+               Iterable iterable,
                StatementList &&stmts,
                Location &&loc)
       : Node(ctx, std::move(loc)),
         decl(decl),
-        iterable(map),
-        stmts(std::move(stmts)) {};
-  explicit For(ASTContext &ctx,
-               Variable *decl,
-               Range *range,
-               StatementList &&stmts,
-               Location &&loc)
-      : Node(ctx, std::move(loc)),
-        decl(decl),
-        iterable(range),
+        iterable(iterable),
         stmts(std::move(stmts)) {};
   explicit For(ASTContext &ctx, const For &other, const Location &loc)
       : Node(ctx, loc + other.loc),

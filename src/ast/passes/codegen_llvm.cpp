@@ -3334,7 +3334,16 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
 ScopedExpr CodegenLLVM::visit(For &f)
 {
   scope_stack_.push_back(&f);
-  std::visit([&](auto *iter) { visit(f, *iter); }, f.iterable.value);
+  std::visit(
+      [&](auto *iter) {
+        // This is a macro syntax, we don't support this during codegen.
+        if constexpr (std::is_same_v<decltype(iter), Tuple *>) {
+          LOG(BUG) << "For contains unexpected tuple during codegen.";
+        } else {
+          visit(f, *iter);
+        }
+      },
+      f.iterable.value);
   scope_stack_.pop_back();
   return ScopedExpr();
 }

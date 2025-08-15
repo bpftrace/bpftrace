@@ -3029,7 +3029,7 @@ begin { for ($kv : @map) print($kv); }
 
   // Map for decl
   test_parse_failure("begin { for (@kv : @map) { } }", R"(
-stdin:1:13-17: ERROR: syntax error, unexpected map, expecting variable
+stdin:1:13-17: ERROR: syntax error, unexpected map, expecting identifier or variable
 begin { for (@kv : @map) { } }
             ~~~~
 )");

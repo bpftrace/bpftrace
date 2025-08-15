@@ -4925,6 +4925,18 @@ TEST_F(SemanticAnalyserTest, for_range_nested_range)
        "} } }");
 }
 
+TEST_F(SemanticAnalyserTest, for_loop_tuple)
+{
+  // Same type.
+  test("begin { for (i : (0, 1, 2)) { print(i); } }");
+
+  // Multiple types.
+  test(R"(begin { for (i : (0, "foo")) { print(i); } })");
+
+  // More complex logic, with external variables.
+  test(R"(begin { $x = 0; for (i : (0, "foo")) { printf("%d: %s\n", $x, i); $x += 1; } })");
+}
+
 TEST_F(SemanticAnalyserTest, castable_map_missing_feature)
 {
   test("k:f {  @a = count(); }", NoFeatures::Enable);
