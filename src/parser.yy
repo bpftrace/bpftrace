@@ -152,6 +152,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
 %type <ast::ExpressionList> macro_args
+%type <ast::VarArgs *> varargs
 %type <ast::Map *> map
 %type <ast::MapAccess *> map_expr
 %type <ast::PositionalParameter *> param
@@ -358,9 +359,16 @@ subprog_arg:
                 VAR ":" type { $$ = driver.ctx.make_node<ast::SubprogArg>($1, $3, @$); }
                 ;
 
+varargs:
+                DOT DOT DOT { $$ = driver.ctx.make_node<ast::VarArgs>(@$); }
+
 macro:
-                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
-        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), false, $6, @$); }
+        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), false, $6, @$); }
+        |       MACRO IDENT "(" macro_args "," varargs ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), true, $8, @$); }
+        |       MACRO IDENT "(" macro_args "," varargs ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), true, $8, @$); }
+        |       MACRO IDENT "(" varargs ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList({}), true, $6, @$); }
+        |       MACRO IDENT "(" varargs ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList({}), true, $6, @$); }
 
 macro_args:
                 macro_args "," map   { $$ = std::move($1); $$.push_back($3); }
@@ -504,6 +512,7 @@ for_stmt:
         // lacks the $-prefix. This means that it cannot be referenced as a
         // variable in the block, and only macro expansion can operate on this.
         |       FOR "(" IDENT ":" tuple_expr ")" block { $$ = driver.ctx.make_node<ast::For>(driver.ctx.make_node<ast::Variable>($3, @3), $5, std::move($7), @1); }
+        |       FOR "(" IDENT ":" varargs ")" block    { $$ = driver.ctx.make_node<ast::For>(driver.ctx.make_node<ast::Variable>($3, @3), $5, std::move($7), @1); }
                 ;
 
 range:
@@ -757,10 +766,14 @@ external_name:
         ;
 
 call:
-                IDENT "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       IDENT "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
-        |       BUILTIN "(" vargs ")"         { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
+                IDENT "(" ")"                     { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), false, @$); }
+        |       BUILTIN "(" ")"                   { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), false, @$); }
+        |       IDENT "(" vargs ")"               { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), false, @$); }
+        |       BUILTIN "(" vargs ")"             { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), false, @$); }
+        |       IDENT "(" varargs ")"             { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), true, @$); }
+        |       BUILTIN "(" varargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), true, @$); }
+        |       IDENT "(" vargs "," varargs ")"   { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), true, @$); }
+        |       BUILTIN "(" vargs "," varargs ")" { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), true, @$); }
                 ;
 
 map:

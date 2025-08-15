@@ -403,19 +403,20 @@ public:
 
 class Call : public Node {
 public:
-  explicit Call(ASTContext &ctx, std::string func, Location &&loc)
-      : Node(ctx, std::move(loc)), func(std::move(func)) {};
   explicit Call(ASTContext &ctx,
                 std::string func,
                 ExpressionList &&vargs,
+                bool varargs,
                 Location &&loc)
       : Node(ctx, std::move(loc)),
         func(std::move(func)),
-        vargs(std::move(vargs)) {};
+        vargs(std::move(vargs)),
+        varargs(varargs) {};
   explicit Call(ASTContext &ctx, const Call &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         func(other.func),
         vargs(clone(ctx, other.vargs, loc)),
+        varargs(other.varargs),
         return_type(other.return_type),
         injected_args(other.injected_args) {};
 
@@ -426,6 +427,7 @@ public:
 
   std::string func;
   ExpressionList vargs;
+  bool varargs;
   SizedType return_type;
 
   // Some passes may inject new arguments to the call, which is always
@@ -1088,7 +1090,15 @@ public:
   Expression end;
 };
 
-class Iterable : public VariantNode<Map, Tuple, Range> {
+class VarArgs : public Node {
+public:
+  explicit VarArgs(ASTContext &ctx, Location &&loc)
+      : Node(ctx, std::move(loc)) {};
+  explicit VarArgs(ASTContext &ctx, const VarArgs &other, const Location &loc)
+      : Node(ctx, loc + other.loc) {};
+};
+
+class Iterable : public VariantNode<Map, Tuple, Range, VarArgs> {
 public:
   using VariantNode::VariantNode;
   Iterable() : Iterable(static_cast<Map *>(nullptr)) {};
@@ -1312,29 +1322,35 @@ public:
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
+        bool varargs,
         BlockExpr *block_expr,
         Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
+        varargs(varargs),
         block(block_expr) {};
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
+        bool varargs,
         Block *block,
         Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
+        varargs(varargs),
         block(block) {};
   explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, other.vargs, loc)),
+        varargs(other.varargs),
         block(clone(ctx, other.block, loc)) {};
 
   std::string name;
   ExpressionList vargs;
+  bool varargs = false;
   std::variant<BlockExpr *, Block *> block;
 };
 using MacroList = std::vector<Macro *>;
