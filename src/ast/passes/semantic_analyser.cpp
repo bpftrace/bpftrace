@@ -12,6 +12,7 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
@@ -120,6 +121,7 @@ public:
                             MapMetadata &map_metadata,
                             NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
+                            MacroRegistry &macros,
                             bool has_child = true,
                             bool listing = false)
       : ctx_(ctx),
@@ -128,6 +130,7 @@ public:
         map_metadata_(map_metadata),
         named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
+        macros_(macros),
         listing_(listing),
         has_child_(has_child)
   {
@@ -182,6 +185,7 @@ private:
   MapMetadata &map_metadata_;
   NamedParamDefaults &named_param_defaults_;
   TypeMetadata &type_metadata_;
+  MacroRegistry &macros_;
   bool listing_;
 
   bool is_final_pass() const;
@@ -272,6 +276,9 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
   std::map<std::string, libbpf::bpf_map_type> bpf_map_type_;
+
+  // Used to determine recursion limits with macros.
+  int macro_depth_ = 0;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
@@ -1185,6 +1192,11 @@ void SemanticAnalyser::visit(Call &call)
   for (size_t i = 0; i < call.vargs.size(); ++i) {
     func_arg_idx_ = i;
     visit(call.vargs.at(i));
+  }
+
+  if (call.varargs) {
+    call.addError() << "Only macros can use variable arguments.";
+    return;
   }
 
   if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
@@ -2829,7 +2841,6 @@ void SemanticAnalyser::visit(While &while_block)
 void SemanticAnalyser::visit(For &f)
 {
   // This must be expanded earlier.
-  assert(!f.iterable.is<Tuple>());
   if (f.iterable.is<Range>() && !bpftrace_.feature_->has_helper_loop()) {
     f.addError() << "Missing required kernel feature: loop";
   }
@@ -2841,6 +2852,12 @@ void SemanticAnalyser::visit(For &f)
     if (!is_first_pass() && !map_val_.contains(map->ident)) {
       map->addError() << "Undefined map: " << map->ident;
     }
+  }
+  if (f.iterable.is<Tuple>()) {
+    LOG(BUG) << "Tuple loop expansion requires macro expansion.";
+  }
+  if (f.iterable.is<VarArgs>()) {
+    LOG(BUG) << "Loop expression using varargs syntax requires macro.";
   }
 
   // For-loops are implemented using the bpf_for_each_map_elem or bpf_loop
@@ -3340,8 +3357,33 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
 void SemanticAnalyser::visit(Expression &expr)
 {
+  // Prior to visiting, ensure that this is fully expanded. It may be the case
+  // that we prune branches from expanded macros, allowing them to be
+  // non-recursive in practice even if they are defined recursively. However, we
+  // can't expand indefinitely, we must impose limits of macro expansion.
+  bool found = false;
+  if (expr.is<Call>()) {
+    found = expand(ctx_, macros_, expr, macro_depth_ + 1);
+  }
+  if (found) {
+    constexpr int MacroExpansionLimit = 16;
+    if (macro_depth_ > MacroExpansionLimit) {
+      expr.node().addError() << "Reached recursive expansion limit of "
+                             << MacroExpansionLimit << "; unable to proceed.";
+      return;
+    }
+    // Fold an extra time, since this has changed. This may be necessary in
+    // order to ensure that some branches are pruned.
+    fold(ctx_, expr);
+    macro_depth_++;
+    Visitor<SemanticAnalyser>::visit(expr);
+    macro_depth_--;
+  } else {
+    // Nothing has changed, so we don't need to re-fold.
+    Visitor<SemanticAnalyser>::visit(expr);
+  }
+
   // Visit and fold all other values.
-  Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
 
   // Inline specific constant expressions.
@@ -4606,13 +4648,15 @@ Pass CreateSemanticPass(bool listing)
                       CDefinitions &c_definitions,
                       MapMetadata &mm,
                       NamedParamDefaults &named_param_defaults,
-                      TypeMetadata &types) {
+                      TypeMetadata &types,
+                      MacroRegistry &macros) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
                                named_param_defaults,
                                types,
+                               macros,
                                !b.cmd_.empty() || b.child_ != nullptr,
                                listing);
     semantics.analyse();

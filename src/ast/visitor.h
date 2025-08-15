@@ -198,6 +198,10 @@ public:
     visitImpl(range.end);
     return default_value();
   }
+  R visit([[maybe_unused]] VarArgs &varargs)
+  {
+    return default_value();
+  }
   R visit(For &for_loop)
   {
     visitImpl(for_loop.decl);

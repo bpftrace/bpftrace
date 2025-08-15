@@ -3337,8 +3337,10 @@ ScopedExpr CodegenLLVM::visit(For &f)
   std::visit(
       [&](auto *iter) {
         // This is a macro syntax, we don't support this during codegen.
-        if constexpr (std::is_same_v<decltype(iter), Tuple *>) {
-          LOG(BUG) << "For contains unexpected tuple during codegen.";
+        if constexpr (std::is_same_v<decltype(iter), Tuple *> ||
+                      std::is_same_v<decltype(iter), VarArgs *>) {
+          LOG(BUG)
+              << "For contains unexpected tuple or varargs during codegen.";
         } else {
           visit(f, *iter);
         }
