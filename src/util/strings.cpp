@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <codecvt>
 #include <cstdint>
+#include <locale>
 #include <sstream>
 
 #include "util/strings.h"
@@ -117,6 +119,12 @@ bool is_str_bool_falsy(const std::string &value)
 {
   auto val = util::to_lower(value);
   return val == "0" || val == "false" || val == "off" || val == "no";
+}
+
+std::string to_utf8(const std::u32string &str)
+{
+  std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+  return conv.to_bytes(str);
 }
 
 } // namespace bpftrace::util
