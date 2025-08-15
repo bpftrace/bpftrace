@@ -363,8 +363,8 @@ subprog_arg:
                 ;
 
 macro:
-                MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
-        |       MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@4); }
+        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@4); }
                 ;
 
 macro_args:
@@ -584,7 +584,7 @@ tuple_expr:
                   // Empty tuple.
                   $$ = driver.ctx.make_node<ast::Tuple>(ast::ExpressionList({}), @$);
                 }
-
+                ;
 
 primary_expr:
                 UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
@@ -816,7 +816,7 @@ keyword:
         |       SUBPROG       { $$ = $1; }
         |       TYPEOF        { $$ = $1; }
         |       TYPEINFO      { $$ = $1; }
-        ;
+                ;
 
 ident:
                 IDENT         { $$ = $1; }
@@ -828,22 +828,23 @@ ident:
 struct_field:
                 external_name                       { $$.push_back($1); }
         |       struct_field DOT external_name      { $$ = std::move($1); $$.push_back($3); }
-        ;
+                ;
 
 external_name:
                 keyword       { $$ = $1; }
         |       ident         { $$ = $1; }
-        ;
+                ;
 
 call:
-                IDENT "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
+                IDENT "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), @$); }
+        |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), @$); }
         |       IDENT "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
         |       BUILTIN "(" vargs ")"         { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
                 ;
 
 map:
                 MAP { $$ = driver.ctx.make_node<ast::Map>($1, @$); }
+                ;
 
 map_expr:
                 map "[" vargs "]" {
