@@ -153,7 +153,7 @@ public:
   void visit(While &while_block);
   void visit(For &f);
   void visit(Jump &jump);
-  void visit(Ternary &ternary);
+  void visit(IfExpr &if_expr);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(TupleAccess &acc);
@@ -165,13 +165,11 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(Predicate &pred);
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
-  void visit(Block &block);
-  void visit(BlockExpr &block_expr);
+  void visit(BlockExpr &block);
   void visit(Subprog &subprog);
 
 private:
@@ -248,7 +246,6 @@ private:
   {
     return loop_depth_ > 0;
   };
-  void accept_statements(StatementList &stmts);
 
   // At the moment we iterate over the stack from top to
   // bottom as variable shadowing is not supported.
@@ -2707,66 +2704,51 @@ void SemanticAnalyser::visit(Unop &unop)
   }
 }
 
-void SemanticAnalyser::visit(Ternary &ternary)
+void SemanticAnalyser::visit(IfExpr &if_expr)
 {
-  visit(ternary.cond);
-  visit(ternary.left);
-  visit(ternary.right);
+  visit(if_expr.cond);
+  visit(if_expr.left);
+  visit(if_expr.right);
 
-  const Type &cond = ternary.cond.type().GetTy();
-  const auto &lhs = ternary.left.type();
-  const auto &rhs = ternary.right.type();
+  const Type &cond = if_expr.cond.type().GetTy();
+  const auto &lhs = if_expr.left.type();
+  const auto &rhs = if_expr.right.type();
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      ternary.addError() << "Ternary operator must return the same type: "
+      if_expr.addError() << "Branches must return the same type: "
                          << "have '" << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
-    ternary.result_type = lhs;
+    if_expr.result_type = lhs;
     return;
   }
 
   if (lhs.IsStack() && lhs.stack_type != rhs.stack_type) {
     // TODO: fix this for different stack types
-    ternary.addError()
-        << "Ternary operator must have the same stack type on the right "
-           "and left sides.";
+    if_expr.addError() << "Branches must have the same stack type on the right "
+                          "and left sides.";
     return;
   }
 
   if (is_final_pass() && cond != Type::integer && cond != Type::pointer &&
       cond != Type::boolean) {
-    ternary.addError() << "Invalid condition in ternary: " << cond;
+    if_expr.addError() << "Invalid condition: " << cond;
     return;
   }
 
   if (lhs.IsIntegerTy()) {
-    ternary.result_type = CreateInteger(64, lhs.IsSigned());
+    if_expr.result_type = CreateInteger(64, lhs.IsSigned());
   } else {
     auto lsize = lhs.GetSize();
     auto rsize = rhs.GetSize();
     if (lhs.IsTupleTy()) {
-      ternary.result_type = create_merged_tuple(rhs, lhs);
+      if_expr.result_type = create_merged_tuple(rhs, lhs);
     } else {
-      ternary.result_type = lsize > rsize ? lhs : rhs;
+      if_expr.result_type = lsize > rsize ? lhs : rhs;
     }
   }
-}
-
-void SemanticAnalyser::visit(If &if_node)
-{
-  visit(if_node.cond);
-
-  if (is_final_pass()) {
-    const Type &cond = if_node.cond.type().GetTy();
-    if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean)
-      if_node.addError() << "Invalid condition in if(): " << cond;
-  }
-
-  visit(if_node.if_block);
-  visit(if_node.else_block);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -2955,7 +2937,7 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate body. We may relax this in the future.
   CollectNodes<Jump> jumps;
-  jumps.visit(f.stmts);
+  jumps.visit(f.block);
   for (const Jump &n : jumps.nodes()) {
     if (n.ident == JumpType::RETURN) {
       n.addError() << "'" << opstr(n)
@@ -2975,29 +2957,27 @@ void SemanticAnalyser::visit(For &f)
   // reference e.g.
   // begin { @a[1] = 1; for ($kv : @a) { $x = 2; } let $x; }
   if (is_first_pass()) {
-    for (auto &stmt : f.stmts) {
-      // We save these for potential use at the end of this function in
-      // subsequent passes in case the map we're iterating over isn't ready
-      // yet and still needs additional passes to resolve its key/value types
-      // e.g. begin { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
-      //
-      // This is especially tricky because we need to visit all statements
-      // inside the for loop to get the types of the referenced variables but
-      // only after we have the map's key/value type so we can also check
-      // the usages of the created $kv tuple variable.
-      auto [iter, _] = for_vars_referenced_.try_emplace(&f);
-      auto &collector = iter->second;
-      collector.visit(stmt, [this, &found_vars](const auto &var) {
-        if (found_vars.contains(var.ident))
-          return false;
-
-        if (find_variable(var.ident)) {
-          found_vars.insert(var.ident);
-          return true;
-        }
+    // We save these for potential use at the end of this function in
+    // subsequent passes in case the map we're iterating over isn't ready
+    // yet and still needs additional passes to resolve its key/value types
+    // e.g. begin { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
+    //
+    // This is especially tricky because we need to visit all statements
+    // inside the for loop to get the types of the referenced variables but
+    // only after we have the map's key/value type so we can also check
+    // the usages of the created $kv tuple variable.
+    auto [iter, _] = for_vars_referenced_.try_emplace(&f);
+    auto &collector = iter->second;
+    collector.visit(f.block, [this, &found_vars](const auto &var) {
+      if (found_vars.contains(var.ident))
         return false;
-      });
-    }
+
+      if (find_variable(var.ident)) {
+        found_vars.insert(var.ident);
+        return true;
+      }
+      return false;
+    });
   }
 
   // Create type for the loop's decl.
@@ -3022,7 +3002,7 @@ void SemanticAnalyser::visit(For &f)
                                                  .was_assigned = true };
 
   loop_depth_++;
-  accept_statements(f.stmts);
+  visit(f.block);
   loop_depth_--;
 
   scope_stack_.pop_back();
@@ -3030,7 +3010,7 @@ void SemanticAnalyser::visit(For &f)
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
   CollectNodes<Builtin> builtins;
-  builtins.visit(f.stmts);
+  builtins.visit(f.block);
   for (const Builtin &builtin : builtins.nodes()) {
     if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
         builtin.ident == "__builtin_retval") {
@@ -4030,18 +4010,21 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   }
 }
 
-void SemanticAnalyser::visit(Block &block)
+void SemanticAnalyser::visit(BlockExpr &block)
 {
   scope_stack_.push_back(&block);
-  accept_statements(block.stmts);
-  scope_stack_.pop_back();
-}
-
-void SemanticAnalyser::visit(BlockExpr &block_expr)
-{
-  scope_stack_.push_back(&block_expr);
-  accept_statements(block_expr.stmts);
-  visit(block_expr.expr);
+  for (size_t i = 0; i < block.stmts.size(); i++) {
+    auto &stmt = block.stmts.at(i);
+    visit(stmt);
+    if (is_final_pass()) {
+      auto *jump = stmt.as<Jump>();
+      if (jump && i < (block.stmts.size() - 1)) {
+        jump->addWarning() << "All code after a '" << opstr(*jump)
+                           << "' is unreachable.";
+      }
+    }
+  }
+  visit(block.expr);
   scope_stack_.pop_back();
 }
 
@@ -4405,22 +4388,6 @@ void SemanticAnalyser::assign_map_type(Map &map,
       map_val_[map_ident].SetSize(8);
     }
     map.value_type = map_val_[map_ident];
-  }
-}
-
-void SemanticAnalyser::accept_statements(StatementList &stmts)
-{
-  for (size_t i = 0; i < stmts.size(); i++) {
-    visit(stmts.at(i));
-    auto &stmt = stmts.at(i);
-
-    if (is_final_pass()) {
-      auto *jump = stmt.as<Jump>();
-      if (jump && i < (stmts.size() - 1)) {
-        jump->addWarning() << "All code after a '" << opstr(*jump)
-                           << "' is unreachable.";
-      }
-    }
   }
 }
 

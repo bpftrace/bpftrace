@@ -64,7 +64,7 @@ void USDTArgumentLift::visit(Probe &probe)
   }
 
   // Rewrite the block to include declarations.
-  std::vector<Statement> stmt_list;
+  StatementList stmt_list;
   for (const auto arg_num : args_) {
     stmt_list.emplace_back(var_decl(arg_num, probe));
   }

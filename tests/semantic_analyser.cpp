@@ -488,51 +488,53 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
       ExpectedAST{ R"(
 Program
  kprobe:f
-  ?: :: [(string[13],string[13])]
+  if :: [(string[13],string[13])]
    < :: [bool]
     builtin: pid :: [uint32]
     int: 10000 :: [int64]
-   tuple: :: [(string[2],string[13])]
-    string: a
-    string: hellolongstr
-   tuple: :: [(string[13],string[2])]
-    string: hellolongstr
-    string: b
+   then
+    tuple: :: [(string[2],string[13])]
+     string: a
+     string: hellolongstr
+   else
+    tuple: :: [(string[13],string[2])]
+     string: hellolongstr
+     string: b
 )" });
 
   // Error location is incorrect: #3063
   test("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", Error{ R"(
-stdin:1:12-50: ERROR: Ternary operator must return the same type: have 'int64' and 'none'
+stdin:1:12-50: ERROR: Branches must return the same type: have 'int64' and 'none'
 kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
-stdin:1:17-42: ERROR: Ternary operator must return the same type: have 'int64' and 'string'
+stdin:1:17-42: ERROR: Branches must return the same type: have 'int64' and 'string'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", Error{ R"(
-stdin:1:17-40: ERROR: Ternary operator must return the same type: have 'string' and 'int64'
+stdin:1:17-40: ERROR: Branches must return the same type: have 'string' and 'int64'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", Error{ R"(
-stdin:1:17-49: ERROR: Ternary operator must return the same type: have '(int64,int64)' and '(string,int64)'
+stdin:1:17-49: ERROR: Branches must return the same type: have '(int64,int64)' and '(string,int64)'
 kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }", Error{ R"(
-stdin:1:17-53: ERROR: Ternary operator must have the same stack type on the right and left sides.
+stdin:1:17-53: ERROR: Branches must have the same stack type on the right and left sides.
 kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }", Error{ R"(
-stdin:1:17-58: ERROR: Ternary operator must have the same stack type on the right and left sides.
+stdin:1:17-58: ERROR: Branches must have the same stack type on the right and left sides.
 kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5036,8 +5038,8 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   test("begin { let $a: struct x *; }");
   test("begin { let $a: struct task_struct *; $a = curtask; }");
   test("begin { let $a: struct Foo[10]; }");
-  test("begin { if (1) { let $x; } $x = 2; }");
-  test("begin { if (1) { let $x; } else { let $x; } let $x; }");
+  test("begin { if (pid) { let $x; } $x = 2; }");
+  test("begin { if (pid) { let $x; } else { let $x; } let $x; }");
 
   // https://github.com/bpftrace/bpftrace/pull/3668#issuecomment-2596432923
   test("begin { let $a; print($a); $a = 1; }",
@@ -5109,10 +5111,10 @@ begin { let $a: struct bad_task; $a = *curtask; }
                                  ~~~~~~~~~~~~~
 )" });
 
-  test(R"(begin { $x = 2; if (1) { let $x; } })", Error{ R"(
-stdin:1:26-32: ERROR: Variable declarations need to occur before variable usage or assignment. Variable: $x
-begin { $x = 2; if (1) { let $x; } }
-                         ~~~~~~
+  test(R"(begin { $x = 2; if (pid) { let $x; } })", Error{ R"(
+stdin:1:28-34: ERROR: Variable declarations need to occur before variable usage or assignment. Variable: $x
+begin { $x = 2; if (pid) { let $x; } }
+                           ~~~~~~
 )" });
 }
 
@@ -5154,15 +5156,15 @@ begin { $x = &@a; }
 TEST_F(SemanticAnalyserTest, block_scoping)
 {
   // if/else
-  test("begin { $a = 1; if (1) { $b = 2; "
+  test("begin { $a = 1; if (pid) { $b = 2; "
        "print(($a, $b)); } }");
   test(R"(
       begin {
         $a = 1;
-        if (1) {
+        if (pid) {
           print(($a));
           $b = 2;
-          if (1) {
+          if (pid) {
             print(($a, $b));
           } else {
             print(($a, $b));
@@ -5233,7 +5235,7 @@ TEST_F(SemanticAnalyserTest, block_scoping)
     begin {
       $a = 1;
       @x[0] = 1;
-      if (1) {
+      if (pid) {
         $b = 2;
         for ($kv : @x) {
           $c = 3;
@@ -5249,20 +5251,21 @@ TEST_F(SemanticAnalyserTest, block_scoping)
     })");
 
   // if/else
-  test("begin { if (1) { $a = 1; } print(($a)); }", Error{ R"(
-stdin:1:28-37: ERROR: Undefined or undeclared variable: $a
-begin { if (1) { $a = 1; } print(($a)); }
-                           ~~~~~~~~~
+  test("begin { if (pid) { $a = 1; } print(($a)); }", Error{ R"(
+stdin:1:30-39: ERROR: Undefined or undeclared variable: $a
+begin { if (pid) { $a = 1; } print(($a)); }
+                             ~~~~~~~~~
 )" });
-  test("begin { if (1) { $a = 1; } else { print(($a)); } }", Error{ R"(
-stdin:1:35-44: ERROR: Undefined or undeclared variable: $a
-begin { if (1) { $a = 1; } else { print(($a)); } }
-                                  ~~~~~~~~~
+  test("begin { if (pid) { $a = 1; } else { print(($a)); } }", Error{ R"(
+stdin:1:37-46: ERROR: Undefined or undeclared variable: $a
+begin { if (pid) { $a = 1; } else { print(($a)); } }
+                                    ~~~~~~~~~
 )" });
-  test("begin { if (1) { $b = 1; } else { $b = 2; } print(($b)); }", Error{ R"(
-stdin:1:45-54: ERROR: Undefined or undeclared variable: $b
-begin { if (1) { $b = 1; } else { $b = 2; } print(($b)); }
-                                            ~~~~~~~~~
+  test("begin { if (pid) { $b = 1; } else { $b = 2; } print(($b)); }",
+       Error{ R"(
+stdin:1:47-56: ERROR: Undefined or undeclared variable: $b
+begin { if (pid) { $b = 1; } else { $b = 2; } print(($b)); }
+                                              ~~~~~~~~~
 )" });
 
   // for loops

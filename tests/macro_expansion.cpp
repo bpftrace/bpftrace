@@ -70,15 +70,14 @@ TEST(macro_expansion, basic_checks)
   test("macro add1(x) { x + 1 } begin { $y = 1; add1($y); }");
   test("macro add1(x) { x + 1 } begin { @y = 1; add1(@y); }");
 
-  test_error("macro add1($x) { $x += 1; } begin { $y = 1; $z = add1($y); }",
-             "Macro 'add1' expanded to a block instead of a block expression. "
-             "Try removing the semicolon from the end of the last statement in "
-             "the macro body.");
-  test_error("macro add2($y) { $y += 1; } macro add1($x) { $x += add2($x); } "
-             "begin { $y = 1; add1($y); }",
-             "Macro 'add2' expanded to a block instead of a block expression. "
-             "Try removing the semicolon from the end of the last statement in "
-             "the macro body.");
+  // Note that these will ultimately result in semantic errors, because they
+  // attempt to assign something with no value to a scratch variable. But they
+  // are not strictly an error during macro expansion, as the type mismatch can
+  // obviously go beyond none (to any kind of type mismatch).
+  test("macro add1($x) { $x += 1; } begin { $y = 1; $z = add1($y); }");
+  test("macro add2($y) { $y += 1; } macro add1($x) { $x += add2($x); } begin { "
+       "$y = 1; add1($y); }");
+
   test_error("macro set($x) { $x += 1; $x } begin { $a = 1; set($a, 1); }",
              "Call to macro has wrong number arguments. Expected: 1 but got 2");
   test_error("macro set($x, $x) { $x += 1; $x } begin { $a = 1; set($a, 1); }",

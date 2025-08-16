@@ -15,7 +15,8 @@ public:
   bool visit(Program &prog);
   bool visit(Subprog &subprog);
   bool visit(Jump &jump);
-  bool visit(If &if_node);
+  bool visit(IfExpr &if_expr);
+  bool visit(BlockExpr &block);
 };
 
 } // namespace
@@ -31,12 +32,12 @@ bool ReturnPathAnalyser::visit(Subprog &subprog)
   if (subprog.return_type.IsVoidTy())
     return true;
 
-  for (auto &stmt : subprog.stmts) {
-    if (visit(stmt))
-      return true;
+  if (!visit(subprog.block)) {
+    subprog.addError() << "Not all code paths returned a value";
+    return false;
   }
-  subprog.addError() << "Not all code paths returned a value";
-  return false;
+
+  return true;
 }
 
 bool ReturnPathAnalyser::visit(Jump &jump)
@@ -44,22 +45,19 @@ bool ReturnPathAnalyser::visit(Jump &jump)
   return jump.ident == JumpType::RETURN;
 }
 
-bool ReturnPathAnalyser::visit(If &if_node)
+bool ReturnPathAnalyser::visit(IfExpr &if_expr)
 {
-  bool result = false;
-  for (auto &stmt : if_node.if_block->stmts) {
-    if (visit(stmt))
-      result = true;
-  }
-  if (!result) {
-    // if block has no return
-    return false;
-  }
+  return visit(if_expr.left) && visit(if_expr.right);
+}
 
-  // True if both blocks have a return.
-  // False if else block has no return (or there is no else block).
-  return std::ranges::any_of(if_node.else_block->stmts,
-                             [this](auto &stmt) { return visit(stmt); });
+bool ReturnPathAnalyser::visit(BlockExpr &block)
+{
+  for (auto &stmt : block.stmts) {
+    if (visit(stmt)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 Pass CreateReturnPathPass()

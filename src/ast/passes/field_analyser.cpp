@@ -383,7 +383,7 @@ void FieldAnalyser::visit(Probe &probe)
 void FieldAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
-  visit(subprog.stmts);
+  visit(subprog.block);
 }
 
 Pass CreateFieldAnalyserPass()

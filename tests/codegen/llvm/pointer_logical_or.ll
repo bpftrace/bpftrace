@@ -26,10 +26,13 @@ entry:
   %lhs_true_cond = icmp ne ptr %1, null
   br i1 %lhs_true_cond, label %"||_true", label %"||_lhs_false"
 
-if_body:                                          ; preds = %"||_merge"
-  br label %if_end
+left:                                             ; preds = %"||_merge"
+  br label %done
 
-if_end:                                           ; preds = %if_body, %"||_merge"
+right:                                            ; preds = %"||_merge"
+  br label %done
+
+done:                                             ; preds = %right, %left
   ret i64 0
 
 "||_lhs_false":                                   ; preds = %entry
@@ -46,7 +49,7 @@ if_end:                                           ; preds = %if_body, %"||_merge
 "||_merge":                                       ; preds = %"||_true", %"||_false"
   %2 = load i1, ptr %"||_result", align 1
   %true_cond = icmp ne i1 %2, false
-  br i1 %true_cond, label %if_body, label %if_end
+  br i1 %true_cond, label %left, label %right
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)

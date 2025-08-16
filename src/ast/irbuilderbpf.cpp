@@ -12,7 +12,6 @@
 #include "globalvars.h"
 #include "log.h"
 #include "types.h"
-#include "util/bpf_funcs.h"
 #include "util/exceptions.h"
 
 namespace bpftrace::ast {

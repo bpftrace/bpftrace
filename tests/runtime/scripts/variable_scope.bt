@@ -5,7 +5,7 @@ begin {
 
 	if (1) {
 		let $x;
-		if (0) {
+		if ($x) {
 			$x = 5;
 		}
 		print($x);

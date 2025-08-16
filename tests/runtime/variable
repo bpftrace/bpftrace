@@ -119,7 +119,7 @@ PROG begin { let $x: struct Foo[1];  }
 EXPECT Attached 1 probe
 
 NAME variable declaration not initialized
-PROG begin { let $a; if (false) { $a = 1; } @b = $a; }
+PROG begin { let $a; if ($a) { $a = 1; } @b = $a; }
 EXPECT @b: 0
 
 NAME variable doesn't escape scope

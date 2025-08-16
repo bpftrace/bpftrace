@@ -26,9 +26,9 @@ entry:
   %2 = zext i32 %pid to i64
   %3 = icmp ugt i64 %2, 10
   %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %else_body
+  br i1 %true_cond, label %left, label %right
 
-if_body:                                          ; preds = %entry
+left:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 8, i1 false)
   %4 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
@@ -37,10 +37,7 @@ if_body:                                          ; preds = %entry
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %counter_merge4, %counter_merge
-  ret i64 0
-
-else_body:                                        ; preds = %entry
+right:                                            ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args1)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args1, i8 0, i64 8, i1 false)
   %5 = getelementptr %printf_t.0, ptr %printf_args1, i32 0, i32 0
@@ -49,7 +46,10 @@ else_body:                                        ; preds = %entry
   %ringbuf_loss5 = icmp slt i64 %ringbuf_output2, 0
   br i1 %ringbuf_loss5, label %event_loss_counter3, label %counter_merge4
 
-event_loss_counter:                               ; preds = %if_body
+done:                                             ; preds = %counter_merge4, %counter_merge
+  ret i64 0
+
+event_loss_counter:                               ; preds = %left
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %6 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %6
@@ -59,11 +59,11 @@ event_loss_counter:                               ; preds = %if_body
   store i64 %9, ptr %7, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %if_body
+counter_merge:                                    ; preds = %event_loss_counter, %left
   call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args)
-  br label %if_end
+  br label %done
 
-event_loss_counter3:                              ; preds = %else_body
+event_loss_counter3:                              ; preds = %right
   %get_cpu_id6 = call i64 inttoptr (i64 8 to ptr)() #3
   %10 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded7 = and i64 %get_cpu_id6, %10
@@ -73,9 +73,9 @@ event_loss_counter3:                              ; preds = %else_body
   store i64 %13, ptr %11, align 8
   br label %counter_merge4
 
-counter_merge4:                                   ; preds = %event_loss_counter3, %else_body
+counter_merge4:                                   ; preds = %event_loss_counter3, %right
   call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args1)
-  br label %if_end
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
