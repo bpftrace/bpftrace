@@ -63,16 +63,9 @@ public:
   void visit(VarDeclStatement &decl);
   void visit(Map &map);
   void visit(Expression &expr);
-  // We can't add extra params with default values to the standard `visit`
-  // because it then becomes ambiguous
-  void replace_macro_call(Expression &expr, bool block_ok = false);
-  void visit(Statement &stmt);
 
-  std::optional<BlockExpr *> expand(Macro &macro, Call &call);
-  std::optional<BlockExpr *> expand(Macro &macro, Identifier &ident);
-  std::optional<BlockExpr *> make_block_expr(Macro &macro,
-                                             StatementList &stmt_list,
-                                             const Location &loc);
+  std::optional<Block *> expand(Macro &macro, Call &call);
+  std::optional<Block *> expand(Macro &macro, Identifier &ident);
 
 private:
   ASTContext &ast_;
@@ -187,7 +180,7 @@ bool MacroExpander::is_recursive_call(const std::string &macro_name,
   return false;
 }
 
-void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
+void MacroExpander::visit(Expression &expr)
 {
   auto *ident = expr.as<Identifier>();
   auto *call = expr.as<Call>();
@@ -226,15 +219,6 @@ void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
       return;
     }
 
-    if (std::holds_alternative<Block *>(macro->block) && !block_ok) {
-      auto &err = expr.node().addError();
-      err << "Macro '" << name
-          << "' expanded to a block instead of a block "
-             "expression. Try removing the semicolon from the "
-             "end of the last statement in the macro body.";
-      return;
-    }
-
     auto next_macro_stack = macro_stack_;
     next_macro_stack.push_back(name);
 
@@ -249,68 +233,12 @@ void MacroExpander::replace_macro_call(Expression &expr, bool block_ok)
   }
 }
 
-void MacroExpander::visit(Expression &expr)
-{
-  replace_macro_call(expr);
-}
-
-void MacroExpander::visit(Statement &stmt)
-{
-  auto *expr_stmt = stmt.as<ExprStatement>();
-  if (!expr_stmt) {
-    Visitor<MacroExpander>::visit(stmt);
-    return;
-  }
-
-  replace_macro_call(expr_stmt->expr, true);
-}
-
 std::string MacroExpander::get_new_var_ident(std::string original_ident)
 {
   return std::string("$$") + macro_name_ + std::string("_") + original_ident;
 }
 
-std::optional<BlockExpr *> MacroExpander::make_block_expr(
-    Macro &macro,
-    StatementList &stmt_list,
-    const Location &loc)
-{
-  Expression macro_expr;
-
-  if (std::holds_alternative<Block *>(macro.block)) {
-    auto *bare_block = std::get<Block *>(macro.block);
-    // Since this always evaluates to a BlockExpr we insert a unused
-    // final expression. This shouldn't ever be an issue as we have
-    // a check above to ensure that macro bodies that are blocks
-    // never get used in place of block expressions, e.g., this is not legal
-    // because there is a trailing semi-colon in the macro body:
-    // `macro add_one($x) { $x + 1; } begin { $x = 1; $y = add_one($x);`
-    macro_expr = ast_.make_node<Boolean>(false, Location(macro.loc));
-    for (auto expr : bare_block->stmts) {
-      stmt_list.push_back(clone(ast_, expr, loc));
-    }
-  } else {
-    auto *block_expr = std::get<BlockExpr *>(macro.block);
-    macro_expr = clone(ast_, block_expr->expr, loc);
-    for (auto expr : block_expr->stmts) {
-      stmt_list.push_back(clone(ast_, expr, loc));
-    }
-  }
-
-  auto *cloned_block = ast_.make_node<BlockExpr>(std::move(stmt_list),
-                                                 macro_expr,
-                                                 Location(macro.loc));
-
-  visit(cloned_block);
-
-  if (ast_.diagnostics().ok()) {
-    return cloned_block;
-  }
-
-  return std::nullopt;
-}
-
-std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
+std::optional<Block *> MacroExpander::expand(Macro &macro, Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
     call.addError() << "Call to macro has wrong number arguments. Expected: "
@@ -318,14 +246,11 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
     return std::nullopt;
   }
 
-  StatementList stmt_list;
-
   for (size_t i = 0; i < macro.vargs.size(); i++) {
     if (auto *mident = macro.vargs.at(i).as<Identifier>()) {
       if (call.vargs.at(i).is<Variable>() || call.vargs.at(i).is<Map>()) {
-        // Wrap variables and maps in a BlockExpr so their value is used
-        // and they won't be mutated.
-        passed_exprs_[mident->ident] = ast_.make_node<BlockExpr>(
+        // Wrap variables and maps in a block to avoid mutation.
+        passed_exprs_[mident->ident] = ast_.make_node<Block>(
             StatementList({}),
             clone(ast_, call.vargs.at(i), call.vargs.at(i).loc()),
             Location(call.loc));
@@ -361,11 +286,12 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
     }
   }
 
-  return make_block_expr(macro, stmt_list, call.loc);
+  auto *inst = clone(ast_, macro.block, call.loc);
+  visit(inst);
+  return inst;
 }
 
-std::optional<BlockExpr *> MacroExpander::expand(Macro &macro,
-                                                 Identifier &ident)
+std::optional<Block *> MacroExpander::expand(Macro &macro, Identifier &ident)
 {
   if (!macro.vargs.empty()) {
     ident.addError() << "Call to macro has no number arguments. Expected: "
@@ -373,8 +299,9 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro,
     return std::nullopt;
   }
 
-  StatementList stmt_list;
-  return make_block_expr(macro, stmt_list, ident.loc);
+  auto *inst = clone(ast_, macro.block, ident.loc);
+  visit(inst);
+  return inst;
 }
 
 Pass CreateMacroExpansionPass()
