@@ -5254,10 +5254,10 @@ stdin:1:28-37: ERROR: Undefined or undeclared variable: $a
 begin { if (1) { $a = 1; } print(($a)); }
                            ~~~~~~~~~
 )" });
-  test("begin { if (1) { $a = 1; } else { print(($a)); } }", Error{ R"(
-stdin:1:35-44: ERROR: Undefined or undeclared variable: $a
-begin { if (1) { $a = 1; } else { print(($a)); } }
-                                  ~~~~~~~~~
+  test("begin { $x = 1; if ($x) { $a = 1; } else { print(($a)); } }", Error{ R"(
+stdin:1:44-53: ERROR: Undefined or undeclared variable: $a
+begin { $x = 1; if ($x) { $a = 1; } else { print(($a)); } }
+                                           ~~~~~~~~~
 )" });
   test("begin { if (1) { $b = 1; } else { $b = 2; } print(($b)); }", Error{ R"(
 stdin:1:45-54: ERROR: Undefined or undeclared variable: $b
