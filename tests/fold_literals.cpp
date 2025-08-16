@@ -37,8 +37,12 @@ void test(const std::string& input,
   if (!output.empty() || !warn.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     if (!output.empty()) {
-      EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
-          << msg.str() << out.str();
+      if (output.find("begin") == std::string::npos) {
+        EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
+            << msg.str() << out.str();
+      } else {
+        EXPECT_THAT(out.str(), HasSubstr(output)) << msg.str() << out.str();
+      }
     }
     if (!warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
@@ -462,11 +466,35 @@ TEST(fold_literals, unary)
 
 TEST(fold_literals, ternary)
 {
-  test("0 ? true : false", "bool: false");
-  test("1 ? true : false", "bool: true");
-  test("-1 ? true : false", "bool: true");
-  test("\"foo\" ? true : false", "bool: true");
-  test("\"\" ? true : false", "bool: false");
+  // These are validating that the ternary is removed completely
+  test("0 ? true : false", "begin\n  bool: false");
+  test("1 ? true : false", "begin\n  bool: true");
+  test("-1 ? true : false", "begin\n  bool: true");
+  test("\"foo\" ? true : false", "begin\n  bool: true");
+  test("\"\" ? true : false", "begin\n  bool: false");
+  test("1 + 1 ? 100 : 200", "begin\n  int: 100 :: [int64]");
+  test("1 - 1 ? 100 : 200", "begin\n  int: 200 :: [int64]");
+  test("\"str\" ? 100 : 200", "begin\n  int: 100 :: [int64]");
+  test("\"\" ? 100 : 200", "begin\n  int: 200 :: [int64]");
+}
+
+TEST(fold_literals, conditional_cast)
+{
+  test("if (1) {}", "if\n   bool: true");
+  test("if (-1) {}", "if\n   bool: true");
+  test("if (0) {}", "if\n   bool: false");
+  test("if (1 + 1) {}", "if\n   bool: true");
+  test("if (1 - 1) {}", "if\n   bool: false");
+  test("if (\"str\") {}", "if\n   bool: true");
+  test("if (\"\") {}", "if\n   bool: false");
+
+  test("while (1) {}", "while(\n   bool: true");
+  test("while (-1) {}", "while(\n   bool: true");
+  test("while (0) {}", "while(\n   bool: false");
+  test("while (1 + 1) {}", "while(\n   bool: true");
+  test("while (1 - 1) {}", "while(\n   bool: false");
+  test("while (\"str\") {}", "while(\n   bool: true");
+  test("while (\"\") {}", "while(\n   bool: false");
 }
 
 } // namespace bpftrace::test::fold_literals

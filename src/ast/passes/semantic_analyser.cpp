@@ -3235,7 +3235,7 @@ void SemanticAnalyser::visit(Cast &cast)
   if (rhs.IsRecordTy()) {
     cast.addError() << "Cannot cast from struct type \"" << cast.expr.type()
                     << "\"";
-  } else if (rhs.IsNoneTy()) {
+  } else if (is_final_pass() && rhs.IsNoneTy()) {
     cast.addError() << "Cannot cast from \"" << cast.expr.type() << "\" type";
   }
 

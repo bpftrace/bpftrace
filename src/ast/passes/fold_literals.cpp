@@ -31,6 +31,8 @@ public:
   std::optional<Expression> visit(Expression &expr);
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> visit(Builtin &builtin);
+  std::optional<Expression> visit(If &if_node);
+  std::optional<Expression> visit(While &while_block);
 
 private:
   ASTContext &ast_;
@@ -40,6 +42,12 @@ private:
 };
 
 } // namespace
+
+static bool is_literal(const Expression &expr)
+{
+  return expr.is<Integer>() || expr.is<NegativeInteger>() ||
+         expr.is<String>() || expr.is<Boolean>();
+}
 
 template <typename T>
 static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
@@ -254,6 +262,20 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
 std::optional<Expression> LiteralFolder::visit(Cast &cast)
 {
   visit(cast.expr);
+  if (cast.type().IsBoolTy()) {
+    if (auto *integer = cast.expr.as<Integer>()) {
+      return ast_.make_node<Boolean>(integer->value != 0, Location(cast.loc));
+    }
+    if (cast.expr.is<NegativeInteger>()) {
+      return ast_.make_node<Boolean>(true, Location(cast.loc));
+    }
+    if (auto *str = cast.expr.as<String>()) {
+      return ast_.make_node<Boolean>(!str->value.empty(), Location(cast.loc));
+    }
+    if (cast.expr.is<Boolean>()) {
+      return cast.expr;
+    }
+  }
   return std::nullopt;
 }
 
@@ -486,6 +508,10 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
 std::optional<Expression> LiteralFolder::visit(Ternary &op)
 {
   visit(op.cond);
+  if (!op.cond.type().IsBoolTy() && is_literal(op.cond)) {
+    op.cond = ast_.make_node<Cast>(CreateBool(), op.cond, Location(op.loc));
+  }
+  visit(op.cond);
   visit(op.left);
   visit(op.right);
 
@@ -659,6 +685,33 @@ void fold(ASTContext &ast, Expression &expr)
 {
   LiteralFolder folder(ast);
   folder.visit(expr);
+}
+
+std::optional<Expression> LiteralFolder::visit(If &if_node)
+{
+  visit(if_node.cond);
+  if (!if_node.cond.type().IsBoolTy() && is_literal(if_node.cond)) {
+    if_node.cond = ast_.make_node<Cast>(CreateBool(),
+                                        if_node.cond,
+                                        Location(if_node.loc));
+  }
+  visit(if_node.cond);
+  visit(if_node.if_block);
+  visit(if_node.else_block);
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(While &while_block)
+{
+  visit(while_block.cond);
+  if (!while_block.cond.type().IsBoolTy() && is_literal(while_block.cond)) {
+    while_block.cond = ast_.make_node<Cast>(CreateBool(),
+                                            while_block.cond,
+                                            Location(while_block.loc));
+  }
+  visit(while_block.cond);
+  visit(while_block.block);
+  return std::nullopt;
 }
 
 Pass CreateFoldLiteralsPass()
