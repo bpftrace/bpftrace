@@ -24,7 +24,7 @@ public:
   std::optional<Expression> visit(Cast &cast);
   std::optional<Expression> visit(Unop &op);
   std::optional<Expression> visit(Binop &op);
-  std::optional<Expression> visit(Ternary &op);
+  std::optional<Expression> visit(IfExpr &if_expr);
   std::optional<Expression> visit(PositionalParameterCount &param);
   std::optional<Expression> visit(PositionalParameter &param);
   std::optional<Expression> visit(Call &call);
@@ -484,31 +484,31 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
       result.value());
 }
 
-std::optional<Expression> LiteralFolder::visit(Ternary &op)
+std::optional<Expression> LiteralFolder::visit(IfExpr &if_expr)
 {
-  visit(op.cond);
-  visit(op.left);
-  visit(op.right);
+  visit(if_expr.cond);
+  visit(if_expr.left);
+  visit(if_expr.right);
 
-  if (op.cond.is<Integer>()) {
-    if (op.cond.as<Integer>()->value != 0) {
-      return op.left;
+  if (if_expr.cond.is<Integer>()) {
+    if (if_expr.cond.as<Integer>()->value != 0) {
+      return if_expr.left;
     } else {
-      return op.right;
+      return if_expr.right;
     }
-  } else if (op.cond.is<NegativeInteger>()) {
-    return op.left;
-  } else if (op.cond.is<Boolean>()) {
-    if (op.cond.as<Boolean>()->value) {
-      return op.left;
+  } else if (if_expr.cond.is<NegativeInteger>()) {
+    return if_expr.left;
+  } else if (if_expr.cond.is<Boolean>()) {
+    if (if_expr.cond.as<Boolean>()->value) {
+      return if_expr.left;
     } else {
-      return op.right;
+      return if_expr.right;
     }
-  } else if (op.cond.is<String>()) {
-    if (!op.cond.as<String>()->value.empty()) {
-      return op.left;
+  } else if (if_expr.cond.is<String>()) {
+    if (!if_expr.cond.as<String>()->value.empty()) {
+      return if_expr.left;
     } else {
-      return op.right;
+      return if_expr.right;
     }
   }
 

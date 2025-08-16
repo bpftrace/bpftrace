@@ -4,7 +4,6 @@
 
 #include "ast/visitor.h"
 #include "bpftrace.h"
-#include "log.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
@@ -197,15 +196,19 @@ void SessionExpander::visit(Probe &probe)
       return;
 
     AttachPointList attach_points = probe.attach_points;
-    auto *if_cond = ast_.make_node<If>(
+    auto *expr = ast_.make_node<IfExpr>(
         ast_.make_node<Builtin>("__builtin_session_is_return",
                                 Location(probe.block->loc)),
         retprobe->block,
         probe.block,
         Location(probe.block->loc));
+    auto *stmt = ast_.make_node<ExprStatement>(expr,
+                                               Location(probe.block->loc));
 
-    probe.block = ast_.make_node<Block>(std::vector<Statement>{ if_cond },
-                                        Location(probe.block->loc));
+    probe.block = ast_.make_node<BlockExpr>(StatementList({ stmt }),
+                                            ast_.make_node<None>(
+                                                Location(probe.block->loc)),
+                                            Location(probe.block->loc));
 
     expansion_result_.set_expansion(*probe.attach_points[0],
                                     ExpansionType::SESSION);

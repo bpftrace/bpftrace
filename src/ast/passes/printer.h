@@ -19,6 +19,7 @@ public:
   void visit(PositionalParameter &param);
   void visit(PositionalParameterCount &param);
   void visit(String &string);
+  void visit(None &none);
   void visit(StackMode &mode);
   void visit(Identifier &identifier);
   void visit(Builtin &builtin);
@@ -32,7 +33,7 @@ public:
   void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(Unop &unop);
-  void visit(Ternary &ternary);
+  void visit(IfExpr &if_expr);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(TupleAccess &acc);
@@ -45,7 +46,6 @@ public:
   void visit(AssignVarStatement &assignment);
   void visit(AssignConfigVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(While &while_block);
   void visit(Range &range);

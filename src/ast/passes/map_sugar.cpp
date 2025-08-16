@@ -225,7 +225,7 @@ void MapDefaultKey::visit(For &for_loop)
     // to be desugared properly.
     visit(for_loop.iterable);
   }
-  visit(for_loop.stmts);
+  visit(for_loop.block);
 }
 
 void MapFunctionAliases::visit(Call &call)
@@ -263,10 +263,10 @@ static std::optional<Expression> injectMap(Expression expr,
       call->vargs.insert(call->vargs.end(), args.begin(), args.end());
       return call;
     }
-  } else if (auto *block_expr = expr.as<BlockExpr>()) {
-    auto injected_expr = injectMap(block_expr->expr, map, key);
+  } else if (auto *block = expr.as<BlockExpr>()) {
+    auto injected_expr = injectMap(block->expr, map, key);
     if (injected_expr) {
-      return block_expr;
+      return block;
     }
   }
   return std::nullopt;

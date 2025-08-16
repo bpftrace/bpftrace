@@ -46,7 +46,7 @@ public:
   void visit(MapDeclStatement &decl);
   void visit(Tuple &tuple);
   void visit(For &f);
-  void visit(Ternary &ternary);
+  void visit(IfExpr &if_expr);
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
@@ -529,16 +529,16 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   maybe_allocate_map_key_buffer(*assignment.map, assignment.key);
 }
 
-void ResourceAnalyser::visit(Ternary &ternary)
+void ResourceAnalyser::visit(IfExpr &if_expr)
 {
-  Visitor<ResourceAnalyser>::visit(ternary);
+  Visitor<ResourceAnalyser>::visit(if_expr);
 
   // Codegen cannot use a phi node for ternary string b/c strings can be of
   // differing lengths and phi node wants identical types. So we have to
   // allocate a result temporary, but not on the stack b/c a big string would
   // blow it up. So we need a scratch buffer for it.
 
-  if (ternary.result_type.IsStringTy()) {
+  if (if_expr.result_type.IsStringTy()) {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;

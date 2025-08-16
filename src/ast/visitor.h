@@ -45,6 +45,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] None &none)
+  {
+    return default_value();
+  }
   R visit([[maybe_unused]] Builtin &builtin)
   {
     return default_value();
@@ -103,11 +107,11 @@ public:
   {
     return visitImpl(unop.expr);
   }
-  R visit(Ternary &ternary)
+  R visit(IfExpr &if_expr)
   {
-    visitImpl(ternary.cond);
-    visitImpl(ternary.left);
-    visitImpl(ternary.right);
+    visitImpl(if_expr.cond);
+    visitImpl(if_expr.left);
+    visitImpl(if_expr.right);
     return default_value();
   }
   R visit(FieldAccess &acc)
@@ -169,13 +173,6 @@ public:
   {
     return visitImpl(decl.var);
   }
-  R visit(If &if_node)
-  {
-    visitImpl(if_node.cond);
-    visitImpl(if_node.if_block);
-    visitImpl(if_node.else_block);
-    return default_value();
-  }
   R visit(Jump &jump)
   {
     return visitImpl(jump.return_value);
@@ -202,7 +199,7 @@ public:
   {
     visitImpl(for_loop.decl);
     visitImpl(for_loop.iterable);
-    visitImpl(for_loop.stmts);
+    visitImpl(for_loop.block);
     return default_value();
   }
   R visit(Predicate &pred)
@@ -221,16 +218,10 @@ public:
     visitImpl(config.stmts);
     return default_value();
   }
-  R visit(Block &block)
+  R visit(BlockExpr &block)
   {
     visitImpl(block.stmts);
-    return default_value();
-  }
-  R visit(BlockExpr &block_expr)
-  {
-    visitImpl(block_expr.stmts);
-    visitImpl(block_expr.expr);
-    return default_value();
+    return visitImpl(block.expr);
   }
   R visit([[maybe_unused]] Macro &macro)
   {
@@ -242,7 +233,7 @@ public:
   R visit(Subprog &subprog)
   {
     visitImpl(subprog.args);
-    visitImpl(subprog.stmts);
+    visitImpl(subprog.block);
     return default_value();
   }
   R visit([[maybe_unused]] Import &imp)

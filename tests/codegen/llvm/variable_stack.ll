@@ -27,18 +27,18 @@ entry:
   %arg0 = load volatile i64, ptr %2, align 8
   %3 = icmp ugt i64 %arg0, 0
   %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %else_body
+  br i1 %true_cond, label %left, label %right
 
-if_body:                                          ; preds = %entry
+left:                                             ; preds = %entry
   store i64 1, ptr %"$x", align 8
-  br label %if_end
+  br label %done
 
-if_end:                                           ; preds = %else_body, %if_body
-  ret i64 0
-
-else_body:                                        ; preds = %entry
+right:                                            ; preds = %entry
   store i64 2, ptr %"$x1", align 8
-  br label %if_end
+  br label %done
+
+done:                                             ; preds = %right, %left
+  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)

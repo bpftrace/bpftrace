@@ -84,6 +84,11 @@ void Printer::visit(String &string)
   out_ << indent << "string: " << ss.str() << std::endl;
 }
 
+void Printer::visit([[maybe_unused]] None &none)
+{
+  // Just omit this, since it adds tons of noise.
+}
+
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');
@@ -220,16 +225,24 @@ void Printer::visit(Unop &unop)
   --depth_;
 }
 
-void Printer::visit(Ternary &ternary)
+void Printer::visit(IfExpr &if_expr)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "?:" << type(ternary.result_type) << std::endl;
+  out_ << indent << "if" << type(if_expr.result_type) << std::endl;
 
   ++depth_;
-  visit(ternary.cond);
-  visit(ternary.left);
-  visit(ternary.right);
-  --depth_;
+  visit(if_expr.cond);
+
+  ++depth_;
+  out_ << indent << " then" << std::endl;
+  visit(if_expr.left);
+
+  if (!if_expr.right.is<None>()) {
+    out_ << indent << " else" << std::endl;
+    visit(if_expr.right);
+  }
+
+  depth_ -= 2;
 }
 
 void Printer::visit(FieldAccess &acc)
@@ -384,27 +397,6 @@ void Printer::visit(VarDeclStatement &decl)
   --depth_;
 }
 
-void Printer::visit(If &if_node)
-{
-  std::string indent(depth_, ' ');
-
-  out_ << indent << "if" << std::endl;
-
-  ++depth_;
-  visit(if_node.cond);
-
-  ++depth_;
-  out_ << indent << " then" << std::endl;
-
-  visit(if_node.if_block);
-
-  if (!if_node.else_block->stmts.empty()) {
-    out_ << indent << " else" << std::endl;
-    visit(if_node.else_block);
-  }
-  depth_ -= 2;
-}
-
 void Printer::visit(Unroll &unroll)
 {
   std::string indent(depth_, ' ');
@@ -471,7 +463,7 @@ void Printer::visit(For &for_loop)
 
   out_ << indent << " stmts\n";
   ++depth_;
-  visit(for_loop.stmts);
+  visit(for_loop.block);
   --depth_;
 
   --depth_;
@@ -547,7 +539,7 @@ void Printer::visit(Subprog &subprog)
     --depth_;
   }
 
-  visit(subprog.stmts);
+  visit(subprog.block);
 
   --depth_;
 }

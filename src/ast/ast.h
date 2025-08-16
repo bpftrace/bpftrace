@@ -123,6 +123,7 @@ class Boolean;
 class PositionalParameter;
 class PositionalParameterCount;
 class String;
+class None;
 class Identifier;
 class Builtin;
 class Call;
@@ -140,7 +141,7 @@ class TupleAccess;
 class MapAccess;
 class Cast;
 class Tuple;
-class Ternary;
+class IfExpr;
 class BlockExpr;
 
 class Expression : public VariantNode<Integer,
@@ -149,6 +150,7 @@ class Expression : public VariantNode<Integer,
                                       PositionalParameter,
                                       PositionalParameterCount,
                                       String,
+                                      None,
                                       Identifier,
                                       Builtin,
                                       Call,
@@ -166,7 +168,7 @@ class Expression : public VariantNode<Integer,
                                       MapAccess,
                                       Cast,
                                       Tuple,
-                                      Ternary,
+                                      IfExpr,
                                       BlockExpr> {
 public:
   using VariantNode::VariantNode;
@@ -183,24 +185,20 @@ class VarDeclStatement;
 class AssignScalarMapStatement;
 class AssignMapStatement;
 class AssignVarStatement;
-class If;
 class Unroll;
 class Jump;
 class While;
 class For;
-class Block;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
                                      AssignScalarMapStatement,
                                      AssignMapStatement,
                                      AssignVarStatement,
-                                     If,
                                      Unroll,
                                      Jump,
                                      While,
-                                     For,
-                                     Block> {
+                                     For> {
 public:
   using VariantNode::VariantNode;
   Statement() : Statement(static_cast<ExprStatement *>(nullptr)) {};
@@ -284,6 +282,19 @@ public:
   }
 
   const bool value;
+};
+
+class None : public Node {
+public:
+  explicit None(ASTContext &ctx, Location &&loc) : Node(ctx, std::move(loc)) {};
+  explicit None(ASTContext &ctx, const None &other, const Location &loc)
+      : Node(ctx, loc + other.loc) {};
+
+  const SizedType &type() const
+  {
+    static SizedType none = CreateNone();
+    return none;
+  }
 };
 
 class PositionalParameter : public Node {
@@ -919,22 +930,6 @@ public:
 };
 using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
 
-class Block : public Node {
-public:
-  explicit Block(ASTContext &ctx, StatementList &&stmts, Location &&loc)
-      : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
-  explicit Block(ASTContext &ctx, const Block &other, const Location &loc)
-      : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
-
-  const SizedType &type() const
-  {
-    static SizedType none = CreateNone();
-    return none;
-  }
-
-  StatementList stmts;
-};
-
 class BlockExpr : public Node {
 public:
   explicit BlockExpr(ASTContext &ctx,
@@ -960,33 +955,11 @@ public:
   Expression expr;
 };
 
-class If : public Node {
-public:
-  explicit If(ASTContext &ctx,
-              Expression cond,
-              Block *if_block,
-              Block *else_block,
-              Location &&loc)
-      : Node(ctx, std::move(loc)),
-        cond(std::move(cond)),
-        if_block(if_block),
-        else_block(else_block) {};
-  explicit If(ASTContext &ctx, const If &other, const Location &loc)
-      : Node(ctx, loc + other.loc),
-        cond(clone(ctx, other.cond, loc)),
-        if_block(clone(ctx, other.if_block, loc)),
-        else_block(clone(ctx, other.else_block, loc)) {};
-
-  Expression cond;
-  Block *if_block = nullptr;
-  Block *else_block = nullptr;
-};
-
 class Unroll : public Node {
 public:
   explicit Unroll(ASTContext &ctx,
                   Expression expr,
-                  Block *block,
+                  BlockExpr *block,
                   Location &&loc)
       : Node(ctx, std::move(loc)), expr(std::move(expr)), block(block) {};
   explicit Unroll(ASTContext &ctx, const Unroll &other, const Location &loc)
@@ -995,7 +968,7 @@ public:
         block(clone(ctx, other.block, loc)) {};
 
   Expression expr;
-  Block *block = nullptr;
+  BlockExpr *block = nullptr;
 };
 
 class Jump : public Node {
@@ -1030,18 +1003,18 @@ public:
   Expression expr;
 };
 
-class Ternary : public Node {
+class IfExpr : public Node {
 public:
-  explicit Ternary(ASTContext &ctx,
-                   Expression cond,
-                   Expression left,
-                   Expression right,
-                   Location &&loc)
+  explicit IfExpr(ASTContext &ctx,
+                  Expression cond,
+                  Expression left,
+                  Expression right,
+                  Location &&loc)
       : Node(ctx, std::move(loc)),
         cond(std::move(cond)),
         left(std::move(left)),
         right(std::move(right)) {};
-  explicit Ternary(ASTContext &ctx, const Ternary &other, const Location &loc)
+  explicit IfExpr(ASTContext &ctx, const IfExpr &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         cond(clone(ctx, other.cond, loc)),
         left(clone(ctx, other.left, loc)),
@@ -1061,7 +1034,10 @@ public:
 
 class While : public Node {
 public:
-  explicit While(ASTContext &ctx, Expression cond, Block *block, Location &&loc)
+  explicit While(ASTContext &ctx,
+                 Expression cond,
+                 BlockExpr *block,
+                 Location &&loc)
       : Node(ctx, std::move(loc)), cond(cond), block(block) {};
   explicit While(ASTContext &ctx, const While &other, const Location &loc)
       : Node(ctx, loc + other.loc),
@@ -1069,7 +1045,7 @@ public:
         block(clone(ctx, other.block, loc)) {};
 
   Expression cond;
-  Block *block = nullptr;
+  BlockExpr *block = nullptr;
 };
 
 class Range : public Node {
@@ -1098,31 +1074,22 @@ class For : public Node {
 public:
   explicit For(ASTContext &ctx,
                Variable *decl,
-               Map *map,
-               StatementList &&stmts,
+               Iterable iterable,
+               BlockExpr *block,
                Location &&loc)
       : Node(ctx, std::move(loc)),
         decl(decl),
-        iterable(map),
-        stmts(std::move(stmts)) {};
-  explicit For(ASTContext &ctx,
-               Variable *decl,
-               Range *range,
-               StatementList &&stmts,
-               Location &&loc)
-      : Node(ctx, std::move(loc)),
-        decl(decl),
-        iterable(range),
-        stmts(std::move(stmts)) {};
+        iterable(iterable),
+        block(block) {};
   explicit For(ASTContext &ctx, const For &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         decl(clone(ctx, other.decl, loc)),
         iterable(clone(ctx, other.iterable, loc)),
-        stmts(clone(ctx, other.stmts, loc)) {};
+        block(clone(ctx, other.block, loc)) {};
 
   Variable *decl = nullptr;
   Iterable iterable;
-  StatementList stmts;
+  BlockExpr *block = nullptr;
   SizedType ctx_type;
 };
 
@@ -1227,7 +1194,7 @@ public:
   explicit Probe(ASTContext &ctx,
                  AttachPointList &&attach_points,
                  Predicate *pred,
-                 Block *block,
+                 BlockExpr *block,
                  Location &&loc)
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
@@ -1244,7 +1211,7 @@ public:
 
   AttachPointList attach_points;
   Predicate *pred = nullptr;
-  Block *block = nullptr;
+  BlockExpr *block = nullptr;
   std::string orig_name;
 
   std::string args_typename() const;
@@ -1284,24 +1251,24 @@ public:
                    std::string name,
                    SizedType return_type,
                    SubprogArgList &&args,
-                   StatementList &&stmts,
+                   BlockExpr *block,
                    Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         return_type(std::move(return_type)),
         args(std::move(args)),
-        stmts(std::move(stmts)) {};
+        block(block) {};
   explicit Subprog(ASTContext &ctx, const Subprog &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         return_type(other.return_type),
         args(clone(ctx, other.args, loc)),
-        stmts(clone(ctx, other.stmts, loc)) {};
+        block(clone(ctx, other.block, loc)) {};
 
   const std::string name;
   SizedType return_type;
   SubprogArgList args;
-  StatementList stmts;
+  BlockExpr *block = nullptr;
 };
 using SubprogList = std::vector<Subprog *>;
 
@@ -1321,16 +1288,7 @@ public:
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
-        BlockExpr *block_expr,
-        Location &&loc)
-      : Node(ctx, std::move(loc)),
-        name(std::move(name)),
-        vargs(std::move(vargs)),
-        block(block_expr) {};
-  Macro(ASTContext &ctx,
-        std::string name,
-        ExpressionList &&vargs,
-        Block *block,
+        BlockExpr *block,
         Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
@@ -1344,7 +1302,7 @@ public:
 
   std::string name;
   ExpressionList vargs;
-  std::variant<BlockExpr *, Block *> block;
+  BlockExpr *block = nullptr;
 };
 using MacroList = std::vector<Macro *>;
 

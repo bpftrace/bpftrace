@@ -55,7 +55,6 @@
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "codegen_resources.h"
-#include "format_string.h"
 #include "globalvars.h"
 #include "kfuncs.h"
 #include "log.h"
@@ -223,7 +222,7 @@ public:
   ScopedExpr visit(VariableAddr &var_addr);
   ScopedExpr visit(Binop &binop);
   ScopedExpr visit(Unop &unop);
-  ScopedExpr visit(Ternary &ternary);
+  ScopedExpr visit(IfExpr &if_expr);
   ScopedExpr visit(FieldAccess &acc);
   ScopedExpr visit(ArrayAccess &arr);
   ScopedExpr visit(TupleAccess &acc);
@@ -234,7 +233,6 @@ public:
   ScopedExpr visit(AssignMapStatement &assignment);
   ScopedExpr visit(AssignVarStatement &assignment);
   ScopedExpr visit(VarDeclStatement &decl);
-  ScopedExpr visit(If &if_node);
   ScopedExpr visit(Unroll &unroll);
   ScopedExpr visit(While &while_block);
   ScopedExpr visit(For &f, Map &map);
@@ -245,8 +243,7 @@ public:
   ScopedExpr visit(Probe &probe);
   ScopedExpr visit(Subprog &subprog);
   ScopedExpr visit(Program &program);
-  ScopedExpr visit(Block &block);
-  ScopedExpr visit(BlockExpr &block_expr);
+  ScopedExpr visit(BlockExpr &block);
 
   // compile is the primary entrypoint; it will return the generated LLVMModule.
   // Only one call to `compile` is permitted per instantiation.
@@ -2515,7 +2512,7 @@ ScopedExpr CodegenLLVM::visit(Unop &unop)
   }
 }
 
-ScopedExpr CodegenLLVM::visit(Ternary &ternary)
+ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 {
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *left_block = BasicBlock::Create(module_->getContext(),
@@ -2528,78 +2525,78 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
 
   // ordering of all the following statements is important
   Value *buf = nullptr;
-  if (ternary.result_type.IsStringTy()) {
-    buf = b_.CreateGetStrAllocation("buf", ternary.loc);
+  if (if_expr.result_type.IsStringTy()) {
+    buf = b_.CreateGetStrAllocation("buf", if_expr.loc);
     const auto max_strlen = bpftrace_.config_->max_strlen;
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
-  } else if (!ternary.result_type.IsIntTy() &&
-             !ternary.result_type.IsNoneTy()) {
-    buf = b_.CreateAllocaBPF(ternary.result_type);
-    b_.CreateMemsetBPF(buf, b_.getInt8(0), ternary.result_type.GetSize());
+  } else if (!if_expr.result_type.IsIntTy() &&
+             !if_expr.result_type.IsNoneTy()) {
+    buf = b_.CreateAllocaBPF(if_expr.result_type);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
   }
 
-  auto scoped_expr = visit(ternary.cond);
+  auto scoped_expr = visit(if_expr.cond);
   Value *cond = scoped_expr.value();
   Value *zero_value = Constant::getNullValue(cond->getType());
   b_.CreateCondBr(b_.CreateICmpNE(cond, zero_value, "true_cond"),
                   left_block,
                   right_block);
 
-  if (ternary.result_type.IsIntTy()) {
+  if (if_expr.result_type.IsIntTy()) {
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
-    auto scoped_left = visit(ternary.left);
+    auto scoped_left = visit(if_expr.left);
     auto *left_expr = b_.CreateIntCast(scoped_left.value(),
-                                       b_.GetType(ternary.result_type),
-                                       ternary.result_type.IsSigned());
+                                       b_.GetType(if_expr.result_type),
+                                       if_expr.result_type.IsSigned());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
-    auto scoped_right = visit(ternary.right);
+    auto scoped_right = visit(if_expr.right);
     auto *right_expr = b_.CreateIntCast(scoped_right.value(),
-                                        b_.GetType(ternary.result_type),
-                                        ternary.result_type.IsSigned());
+                                        b_.GetType(if_expr.result_type),
+                                        if_expr.result_type.IsSigned());
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
-    auto *phi = b_.CreatePHI(b_.GetType(ternary.result_type), 2, "result");
+    auto *phi = b_.CreatePHI(b_.GetType(if_expr.result_type), 2, "result");
     phi->addIncoming(left_expr, left_block);
     phi->addIncoming(right_expr, right_block);
     return ScopedExpr(phi);
-  } else if (ternary.result_type.IsNoneTy()) {
+  } else if (if_expr.result_type.IsNoneTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
-    visit(ternary.left);
+    visit(if_expr.left);
     b_.CreateBr(done);
     b_.SetInsertPoint(right_block);
-    visit(ternary.right);
+    visit(if_expr.right);
     b_.CreateBr(done);
     b_.SetInsertPoint(done);
     return ScopedExpr();
   } else {
     b_.SetInsertPoint(left_block);
-    auto scoped_left = visit(ternary.left);
-    if (ternary.result_type.IsTupleTy()) {
+    auto scoped_left = visit(if_expr.left);
+    if (if_expr.result_type.IsTupleTy()) {
       createTupleCopy(
-          ternary.left.type(), ternary.result_type, buf, scoped_left.value());
-    } else if (needMemcpy(ternary.result_type)) {
+          if_expr.left.type(), if_expr.result_type, buf, scoped_left.value());
+    } else if (needMemcpy(if_expr.result_type)) {
       b_.CreateMemcpyBPF(buf,
                          scoped_left.value(),
-                         ternary.result_type.GetSize());
+                         if_expr.result_type.GetSize());
     } else {
       b_.CreateStore(scoped_left.value(), buf);
     }
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
-    auto scoped_right = visit(ternary.right);
-    if (ternary.result_type.IsTupleTy()) {
+    auto scoped_right = visit(if_expr.right);
+    if (if_expr.result_type.IsTupleTy()) {
       createTupleCopy(
-          ternary.right.type(), ternary.result_type, buf, scoped_right.value());
-    } else if (needMemcpy(ternary.result_type)) {
+          if_expr.right.type(), if_expr.result_type, buf, scoped_right.value());
+    } else if (needMemcpy(if_expr.result_type)) {
       b_.CreateMemcpyBPF(buf,
                          scoped_right.value(),
-                         ternary.result_type.GetSize());
+                         if_expr.result_type.GetSize());
     } else {
       b_.CreateStore(scoped_right.value(), buf);
     }
@@ -3202,58 +3199,6 @@ ScopedExpr CodegenLLVM::visit(VarDeclStatement &decl)
   return ScopedExpr();
 }
 
-ScopedExpr CodegenLLVM::visit(If &if_node)
-{
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
-                                           "if_body",
-                                           parent);
-  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
-                                          "if_end",
-                                          parent);
-  BasicBlock *if_else = nullptr;
-
-  auto scoped_cond = visit(if_node.cond);
-  auto *cond_expr = scoped_cond.value();
-  Value *zero_value = Constant::getNullValue(cond_expr->getType());
-  Value *cond = b_.CreateICmpNE(cond_expr, zero_value, "true_cond");
-
-  // 3 possible flows:
-  //
-  // if condition is true
-  //   parent -> if_body -> if_end
-  //
-  // if condition is false, no else
-  //   parent -> if_end
-  //
-  // if condition is false, with else
-  //   parent -> if_else -> if_end
-  //
-  if (!if_node.else_block->stmts.empty()) {
-    // LLVM doesn't accept empty basic block, only create when needed
-    if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
-    b_.CreateCondBr(cond, if_true, if_else);
-  } else {
-    b_.CreateCondBr(cond, if_true, if_end);
-  }
-
-  b_.SetInsertPoint(if_true);
-  auto scoped_del_if_block = visit(*if_node.if_block);
-
-  b_.CreateBr(if_end);
-
-  b_.SetInsertPoint(if_end);
-
-  if (!if_node.else_block->stmts.empty()) {
-    b_.SetInsertPoint(if_else);
-    auto scoped_del_else_block = visit(*if_node.else_block);
-
-    b_.CreateBr(if_end);
-    b_.SetInsertPoint(if_end);
-  }
-  return ScopedExpr();
-}
-
 ScopedExpr CodegenLLVM::visit(Unroll &unroll)
 {
   auto n = unroll.expr.as<Integer>()->value;
@@ -3390,15 +3335,6 @@ ScopedExpr CodegenLLVM::visit(Predicate &pred)
   b_.SetInsertPoint(pred_true_block);
 
   return ScopedExpr(cmp_value);
-}
-
-ScopedExpr CodegenLLVM::visit(Block &block)
-{
-  scope_stack_.push_back(&block);
-  visit(block.stmts);
-  scope_stack_.pop_back();
-
-  return ScopedExpr();
 }
 
 ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
@@ -3540,8 +3476,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
     ++arg_index;
   }
 
-  for (Statement &stmt : subprog.stmts)
-    visit(stmt);
+  visit(subprog.block);
   if (subprog.return_type.IsVoidTy())
     createRet();
 
@@ -5073,7 +5008,7 @@ llvm::Function *CodegenLLVM::createForCallback(
 
   // Generate code for the loop body.
   loops_.emplace_back(for_continue, for_break);
-  visit(f.stmts);
+  visit(f.block);
   b_.CreateBr(for_continue);
   loops_.pop_back();
   b_.SetInsertPoint(for_continue);

@@ -22,12 +22,15 @@ entry:
   store ptr inttoptr (i64 1 to ptr), ptr %"$v", align 8
   %1 = load ptr, ptr %"$v", align 8
   %true_cond = icmp ne ptr %1, null
-  br i1 %true_cond, label %if_body, label %if_end
+  br i1 %true_cond, label %left, label %right
 
-if_body:                                          ; preds = %entry
-  br label %if_end
+left:                                             ; preds = %entry
+  br label %done
 
-if_end:                                           ; preds = %if_body, %entry
+right:                                            ; preds = %entry
+  br label %done
+
+done:                                             ; preds = %right, %left
   ret i64 0
 }
 
