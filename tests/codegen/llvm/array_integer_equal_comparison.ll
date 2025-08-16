@@ -57,7 +57,7 @@ entry:
   store i32 4, ptr %n, align 4
   br label %while_cond
 
-if_body:                                          ; preds = %arraycmp.done
+left:                                             ; preds = %arraycmp.done
   call void @llvm.lifetime.start.p0(i64 -1, ptr %exit)
   %15 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
   store i64 30000, ptr %15, align 8
@@ -67,7 +67,10 @@ if_body:                                          ; preds = %arraycmp.done
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-if_end:                                           ; preds = %deadcode, %arraycmp.done
+right:                                            ; preds = %arraycmp.done
+  br label %done
+
+done:                                             ; preds = %right, %deadcode
   ret i64 0
 
 while_cond:                                       ; preds = %arraycmp.loop, %entry
@@ -99,7 +102,7 @@ arraycmp.done:                                    ; preds = %arraycmp.false, %wh
   call void @llvm.lifetime.end.p0(i64 -1, ptr %v2)
   %26 = zext i1 %25 to i64
   %true_cond = icmp ne i64 %26, 0
-  br i1 %true_cond, label %if_body, label %if_end
+  br i1 %true_cond, label %left, label %right
 
 arraycmp.loop:                                    ; preds = %while_body
   %27 = load i32, ptr %i, align 4
@@ -107,7 +110,7 @@ arraycmp.loop:                                    ; preds = %while_body
   store i32 %28, ptr %i, align 4
   br label %while_cond
 
-event_loss_counter:                               ; preds = %if_body
+event_loss_counter:                               ; preds = %left
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %29 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %29
@@ -117,12 +120,12 @@ event_loss_counter:                               ; preds = %if_body
   store i64 %32, ptr %30, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %if_body
+counter_merge:                                    ; preds = %event_loss_counter, %left
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
 
 deadcode:                                         ; No predecessors!
-  br label %if_end
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)

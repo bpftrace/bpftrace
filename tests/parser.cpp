@@ -958,12 +958,14 @@ TEST(Parser, ternary_int)
        " kprobe:sys_open\n"
        "  =\n"
        "   map: @x\n"
-       "   ?:\n"
+       "   if\n"
        "    <\n"
        "     builtin: pid\n"
        "     int: 10000 :: [int64]\n"
-       "    int: 1 :: [int64]\n"
-       "    int: 2 :: [int64]\n");
+       "    then\n"
+       "     int: 1 :: [int64]\n"
+       "    else\n"
+       "     int: 2 :: [int64]\n");
 }
 
 TEST(Parser, if_block)
@@ -1169,12 +1171,14 @@ TEST(Parser, ternary_str)
        " kprobe:sys_open\n"
        "  =\n"
        "   map: @x\n"
-       "   ?:\n"
+       "   if\n"
        "    <\n"
        "     builtin: pid\n"
        "     int: 10000 :: [int64]\n"
-       "    string: lo\n"
-       "    string: high\n");
+       "    then\n"
+       "     string: lo\n"
+       "    else\n"
+       "     string: high\n");
 }
 
 TEST(Parser, ternary_nested)
@@ -1184,17 +1188,21 @@ TEST(Parser, ternary_nested)
        " kprobe:sys_open\n"
        "  =\n"
        "   map: @x\n"
-       "   ?:\n"
+       "   if\n"
        "    <\n"
        "     builtin: pid\n"
        "     int: 10000 :: [int64]\n"
-       "    ?:\n"
-       "     <\n"
-       "      builtin: pid\n"
-       "      int: 5000 :: [int64]\n"
-       "     int: 1 :: [int64]\n"
-       "     int: 2 :: [int64]\n"
-       "    int: 3 :: [int64]\n");
+       "    then\n"
+       "     if\n"
+       "      <\n"
+       "       builtin: pid\n"
+       "       int: 5000 :: [int64]\n"
+       "      then\n"
+       "       int: 1 :: [int64]\n"
+       "      else\n"
+       "       int: 2 :: [int64]\n"
+       "    else\n"
+       "     int: 3 :: [int64]\n");
 }
 
 TEST(Parser, call)
@@ -2647,7 +2655,7 @@ i:s:1 { @x = (1, 2); $x.1 = 1; }
 TEST(Parser, tuple_assignment_error)
 {
   test_parse_failure("i:s:1 { (1, 0) = 0 }", R"(
-stdin:1:16-17: ERROR: syntax error, unexpected =, expecting ; or }
+stdin:1:16-17: ERROR: syntax error, unexpected =, expecting ;
 i:s:1 { (1, 0) = 0 }
                ~
 )");
@@ -2825,7 +2833,7 @@ config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
                      "BPFTRACE_MAX_PROBES=2; exit(); }",
                      R"(
-stdin:1:47-67: ERROR: syntax error, unexpected =, expecting ; or }
+stdin:1:47-67: ERROR: syntax error, unexpected =, expecting ;
 config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
                                               ~~~~~~~~~~~~~~~~~~~~
 )");
@@ -3120,14 +3128,14 @@ Program
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
+stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
 begin { $x: int8; }
         ~~~
 )");
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8 = 1; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ; or }
+stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
 begin { $x: int8 = 1; }
         ~~~
 )");

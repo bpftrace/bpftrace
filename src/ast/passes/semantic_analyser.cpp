@@ -165,13 +165,11 @@ public:
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(Predicate &pred);
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(Block &block);
-  void visit(BlockExpr &block_expr);
   void visit(Subprog &subprog);
 
 private:
@@ -248,7 +246,6 @@ private:
   {
     return loop_depth_ > 0;
   };
-  void accept_statements(StatementList &stmts);
 
   // At the moment we iterate over the stack from top to
   // bottom as variable shadowing is not supported.
@@ -2737,7 +2734,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
 
   if (is_final_pass() && cond != Type::integer && cond != Type::pointer &&
       cond != Type::boolean) {
-    ternary.addError() << "Invalid condition in ternary: " << cond;
+    ternary.addError() << "Invalid condition: " << cond;
     return;
   }
 
@@ -2752,20 +2749,6 @@ void SemanticAnalyser::visit(Ternary &ternary)
       ternary.result_type = lsize > rsize ? lhs : rhs;
     }
   }
-}
-
-void SemanticAnalyser::visit(If &if_node)
-{
-  visit(if_node.cond);
-
-  if (is_final_pass()) {
-    const Type &cond = if_node.cond.type().GetTy();
-    if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean)
-      if_node.addError() << "Invalid condition in if(): " << cond;
-  }
-
-  visit(if_node.if_block);
-  visit(if_node.else_block);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -2954,7 +2937,7 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate body. We may relax this in the future.
   CollectNodes<Jump> jumps;
-  jumps.visit(f.stmts);
+  jumps.visit(f.block);
   for (const Jump &n : jumps.nodes()) {
     if (n.ident == JumpType::RETURN) {
       n.addError() << "'" << opstr(n)
@@ -2974,29 +2957,27 @@ void SemanticAnalyser::visit(For &f)
   // reference e.g.
   // begin { @a[1] = 1; for ($kv : @a) { $x = 2; } let $x; }
   if (is_first_pass()) {
-    for (auto &stmt : f.stmts) {
-      // We save these for potential use at the end of this function in
-      // subsequent passes in case the map we're iterating over isn't ready
-      // yet and still needs additional passes to resolve its key/value types
-      // e.g. begin { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
-      //
-      // This is especially tricky because we need to visit all statements
-      // inside the for loop to get the types of the referenced variables but
-      // only after we have the map's key/value type so we can also check
-      // the usages of the created $kv tuple variable.
-      auto [iter, _] = for_vars_referenced_.try_emplace(&f);
-      auto &collector = iter->second;
-      collector.visit(stmt, [this, &found_vars](const auto &var) {
-        if (found_vars.contains(var.ident))
-          return false;
-
-        if (find_variable(var.ident)) {
-          found_vars.insert(var.ident);
-          return true;
-        }
+    // We save these for potential use at the end of this function in
+    // subsequent passes in case the map we're iterating over isn't ready
+    // yet and still needs additional passes to resolve its key/value types
+    // e.g. begin { $x = 1; for ($kv : @a) { print(($x)); } @a[1] = 1; }
+    //
+    // This is especially tricky because we need to visit all statements
+    // inside the for loop to get the types of the referenced variables but
+    // only after we have the map's key/value type so we can also check
+    // the usages of the created $kv tuple variable.
+    auto [iter, _] = for_vars_referenced_.try_emplace(&f);
+    auto &collector = iter->second;
+    collector.visit(f.block, [this, &found_vars](const auto &var) {
+      if (found_vars.contains(var.ident))
         return false;
-      });
-    }
+
+      if (find_variable(var.ident)) {
+        found_vars.insert(var.ident);
+        return true;
+      }
+      return false;
+    });
   }
 
   // Create type for the loop's decl.
@@ -3021,7 +3002,7 @@ void SemanticAnalyser::visit(For &f)
                                                  .was_assigned = true };
 
   loop_depth_++;
-  accept_statements(f.stmts);
+  visit(f.block);
   loop_depth_--;
 
   scope_stack_.pop_back();
@@ -3029,7 +3010,7 @@ void SemanticAnalyser::visit(For &f)
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
   CollectNodes<Builtin> builtins;
-  builtins.visit(f.stmts);
+  builtins.visit(f.block);
   for (const Builtin &builtin : builtins.nodes()) {
     if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
         builtin.ident == "__builtin_retval") {
@@ -4032,15 +4013,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 void SemanticAnalyser::visit(Block &block)
 {
   scope_stack_.push_back(&block);
-  accept_statements(block.stmts);
-  scope_stack_.pop_back();
-}
-
-void SemanticAnalyser::visit(BlockExpr &block_expr)
-{
-  scope_stack_.push_back(&block_expr);
-  accept_statements(block_expr.stmts);
-  visit(block_expr.expr);
+  for (size_t i = 0; i < block.stmts.size(); i++) {
+    auto &stmt = block.stmts.at(i);
+    visit(stmt);
+    if (is_final_pass()) {
+      auto *jump = stmt.as<Jump>();
+      if (jump && i < (block.stmts.size() - 1)) {
+        jump->addWarning() << "All code after a '" << opstr(*jump)
+                           << "' is unreachable.";
+      }
+    }
+  }
+  visit(block.expr);
   scope_stack_.pop_back();
 }
 
@@ -4404,22 +4388,6 @@ void SemanticAnalyser::assign_map_type(Map &map,
       map_val_[map_ident].SetSize(8);
     }
     map.value_type = map_val_[map_ident];
-  }
-}
-
-void SemanticAnalyser::accept_statements(StatementList &stmts)
-{
-  for (size_t i = 0; i < stmts.size(); i++) {
-    visit(stmts.at(i));
-    auto &stmt = stmts.at(i);
-
-    if (is_final_pass()) {
-      auto *jump = stmt.as<Jump>();
-      if (jump && i < (stmts.size() - 1)) {
-        jump->addWarning() << "All code after a '" << opstr(*jump)
-                           << "' is unreachable.";
-      }
-    }
   }
 }
 

@@ -25,17 +25,20 @@ entry:
   %strcmp.cmp = icmp ne i8 %1, %2
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
-if_body:                                          ; preds = %strcmp.false
-  br label %if_end
+left:                                             ; preds = %strcmp.false
+  br label %done
 
-if_end:                                           ; preds = %if_body, %strcmp.false
+right:                                            ; preds = %strcmp.false
+  br label %done
+
+done:                                             ; preds = %right, %left
   ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop97, %strcmp.loop93, %strcmp.loop89, %strcmp.loop85, %strcmp.loop81, %strcmp.loop77, %strcmp.loop73, %strcmp.loop69, %strcmp.loop65, %strcmp.loop61, %strcmp.loop57, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %entry
   %3 = load i1, ptr %strcmp.result, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   %true_cond = icmp ne i1 %3, false
-  br i1 %true_cond, label %if_body, label %if_end
+  br i1 %true_cond, label %left, label %right
 
 strcmp.done:                                      ; preds = %strcmp.loop101, %strcmp.loop_null_cmp102, %strcmp.loop_null_cmp98, %strcmp.loop_null_cmp94, %strcmp.loop_null_cmp90, %strcmp.loop_null_cmp86, %strcmp.loop_null_cmp82, %strcmp.loop_null_cmp78, %strcmp.loop_null_cmp74, %strcmp.loop_null_cmp70, %strcmp.loop_null_cmp66, %strcmp.loop_null_cmp62, %strcmp.loop_null_cmp58, %strcmp.loop_null_cmp54, %strcmp.loop_null_cmp50, %strcmp.loop_null_cmp46, %strcmp.loop_null_cmp42, %strcmp.loop_null_cmp38, %strcmp.loop_null_cmp34, %strcmp.loop_null_cmp30, %strcmp.loop_null_cmp26, %strcmp.loop_null_cmp22, %strcmp.loop_null_cmp18, %strcmp.loop_null_cmp14, %strcmp.loop_null_cmp10, %strcmp.loop_null_cmp6, %strcmp.loop_null_cmp2, %strcmp.loop_null_cmp
   store i1 true, ptr %strcmp.result, align 1

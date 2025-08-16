@@ -34,6 +34,7 @@ int_size (([uU])|([uU]?[lL]?[lL])|(ns)|(us)|(ms)|(s)|(m)|(h)|(d))
 /* Number with underscores in it, e.g. 1_000_000 */
 int      [0-9]([0-9_]*[0-9])?{int_size}?
 bool     true|false
+none     none
 hex      0[xX][0-9a-fA-F]+
 /* scientific notation, e.g. 2e4 or 1e6 */
 exponent {int}[eE]{int}
@@ -110,6 +111,7 @@ oct_esc  [0-7]{1,3}
                           }
                           return Parser::make_BOOL(false, driver.loc);
                         }
+{none}                  { return Parser::make_NONE(yytext, driver.loc); }
 {path}                  { return Parser::make_PATH(yytext, driver.loc); }
 {map}                   { return Parser::make_MAP(yytext, driver.loc); }
 {var}                   { return Parser::make_VAR(yytext, driver.loc); }
