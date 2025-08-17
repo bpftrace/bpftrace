@@ -4,7 +4,7 @@ begin {
 	}
 
 	if (1) {
-		let $x;
+		let $x = 0;
 		if (0) {
 			$x = 5;
 		}
