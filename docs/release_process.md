@@ -1,8 +1,8 @@
 # Upcoming release schedule
 
-The schedule for the upcoming v0.23 release is:
-- February 25, 2025: Create release branch `release/0.23.x`.
-- **March 25, 2025: Release v0.23.0.**
+The schedule for the upcoming v0.24 release is:
+- August 20, 2025: Create release branch `release/0.24.x`.
+- **September 17, 2025: Release v0.24.0.**
 
 # Release procedure
 
