@@ -33,10 +33,15 @@ Pass CreateImportExternalScriptsPass()
 {
   return Pass::create("ImportExternalScripts",
                       [](ASTContext &ast, Imports &imports) {
+                        std::vector<std::string> imported;
                         for (const auto &[name, obj] : imports.scripts) {
                           if (!obj.internal) {
                             import_ast(ast, obj.ast);
+                            imported.emplace_back(name);
                           }
+                        }
+                        for (const auto &name : imported) {
+                          imports.scripts.erase(name);
                         }
                       });
 }
@@ -45,10 +50,15 @@ Pass CreateImportInternalScriptsPass()
 {
   return Pass::create("ImportInternalScripts",
                       [](ASTContext &ast, Imports &imports) {
+                        std::vector<std::string> imported;
                         for (const auto &[name, obj] : imports.scripts) {
                           if (obj.internal) {
                             import_ast(ast, obj.ast);
+                            imported.emplace_back(name);
                           }
+                        }
+                        for (const auto &name : imported) {
+                          imports.scripts.erase(name);
                         }
                       });
 }
