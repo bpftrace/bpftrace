@@ -36,7 +36,8 @@ BUILD_DIR = "build-ci"
 # latest LLVM release we support
 NIX_TARGET = os.environ.get("NIX_TARGET", "")
 CMAKE_BUILD_TYPE = os.environ.get("CMAKE_BUILD_TYPE", "Release")
-RUN_TESTS = os.environ.get("RUN_TESTS", "1")
+RUN_UNIT_TESTS = os.environ.get("RUN_UNIT_TESTS", "1")
+RUN_RUNTIME_TESTS = os.environ.get("RUN_RUNTIME_TESTS", "1")
 RUN_AOT_TESTS = os.environ.get("RUN_AOT_TESTS", "0")
 CC = os.environ.get("CC", "cc")
 CXX = os.environ.get("CXX", "c++")
@@ -299,7 +300,7 @@ def fuzz():
     results = [
         test_one(
             "fuzz",
-            lambda: truthy(RUN_TESTS),
+            lambda: truthy(RUN_RUNTIME_TESTS),
             lambda: shell(
                 # fmt: off
                 cmd = [
@@ -351,7 +352,7 @@ def test():
     results.append(
         test_one(
             "bpftrace_test",
-            lambda: truthy(RUN_TESTS),
+            lambda: truthy(RUN_UNIT_TESTS),
             lambda: shell(
                 ["./tests/bpftrace_test"],
                 cwd=Path(BUILD_DIR),
@@ -362,14 +363,14 @@ def test():
     results.append(
         test_one(
             "runtime-tests.sh",
-            lambda: truthy(RUN_TESTS),
+            lambda: truthy(RUN_RUNTIME_TESTS),
             run_runtime_tests,
         )
     )
     results.append(
         test_one(
             "tools-parsing-test.sh",
-            lambda: truthy(RUN_TESTS),
+            lambda: truthy(RUN_RUNTIME_TESTS),
             lambda: shell(
                 [
                     "./tests/tools-parsing-test.sh",

@@ -82,10 +82,12 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm20
           NIX_TARGET_KERNEL: .#kernel-6_14
           TOOLS_TEST_OLDVERSION: runqlen.bt # Need host 6.14 kernel
+          RUN_UNIT_TESTS: 0
         - NAME: AOT (LLVM 20 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm20
-          RUN_TESTS: 0
+          RUN_UNIT_TESTS: 0
+          RUN_RUNTIME_TESTS: 0
           RUN_AOT_TESTS: 1
           AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
     steps:
