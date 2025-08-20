@@ -40,7 +40,7 @@ Overview of the release cadence is as follows:
 Once the release dates are clarified (approximately 6 weeks before the release),
 do the following steps to track the release in a public manner:
 
-1. Update the release dates at the top of this document and on the [bpftrace website](https://github.com/bpftrace/website/blob/master/src/pages/release-schedule.md).
+1. Update the release dates at the top of this document.
 1. Create a new tracker issue in GitHub from the "Release tracker" template.
 
 ## Creating a release branch
