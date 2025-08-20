@@ -200,3 +200,8 @@ NAME bench multiple
 RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'bench:a { @a++; } bench:b { @b++; } bench:c { @c++; }'
 EXPECT_REGEX {"type": "benchmark_results", "data": {"a": \d+, "b": \d+, "c": \d+}}
 TIMEOUT 5
+
+NAME attached probes
+RUN {{BPFTRACE}} -f json -e 'i:s:1 { exit(); }'
+EXPECT {"type": "attached_probes", "count": 1, "data": {"probes": 1}}
+TIMEOUT 5
