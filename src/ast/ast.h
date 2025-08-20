@@ -1,6 +1,7 @@
 #pragma once
 
 #include <charconv>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -49,6 +50,15 @@ enum class Operator {
   LNOT,
   BNOT,
 };
+
+inline bool operator==(Operator lhs, Operator rhs)
+{
+  return static_cast<int>(lhs) == static_cast<int>(rhs);
+}
+inline std::strong_ordering operator<=>(Operator lhs, Operator rhs)
+{
+  return static_cast<int>(lhs) <=> static_cast<int>(rhs);
+}
 
 class Node {
 public:
@@ -110,6 +120,32 @@ public:
   {
     return std::visit([](const auto *v) -> const Location & { return v->loc; },
                       value);
+  }
+
+  bool operator==(const VariantNode &other) const
+  {
+    if (value.index() != other.value.index())
+      return false;
+    return std::visit(
+        [&other](auto *v) {
+          using T = std::decay_t<decltype(*v)>;
+          auto *other_v = std::get<T *>(other.value);
+          return *v == *other_v;
+        },
+        value);
+  }
+
+  std::strong_ordering operator<=>(const VariantNode &other) const
+  {
+    if (auto cmp = value.index() <=> other.value.index(); cmp != 0)
+      return cmp;
+    return std::visit(
+        [&other](auto *v) {
+          using T = std::decay_t<decltype(*v)>;
+          auto *other_v = std::get<T *>(other.value);
+          return *v <=> *other_v;
+        },
+        value);
   }
 
   std::variant<Ts *...> value;
@@ -242,6 +278,17 @@ public:
     return integer_type;
   }
 
+  bool operator==(const Integer &other) const
+  {
+    return value == other.value && integer_type == other.integer_type;
+  }
+  std::strong_ordering operator<=>(const Integer &other) const
+  {
+    if (auto cmp = value <=> other.value; cmp != 0)
+      return cmp;
+    return integer_type <=> other.integer_type;
+  }
+
   // This literal has a dynamic type, but it is not mutable. The type is
   // generally signed if the signed value is capable of holding the literal,
   // otherwise it is unsigned. This is the existing convention.
@@ -268,6 +315,15 @@ public:
     return int64;
   }
 
+  bool operator==(const NegativeInteger &other) const
+  {
+    return value == other.value;
+  }
+  std::strong_ordering operator<=>(const NegativeInteger &other) const
+  {
+    return value <=> other.value;
+  }
+
   const int64_t value;
 };
 
@@ -284,6 +340,15 @@ public:
     return boolean;
   }
 
+  bool operator==(const Boolean &other) const
+  {
+    return value == other.value;
+  }
+  std::strong_ordering operator<=>(const Boolean &other) const
+  {
+    return value <=> other.value;
+  }
+
   const bool value;
 };
 
@@ -297,6 +362,15 @@ public:
   {
     static SizedType none = CreateNone();
     return none;
+  }
+
+  bool operator==([[maybe_unused]] const None &other) const
+  {
+    return true;
+  }
+  std::strong_ordering operator<=>([[maybe_unused]] const None &other) const
+  {
+    return std::strong_ordering::equal;
   }
 };
 
@@ -313,6 +387,15 @@ public:
   {
     static SizedType none = CreateNone();
     return none;
+  }
+
+  bool operator==(const PositionalParameter &other) const
+  {
+    return n == other.n;
+  }
+  std::strong_ordering operator<=>(const PositionalParameter &other) const
+  {
+    return n <=> other.n;
   }
 
   const long n;
@@ -333,6 +416,16 @@ public:
     static SizedType none = CreateNone();
     return none;
   }
+
+  bool operator==([[maybe_unused]] const PositionalParameterCount &other) const
+  {
+    return true;
+  }
+  std::strong_ordering operator<=>(
+      [[maybe_unused]] const PositionalParameterCount &other) const
+  {
+    return std::strong_ordering::equal;
+  }
 };
 
 class String : public Node {
@@ -349,6 +442,17 @@ public:
   const SizedType &type() const
   {
     return string_type;
+  }
+
+  bool operator==(const String &other) const
+  {
+    return value == other.value && string_type == other.string_type;
+  }
+  std::strong_ordering operator<=>(const String &other) const
+  {
+    if (auto cmp = value <=> other.value; cmp != 0)
+      return cmp;
+    return string_type <=> other.string_type;
   }
 
   const std::string value;
@@ -369,6 +473,17 @@ public:
   const SizedType &type() const
   {
     return ident_type;
+  }
+
+  bool operator==(const Identifier &other) const
+  {
+    return ident == other.ident && ident_type == other.ident_type;
+  }
+  std::strong_ordering operator<=>(const Identifier &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    return ident_type <=> other.ident_type;
   }
 
   std::string ident;
@@ -410,6 +525,20 @@ public:
            arg_num >= 0 && arg_num < 256;
   }
 
+  bool operator==(const Builtin &other) const
+  {
+    return ident == other.ident && probe_id == other.probe_id &&
+           builtin_type == other.builtin_type;
+  }
+  std::strong_ordering operator<=>(const Builtin &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    if (auto cmp = probe_id <=> other.probe_id; cmp != 0)
+      return cmp;
+    return builtin_type <=> other.builtin_type;
+  }
+
   std::string ident;
   int probe_id;
   SizedType builtin_type;
@@ -434,6 +563,27 @@ public:
   const SizedType &type() const
   {
     return return_type;
+  }
+
+  bool operator==(const Call &other) const
+  {
+    return func == other.func && vargs == other.vargs &&
+           injected_args == other.injected_args &&
+           return_type == other.return_type;
+  }
+  std::strong_ordering operator<=>(const Call &other) const
+  {
+    if (auto cmp = func <=> other.func; cmp != 0)
+      return cmp;
+    if (vargs.size() != other.vargs.size())
+      return vargs.size() <=> other.vargs.size();
+    for (size_t i = 0; i < vargs.size(); ++i) {
+      if (auto cmp = vargs[i] <=> other.vargs[i]; cmp != 0)
+        return cmp;
+    }
+    if (auto cmp = injected_args <=> other.injected_args; cmp != 0)
+      return cmp;
+    return return_type <=> other.return_type;
   }
 
   std::string func;
@@ -465,6 +615,29 @@ public:
     return uint64;
   }
 
+  bool operator==(const Sizeof &other) const
+  {
+    if (record.index() != other.record.index())
+      return false;
+    return std::visit(
+        [&other](const auto &v) {
+          using T = std::decay_t<decltype(v)>;
+          return v == std::get<T>(other.record);
+        },
+        record);
+  }
+  std::strong_ordering operator<=>(const Sizeof &other) const
+  {
+    if (auto cmp = record.index() <=> other.record.index(); cmp != 0)
+      return cmp;
+    return std::visit(
+        [&other](const auto &v) -> std::strong_ordering {
+          using T = std::decay_t<decltype(v)>;
+          return v <=> std::get<T>(other.record);
+        },
+        record);
+  }
+
   std::variant<Expression, SizedType> record;
 };
 
@@ -492,6 +665,33 @@ public:
     return uint64;
   }
 
+  bool operator==(const Offsetof &other) const
+  {
+    if (record.index() != other.record.index())
+      return false;
+    bool record_equal = std::visit(
+        [&other](const auto &v) {
+          using T = std::decay_t<decltype(v)>;
+          return v == std::get<T>(other.record);
+        },
+        record);
+    return record_equal && field == other.field;
+  }
+  std::strong_ordering operator<=>(const Offsetof &other) const
+  {
+    if (auto cmp = record.index() <=> other.record.index(); cmp != 0)
+      return cmp;
+    auto record_cmp = std::visit(
+        [&other](const auto &v) -> std::strong_ordering {
+          using T = std::decay_t<decltype(v)>;
+          return v <=> std::get<T>(other.record);
+        },
+        record);
+    if (record_cmp != 0)
+      return record_cmp;
+    return field <=> other.field;
+  }
+
   std::variant<Expression, SizedType> record;
   std::vector<std::string> field;
 };
@@ -509,6 +709,20 @@ public:
   const SizedType &type() const
   {
     return value_type;
+  }
+
+  bool operator==(const Map &other) const
+  {
+    return ident == other.ident && key_type == other.key_type &&
+           value_type == other.value_type;
+  }
+  std::strong_ordering operator<=>(const Map &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    if (auto cmp = key_type <=> other.key_type; cmp != 0)
+      return cmp;
+    return value_type <=> other.value_type;
   }
 
   std::string ident;
@@ -543,6 +757,15 @@ public:
     }
   }
 
+  bool operator==(const Typeof &other) const
+  {
+    return record == other.record;
+  }
+  std::strong_ordering operator<=>(const Typeof &other) const
+  {
+    return record <=> other.record;
+  }
+
   std::variant<Expression, SizedType> record;
 };
 
@@ -562,6 +785,15 @@ public:
     return none;
   }
 
+  bool operator==(const Typeinfo &other) const
+  {
+    return *typeof == *other.typeof;
+  }
+  std::strong_ordering operator<=>(const Typeinfo &other) const
+  {
+    return *typeof <=> *other.typeof;
+  }
+
   Typeof *typeof = nullptr;
 };
 
@@ -576,6 +808,15 @@ public:
   const SizedType &type() const
   {
     return expr.type();
+  }
+
+  bool operator==([[maybe_unused]] const Comptime &other) const
+  {
+    return expr == other.expr;
+  }
+  std::strong_ordering operator<=>([[maybe_unused]] const Comptime &other) const
+  {
+    return expr <=> other.expr;
   }
 
   Expression expr;
@@ -600,6 +841,20 @@ public:
         bpf_type(other.bpf_type),
         max_entries(other.max_entries) {};
 
+  bool operator==(const MapDeclStatement &other) const
+  {
+    return ident == other.ident && bpf_type == other.bpf_type &&
+           max_entries == other.max_entries;
+  }
+  std::strong_ordering operator<=>(const MapDeclStatement &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    if (auto cmp = bpf_type <=> other.bpf_type; cmp != 0)
+      return cmp;
+    return max_entries <=> other.max_entries;
+  }
+
   const std::string ident;
   const std::string bpf_type;
   const int max_entries;
@@ -618,6 +873,17 @@ public:
   const SizedType &type() const
   {
     return var_type;
+  }
+
+  bool operator==(const Variable &other) const
+  {
+    return ident == other.ident && var_type == other.var_type;
+  }
+  std::strong_ordering operator<=>(const Variable &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    return var_type <=> other.var_type;
   }
 
   std::string ident;
@@ -640,6 +906,17 @@ public:
     return var_addr_type;
   }
 
+  bool operator==(const VariableAddr &other) const
+  {
+    return *var == *other.var && var_addr_type == other.var_addr_type;
+  }
+  std::strong_ordering operator<=>(const VariableAddr &other) const
+  {
+    if (auto cmp = *var <=> *other.var; cmp != 0)
+      return cmp;
+    return var_addr_type <=> other.var_addr_type;
+  }
+
   Variable *var = nullptr;
   SizedType var_addr_type;
 };
@@ -655,6 +932,15 @@ public:
   {
     static SizedType voidptr = CreatePointer(CreateVoid());
     return voidptr;
+  }
+
+  bool operator==(const MapAddr &other) const
+  {
+    return *map == *other.map;
+  }
+  std::strong_ordering operator<=>(const MapAddr &other) const
+  {
+    return *map <=> *other.map;
   }
 
   Map *map = nullptr;
@@ -681,6 +967,22 @@ public:
   const SizedType &type() const
   {
     return result_type;
+  }
+
+  bool operator==(const Binop &other) const
+  {
+    return op == other.op && left == other.left && right == other.right &&
+           result_type == other.result_type;
+  }
+  std::strong_ordering operator<=>(const Binop &other) const
+  {
+    if (auto cmp = op <=> other.op; cmp != 0)
+      return cmp;
+    if (auto cmp = left <=> other.left; cmp != 0)
+      return cmp;
+    if (auto cmp = right <=> other.right; cmp != 0)
+      return cmp;
+    return result_type <=> other.result_type;
   }
 
   Expression left;
@@ -711,6 +1013,22 @@ public:
     return result_type;
   }
 
+  bool operator==(const Unop &other) const
+  {
+    return op == other.op && is_post_op == other.is_post_op &&
+           expr == other.expr && result_type == other.result_type;
+  }
+  std::strong_ordering operator<=>(const Unop &other) const
+  {
+    if (auto cmp = op <=> other.op; cmp != 0)
+      return cmp;
+    if (auto cmp = is_post_op <=> other.is_post_op; cmp != 0)
+      return cmp;
+    if (auto cmp = expr <=> other.expr; cmp != 0)
+      return cmp;
+    return result_type <=> other.result_type;
+  }
+
   Expression expr;
   Operator op;
   bool is_post_op;
@@ -739,6 +1057,20 @@ public:
     return field_type;
   }
 
+  bool operator==(const FieldAccess &other) const
+  {
+    return field == other.field && expr == other.expr &&
+           field_type == other.field_type;
+  }
+  std::strong_ordering operator<=>(const FieldAccess &other) const
+  {
+    if (auto cmp = field <=> other.field; cmp != 0)
+      return cmp;
+    if (auto cmp = expr <=> other.expr; cmp != 0)
+      return cmp;
+    return field_type <=> other.field_type;
+  }
+
   Expression expr;
   std::string field;
   SizedType field_type;
@@ -763,6 +1095,20 @@ public:
   const SizedType &type() const
   {
     return element_type;
+  }
+
+  bool operator==(const ArrayAccess &other) const
+  {
+    return expr == other.expr && indexpr == other.indexpr &&
+           element_type == other.element_type;
+  }
+  std::strong_ordering operator<=>(const ArrayAccess &other) const
+  {
+    if (auto cmp = expr <=> other.expr; cmp != 0)
+      return cmp;
+    if (auto cmp = indexpr <=> other.indexpr; cmp != 0)
+      return cmp;
+    return element_type <=> other.element_type;
   }
 
   Expression expr;
@@ -790,6 +1136,20 @@ public:
     return element_type;
   }
 
+  bool operator==(const TupleAccess &other) const
+  {
+    return index == other.index && expr == other.expr &&
+           element_type == other.element_type;
+  }
+  std::strong_ordering operator<=>(const TupleAccess &other) const
+  {
+    if (auto cmp = index <=> other.index; cmp != 0)
+      return cmp;
+    if (auto cmp = expr <=> other.expr; cmp != 0)
+      return cmp;
+    return element_type <=> other.element_type;
+  }
+
   Expression expr;
   size_t index;
   SizedType element_type;
@@ -809,6 +1169,17 @@ public:
   const SizedType &type() const
   {
     return map->type();
+  }
+
+  bool operator==(const MapAccess &other) const
+  {
+    return *map == *other.map && key == other.key;
+  }
+  std::strong_ordering operator<=>(const MapAccess &other) const
+  {
+    if (auto cmp = *map <=> *other.map; cmp != 0)
+      return cmp;
+    return key <=> other.key;
   }
 
   Map *map = nullptr;
@@ -832,6 +1203,17 @@ public:
     return typeof->type();
   }
 
+  bool operator==(const Cast &other) const
+  {
+    return *typeof == *other.typeof && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const Cast &other) const
+  {
+    if (auto cmp = *typeof <=> *other.typeof; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
+
   Typeof *typeof;
   Expression expr;
 };
@@ -848,6 +1230,17 @@ public:
     return tuple_type;
   }
 
+  bool operator==(const Tuple &other) const
+  {
+    return elems == other.elems && tuple_type == other.tuple_type;
+  }
+  std::strong_ordering operator<=>(const Tuple &other) const
+  {
+    if (auto cmp = elems <=> other.elems; cmp != 0)
+      return cmp;
+    return tuple_type <=> other.tuple_type;
+  }
+
   ExpressionList elems;
   SizedType tuple_type;
 };
@@ -860,6 +1253,15 @@ public:
                          const ExprStatement &other,
                          const Location &loc)
       : Node(ctx, loc + other.loc), expr(clone(ctx, other.expr, loc)) {};
+
+  bool operator==(const ExprStatement &other) const
+  {
+    return expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const ExprStatement &other) const
+  {
+    return expr <=> other.expr;
+  }
 
   Expression expr;
 };
@@ -879,6 +1281,17 @@ public:
       : Node(ctx, loc + other.loc),
         var(clone(ctx, other.var, loc)),
         typeof(clone(ctx, other.typeof, loc)) {};
+
+  bool operator==(const VarDeclStatement &other) const
+  {
+    return *var == *other.var && *typeof == *other.typeof;
+  }
+  std::strong_ordering operator<=>(const VarDeclStatement &other) const
+  {
+    if (auto cmp = *var <=> *other.var; cmp != 0)
+      return cmp;
+    return *typeof <=> *other.typeof;
+  }
 
   Variable *var = nullptr;
   Typeof *typeof = nullptr;
@@ -903,6 +1316,17 @@ public:
         map(clone(ctx, other.map, loc)),
         expr(clone(ctx, other.expr, loc)) {};
 
+  bool operator==(const AssignScalarMapStatement &other) const
+  {
+    return *map == *other.map && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const AssignScalarMapStatement &other) const
+  {
+    if (auto cmp = *map <=> *other.map; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
+
   Map *map = nullptr;
   Expression expr;
 };
@@ -925,6 +1349,19 @@ public:
         map(clone(ctx, other.map, loc)),
         key(clone(ctx, other.key, loc)),
         expr(clone(ctx, other.expr, loc)) {};
+
+  bool operator==(const AssignMapStatement &other) const
+  {
+    return *map == *other.map && key == other.key && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const AssignMapStatement &other) const
+  {
+    if (auto cmp = *map <=> *other.map; cmp != 0)
+      return cmp;
+    if (auto cmp = key <=> other.key; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
 
   Map *map = nullptr;
   Expression key;
@@ -961,6 +1398,33 @@ public:
     }
   }
 
+  bool operator==(const AssignVarStatement &other) const
+  {
+    if (var_decl.index() != other.var_decl.index())
+      return false;
+    bool var_decl_equal = std::visit(
+        [&other](const auto &v) {
+          using T = std::decay_t<decltype(v)>;
+          return *v == *std::get<T>(other.var_decl);
+        },
+        var_decl);
+    return var_decl_equal && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const AssignVarStatement &other) const
+  {
+    if (auto cmp = var_decl.index() <=> other.var_decl.index(); cmp != 0)
+      return cmp;
+    auto var_decl_cmp = std::visit(
+        [&other](const auto &v) {
+          using T = std::decay_t<decltype(v)>;
+          return *v <=> *std::get<T>(other.var_decl);
+        },
+        var_decl);
+    if (var_decl_cmp != 0)
+      return var_decl_cmp;
+    return expr <=> other.expr;
+  }
+
   std::variant<VarDeclStatement *, Variable *> var_decl;
   Expression expr;
 };
@@ -989,6 +1453,17 @@ public:
                                     const Location &loc)
       : Node(ctx, loc + other.loc), var(other.var), value(other.value) {};
 
+  bool operator==(const AssignConfigVarStatement &other) const
+  {
+    return var == other.var && value == other.value;
+  }
+  std::strong_ordering operator<=>(const AssignConfigVarStatement &other) const
+  {
+    if (auto cmp = var <=> other.var; cmp != 0)
+      return cmp;
+    return value <=> other.value;
+  }
+
   std::string var;
   std::variant<uint64_t, std::string, bool> value;
 };
@@ -1015,6 +1490,17 @@ public:
     return expr.type();
   }
 
+  bool operator==(const BlockExpr &other) const
+  {
+    return stmts == other.stmts && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const BlockExpr &other) const
+  {
+    if (auto cmp = stmts <=> other.stmts; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
+
   StatementList stmts;
   Expression expr;
 };
@@ -1030,6 +1516,17 @@ public:
       : Node(ctx, loc + other.loc),
         expr(clone(ctx, other.expr, loc)),
         block(clone(ctx, other.block, loc)) {};
+
+  bool operator==(const Unroll &other) const
+  {
+    return expr == other.expr && *block == *other.block;
+  }
+  std::strong_ordering operator<=>(const Unroll &other) const
+  {
+    if (auto cmp = expr <=> other.expr; cmp != 0)
+      return cmp;
+    return *block <=> *other.block;
+  }
 
   Expression expr;
   BlockExpr *block = nullptr;
@@ -1050,6 +1547,17 @@ public:
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         return_value(clone(ctx, other.return_value, loc)) {};
+
+  bool operator==(const Jump &other) const
+  {
+    return ident == other.ident && return_value == other.return_value;
+  }
+  std::strong_ordering operator<=>(const Jump &other) const
+  {
+    if (auto cmp = ident <=> other.ident; cmp != 0)
+      return cmp;
+    return return_value <=> other.return_value;
+  }
 
   JumpType ident;
   std::optional<Expression> return_value;
@@ -1078,6 +1586,22 @@ public:
     return result_type;
   }
 
+  bool operator==(const IfExpr &other) const
+  {
+    return cond == other.cond && left == other.left && right == other.right &&
+           result_type == other.result_type;
+  }
+  std::strong_ordering operator<=>(const IfExpr &other) const
+  {
+    if (auto cmp = cond <=> other.cond; cmp != 0)
+      return cmp;
+    if (auto cmp = left <=> other.left; cmp != 0)
+      return cmp;
+    if (auto cmp = right <=> other.right; cmp != 0)
+      return cmp;
+    return result_type <=> other.result_type;
+  }
+
   Expression cond;
   Expression left;
   Expression right;
@@ -1096,6 +1620,17 @@ public:
         cond(clone(ctx, other.cond, loc)),
         block(clone(ctx, other.block, loc)) {};
 
+  bool operator==(const While &other) const
+  {
+    return cond == other.cond && *block == *other.block;
+  }
+  std::strong_ordering operator<=>(const While &other) const
+  {
+    if (auto cmp = cond <=> other.cond; cmp != 0)
+      return cmp;
+    return *block <=> *other.block;
+  }
+
   Expression cond;
   BlockExpr *block = nullptr;
 };
@@ -1111,6 +1646,17 @@ public:
       : Node(ctx, loc + other.loc),
         start(clone(ctx, other.start, loc)),
         end(clone(ctx, other.end, loc)) {};
+
+  bool operator==(const Range &other) const
+  {
+    return start == other.start && end == other.end;
+  }
+  std::strong_ordering operator<=>(const Range &other) const
+  {
+    if (auto cmp = start <=> other.start; cmp != 0)
+      return cmp;
+    return end <=> other.end;
+  }
 
   Expression start;
   Expression end;
@@ -1139,6 +1685,22 @@ public:
         iterable(clone(ctx, other.iterable, loc)),
         block(clone(ctx, other.block, loc)) {};
 
+  bool operator==(const For &other) const
+  {
+    return *decl == *other.decl && iterable == other.iterable &&
+           *block == *other.block && ctx_type == other.ctx_type;
+  }
+  std::strong_ordering operator<=>(const For &other) const
+  {
+    if (auto cmp = *decl <=> *other.decl; cmp != 0)
+      return cmp;
+    if (auto cmp = iterable <=> other.iterable; cmp != 0)
+      return cmp;
+    if (auto cmp = *block <=> *other.block; cmp != 0)
+      return cmp;
+    return ctx_type <=> other.ctx_type;
+  }
+
   Variable *decl = nullptr;
   Iterable iterable;
   BlockExpr *block = nullptr;
@@ -1151,6 +1713,15 @@ public:
       : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
   explicit Config(ASTContext &ctx, const Config &other, const Location &loc)
       : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
+
+  bool operator==(const Config &other) const
+  {
+    return stmts == other.stmts;
+  }
+  std::strong_ordering operator<=>(const Config &other) const
+  {
+    return stmts <=> other.stmts;
+  }
 
   ConfigStatementList stmts;
 };
@@ -1185,6 +1756,46 @@ public:
         func_offset(other.func_offset),
         ignore_invalid(other.ignore_invalid),
         index_(other.index_) {};
+
+  bool operator==(const AttachPoint &other) const
+  {
+    return raw_input == other.raw_input && provider == other.provider &&
+           target == other.target && lang == other.lang && ns == other.ns &&
+           func == other.func && pin == other.pin && freq == other.freq &&
+           len == other.len && mode == other.mode && async == other.async &&
+           address == other.address && func_offset == other.func_offset &&
+           ignore_invalid == other.ignore_invalid;
+  }
+  std::strong_ordering operator<=>(const AttachPoint &other) const
+  {
+    if (auto cmp = raw_input <=> other.raw_input; cmp != 0)
+      return cmp;
+    if (auto cmp = provider <=> other.provider; cmp != 0)
+      return cmp;
+    if (auto cmp = target <=> other.target; cmp != 0)
+      return cmp;
+    if (auto cmp = lang <=> other.lang; cmp != 0)
+      return cmp;
+    if (auto cmp = ns <=> other.ns; cmp != 0)
+      return cmp;
+    if (auto cmp = func <=> other.func; cmp != 0)
+      return cmp;
+    if (auto cmp = pin <=> other.pin; cmp != 0)
+      return cmp;
+    if (auto cmp = freq <=> other.freq; cmp != 0)
+      return cmp;
+    if (auto cmp = len <=> other.len; cmp != 0)
+      return cmp;
+    if (auto cmp = mode <=> other.mode; cmp != 0)
+      return cmp;
+    if (auto cmp = async <=> other.async; cmp != 0)
+      return cmp;
+    if (auto cmp = address <=> other.address; cmp != 0)
+      return cmp;
+    if (auto cmp = func_offset <=> other.func_offset; cmp != 0)
+      return cmp;
+    return ignore_invalid <=> other.ignore_invalid;
+  }
 
   // Currently, the AST node itself is used to store metadata related to probe
   // expansion and attachment. This is done through `create_expansion_copy`
@@ -1258,6 +1869,20 @@ public:
         orig_name(other.orig_name),
         index_(other.index_) {};
 
+  bool operator==(const Probe &other) const
+  {
+    return attach_points == other.attach_points && *block == *other.block &&
+           orig_name == other.orig_name;
+  }
+  std::strong_ordering operator<=>(const Probe &other) const
+  {
+    if (auto cmp = attach_points <=> other.attach_points; cmp != 0)
+      return cmp;
+    if (auto cmp = *block <=> *other.block; cmp != 0)
+      return cmp;
+    return orig_name <=> other.orig_name;
+  }
+
   AttachPointList attach_points;
   BlockExpr *block = nullptr;
   std::string orig_name;
@@ -1288,6 +1913,17 @@ public:
         var(clone(ctx, other.var, loc)),
         typeof(clone(ctx, other.typeof, loc)) {};
 
+  bool operator==(const SubprogArg &other) const
+  {
+    return *var == *other.var && *typeof == *other.typeof;
+  }
+  std::strong_ordering operator<=>(const SubprogArg &other) const
+  {
+    if (auto cmp = *var <=> *other.var; cmp != 0)
+      return cmp;
+    return *typeof <=> *other.typeof;
+  }
+
   Variable *var = nullptr;
   Typeof *typeof = nullptr;
 };
@@ -1313,6 +1949,22 @@ public:
         args(clone(ctx, other.args, loc)),
         block(clone(ctx, other.block, loc)) {};
 
+  bool operator==(const Subprog &other) const
+  {
+    return name == other.name && return_type == other.return_type &&
+           args == other.args && *block == *other.block;
+  }
+  std::strong_ordering operator<=>(const Subprog &other) const
+  {
+    if (auto cmp = name <=> other.name; cmp != 0)
+      return cmp;
+    if (auto cmp = return_type <=> other.return_type; cmp != 0)
+      return cmp;
+    if (auto cmp = args <=> other.args; cmp != 0)
+      return cmp;
+    return *block <=> *other.block;
+  }
+
   const std::string name;
   Typeof *return_type;
   SubprogArgList args;
@@ -1326,6 +1978,15 @@ public:
       : Node(ctx, std::move(loc)), name(std::move(name)) {};
   explicit Import(ASTContext &ctx, const Import &other, const Location &loc)
       : Node(ctx, loc + other.loc), name(other.name) {};
+
+  bool operator==(const Import &other) const
+  {
+    return name == other.name;
+  }
+  std::strong_ordering operator<=>(const Import &other) const
+  {
+    return name <=> other.name;
+  }
 
   const std::string name;
 };
@@ -1348,6 +2009,27 @@ public:
         vargs(clone(ctx, other.vargs, loc)),
         block(clone(ctx, other.block, loc)) {};
 
+  bool operator==(const Macro &other) const
+  {
+    if (name != other.name || vargs != other.vargs)
+      return false;
+    if (vargs != other.vargs)
+      return false;
+    return *block == *other.block;
+  }
+  std::strong_ordering operator<=>(const Macro &other) const
+  {
+    if (auto cmp = name <=> other.name; cmp != 0)
+      return cmp;
+    if (vargs.size() != other.vargs.size())
+      return vargs.size() <=> other.vargs.size();
+    for (size_t i = 0; i < vargs.size(); ++i) {
+      if (auto cmp = vargs[i] <=> other.vargs[i]; cmp != 0)
+        return cmp;
+    }
+    return *block <=> *other.block;
+  }
+
   std::string name;
   ExpressionList vargs;
   BlockExpr *block = nullptr;
@@ -1362,6 +2044,15 @@ public:
                       const CStatement &other,
                       const Location &loc)
       : Node(ctx, loc + other.loc), data(other.data) {};
+
+  bool operator==(const CStatement &other) const
+  {
+    return data == other.data;
+  }
+  std::strong_ordering operator<=>(const CStatement &other) const
+  {
+    return data <=> other.data;
+  }
 
   std::string data;
 };
@@ -1404,6 +2095,30 @@ public:
         functions(clone(ctx, other.functions, loc)),
         probes(clone(ctx, other.probes, loc)),
         header(other.header) {};
+
+  bool operator==(const Program &other) const
+  {
+    return c_statements == other.c_statements && *config == *other.config &&
+           imports == other.imports && map_decls == other.map_decls &&
+           macros == other.macros && functions == other.functions &&
+           probes == other.probes;
+  }
+  std::strong_ordering operator<=>(const Program &other) const
+  {
+    if (auto cmp = c_statements <=> other.c_statements; cmp != 0)
+      return cmp;
+    if (auto cmp = *config <=> *other.config; cmp != 0)
+      return cmp;
+    if (auto cmp = imports <=> other.imports; cmp != 0)
+      return cmp;
+    if (auto cmp = map_decls <=> other.map_decls; cmp != 0)
+      return cmp;
+    if (auto cmp = macros <=> other.macros; cmp != 0)
+      return cmp;
+    if (auto cmp = functions <=> other.functions; cmp != 0)
+      return cmp;
+    return probes <=> other.probes;
+  }
 
   CStatementList c_statements;
   Config *config = nullptr;
