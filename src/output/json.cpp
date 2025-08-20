@@ -440,15 +440,17 @@ void JsonOutput::syscall(const std::string &syscall)
 
 void JsonOutput::lost_events(uint64_t lost)
 {
-  // This is a special case, it does not use the `data` field.
-  out_ << R"({"type":"lost_events", "count":)" << lost << "}" << std::endl;
+  // This is a special case, it emits both a count and the `data` field.
+  out_ << R"({"type": "lost_events", "count": )" << lost
+       << R"(, "data": {"events": )" << lost << "}}" << std::endl;
 }
 
 void JsonOutput::attached_probes(uint64_t num_probes)
 {
-  // As with lost_events, this is a special case.
-  out_ << R"({"type":"attached_probes", "count":)" << num_probes << "}"
-       << std::endl;
+  // As with lost_events, this is a special case, we do a `count` and `data`
+  // field.
+  out_ << R"({"type": "attached_probes", "count": )" << num_probes
+       << R"(, "data": {"probes": )" << num_probes << "}}" << std::endl;
 }
 
 void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
