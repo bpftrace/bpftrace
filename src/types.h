@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cereal/access.hpp>
 #include <cereal/types/variant.hpp>
+#include <compare>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -262,7 +263,7 @@ public:
 
   bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
-  bool operator!=(const SizedType &t) const;
+  std::strong_ordering operator<=>(const SizedType &t) const;
   bool IsSameType(const SizedType &t) const;
   // This is primarily for Tuples which have equal total size (due to padding)
   // but their individual elements have different sizes.
