@@ -3,6 +3,8 @@
 The schedule for the upcoming v0.24 release is:
 - August 20, 2025: Create release branch `release/0.24.x`.
 - **September 17, 2025: Release v0.24.0.**
+- September 24, 2025: Release v0.24.1 (if necessary).
+- October 1, 2025: Release v0.24.2 (if necessary).
 
 # Release procedure
 
@@ -22,6 +24,9 @@ tends to break things, is LLVM, we align with the [LLVM release
 schedule](https://llvm.org/docs/HowToReleaseLLVM.html). In particular, a minor
 bpftrace release should happen **two weeks after a major LLVM release**.
 
+If patch releases are necessary, there should be at least one week period
+between two successive releases.
+
 In addition, four weeks before the bpftrace release, we create a stabilized
 release branch, which will only receive bug fixes affecting the release itself.
 The branch will also serve as a target for future (post-release) bug fixes that
@@ -34,6 +39,7 @@ Overview of the release cadence is as follows:
 | release branch created | **2 weeks before the LLVM release** | [Creating a release branch](#creating-a-release-branch)              |
 | LLVM release           | usually second Tuesday of Mar/Sep   | [LLVM release schedule](https://llvm.org/docs/HowToReleaseLLVM.html) |
 | bpftrace release       | **2 weeks after the LLVM release**  | [Tagging a release](#tagging-a-release)                              |
+| patch releases         | weekly cadence after the release    | [Tagging a release](#tagging-a-release)                              |
 
 ## Preparing for a release
 
