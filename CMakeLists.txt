@@ -112,6 +112,15 @@ include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 find_package(LibCereal REQUIRED)
 include_directories(SYSTEM ${LIBCEREAL_INCLUDE_DIRS})
 
+# Cereal 1.3.1+ is required for C++20 compatibility.
+if(LIBCEREAL_VERSION)
+  if(LIBCEREAL_VERSION VERSION_LESS "1.3.1")
+    message(FATAL_ERROR "Cereal version ${LIBCEREAL_VERSION} is too old."
+                        "Version 1.3.1 or newer is required for C++20.")
+  endif()
+  message(STATUS "Found cereal version: ${LIBCEREAL_VERSION}")
+endif()
+
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 # `parser_class_name` is deprecated and generates warnings in bison >= 3.3.

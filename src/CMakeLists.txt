@@ -104,7 +104,7 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
-target_link_libraries(runtime debugfs output tracefs util)
+target_link_libraries(runtime debugfs output tracefs util providers)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
 target_link_libraries(libbpftrace parser runtime aot ast arch util cxxdemangler_llvm)
 
@@ -238,6 +238,7 @@ add_subdirectory(btf)
 add_subdirectory(cxxdemangler)
 add_subdirectory(debugfs)
 add_subdirectory(output)
+add_subdirectory(providers)
 add_subdirectory(stdlib)
 add_subdirectory(tracefs)
 add_subdirectory(util)

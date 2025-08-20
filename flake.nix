@@ -60,6 +60,20 @@
             };
           };
 
+          # Override cereal to use version 1.3.2 for C++20 compatibility. Older
+          # versions were finalized prior to C++20, and have issues with
+          # aggregate initialization rules.
+          cereal = pkgs.cereal.overrideAttrs (oldAttrs: {
+            version = "1.3.2";
+            src = pkgs.fetchFromGitHub {
+              owner = "USCiLab";
+              repo = "cereal";
+              rev = "v1.3.2";
+              sha256 = "sha256-HapnwM5oSNKuqoKm5x7+i2zt0sny8z8CePwobz1ITQs=";
+            };
+            patches = []; # Patches already in 1.3.2.
+          });
+
           # gtest-parallel for running tests
           gtest_parallel = pkgs.stdenv.mkDerivation {
             name = "gtest-parallel";
@@ -157,7 +171,7 @@
                   bcc
                   blazesym_c
                   pkgs.asciidoctor
-                  pkgs.cereal
+                  cereal
                   pkgs.elfutils
                   pkgs.gtest
                   pkgs.libbfd

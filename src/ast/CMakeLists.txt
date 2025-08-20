@@ -6,7 +6,7 @@ add_library(ast_defs STATIC
   location.cpp
 )
 add_dependencies(ast_defs parser)
-target_link_libraries(ast_defs util)
+target_link_libraries(ast_defs providers util)
 
 add_library(ast STATIC
   async_event_types.cpp

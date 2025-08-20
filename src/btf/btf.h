@@ -36,6 +36,7 @@ public:
   Handle(const Handle &other) = delete;
   Handle &operator=(Handle &other) = delete;
 
+  static HandleRef create(struct btf *btf);
   static Result<HandleRef> parse(const void *data, size_t sz);
   static Result<HandleRef> parse(HandleRef base, const void *data, size_t sz);
 
@@ -826,6 +827,7 @@ public:
   Types(Types &&other) = default;
   Types &operator=(Types &&other) = default;
 
+  static Types create(struct btf *btf);
   static Result<Types> parse(const void *data, size_t sz);
   static Result<Types> parse(const Types &base, const void *data, size_t sz);
 
@@ -874,6 +876,12 @@ public:
 
   // Dumps a stream of C declarations.
   Result<> emit_decl(std::ostream &out) const;
+
+  // Helper to return the underlying handle.
+  struct btf *btf_library() const
+  {
+    return handle_->btf_library();
+  }
 
 private:
   Types(HandleRef &&handle) : handle_(std::move(handle)) {};
